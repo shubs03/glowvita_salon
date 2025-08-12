@@ -1,11 +1,11 @@
 'use client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { FaDollarSign, FaUsers, FaCreditCard, FaChartLine } from 'react-icons/fa';
 
 export default function AdminPage() {
   return (
     <>
-      <h1 className="text-2xl font-bold font-headline mb-6">Dashboard</h1>
+      <h1 className="text-3xl font-bold tracking-tight mb-6">Dashboard</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -67,7 +67,6 @@ export default function AdminPage() {
         <Card>
           <CardHeader>
             <CardTitle>Recent Bookings</CardTitle>
-            <CardDescription>A list of the most recent bookings.</CardDescription>
           </CardHeader>
           <CardContent>
             <p>Booking details will be displayed here.</p>

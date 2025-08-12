@@ -3,6 +3,7 @@
 import { FaBars, FaBell } from "react-icons/fa";
 import { Button } from "@repo/ui/button";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void; }) {
   const router = useRouter();
@@ -24,6 +25,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void; }) {
         <span className="sr-only">Toggle navigation menu</span>
       </Button>
       <div className="flex w-full items-center justify-end gap-4">
+        <ThemeToggle />
         <Button variant="ghost" size="icon" className="rounded-full">
           <FaBell className="h-5 w-5" />
           <span className="sr-only">Toggle notifications</span>
