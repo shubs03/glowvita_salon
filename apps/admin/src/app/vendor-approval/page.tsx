@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Trash2 } from 'lucide-react';
 
 const vendorsData = [
     {
@@ -51,9 +52,15 @@ const vendorsData = [
     },
 ];
 
+type Vendor = typeof vendorsData[0];
+type ActionType = 'approve' | 'reject' | 'delete';
+
 export default function VendorApprovalPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+    const [actionType, setActionType] = useState<ActionType | null>(null);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -61,6 +68,49 @@ export default function VendorApprovalPage() {
 
     const totalPages = Math.ceil(vendorsData.length / itemsPerPage);
 
+    const handleActionClick = (vendor: Vendor, action: ActionType) => {
+        setSelectedVendor(vendor);
+        setActionType(action);
+        setIsModalOpen(true);
+    };
+
+    const handleConfirmAction = () => {
+        if (selectedVendor && actionType) {
+            console.log(`Performing ${actionType} on vendor ${selectedVendor.name}`);
+            // Here you would typically dispatch an action or call an API
+        }
+        setIsModalOpen(false);
+        setSelectedVendor(null);
+        setActionType(null);
+    };
+
+    const getModalContent = () => {
+        if (!actionType || !selectedVendor) return { title: '', description: '', buttonText: '' };
+        switch (actionType) {
+            case 'approve':
+                return {
+                    title: 'Approve Vendor?',
+                    description: `Are you sure you want to approve the vendor "${selectedVendor.name}"? They will get access to the platform.`,
+                    buttonText: 'Approve'
+                };
+            case 'reject':
+                return {
+                    title: 'Reject Vendor?',
+                    description: `Are you sure you want to reject the vendor "${selectedVendor.name}"? This action cannot be undone.`,
+                    buttonText: 'Reject'
+                };
+            case 'delete':
+                return {
+                    title: 'Delete Vendor?',
+                    description: `Are you sure you want to permanently delete the vendor "${selectedVendor.name}"? This action is irreversible.`,
+                    buttonText: 'Delete'
+                };
+            default:
+                return { title: '', description: '', buttonText: '' };
+        }
+    };
+
+    const { title, description, buttonText } = getModalContent();
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -142,13 +192,17 @@ export default function VendorApprovalPage() {
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">View Details</span>
                           </Button>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'approve')}>
                               <CheckCircle className="h-4 w-4 text-green-600" />
                               <span className="sr-only">Approve</span>
                           </Button>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'reject')}>
                               <XCircle className="h-4 w-4 text-red-600" />
                               <span className="sr-only">Reject</span>
+                          </Button>
+                           <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'delete')}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <span className="sr-only">Delete</span>
                           </Button>
                       </TableCell>
                     </TableRow>
@@ -167,6 +221,28 @@ export default function VendorApprovalPage() {
           />
         </CardContent>
       </Card>
+
+       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{title}</DialogTitle>
+                    <DialogDescription>
+                        {description}
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant={actionType === 'delete' || actionType === 'reject' ? 'destructive' : 'default'}
+                        onClick={handleConfirmAction}
+                    >
+                        {buttonText}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }

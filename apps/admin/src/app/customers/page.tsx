@@ -8,8 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination } from "@repo/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
+import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
-import { Eye, FileDown, X, IndianRupee, Percent, Users, FileText } from 'lucide-react';
+import { Eye, FileDown, X, IndianRupee, Percent, Users, FileText, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
 
 const customerOrdersData = [
   {
@@ -103,6 +105,7 @@ export default function CustomerManagementPage() {
     const [itemsPerPageOrders, setItemsPerPageOrders] = useState(10);
     const [currentPageSalons, setCurrentPageSalons] = useState(1);
     const [itemsPerPageSalons, setItemsPerPageSalons] = useState(10);
+    const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
 
     // Orders Pagination Logic
     const lastItemIndexOrders = currentPageOrders * itemsPerPageOrders;
@@ -176,10 +179,16 @@ export default function CustomerManagementPage() {
                                 <CardTitle>All Customer Orders</CardTitle>
                                 <CardDescription>A list of all customer transactions.</CardDescription>
                             </div>
-                            <Button>
-                                <FileDown className="mr-2 h-4 w-4" />
-                                Export List
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button onClick={() => setIsNewCustomerModalOpen(true)}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    New Customer
+                                </Button>
+                                <Button>
+                                    <FileDown className="mr-2 h-4 w-4" />
+                                    Export List
+                                </Button>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -368,8 +377,41 @@ export default function CustomerManagementPage() {
                 </Card>
             </TabsContent>
         </Tabs>
+
+        <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>Add New Customer</DialogTitle>
+                    <DialogDescription>
+                        Enter the details for the new customer. Click save when you're done.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="name" className="text-right">
+                            Name
+                        </Label>
+                        <Input id="name" placeholder="John Doe" className="col-span-3" />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="email" className="text-right">
+                            Email
+                        </Label>
+                        <Input id="email" type="email" placeholder="john.doe@example.com" className="col-span-3" />
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="phone" className="text-right">
+                            Phone
+                        </Label>
+                        <Input id="phone" type="tel" placeholder="+1 234 567 890" className="col-span-3" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="secondary" onClick={() => setIsNewCustomerModalOpen(false)}>Cancel</Button>
+                    <Button type="submit">Save Customer</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
-
-    
