@@ -1,235 +1,248 @@
+
 "use client";
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { useState } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import { Pagination } from "@repo/ui/pagination";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Trash2 } from 'lucide-react';
 
-type ApprovalStatus = 'pending' | 'approved' | 'rejected';
-
-interface SalonItem {
-  id: number;
-  vendorName: string;
-  email: string;
-  contactNumber: string;
-  dateSubmitted: string;
-  status: ApprovalStatus;
-}
-
-interface ServiceItem {
-  id: number;
-  serviceType: string;
-  vendorName: string;
-  serviceName: string;
-  serviceId: string;
-  status: ApprovalStatus;
-}
-
-const initialSalonData: SalonItem[] = [
-  {
-    id: 1,
-    vendorName: "New Beauty Haven",
-    email: "contact@newbeauty.com",
-    contactNumber: "+1 (555) 123-4567",
-    dateSubmitted: "2023-10-27",
-    status: 'pending'
-  },
-  // Add more salon data as needed
+const vendorsData = [
+    {
+        id: "VEN-007",
+        name: "New Beauty Haven",
+        owner: "Jessica Day",
+        phone: "789-012-3456",
+        city: "Miami",
+        pincode: "33101",
+    },
+    {
+        id: "VEN-008",
+        name: "City Style Salon",
+        owner: "Winston Bishop",
+        phone: "890-123-4567",
+        city: "San Diego",
+        pincode: "92101",
+    },
+    {
+        id: "VEN-009",
+        name: "Urban Cuts",
+        owner: "Nick Miller",
+        phone: "901-234-5678",
+        city: "Portland",
+        pincode: "97201",
+    },
+    {
+        id: "VEN-010",
+        name: "The Glow Up Studio",
+        owner: "Cece Parekh",
+        phone: "012-345-6789",
+        city: "Seattle",
+        pincode: "98101",
+    },
+    {
+        id: "VEN-011",
+        name: "Chic & Co.",
+        owner: "Schmidt",
+        phone: "123-456-7890",
+        city: "Los Angeles",
+        pincode: "90028",
+    },
 ];
 
-const initialServiceData: ServiceItem[] = [
-  {
-    id: 1,
-    serviceType: "Haircut",
-    vendorName: "New Beauty Haven",
-    serviceName: "Premium Haircut",
-    serviceId: "SVC001",
-    status: 'pending'
-  },
-  {
-    id: 2,
-    serviceType: "Spa",
-    vendorName: "New Beauty Haven",
-    serviceName: "Full Body Massage",
-    serviceId: "SVC002",
-    status: 'pending'
-  },
-  // Add more service data as needed
-];
+type Vendor = typeof vendorsData[0];
+type ActionType = 'approve' | 'reject' | 'delete';
 
 export default function VendorApprovalPage() {
-  const [activeTab, setActiveTab] = useState('salon');
-  const [salonData, setSalonData] = useState<SalonItem[]>(initialSalonData);
-  const [serviceData, setServiceData] = useState<ServiceItem[]>(initialServiceData);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+    const [actionType, setActionType] = useState<ActionType | null>(null);
 
-  const handleSalonStatus = (id: number, status: 'approved' | 'rejected') => {
-    setSalonData(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, status } : item
-      )
-    );
-  };
+    const lastItemIndex = currentPage * itemsPerPage;
+    const firstItemIndex = lastItemIndex - itemsPerPage;
+    const currentItems = vendorsData.slice(firstItemIndex, lastItemIndex);
 
-  const handleServiceStatus = (id: number, status: 'approved' | 'rejected') => {
-    setServiceData(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, status } : item
-      )
-    );
-  };
-  
+    const totalPages = Math.ceil(vendorsData.length / itemsPerPage);
+
+    const handleActionClick = (vendor: Vendor, action: ActionType) => {
+        setSelectedVendor(vendor);
+        setActionType(action);
+        setIsModalOpen(true);
+    };
+
+    const handleConfirmAction = () => {
+        if (selectedVendor && actionType) {
+            console.log(`Performing ${actionType} on vendor ${selectedVendor.name}`);
+            // Here you would typically dispatch an action or call an API
+        }
+        setIsModalOpen(false);
+        setSelectedVendor(null);
+        setActionType(null);
+    };
+
+    const getModalContent = () => {
+        if (!actionType || !selectedVendor) return { title: '', description: '', buttonText: '' };
+        switch (actionType) {
+            case 'approve':
+                return {
+                    title: 'Approve Vendor?',
+                    description: `Are you sure you want to approve the vendor "${selectedVendor.name}"? They will get access to the platform.`,
+                    buttonText: 'Approve'
+                };
+            case 'reject':
+                return {
+                    title: 'Reject Vendor?',
+                    description: `Are you sure you want to reject the vendor "${selectedVendor.name}"? This action cannot be undone.`,
+                    buttonText: 'Reject'
+                };
+            case 'delete':
+                return {
+                    title: 'Delete Vendor?',
+                    description: `Are you sure you want to permanently delete the vendor "${selectedVendor.name}"? This action is irreversible.`,
+                    buttonText: 'Delete'
+                };
+            default:
+                return { title: '', description: '', buttonText: '' };
+        }
+    };
+
+    const { title, description, buttonText } = getModalContent();
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Vendor Verification & Approval</h1>
 
-      <div className="flex space-x-4 mb-6">
-        <Button 
-          variant={activeTab === 'salon' ? 'default' : 'outline'}
-          onClick={() => setActiveTab('salon')}
-        >
-          Salon
-        </Button>
-        <Button 
-          variant={activeTab === 'service' ? 'default' : 'outline'}
-          onClick={() => setActiveTab('service')}
-        >
-          Service
-        </Button>
+       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">573</div>
+            <p className="text-xs text-muted-foreground">+2 since last hour</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Approved</CardTitle>
+            <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">450</div>
+            <p className="text-xs text-muted-foreground">87% approval rate</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <Hourglass className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">5</div>
+            <p className="text-xs text-muted-foreground">Waiting for review</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Disapproved</CardTitle>
+            <ThumbsDown className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">118</div>
+            <p className="text-xs text-muted-foreground">Onboarding rejected</p>
+          </CardContent>
+        </Card>
       </div>
 
-        {activeTab === 'salon' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Salon Approvals</CardTitle>
-              <CardDescription>Salon vendors waiting for verification to join the platform.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="p-2 text-left">Vendor Name</th>
-                      <th className="p-2 text-left">Email</th>
-                      <th className="p-2 text-left">Contact</th>
-                      <th className="p-2 text-left">Date Submitted</th>
-                      <th className="p-2 text-left">Status</th>
-                      <th className="p-2 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {salonData.map((salon) => (
-                      <tr 
-                        key={salon.id} 
-                        className={`border-b ${
-                          salon.status === 'approved' ? 'bg-green-50' : 
-                          salon.status === 'rejected' ? 'bg-red-50' : ''
-                        }`}
-                      >
-                        <td className="p-2">{salon.vendorName}</td>
-                        <td className="p-2">{salon.email}</td>
-                        <td className="p-2">{salon.contactNumber}</td>
-                        <td className="p-2">{salon.dateSubmitted}</td>
-                        <td className="p-2">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            salon.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            salon.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {salon.status.charAt(0).toUpperCase() + salon.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="p-2 text-right">
-                          <Button variant="ghost" size="sm" className="mr-2">View Details</Button>
-                          <Button 
-                            size="sm" 
-                            variant={salon.status === 'approved' ? 'default' : 'outline'}
-                            onClick={() => handleSalonStatus(salon.id, 'approved')}
-                            className="mr-2"
-                          >
-                            Approve
+      <Card>
+        <CardHeader>
+          <CardTitle>Pending Approvals</CardTitle>
+          <CardDescription>Vendors waiting for verification to join the platform.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto no-scrollbar">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Vendor ID</TableHead>
+                  <TableHead>Salon Name</TableHead>
+                  <TableHead>Owner Name</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>City</TableHead>
+                  <TableHead>Pincode</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {currentItems.map((vendor) => (
+                    <TableRow key={vendor.id}>
+                      <TableCell className="font-mono text-xs">{vendor.id}</TableCell>
+                      <TableCell className="font-medium">{vendor.name}</TableCell>
+                      <TableCell>{vendor.owner}</TableCell>
+                      <TableCell>{vendor.phone}</TableCell>
+                      <TableCell>{vendor.city}</TableCell>
+                      <TableCell>{vendor.pincode}</TableCell>
+                      <TableCell className="text-right">
+                          <Button variant="ghost" size="icon">
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View Details</span>
                           </Button>
-                          <Button 
-                            variant={salon.status === 'rejected' ? 'destructive' : 'outline'}
-                            size="sm"
-                            onClick={() => handleSalonStatus(salon.id, 'rejected')}
-                          >
-                            Reject
+                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'approve')}>
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="sr-only">Approve</span>
                           </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'reject')}>
+                              <XCircle className="h-4 w-4 text-red-600" />
+                              <span className="sr-only">Reject</span>
+                          </Button>
+                           <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'delete')}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <span className="sr-only">Delete</span>
+                          </Button>
+                      </TableCell>
+                    </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <Pagination
+              className="mt-4"
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              onItemsPerPageChange={setItemsPerPage}
+              totalItems={vendorsData.length}
+          />
+        </CardContent>
+      </Card>
 
-        {activeTab === 'service' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Service Approvals</CardTitle>
-              <CardDescription>Services waiting for approval.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="p-2 text-left">Service Type</th>
-                      <th className="p-2 text-left">Vendor Name</th>
-                      <th className="p-2 text-left">Service Name</th>
-                      <th className="p-2 text-left">Service ID</th>
-                      <th className="p-2 text-left">Status</th>
-                      <th className="p-2 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {serviceData.map((service) => (
-                      <tr 
-                        key={service.id} 
-                        className={`border-b ${
-                          service.status === 'approved' ? 'bg-green-50' : 
-                          service.status === 'rejected' ? 'bg-red-50' : ''
-                        }`}
-                      >
-                        <td className="p-2">{service.serviceType}</td>
-                        <td className="p-2">{service.vendorName}</td>
-                        <td className="p-2">{service.serviceName}</td>
-                        <td className="p-2">{service.serviceId}</td>
-                        <td className="p-2">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            service.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            service.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {service.status.charAt(0).toUpperCase() + service.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="p-2 text-right">
-                          <Button 
-                            size="sm" 
-                            variant={service.status === 'approved' ? 'default' : 'outline'}
-                            onClick={() => handleServiceStatus(service.id, 'approved')}
-                            className="mr-2"
-                          >
-                            Approve
-                          </Button>
-                          <Button 
-                            variant={service.status === 'rejected' ? 'destructive' : 'outline'}
-                            size="sm"
-                            onClick={() => handleServiceStatus(service.id, 'rejected')}
-                          >
-                            Reject
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{title}</DialogTitle>
+                    <DialogDescription>
+                        {description}
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant={actionType === 'delete' || actionType === 'reject' ? 'destructive' : 'default'}
+                        onClick={handleConfirmAction}
+                    >
+                        {buttonText}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }

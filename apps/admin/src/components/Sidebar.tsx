@@ -1,11 +1,10 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaSignOutAlt, FaBox, FaUserMd, FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, FaQuestionCircle, FaUserFriends, FaTruck } from "react-icons/fa";
+import { FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaSignOutAlt, FaBox, FaUserMd, FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaBars } from "react-icons/fa";
 
 const sidebarNavItems = [
   {
@@ -59,6 +58,11 @@ const sidebarNavItems = [
     icon: <FaMoneyBillWave className="h-4 w-4" />,
   },
   {
+    title: "Payout",
+    href: "/payout",
+    icon: <FaMoneyCheckAlt className="h-4 w-4" />,
+  },
+  {
     title: "Marketing",
     href: "/marketing",
     icon: <FaBullhorn className="h-4 w-4" />,
@@ -75,7 +79,7 @@ const sidebarNavItems = [
   },
 ];
 
-export function Sidebar({ isOpen }: { isOpen: boolean }) {
+export function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean, toggleSidebar: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   
@@ -89,14 +93,22 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
         "hidden bg-background border-r lg:flex lg:flex-col transition-all duration-300 ease-in-out",
         isOpen ? "lg:w-64" : "lg:w-20"
       )}>
-      <div className="flex-grow flex flex-col overflow-y-auto">
-        <div className="p-4 h-16 border-b flex items-center shrink-0">
-          <Link href="/" className="flex items-center gap-2">
-            <FaBox className="h-6 w-6 text-primary" />
+      <div className="flex-grow flex flex-col overflow-y-auto no-scrollbar">
+        <div className="p-4 h-16 border-b flex items-center shrink-0 justify-between">
+           <Link href="/" className="flex items-center gap-2">
             <h1 className={cn("text-xl font-bold font-headline text-primary", !isOpen && "lg:hidden")}>Admin</h1>
           </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            onClick={toggleSidebar}
+            >
+            <FaBars className="h-5 w-5" />
+            <span className="sr-only">Toggle navigation menu</span>
+          </Button>
         </div>
-        <nav className="flex-grow px-2 py-4">
+        <nav className="flex-grow px-2 py-4 space-y-1">
           {sidebarNavItems.map((item) => (
             <Link
               key={item.href}

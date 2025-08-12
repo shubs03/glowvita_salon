@@ -21,5 +21,6 @@
     "@repo/typescript-config": "*",
     "@types/bcryptjs": "^2.4.6",
     "typescript": "^5.4.5"
-  }
+  },
+  "type": "module"
 }
