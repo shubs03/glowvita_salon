@@ -1,6 +1,6 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { DollarSign, Users, CreditCard, Activity } from 'lucide-react';
+import { FaDollarSign, FaUsers, FaCreditCard, FaChartLine } from 'react-icons/fa';
 
 export default function AdminPage() {
   return (
@@ -12,7 +12,7 @@ export default function AdminPage() {
             <CardTitle className="text-sm font-medium">
               Daily Bookings
             </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <FaChartLine className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">125</div>
@@ -26,7 +26,7 @@ export default function AdminPage() {
             <CardTitle className="text-sm font-medium">
               Total Vendors
             </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <FaUsers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">42</div>
@@ -38,7 +38,7 @@ export default function AdminPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Settlement Amount</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
+            <FaCreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">$4,832.00</div>
@@ -52,7 +52,7 @@ export default function AdminPage() {
             <CardTitle className="text-sm font-medium">
               Profit / Loss
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <FaDollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">+$1,203.50</div>

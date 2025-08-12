@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Download } from 'lucide-react';
+import { FaDownload } from 'react-icons/fa';
 
 export default function ReportsPage() {
   return (
@@ -20,7 +20,7 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Includes profit, loss, and settlement data.</p>
               <Button>
-                <Download className="mr-2 h-4 w-4" />
+                <FaDownload className="mr-2 h-4 w-4" />
                 Download
               </Button>
             </div>
@@ -36,7 +36,7 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Track user engagement and growth.</p>
               <Button>
-                <Download className="mr-2 h-4 w-4" />
+                <FaDownload className="mr-2 h-4 w-4" />
                 Download
               </Button>
             </div>
@@ -52,7 +52,7 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Evaluate and manage vendor performance.</p>
               <Button>
-                <Download className="mr-2 h-4 w-4" />
+                <FaDownload className="mr-2 h-4 w-4" />
                 Download
               </Button>
             </div>
@@ -68,7 +68,7 @@ export default function ReportsPage() {
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Understand your audience better.</p>
               <Button>
-                <Download className="mr-2 h-4 w-4" />
+                <FaDownload className="mr-2 h-4 w-4" />
                 Download
               </Button>
             </div>
