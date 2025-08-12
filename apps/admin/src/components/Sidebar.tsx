@@ -93,7 +93,7 @@ export function Sidebar({ isOpen, toggleSidebar }: { isOpen: boolean, toggleSide
         "hidden bg-background border-r lg:flex lg:flex-col transition-all duration-300 ease-in-out",
         isOpen ? "lg:w-64" : "lg:w-20"
       )}>
-      <div className="flex-grow flex flex-col overflow-y-auto">
+      <div className="flex-grow flex flex-col overflow-y-auto no-scrollbar">
         <div className="p-4 h-16 border-b flex items-center shrink-0 justify-between">
            <Link href="/" className="flex items-center gap-2">
             <h1 className={cn("text-xl font-bold font-headline text-primary", !isOpen && "lg:hidden")}>Admin</h1>
