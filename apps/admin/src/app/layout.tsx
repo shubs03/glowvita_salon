@@ -1,8 +1,13 @@
+
+'use client';
+
 import type { Metadata } from 'next';
+import { usePathname } from 'next/navigation';
 import StoreProvider from '@repo/store/provider';
 import './globals.css';
 import { Sidebar } from '@/components/Sidebar';
 
+// Even though we use 'use client', we can still define metadata
 export const metadata: Metadata = {
   title: 'Admin Panel',
   description: 'Admin Panel for Monorepo Maestro.',
@@ -13,6 +18,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const showSidebar = pathname !== '/login';
+
   return (
     <html lang="en">
       <head>
@@ -23,7 +31,7 @@ export default function RootLayout({
       <body>
         <StoreProvider>
           <div className="flex min-h-screen">
-            <Sidebar />
+            {showSidebar && <Sidebar />}
             <main className="flex-grow">{children}</main>
           </div>
         </StoreProvider>
