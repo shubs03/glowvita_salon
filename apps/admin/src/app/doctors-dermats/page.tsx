@@ -7,7 +7,7 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
-import { CheckCircle, Eye, XCircle, Trash2, UserMd, ThumbsUp, Hourglass, BarChart, Plus, FileDown, X } from 'lucide-react';
+import { CheckCircle, Eye, XCircle, Trash2, User, ThumbsUp, Hourglass, BarChart, Plus, FileDown, X } from 'lucide-react';
 import { Badge } from '@repo/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from '@repo/ui/input';
@@ -139,7 +139,7 @@ export default function DoctorsDermatsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Doctors</CardTitle>
-            <UserMd className="h-4 w-4 text-muted-foreground" />
+            <User className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">78</div>
@@ -238,7 +238,7 @@ export default function DoctorsDermatsPage() {
                     <TableBody>
                       {currentItems.map((doctor, index) => (
                         <TableRow key={doctor.id}>
-                            <TableCell>{firstItemIndex + index}</TableCell>
+                            <TableCell>{firstItemIndex + index + 1}</TableCell>
                             <TableCell className="font-medium">{doctor.name}</TableCell>
                             <TableCell>{new Date(doctor.registrationTimestamp).toLocaleString()}</TableCell>
                             <TableCell>{doctor.clinicName || 'N/A'}</TableCell>
@@ -372,3 +372,5 @@ export default function DoctorsDermatsPage() {
     </div>
   );
 }
+
+    
