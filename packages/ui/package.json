@@ -13,6 +13,7 @@
     "./badge": "./src/badge.tsx",
     "./tabs": "./src/tabs.tsx",
     "./dialog": "./src/dialog.tsx",
+    "./textarea": "./src/textarea.tsx",
     "./globals.css": "./src/globals.css",
     "./tailwind.config": "./tailwind.config.ts",
     "./cn": "./src/cn.ts"
