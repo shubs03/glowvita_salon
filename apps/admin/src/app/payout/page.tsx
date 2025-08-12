@@ -58,7 +58,7 @@ const payoutData = [
 
 export default function PayoutPage() {
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(5);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;

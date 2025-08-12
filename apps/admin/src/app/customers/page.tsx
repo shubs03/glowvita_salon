@@ -100,9 +100,9 @@ const salonListData = [
 
 export default function CustomerManagementPage() {
     const [currentPageOrders, setCurrentPageOrders] = useState(1);
-    const [itemsPerPageOrders, setItemsPerPageOrders] = useState(5);
+    const [itemsPerPageOrders, setItemsPerPageOrders] = useState(10);
     const [currentPageSalons, setCurrentPageSalons] = useState(1);
-    const [itemsPerPageSalons, setItemsPerPageSalons] = useState(5);
+    const [itemsPerPageSalons, setItemsPerPageSalons] = useState(10);
 
     // Orders Pagination Logic
     const lastItemIndexOrders = currentPageOrders * itemsPerPageOrders;

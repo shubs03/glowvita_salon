@@ -38,7 +38,7 @@ const vendorsData = [
 
 export default function VendorApprovalPage() {
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(5);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
