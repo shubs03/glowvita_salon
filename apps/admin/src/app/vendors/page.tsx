@@ -184,3 +184,5 @@ export default function VendorManagementPage() {
     </div>
   );
 }
+
+    
