@@ -2,14 +2,6 @@
 
 import { FaBars, FaBell } from "react-icons/fa";
 import { Button } from "@repo/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@repo/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void; }) {
@@ -36,24 +28,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void; }) {
           <FaBell className="h-5 w-5" />
           <span className="sr-only">Toggle notifications</span>
         </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                A
-              </div>
-              <span className="sr-only">Toggle user menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem>Support</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button variant="ghost" onClick={handleLogout}>Logout</Button>
       </div>
     </header>
   );
