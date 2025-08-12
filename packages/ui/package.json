@@ -10,6 +10,7 @@
     "./table": "./src/table.tsx",
     "./pagination": "./src/pagination.tsx",
     "./select": "./src/select.tsx",
+    "./badge": "./src/badge.tsx",
     "./globals.css": "./src/globals.css",
     "./tailwind.config": "./tailwind.config.ts",
     "./cn": "./src/cn.ts"

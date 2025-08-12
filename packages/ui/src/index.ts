@@ -6,3 +6,4 @@ export * from "./cn";
 export * from "./table";
 export * from "./pagination";
 export * from "./select";
+export * from "./badge";
