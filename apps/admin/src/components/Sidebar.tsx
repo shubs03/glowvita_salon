@@ -1,10 +1,11 @@
+
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaSignOutAlt, FaBox, FaUserMd, FaCheckCircle, FaMoneyBillWave, FaBullhorn } from "react-icons/fa";
+import { FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaSignOutAlt, FaBox, FaUserMd, FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, FaQuestionCircle, FaUserFriends, FaTruck } from "react-icons/fa";
 
 const sidebarNavItems = [
   {
@@ -33,6 +34,26 @@ const sidebarNavItems = [
     icon: <FaCheckCircle className="h-4 w-4" />,
   },
   {
+    title: "Supplier Management",
+    href: "/supplier-management",
+    icon: <FaTruck className="h-4 w-4" />,
+  },
+  {
+    title: "Admin Roles",
+    href: "/admin-roles",
+    icon: <FaUserShield className="h-4 w-4" />,
+  },
+  {
+    title: "Offers & Coupons",
+    href: "/offers-coupons",
+    icon: <FaTags className="h-4 w-4" />,
+  },
+  {
+    title: "Referral Management",
+    href: "/referral-management",
+    icon: <FaUserFriends className="h-4 w-4" />,
+  },
+  {
     title: "Tax & Fees",
     href: "/tax-fees",
     icon: <FaMoneyBillWave className="h-4 w-4" />,
@@ -46,6 +67,11 @@ const sidebarNavItems = [
     title: "Reports",
     href: "/reports",
     icon: <FaFileAlt className="h-4 w-4" />,
+  },
+  {
+    title: "FAQ Management",
+    href: "/faq-management",
+    icon: <FaQuestionCircle className="h-4 w-4" />,
   },
 ];
 
