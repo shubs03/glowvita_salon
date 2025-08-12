@@ -15,9 +15,6 @@ const vendorsData = [
     name: "Glamour Salon",
     owner: "Alice Johnson",
     phone: "123-456-7890",
-    city: "New York",
-    pincode: "10001",
-    sales: 54320,
     status: "Active",
   },
   {
@@ -25,9 +22,6 @@ const vendorsData = [
     name: "Modern Cuts",
     owner: "Bob Williams",
     phone: "234-567-8901",
-    city: "Los Angeles",
-    pincode: "90001",
-    sales: 48900,
     status: "Active",
   },
   {
@@ -35,9 +29,6 @@ const vendorsData = [
     name: "Style Hub",
     owner: "Charlie Brown",
     phone: "345-678-9012",
-    city: "Chicago",
-    pincode: "60601",
-    sales: 23100,
     status: "Disabled",
   },
   {
@@ -45,9 +36,6 @@ const vendorsData = [
     name: "Beauty Bliss",
     owner: "Diana Prince",
     phone: "456-789-0123",
-    city: "Houston",
-    pincode: "77001",
-    sales: 67500,
     status: "Active",
   },
   {
@@ -55,9 +43,6 @@ const vendorsData = [
     name: "The Men's Room",
     owner: "Clark Kent",
     phone: "567-890-1234",
-    city: "Metropolis",
-    pincode: "10002",
-    sales: 89000,
     status: "Active",
   },
   {
@@ -65,9 +50,6 @@ const vendorsData = [
     name: "Nail Envy",
     owner: "Lois Lane",
     phone: "678-901-2345",
-    city: "Metropolis",
-    pincode: "10002",
-    sales: 12500,
     status: "Disabled",
   },
 ];
@@ -124,13 +106,9 @@ export default function VendorManagementPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vendor ID</TableHead>
                   <TableHead>Salon Name</TableHead>
                   <TableHead>Owner Name</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead>Pincode</TableHead>
-                  <TableHead>Sales</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -138,13 +116,9 @@ export default function VendorManagementPage() {
               <TableBody>
                 {currentItems.map((vendor) => (
                     <TableRow key={vendor.id}>
-                    <TableCell className="font-mono text-xs">{vendor.id}</TableCell>
                     <TableCell className="font-medium">{vendor.name}</TableCell>
                     <TableCell>{vendor.owner}</TableCell>
                     <TableCell>{vendor.phone}</TableCell>
-                    <TableCell>{vendor.city}</TableCell>
-                    <TableCell>{vendor.pincode}</TableCell>
-                    <TableCell>${vendor.sales.toLocaleString()}</TableCell>
                     <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                             vendor.status === "Active"
@@ -184,5 +158,3 @@ export default function VendorManagementPage() {
     </div>
   );
 }
-
-    

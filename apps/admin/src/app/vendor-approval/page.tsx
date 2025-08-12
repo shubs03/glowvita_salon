@@ -10,29 +10,44 @@ import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown } fro
 
 const vendorsData = [
     {
+        id: "VEN-007",
         name: "New Beauty Haven",
-        email: "contact@newbeauty.com",
-        date: "2023-10-27",
+        owner: "Jessica Day",
+        phone: "789-012-3456",
+        city: "Miami",
+        pincode: "33101",
     },
     {
+        id: "VEN-008",
         name: "City Style Salon",
-        email: "info@citystyle.com",
-        date: "2023-10-26",
+        owner: "Winston Bishop",
+        phone: "890-123-4567",
+        city: "San Diego",
+        pincode: "92101",
     },
     {
+        id: "VEN-009",
         name: "Urban Cuts",
-        email: "support@urbancuts.dev",
-        date: "2023-10-25",
+        owner: "Nick Miller",
+        phone: "901-234-5678",
+        city: "Portland",
+        pincode: "97201",
     },
     {
+        id: "VEN-010",
         name: "The Glow Up Studio",
-        email: "manager@glowup.com",
-        date: "2023-10-24",
+        owner: "Cece Parekh",
+        phone: "012-345-6789",
+        city: "Seattle",
+        pincode: "98101",
     },
     {
+        id: "VEN-011",
         name: "Chic & Co.",
-        email: "contact@chicandco.net",
-        date: "2023-10-23",
+        owner: "Schmidt",
+        phone: "123-456-7890",
+        city: "Los Angeles",
+        pincode: "90028",
     },
 ];
 
@@ -104,32 +119,38 @@ export default function VendorApprovalPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Vendor Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Date Submitted</TableHead>
+                  <TableHead>Vendor ID</TableHead>
+                  <TableHead>Salon Name</TableHead>
+                  <TableHead>Owner Name</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>City</TableHead>
+                  <TableHead>Pincode</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {currentItems.map((vendor) => (
-                    <TableRow key={vendor.email}>
-                    <TableCell className="font-medium">{vendor.name}</TableCell>
-                    <TableCell>{vendor.email}</TableCell>
-                    <TableCell>{vendor.date}</TableCell>
-                    <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View Details</span>
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                            <span className="sr-only">Approve</span>
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                            <XCircle className="h-4 w-4 text-red-600" />
-                            <span className="sr-only">Reject</span>
-                        </Button>
-                    </TableCell>
+                    <TableRow key={vendor.id}>
+                      <TableCell className="font-mono text-xs">{vendor.id}</TableCell>
+                      <TableCell className="font-medium">{vendor.name}</TableCell>
+                      <TableCell>{vendor.owner}</TableCell>
+                      <TableCell>{vendor.phone}</TableCell>
+                      <TableCell>{vendor.city}</TableCell>
+                      <TableCell>{vendor.pincode}</TableCell>
+                      <TableCell className="text-right">
+                          <Button variant="ghost" size="icon">
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View Details</span>
+                          </Button>
+                          <Button variant="ghost" size="icon">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="sr-only">Approve</span>
+                          </Button>
+                          <Button variant="ghost" size="icon">
+                              <XCircle className="h-4 w-4 text-red-600" />
+                              <span className="sr-only">Reject</span>
+                          </Button>
+                      </TableCell>
                     </TableRow>
                 ))}
               </TableBody>
@@ -149,5 +170,3 @@ export default function VendorApprovalPage() {
     </div>
   );
 }
-
-    
