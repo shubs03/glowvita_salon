@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -101,7 +100,7 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
             <h1 className={cn("text-xl font-bold font-headline text-primary", !isOpen && "lg:hidden")}>Admin</h1>
           </Link>
         </div>
-        <nav className="flex-grow px-2 py-4">
+        <nav className="flex-grow px-2 py-4 space-y-1">
           {sidebarNavItems.map((item) => (
             <Link
               key={item.href}

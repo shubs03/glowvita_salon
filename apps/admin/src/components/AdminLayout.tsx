@@ -20,11 +20,11 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   };
 
   return (
-    <div className="flex min-h-screen bg-secondary">
+    <div className="flex h-screen bg-secondary overflow-hidden">
       <Sidebar isOpen={isSidebarOpen} />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Header toggleSidebar={toggleSidebar} />
-        <main className="flex-grow p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">
             {children}
         </main>
       </div>
