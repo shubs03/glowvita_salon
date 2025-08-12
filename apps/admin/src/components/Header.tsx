@@ -17,7 +17,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void; }) {
       <Button
         variant="outline"
         size="icon"
-        className="shrink-0 md:hidden"
+        className="shrink-0"
         onClick={toggleSidebar}
       >
         <FaBars className="h-5 w-5" />
