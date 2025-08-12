@@ -4,7 +4,7 @@ import { FaDollarSign, FaUsers, FaCreditCard, FaChartLine } from 'react-icons/fa
 
 export default function AdminPage() {
   return (
-    <div className="flex-grow p-4 sm:p-6 lg:p-8 bg-secondary">
+    <>
       <h1 className="text-2xl font-bold font-headline mb-6">Dashboard</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -74,6 +74,6 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </>
   );
 }
