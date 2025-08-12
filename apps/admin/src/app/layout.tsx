@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import StoreProvider from '@repo/store/provider';
 import './globals.css';
 import { AdminLayout } from '@/components/AdminLayout';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'Admin Panel',
@@ -15,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -23,7 +24,14 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          <AdminLayout>{children}</AdminLayout>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AdminLayout>{children}</AdminLayout>
+          </ThemeProvider>
         </StoreProvider>
       </body>
     </html>

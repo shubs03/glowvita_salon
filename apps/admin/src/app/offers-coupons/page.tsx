@@ -1,8 +1,57 @@
 
+"use client";
+
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import { Pagination } from "@repo/ui/pagination";
+import { Edit2, Eye, Trash2 } from "lucide-react";
+
+const couponsData = [
+    {
+        code: "SUMMER24",
+        discount: "20% Off",
+        status: "Active",
+        expires: "2024-08-31",
+    },
+    {
+        code: "NEWUSER10",
+        discount: "$10 Off",
+        status: "Active",
+        expires: "N/A",
+    },
+    {
+        code: "EXPIRED01",
+        discount: "15% Off",
+        status: "Expired",
+        expires: "2023-12-31",
+    },
+    {
+        code: "HOLIDAYFUN",
+        discount: "25% Off",
+        status: "Active",
+        expires: "2024-07-31",
+    },
+    {
+        code: "FLASH30",
+        discount: "30% Off",
+        status: "Expired",
+        expires: "2024-01-01",
+    },
+];
+
 
 export default function OffersCouponsPage() {
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
+    const lastItemIndex = currentPage * itemsPerPage;
+    const firstItemIndex = lastItemIndex - itemsPerPage;
+    const currentItems = couponsData.slice(firstItemIndex, lastItemIndex);
+
+    const totalPages = Math.ceil(couponsData.length / itemsPerPage);
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Offers & Coupons Management</h1>
@@ -19,49 +68,59 @@ export default function OffersCouponsPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="p-2 text-left">Coupon Code</th>
-                  <th className="p-2 text-left">Discount</th>
-                  <th className="p-2 text-left">Status</th>
-                  <th className="p-2 text-left">Expires On</th>
-                  <th className="p-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="p-2">SUMMER24</td>
-                  <td className="p-2">20% Off</td>
-                  <td className="p-2"><span className="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Active</span></td>
-                  <td className="p-2">2024-08-31</td>
-                  <td className="p-2 text-right">
-                    <Button variant="ghost" size="sm">Edit</Button>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">Deactivate</Button>
-                  </td>
-                </tr>
-                 <tr className="border-b">
-                  <td className="p-2">NEWUSER10</td>
-                  <td className="p-2">$10 Off</td>
-                  <td className="p-2"><span className="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Active</span></td>
-                  <td className="p-2">N/A</td>
-                  <td className="p-2 text-right">
-                    <Button variant="ghost" size="sm">Edit</Button>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">Deactivate</Button>
-                  </td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-2">EXPIRED01</td>
-                  <td className="p-2">15% Off</td>
-                  <td className="p-2"><span className="px-2 py-1 text-xs font-semibold text-red-800 bg-red-200 rounded-full">Expired</span></td>
-                  <td className="p-2">2023-12-31</td>
-                  <td className="p-2 text-right">
-                    <Button variant="ghost" size="sm">View</Button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Coupon Code</TableHead>
+                  <TableHead>Discount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Expires On</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {currentItems.map((coupon, index) => (
+                    <TableRow key={index}>
+                    <TableCell className="font-medium">{coupon.code}</TableCell>
+                    <TableCell>{coupon.discount}</TableCell>
+                    <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            coupon.status === "Active"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                        }`}>
+                        {coupon.status}
+                        </span>
+                    </TableCell>
+                    <TableCell>{coupon.expires}</TableCell>
+                    <TableCell className="text-right">
+                        <Button variant="ghost" size="icon">
+                            <Eye className="h-4 w-4" />
+                            <span className="sr-only">View</span>
+                        </Button>
+                        <Button variant="ghost" size="icon">
+                            <Edit2 className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete</span>
+                        </Button>
+                    </TableCell>
+                    </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
+            <Pagination
+                className="mt-4"
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={setItemsPerPage}
+                totalItems={couponsData.length}
+            />
         </CardContent>
       </Card>
     </div>
