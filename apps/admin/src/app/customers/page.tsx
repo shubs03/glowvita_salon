@@ -9,7 +9,7 @@ import { Pagination } from "@repo/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
-import { Eye, FileDown } from 'lucide-react';
+import { Eye, FileDown, X } from 'lucide-react';
 
 const customerOrdersData = [
   {
@@ -138,40 +138,50 @@ export default function CustomerManagementPage() {
                                 Export List
                             </Button>
                         </div>
-                         <div className="mt-4 flex flex-col md:flex-row items-center gap-4">
-                           <Select>
-                                <SelectTrigger className="w-full md:w-[180px]">
-                                    <SelectValue placeholder="Filter by Order Type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="online">Online</SelectItem>
-                                    <SelectItem value="offline">Offline</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select>
-                                <SelectTrigger className="w-full md:w-[180px]">
-                                    <SelectValue placeholder="Filter by Payment Mode" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="credit-card">Credit Card</SelectItem>
-                                    <SelectItem value="paypal">PayPal</SelectItem>
-                                    <SelectItem value="cash">Cash</SelectItem>
-                                </SelectContent>
-                            </Select>
-                             <Select>
-                                <SelectTrigger className="w-full md:w-[180px]">
-                                    <SelectValue placeholder="Filter by Order Status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="completed">Completed</SelectItem>
-                                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                                    <SelectItem value="pending">Pending</SelectItem>
-                                </SelectContent>
-                            </Select>
-                             <Input type="date" placeholder="Appointment Date" className="w-full md:w-auto"/>
-                        </div>
                     </CardHeader>
                     <CardContent>
+                        <div className="mb-6 p-4 rounded-lg bg-secondary">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold">Filters</h3>
+                                <Button variant="ghost" size="sm">
+                                <X className="mr-2 h-4 w-4" />
+                                Clear Filters
+                                </Button>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                <Select>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Filter by Order Type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="online">Online</SelectItem>
+                                        <SelectItem value="offline">Offline</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Filter by Payment Mode" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="credit-card">Credit Card</SelectItem>
+                                        <SelectItem value="paypal">PayPal</SelectItem>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Filter by Order Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="completed">Completed</SelectItem>
+                                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Input type="date" placeholder="Appointment Date" />
+                            </div>
+                        </div>
+
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
@@ -251,12 +261,22 @@ export default function CustomerManagementPage() {
                                 Export List
                             </Button>
                         </div>
-                         <div className="mt-4 flex flex-col md:flex-row items-center gap-4">
-                            <Input type="text" placeholder="Filter by Salon Name..." className="w-full md:w-[240px]" />
-                            <Input type="text" placeholder="Filter by Vendor Owner..." className="w-full md:w-[240px]" />
-                        </div>
                     </CardHeader>
                     <CardContent>
+                        <div className="mb-6 p-4 rounded-lg bg-secondary">
+                             <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold">Filters</h3>
+                                <Button variant="ghost" size="sm">
+                                    <X className="mr-2 h-4 w-4" />
+                                    Clear Filters
+                                </Button>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <Input type="text" placeholder="Filter by Salon Name..." />
+                                <Input type="text" placeholder="Filter by Vendor Owner..." />
+                            </div>
+                        </div>
+
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
