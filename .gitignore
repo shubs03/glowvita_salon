@@ -1,22 +1,25 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # Dependencies
-/node_modules
 node_modules/
+*/node_modules/
 
-
-/.pnp
+# PnP
+.pnp
 .pnp.js
 
-# Build outputs
-/.next/
+# Build outputs (Next.js, Turborepo, etc.)
+.next/
 **/.next/
-/out/
-/build
+out/
+build/
+dist/
+.turbo/
 
-# Turborepo
-.turbo
-dist
+# Ignore specific build folders inside monorepo apps
+apps/*/.next/
+apps/*/out/
+apps/*/dist/
 
 # VSCode
 .vscode/
@@ -31,6 +34,6 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Other
+# OS & Misc
 .DS_Store
 *.pem
