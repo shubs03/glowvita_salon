@@ -1,5 +1,10 @@
+
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import { Pagination } from "@repo/ui/pagination";
 
 export default function VendorApprovalPage() {
   return (
@@ -13,30 +18,30 @@ export default function VendorApprovalPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="p-2 text-left">Vendor Name</th>
-                  <th className="p-2 text-left">Email</th>
-                  <th className="p-2 text-left">Date Submitted</th>
-                  <th className="p-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Placeholder Row */}
-                <tr className="border-b">
-                  <td className="p-2">New Beauty Haven</td>
-                  <td className="p-2">contact@newbeauty.com</td>
-                  <td className="p-2">2023-10-27</td>
-                  <td className="p-2 text-right">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Vendor Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Date Submitted</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell>New Beauty Haven</TableCell>
+                  <TableCell>contact@newbeauty.com</TableCell>
+                  <TableCell>2023-10-27</TableCell>
+                  <TableCell className="text-right">
                     <Button variant="ghost" size="sm">View Details</Button>
                     <Button size="sm" className="ml-2">Approve</Button>
                     <Button variant="destructive" size="sm" className="ml-2">Reject</Button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
+          <Pagination className="mt-4" />
         </CardContent>
       </Card>
     </div>

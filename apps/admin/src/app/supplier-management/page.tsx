@@ -1,6 +1,10 @@
 
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import { Pagination } from "@repo/ui/pagination";
 
 export default function SupplierManagementPage() {
   return (
@@ -20,38 +24,39 @@ export default function SupplierManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="p-2 text-left">Supplier Name</th>
-                    <th className="p-2 text-left">Products</th>
-                    <th className="p-2 text-left">Total Sales</th>
-                    <th className="p-2 text-left">Status</th>
-                    <th className="p-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="p-2">Global Beauty Supplies</td>
-                    <td className="p-2">125</td>
-                    <td className="p-2">$25,430</td>
-                    <td className="p-2"><span className="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Approved</span></td>
-                    <td className="p-2 text-right">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Supplier Name</TableHead>
+                    <TableHead>Products</TableHead>
+                    <TableHead>Total Sales</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Global Beauty Supplies</TableCell>
+                    <TableCell>125</TableCell>
+                    <TableCell>$25,430</TableCell>
+                    <TableCell><span className="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Approved</span></TableCell>
+                    <TableCell className="text-right">
                       <Button variant="ghost" size="sm">View Details</Button>
-                    </td>
-                  </tr>
-                   <tr className="border-b">
-                    <td className="p-2">Organic Skincare Inc.</td>
-                    <td className="p-2">45</td>
-                    <td className="p-2">$12,810</td>
-                    <td className="p-2"><span className="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded-full">Pending</span></td>
-                    <td className="p-2 text-right">
+                    </TableCell>
+                  </TableRow>
+                   <TableRow>
+                    <TableCell>Organic Skincare Inc.</TableCell>
+                    <TableCell>45</TableCell>
+                    <TableCell>$12,810</TableCell>
+                    <TableCell><span className="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-200 rounded-full">Pending</span></TableCell>
+                    <TableCell className="text-right">
                       <Button variant="ghost" size="sm">View Details</Button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </div>
+            <Pagination className="mt-4" />
           </CardContent>
         </Card>
       </div>

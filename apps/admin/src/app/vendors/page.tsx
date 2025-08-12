@@ -1,5 +1,10 @@
+
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import { Pagination } from "@repo/ui/pagination";
 
 export default function VendorManagementPage() {
   return (
@@ -18,49 +23,47 @@ export default function VendorManagementPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="p-2 text-left">Vendor Name</th>
-                  <th className="p-2 text-left">Email</th>
-                  <th className="p-2 text-left">Status</th>
-                  <th className="p-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Placeholder Row 1 */}
-                <tr className="border-b">
-                  <td className="p-2">Glamour Salon</td>
-                  <td className="p-2">contact@glamoursalon.com</td>
-                  <td className="p-2"><span className="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Active</span></td>
-                  <td className="p-2 text-right">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Vendor Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell>Glamour Salon</TableCell>
+                  <TableCell>contact@glamoursalon.com</TableCell>
+                  <TableCell><span className="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Active</span></TableCell>
+                  <TableCell className="text-right">
                     <Button variant="ghost" size="sm">View</Button>
                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">Disable</Button>
-                  </td>
-                </tr>
-                {/* Placeholder Row 2 */}
-                <tr className="border-b">
-                  <td className="p-2">Modern Cuts</td>
-                  <td className="p-2">info@moderncuts.com</td>
-                  <td className="p-2"><span className="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Active</span></td>
-                  <td className="p-2 text-right">
+                  </TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell>Modern Cuts</TableCell>
+                  <TableCell>info@moderncuts.com</TableCell>
+                  <TableCell><span className="px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">Active</span></TableCell>
+                  <TableCell className="text-right">
                     <Button variant="ghost" size="sm">View</Button>
                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">Disable</Button>
-                  </td>
-                </tr>
-                 {/* Placeholder Row 3 */}
-                 <tr className="border-b">
-                  <td className="p-2">Style Hub</td>
-                  <td className="p-2">support@stylehub.com</td>
-                  <td className="p-2"><span className="px-2 py-1 text-xs font-semibold text-red-800 bg-red-200 rounded-full">Disabled</span></td>
-                  <td className="p-2 text-right">
+                  </TableCell>
+                </TableRow>
+                 <TableRow>
+                  <TableCell>Style Hub</TableCell>
+                  <TableCell>support@stylehub.com</TableCell>
+                  <TableCell><span className="px-2 py-1 text-xs font-semibold text-red-800 bg-red-200 rounded-full">Disabled</span></TableCell>
+                  <TableCell className="text-right">
                     <Button variant="ghost" size="sm">View</Button>
                     <Button variant="ghost" size="sm">Enable</Button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
+          <Pagination className="mt-4" />
         </CardContent>
       </Card>
     </div>

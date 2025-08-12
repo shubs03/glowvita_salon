@@ -7,6 +7,8 @@
     "./card": "./src/card.tsx",
     "./input": "./src/input.tsx",
     "./label": "./src/label.tsx",
+    "./table": "./src/table.tsx",
+    "./pagination": "./src/pagination.tsx",
     "./globals.css": "./src/globals.css",
     "./tailwind.config": "./tailwind.config.ts",
     "./cn": "./src/cn.ts"

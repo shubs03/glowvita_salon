@@ -1,6 +1,10 @@
 
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import { Pagination } from "@repo/ui/pagination";
 
 export default function AdminRolesPage() {
   return (
@@ -20,32 +24,33 @@ export default function AdminRolesPage() {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="p-2 text-left">Role Name</th>
-                    <th className="p-2 text-left">Permissions</th>
-                    <th className="p-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b">
-                    <td className="p-2">Super Admin</td>
-                    <td className="p-2">All Access</td>
-                    <td className="p-2 text-right">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Role Name</TableHead>
+                    <TableHead>Permissions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Super Admin</TableCell>
+                    <TableCell>All Access</TableCell>
+                    <TableCell className="text-right">
                       <Button variant="ghost" size="sm">Edit</Button>
-                    </td>
-                  </tr>
-                  <tr className="border-b">
-                    <td className="p-2">Support Staff</td>
-                    <td className="p-2">View Customers, View Vendors</td>
-                    <td className="p-2 text-right">
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>Support Staff</TableCell>
+                    <TableCell>View Customers, View Vendors</TableCell>
+                    <TableCell className="text-right">
                       <Button variant="ghost" size="sm">Edit</Button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                    </TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
             </div>
+            <Pagination className="mt-4" />
           </CardContent>
         </Card>
       </div>
