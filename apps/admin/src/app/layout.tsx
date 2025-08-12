@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import StoreProvider from '@repo/store/provider';
 import './globals.css';
+import { Sidebar } from '@/components/Sidebar';
 
 export const metadata: Metadata = {
   title: 'Admin Panel',
@@ -20,7 +21,12 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <StoreProvider>{children}</StoreProvider>
+        <StoreProvider>
+          <div className="flex min-h-screen">
+            <Sidebar />
+            <main className="flex-grow">{children}</main>
+          </div>
+        </StoreProvider>
       </body>
     </html>
   );

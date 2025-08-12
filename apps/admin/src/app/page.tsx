@@ -1,34 +1,79 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { Button } from "@repo/ui/button";
-import { useRouter } from "next/navigation";
+import { DollarSign, Users, CreditCard, Activity } from 'lucide-react';
 
 export default function AdminPage() {
-  const router = useRouter();
-  const handleLogout = async () => {
-    // This assumes the API endpoint is available on this domain
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-  };
   return (
-    <div className="flex flex-col min-h-screen bg-secondary">
-      <header className="bg-background border-b">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold font-headline">Admin Panel</h1>
-          <Button variant="ghost" onClick={handleLogout}>Logout</Button>
-        </div>
-      </header>
-      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="flex-grow p-4 sm:p-6 lg:p-8 bg-secondary">
+      <h1 className="text-2xl font-bold font-headline mb-6">Dashboard</h1>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Welcome, Administrator!</CardTitle>
-            <CardDescription>Manage all users and vendors.</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Daily Bookings
+            </CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p>This is the main dashboard for administrators. More features coming soon!</p>
+            <div className="text-2xl font-bold">125</div>
+            <p className="text-xs text-muted-foreground">
+              +12% from yesterday
+            </p>
           </CardContent>
         </Card>
-      </main>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Vendors
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">42</div>
+            <p className="text-xs text-muted-foreground">
+              +2 since last month
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Settlement Amount</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">$4,832.00</div>
+            <p className="text-xs text-muted-foreground">
+              Pending for this week
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Profit / Loss
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">+$1,203.50</div>
+            <p className="text-xs text-muted-foreground">
+              Today's profit
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Bookings</CardTitle>
+            <CardDescription>A list of the most recent bookings.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>Booking details will be displayed here.</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
