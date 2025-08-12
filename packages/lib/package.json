@@ -1,0 +1,25 @@
+{
+  "name": "@repo/lib",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./db": "./src/db.js",
+    "./auth": "./src/auth.js",
+    "./models/user": "./src/models/user.js"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jose": "^5.4.0",
+    "mongoose": "^8.4.1"
+  },
+  "devDependencies": {
+    "@repo/eslint-config-custom": "*",
+    "@repo/typescript-config": "*",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@repo/store",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./store": "./src/store.ts",
+    "./hooks": "./src/hooks.ts",
+    "./provider": "./src/provider.tsx",
+    "./apis/example": "./src/apis/example-api.ts",
+    "./slices/auth": "./src/slices/auth-slice.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.2.5",
+    "react-redux": "^9.1.2"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@repo/eslint-config-custom": "*",
+    "@repo/typescript-config": "*",
+    "react": "^18.3.1",
+    "typescript": "^5.4.5"
+  }
+}

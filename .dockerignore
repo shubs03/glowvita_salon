@@ -1,0 +1,40 @@
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+report.*.json
+pids
+*.pid
+*.seed
+*.log
+*.csv
+*.dat
+*.out
+lib-cov
+coverage
+.nyc_output
+
+# Turbo
+.turbo
+
+# Next.js
+.next
+out
+
+# Env files
+.env
+.env*.local
+
+# Project-specific
+apps/**/node_modules
+apps/**/.next
+apps/**/.turbo
+packages/**/node_modules
+packages/**/dist
