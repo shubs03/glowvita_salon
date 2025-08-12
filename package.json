@@ -3,13 +3,13 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
-    "dev": "turbo dev --filter=admin...",
+    "dev": "turbo dev --filter=admin... --",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "clean": "turbo clean",
-    "dev:web": "turbo dev --filter=web",
-    "dev:crm": "turbo dev --filter=crm",
-    "dev:admin": "turbo dev --filter=admin"
+    "dev:web": "turbo dev --filter=web --",
+    "dev:crm": "turbo dev --filter=crm --",
+    "dev:admin": "turbo dev --filter=admin --"
   },
   "devDependencies": {
     "@repo/eslint-config-custom": "*",
