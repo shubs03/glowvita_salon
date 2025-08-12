@@ -3,10 +3,13 @@
   "private": true,
   "scripts": {
     "build": "turbo build",
-    "dev": "npx turbo dev --",
+    "dev": "turbo dev --filter=admin...",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "dev:web": "turbo dev --filter=web",
+    "dev:crm": "turbo dev --filter=crm",
+    "dev:admin": "turbo dev --filter=admin"
   },
   "devDependencies": {
     "@repo/eslint-config-custom": "*",
@@ -21,6 +24,7 @@
     "packages/*"
   ],
   "dependencies": {
+    "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-label": "^2.1.7"
   }
 }
