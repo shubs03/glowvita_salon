@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaSignOutAlt, FaBox, FaUserMd, FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, FaQuestionCircle, FaUserFriends, FaTruck } from "react-icons/fa";
+import { FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaSignOutAlt, FaBox, FaUserMd, FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt } from "react-icons/fa";
 
 const sidebarNavItems = [
   {
@@ -57,6 +57,11 @@ const sidebarNavItems = [
     title: "Tax & Fees",
     href: "/tax-fees",
     icon: <FaMoneyBillWave className="h-4 w-4" />,
+  },
+  {
+    title: "Payout",
+    href: "/payout",
+    icon: <FaMoneyCheckAlt className="h-4 w-4" />,
   },
   {
     title: "Marketing",
