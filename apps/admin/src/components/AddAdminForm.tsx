@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
@@ -70,6 +70,26 @@ export function AddAdminForm({
     address: '',
     ...initialData
   });
+
+  // Reset form data when the modal is opened/closed or when initialData changes
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const resetForm = {
+      fullName: '',
+      mobileNumber: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      role: '',
+      designation: '',
+      address: '',
+      ...initialData
+    };
+    
+    setFormData(resetForm);
+    setSelectedFile(null);
+  }, [isOpen, initialData]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -88,14 +108,22 @@ export function AddAdminForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Add form validation
-    if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
-      return;
+    
+    // Only validate passwords if it's not an edit or if passwords are being changed
+    if (!isEditMode || formData.password) {
+      if (formData.password !== formData.confirmPassword) {
+        alert("Passwords don't match!");
+        return;
+      }
     }
     
     const dataToSave = {
       ...formData,
+      // Don't include password fields if they're empty in edit mode
+      ...(isEditMode && !formData.password && {
+        password: undefined,
+        confirmPassword: undefined
+      }),
       photo: selectedFile || formData.photo
     };
     
@@ -110,10 +138,9 @@ export function AddAdminForm({
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
+  const handleOverlayClick = (event: any) => {
     // Prevent the default behavior of closing the dialog
-    e.preventDefault();
-    e.stopPropagation();
+    event.preventDefault();
   };
 
   return (
@@ -128,9 +155,11 @@ export function AddAdminForm({
       >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Add New Admin</DialogTitle>
+            <DialogTitle>{isEditMode ? 'Edit Admin User' : 'Add New Admin'}</DialogTitle>
             <DialogDescription>
-              Fill in the details below to create a new admin user.
+              {isEditMode 
+                ? 'Update the admin user details below.'
+                : 'Fill in the details below to create a new admin user.'}
             </DialogDescription>
           </DialogHeader>
           
@@ -185,29 +214,33 @@ export function AddAdminForm({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Password *</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
+              {!isEditMode && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password *</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      value={formData.password || ''}
+                      onChange={handleInputChange}
+                      required={!isEditMode}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      value={formData.confirmPassword || ''}
+                      onChange={handleInputChange}
+                      required={!isEditMode}
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -286,4 +319,6 @@ export function AddAdminForm({
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default AddAdminForm;

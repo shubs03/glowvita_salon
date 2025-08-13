@@ -70,7 +70,7 @@ export default function AdminRolesPage() {
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [selectedRole, setSelectedRole] = useState<AdminUser | null>(null);
   
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector((state) => state.modal);
@@ -85,17 +85,19 @@ export default function AdminRolesPage() {
     if (editingAdmin) {
       // Update existing admin
       setAdminUsers(adminUsers.map(admin => 
-        admin.id === editingAdmin.id ? { ...adminData, id: editingAdmin.id } : admin
+        admin.id === editingAdmin.id ? { ...admin, ...adminData } : admin
       ));
-      setEditingAdmin(null);
     } else {
       // Add new admin
       const newAdmin = {
         ...adminData,
         id: Date.now().toString(),
+        isActive: true // Default to active when creating new admin
       };
       setAdminUsers([...adminUsers, newAdmin]);
     }
+    setEditingAdmin(null);
+    setIsAddAdminOpen(false);
   };
 
   const handleDeleteAdmin = (id?: string) => {
@@ -105,11 +107,13 @@ export default function AdminRolesPage() {
   };
 
   const handleEditAdmin = (admin: AdminUser) => {
-    setEditingAdmin(admin);
+    // Create a deep copy of the admin object to avoid reference issues
+    const adminCopy = { ...admin };
+    setEditingAdmin(adminCopy);
     setIsAddAdminOpen(true);
   };
 
-  const handleOpenModal = (type: 'addRole' | 'editRole', role?: Role) => {
+  const handleOpenModal = (type: 'addRole' | 'editRole', role?: AdminUser) => {
     dispatch(openModal({ modalType: type, data: role }));
   };
 
@@ -117,7 +121,7 @@ export default function AdminRolesPage() {
     dispatch(closeModal());
   };
   
-  const handleDeleteClick = (role: Role) => {
+  const handleDeleteClick = (role:AdminUser) => {
     setSelectedRole(role);
     setIsDeleteModalOpen(true);
   };
@@ -143,9 +147,14 @@ export default function AdminRolesPage() {
                 <CardDescription>Define roles and assign permissions for admin users.</CardDescription>
               </div>
               <Button onClick={() => {
+                // Reset editing state and open the form
                 setEditingAdmin(null);
-                setIsAddAdminOpen(true);
-              }}>Add New Admin</Button>
+                // Close and immediately reopen to ensure form resets
+                setIsAddAdminOpen(false);
+                setTimeout(() => setIsAddAdminOpen(true), 0);
+              }}>
+                Add New Admin
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
