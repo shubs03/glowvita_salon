@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useGetMeQuery } from '@repo/store/apis/example';
+import { useGetMeQuery } from '@/packages/store/src/services/api';
 import { useAppDispatch, setAuth, clearAuth } from '@repo/store/slices/auth';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';

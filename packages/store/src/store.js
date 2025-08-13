@@ -1,16 +1,16 @@
 import { configureStore } from '@reduxjs/toolkit';
-import { authApi } from './apis/example-api';
+import { glowvitaApi } from '../src/services/api.js';
 import authReducer from './slices/auth-slice';
 import modalReducer from './slices/modalSlice';
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
-      [authApi.reducerPath]: authApi.reducer,
+      [glowvitaApi.reducerPath]: glowvitaApi.reducer,
       auth: authReducer,
       modal: modalReducer,
     },
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(authApi.middleware),
+      getDefaultMiddleware().concat(glowvitaApi.middleware),
   });
 };
