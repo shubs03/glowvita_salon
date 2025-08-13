@@ -20,21 +20,21 @@ const plansData = [
     name: "Basic Monthly",
     duration: 1,
     durationType: 'months',
-    price: 999,
+    price: 99900,
   },
   {
     id: 'plan_2',
     name: "Pro Yearly",
     duration: 1,
     durationType: 'years',
-    price: 9999,
+    price: 999900,
   },
   {
     id: 'plan_3',
     name: "Weekly Trial",
     duration: 7,
     durationType: 'days',
-    price: 249,
+    price: 24900,
   },
 ];
 
@@ -157,7 +157,7 @@ export default function SubscriptionManagementPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$45,231</div>
+            <div className="text-2xl font-bold">₹45,231</div>
             <p className="text-xs text-muted-foreground">From all subscriptions</p>
           </CardContent>
         </Card>
@@ -249,7 +249,7 @@ export default function SubscriptionManagementPage() {
                       <TableRow key={plan.id}>
                         <TableCell className="font-medium">{plan.name}</TableCell>
                         <TableCell>{plan.duration} {plan.durationType}</TableCell>
-                        <TableCell>${plan.price / 100}</TableCell>
+                        <TableCell>₹{plan.price / 100}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => handleOpenPlanModal('edit', plan)}>
                             <Edit2 className="h-4 w-4" />
@@ -305,7 +305,7 @@ export default function SubscriptionManagementPage() {
               </div>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="price">Price (in cents)</Label>
+                <Label htmlFor="price">Price (in paise)</Label>
                 <Input id="price" type="number" defaultValue={selectedPlan?.price || ''} />
             </div>
           </div>
