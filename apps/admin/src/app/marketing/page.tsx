@@ -212,8 +212,8 @@ export default function PlatformMarketingPage() {
             <TabsTrigger value="active_campaigns">Active Campaigns</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="sms_templates">
-            <Card className="mt-4">
+        <TabsContent value="sms_templates" className="mt-4">
+            <Card>
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
@@ -261,8 +261,8 @@ export default function PlatformMarketingPage() {
             </Card>
         </TabsContent>
         
-        <TabsContent value="sms_packages">
-            <Card className="mt-4">
+        <TabsContent value="sms_packages" className="mt-4">
+            <Card>
                 <CardHeader>
                      <div className="flex justify-between items-center">
                         <div>
@@ -310,8 +310,8 @@ export default function PlatformMarketingPage() {
             </Card>
         </TabsContent>
 
-        <TabsContent value="social_media">
-            <Card className="mt-4">
+        <TabsContent value="social_media" className="mt-4">
+            <Card>
                 <CardHeader>
                      <div className="flex justify-between items-center">
                         <div>
@@ -359,8 +359,8 @@ export default function PlatformMarketingPage() {
             </Card>
         </TabsContent>
         
-        <TabsContent value="active_campaigns">
-            <Card className="mt-4">
+        <TabsContent value="active_campaigns" className="mt-4">
+            <Card>
                 <CardHeader>
                     <CardTitle>Active Marketing Campaigns</CardTitle>
                     <CardDescription>Monitor and manage all ongoing vendor campaigns.</CardDescription>
@@ -404,8 +404,8 @@ export default function PlatformMarketingPage() {
             </Card>
         </TabsContent>
 
-        <TabsContent value="marketing_tickets">
-            <Card className="mt-4">
+        <TabsContent value="marketing_tickets" className="mt-4">
+            <Card>
                 <CardHeader>
                     <CardTitle>Digital Marketing Tickets</CardTitle>
                     <CardDescription>Manage digital marketing requests from vendors.</CardDescription>
@@ -445,8 +445,8 @@ export default function PlatformMarketingPage() {
             </Card>
         </TabsContent>
         
-        <TabsContent value="purchase_history">
-             <Card className="mt-4">
+        <TabsContent value="purchase_history" className="mt-4">
+             <Card>
                 <CardHeader>
                     <CardTitle>Purchase History</CardTitle>
                     <CardDescription>History of all marketing-related purchases by vendors.</CardDescription>
@@ -508,5 +508,3 @@ export default function PlatformMarketingPage() {
     </div>
   );
 }
-
-    
