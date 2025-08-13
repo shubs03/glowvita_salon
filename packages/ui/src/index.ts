@@ -11,3 +11,4 @@ export * from "./badge";
 export * from "./tabs";
 export * from "./dialog";
 export * from "./textarea";
+export * from "./radio-group";

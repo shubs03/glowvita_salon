@@ -11,31 +11,71 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Settings, User, Users, Briefcase } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 
 const c2cData = [
-  { id: 'C2C-001', referrer: 'Alice Johnson', referee: 'Bob Williams', date: '2024-08-01', status: 'Completed', bonus: 50 },
-  { id: 'C2C-002', referrer: 'Charlie Brown', referee: 'Diana Prince', date: '2024-08-02', status: 'Pending', bonus: 50 },
+  { id: 'C2C-001', referrer: 'Alice Johnson', referee: 'Bob Williams', date: '2024-08-01', status: 'Completed', bonus: '₹50' },
+  { id: 'C2C-002', referrer: 'Charlie Brown', referee: 'Diana Prince', date: '2024-08-02', status: 'Pending', bonus: '₹50' },
 ];
 
 const c2vData = [
-    { id: 'C2V-001', referrer: 'Clark Kent', vendor: 'Glamour Salon', date: '2024-07-15', status: 'Approved', bonus: 500 },
-    { id: 'C2V-002', referrer: 'Lois Lane', vendor: 'Modern Cuts', date: '2024-07-20', status: 'Pending', bonus: 500 },
+    { id: 'C2V-001', referrer: 'Clark Kent', vendor: 'Glamour Salon', date: '2024-07-15', status: 'Approved', bonus: '₹500' },
+    { id: 'C2V-002', referrer: 'Lois Lane', vendor: 'Modern Cuts', date: '2024-07-20', status: 'Pending', bonus: '₹500' },
 ];
 
 const v2vData = [
-    { id: 'V2V-001', referrer: 'Glamour Salon', vendor: 'Style Hub', date: '2024-06-10', status: 'Paid', bonus: 1000 },
-    { id: 'V2V-002', referrer: 'The Men\'s Room', vendor: 'Nail Envy', date: '2024-06-25', status: 'Pending', bonus: 1000 },
+    { id: 'V2V-001', referrer: 'Glamour Salon', vendor: 'Style Hub', date: '2024-06-10', status: 'Paid', bonus: '₹1000' },
+    { id: 'V2V-002', referrer: 'The Men\'s Room', vendor: 'Nail Envy', date: '2024-06-25', status: 'Pending', bonus: '₹1000' },
 ];
+
+type ReferralType = 'C2C' | 'C2V' | 'V2V';
+
+interface ReferralSettingsConfig {
+    bonusType: 'discount' | 'amount';
+    bonusValue: number;
+    usageLimit: 'unlimited' | 'manual';
+    usageCount: number | null;
+    creditTime: string; // e.g., "7 days", "24 hours"
+    minOrders?: number; // C2C specific
+    minBookings?: number; // C2V specific
+    minPayoutCycle?: number; // V2V specific
+}
 
 export default function ReferralManagementPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalType, setModalType] = useState<'C2C' | 'C2V' | 'V2V' | null>(null);
+    const [modalType, setModalType] = useState<ReferralType | null>(null);
+
+    const [c2cSettings, setC2cSettings] = useState<ReferralSettingsConfig>({
+        bonusType: 'amount',
+        bonusValue: 50,
+        usageLimit: 'unlimited',
+        usageCount: null,
+        creditTime: '48 hours',
+        minOrders: 1,
+    });
+     const [c2vSettings, setC2vSettings] = useState<ReferralSettingsConfig>({
+        bonusType: 'amount',
+        bonusValue: 500,
+        usageLimit: 'manual',
+        usageCount: 100,
+        creditTime: '15 days',
+        minBookings: 5,
+    });
+     const [v2vSettings, setV2vSettings] = useState<ReferralSettingsConfig>({
+        bonusType: 'amount',
+        bonusValue: 1000,
+        usageLimit: 'unlimited',
+        usageCount: null,
+        creditTime: '30 days',
+        minPayoutCycle: 1,
+    });
     
-    // Pagination states - could be separated further if needed
+    // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
     
-    const handleOpenModal = (type: 'C2C' | 'C2V' | 'V2V') => {
+    const handleOpenModal = (type: ReferralType) => {
         setModalType(type);
         setIsModalOpen(true);
     };
@@ -43,6 +83,15 @@ export default function ReferralManagementPage() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setModalType(null);
+    };
+
+    const getCurrentSettings = () => {
+        switch(modalType) {
+            case 'C2C': return c2cSettings;
+            case 'C2V': return c2vSettings;
+            case 'V2V': return v2vSettings;
+            default: return null;
+        }
     };
 
     const ReferralTable = ({ data, headers }: { data: any[], headers: string[] }) => (
@@ -75,31 +124,41 @@ export default function ReferralManagementPage() {
         </>
     );
     
-    const ReferralSettings = ({ title, settings, onEditClick }: { title: string, settings: { [key: string]: string }, onEditClick: () => void }) => (
-        <Card className="mb-6">
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                    <CardTitle className="text-lg">Referral Settings</CardTitle>
-                    <CardDescription>{title}</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={onEditClick}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Edit Settings
-                </Button>
-            </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    {Object.entries(settings).map(([key, value]) => (
-                        <div key={key} className="p-3 bg-secondary rounded-lg">
-                            <p className="text-muted-foreground">{key}</p>
-                            <p className="font-semibold">{value}</p>
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
-    );
+    const ReferralSettingsComponent = ({ title, settings, onEditClick }: { title: string, settings: ReferralSettingsConfig, onEditClick: () => void }) => {
+        const displaySettings: { [key: string]: string } = {
+            'Referral Bonus': settings.bonusType === 'discount' ? `${settings.bonusValue}%` : `₹${settings.bonusValue}`,
+            'Usage Limit': settings.usageLimit === 'unlimited' ? 'Unlimited' : `Manual (${settings.usageCount} referrals)`,
+            'Credit Time': settings.creditTime,
+        };
+        if(settings.minOrders) displaySettings['Min. Orders for Referee'] = String(settings.minOrders);
+        if(settings.minBookings) displaySettings['Min. Vendor Bookings'] = String(settings.minBookings);
+        if(settings.minPayoutCycle) displaySettings['Min. Vendor Payout Cycle'] = String(settings.minPayoutCycle);
 
+        return (
+            <Card className="mb-6">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="text-lg">Referral Settings</CardTitle>
+                        <CardDescription>{title}</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={onEditClick}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Edit Settings
+                    </Button>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        {Object.entries(displaySettings).map(([key, value]) => (
+                            <div key={key} className="p-3 bg-secondary rounded-lg">
+                                <p className="text-muted-foreground">{key}</p>
+                                <p className="font-semibold">{value}</p>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Referral Management</h1>
@@ -150,14 +209,9 @@ export default function ReferralManagementPage() {
                     <CardDescription>Track referrals made by customers to other customers.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     <ReferralSettings 
+                     <ReferralSettingsComponent 
                         title="Settings for C2C referrals"
-                        settings={{
-                            'Referral Bonus': '₹50',
-                            'Bonus Type': 'Wallet Credit',
-                            'Min. Orders for Referee': '1',
-                            'Validity (Days)': '30',
-                        }}
+                        settings={c2cSettings}
                         onEditClick={() => handleOpenModal('C2C')}
                     />
                     <ReferralTable data={c2cData} headers={['Referral ID', 'Referrer', 'Referee', 'Date', 'Status', 'Bonus']} />
@@ -171,14 +225,9 @@ export default function ReferralManagementPage() {
                     <CardDescription>Track vendors referred by customers.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     <ReferralSettings 
+                     <ReferralSettingsComponent 
                         title="Settings for C2V referrals"
-                        settings={{
-                            'Referral Bonus': '₹500',
-                            'Bonus Type': 'Payout',
-                            'Verification Status': 'Approved',
-                            'Min. Bookings': '5',
-                        }}
+                        settings={c2vSettings}
                          onEditClick={() => handleOpenModal('C2V')}
                     />
                     <ReferralTable data={c2vData} headers={['Referral ID', 'Referrer Customer', 'Referred Vendor', 'Date', 'Status', 'Bonus']} />
@@ -192,14 +241,9 @@ export default function ReferralManagementPage() {
                     <CardDescription>Track vendors referred by other vendors.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ReferralSettings 
+                    <ReferralSettingsComponent 
                         title="Settings for V2V referrals"
-                        settings={{
-                            'Referral Bonus': '₹1000',
-                            'Bonus Type': 'Payout',
-                            'Subscription Plan': 'Premium',
-                             'Min. Payout Cycle': '1',
-                        }}
+                        settings={v2vSettings}
                         onEditClick={() => handleOpenModal('V2V')}
                     />
                     <ReferralTable data={v2vData} headers={['Referral ID', 'Referrer Vendor', 'Referred Vendor', 'Date', 'Status', 'Bonus']} />
@@ -209,35 +253,58 @@ export default function ReferralManagementPage() {
       </Tabs>
       
         <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Edit {modalType} Referral Settings</DialogTitle>
                      <DialogDescription>
                         Update the settings for the {modalType} referral program.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="bonus-amount">Referral Bonus (₹)</Label>
-                        <Input id="bonus-amount" type="number" defaultValue={modalType === 'C2C' ? 50 : modalType === 'C2V' ? 500 : 1000} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="bonus-type">Bonus Type</Label>
-                        <Input id="bonus-type" defaultValue={modalType === 'C2C' ? 'Wallet Credit' : 'Payout'} />
-                    </div>
-                    {modalType === 'C2C' && (
-                         <div className="space-y-2">
-                            <Label htmlFor="min-orders">Min. Orders for Referee</Label>
-                            <Input id="min-orders" type="number" defaultValue="1" />
+                {getCurrentSettings() && (
+                    <div className="grid gap-6 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Bonus Type</Label>
+                                <Select defaultValue={getCurrentSettings()!.bonusType}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="amount">Fixed Amount</SelectItem>
+                                        <SelectItem value="discount">Discount (%)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="bonus-value">Bonus Value</Label>
+                                <Input id="bonus-value" type="number" defaultValue={getCurrentSettings()!.bonusValue} />
+                            </div>
                         </div>
-                    )}
-                     {modalType === 'C2V' && (
-                         <div className="space-y-2">
-                            <Label htmlFor="min-bookings">Min. Bookings</Label>
-                            <Input id="min-bookings" type="number" defaultValue="5" />
+                        <div className="space-y-2">
+                            <Label>Usage Limit</Label>
+                            <RadioGroup defaultValue={getCurrentSettings()!.usageLimit} className="flex space-x-4">
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="unlimited" id="unlimited" />
+                                    <Label htmlFor="unlimited">Unlimited</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="manual" id="manual" />
+                                    <Label htmlFor="manual">Manual Count</Label>
+                                </div>
+                            </RadioGroup>
                         </div>
-                    )}
-                </div>
+                        {getCurrentSettings()!.usageLimit === 'manual' && (
+                             <div className="space-y-2">
+                                <Label htmlFor="usage-count">Number of Referrals</Label>
+                                <Input id="usage-count" type="number" placeholder="e.g., 100" defaultValue={getCurrentSettings()!.usageCount || ''}/>
+                            </div>
+                        )}
+                         <div className="space-y-2">
+                            <Label htmlFor="credit-time">Credit Time</Label>
+                            <Input id="credit-time" placeholder="e.g., 7 days" defaultValue={getCurrentSettings()!.creditTime}/>
+                        </div>
+                    </div>
+                )}
                 <DialogFooter>
                     <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancel</Button>
                     <Button type="submit" onClick={handleCloseModal}>Save Changes</Button>
