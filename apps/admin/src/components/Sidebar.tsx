@@ -5,94 +5,49 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaSignOutAlt, FaBox, FaUserMd, FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaBars, FaTimes, FaRedo } from "react-icons/fa";
+import { FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa";
+import { sidebarNavItems, NavItem } from "@/lib/routes";
+import { useAppSelector } from "@repo/store/hooks";
+import { useEffect, useState } from "react";
 
-const sidebarNavItems = [
-  {
-    title: "Dashboard",
-    href: "/",
-    icon: <FaTachometerAlt className="h-4 w-4" />,
-  },
-  {
-    title: "Customers",
-    href: "/customers",
-    icon: <FaUsers className="h-4 w-4" />,
-  },
-  {
-    title: "Vendors",
-    href: "/vendors",
-    icon: <FaUserCog className="h-4 w-4" />,
-  },
-  {
-    title: "Doctors & Dermats",
-    href: "/doctors-dermats",
-    icon: <FaUserMd className="h-4 w-4" />,
-  },
-  {
-    title: "Vendor Approval",
-    href: "/vendor-approval",
-    icon: <FaCheckCircle className="h-4 w-4" />,
-  },
-  {
-    title: "Supplier Management",
-    href: "/supplier-management",
-    icon: <FaTruck className="h-4 w-4" />,
-  },
-  {
-    title: "Admin Roles",
-    href: "/admin-roles",
-    icon: <FaUserShield className="h-4 w-4" />,
-  },
-  {
-    title: "Offers & Coupons",
-    href: "/offers-coupons",
-    icon: <FaTags className="h-4 w-4" />,
-  },
-   {
-    title: "Subscription Management",
-    href: "/subscription-management",
-    icon: <FaRedo className="h-4 w-4" />,
-  },
-  {
-    title: "Referral Management",
-    href: "/referral-management",
-    icon: <FaUserFriends className="h-4 w-4" />,
-  },
-  {
-    title: "Tax & Fees",
-    href: "/tax-fees",
-    icon: <FaMoneyBillWave className="h-4 w-4" />,
-  },
-  {
-    title: "Payout",
-    href: "/payout",
-    icon: <FaMoneyCheckAlt className="h-4 w-4" />,
-  },
-  {
-    title: "Marketing",
-    href: "/marketing",
-    icon: <FaBullhorn className="h-4 w-4" />,
-  },
-  {
-    title: "Reports",
-    href: "/reports",
-    icon: <FaFileAlt className="h-4 w-4" />,
-  },
-  {
-    title: "FAQ Management",
-    href: "/faq-management",
-    icon: <FaQuestionCircle className="h-4 w-4" />,
-  },
-];
+
+// Mock hook to get user permissions. In a real app, this would come from your auth context/store.
+const useUserPermissions = () => {
+    // const user = useAppSelector(state => state.auth.user)
+    // For demonstration, we'll mock the user and their permissions.
+    // A 'superadmin' has all permissions.
+    const mockUser = {
+        role: "superadmin", // or 'admin', 'editor', etc.
+        // permissions: ["dashboard", "customers", "vendors"] // for a non-superadmin
+    };
+
+    const [permissions, setPermissions] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (mockUser.role === 'superadmin') {
+            setPermissions(sidebarNavItems.map(item => item.permission));
+        } 
+        // else {
+        //     // In a real app, you'd fetch this from your user object
+        //     setPermissions(mockUser.permissions);
+        // }
+    }, [mockUser.role]);
+
+    return permissions;
+};
+
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  
+  const permissions = useUserPermissions();
+
   const handleLogout = async () => {
     await fetch('/api/admin/auth/logout', { method: 'POST' });
     router.push('/login');
   };
+  
+  const visibleNavItems = sidebarNavItems.filter(item => permissions.includes(item.permission));
 
   const SidebarContent = () => (
     <div className={cn(
@@ -116,7 +71,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
           </Button>
         </div>
         <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto no-scrollbar">
-          {sidebarNavItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
