@@ -3,12 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    "./store": "./src/store.ts",
-    "./hooks": "./src/hooks.ts",
-    "./provider": "./src/provider.tsx",
-    "./apis/example": "./src/apis/example-api.ts",
-    "./slices/auth": "./src/slices/auth-slice.ts",
-    "./slices/modal": "./src/slices/modalSlice.ts"
+    "./store": "./src/store.js",
+    "./hooks": "./src/hooks.js",
+    "./provider": "./src/provider.jsx",
+    "./apis/example": "./src/apis/example-api.js",
+    "./slices/auth": "./src/slices/auth-slice.js",
+    "./slices/modal": "./src/slices/modalSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
