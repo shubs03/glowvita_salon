@@ -5,98 +5,86 @@ import { useState } from 'react';
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
-import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
-import { Checkbox } from '@repo/ui/checkbox';
-import { Trash2, Edit, Plus } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { sidebarNavItems } from '@/lib/routes';
+import AddAdminForm, { AdminUser } from '@/components/AddAdminForm';
 
-interface Role {
-    id: string;
-    roleName: string;
-    permissions: string[];
-}
-
-const initialRoles: Role[] = [
+const initialAdmins: AdminUser[] = [
     {
-        id: 'role_1',
-        roleName: "Super Admin",
-        permissions: sidebarNavItems.map(item => item.permission), // All permissions
+        id: 'user_1',
+        fullName: "Super Admin",
+        mobileNumber: "1234567890",
+        email: "superadmin@example.com",
+        role: "Super Admin",
+        designation: "Head Admin",
+        address: "123 Admin Lane",
+        permissions: sidebarNavItems.map(item => item.permission),
+        isActive: true,
     },
     {
-        id: 'role_2',
-        roleName: "Support Staff",
+        id: 'user_2',
+        fullName: "Support Staff",
+        mobileNumber: "0987654321",
+        email: "support@example.com",
+        role: "Support Staff",
+        designation: "Support Agent",
+        address: "456 Support Street",
         permissions: ["dashboard", "customers", "vendors"],
-    },
-    {
-        id: 'role_3',
-        roleName: "Content Editor",
-        permissions: ["dashboard", "faq-management", "marketing"],
-    },
-    {
-        id: 'role_4',
-        roleName: "Finance Manager",
-        permissions: ["dashboard", "payout", "reports", "tax-fees"],
+        isActive: true,
     },
 ];
 
-export default function AdminRolesPage() {
-    const [roles, setRoles] = useState<Role[]>(initialRoles);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [editingRole, setEditingRole] = useState<Role | null>(null);
+const allRoles = [
+    { roleName: 'Super Admin', permissions: 'all', isActive: true },
+    { roleName: 'Support Staff', permissions: 'limited', isActive: true },
+    { roleName: 'Content Editor', permissions: 'limited', isActive: true },
+    { roleName: 'Finance Manager', permissions: 'limited', isActive: true },
+];
 
-    const openModal = (role: Role | null = null) => {
-        setEditingRole(role);
+export default function AdminManagementPage() {
+    const [admins, setAdmins] = useState<AdminUser[]>(initialAdmins);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+
+    const openModal = (admin: AdminUser | null = null) => {
+        setEditingAdmin(admin);
         setIsModalOpen(true);
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
-        setEditingRole(null);
-    };
-    
-    const openDeleteModal = (role: Role) => {
-        setEditingRole(role);
-        setIsDeleteModalOpen(true);
+        setEditingAdmin(null);
     };
 
-    const closeDeleteModal = () => {
-        setIsDeleteModalOpen(false);
-        setEditingRole(null);
-    };
-
-    const handleSaveRole = (roleData: Role) => {
-        if (editingRole) {
-            setRoles(roles.map(r => r.id === roleData.id ? roleData : r));
+    const handleSaveAdmin = (adminData: AdminUser) => {
+        if (adminData.id) {
+            setAdmins(admins.map(a => a.id === adminData.id ? adminData : a));
         } else {
-            setRoles([...roles, { ...roleData, id: `role_${Date.now()}` }]);
+            setAdmins([...admins, { ...adminData, id: `user_${Date.now()}` }]);
         }
         closeModal();
     };
     
-    const handleDeleteRole = () => {
-        if (editingRole) {
-            setRoles(roles.filter(r => r.id !== editingRole.id));
-            closeDeleteModal();
+    const handleDeleteAdmin = (id?: string) => {
+        if (id) {
+            setAdmins(admins.filter(a => a.id !== id));
         }
     };
     
     return (
         <div className="p-4 sm:p-6 lg:p-8">
-            <h1 className="text-2xl font-bold font-headline mb-6">Admin Roles & Permissions</h1>
+            <h1 className="text-2xl font-bold font-headline mb-6">Admin User Management</h1>
 
             <Card>
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle>Manage Roles</CardTitle>
-                            <CardDescription>Define roles and assign permissions for admin users.</CardDescription>
+                            <CardTitle>Manage Admins</CardTitle>
+                            <CardDescription>Add, edit, and assign permissions to admin users.</CardDescription>
                         </div>
                         <Button onClick={() => openModal()}>
                             <Plus className="mr-2 h-4 w-4" />
-                            Add New Role
+                            Add New Admin
                         </Button>
                     </div>
                 </CardHeader>
@@ -105,32 +93,32 @@ export default function AdminRolesPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Role Name</TableHead>
-                                    <TableHead>Permissions</TableHead>
+                                    <TableHead>Full Name</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Role</TableHead>
+                                    <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {roles.map((role) => (
-                                    <TableRow key={role.id}>
-                                        <TableCell className="font-medium">{role.roleName}</TableCell>
-                                        <TableCell className="max-w-md truncate">
-                                            {role.permissions.join(', ')}
+                                {admins.map((admin) => (
+                                    <TableRow key={admin.id}>
+                                        <TableCell className="font-medium">{admin.fullName}</TableCell>
+                                        <TableCell>{admin.email}</TableCell>
+                                        <TableCell>{admin.role}</TableCell>
+                                        <TableCell>
+                                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                                admin.isActive
+                                                ? "bg-green-100 text-green-800"
+                                                : "bg-gray-100 text-gray-800"
+                                            }`}>
+                                                {admin.isActive ? 'Active' : 'Inactive'}
+                                            </span>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => openModal(role)}>
+                                            <Button variant="ghost" size="icon" onClick={() => openModal(admin)}>
                                                 <Edit className="h-4 w-4" />
                                                 <span className="sr-only">Edit</span>
-                                            </Button>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="text-red-500 hover:text-red-700" 
-                                                onClick={() => openDeleteModal(role)}
-                                                disabled={role.roleName === 'Super Admin'}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                                <span className="sr-only">Delete</span>
                                             </Button>
                                         </TableCell>
                                     </TableRow>
@@ -141,123 +129,15 @@ export default function AdminRolesPage() {
                 </CardContent>
             </Card>
 
-            <RoleFormModal
+            <AddAdminForm
                 isOpen={isModalOpen}
                 onClose={closeModal}
-                onSave={handleSaveRole}
-                role={editingRole}
+                onSave={handleSaveAdmin}
+                initialData={editingAdmin}
+                roles={allRoles}
+                onDelete={handleDeleteAdmin}
+                isEditMode={!!editingAdmin}
             />
-
-            <Dialog open={isDeleteModalOpen} onOpenChange={closeDeleteModal}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Delete Role?</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to delete the role "{editingRole?.roleName}"? This action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="secondary" onClick={closeDeleteModal}>Cancel</Button>
-                        <Button variant="destructive" onClick={handleDeleteRole}>Delete</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </div>
     );
-}
-
-interface RoleFormModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    onSave: (role: Role) => void;
-    role: Role | null;
-}
-
-function RoleFormModal({ isOpen, onClose, onSave, role }: RoleFormModalProps) {
-    const [roleName, setRoleName] = useState('');
-    const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
-
-    React.useEffect(() => {
-        if (role) {
-            setRoleName(role.roleName);
-            setSelectedPermissions(role.permissions);
-        } else {
-            setRoleName('');
-            setSelectedPermissions([]);
-        }
-    }, [role, isOpen]);
-
-    const handlePermissionChange = (permission: string, checked: boolean) => {
-        setSelectedPermissions(prev =>
-            checked ? [...prev, permission] : prev.filter(p => p !== permission)
-        );
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onSave({
-            id: role?.id || '',
-            roleName,
-            permissions: selectedPermissions
-        });
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-2xl">
-                <form onSubmit={handleSubmit}>
-                    <DialogHeader>
-                        <DialogTitle>{role ? 'Edit Role' : 'Add New Role'}</DialogTitle>
-                        <DialogDescription>
-                            Set the role name and select the pages this role can access.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-6 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="roleName">Role Name</Label>
-                            <Input
-                                id="roleName"
-                                value={roleName}
-                                onChange={(e) => setRoleName(e.target.value)}
-                                required
-                                disabled={role?.roleName === 'Super Admin'}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Permissions</Label>
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 rounded-md border p-4 max-h-64 overflow-y-auto">
-                                {sidebarNavItems.map(item => (
-                                    <div key={item.permission} className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id={item.permission}
-                                            checked={selectedPermissions.includes(item.permission)}
-                                            onCheckedChange={(checked) => handlePermissionChange(item.permission, !!checked)}
-                                            disabled={role?.roleName === 'Super Admin'}
-                                        />
-                                        <label
-                                            htmlFor={item.permission}
-                                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                        >
-                                            {item.title}
-                                        </label>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
-                        <Button type="submit" disabled={role?.roleName === 'Super Admin'}>Save Role</Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-// Checkbox component needs to be available in the project.
-// Assuming it exists at @repo/ui/checkbox
-declare module "@repo/ui/checkbox" {
-    const Checkbox: React.FC<any>;
-    export { Checkbox };
 }
