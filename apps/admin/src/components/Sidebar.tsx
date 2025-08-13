@@ -6,48 +6,34 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
 import { FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa";
-import { sidebarNavItems, NavItem } from "@/lib/routes";
-import { useAppSelector } from "@repo/store/hooks";
-import { useEffect, useState } from "react";
-
-
-// Mock hook to get user permissions. In a real app, this would come from your auth context/store.
-const useUserPermissions = () => {
-    // const user = useAppSelector(state => state.auth.user)
-    // For demonstration, we'll mock the user and their permissions.
-    // A 'superadmin' has all permissions.
-    const mockUser = {
-        role: "superadmin", // or 'admin', 'editor', etc.
-        // permissions: ["dashboard", "customers", "vendors"] // for a non-superadmin
-    };
-
-    const [permissions, setPermissions] = useState<string[]>([]);
-
-    useEffect(() => {
-        if (mockUser.role === 'superadmin') {
-            setPermissions(sidebarNavItems.map(item => item.permission));
-        } 
-        // else {
-        //     // In a real app, you'd fetch this from your user object
-        //     setPermissions(mockUser.permissions);
-        // }
-    }, [mockUser.role]);
-
-    return permissions;
-};
+import { sidebarNavItems } from "@/lib/routes";
+import { useAuth } from "@/hooks/useAuth";
+import { useAppDispatch } from "@repo/store/hooks";
+import { clearAdminAuth } from "@repo/store/slices/auth";
 
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  const permissions = useUserPermissions();
+  const dispatch = useAppDispatch();
+  const { admin, isLoading } = useAuth();
 
   const handleLogout = async () => {
-    await fetch('/api/admin/auth/logout', { method: 'POST' });
+    // This is a client-side logout.
+    // The API route for logout clears the httpOnly cookie if you were using it.
+    // Here we clear the client-side state and token.
+    dispatch(clearAdminAuth());
     router.push('/login');
   };
   
-  const visibleNavItems = sidebarNavItems.filter(item => permissions.includes(item.permission));
+  if (isLoading) {
+    return null; // Or a loading skeleton
+  }
+
+  const permissions = admin?.permissions || [];
+  const isSuperAdmin = admin?.roleName === 'Super Admin';
+  
+  const visibleNavItems = isSuperAdmin ? sidebarNavItems : sidebarNavItems.filter(item => permissions.includes(item.permission));
 
   const SidebarContent = () => (
     <div className={cn(

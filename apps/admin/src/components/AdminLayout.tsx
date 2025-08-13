@@ -1,13 +1,15 @@
 
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
+import { useAuth } from '@/hooks/useAuth';
 
 export function AdminLayout({ children }: { children: React.ReactNode; }) {
-  const pathname = usePathname();
+  const router = useRouter();
+  const { admin, isLoading } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -19,6 +21,12 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+  
+  useEffect(() => {
+    if (!isLoading && !admin) {
+        router.push('/login');
+    }
+  }, [admin, isLoading, router])
 
   useEffect(() => {
     if (isMobile) {
@@ -28,15 +36,18 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
     }
   }, [isMobile]);
 
-  const showLayout = pathname !== '/login';
-
-  if (!showLayout) {
-    return <>{children}</>;
-  }
   
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
+  
+  if (isLoading || !admin) {
+    return (
+        <div className="flex items-center justify-center h-screen">
+            <div>Loading...</div>
+        </div>
+    )
+  }
 
   return (
     <div className="flex h-screen bg-secondary overflow-hidden">
