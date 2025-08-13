@@ -174,7 +174,7 @@ export default function VendorManagementPage() {
                 </div>
             </div>
 
-          <div className="overflow-x-auto no-scrollbar">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -232,7 +232,7 @@ export default function VendorApprovalPage() {
                 <CardDescription>Vendors waiting for verification to join the platform.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                <div className="overflow-x-auto no-scrollbar">
+                <div className="overflow-x-auto">
                     <Table>
                     <TableHeader>
                         <TableRow>
@@ -296,7 +296,7 @@ export default function VendorApprovalPage() {
                 <CardDescription>Services submitted by vendors waiting for approval.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                <div className="overflow-x-auto no-scrollbar">
+                <div className="overflow-x-auto">
                     <Table>
                     <TableHeader>
                         <TableRow>

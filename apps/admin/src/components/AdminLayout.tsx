@@ -15,7 +15,13 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if(mobile) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -29,15 +35,6 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
     // }
   }, [admin, isLoading, router])
 
-  useEffect(() => {
-    if (isMobile) {
-      setSidebarOpen(false);
-    } else {
-      setSidebarOpen(true);
-    }
-  }, [isMobile]);
-
-  
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
@@ -53,9 +50,9 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   return (
     <div className="flex h-screen bg-secondary">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} isMobile={isMobile}/>
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col h-screen">
         <Header toggleSidebar={toggleSidebar} />
-        <main className="flex-1 no-scrollbar">
+        <main className="flex-1 overflow-y-auto">
             {children}
         </main>
       </div>
