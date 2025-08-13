@@ -219,7 +219,7 @@ export default function PayoutPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto no-scrollbar">
             <Table>
               <TableHeader>
                 <TableRow>

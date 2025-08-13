@@ -33,7 +33,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   }
 
   const permissions = admin?.permissions || [];
-  const isSuperAdmin = admin?.roleName === 'Super Admin';
+  const isSuperAdmin = admin?.roleName === 'superadmin';
   
   const visibleNavItems = isSuperAdmin 
     ? sidebarNavItems 
@@ -45,7 +45,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
         isOpen ? "w-64" : "w-20",
         isMobile && "w-64"
     )}>
-      <div className="flex-grow flex flex-col overflow-y-hidden">
+      <div className="flex flex-col flex-grow overflow-hidden">
         <div className="p-4 h-16 border-b flex items-center shrink-0 justify-between">
            <Link href="/" className="flex items-center gap-2">
             <h1 className={cn("text-xl font-bold font-headline text-primary", !isOpen && !isMobile && "lg:hidden")}>Admin</h1>
@@ -60,7 +60,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
             <span className="sr-only">Toggle navigation menu</span>
           </Button>
         </div>
-        <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto no-scrollbar">
+        <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto">
           {visibleNavItems.map((item) => (
             <Link
               key={item.href}
@@ -102,7 +102,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   }
 
   return (
-    <div className="hidden lg:block">
+    <div className="hidden lg:block h-full">
         <SidebarContent />
     </div>
   );

@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Trash2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 
 const vendorsData = [
     {
@@ -52,7 +53,44 @@ const vendorsData = [
     },
 ];
 
+const servicesData = [
+  {
+    id: "SRV-001",
+    serviceName: "Advanced Haircut",
+    vendorName: "New Beauty Haven",
+    category: "Hair",
+    price: 75.00,
+    status: "Pending",
+  },
+  {
+    id: "SRV-002",
+    serviceName: "Gel Manicure",
+    vendorName: "City Style Salon",
+    category: "Nails",
+    price: 55.00,
+    status: "Pending",
+  },
+  {
+    id: "SRV-003",
+    serviceName: "Deep Tissue Massage",
+    vendorName: "Urban Cuts",
+    category: "Spa",
+    price: 120.00,
+    status: "Approved",
+  },
+   {
+    id: "SRV-004",
+    serviceName: "Bridal Makeup",
+    vendorName: "The Glow Up Studio",
+    category: "Makeup",
+    price: 250.00,
+    status: "Pending",
+  },
+];
+
+
 type Vendor = typeof vendorsData[0];
+type Service = typeof servicesData[0];
 type ActionType = 'approve' | 'reject' | 'delete';
 
 export default function VendorApprovalPage() {
@@ -61,16 +99,27 @@ export default function VendorApprovalPage() {
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+    const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [actionType, setActionType] = useState<ActionType | null>(null);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
-    const currentItems = vendorsData.slice(firstItemIndex, lastItemIndex);
+    const currentVendors = vendorsData.slice(firstItemIndex, lastItemIndex);
+    const currentServices = servicesData.slice(firstItemIndex, lastItemIndex);
 
-    const totalPages = Math.ceil(vendorsData.length / itemsPerPage);
+    const totalVendorPages = Math.ceil(vendorsData.length / itemsPerPage);
+    const totalServicePages = Math.ceil(servicesData.length / itemsPerPage);
 
-    const handleActionClick = (vendor: Vendor, action: ActionType) => {
+    const handleVendorActionClick = (vendor: Vendor, action: ActionType) => {
         setSelectedVendor(vendor);
+        setSelectedService(null);
+        setActionType(action);
+        setIsActionModalOpen(true);
+    };
+
+    const handleServiceActionClick = (service: Service, action: ActionType) => {
+        setSelectedService(service);
+        setSelectedVendor(null);
         setActionType(action);
         setIsActionModalOpen(true);
     };
@@ -83,32 +132,38 @@ export default function VendorApprovalPage() {
     const handleConfirmAction = () => {
         if (selectedVendor && actionType) {
             console.log(`Performing ${actionType} on vendor ${selectedVendor.name}`);
-            // Here you would typically dispatch an action or call an API
+        } else if (selectedService && actionType) {
+            console.log(`Performing ${actionType} on service ${selectedService.serviceName}`);
         }
         setIsActionModalOpen(false);
         setSelectedVendor(null);
+        setSelectedService(null);
         setActionType(null);
     };
 
     const getModalContent = () => {
-        if (!actionType || !selectedVendor) return { title: '', description: '', buttonText: '' };
+        const item = selectedVendor ? selectedVendor.name : selectedService?.serviceName;
+        const itemType = selectedVendor ? "vendor" : "service";
+
+        if (!actionType || !item) return { title: '', description: '', buttonText: '' };
+        
         switch (actionType) {
             case 'approve':
                 return {
-                    title: 'Approve Vendor?',
-                    description: `Are you sure you want to approve the vendor "${selectedVendor.name}"? They will get access to the platform.`,
+                    title: `Approve ${itemType}?`,
+                    description: `Are you sure you want to approve the ${itemType} "${item}"?`,
                     buttonText: 'Approve'
                 };
             case 'reject':
                 return {
-                    title: 'Reject Vendor?',
-                    description: `Are you sure you want to reject the vendor "${selectedVendor.name}"? This action cannot be undone.`,
+                    title: `Reject ${itemType}?`,
+                    description: `Are you sure you want to reject the ${itemType} "${item}"? This action cannot be undone.`,
                     buttonText: 'Reject'
                 };
             case 'delete':
                 return {
-                    title: 'Delete Vendor?',
-                    description: `Are you sure you want to permanently delete the vendor "${selectedVendor.name}"? This action is irreversible.`,
+                    title: `Delete ${itemType}?`,
+                    description: `Are you sure you want to permanently delete the ${itemType} "${item}"? This action is irreversible.`,
                     buttonText: 'Delete'
                 };
             default:
@@ -120,7 +175,7 @@ export default function VendorApprovalPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Vendor Verification & Approval</h1>
+      <h1 className="text-2xl font-bold font-headline mb-6">Vendor & Service Approval</h1>
 
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -165,68 +220,144 @@ export default function VendorApprovalPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Pending Approvals</CardTitle>
-          <CardDescription>Vendors waiting for verification to join the platform.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto no-scrollbar">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Vendor ID</TableHead>
-                  <TableHead>Salon Name</TableHead>
-                  <TableHead>Owner Name</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead>Pincode</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {currentItems.map((vendor) => (
-                    <TableRow key={vendor.id}>
-                      <TableCell className="font-mono text-xs">{vendor.id}</TableCell>
-                      <TableCell className="font-medium">{vendor.name}</TableCell>
-                      <TableCell>{vendor.owner}</TableCell>
-                      <TableCell>{vendor.phone}</TableCell>
-                      <TableCell>{vendor.city}</TableCell>
-                      <TableCell>{vendor.pincode}</TableCell>
-                      <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewClick(vendor)}>
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">View Details</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'approve')}>
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                              <span className="sr-only">Approve</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'reject')}>
-                              <XCircle className="h-4 w-4 text-red-600" />
-                              <span className="sr-only">Reject</span>
-                          </Button>
-                           <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'delete')}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                              <span className="sr-only">Delete</span>
-                          </Button>
-                      </TableCell>
-                    </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <Pagination
-              className="mt-4"
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-              onItemsPerPageChange={setItemsPerPage}
-              totalItems={vendorsData.length}
-          />
-        </CardContent>
-      </Card>
+    <Tabs defaultValue="vendor-approvals">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="vendor-approvals">Vendor Approvals</TabsTrigger>
+            <TabsTrigger value="service-approvals">Service Approvals</TabsTrigger>
+        </TabsList>
+        <TabsContent value="vendor-approvals">
+            <Card>
+                <CardHeader>
+                <CardTitle>Pending Approvals</CardTitle>
+                <CardDescription>Vendors waiting for verification to join the platform.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <div className="overflow-x-auto no-scrollbar">
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Vendor ID</TableHead>
+                        <TableHead>Salon Name</TableHead>
+                        <TableHead>Owner Name</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>City</TableHead>
+                        <TableHead>Pincode</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {currentVendors.map((vendor) => (
+                            <TableRow key={vendor.id}>
+                            <TableCell className="font-mono text-xs">{vendor.id}</TableCell>
+                            <TableCell className="font-medium">{vendor.name}</TableCell>
+                            <TableCell>{vendor.owner}</TableCell>
+                            <TableCell>{vendor.phone}</TableCell>
+                            <TableCell>{vendor.city}</TableCell>
+                            <TableCell>{vendor.pincode}</TableCell>
+                            <TableCell className="text-right">
+                                <Button variant="ghost" size="icon" onClick={() => handleViewClick(vendor)}>
+                                    <Eye className="h-4 w-4" />
+                                    <span className="sr-only">View Details</span>
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleVendorActionClick(vendor, 'approve')}>
+                                    <CheckCircle className="h-4 w-4 text-green-600" />
+                                    <span className="sr-only">Approve</span>
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleVendorActionClick(vendor, 'reject')}>
+                                    <XCircle className="h-4 w-4 text-red-600" />
+                                    <span className="sr-only">Reject</span>
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleVendorActionClick(vendor, 'delete')}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    <span className="sr-only">Delete</span>
+                                </Button>
+                            </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                    </Table>
+                </div>
+                <Pagination
+                    className="mt-4"
+                    currentPage={currentPage}
+                    totalPages={totalVendorPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={setItemsPerPage}
+                    totalItems={vendorsData.length}
+                />
+                </CardContent>
+            </Card>
+        </TabsContent>
+        <TabsContent value="service-approvals">
+            <Card>
+                <CardHeader>
+                <CardTitle>Pending Service Approvals</CardTitle>
+                <CardDescription>Services submitted by vendors waiting for approval.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <div className="overflow-x-auto no-scrollbar">
+                    <Table>
+                    <TableHeader>
+                        <TableRow>
+                        <TableHead>Service ID</TableHead>
+                        <TableHead>Service Name</TableHead>
+                        <TableHead>Vendor</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {currentServices.map((service) => (
+                            <TableRow key={service.id}>
+                                <TableCell className="font-mono text-xs">{service.id}</TableCell>
+                                <TableCell className="font-medium">{service.serviceName}</TableCell>
+                                <TableCell>{service.vendorName}</TableCell>
+                                <TableCell>{service.category}</TableCell>
+                                <TableCell>${service.price.toFixed(2)}</TableCell>
+                                <TableCell>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                        service.status === "Approved" ? "bg-green-100 text-green-800" :
+                                        "bg-yellow-100 text-yellow-800"
+                                    }`}>
+                                        {service.status}
+                                    </span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    {service.status === "Pending" && (
+                                        <>
+                                            <Button variant="ghost" size="icon" onClick={() => handleServiceActionClick(service, 'approve')}>
+                                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                                <span className="sr-only">Approve</span>
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleServiceActionClick(service, 'reject')}>
+                                                <XCircle className="h-4 w-4 text-red-600" />
+                                                <span className="sr-only">Reject</span>
+                                            </Button>
+                                        </>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                    </Table>
+                </div>
+                <Pagination
+                    className="mt-4"
+                    currentPage={currentPage}
+                    totalPages={totalServicePages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={setItemsPerPage}
+                    totalItems={servicesData.length}
+                />
+                </CardContent>
+            </Card>
+        </TabsContent>
+    </Tabs>
+
 
        <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
             <DialogContent>
