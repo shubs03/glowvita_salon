@@ -1,9 +1,11 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
+import { Checkbox } from "@repo/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui/select";
+import { sidebarNavItems } from '@/lib/routes';
+import { Trash2 } from 'lucide-react';
 
 export type AdminUser = {
   id?: string;
@@ -32,12 +36,11 @@ export type AdminUser = {
   address: string;
   photo?: string | File;
   isActive?: boolean;
+  permissions?: string[];
 };
 
 type AdminRole = {
   roleName: string;
-  permissions: string;
-  isActive: boolean;
 };
 
 type AddAdminFormProps = {
@@ -59,37 +62,31 @@ export function AddAdminForm({
   onDelete,
   isEditMode = false
 }: AddAdminFormProps) {
-  const [formData, setFormData] = useState<AdminUser>({
-    fullName: '',
-    mobileNumber: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: '',
-    designation: '',
-    address: '',
-    ...initialData
-  });
+    
+    const getInitialFormData = (data: AdminUser | null) => ({
+        fullName: '',
+        mobileNumber: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        role: '',
+        designation: '',
+        address: '',
+        permissions: [],
+        ...data
+    });
+    
+  const [formData, setFormData] = useState<AdminUser>(getInitialFormData(initialData));
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
 
-  // Reset form data when the modal is opened/closed or when initialData changes
   useEffect(() => {
-    if (!isOpen) return;
-    
-    const resetForm = {
-      fullName: '',
-      mobileNumber: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      role: '',
-      designation: '',
-      address: '',
-      ...initialData
-    };
-    
-    setFormData(resetForm);
-    setSelectedFile(null);
+    if (isOpen) {
+        const initialFormState = getInitialFormData(initialData);
+        setFormData(initialFormState);
+        setSelectedPermissions(initialFormState.permissions || []);
+    }
   }, [isOpen, initialData]);
+  
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -106,10 +103,15 @@ export function AddAdminForm({
     }
   };
 
+  const handlePermissionChange = (permission: string, checked: boolean) => {
+    setSelectedPermissions(prev =>
+        checked ? [...prev, permission] : prev.filter(p => p !== permission)
+    );
+  };
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Only validate passwords if it's not an edit or if passwords are being changed
     if (!isEditMode || formData.password) {
       if (formData.password !== formData.confirmPassword) {
         alert("Passwords don't match!");
@@ -117,18 +119,15 @@ export function AddAdminForm({
       }
     }
     
-    const dataToSave = {
+    const dataToSave: AdminUser = {
       ...formData,
-      // Don't include password fields if they're empty in edit mode
-      ...(isEditMode && !formData.password && {
-        password: undefined,
-        confirmPassword: undefined
-      }),
-      photo: selectedFile || formData.photo
+      permissions: selectedPermissions,
+      photo: selectedFile || formData.photo,
+      password: (isEditMode && !formData.password) ? undefined : formData.password,
+      confirmPassword: (isEditMode && !formData.password) ? undefined : formData.confirmPassword,
     };
     
     onSave(dataToSave);
-    onClose();
   };
   
   const handleDelete = () => {
@@ -138,119 +137,57 @@ export function AddAdminForm({
     }
   };
 
-  const handleOverlayClick = (event: any) => {
-    // Prevent the default behavior of closing the dialog
-    event.preventDefault();
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
-        className="sm:max-w-[600px]"
-        onInteractOutside={handleOverlayClick}
-        onEscapeKeyDown={(e) => {
-          // Prevent closing on escape key
-          e.preventDefault();
-        }}
-      >
+      <DialogContent className="sm:max-w-3xl">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{isEditMode ? 'Edit Admin User' : 'Add New Admin'}</DialogTitle>
             <DialogDescription>
               {isEditMode 
-                ? 'Update the admin user details below.'
+                ? 'Update the admin user details and permissions below.'
                 : 'Fill in the details below to create a new admin user.'}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name *</Label>
-                <Input
-                  id="fullName"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  required
-                />
+                <Input id="fullName" name="fullName" value={formData.fullName} onChange={handleInputChange} required />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="mobileNumber">Mobile Number *</Label>
-                <Input
-                  id="mobileNumber"
-                  name="mobileNumber"
-                  type="tel"
-                  value={formData.mobileNumber}
-                  onChange={handleInputChange}
-                  required
-                />
+                <Input id="mobileNumber" name="mobileNumber" type="tel" value={formData.mobileNumber} onChange={handleInputChange} required />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                />
+                <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} required />
               </div>
-              
               <div className="space-y-2">
                 <Label htmlFor="designation">Designation</Label>
-                <Input
-                  id="designation"
-                  name="designation"
-                  value={formData.designation}
-                  onChange={handleInputChange}
-                />
+                <Input id="designation" name="designation" value={formData.designation} onChange={handleInputChange}/>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              {!isEditMode && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password *</Label>
-                    <Input
-                      id="password"
-                      name="password"
-                      type="password"
-                      value={formData.password || ''}
-                      onChange={handleInputChange}
-                      required={!isEditMode}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                    <Input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type="password"
-                      value={formData.confirmPassword || ''}
-                      onChange={handleInputChange}
-                      required={!isEditMode}
-                    />
-                  </div>
-                </>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="space-y-2">
+                <Label htmlFor="password">{isEditMode ? 'New Password (Optional)' : 'Password *'}</Label>
+                <Input id="password" name="password" type="password" value={formData.password || ''} onChange={handleInputChange} required={!isEditMode}/>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">{isEditMode ? 'Confirm New Password' : 'Confirm Password *'}</Label>
+                <Input id="confirmPassword" name="confirmPassword" type="password" value={formData.confirmPassword || ''} onChange={handleInputChange} required={!isEditMode} />
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="role">Role *</Label>
-                <Select
-                  value={formData.role}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))}
-                  required
-                >
+                <Select value={formData.role} onValueChange={(value) => setFormData(prev => ({ ...prev, role: value }))} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
@@ -263,51 +200,49 @@ export function AddAdminForm({
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="photo">Photo</Label>
-                <Input
-                  id="photo"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                />
+                <Input id="photo" type="file" accept="image/*" onChange={handleFileChange} />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="address">Address</Label>
-              <textarea
-                id="address"
-                name="address"
-                rows={3}
-                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={formData.address}
-                onChange={handleInputChange}
-              />
+              <textarea id="address" name="address" rows={2} className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" value={formData.address} onChange={handleInputChange} />
             </div>
+
+            <div className="space-y-2">
+                <Label>Page Permissions</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 rounded-md border p-4 max-h-64 overflow-y-auto">
+                    {sidebarNavItems.map(item => (
+                        <div key={item.permission} className="flex items-center space-x-2">
+                            <Checkbox
+                                id={`perm_${item.permission}`}
+                                checked={selectedPermissions.includes(item.permission)}
+                                onCheckedChange={(checked) => handlePermissionChange(item.permission, !!checked)}
+                                disabled={formData.role === 'Super Admin'}
+                            />
+                            <label htmlFor={`perm_${item.permission}`} className="text-sm font-medium leading-none">
+                                {item.title}
+                            </label>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
           </div>
 
-          <DialogFooter className="flex justify-between">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center w-full">
             <div>
               {isEditMode && onDelete && (
-                <Button 
-                  type="button" 
-                  variant="destructive" 
-                  onClick={handleDelete}
-                  className="mr-2"
-                >
+                <Button type="button" variant="destructive" onClick={handleDelete}>
+                  <Trash2 className="mr-2 h-4 w-4" />
                   Delete Admin
                 </Button>
               )}
             </div>
-            <div>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={onClose}
-                className="mr-2"
-              >
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
               <Button type="submit">

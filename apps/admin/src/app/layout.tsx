@@ -1,20 +1,22 @@
 
-import type { Metadata } from 'next';
+"use client";
+
+import type { ReactNode } from 'react';
 import StoreProvider from '@repo/store/provider';
 import './globals.css';
 import { AdminLayout } from '@/components/AdminLayout';
 import { ThemeProvider } from '@/components/ThemeProvider';
-
-export const metadata: Metadata = {
-  title: 'Admin Panel',
-  description: 'Admin Panel for Monorepo Maestro.',
-};
+import { usePathname } from 'next/navigation';
+import { AuthInitializer } from '@/components/AuthInitializer';
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
+  const pathname = usePathname();
+  const showLayout = pathname !== '/login';
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -24,14 +26,16 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <AdminLayout>{children}</AdminLayout>
-          </ThemeProvider>
+            <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+            >
+                <AuthInitializer>
+                    {showLayout ? <AdminLayout>{children}</AdminLayout> : children}
+                </AuthInitializer>
+            </ThemeProvider>
         </StoreProvider>
       </body>
     </html>

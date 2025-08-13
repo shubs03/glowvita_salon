@@ -16,6 +16,7 @@
     "./textarea": "./src/textarea.tsx",
     "./radio-group": "./src/radio-group.tsx",
     "./switch": "./src/switch.tsx",
+    "./checkbox": "./src/checkbox.tsx",
     "./globals.css": "./src/globals.css",
     "./tailwind.config": "./tailwind.config.ts",
     "./cn": "./src/cn.ts"
@@ -25,6 +26,7 @@
     "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
   },
   "dependencies": {
+    "@radix-ui/react-checkbox": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-radio-group": "^1.2.0",

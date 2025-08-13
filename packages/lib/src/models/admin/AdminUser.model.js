@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const adminUserSchema = new mongoose.Schema({
@@ -37,14 +38,14 @@ const adminUserSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  role: {
+  roleName: {
     type: String,
-    enum: ["superadmin", "admin", "editor", "viewer"], // predefined roles
-    default: "admin",
+    required: true,
+    trim: true,
   },
   permissions: [
     {
-      type: String, // extra permissions if needed (custom per admin)
+      type: String,
       trim: true,
     },
   ],
