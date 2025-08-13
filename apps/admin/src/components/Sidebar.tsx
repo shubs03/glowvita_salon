@@ -23,6 +23,8 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
     // The API route for logout clears the httpOnly cookie if you were using it.
     // Here we clear the client-side state and token.
     dispatch(clearAdminAuth());
+    // Also clear from localStorage
+    localStorage.removeItem('adminAuthState');
     router.push('/login');
   };
   
@@ -33,7 +35,9 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   const permissions = admin?.permissions || [];
   const isSuperAdmin = admin?.roleName === 'Super Admin';
   
-  const visibleNavItems = isSuperAdmin ? sidebarNavItems : sidebarNavItems.filter(item => permissions.includes(item.permission));
+  const visibleNavItems = isSuperAdmin 
+    ? sidebarNavItems 
+    : sidebarNavItems.filter(item => permissions.includes(item.permission));
 
   const SidebarContent = () => (
     <div className={cn(
