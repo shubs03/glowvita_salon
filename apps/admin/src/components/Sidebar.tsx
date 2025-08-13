@@ -28,8 +28,16 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
     router.push('/login');
   };
   
-  // For development: bypass permissions and show all items
-  const visibleNavItems = sidebarNavItems;
+  if (isLoading) {
+    return null; // Or a loading skeleton
+  }
+
+  const permissions = admin?.permissions || [];
+  const isSuperAdmin = admin?.roleName === 'superadmin';
+  
+  const visibleNavItems = isSuperAdmin 
+    ? sidebarNavItems 
+    : sidebarNavItems.filter(item => permissions.includes(item.permission));
 
   const SidebarContent = () => (
     <div className={cn(
