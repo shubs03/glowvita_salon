@@ -8,21 +8,24 @@ await _db();
 
 export async function POST(req) {
   try {
-    const { firstName, lastName, emailAddress, mobileNo, password, role } = await req.json();
+    const { fullName, emailAddress, mobileNo, address, designation, profileImage, password, role } = await req.json();
 
-    // Validate fields
-    if (!firstName || !lastName || !emailAddress || !mobileNo || !password) {
+    // Validate required fields
+    if (!fullName || !emailAddress || !mobileNo || !address || !designation || !password) {
       return NextResponse.json({ error: "All required fields must be filled" }, { status: 400 });
     }
 
+    // Email validation
     if (!validator.isEmail(emailAddress)) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     }
 
+    // Mobile number validation
     if (!validator.isMobilePhone(mobileNo, "any")) {
       return NextResponse.json({ error: "Invalid mobile number" }, { status: 400 });
     }
 
+    // Password length validation
     if (password.length < 6) {
       return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
     }
@@ -33,17 +36,19 @@ export async function POST(req) {
       return NextResponse.json({ error: "Admin already registered" }, { status: 400 });
     }
 
-    // Hash the password
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create new admin
+    // Create new admin user
     const newAdmin = new AdminUserModel({
-      firstName,
-      lastName,
+      fullName,
       emailAddress,
       mobileNo,
+      address,
+      designation,
+      profileImage: profileImage || "", // optional
       password: hashedPassword,
-      role: role || "admin", // Default role if not provided
+      role: role || "admin", // default role if not provided
     });
 
     await newAdmin.save();

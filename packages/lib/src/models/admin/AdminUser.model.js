@@ -1,12 +1,7 @@
 import mongoose from "mongoose";
 
 const adminUserSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  lastName: {
+  fullName:{
     type: String,
     required: true,
     trim: true,
@@ -22,6 +17,20 @@ const adminUserSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
+    trim: true,
+  },
+  address: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  designation: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  profileImage: {
+    type: String,
     trim: true,
   },
   password: {
