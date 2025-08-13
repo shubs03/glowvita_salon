@@ -11,7 +11,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Edit2, Eye, Trash2, Plus } from "lucide-react";
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { openModal, closeModal } from '@repo/store/slices/modalSlice';
+import { openModal, closeModal } from '@repo/store/slices/modal';
 
 
 const couponsData = [

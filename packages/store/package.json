@@ -7,7 +7,8 @@
     "./hooks": "./src/hooks.ts",
     "./provider": "./src/provider.tsx",
     "./apis/example": "./src/apis/example-api.ts",
-    "./slices/auth": "./src/slices/auth-slice.ts"
+    "./slices/auth": "./src/slices/auth-slice.ts",
+    "./slices/modal": "./src/slices/modalSlice.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
