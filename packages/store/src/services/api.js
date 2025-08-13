@@ -4,8 +4,11 @@ const baseQuery = fetchBaseQuery({
   baseUrl: process.env.NEXT_PUBLIC_API_URL || "/api",
   prepareHeaders: (headers, { getState }) => {
     const accessToken = localStorage.getItem("accessToken");
-    const adminAccessToken = localStorage.getItem("admin_access_token");
+    const adminAuthState = localStorage.getItem("adminAuthState");
     const vendorAccessToken = localStorage.getItem("vendor_access_token");
+
+    const adminAccessToken =
+      adminAuthState && JSON.parse(adminAuthState).token;
 
     if (accessToken) {
       headers.set("Authorization", `Bearer ${accessToken}`);
@@ -90,6 +93,16 @@ export const glowvitaApi = createApi({
   baseQuery: baseQuery,
   tagTypes: ["admin"],
   endpoints: (builder) => ({
+    // Admin
+    registerAdmin: builder.mutation({
+      query: (admin) => ({
+        url: "/admin/register",
+        method: "POST",
+        body: admin,
+      }),
+      invalidatesTags: ["admin"],
+    }),
+
     adminLogin: builder.mutation({
       query: (credentials) => ({
         url: "/admin/auth/login",
@@ -98,7 +111,47 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["admin"],
     }),
+
+    getAdmins: builder.query({
+      query: () => "/admin",
+      providesTags: ["admin"],
+    }),
+
+    createAdmin: builder.mutation({
+      query: (admin) => ({
+        url: "/admin",
+        method: "POST",
+        body: admin,
+      }),
+      invalidatesTags: ["admin"],
+    }),
+
+    updateAdmin: builder.mutation({
+      query: (admin) => ({
+        url: `/admin`,
+        method: "PUT",
+        body: admin,
+      }),
+      invalidatesTags: ["admin"],
+    }),
+
+    deleteAdmin: builder.mutation({
+      query: (id) => ({
+        url: `/admin`,
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["admin"],
+    }),
   }),
 });
 
-export const { useAdminLoginMutation } = glowvitaApi;
+export const { 
+  useAdminLoginMutation,
+  useRegisterAdminMutation,
+  useCreateAdminMutation,
+  useUpdateAdminMutation,
+  useDeleteAdminMutation,
+  useGetAdminsQuery,
+
+ } = glowvitaApi;

@@ -33,7 +33,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   }
 
   const permissions = admin?.permissions || [];
-  const isSuperAdmin = admin?.roleName === 'Super Admin';
+  const isSuperAdmin = admin?.roleName === 'superadmin';
   
   const visibleNavItems = isSuperAdmin 
     ? sidebarNavItems 
