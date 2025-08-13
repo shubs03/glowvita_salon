@@ -300,8 +300,8 @@ export default function ReferralManagementPage() {
                             </div>
                         )}
                          <div className="space-y-2">
-                            <Label htmlFor="credit-time">Credit Time</Label>
-                            <Input id="credit-time" placeholder="e.g., 7 days" defaultValue={getCurrentSettings()!.creditTime}/>
+                            <Label htmlFor="credit-time">Credit Time (in days)</Label>
+                            <Input id="credit-time" placeholder="e.g., 7" defaultValue={getCurrentSettings()!.creditTime.split(' ')[0]}/>
                         </div>
                     </div>
                 )}
@@ -315,3 +315,5 @@ export default function ReferralManagementPage() {
     </div>
   );
 }
+
+    
