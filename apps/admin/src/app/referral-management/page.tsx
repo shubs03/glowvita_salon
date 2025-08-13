@@ -13,6 +13,7 @@ import { Settings, User, Users, Briefcase } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
+import { Switch } from '@repo/ui/switch';
 
 const c2cData = [
   { id: 'C2C-001', referrer: 'Alice Johnson', referee: 'Bob Williams', date: '2024-08-01', status: 'Completed', bonus: '₹50' },
@@ -31,16 +32,25 @@ const v2vData = [
 
 type ReferralType = 'C2C' | 'C2V' | 'V2V';
 
+interface RefereeBonusConfig {
+    enabled: boolean;
+    bonusType: 'discount' | 'amount';
+    bonusValue: number;
+    creditTime: string; // e.g., "7 days"
+}
+
 interface ReferralSettingsConfig {
     bonusType: 'discount' | 'amount';
     bonusValue: number;
     usageLimit: 'unlimited' | 'manual';
     usageCount: number | null;
-    creditTime: string; // e.g., "7 days", "24 hours"
+    creditTime: string; // e.g., "7 days"
+    refereeBonus: RefereeBonusConfig;
     minOrders?: number; // C2C specific
     minBookings?: number; // C2V specific
     minPayoutCycle?: number; // V2V specific
 }
+
 
 export default function ReferralManagementPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,6 +63,12 @@ export default function ReferralManagementPage() {
         usageCount: null,
         creditTime: '48 hours',
         minOrders: 1,
+        refereeBonus: {
+            enabled: true,
+            bonusType: 'discount',
+            bonusValue: 10,
+            creditTime: '24 hours',
+        },
     });
      const [c2vSettings, setC2vSettings] = useState<ReferralSettingsConfig>({
         bonusType: 'amount',
@@ -61,6 +77,12 @@ export default function ReferralManagementPage() {
         usageCount: 100,
         creditTime: '15 days',
         minBookings: 5,
+        refereeBonus: {
+            enabled: false,
+            bonusType: 'amount',
+            bonusValue: 200,
+            creditTime: '15 days',
+        },
     });
      const [v2vSettings, setV2vSettings] = useState<ReferralSettingsConfig>({
         bonusType: 'amount',
@@ -69,6 +91,12 @@ export default function ReferralManagementPage() {
         usageCount: null,
         creditTime: '30 days',
         minPayoutCycle: 1,
+        refereeBonus: {
+            enabled: false,
+            bonusType: 'amount',
+            bonusValue: 500,
+            creditTime: '30 days',
+        },
     });
     
     // Pagination states
@@ -93,6 +121,48 @@ export default function ReferralManagementPage() {
             default: return null;
         }
     };
+    
+    // A temporary state to manage modal inputs
+    const [modalSettings, setModalSettings] = useState<ReferralSettingsConfig | null>(null);
+
+    React.useEffect(() => {
+        if (isModalOpen && modalType) {
+            setModalSettings(getCurrentSettings());
+        } else {
+            setModalSettings(null);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isModalOpen, modalType]);
+
+    const handleModalChange = (field: keyof ReferralSettingsConfig, value: any) => {
+        if (modalSettings) {
+            setModalSettings({ ...modalSettings, [field]: value });
+        }
+    };
+    
+    const handleRefereeBonusChange = (field: keyof RefereeBonusConfig, value: any) => {
+        if (modalSettings) {
+            setModalSettings({
+                ...modalSettings,
+                refereeBonus: {
+                    ...modalSettings.refereeBonus,
+                    [field]: value,
+                },
+            });
+        }
+    };
+    
+    const handleSaveChanges = () => {
+        if (modalType && modalSettings) {
+            switch(modalType) {
+                case 'C2C': setC2cSettings(modalSettings); break;
+                case 'C2V': setC2vSettings(modalSettings); break;
+                case 'V2V': setV2vSettings(modalSettings); break;
+            }
+        }
+        handleCloseModal();
+    }
+
 
     const ReferralTable = ({ data, headers }: { data: any[], headers: string[] }) => (
          <>
@@ -126,13 +196,22 @@ export default function ReferralManagementPage() {
     
     const ReferralSettingsComponent = ({ title, settings, onEditClick }: { title: string, settings: ReferralSettingsConfig, onEditClick: () => void }) => {
         const displaySettings: { [key: string]: string } = {
-            'Referral Bonus': settings.bonusType === 'discount' ? `${settings.bonusValue}%` : `₹${settings.bonusValue}`,
+            'Referrer Bonus': settings.bonusType === 'discount' ? `${settings.bonusValue}%` : `₹${settings.bonusValue}`,
             'Usage Limit': settings.usageLimit === 'unlimited' ? 'Unlimited' : `Manual (${settings.usageCount} referrals)`,
-            'Credit Time': settings.creditTime,
+            'Referrer Credit Time': settings.creditTime,
         };
         if(settings.minOrders) displaySettings['Min. Orders for Referee'] = String(settings.minOrders);
         if(settings.minBookings) displaySettings['Min. Vendor Bookings'] = String(settings.minBookings);
         if(settings.minPayoutCycle) displaySettings['Min. Vendor Payout Cycle'] = String(settings.minPayoutCycle);
+        
+        if (settings.refereeBonus.enabled) {
+            displaySettings['Referee Bonus'] = settings.refereeBonus.bonusType === 'discount' 
+                ? `${settings.refereeBonus.bonusValue}%` 
+                : `₹${settings.refereeBonus.bonusValue}`;
+            displaySettings['Referee Credit Time'] = settings.refereeBonus.creditTime;
+        } else {
+            displaySettings['Referee Bonus'] = 'Disabled';
+        }
 
         return (
             <Card className="mb-6">
@@ -260,29 +339,33 @@ export default function ReferralManagementPage() {
                         Update the settings for the {modalType} referral program.
                     </DialogDescription>
                 </DialogHeader>
-                {getCurrentSettings() && (
+                {modalSettings && (
                     <div className="grid gap-6 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Bonus Type</Label>
-                                <Select defaultValue={getCurrentSettings()!.bonusType}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="amount">Fixed Amount</SelectItem>
-                                        <SelectItem value="discount">Discount (%)</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="bonus-value">Bonus Value</Label>
-                                <Input id="bonus-value" type="number" defaultValue={getCurrentSettings()!.bonusValue} />
+                        <div>
+                            <Label className='text-base font-semibold'>Referrer Bonus</Label>
+                            <div className="grid grid-cols-2 gap-4 mt-2">
+                                <div className="space-y-2">
+                                    <Label>Bonus Type</Label>
+                                    <Select value={modalSettings.bonusType} onValueChange={(v) => handleModalChange('bonusType', v)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="amount">Fixed Amount</SelectItem>
+                                            <SelectItem value="discount">Discount (%)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="bonus-value">Bonus Value</Label>
+                                    <Input id="bonus-value" type="number" value={modalSettings.bonusValue} onChange={(e) => handleModalChange('bonusValue', Number(e.target.value))} />
+                                </div>
                             </div>
                         </div>
+
                         <div className="space-y-2">
                             <Label>Usage Limit</Label>
-                            <RadioGroup defaultValue={getCurrentSettings()!.usageLimit} className="flex space-x-4">
+                            <RadioGroup value={modalSettings.usageLimit} onValueChange={(v) => handleModalChange('usageLimit', v)} className="flex space-x-4">
                                 <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="unlimited" id="unlimited" />
                                     <Label htmlFor="unlimited">Unlimited</Label>
@@ -293,21 +376,55 @@ export default function ReferralManagementPage() {
                                 </div>
                             </RadioGroup>
                         </div>
-                        {getCurrentSettings()!.usageLimit === 'manual' && (
+                        {modalSettings.usageLimit === 'manual' && (
                              <div className="space-y-2">
                                 <Label htmlFor="usage-count">Number of Referrals</Label>
-                                <Input id="usage-count" type="number" placeholder="e.g., 100" defaultValue={getCurrentSettings()!.usageCount || ''}/>
+                                <Input id="usage-count" type="number" placeholder="e.g., 100" value={modalSettings.usageCount || ''} onChange={(e) => handleModalChange('usageCount', Number(e.target.value))} />
                             </div>
                         )}
                          <div className="space-y-2">
                             <Label htmlFor="credit-time">Credit Time (in days)</Label>
-                            <Input id="credit-time" placeholder="e.g., 7" defaultValue={getCurrentSettings()!.creditTime.split(' ')[0]}/>
+                            <Input id="credit-time" placeholder="e.g., 7" value={modalSettings.creditTime.split(' ')[0]} onChange={(e) => handleModalChange('creditTime', `${e.target.value} days`)} />
                         </div>
+                        
+                        <div className="space-y-4 pt-4 border-t">
+                             <div className="flex items-center justify-between">
+                                <Label htmlFor="referee-bonus-toggle" className="text-base font-semibold">Referee Bonus</Label>
+                                <Switch id="referee-bonus-toggle" checked={modalSettings.refereeBonus.enabled} onCheckedChange={(c) => handleRefereeBonusChange('enabled', c)} />
+                            </div>
+                            {modalSettings.refereeBonus.enabled && (
+                                <div className='grid gap-4'>
+                                    <div className="grid grid-cols-2 gap-4">
+                                         <div className="space-y-2">
+                                            <Label>Bonus Type</Label>
+                                            <Select value={modalSettings.refereeBonus.bonusType} onValueChange={(v) => handleRefereeBonusChange('bonusType', v)}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select type" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="amount">Fixed Amount</SelectItem>
+                                                    <SelectItem value="discount">Discount (%)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                         <div className="space-y-2">
+                                            <Label htmlFor="referee-bonus-value">Bonus Value</Label>
+                                            <Input id="referee-bonus-value" type="number" value={modalSettings.refereeBonus.bonusValue} onChange={(e) => handleRefereeBonusChange('bonusValue', Number(e.target.value))} />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="referee-credit-time">Credit Time (in days)</Label>
+                                        <Input id="referee-credit-time" placeholder="e.g., 7" value={modalSettings.refereeBonus.creditTime.split(' ')[0]} onChange={(e) => handleRefereeBonusChange('creditTime', `${e.target.value} days`)} />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                     </div>
                 )}
                 <DialogFooter>
                     <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancel</Button>
-                    <Button type="submit" onClick={handleCloseModal}>Save Changes</Button>
+                    <Button type="submit" onClick={handleSaveChanges}>Save Changes</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -315,5 +432,3 @@ export default function ReferralManagementPage() {
     </div>
   );
 }
-
-    
