@@ -9,7 +9,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { useAppDispatch } from '@repo/store/hooks';
 import { setAdminAuth } from '@repo/store/slices/auth';
-import { useAdminLoginMutation } from '../../../../../packages/store/src/services/api';
+import { useAdminLoginMutation } from '@repo/store/services/api';
 
 
 export default function LoginPage() {
@@ -19,24 +19,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const [_ADMINLOGIN] = useAdminLoginMutation();
+  const [adminLogin] = useAdminLoginMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
-      const response = await _ADMINLOGIN(email, password).unwrap();
-      if (response.status === 200) {
-        dispatch(setAdminAuth(true));
-        router.push('/admin/dashboard');
-        localStorage.setItem('admin_access_token', response.data.token);
-        localStorage.setItem('admin_refresh_token', response.data.refreshToken);
+      const response = await adminLogin({ email, password }).unwrap();
+      if (response.success) {
+        dispatch(setAdminAuth({ user: response.user, token: response.admin_access_token }));
+        router.push('/');
       } else {
-        setError('Invalid email or password.');
+        setError(response.error || 'Invalid email or password.');
     }
-    } catch (err) {
-      setError('An unexpected error occurred.');
+    } catch (err: any) {
+      setError(err.data?.error || 'An unexpected error occurred.');
     }
   };
 

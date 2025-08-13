@@ -6,6 +6,7 @@
     "./store": "./src/store.js",
     "./hooks": "./src/hooks.js",
     "./provider": "./src/provider.jsx",
+    "./services/api": "./src/services/api.js",
     "./apis/example": "./src/apis/example-api.js",
     "./slices/auth": "./src/slices/auth-slice.js",
     "./slices/modal": "./src/slices/modalSlice.js"

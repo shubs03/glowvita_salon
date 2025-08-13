@@ -85,9 +85,9 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
   return result;
 };
 
-export const paarshEduApi = createApi({
+export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
-  baseQuery: baseQueryWithReauth,
+  baseQuery: baseQuery,
   tagTypes: ["admin"],
   endpoints: (builder) => ({
     adminLogin: builder.mutation({
