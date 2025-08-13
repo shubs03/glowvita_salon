@@ -9,50 +9,76 @@ import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
-import { Edit2, Eye, Trash2, Plus } from "lucide-react";
+import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee } from "lucide-react";
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { openModal, closeModal } from '@repo/store/slices/modal';
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 
 const couponsData = [
     {
         id: "coupon_1",
         code: "SUMMER24",
-        discount: "20% Off",
+        type: "percentage",
+        value: 20,
         status: "Active",
+        startDate: "2024-06-01",
         expires: "2024-08-31",
+        redeemed: 150,
     },
     {
         id: "coupon_2",
         code: "NEWUSER10",
-        discount: "$10 Off",
+        type: "fixed",
+        value: 100,
         status: "Active",
+        startDate: "2024-01-01",
         expires: "N/A",
+        redeemed: 230,
     },
     {
         id: "coupon_3",
         code: "EXPIRED01",
-        discount: "15% Off",
+        type: "percentage",
+        value: 15,
         status: "Expired",
+        startDate: "2023-12-01",
         expires: "2023-12-31",
+        redeemed: 50,
     },
     {
         id: "coupon_4",
         code: "HOLIDAYFUN",
-        discount: "25% Off",
+        type: "percentage",
+        value: 25,
         status: "Active",
+        startDate: "2024-07-01",
         expires: "2024-07-31",
+        redeemed: 75,
     },
     {
         id: "coupon_5",
         code: "FLASH30",
-        discount: "30% Off",
+        type: "fixed",
+        value: 300,
         status: "Expired",
+        startDate: "2023-12-25",
         expires: "2024-01-01",
+        redeemed: 25,
     },
+    {
+        id: "coupon_6",
+        code: "WINTER25",
+        type: "percentage",
+        value: 15,
+        status: "Scheduled",
+        startDate: "2024-12-01",
+        expires: "2025-01-31",
+        redeemed: 0,
+    }
 ];
 
 type Coupon = typeof couponsData[0];
+type DiscountType = 'percentage' | 'fixed';
 
 export default function OffersCouponsPage() {
     const [currentPage, setCurrentPage] = useState(1);
@@ -87,19 +113,83 @@ export default function OffersCouponsPage() {
         setIsDeleteModalOpen(false);
         setSelectedCoupon(null);
     };
+    
+    const formatDiscount = (coupon: Coupon) => {
+        if (coupon.type === 'percentage') {
+            return `${coupon.value}% Off`;
+        }
+        return `₹${coupon.value} Off`;
+    }
 
     const isModalOpen = isOpen && (modalType === 'addCoupon' || modalType === 'editCoupon' || modalType === 'viewCoupon');
     const modalCoupon = data as Coupon;
+
+    const totalDiscountValue = couponsData.reduce((acc, coupon) => {
+        if (coupon.type === 'fixed') {
+            return acc + coupon.value * coupon.redeemed;
+        }
+        // Assuming an average order value of ₹1000 for percentage discounts
+        return acc + (1000 * (coupon.value / 100)) * coupon.redeemed;
+    }, 0);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Offers & Coupons Management</h1>
 
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Coupons</CardTitle>
+                <Tag className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{couponsData.length}</div>
+                <p className="text-xs text-muted-foreground">Across all categories</p>
+            </CardContent>
+            </Card>
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Coupons</CardTitle>
+                <CheckSquare className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                    {couponsData.filter(c => c.status === 'Active').length}
+                </div>
+                <p className="text-xs text-muted-foreground">Currently usable by customers</p>
+            </CardContent>
+            </Card>
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Redeemed</CardTitle>
+                <Percent className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">
+                    {couponsData.reduce((acc, c) => acc + c.redeemed, 0)}
+                </div>
+                <p className="text-xs text-muted-foreground">Total times coupons were applied</p>
+            </CardContent>
+            </Card>
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Discount Value</CardTitle>
+                <IndianRupee className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">
+                    ₹{totalDiscountValue.toLocaleString()}
+                </div>
+                <p className="text-xs text-muted-foreground">Estimated value of discounts</p>
+            </CardContent>
+            </Card>
+        </div>
+
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Active Coupons</CardTitle>
+              <CardTitle>Manage Coupons</CardTitle>
               <CardDescription>Manage and create new promotional coupons.</CardDescription>
             </div>
             <Button onClick={() => handleOpenModal('addCoupon')}>
@@ -116,7 +206,9 @@ export default function OffersCouponsPage() {
                   <TableHead>Coupon Code</TableHead>
                   <TableHead>Discount</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Starts On</TableHead>
                   <TableHead>Expires On</TableHead>
+                  <TableHead>Redeemed</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -124,17 +216,21 @@ export default function OffersCouponsPage() {
                 {currentItems.map((coupon) => (
                     <TableRow key={coupon.id}>
                     <TableCell className="font-medium">{coupon.code}</TableCell>
-                    <TableCell>{coupon.discount}</TableCell>
+                    <TableCell>{formatDiscount(coupon)}</TableCell>
                     <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                             coupon.status === "Active"
                             ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            : coupon.status === "Scheduled"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                             : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
                         }`}>
                         {coupon.status}
                         </span>
                     </TableCell>
+                    <TableCell>{coupon.startDate}</TableCell>
                     <TableCell>{coupon.expires}</TableCell>
+                    <TableCell>{coupon.redeemed}</TableCell>
                     <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleOpenModal('viewCoupon', coupon)}>
                             <Eye className="h-4 w-4" />
@@ -168,7 +264,7 @@ export default function OffersCouponsPage() {
 
       {/* Add/Edit/View Modals */}
       <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
                 {modalType === 'addCoupon' && 'Create New Coupon'}
@@ -190,30 +286,56 @@ export default function OffersCouponsPage() {
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                     <span className="font-semibold text-muted-foreground">Discount</span>
-                    <span className="col-span-2">{modalCoupon?.discount}</span>
+                    <span className="col-span-2">{modalCoupon ? formatDiscount(modalCoupon) : ''}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                     <span className="font-semibold text-muted-foreground">Status</span>
                     <span className="col-span-2">{modalCoupon?.status}</span>
                 </div>
                  <div className="grid grid-cols-3 items-center gap-4">
+                    <span className="font-semibold text-muted-foreground">Starts</span>
+                    <span className="col-span-2">{modalCoupon?.startDate}</span>
+                </div>
+                 <div className="grid grid-cols-3 items-center gap-4">
                     <span className="font-semibold text-muted-foreground">Expires</span>
                     <span className="col-span-2">{modalCoupon?.expires}</span>
+                </div>
+                 <div className="grid grid-cols-3 items-center gap-4">
+                    <span className="font-semibold text-muted-foreground">Redeemed</span>
+                    <span className="col-span-2">{modalCoupon?.redeemed}</span>
                 </div>
              </div>
           ) : (
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="code" className="text-right">Code</Label>
-                <Input id="code" defaultValue={modalCoupon?.code || ''} className="col-span-3" />
+              <div className="space-y-2">
+                <Label htmlFor="code">Coupon Code</Label>
+                <Input id="code" defaultValue={modalCoupon?.code || ''} />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="discount" className="text-right">Discount</Label>
-                <Input id="discount" defaultValue={modalCoupon?.discount || ''} className="col-span-3" />
+              <div className="space-y-2">
+                <Label htmlFor="type">Discount Type</Label>
+                <Select defaultValue={modalCoupon?.type || 'percentage'}>
+                    <SelectTrigger id="type">
+                        <SelectValue placeholder="Select discount type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="percentage">Percentage (%)</SelectItem>
+                        <SelectItem value="fixed">Fixed Amount (₹)</SelectItem>
+                    </SelectContent>
+                </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="expires" className="text-right">Expires On</Label>
-                <Input id="expires" type="date" defaultValue={modalCoupon?.expires || ''} className="col-span-3" />
+              <div className="space-y-2">
+                <Label htmlFor="value">Discount Value</Label>
+                <Input id="value" type="number" defaultValue={modalCoupon?.value || ''} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Starts On</Label>
+                  <Input id="startDate" type="date" defaultValue={modalCoupon?.startDate || ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expires">Expires On</Label>
+                  <Input id="expires" type="date" defaultValue={modalCoupon?.expires || ''} />
+                </div>
               </div>
             </div>
           )}
@@ -256,3 +378,5 @@ export default function OffersCouponsPage() {
     </div>
   );
 }
+
+    
