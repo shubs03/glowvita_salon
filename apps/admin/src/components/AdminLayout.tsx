@@ -23,9 +23,10 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   }, []);
   
   useEffect(() => {
-    if (!isLoading && !admin) {
-        router.push('/login');
-    }
+    // Intentionally bypassed login for development
+    // if (!isLoading && !admin) {
+    //     router.push('/login');
+    // }
   }, [admin, isLoading, router])
 
   useEffect(() => {
@@ -41,13 +42,13 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
     setSidebarOpen(!isSidebarOpen);
   };
   
-  if (isLoading || !admin) {
-    return (
-        <div className="flex items-center justify-center h-screen">
-            <div>Loading...</div>
-        </div>
-    )
-  }
+  // if (isLoading || !admin) {
+  //   return (
+  //       <div className="flex items-center justify-center h-screen">
+  //           <div>Loading...</div>
+  //       </div>
+  //   )
+  // }
 
   return (
     <div className="flex h-screen bg-secondary overflow-hidden">
