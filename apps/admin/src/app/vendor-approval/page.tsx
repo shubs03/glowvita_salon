@@ -58,7 +58,8 @@ type ActionType = 'approve' | 'reject' | 'delete';
 export default function VendorApprovalPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
     const [actionType, setActionType] = useState<ActionType | null>(null);
 
@@ -71,7 +72,12 @@ export default function VendorApprovalPage() {
     const handleActionClick = (vendor: Vendor, action: ActionType) => {
         setSelectedVendor(vendor);
         setActionType(action);
-        setIsModalOpen(true);
+        setIsActionModalOpen(true);
+    };
+
+    const handleViewClick = (vendor: Vendor) => {
+        setSelectedVendor(vendor);
+        setIsViewModalOpen(true);
     };
 
     const handleConfirmAction = () => {
@@ -79,7 +85,7 @@ export default function VendorApprovalPage() {
             console.log(`Performing ${actionType} on vendor ${selectedVendor.name}`);
             // Here you would typically dispatch an action or call an API
         }
-        setIsModalOpen(false);
+        setIsActionModalOpen(false);
         setSelectedVendor(null);
         setActionType(null);
     };
@@ -188,7 +194,7 @@ export default function VendorApprovalPage() {
                       <TableCell>{vendor.city}</TableCell>
                       <TableCell>{vendor.pincode}</TableCell>
                       <TableCell className="text-right">
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => handleViewClick(vendor)}>
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">View Details</span>
                           </Button>
@@ -222,7 +228,7 @@ export default function VendorApprovalPage() {
         </CardContent>
       </Card>
 
-       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+       <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
@@ -231,7 +237,7 @@ export default function VendorApprovalPage() {
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                    <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+                    <Button variant="secondary" onClick={() => setIsActionModalOpen(false)}>
                         Cancel
                     </Button>
                     <Button
@@ -243,6 +249,41 @@ export default function VendorApprovalPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        
+      <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle>Vendor Details: {selectedVendor?.name}</DialogTitle>
+            </DialogHeader>
+            {selectedVendor && (
+                <div className="grid gap-4 py-4 text-sm">
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground">Vendor ID</span>
+                        <span className="col-span-2">{selectedVendor.id}</span>
+                    </div>
+                     <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground">Owner</span>
+                        <span className="col-span-2">{selectedVendor.owner}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground">Phone</span>
+                        <span className="col-span-2">{selectedVendor.phone}</span>
+                    </div>
+                     <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground">City</span>
+                        <span className="col-span-2">{selectedVendor.city}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <span className="font-semibold text-muted-foreground">Pincode</span>
+                        <span className="col-span-2">{selectedVendor.pincode}</span>
+                    </div>
+                </div>
+            )}
+            <DialogFooter>
+                <Button onClick={() => setIsViewModalOpen(false)}>Close</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
     </div>
   );
 }

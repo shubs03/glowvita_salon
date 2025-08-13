@@ -8,15 +8,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Edit2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { Input } from '@repo/ui/input';
+import { Label } from '@repo/ui/label';
+import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
+import { openModal, closeModal } from '@repo/store/slices/modal';
 
 const rolesData = [
   {
+    id: 'role_1',
     roleName: "Super Admin",
     permissions: "All Access",
     isActive: true,
   },
   {
+    id: 'role_2',
     roleName: "Support Staff",
     permissions: "View Customers, View Vendors",
     isActive: true,
@@ -63,6 +69,11 @@ export default function AdminRolesPage() {
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>(mockAdminUsers);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  
+  const dispatch = useAppDispatch();
+  const { isOpen, modalType, data } = useAppSelector((state) => state.modal);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -98,6 +109,27 @@ export default function AdminRolesPage() {
     setIsAddAdminOpen(true);
   };
 
+  const handleOpenModal = (type: 'addRole' | 'editRole', role?: Role) => {
+    dispatch(openModal({ modalType: type, data: role }));
+  };
+
+  const handleCloseModal = () => {
+    dispatch(closeModal());
+  };
+  
+  const handleDeleteClick = (role: Role) => {
+    setSelectedRole(role);
+    setIsDeleteModalOpen(true);
+  };
+  
+  const handleConfirmDelete = () => {
+    // API call to delete role
+    setIsDeleteModalOpen(false);
+    setSelectedRole(null);
+  }
+
+  const isModalOpen = isOpen && (modalType === 'addRole' || modalType === 'editRole');
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Admin Roles & Permissions</h1>
@@ -117,7 +149,7 @@ export default function AdminRolesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto no-scrollbar">
               <Table>
                 <TableHeader>
                   <TableRow>
