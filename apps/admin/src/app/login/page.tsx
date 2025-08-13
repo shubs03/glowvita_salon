@@ -62,6 +62,7 @@ export default function LoginPage() {
                   placeholder="admin@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
                 />
               </div>
               <div className="grid gap-2">
@@ -71,6 +72,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)} 
+                  required
                 />
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
