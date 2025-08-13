@@ -2,105 +2,106 @@
 import {
     FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaBox, FaUserMd, 
     FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, 
-    FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaRedo 
+    FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync
 } from "react-icons/fa";
+import { IconType } from "react-icons";
 
 export interface NavItem {
   title: string;
   href: string;
-  icon: React.ReactElement;
-  permission: string; // This key will be used for role-based access
+  Icon: IconType;
+  permission: string;
 }
 
 export const sidebarNavItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/",
-    icon: <FaTachometerAlt className="h-4 w-4" />,
+    Icon: FaTachometerAlt,
     permission: "dashboard",
   },
   {
     title: "Customers",
     href: "/customers",
-    icon: <FaUsers className="h-4 w-4" />,
+    Icon: FaUsers,
     permission: "customers",
   },
   {
     title: "Vendors",
     href: "/vendors",
-    icon: <FaUserCog className="h-4 w-4" />,
+    Icon: FaUserCog,
     permission: "vendors",
   },
   {
     title: "Doctors & Dermats",
     href: "/doctors-dermats",
-    icon: <FaUserMd className="h-4 w-4" />,
+    Icon: FaUserMd,
     permission: "doctors-dermats",
   },
   {
     title: "Vendor Approval",
     href: "/vendor-approval",
-    icon: <FaCheckCircle className="h-4 w-4" />,
+    Icon: FaCheckCircle,
     permission: "vendor-approval",
   },
   {
     title: "Supplier Management",
     href: "/supplier-management",
-    icon: <FaTruck className="h-4 w-4" />,
+    Icon: FaTruck,
     permission: "supplier-management",
   },
   {
     title: "Admin Roles",
     href: "/admin-roles",
-    icon: <FaUserShield className="h-4 w-4" />,
+    Icon: FaUserShield,
     permission: "admin-roles",
   },
   {
     title: "Offers & Coupons",
     href: "/offers-coupons",
-    icon: <FaTags className="h-4 w-4" />,
+    Icon: FaTags,
     permission: "offers-coupons",
   },
    {
     title: "Subscription Management",
     href: "/subscription-management",
-    icon: <FaRedo className="h-4 w-4" />,
+    Icon: FaSync,
     permission: "subscription-management",
   },
   {
     title: "Referral Management",
     href: "/referral-management",
-    icon: <FaUserFriends className="h-4 w-4" />,
+    Icon: FaUserFriends,
     permission: "referral-management",
   },
   {
     title: "Tax & Fees",
     href: "/tax-fees",
-    icon: <FaMoneyBillWave className="h-4 w-4" />,
+    Icon: FaMoneyBillWave,
     permission: "tax-fees",
   },
   {
     title: "Payout",
     href: "/payout",
-    icon: <FaMoneyCheckAlt className="h-4 w-4" />,
+    Icon: FaMoneyCheckAlt,
     permission: "payout",
   },
   {
     title: "Marketing",
     href: "/marketing",
-    icon: <FaBullhorn className="h-4 w-4" />,
+    Icon: FaBullhorn,
     permission: "marketing",
   },
   {
     title: "Reports",
     href: "/reports",
-    icon: <FaFileAlt className="h-4 w-4" />,
+    Icon: FaFileAlt,
     permission: "reports",
   },
   {
     title: "FAQ Management",
     href: "/faq-management",
-    icon: <FaQuestionCircle className="h-4 w-4" />,
+    Icon: FaQuestionCircle,
     permission: "faq-management",
   },
 ];

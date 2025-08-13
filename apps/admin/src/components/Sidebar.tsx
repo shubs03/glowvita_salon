@@ -82,7 +82,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
                 !isOpen && !isMobile && "justify-center"
               )}
             >
-              {item.icon}
+              <item.Icon className="h-4 w-4" />
               <span className={cn(!isOpen && !isMobile && "lg:hidden")}>{item.title}</span>
             </Link>
           ))}
