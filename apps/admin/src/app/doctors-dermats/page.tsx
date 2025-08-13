@@ -11,6 +11,9 @@ import { CheckCircle, Eye, XCircle, Trash2, User, ThumbsUp, Hourglass, BarChart,
 import { Badge } from '@repo/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from '@repo/ui/input';
+import { Label } from '@repo/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Textarea } from '@repo/ui/textarea';
 
 const doctorsData = [
   {
@@ -73,6 +76,8 @@ export default function DoctorsDermatsPage() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [isNewDoctorModalOpen, setIsNewDoctorModalOpen] = useState(false);
+    const [isSpecializationModalOpen, setIsSpecializationModalOpen] = useState(false);
     const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
     const [actionType, setActionType] = useState<ActionType | null>(null);
 
@@ -192,9 +197,13 @@ export default function DoctorsDermatsPage() {
                           <CardDescription>Verify and manage doctor profiles.</CardDescription>
                       </div>
                       <div className="flex gap-2">
-                          <Button>
+                          <Button onClick={() => setIsNewDoctorModalOpen(true)}>
                               <Plus className="mr-2 h-4 w-4" />
                               Add New Doctor
+                          </Button>
+                          <Button onClick={() => setIsSpecializationModalOpen(true)}>
+                              <Plus className="mr-2 h-4 w-4" />
+                              Add Specialization
                           </Button>
                           <Button variant="outline">
                               <FileDown className="mr-2 h-4 w-4" />
@@ -369,8 +378,83 @@ export default function DoctorsDermatsPage() {
             </DialogContent>
         </Dialog>
 
+        {/* Add New Doctor Modal */}
+        <Dialog open={isNewDoctorModalOpen} onOpenChange={setIsNewDoctorModalOpen}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Add New Doctor</DialogTitle>
+                    <DialogDescription>
+                        Fill in the details below to add a new doctor.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="doctor-name">Doctor Name</Label>
+                        <Input id="doctor-name" placeholder="e.g., Dr. John Doe" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="clinic-name">Clinic Name</Label>
+                        <Input id="clinic-name" placeholder="e.g., Sunrise Clinic" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="contact-no">Contact No.</Label>
+                        <Input id="contact-no" type="tel" placeholder="e.g., 9876543210" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="email-id">Email ID</Label>
+                        <Input id="email-id" type="email" placeholder="e.g., john.doe@example.com" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="reg-date">Registration Date</Label>
+                        <Input id="reg-date" type="date" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="specialization">Specialization</Label>
+                        <Select>
+                            <SelectTrigger id="specialization">
+                                <SelectValue placeholder="Select a specialization" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="dermatologist">Dermatologist</SelectItem>
+                                <SelectItem value="trichologist">Trichologist</SelectItem>
+                                <SelectItem value="homeopath">Homeopath</SelectItem>
+                                <SelectItem value="aesthetic-dermatologist">Aesthetic Dermatologist</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="secondary" onClick={() => setIsNewDoctorModalOpen(false)}>Cancel</Button>
+                    <Button type="submit">Add Doctor</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        {/* Add New Specialization Modal */}
+        <Dialog open={isSpecializationModalOpen} onOpenChange={setIsSpecializationModalOpen}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Create New Specialization</DialogTitle>
+                    <DialogDescription>
+                       Add a new specialization for doctors.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="spec-name">Specialization Name</Label>
+                        <Input id="spec-name" placeholder="e.g., Cosmetologist" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="spec-desc">Description</Label>
+                        <Textarea id="spec-desc" placeholder="A short description of the specialization." />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="secondary" onClick={() => setIsSpecializationModalOpen(false)}>Cancel</Button>
+                    <Button type="submit">Save Specialization</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
-
-    
