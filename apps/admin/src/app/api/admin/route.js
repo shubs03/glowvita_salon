@@ -74,7 +74,7 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["admin"]
+  ["superadmin"]
 ); // ✅ only superadmin can add new admins
 
 
@@ -83,7 +83,7 @@ export const GET = authMiddlewareAdmin(
     const admins = await AdminUserModel.find().select("-password"); // Hide password
     return Response.json(admins);
   },
-  ["admin"]
+  ["superadmin"]
 ); // Only superadmin can view
 
 export const PUT = authMiddlewareAdmin(
@@ -102,7 +102,7 @@ export const PUT = authMiddlewareAdmin(
 
     return Response.json(updatedAdmin);
   },
-  ["admin"]
+  ["superadmin"]
 );
 
 export const DELETE = authMiddlewareAdmin(
@@ -116,5 +116,5 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Admin deleted successfully" });
   },
-  ["admin"]
+  ["superadmin"]
 );

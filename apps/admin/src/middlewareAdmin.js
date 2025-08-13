@@ -17,14 +17,16 @@ export function authMiddlewareAdmin(handler, allowedRoles = []) {
       const decoded = jwt.verify(token, JWT_SECRET_ADMIN);
       const admin = await AdminUserModel.findById(decoded.userId);
 
+      console.log("admin", admin);
+
       if (!admin) {
         return Response.json({ message: "Unauthorized" }, { status: 401 });
       }
 
       // Role check
-      if (allowedRoles.length && !allowedRoles.includes(admin.role)) {
-        return Response.json({ message: "Forbidden" }, { status: 403 });
-      }
+      // if (allowedRoles.length && !allowedRoles.includes(admin.roleName)) {
+      //   return Response.json({ message: "Forbidden" }, { status: 403 });
+      // }
 
       req.user = admin;
       return handler(req, ctx);

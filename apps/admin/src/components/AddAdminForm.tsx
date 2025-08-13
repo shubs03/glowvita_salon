@@ -25,18 +25,22 @@ import { Trash2, Loader2 } from 'lucide-react';
 import { useCreateAdminMutation, useUpdateAdminMutation, useDeleteAdminMutation } from '../../../../packages/store/src/services/api.js';
 
 export type AdminUser = {
+  _id?: string;
   id?: string;
   fullName: string;
-  mobileNumber: string;
-  email: string;
+  mobileNo: string;
+  emailAddress: string;
   password?: string;
   confirmPassword?: string;
-  role: string;
+  roleName: string;
   designation: string;
   address: string;
-  photo?: string | File;
+  profileImage?: string | File;
   isActive?: boolean;
   permissions?: string[];
+  lastLoginAt?: Date | null;
+  createdAt?: Date;
+  updatedAt?: Date;
 };
 
 type AdminRole = {
@@ -70,11 +74,11 @@ export function AddAdminForm({
 
   const getInitialFormData = (data: AdminUser | null) => ({
     fullName: '',
-    mobileNumber: '',
-    email: '',
+    mobileNo: '',
+    emailAddress: '',
     password: '',
     confirmPassword: '',
-    role: '',
+    roleName: '',
     designation: '',
     address: '',
     permissions: [],
@@ -131,18 +135,26 @@ export function AddAdminForm({
       newErrors.fullName = 'Full name is required';
     }
 
-    if (!formData.mobileNumber.trim()) {
-      newErrors.mobileNumber = 'Mobile number is required';
+    if (!formData.mobileNo.trim()) {
+      newErrors.mobileNo = 'Mobile number is required';
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+    if (!formData.emailAddress.trim()) {
+      newErrors.emailAddress = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.emailAddress)) {
+      newErrors.emailAddress = 'Email is invalid';
     }
 
-    if (!formData.role) {
-      newErrors.role = 'Role is required';
+    if (!formData.roleName) {
+      newErrors.roleName = 'Role is required';
+    }
+
+    if (!formData.designation.trim()) {
+      newErrors.designation = 'Designation is required';
+    }
+
+    if (!formData.address.trim()) {
+      newErrors.address = 'Address is required';
     }
 
     // Password validation for new admin or when changing password
@@ -170,36 +182,46 @@ export function AddAdminForm({
     }
     
     try {
-      const formDataToSend = new FormData();
+      // Handle file upload separately if needed
+      let profileImageUrl = formData.profileImage;
       
-      // Append all form fields
-      formDataToSend.append('fullName', formData.fullName);
-      formDataToSend.append('mobileNumber', formData.mobileNumber);
-      formDataToSend.append('email', formData.email);
-      formDataToSend.append('role', formData.role);
-      formDataToSend.append('designation', formData.designation);
-      formDataToSend.append('address', formData.address);
-      formDataToSend.append('permissions', JSON.stringify(selectedPermissions));
-      
-      // Append password fields if needed
-      if (!isEditMode || formData.password) {
-        formDataToSend.append('password', formData.password || '');
-      }
-      
-      // Append file if selected
+      // If there's a new file selected, convert to base64
       if (selectedFile) {
-        formDataToSend.append('photo', selectedFile);
+        const fileBase64 = await convertFileToBase64(selectedFile);
+        profileImageUrl = fileBase64;
       }
       
-      if (isEditMode && formData.id) {
+      // Prepare JSON data matching MongoDB schema
+      const jsonDataToSend = {
+        fullName: formData.fullName.trim(),
+        mobileNo: formData.mobileNo.trim(),
+        emailAddress: formData.emailAddress.trim(),
+        roleName: formData.roleName,
+        designation: formData.designation.trim(),
+        address: formData.address.trim(),
+        permissions: selectedPermissions,
+        isActive: formData.isActive ?? true,
+        updatedAt: new Date().toISOString(),
+        ...(profileImageUrl && { profileImage: profileImageUrl }),
+        // Only include password fields if needed
+        ...(!isEditMode || formData.password ? { 
+          password: formData.password 
+        } : {}),
+        // Add createdAt only for new admin
+        ...(!isEditMode ? { 
+          createdAt: new Date().toISOString() 
+        } : {}),
+      };
+      
+      if (isEditMode && (formData.id || formData._id)) {
         // Update existing admin
         await updateAdmin({
-          id: formData.id,
-          data: formDataToSend
+          id: formData.id || formData._id!,
+          data: jsonDataToSend
         }).unwrap();
       } else {
         // Create new admin
-        await createAdmin(formDataToSend).unwrap();
+        await createAdmin(jsonDataToSend).unwrap();
       }
       
       // Call onSave callback if provided (for backward compatibility)
@@ -207,7 +229,7 @@ export function AddAdminForm({
         const dataToSave: AdminUser = {
           ...formData,
           permissions: selectedPermissions,
-          photo: selectedFile || formData.photo,
+          profileImage: profileImageUrl,
           password: (isEditMode && !formData.password) ? undefined : formData.password,
           confirmPassword: (isEditMode && !formData.password) ? undefined : formData.confirmPassword,
         };
@@ -225,19 +247,48 @@ export function AddAdminForm({
       }
     }
   };
+
+  // Helper function to convert file to base64
+  const convertFileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  // Alternative: Upload file separately (uncomment if using separate file upload endpoint)
+  // const uploadFile = async (file: File): Promise<string> => {
+  //   const fileFormData = new FormData();
+  //   fileFormData.append('file', file);
+  //   
+  //   const response = await fetch('/api/upload', {
+  //     method: 'POST',
+  //     body: fileFormData,
+  //   });
+  //   
+  //   if (!response.ok) {
+  //     throw new Error('File upload failed');
+  //   }
+  //   
+  //   const result = await response.json();
+  //   return result.url;
+  // };
   
   const handleDelete = async () => {
-    if (!formData.id) return;
+    const adminId = formData.id || formData._id;
+    if (!adminId) return;
     
     const confirmed = window.confirm('Are you sure you want to delete this admin?');
     if (!confirmed) return;
     
     try {
-      await deleteAdmin(formData.id).unwrap();
+      await deleteAdmin(adminId).unwrap();
       
       // Call onDelete callback if provided (for backward compatibility)
       if (onDelete) {
-        onDelete(formData.id);
+        onDelete(adminId);
       }
       
       onClose();
@@ -291,47 +342,49 @@ export function AddAdminForm({
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="mobileNumber" className="text-sm">Mobile Number *</Label>
+                  <Label htmlFor="mobileNo" className="text-sm">Mobile Number *</Label>
                   <Input 
-                    id="mobileNumber" 
-                    name="mobileNumber" 
+                    id="mobileNo" 
+                    name="mobileNo" 
                     type="tel" 
-                    value={formData.mobileNumber} 
+                    value={formData.mobileNo} 
                     onChange={handleInputChange} 
-                    className={`text-sm ${errors.mobileNumber ? 'border-destructive' : ''}`}
+                    className={`text-sm ${errors.mobileNo ? 'border-destructive' : ''}`}
                     disabled={isLoading}
                     required 
                   />
-                  {errors.mobileNumber && <p className="text-xs text-destructive">{errors.mobileNumber}</p>}
+                  {errors.mobileNo && <p className="text-xs text-destructive">{errors.mobileNo}</p>}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm">Email *</Label>
+                  <Label htmlFor="emailAddress" className="text-sm">Email Address *</Label>
                   <Input 
-                    id="email" 
-                    name="email" 
+                    id="emailAddress" 
+                    name="emailAddress" 
                     type="email" 
-                    value={formData.email} 
+                    value={formData.emailAddress} 
                     onChange={handleInputChange} 
-                    className={`text-sm ${errors.email ? 'border-destructive' : ''}`}
+                    className={`text-sm ${errors.emailAddress ? 'border-destructive' : ''}`}
                     disabled={isLoading}
                     required 
                   />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                  {errors.emailAddress && <p className="text-xs text-destructive">{errors.emailAddress}</p>}
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="designation" className="text-sm">Designation</Label>
+                  <Label htmlFor="designation" className="text-sm">Designation *</Label>
                   <Input 
                     id="designation" 
                     name="designation" 
                     value={formData.designation} 
                     onChange={handleInputChange}
-                    className="text-sm"
+                    className={`text-sm ${errors.designation ? 'border-destructive' : ''}`}
                     disabled={isLoading}
+                    required
                   />
+                  {errors.designation && <p className="text-xs text-destructive">{errors.designation}</p>}
                 </div>
               </div>
             </div>
@@ -383,19 +436,19 @@ export function AddAdminForm({
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="role" className="text-sm">Role *</Label>
+                  <Label htmlFor="roleName" className="text-sm">Role *</Label>
                   <Select 
-                    value={formData.role} 
+                    value={formData.roleName} 
                     onValueChange={(value) => {
-                      setFormData(prev => ({ ...prev, role: value }));
-                      if (errors.role) {
-                        setErrors(prev => ({ ...prev, role: '' }));
+                      setFormData(prev => ({ ...prev, roleName: value }));
+                      if (errors.roleName) {
+                        setErrors(prev => ({ ...prev, roleName: '' }));
                       }
                     }} 
                     disabled={isLoading}
                     required
                   >
-                    <SelectTrigger className={`text-sm ${errors.role ? 'border-destructive' : ''}`}>
+                    <SelectTrigger className={`text-sm ${errors.roleName ? 'border-destructive' : ''}`}>
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -406,13 +459,13 @@ export function AddAdminForm({
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.role && <p className="text-xs text-destructive">{errors.role}</p>}
+                  {errors.roleName && <p className="text-xs text-destructive">{errors.roleName}</p>}
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="photo" className="text-sm">Photo</Label>
+                  <Label htmlFor="profileImage" className="text-sm">Profile Image</Label>
                   <Input 
-                    id="photo" 
+                    id="profileImage" 
                     type="file" 
                     accept="image/*" 
                     onChange={handleFileChange} 
@@ -428,16 +481,18 @@ export function AddAdminForm({
               <h3 className="text-base font-medium border-b pb-2">Address</h3>
               
               <div className="space-y-2">
-                <Label htmlFor="address" className="text-sm">Address</Label>
+                <Label htmlFor="address" className="text-sm">Address *</Label>
                 <textarea 
                   id="address" 
                   name="address" 
                   rows={3} 
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none" 
+                  className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.address ? 'border-destructive' : ''}`}
                   value={formData.address} 
                   onChange={handleInputChange}
                   disabled={isLoading}
+                  required
                 />
+                {errors.address && <p className="text-xs text-destructive">{errors.address}</p>}
               </div>
             </div>
 
@@ -453,7 +508,7 @@ export function AddAdminForm({
                         id={`perm_${item.permission}`}
                         checked={selectedPermissions.includes(item.permission)}
                         onCheckedChange={(checked) => handlePermissionChange(item.permission, !!checked)}
-                        disabled={formData.role === 'Super Admin' || isLoading}
+                        disabled={formData.roleName === 'Super Admin' || isLoading}
                         className="flex-shrink-0"
                       />
                       <label 
@@ -467,7 +522,7 @@ export function AddAdminForm({
                 </div>
               </div>
               
-              {formData.role === 'Super Admin' && (
+              {formData.roleName === 'Super Admin' && (
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Super Admin has access to all permissions by default.
                 </p>
