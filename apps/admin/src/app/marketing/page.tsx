@@ -203,7 +203,7 @@ export default function PlatformMarketingPage() {
 
 
        <Tabs defaultValue="sms_templates">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 max-w-5xl">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="sms_templates">SMS Templates</TabsTrigger>
             <TabsTrigger value="sms_packages">SMS Packages</TabsTrigger>
             <TabsTrigger value="social_media">Social Posts</TabsTrigger>
@@ -227,34 +227,36 @@ export default function PlatformMarketingPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Template ID</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {smsTemplatesData.map(t => (
-                                <TableRow key={t.id}>
-                                    <TableCell>{t.id}</TableCell>
-                                    <TableCell>{t.name}</TableCell>
-                                    <TableCell>{t.type}</TableCell>
-                                    <TableCell>₹{t.price / 100}</TableCell>
-                                    <TableCell>{t.status}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => openModal('View Template', 'view', viewDetails(t), t)}><Eye className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => openModal('Edit Template', 'edit', createTemplateForm(t), t)}><Edit className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                                    </TableCell>
+                    <div className="overflow-x-auto no-scrollbar">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Template ID</TableHead>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Price</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {smsTemplatesData.map(t => (
+                                    <TableRow key={t.id}>
+                                        <TableCell>{t.id}</TableCell>
+                                        <TableCell>{t.name}</TableCell>
+                                        <TableCell>{t.type}</TableCell>
+                                        <TableCell>₹{t.price / 100}</TableCell>
+                                        <TableCell>{t.status}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => openModal('View Template', 'view', viewDetails(t), t)}><Eye className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" onClick={() => openModal('Edit Template', 'edit', createTemplateForm(t), t)}><Edit className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </TabsContent>
@@ -274,34 +276,36 @@ export default function PlatformMarketingPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Package ID</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>SMS Count</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                             {smsPackagesData.map(p => (
-                                <TableRow key={p.id}>
-                                    <TableCell>{p.id}</TableCell>
-                                    <TableCell>{p.name}</TableCell>
-                                    <TableCell>{p.smsCount.toLocaleString()}</TableCell>
-                                    <TableCell>₹{(p.price / 100).toLocaleString()}</TableCell>
-                                    <TableCell className="max-w-xs truncate">{p.description}</TableCell>
-                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => openModal('View Package', 'view', viewDetails(p), p)}><Eye className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => openModal('Edit Package', 'edit', createSmsPackageForm(p), p)}><Edit className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                                    </TableCell>
+                    <div className="overflow-x-auto no-scrollbar">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Package ID</TableHead>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>SMS Count</TableHead>
+                                    <TableHead>Price</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {smsPackagesData.map(p => (
+                                    <TableRow key={p.id}>
+                                        <TableCell>{p.id}</TableCell>
+                                        <TableCell>{p.name}</TableCell>
+                                        <TableCell>{p.smsCount.toLocaleString()}</TableCell>
+                                        <TableCell>₹{(p.price / 100).toLocaleString()}</TableCell>
+                                        <TableCell className="max-w-xs truncate">{p.description}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => openModal('View Package', 'view', viewDetails(p), p)}><Eye className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" onClick={() => openModal('Edit Package', 'edit', createSmsPackageForm(p), p)}><Edit className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </TabsContent>
@@ -321,34 +325,36 @@ export default function PlatformMarketingPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Post ID</TableHead>
-                                <TableHead>Title</TableHead>
-                                <TableHead>Platform</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                             {socialMediaPostsData.map(p => (
-                                <TableRow key={p.id}>
-                                    <TableCell>{p.id}</TableCell>
-                                    <TableCell>{p.title}</TableCell>
-                                    <TableCell>{p.platform}</TableCell>
-                                    <TableCell>₹{(p.price / 100).toLocaleString()}</TableCell>
-                                    <TableCell className="max-w-xs truncate">{p.description}</TableCell>
-                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => openModal('View Post', 'view', viewDetails(p), p)}><Eye className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => openModal('Edit Post', 'edit', createSocialPostForm(p), p)}><Edit className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                                    </TableCell>
+                    <div className="overflow-x-auto no-scrollbar">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Post ID</TableHead>
+                                    <TableHead>Title</TableHead>
+                                    <TableHead>Platform</TableHead>
+                                    <TableHead>Price</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {socialMediaPostsData.map(p => (
+                                    <TableRow key={p.id}>
+                                        <TableCell>{p.id}</TableCell>
+                                        <TableCell>{p.title}</TableCell>
+                                        <TableCell>{p.platform}</TableCell>
+                                        <TableCell>₹{(p.price / 100).toLocaleString()}</TableCell>
+                                        <TableCell className="max-w-xs truncate">{p.description}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => openModal('View Post', 'view', viewDetails(p), p)}><Eye className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" onClick={() => openModal('Edit Post', 'edit', createSocialPostForm(p), p)}><Edit className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </TabsContent>
@@ -360,38 +366,40 @@ export default function PlatformMarketingPage() {
                     <CardDescription>Monitor and manage all ongoing vendor campaigns.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Vendor</TableHead>
-                                <TableHead>Contact</TableHead>
-                                <TableHead>Activation</TableHead>
-                                <TableHead>Expiration</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {activeCampaignsData.map(c => (
-                                <TableRow key={c.id}>
-                                    <TableCell>
-                                        <div className="font-medium">{c.vendorName}</div>
-                                        <div className="text-sm text-muted-foreground">{c.salonName}</div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div>{c.contact}</div>
-                                        <div className="text-sm text-muted-foreground">{c.email}</div>
-                                    </TableCell>
-                                    <TableCell>{c.activationDate}</TableCell>
-                                    <TableCell>{c.expirationDate}</TableCell>
-                                    <TableCell>{c.status ? 'Active' : 'Expired'}</TableCell>
-                                    <TableCell className="text-right">
-                                         <Switch checked={c.status} onCheckedChange={() => {}} aria-label="Toggle campaign status" />
-                                    </TableCell>
+                    <div className="overflow-x-auto no-scrollbar">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Vendor</TableHead>
+                                    <TableHead>Contact</TableHead>
+                                    <TableHead>Activation</TableHead>
+                                    <TableHead>Expiration</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {activeCampaignsData.map(c => (
+                                    <TableRow key={c.id}>
+                                        <TableCell>
+                                            <div className="font-medium">{c.vendorName}</div>
+                                            <div className="text-sm text-muted-foreground">{c.salonName}</div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div>{c.contact}</div>
+                                            <div className="text-sm text-muted-foreground">{c.email}</div>
+                                        </TableCell>
+                                        <TableCell>{c.activationDate}</TableCell>
+                                        <TableCell>{c.expirationDate}</TableCell>
+                                        <TableCell>{c.status ? 'Active' : 'Expired'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Switch checked={c.status} onCheckedChange={() => {}} aria-label="Toggle campaign status" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </TabsContent>
@@ -403,34 +411,36 @@ export default function PlatformMarketingPage() {
                     <CardDescription>Manage digital marketing requests from vendors.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Ticket ID</TableHead>
-                                <TableHead>Vendor Name</TableHead>
-                                <TableHead>Request Date</TableHead>
-                                <TableHead>Service</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {marketingTicketsData.map(t => (
-                                <TableRow key={t.id}>
-                                    <TableCell>{t.id}</TableCell>
-                                    <TableCell>{t.vendorName}</TableCell>
-                                    <TableCell>{t.requestDate}</TableCell>
-                                    <TableCell>{t.service}</TableCell>
-                                    <TableCell>{t.status}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="text-green-600"><CheckCircle className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="text-destructive"><XCircle className="h-4 w-4" /></Button>
-                                    </TableCell>
+                    <div className="overflow-x-auto no-scrollbar">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Ticket ID</TableHead>
+                                    <TableHead>Vendor Name</TableHead>
+                                    <TableHead>Request Date</TableHead>
+                                    <TableHead>Service</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {marketingTicketsData.map(t => (
+                                    <TableRow key={t.id}>
+                                        <TableCell>{t.id}</TableCell>
+                                        <TableCell>{t.vendorName}</TableCell>
+                                        <TableCell>{t.requestDate}</TableCell>
+                                        <TableCell>{t.service}</TableCell>
+                                        <TableCell>{t.status}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="text-green-600"><CheckCircle className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="icon" className="text-destructive"><XCircle className="h-4 w-4" /></Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </TabsContent>
@@ -442,28 +452,30 @@ export default function PlatformMarketingPage() {
                     <CardDescription>History of all marketing-related purchases by vendors.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Purchase ID</TableHead>
-                                <TableHead>Vendor Name</TableHead>
-                                <TableHead>Item Purchased</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Amount</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {purchaseHistoryData.map(p => (
-                                <TableRow key={p.id}>
-                                    <TableCell>{p.id}</TableCell>
-                                    <TableCell>{p.vendorName}</TableCell>
-                                    <TableCell>{p.item}</TableCell>
-                                    <TableCell>{p.date}</TableCell>
-                                    <TableCell>₹{(p.amount / 100).toLocaleString()}</TableCell>
+                    <div className="overflow-x-auto no-scrollbar">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Purchase ID</TableHead>
+                                    <TableHead>Vendor Name</TableHead>
+                                    <TableHead>Item Purchased</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Amount</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {purchaseHistoryData.map(p => (
+                                    <TableRow key={p.id}>
+                                        <TableCell>{p.id}</TableCell>
+                                        <TableCell>{p.vendorName}</TableCell>
+                                        <TableCell>{p.item}</TableCell>
+                                        <TableCell>{p.date}</TableCell>
+                                        <TableCell>₹{(p.amount / 100).toLocaleString()}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </TabsContent>
@@ -496,3 +508,5 @@ export default function PlatformMarketingPage() {
     </div>
   );
 }
+
+    
