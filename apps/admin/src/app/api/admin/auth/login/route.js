@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import validator from "validator";
@@ -60,7 +61,7 @@ export async function POST(request) {
       user: safeUser,
       admin_access_token: accessToken,
       admin_refresh_token: refreshToken,
-      role: user.role,
+      role: user.roleName,
     });
   } catch (error) {
     console.error("Login error:", error);
