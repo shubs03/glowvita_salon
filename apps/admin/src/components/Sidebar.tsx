@@ -28,17 +28,6 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
     router.push('/login');
   };
   
-  // if (isLoading) {
-  //   return null; // Or a loading skeleton
-  // }
-
-  // const permissions = admin?.permissions || [];
-  // const isSuperAdmin = admin?.roleName === 'Super Admin';
-  
-  // const visibleNavItems = isSuperAdmin 
-  //   ? sidebarNavItems 
-  //   : sidebarNavItems.filter(item => permissions.includes(item.permission));
-
   // For development: bypass permissions and show all items
   const visibleNavItems = sidebarNavItems;
 
@@ -48,7 +37,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
         isOpen ? "w-64" : "w-20",
         isMobile && "w-64"
     )}>
-      <div className="flex flex-col flex-grow overflow-y-hidden">
+      <div className="flex flex-col flex-grow overflow-hidden">
         <div className="p-4 h-16 border-b flex items-center shrink-0 justify-between">
            <Link href="/" className="flex items-center gap-2">
             <h1 className={cn("text-xl font-bold font-headline text-primary", !isOpen && !isMobile && "lg:hidden")}>Admin</h1>

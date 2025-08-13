@@ -177,7 +177,7 @@ export default function SupplierManagementPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto no-scrollbar">
               <Table>
                 <TableHeader>
                   <TableRow>
