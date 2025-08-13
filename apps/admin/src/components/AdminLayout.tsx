@@ -33,16 +33,28 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   useEffect(() => {
     if (!isLoading && !admin) {
         router.push('/login');
+        return; // Early return to prevent further checks
     }
 
     if (!isLoading && admin) {
+      // Find the required permission for the current route
       const requiredPermission = sidebarNavItems.find(item => item.href === pathname)?.permission;
       
-      if (requiredPermission && admin.roleName !== 'superadmin' && !admin.permissions?.includes(requiredPermission)) {
+      // Allow access if no specific permission is required for the route (e.g., dashboard)
+      if (!requiredPermission) {
+        return;
+      }
+      
+      // Check if the user has permission
+      const isSuperAdmin = admin.roleName === 'superadmin';
+      const hasPermission = admin.permissions?.includes(requiredPermission);
+
+      // If user is not superadmin and does not have the required permission, redirect
+      if (!isSuperAdmin && !hasPermission) {
         router.push('/');
       }
     }
-  }, [admin, isLoading, router, pathname])
+  }, [admin, isLoading, router, pathname]);
 
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
