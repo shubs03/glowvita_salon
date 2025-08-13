@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { sidebarNavItems } from '@/lib/routes';
+import { Trash2 } from 'lucide-react';
 
 export type AdminUser = {
   id?: string;
