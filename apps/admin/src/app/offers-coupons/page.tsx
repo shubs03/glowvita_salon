@@ -21,6 +21,7 @@ const couponsData = [
         type: "percentage",
         value: 20,
         status: "Active",
+        startDate: "2024-06-01",
         expires: "2024-08-31",
         redeemed: 150,
     },
@@ -30,6 +31,7 @@ const couponsData = [
         type: "fixed",
         value: 100,
         status: "Active",
+        startDate: "2024-01-01",
         expires: "N/A",
         redeemed: 230,
     },
@@ -39,6 +41,7 @@ const couponsData = [
         type: "percentage",
         value: 15,
         status: "Expired",
+        startDate: "2023-12-01",
         expires: "2023-12-31",
         redeemed: 50,
     },
@@ -48,6 +51,7 @@ const couponsData = [
         type: "percentage",
         value: 25,
         status: "Active",
+        startDate: "2024-07-01",
         expires: "2024-07-31",
         redeemed: 75,
     },
@@ -57,9 +61,20 @@ const couponsData = [
         type: "fixed",
         value: 300,
         status: "Expired",
+        startDate: "2023-12-25",
         expires: "2024-01-01",
         redeemed: 25,
     },
+    {
+        id: "coupon_6",
+        code: "WINTER25",
+        type: "percentage",
+        value: 15,
+        status: "Scheduled",
+        startDate: "2024-12-01",
+        expires: "2025-01-31",
+        redeemed: 0,
+    }
 ];
 
 type Coupon = typeof couponsData[0];
@@ -191,6 +206,7 @@ export default function OffersCouponsPage() {
                   <TableHead>Coupon Code</TableHead>
                   <TableHead>Discount</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Starts On</TableHead>
                   <TableHead>Expires On</TableHead>
                   <TableHead>Redeemed</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -205,11 +221,14 @@ export default function OffersCouponsPage() {
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                             coupon.status === "Active"
                             ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            : coupon.status === "Scheduled"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                             : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
                         }`}>
                         {coupon.status}
                         </span>
                     </TableCell>
+                    <TableCell>{coupon.startDate}</TableCell>
                     <TableCell>{coupon.expires}</TableCell>
                     <TableCell>{coupon.redeemed}</TableCell>
                     <TableCell className="text-right">
@@ -274,6 +293,10 @@ export default function OffersCouponsPage() {
                     <span className="col-span-2">{modalCoupon?.status}</span>
                 </div>
                  <div className="grid grid-cols-3 items-center gap-4">
+                    <span className="font-semibold text-muted-foreground">Starts</span>
+                    <span className="col-span-2">{modalCoupon?.startDate}</span>
+                </div>
+                 <div className="grid grid-cols-3 items-center gap-4">
                     <span className="font-semibold text-muted-foreground">Expires</span>
                     <span className="col-span-2">{modalCoupon?.expires}</span>
                 </div>
@@ -304,9 +327,15 @@ export default function OffersCouponsPage() {
                 <Label htmlFor="value">Discount Value</Label>
                 <Input id="value" type="number" defaultValue={modalCoupon?.value || ''} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="expires">Expires On</Label>
-                <Input id="expires" type="date" defaultValue={modalCoupon?.expires || ''} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Starts On</Label>
+                  <Input id="startDate" type="date" defaultValue={modalCoupon?.startDate || ''} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expires">Expires On</Label>
+                  <Input id="expires" type="date" defaultValue={modalCoupon?.expires || ''} />
+                </div>
               </div>
             </div>
           )}
