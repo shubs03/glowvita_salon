@@ -10,14 +10,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { Plus, Eye, Edit, Trash2, Ticket, CheckCircle, XCircle, DollarSign, MessageSquare, Megaphone, AlertCircle } from 'lucide-react';
+import { Plus, Eye, Edit, Trash2, Ticket, CheckCircle, XCircle, DollarSign, MessageSquare, Megaphone, AlertCircle, Send, Users, Calendar, Power } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Switch } from '@repo/ui/switch';
 
 const smsTemplatesData = [
-  { id: 'TMP001', name: 'Welcome Offer', type: 'Promotional', price: 500, status: 'Active' },
-  { id: 'TMP002', name: 'Appointment Reminder', type: 'Transactional', price: 200, status: 'Active' },
-  { id: 'TMP003', name: 'Festive Discount', type: 'Promotional', price: 750, status: 'Inactive' },
+  { id: 'TMP001', name: 'Welcome Offer', type: 'Promotional', price: 500, status: 'Active', content: 'Welcome to our salon! Enjoy 20% off on your first visit.' },
+  { id: 'TMP002', name: 'Appointment Reminder', type: 'Transactional', price: 200, status: 'Active', content: 'Your appointment is tomorrow at 2 PM. See you soon!' },
+  { id: 'TMP003', name: 'Festive Discount', type: 'Promotional', price: 750, status: 'Inactive', content: 'Celebrate Diwali with us! Get 25% off all services.' },
 ];
 
 const smsPackagesData = [
@@ -26,9 +27,9 @@ const smsPackagesData = [
   { id: 'PKG003', name: 'Pro Pack', smsCount: 10000, price: 800000, description: 'For high-volume marketing.' },
 ];
 
-const socialMediaData = [
-    { id: 'SOC001', name: 'Basic Social', postCount: 10, price: 500000, description: '5 Facebook, 5 Instagram posts.' },
-    { id: 'SOC002', name: 'Advanced Social', postCount: 25, price: 1200000, description: 'Full social media handling.' },
+const socialMediaPostsData = [
+    { id: 'POST001', title: 'Summer Sale Announcement', platform: 'Instagram', price: 10000, description: 'A vibrant post announcing the summer sale.' },
+    { id: 'POST002', title: 'New Service Launch', platform: 'Facebook', price: 12000, description: 'An engaging post to introduce a new service.' },
 ];
 
 const marketingTicketsData = [
@@ -42,85 +43,114 @@ const purchaseHistoryData = [
     { id: 'PUR002', vendorName: 'The Men\'s Room', item: 'Basic Social (Posts)', date: '2024-08-05', amount: 500000 },
 ];
 
+const activeCampaignsData = [
+    { id: 'CAMP001', vendorName: 'Glamour Salon', salonName: 'Glamour Salon', contact: '123-456-7890', email: 'glamour@example.com', activationDate: '2024-08-01', expirationDate: '2024-09-01', status: true },
+    { id: 'CAMP002', vendorName: 'Modern Cuts', salonName: 'Modern Cuts', contact: '987-654-3210', email: 'modern@example.com', activationDate: '2024-08-15', expirationDate: '2024-08-25', status: true },
+];
+
+type ModalDataType = typeof smsTemplatesData[0] | typeof smsPackagesData[0] | typeof socialMediaPostsData[0] | typeof marketingTicketsData[0] | null;
+
 export default function PlatformMarketingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'add' | 'edit' | 'view' | 'confirm'>('add');
   const [modalContent, setModalContent] = useState<React.ReactNode | null>(null);
   const [modalTitle, setModalTitle] = useState('');
+  const [modalData, setModalData] = useState<ModalDataType>(null);
+  const [modalAction, setModalAction] = useState<(() => void) | null>(null);
 
-  const openModal = (title: string, content: React.ReactNode) => {
+  const openModal = (title: string, type: 'add' | 'edit' | 'view' | 'confirm', content: React.ReactNode, data: ModalDataType = null, onConfirm?: () => void) => {
     setModalTitle(title);
+    setModalType(type);
     setModalContent(content);
+    setModalData(data);
+    if(onConfirm) setModalAction(() => onConfirm);
     setIsModalOpen(true);
   };
 
-  const createTemplateModal = (
+  const createTemplateForm = (data?: any) => (
     <div className="grid gap-4 py-4">
         <div className="space-y-2">
             <Label htmlFor="template-name">Template Name</Label>
-            <Input id="template-name" placeholder="e.g., Welcome Offer" />
+            <Input id="template-name" defaultValue={data?.name} placeholder="e.g., Welcome Offer" />
         </div>
         <div className="space-y-2">
             <Label htmlFor="template-type">Template Type</Label>
-            <Select>
-                <SelectTrigger id="template-type">
-                    <SelectValue placeholder="Select a type" />
-                </SelectTrigger>
+            <Select defaultValue={data?.type}>
+                <SelectTrigger id="template-type"><SelectValue placeholder="Select a type" /></SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="promotional">Promotional</SelectItem>
-                    <SelectItem value="transactional">Transactional</SelectItem>
+                    <SelectItem value="Promotional">Promotional</SelectItem>
+                    <SelectItem value="Transactional">Transactional</SelectItem>
                 </SelectContent>
             </Select>
         </div>
         <div className="space-y-2">
             <Label htmlFor="template-price">Price (in paise)</Label>
-            <Input id="template-price" type="number" placeholder="e.g., 50000" />
+            <Input id="template-price" type="number" defaultValue={data?.price} placeholder="e.g., 50000" />
         </div>
         <div className="space-y-2">
-            <Label htmlFor="template-file">Upload File</Label>
-            <Input id="template-file" type="file" />
+            <Label htmlFor="template-content">Content</Label>
+            <Textarea id="template-content" defaultValue={data?.content} placeholder="Enter SMS content here..." />
         </div>
     </div>
   );
 
-  const createSmsPackageModal = (
+  const createSmsPackageForm = (data?: any) => (
      <div className="grid gap-4 py-4">
         <div className="space-y-2">
             <Label htmlFor="pkg-name">Package Name</Label>
-            <Input id="pkg-name" placeholder="e.g., Starter Pack" />
+            <Input id="pkg-name" defaultValue={data?.name} placeholder="e.g., Starter Pack" />
         </div>
         <div className="space-y-2">
             <Label htmlFor="pkg-count">SMS Count</Label>
-            <Input id="pkg-count" type="number" placeholder="e.g., 1000" />
+            <Input id="pkg-count" type="number" defaultValue={data?.smsCount} placeholder="e.g., 1000" />
         </div>
         <div className="space-y-2">
             <Label htmlFor="pkg-price">Price (in paise)</Label>
-            <Input id="pkg-price" type="number" placeholder="e.g., 100000" />
+            <Input id="pkg-price" type="number" defaultValue={data?.price} placeholder="e.g., 100000" />
         </div>
         <div className="space-y-2">
             <Label htmlFor="pkg-desc">Description</Label>
-            <Textarea id="pkg-desc" placeholder="A brief description of the package." />
+            <Textarea id="pkg-desc" defaultValue={data?.description} placeholder="A brief description of the package." />
         </div>
     </div>
   );
   
-    const createSocialPackageModal = (
+  const createSocialPostForm = (data?: any) => (
      <div className="grid gap-4 py-4">
         <div className="space-y-2">
-            <Label htmlFor="soc-name">Package Name</Label>
-            <Input id="soc-name" placeholder="e.g., Basic Social" />
+            <Label htmlFor="post-title">Post Title</Label>
+            <Input id="post-title" defaultValue={data?.title} placeholder="e.g., Summer Sale" />
         </div>
         <div className="space-y-2">
-            <Label htmlFor="soc-count">Post Count</Label>
-            <Input id="soc-count" type="number" placeholder="e.g., 10" />
+            <Label htmlFor="post-platform">Platform</Label>
+            <Select defaultValue={data?.platform}>
+                <SelectTrigger id="post-platform"><SelectValue placeholder="Select social media platform" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="Instagram">Instagram</SelectItem>
+                    <SelectItem value="Facebook">Facebook</SelectItem>
+                    <SelectItem value="Twitter">Twitter</SelectItem>
+                </SelectContent>
+            </Select>
         </div>
         <div className="space-y-2">
-            <Label htmlFor="soc-price">Price (in paise)</Label>
-            <Input id="soc-price" type="number" placeholder="e.g., 500000" />
+            <Label htmlFor="post-price">Price (in paise)</Label>
+            <Input id="post-price" type="number" defaultValue={data?.price} placeholder="e.g., 10000" />
         </div>
         <div className="space-y-2">
-            <Label htmlFor="soc-desc">Description</Label>
-            <Textarea id="soc-desc" placeholder="e.g., 5 Facebook, 5 Instagram posts." />
+            <Label htmlFor="post-desc">Description</Label>
+            <Textarea id="post-desc" defaultValue={data?.description} placeholder="Briefly describe the social media post." />
         </div>
+    </div>
+  );
+
+  const viewDetails = (data: any) => (
+    <div className="space-y-2">
+      {Object.entries(data).map(([key, value]) => (
+        <div key={key} className="flex justify-between border-b pb-1">
+          <span className="font-semibold capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+          <span>{String(value)}</span>
+        </div>
+      ))}
     </div>
   );
 
@@ -155,7 +185,7 @@ export default function PlatformMarketingPage() {
                     <Megaphone className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">5</div>
+                    <div className="text-2xl font-bold">{activeCampaignsData.length}</div>
                     <p className="text-xs text-muted-foreground">Across all marketing types</p>
                 </CardContent>
             </Card>
@@ -165,7 +195,7 @@ export default function PlatformMarketingPage() {
                     <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">2</div>
+                    <div className="text-2xl font-bold">{marketingTicketsData.filter(t => t.status === 'Pending').length}</div>
                     <p className="text-xs text-muted-foreground">Awaiting resolution</p>
                 </CardContent>
             </Card>
@@ -173,12 +203,13 @@ export default function PlatformMarketingPage() {
 
 
        <Tabs defaultValue="sms_templates">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5 max-w-4xl">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 max-w-5xl">
             <TabsTrigger value="sms_templates">SMS Templates</TabsTrigger>
             <TabsTrigger value="sms_packages">SMS Packages</TabsTrigger>
-            <TabsTrigger value="social_media">Social Media</TabsTrigger>
+            <TabsTrigger value="social_media">Social Posts</TabsTrigger>
             <TabsTrigger value="marketing_tickets">Marketing Tickets</TabsTrigger>
             <TabsTrigger value="purchase_history">Purchase History</TabsTrigger>
+            <TabsTrigger value="active_campaigns">Active Campaigns</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sms_templates">
@@ -189,7 +220,7 @@ export default function PlatformMarketingPage() {
                             <CardTitle>SMS Templates</CardTitle>
                             <CardDescription>Manage predefined SMS templates for vendors.</CardDescription>
                         </div>
-                        <Button onClick={() => openModal('Create New SMS Template', createTemplateModal)}>
+                        <Button onClick={() => openModal('Create New SMS Template', 'add', createTemplateForm())}>
                             <Plus className="mr-2 h-4 w-4" />
                             Create Template
                         </Button>
@@ -216,7 +247,8 @@ export default function PlatformMarketingPage() {
                                     <TableCell>₹{t.price / 100}</TableCell>
                                     <TableCell>{t.status}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => openModal('View Template', 'view', viewDetails(t), t)}><Eye className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => openModal('Edit Template', 'edit', createTemplateForm(t), t)}><Edit className="h-4 w-4" /></Button>
                                         <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                                     </TableCell>
                                 </TableRow>
@@ -235,7 +267,7 @@ export default function PlatformMarketingPage() {
                             <CardTitle>SMS Packages</CardTitle>
                             <CardDescription>Create and manage bulk SMS packages for vendors.</CardDescription>
                         </div>
-                        <Button onClick={() => openModal('Create New SMS Package', createSmsPackageModal)}>
+                        <Button onClick={() => openModal('Create New SMS Package', 'add', createSmsPackageForm())}>
                             <Plus className="mr-2 h-4 w-4" />
                             Create Package
                         </Button>
@@ -262,7 +294,8 @@ export default function PlatformMarketingPage() {
                                     <TableCell>₹{(p.price / 100).toLocaleString()}</TableCell>
                                     <TableCell className="max-w-xs truncate">{p.description}</TableCell>
                                      <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => openModal('View Package', 'view', viewDetails(p), p)}><Eye className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => openModal('Edit Package', 'edit', createSmsPackageForm(p), p)}><Edit className="h-4 w-4" /></Button>
                                         <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                                     </TableCell>
                                 </TableRow>
@@ -278,12 +311,12 @@ export default function PlatformMarketingPage() {
                 <CardHeader>
                      <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle>Social Media Packages</CardTitle>
-                            <CardDescription>Manage packages for social media posts and campaigns.</CardDescription>
+                            <CardTitle>Social Media Posts</CardTitle>
+                            <CardDescription>Manage individual social media posts available for purchase.</CardDescription>
                         </div>
-                        <Button onClick={() => openModal('Create New Social Media Package', createSocialPackageModal)}>
+                        <Button onClick={() => openModal('Create New Social Post', 'add', createSocialPostForm())}>
                             <Plus className="mr-2 h-4 w-4" />
-                            Create Package
+                            Create Post
                         </Button>
                     </div>
                 </CardHeader>
@@ -291,25 +324,69 @@ export default function PlatformMarketingPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Package ID</TableHead>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Post Count</TableHead>
+                                <TableHead>Post ID</TableHead>
+                                <TableHead>Title</TableHead>
+                                <TableHead>Platform</TableHead>
                                 <TableHead>Price</TableHead>
                                 <TableHead>Description</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                             {socialMediaData.map(p => (
+                             {socialMediaPostsData.map(p => (
                                 <TableRow key={p.id}>
                                     <TableCell>{p.id}</TableCell>
-                                    <TableCell>{p.name}</TableCell>
-                                    <TableCell>{p.postCount}</TableCell>
+                                    <TableCell>{p.title}</TableCell>
+                                    <TableCell>{p.platform}</TableCell>
                                     <TableCell>₹{(p.price / 100).toLocaleString()}</TableCell>
                                     <TableCell className="max-w-xs truncate">{p.description}</TableCell>
                                      <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon"><Edit className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => openModal('View Post', 'view', viewDetails(p), p)}><Eye className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => openModal('Edit Post', 'edit', createSocialPostForm(p), p)}><Edit className="h-4 w-4" /></Button>
                                         <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </TabsContent>
+        
+        <TabsContent value="active_campaigns">
+            <Card className="mt-4">
+                <CardHeader>
+                    <CardTitle>Active Marketing Campaigns</CardTitle>
+                    <CardDescription>Monitor and manage all ongoing vendor campaigns.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Vendor</TableHead>
+                                <TableHead>Contact</TableHead>
+                                <TableHead>Activation</TableHead>
+                                <TableHead>Expiration</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {activeCampaignsData.map(c => (
+                                <TableRow key={c.id}>
+                                    <TableCell>
+                                        <div className="font-medium">{c.vendorName}</div>
+                                        <div className="text-sm text-muted-foreground">{c.salonName}</div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div>{c.contact}</div>
+                                        <div className="text-sm text-muted-foreground">{c.email}</div>
+                                    </TableCell>
+                                    <TableCell>{c.activationDate}</TableCell>
+                                    <TableCell>{c.expirationDate}</TableCell>
+                                    <TableCell>{c.status ? 'Active' : 'Expired'}</TableCell>
+                                    <TableCell className="text-right">
+                                         <Switch checked={c.status} onCheckedChange={() => {}} aria-label="Toggle campaign status" />
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -400,13 +477,22 @@ export default function PlatformMarketingPage() {
             </DialogHeader>
             {modalContent}
             <DialogFooter>
-                <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                <Button>Save</Button>
+                {modalType === 'view' ? (
+                     <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Close</Button>
+                ) : modalType === 'confirm' ? (
+                     <>
+                        <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                        <Button onClick={() => { if(modalAction) modalAction(); setIsModalOpen(false); }}>Confirm</Button>
+                     </>
+                ) : (
+                    <>
+                        <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                        <Button>Save</Button>
+                    </>
+                )}
             </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-
-    
