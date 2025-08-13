@@ -139,9 +139,9 @@ export default function ReferralManagementPage() {
 
       <Tabs defaultValue="c2c">
         <TabsList className="grid w-full grid-cols-3 max-w-lg">
-            <TabsTrigger value="c2c">Customer to Customer (C2C)</TabsTrigger>
-            <TabsTrigger value="c2v">Customer to Vendor (C2V)</TabsTrigger>
-            <TabsTrigger value="v2v">Vendor to Vendor (V2V)</TabsTrigger>
+            <TabsTrigger value="c2c">C2C</TabsTrigger>
+            <TabsTrigger value="c2v">C2V</TabsTrigger>
+            <TabsTrigger value="v2v">V2V</TabsTrigger>
         </TabsList>
         <TabsContent value="c2c">
             <Card className="mt-4">
