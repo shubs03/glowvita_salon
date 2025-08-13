@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Download, Eye, DollarSign, Users, UserPlus, ShoppingCart } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+
 
 interface Report {
   title: string;
@@ -90,6 +92,38 @@ const reportsData: ReportCategory[] = [
         ]
     }
 ];
+
+const dummyReportData = [
+  { id: 'REP-001', name: 'John Doe', amount: '$150.00', date: '2024-08-01' },
+  { id: 'REP-002', name: 'Jane Smith', amount: '$200.50', date: '2024-08-02' },
+  { id: 'REP-003', name: 'Sam Wilson', amount: '$75.25', date: '2024-08-03' },
+  { id: 'REP-004', name: 'Alice Brown', amount: '$300.00', date: '2024-08-04' },
+];
+
+const DummyReportTable = () => (
+    <div className="overflow-x-auto no-scrollbar rounded-md border">
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Date</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {dummyReportData.map((item) => (
+                    <TableRow key={item.id}>
+                        <TableCell className="font-mono">{item.id}</TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell>{item.amount}</TableCell>
+                        <TableCell>{item.date}</TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    </div>
+);
 
 
 export default function ReportsPage() {
@@ -187,12 +221,11 @@ export default function ReportsPage() {
                 <DialogHeader>
                     <DialogTitle>{selectedReport?.title}</DialogTitle>
                     <DialogDescription>
-                        {selectedReport?.description}
+                        A preview of the "{selectedReport?.title}".
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <p>Report content for "{selectedReport?.title}" will be displayed here.</p>
-                    {/* Placeholder for actual report component/data */}
+                  <DummyReportTable />
                 </div>
                 <DialogFooter>
                     <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
