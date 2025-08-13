@@ -51,11 +51,11 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   // }
 
   return (
-    <div className="flex h-screen bg-secondary overflow-hidden">
+    <div className="flex h-screen bg-secondary">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} isMobile={isMobile}/>
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col">
         <Header toggleSidebar={toggleSidebar} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto no-scrollbar">
+        <main className="flex-1 no-scrollbar">
             {children}
         </main>
       </div>
