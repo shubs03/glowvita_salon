@@ -4,6 +4,7 @@ import {
     FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, 
     FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync
 } from "react-icons/fa";
+import { FaListUl } from "react-icons/fa";
 import { IconType } from "react-icons";
 
 export interface NavItem {
@@ -73,6 +74,12 @@ export const sidebarNavItems: NavItem[] = [
     href: "/referral-management",
     Icon: FaUserFriends,
     permission: "referral-management",
+  },
+   {
+    title: "Dropdown Management",
+    href: "/dropdown-management",
+    Icon: FaListUl,
+    permission: "dropdown-management",
   },
   {
     title: "Tax & Fees",
