@@ -8,10 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
-import { Eye, ToggleRight, ToggleLeft, FileDown, X, Edit2, Trash2, Plus } from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { openModal, closeModal } from '@repo/store/slices/modal';
+import { Eye, ToggleRight, ToggleLeft, FileDown, X, Trash2, Plus } from 'lucide-react';
+import { VendorForm } from '@/components/VendorForm';
 
 const vendorsData = [
   {
@@ -58,7 +56,17 @@ const vendorsData = [
   },
 ];
 
-type Vendor = typeof vendorsData[0];
+export type Vendor = (typeof vendorsData)[0] & {
+  email?: string;
+  state?: string;
+  city?: string;
+  pincode?: string;
+  description?: string;
+  profileImage?: string;
+  address?: string;
+  website?: string;
+};
+
 type ActionType = 'enable' | 'disable' | 'delete';
 
 export default function VendorManagementPage() {
@@ -66,29 +74,29 @@ export default function VendorManagementPage() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [actionType, setActionType] = useState<ActionType | null>(null);
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
-    
-    const dispatch = useAppDispatch();
-    const { isOpen, modalType, data } = useAppSelector((state) => state.modal);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+    const [isEditMode, setIsEditMode] = useState(false);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
     const currentItems = vendorsData.slice(firstItemIndex, lastItemIndex);
 
     const totalPages = Math.ceil(vendorsData.length / itemsPerPage);
-
-    const selectedVendor = modalType === 'editVendor' || modalType === 'viewVendor' ? data as Vendor : null;
-    const selectedActionVendor = data as Vendor;
-
-    const handleOpenModal = (type: 'addVendor' | 'editVendor' | 'viewVendor', vendor?: Vendor) => {
-        dispatch(openModal({ modalType: type, data: vendor }));
-    };
-
-    const handleCloseModal = () => {
-        dispatch(closeModal());
-    };
     
+    const handleOpenFormModal = (vendor?: Vendor) => {
+        if (vendor) {
+            setSelectedVendor(vendor);
+            setIsEditMode(true);
+        } else {
+            setSelectedVendor(null);
+            setIsEditMode(false);
+        }
+        setIsFormModalOpen(true);
+    };
+
     const handleActionClick = (vendor: Vendor, action: ActionType) => {
-        dispatch(openModal({ modalType: 'confirmation', data: vendor }));
+        setSelectedVendor(vendor);
         setActionType(action);
         setIsActionModalOpen(true);
     };
@@ -96,28 +104,28 @@ export default function VendorManagementPage() {
     const handleConfirmAction = () => {
         // Handle API call for enable/disable/delete
         setIsActionModalOpen(false);
-        dispatch(closeModal());
+        setSelectedVendor(null);
     };
     
      const getModalContent = () => {
-        if (!actionType || !selectedActionVendor) return { title: '', description: '', buttonText: '' };
+        if (!actionType || !selectedVendor) return { title: '', description: '', buttonText: '' };
         switch (actionType) {
             case 'enable':
                 return {
                     title: 'Enable Vendor?',
-                    description: `Are you sure you want to enable the vendor "${selectedActionVendor.name}"?`,
+                    description: `Are you sure you want to enable the vendor "${selectedVendor.name}"?`,
                     buttonText: 'Enable'
                 };
             case 'disable':
                 return {
                     title: 'Disable Vendor?',
-                    description: `Are you sure you want to disable the vendor "${selectedActionVendor.name}"?`,
+                    description: `Are you sure you want to disable the vendor "${selectedVendor.name}"?`,
                     buttonText: 'Disable'
                 };
             case 'delete':
                 return {
                     title: 'Delete Vendor?',
-                    description: `Are you sure you want to permanently delete the vendor "${selectedActionVendor.name}"? This action is irreversible.`,
+                    description: `Are you sure you want to permanently delete the vendor "${selectedVendor.name}"? This action is irreversible.`,
                     buttonText: 'Delete'
                 };
             default:
@@ -126,8 +134,6 @@ export default function VendorManagementPage() {
     };
 
     const { title, description, buttonText } = getModalContent();
-
-    const isModalOpen = isOpen && (modalType === 'addVendor' || modalType === 'editVendor' || modalType === 'viewVendor');
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -145,7 +151,7 @@ export default function VendorManagementPage() {
                     <FileDown className="mr-2 h-4 w-4" />
                     Export List
                 </Button>
-                <Button onClick={() => handleOpenModal('addVendor')}>
+                <Button onClick={() => handleOpenFormModal()}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add New Vendor
                 </Button>
@@ -195,13 +201,9 @@ export default function VendorManagementPage() {
                         </span>
                     </TableCell>
                     <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal('viewVendor', vendor)}>
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenFormModal(vendor)}>
                             <Eye className="h-4 w-4" />
-                            <span className="sr-only">View</span>
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal('editVendor', vendor)}>
-                            <Edit2 className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
+                            <span className="sr-only">View/Edit</span>
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, vendor.status === 'Active' ? 'disable' : 'enable')}
                             className={vendor.status === 'Active' ? 'text-yellow-600 hover:text-yellow-700' : 'text-green-600 hover:text-green-700'}>
@@ -229,68 +231,13 @@ export default function VendorManagementPage() {
             />
         </CardContent>
       </Card>
-
-      {/* Add/Edit/View Vendor Modal */}
-       <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-        <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-                <DialogTitle>
-                    {modalType === 'addVendor' && 'Add New Vendor'}
-                    {modalType === 'editVendor' && 'Edit Vendor'}
-                    {modalType === 'viewVendor' && 'Vendor Details'}
-                </DialogTitle>
-                 <DialogDescription>
-                    {modalType === 'addVendor' && "Enter details for the new vendor."}
-                    {modalType === 'editVendor' && "Update vendor details."}
-                </DialogDescription>
-            </DialogHeader>
-            {modalType === 'viewVendor' ? (
-                 <div className="grid gap-4 py-4 text-sm">
-                    <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Salon Name</span>
-                        <span className="col-span-2">{selectedVendor?.name}</span>
-                    </div>
-                     <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Owner</span>
-                        <span className="col-span-2">{selectedVendor?.owner}</span>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Phone</span>
-                        <span className="col-span-2">{selectedVendor?.phone}</span>
-                    </div>
-                     <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Status</span>
-                        <span className="col-span-2">{selectedVendor?.status}</span>
-                    </div>
-                </div>
-            ) : (
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">Salon Name</Label>
-                        <Input id="name" defaultValue={selectedVendor?.name || ''} className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="owner" className="text-right">Owner</Label>
-                        <Input id="owner" defaultValue={selectedVendor?.owner || ''} className="col-span-3" />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="phone" className="text-right">Phone</Label>
-                        <Input id="phone" defaultValue={selectedVendor?.phone || ''} className="col-span-3" />
-                    </div>
-                </div>
-            )}
-            <DialogFooter>
-                 {modalType === 'viewVendor' ? (
-                    <Button onClick={handleCloseModal}>Close</Button>
-                 ) : (
-                    <>
-                        <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancel</Button>
-                        <Button type="submit">Save Vendor</Button>
-                    </>
-                 )}
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      
+      <VendorForm
+        isOpen={isFormModalOpen}
+        onClose={() => setIsFormModalOpen(false)}
+        vendor={selectedVendor}
+        isEditMode={isEditMode}
+      />
       
        {/* Confirmation Modal */}
         <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>

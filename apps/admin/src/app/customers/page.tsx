@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -13,111 +13,74 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, FileDown, X, IndianRupee, Percent, Users, FileText, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
 
-const customerOrdersData = [
-  {
-    id: 1,
-    orderId: "ORD-001",
-    customerId: "CUST-101",
-    vendorName: "Glamour Salon",
-    customerName: "Alice Johnson",
-    orderType: "Online",
-    appointmentDate: "2024-08-15",
-    fees: 50,
-    subTotal: 45,
-    discount: 5,
-    taxes: 8.1,
-    couponApplied: "SUMMER10",
-    paymentMode: "Credit Card",
-    platformFees: 7.5,
-    serviceTax: 0.6,
-    orderStatus: "Completed",
-  },
-  {
-    id: 2,
-    orderId: "ORD-002",
-    customerId: "CUST-102",
-    vendorName: "Modern Cuts",
-    customerName: "Bob Williams",
-    orderType: "Offline",
-    appointmentDate: "2024-08-16",
-    fees: 30,
-    subTotal: 30,
-    discount: 0,
-    taxes: 5.4,
-    couponApplied: "N/A",
-    paymentMode: "Cash",
-    platformFees: 4.5,
-    serviceTax: 0,
-    orderStatus: "Confirmed",
-  },
-  {
-    id: 3,
-    orderId: "ORD-003",
-    customerId: "CUST-103",
-    vendorName: "Style Hub",
-    customerName: "Charlie Brown",
-    orderType: "Online",
-    appointmentDate: "2024-08-17",
-    fees: 75,
-    subTotal: 70,
-    discount: 5,
-    taxes: 12.6,
-    couponApplied: "NEW5",
-    paymentMode: "PayPal",
-    platformFees: 11.25,
-    serviceTax: 1.35,
-    orderStatus: "Pending",
-  },
-];
-
-const salonListData = [
-    {
-        id: 1,
-        salonName: "Glamour Salon",
-        vendorContact: "vendor1@example.com",
-        vendorOwner: "Ms. Glamour",
-        adminReservation: 100,
-        adminPay: 85,
-        settlementAmount: 15,
-    },
-    {
-        id: 2,
-        salonName: "Modern Cuts",
-        vendorContact: "vendor2@example.com",
-        vendorOwner: "Mr. Modern",
-        adminReservation: 150,
-        adminPay: 127.5,
-        settlementAmount: 22.5,
-    },
-    {
-        id: 3,
-        salonName: "Style Hub",
-        vendorContact: "vendor3@example.com",
-        vendorOwner: "Mx. Style",
-        adminReservation: 200,
-        adminPay: 170,
-        settlementAmount: 30,
-    }
-]
+import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
+import { openModal, closeModal } from '@repo/store/slices/modal';
+import {
+  setCustomerFilter,
+  setCurrentCustomerPage,
+  setCustomerItemsPerPage,
+  clearCustomerFilters,
+} from '@repo/store/slices/customerSlice';
+import {
+  setSalonFilter,
+  setCurrentSalonPage,
+  setSalonItemsPerPage,
+  clearSalonFilters
+} from '@repo/store/slices/salonSlice';
 
 export default function CustomerManagementPage() {
-    const [currentPageOrders, setCurrentPageOrders] = useState(1);
-    const [itemsPerPageOrders, setItemsPerPageOrders] = useState(10);
-    const [currentPageSalons, setCurrentPageSalons] = useState(1);
-    const [itemsPerPageSalons, setItemsPerPageSalons] = useState(10);
-    const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
-
-    // Orders Pagination Logic
-    const lastItemIndexOrders = currentPageOrders * itemsPerPageOrders;
-    const firstItemIndexOrders = lastItemIndexOrders - itemsPerPageOrders;
-    const currentOrders = customerOrdersData.slice(firstItemIndexOrders, lastItemIndexOrders);
-    const totalPagesOrders = Math.ceil(customerOrdersData.length / itemsPerPageOrders);
+    const dispatch = useAppDispatch();
     
-    // Salons Pagination Logic
-    const lastItemIndexSalons = currentPageSalons * itemsPerPageSalons;
-    const firstItemIndexSalons = lastItemIndexSalons - itemsPerPageSalons;
-    const currentSalons = salonListData.slice(firstItemIndexSalons, lastItemIndexSalons);
-    const totalPagesSalons = Math.ceil(salonListData.length / itemsPerPageSalons);
+    // State for the "Add New Customer" modal
+    const { isOpen, modalType } = useAppSelector(state => state.modal);
+    const isNewCustomerModalOpen = isOpen && modalType === 'newCustomer';
+
+    // Customer Orders State from Redux
+    const {
+        orders,
+        filters: customerFilters,
+        pagination: customerPagination
+    } = useAppSelector(state => state.customer);
+    
+    // Salon List State from Redux
+    const {
+        salons,
+        filters: salonFilters,
+        pagination: salonPagination
+    } = useAppSelector(state => state.salon);
+
+    // Memoized filtering and pagination logic
+    const filteredOrders = useMemo(() => {
+        return orders.filter(order => {
+            return (
+                (customerFilters.orderType ? order.orderType === customerFilters.orderType : true) &&
+                (customerFilters.paymentMode ? order.paymentMode === customerFilters.paymentMode : true) &&
+                (customerFilters.orderStatus ? order.orderStatus === customerFilters.orderStatus : true) &&
+                (customerFilters.appointmentDate ? order.appointmentDate === customerFilters.appointmentDate : true)
+            );
+        });
+    }, [orders, customerFilters]);
+
+    const currentOrders = useMemo(() => {
+        const firstItemIndex = (customerPagination.currentPage - 1) * customerPagination.itemsPerPage;
+        const lastItemIndex = firstItemIndex + customerPagination.itemsPerPage;
+        return filteredOrders.slice(firstItemIndex, lastItemIndex);
+    }, [filteredOrders, customerPagination]);
+    
+    const filteredSalons = useMemo(() => {
+        return salons.filter(salon => {
+             return (
+                (salonFilters.salonName ? salon.salonName.toLowerCase().includes(salonFilters.salonName.toLowerCase()) : true) &&
+                (salonFilters.vendorOwner ? salon.vendorOwner.toLowerCase().includes(salonFilters.vendorOwner.toLowerCase()) : true)
+            );
+        });
+    }, [salons, salonFilters]);
+    
+    const currentSalons = useMemo(() => {
+        const firstItemIndex = (salonPagination.currentPage - 1) * salonPagination.itemsPerPage;
+        const lastItemIndex = firstItemIndex + salonPagination.itemsPerPage;
+        return filteredSalons.slice(firstItemIndex, lastItemIndex);
+    }, [filteredSalons, salonPagination]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -180,7 +143,7 @@ export default function CustomerManagementPage() {
                                 <CardDescription>A list of all customer transactions.</CardDescription>
                             </div>
                             <div className="flex gap-2">
-                                <Button onClick={() => setIsNewCustomerModalOpen(true)}>
+                                <Button onClick={() => dispatch(openModal({ modalType: 'newCustomer' }))}>
                                     <Plus className="mr-2 h-4 w-4" />
                                     New Customer
                                 </Button>
@@ -195,42 +158,47 @@ export default function CustomerManagementPage() {
                         <div className="mb-6 p-4 rounded-lg bg-secondary">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-semibold">Filters</h3>
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" onClick={() => dispatch(clearCustomerFilters())}>
                                 <X className="mr-2 h-4 w-4" />
                                 Clear Filters
                                 </Button>
                             </div>
                             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                <Select>
+                                <Select value={customerFilters.orderType} onValueChange={value => dispatch(setCustomerFilter({ filterName: 'orderType', value }))}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Filter by Order Type" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="online">Online</SelectItem>
-                                        <SelectItem value="offline">Offline</SelectItem>
+                                        <SelectItem value="Online">Online</SelectItem>
+                                        <SelectItem value="Offline">Offline</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Select>
+                                <Select value={customerFilters.paymentMode} onValueChange={value => dispatch(setCustomerFilter({ filterName: 'paymentMode', value }))}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Filter by Payment Mode" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="credit-card">Credit Card</SelectItem>
-                                        <SelectItem value="paypal">PayPal</SelectItem>
-                                        <SelectItem value="cash">Cash</SelectItem>
+                                        <SelectItem value="Credit Card">Credit Card</SelectItem>
+                                        <SelectItem value="PayPal">PayPal</SelectItem>
+                                        <SelectItem value="Cash">Cash</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Select>
+                                <Select value={customerFilters.orderStatus} onValueChange={value => dispatch(setCustomerFilter({ filterName: 'orderStatus', value }))}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Filter by Order Status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="completed">Completed</SelectItem>
-                                        <SelectItem value="confirmed">Confirmed</SelectItem>
-                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="Completed">Completed</SelectItem>
+                                        <SelectItem value="Confirmed">Confirmed</SelectItem>
+                                        <SelectItem value="Pending">Pending</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Input type="date" placeholder="Appointment Date" />
+                                <Input 
+                                    type="date" 
+                                    placeholder="Appointment Date" 
+                                    value={customerFilters.appointmentDate} 
+                                    onChange={e => dispatch(setCustomerFilter({ filterName: 'appointmentDate', value: e.target.value }))}
+                                />
                             </div>
                         </div>
 
@@ -290,12 +258,12 @@ export default function CustomerManagementPage() {
                         </div>
                         <Pagination
                             className="mt-4"
-                            currentPage={currentPageOrders}
-                            totalPages={totalPagesOrders}
-                            onPageChange={setCurrentPageOrders}
-                            itemsPerPage={itemsPerPageOrders}
-                            onItemsPerPageChange={setItemsPerPageOrders}
-                            totalItems={customerOrdersData.length}
+                            currentPage={customerPagination.currentPage}
+                            totalPages={Math.ceil(filteredOrders.length / customerPagination.itemsPerPage)}
+                            onPageChange={(page) => dispatch(setCurrentCustomerPage(page))}
+                            itemsPerPage={customerPagination.itemsPerPage}
+                            onItemsPerPageChange={(size) => dispatch(setCustomerItemsPerPage(size))}
+                            totalItems={filteredOrders.length}
                         />
                     </CardContent>
                 </Card>
@@ -318,14 +286,24 @@ export default function CustomerManagementPage() {
                         <div className="mb-6 p-4 rounded-lg bg-secondary">
                              <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-semibold">Filters</h3>
-                                <Button variant="ghost" size="sm">
+                                <Button variant="ghost" size="sm" onClick={() => dispatch(clearSalonFilters())}>
                                     <X className="mr-2 h-4 w-4" />
                                     Clear Filters
                                 </Button>
                             </div>
                             <div className="grid gap-4 sm:grid-cols-2">
-                                <Input type="text" placeholder="Filter by Salon Name..." />
-                                <Input type="text" placeholder="Filter by Vendor Owner..." />
+                                <Input 
+                                    type="text" 
+                                    placeholder="Filter by Salon Name..."
+                                    value={salonFilters.salonName}
+                                    onChange={e => dispatch(setSalonFilter({ filterName: 'salonName', value: e.target.value }))}
+                                />
+                                <Input 
+                                    type="text" 
+                                    placeholder="Filter by Vendor Owner..."
+                                    value={salonFilters.vendorOwner}
+                                    onChange={e => dispatch(setSalonFilter({ filterName: 'vendorOwner', value: e.target.value }))}
+                                />
                             </div>
                         </div>
 
@@ -366,19 +344,19 @@ export default function CustomerManagementPage() {
                         </div>
                          <Pagination
                             className="mt-4"
-                            currentPage={currentPageSalons}
-                            totalPages={totalPagesSalons}
-                            onPageChange={setCurrentPageSalons}
-                            itemsPerPage={itemsPerPageSalons}
-                            onItemsPerPageChange={setItemsPerPageSalons}
-                            totalItems={salonListData.length}
+                            currentPage={salonPagination.currentPage}
+                            totalPages={Math.ceil(filteredSalons.length / salonPagination.itemsPerPage)}
+                            onPageChange={(page) => dispatch(setCurrentSalonPage(page))}
+                            itemsPerPage={salonPagination.itemsPerPage}
+                            onItemsPerPageChange={(size) => dispatch(setSalonItemsPerPage(size))}
+                            totalItems={filteredSalons.length}
                         />
                     </CardContent>
                 </Card>
             </TabsContent>
         </Tabs>
 
-        <Dialog open={isNewCustomerModalOpen} onOpenChange={setIsNewCustomerModalOpen}>
+        <Dialog open={isNewCustomerModalOpen} onOpenChange={(open) => !open && dispatch(closeModal())}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>Add New Customer</DialogTitle>
@@ -407,7 +385,7 @@ export default function CustomerManagementPage() {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button type="button" variant="secondary" onClick={() => setIsNewCustomerModalOpen(false)}>Cancel</Button>
+                    <Button type="button" variant="secondary" onClick={() => dispatch(closeModal())}>Cancel</Button>
                     <Button type="submit">Save Customer</Button>
                 </DialogFooter>
             </DialogContent>
