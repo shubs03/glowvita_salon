@@ -28,12 +28,33 @@ import {
   clearSalonFilters
 } from '@repo/store/slices/salonSlice';
 
+type Salon = {
+  id: number;
+  salonName: string;
+  vendorContact: string;
+  vendorOwner: string;
+  adminReservation: number;
+  adminPay: number;
+  settlementAmount: number;
+};
+
+const salonCustomers = [
+    { id: 'CUST-01', name: 'Ravi Kumar', type: 'Online', contact: '9876543210', email: 'ravi@example.com' },
+    { id: 'CUST-02', name: 'Sunita Sharma', type: 'Offline', contact: '8765432109', email: 'sunita@example.com' },
+    { id: 'CUST-03', name: 'Amit Patel', type: 'Online', contact: '7654321098', email: '' },
+];
+
+
 export default function CustomerManagementPage() {
     const dispatch = useAppDispatch();
     
     // State for the "Add New Customer" modal
     const { isOpen, modalType } = useAppSelector(state => state.modal);
     const isNewCustomerModalOpen = isOpen && modalType === 'newCustomer';
+    
+    // State for viewing salon customers
+    const [isViewCustomersModalOpen, setIsViewCustomersModalOpen] = useState(false);
+    const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
 
     // Customer Orders State from Redux
     const {
@@ -81,6 +102,11 @@ export default function CustomerManagementPage() {
         const lastItemIndex = firstItemIndex + salonPagination.itemsPerPage;
         return filteredSalons.slice(firstItemIndex, lastItemIndex);
     }, [filteredSalons, salonPagination]);
+    
+    const handleViewCustomersClick = (salon: Salon) => {
+        setSelectedSalon(salon);
+        setIsViewCustomersModalOpen(true);
+    };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -332,9 +358,9 @@ export default function CustomerManagementPage() {
                                             <TableCell>${salon.adminPay.toFixed(2)}</TableCell>
                                             <TableCell>${salon.settlementAmount.toFixed(2)}</TableCell>
                                             <TableCell className="text-right">
-                                                 <Button variant="ghost" size="icon">
+                                                 <Button variant="ghost" size="icon" onClick={() => handleViewCustomersClick(salon)}>
                                                     <Eye className="h-4 w-4" />
-                                                    <span className="sr-only">View</span>
+                                                    <span className="sr-only">View Customers</span>
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -390,6 +416,48 @@ export default function CustomerManagementPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        
+        <Dialog open={isViewCustomersModalOpen} onOpenChange={setIsViewCustomersModalOpen}>
+            <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Customers at {selectedSalon?.salonName}</DialogTitle>
+                    <DialogDescription>
+                        A list of all customers who have visited this salon.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <div className="overflow-x-auto no-scrollbar rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Customer Name</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Contact No.</TableHead>
+                                    <TableHead>Email</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {salonCustomers.map((customer) => (
+                                    <TableRow key={customer.id}>
+                                        <TableCell className="font-medium">{customer.name}</TableCell>
+                                        <TableCell>{customer.type}</TableCell>
+                                        <TableCell>{customer.contact}</TableCell>
+                                        <TableCell>{customer.email || 'N/A'}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsViewCustomersModalOpen(false)}>
+                        Close
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </div>
   );
 }
+
+    
