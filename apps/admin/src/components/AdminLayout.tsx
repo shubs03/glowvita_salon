@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
@@ -29,7 +28,7 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  
+     
   useEffect(() => {
     if (!isLoading && !admin) {
         router.push('/login');
@@ -39,12 +38,12 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
     if (!isLoading && admin) {
       // Find the required permission for the current route
       const requiredPermission = sidebarNavItems.find(item => item.href === pathname)?.permission;
-      
+             
       // Allow access if no specific permission is required for the route (e.g., dashboard)
       if (!requiredPermission) {
         return;
       }
-      
+             
       // Check if the user has permission
       const isSuperAdmin = admin.roleName === 'superadmin';
       const hasPermission = admin.permissions?.includes(requiredPermission);
@@ -59,7 +58,7 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
-  
+     
   if (isLoading || !admin) {
     return (
         <div className="flex items-center justify-center h-screen">
@@ -69,12 +68,24 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   }
 
   return (
-    <div className="flex h-screen bg-secondary">
-      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} isMobile={isMobile}/>
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-secondary">
+      {/* Sidebar Component */}
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar} 
+        isMobile={isMobile}
+      />
+             
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+        {/* Header */}
         <Header toggleSidebar={toggleSidebar} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+                 
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="w-full max-w-none overflow-hidden">
             {children}
+          </div>
         </main>
       </div>
     </div>
