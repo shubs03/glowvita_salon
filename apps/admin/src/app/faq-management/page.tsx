@@ -124,7 +124,7 @@ export default function FaqManagementPage() {
                                     <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                                         {faq.category}
                                     </span>
-                                    <div className="text-sm text-muted-foreground mt-1">Category description goes here</div>
+                                    <div className="text-sm text-muted-foreground mt-1">Category description goes here.</div>
                                 </div>
                             </TableCell>
                             <TableCell>
