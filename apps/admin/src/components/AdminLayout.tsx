@@ -50,7 +50,7 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   }
 
   return (
-    <div className="flex h-screen bg-secondary overflow-hidden">
+    <div className="flex h-full bg-secondary overflow-hidden">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} isMobile={isMobile}/>
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header toggleSidebar={toggleSidebar} />
