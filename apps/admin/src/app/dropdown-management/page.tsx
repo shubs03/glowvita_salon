@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, ChevronRight, ChevronsRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 
 interface DropdownItem {
   id: string;
@@ -52,6 +53,15 @@ const initialData: Record<string, ManageableList> = {
       { id: 'sc_3', name: 'Skincare', description: 'Facials, treatments, and other skin services.' },
     ]
   },
+  services: {
+    title: "Salon Services",
+    description: "Manage individual salon services.",
+    items: [
+      { id: 'service_1', name: 'Haircut', description: 'Standard haircut for all styles.' },
+      { id: 'service_2', name: 'Manicure', description: 'Classic manicure service.' },
+      { id: 'service_3', name: 'Facial', description: 'Deep cleansing facial.' },
+    ]
+  },
   designations: {
     title: "Admin Designations",
     description: "Manage the list of available staff designations.",
@@ -77,7 +87,64 @@ const initialData: Record<string, ManageableList> = {
           { id: 'social_2', name: 'Facebook', description: 'General social networking.' },
           { id: 'social_3', name: 'LinkedIn', description: 'Professional networking.' },
       ]
+  },
+  banks: {
+      title: "Bank Names",
+      description: "Manage a list of supported banks.",
+      items: [
+          { id: 'bank_1', name: 'State Bank of India', description: 'SBI' },
+          { id: 'bank_2', name: 'HDFC Bank', description: 'HDFC' },
+          { id: 'bank_3', name: 'ICICI Bank', description: 'ICICI' },
+      ]
+  },
+  documentTypes: {
+      title: "Document Types",
+      description: "Manage types of documents required for verification.",
+      items: [
+          { id: 'doc_1', name: 'Aadhar Card', description: 'Government-issued ID card.' },
+          { id: 'doc_2', name: 'PAN Card', description: 'Permanent Account Number card.' },
+          { id: 'doc_3', name: 'Shop Act License', description: 'Business license.' },
+      ]
   }
+};
+
+interface LocationData {
+  countries: {
+    id: string;
+    name: string;
+    states: {
+      id: string;
+      name: string;
+      cities: { id: string; name: string }[];
+    }[];
+  }[];
+}
+
+const initialLocationData: LocationData = {
+  countries: [
+    {
+      id: 'country_1',
+      name: 'India',
+      states: [
+        {
+          id: 'state_1',
+          name: 'Maharashtra',
+          cities: [
+            { id: 'city_1', name: 'Mumbai' },
+            { id: 'city_2', name: 'Pune' },
+          ],
+        },
+        {
+          id: 'state_2',
+          name: 'Karnataka',
+          cities: [
+            { id: 'city_3', name: 'Bengaluru' },
+            { id: 'city_4', name: 'Mysuru' },
+          ],
+        },
+      ],
+    },
+  ],
 };
 
 const DropdownManager = ({ list, onUpdate }: { list: ManageableList; onUpdate: (items: DropdownItem[]) => void; }) => {
@@ -97,10 +164,8 @@ const DropdownManager = ({ list, onUpdate }: { list: ManageableList; onUpdate: (
     const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
 
     if (currentItem) {
-      // Edit existing item
       onUpdate(list.items.map(item => item.id === currentItem.id ? { ...item, name, description } : item));
     } else {
-      // Add new item
       onUpdate([...list.items, { id: `new_${Date.now()}`, name, description }]);
     }
     setIsModalOpen(false);
@@ -221,6 +286,8 @@ const DropdownManager = ({ list, onUpdate }: { list: ManageableList; onUpdate: (
 
 export default function DropdownManagementPage() {
   const [data, setData] = useState(initialData);
+  const [locations, setLocations] = useState(initialLocationData);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const handleUpdate = (key: string, updatedItems: DropdownItem[]) => {
     setData(prevData => ({
@@ -232,13 +299,117 @@ export default function DropdownManagementPage() {
     }));
   };
 
+  const LocationManager = () => {
+    const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
+    const [selectedStateId, setSelectedStateId] = useState<string | null>(null);
+
+    const selectedCountry = locations.countries.find(c => c.id === selectedCountryId);
+    const selectedState = selectedCountry?.states.find(s => s.id === selectedStateId);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Location Management</CardTitle>
+                <CardDescription>Manage countries, states, and cities.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Countries */}
+                    <div className="border p-4 rounded-md">
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-semibold">Countries</h4>
+                            <Button size="sm"><Plus className="h-4 w-4" /></Button>
+                        </div>
+                        <div className="space-y-1">
+                            {locations.countries.map(country => (
+                                <div key={country.id} onClick={() => setSelectedCountryId(country.id)}
+                                     className={`p-2 rounded-md cursor-pointer ${selectedCountryId === country.id ? 'bg-secondary' : 'hover:bg-secondary/50'}`}>
+                                    {country.name}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* States */}
+                    <div className="border p-4 rounded-md">
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-semibold">States</h4>
+                            <Button size="sm" disabled={!selectedCountry}><Plus className="h-4 w-4" /></Button>
+                        </div>
+                        <div className="space-y-1">
+                            {selectedCountry?.states.map(state => (
+                                <div key={state.id} onClick={() => setSelectedStateId(state.id)}
+                                     className={`p-2 rounded-md cursor-pointer ${selectedStateId === state.id ? 'bg-secondary' : 'hover:bg-secondary/50'}`}>
+                                    {state.name}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Cities */}
+                    <div className="border p-4 rounded-md">
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="font-semibold">Cities</h4>
+                            <Button size="sm" disabled={!selectedState}><Plus className="h-4 w-4" /></Button>
+                        </div>
+                         <div className="space-y-1">
+                            {selectedState?.cities.map(city => (
+                                <div key={city.id} className="p-2 rounded-md">
+                                    {city.name}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+  };
+  
+  const ServiceCategoryManager = () => (
+      <Card>
+          <CardHeader>
+              <CardTitle>Services by Category</CardTitle>
+              <CardDescription>Assign services to different categories.</CardDescription>
+          </CardHeader>
+          <CardContent>
+              <div className="space-y-4">
+                  {data.serviceCategories.items.map(category => (
+                      <div key={category.id} className="border p-4 rounded-lg">
+                          <h4 className="font-bold mb-2">{category.name}</h4>
+                          <div className="mb-2">
+                              <Select>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="Add a service to this category..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      {data.services.items.map(service => (
+                                          <SelectItem key={service.id} value={service.name}>
+                                              {service.name}
+                                          </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                              </Select>
+                          </div>
+                          <div className="space-y-1 text-sm text-muted-foreground">
+                              <p>Assigned services will appear here.</p>
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </CardContent>
+      </Card>
+  );
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Dropdown Management</h1>
       
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-2xl mb-6">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-4xl mb-6">
             <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="services">Services</TabsTrigger>
+            <TabsTrigger value="locations">Locations</TabsTrigger>
             <TabsTrigger value="admin">Admin</TabsTrigger>
             <TabsTrigger value="marketing">Marketing</TabsTrigger>
         </TabsList>
@@ -247,8 +418,21 @@ export default function DropdownManagementPage() {
             <div className="space-y-8">
                 <DropdownManager list={data.specializations} onUpdate={(items) => handleUpdate('specializations', items)} />
                 <DropdownManager list={data.faqCategories} onUpdate={(items) => handleUpdate('faqCategories', items)} />
-                <DropdownManager list={data.serviceCategories} onUpdate={(items) => handleUpdate('serviceCategories', items)} />
+                <DropdownManager list={data.banks} onUpdate={(items) => handleUpdate('banks', items)} />
+                <DropdownManager list={data.documentTypes} onUpdate={(items) => handleUpdate('documentTypes', items)} />
             </div>
+        </TabsContent>
+        
+        <TabsContent value="services">
+            <div className="space-y-8">
+                <DropdownManager list={data.serviceCategories} onUpdate={(items) => handleUpdate('serviceCategories', items)} />
+                <DropdownManager list={data.services} onUpdate={(items) => handleUpdate('services', items)} />
+                <ServiceCategoryManager />
+            </div>
+        </TabsContent>
+        
+         <TabsContent value="locations">
+            <LocationManager />
         </TabsContent>
         
         <TabsContent value="admin">
@@ -268,3 +452,5 @@ export default function DropdownManagementPage() {
     </div>
   );
 }
+
+    
