@@ -10,67 +10,130 @@ import AddAdminForm, { AdminUser } from '@/components/AddAdminForm';
 import { useGetAdminsQuery } from '../../../../../packages/store/src/services/api.js';
  
 
-const allRoles = [
-    { roleName: 'Super Admin', permissions: 'all', isActive: true },
-    { roleName: 'Support Staff', permissions: 'limited', isActive: true },
-    { roleName: 'Content Editor', permissions: 'limited', isActive: true },
-    { roleName: 'Finance Manager', permissions: 'limited', isActive: true },
+const rolesData = [
+  {
+    id: 'role_1',
+    roleName: "Super Admin",
+    permissions: "All Access",
+    isActive: true,
+  },
+  {
+    id: 'role_2',
+    roleName: "admin",
+    permissions: "View Customers, View Vendors",
+    isActive: true,
+  },
+  {
+    roleName: "Editor",
+    permissions: "Manage FAQ, Manage Offers",
+    isActive: false,
+  },
+  {
+    roleName: "Staff",
+    permissions: "View Payouts, View Reports",
+    isActive: true,
+  },
+  {
+    roleName: "Viewer",
+    permissions: "View Payouts, View Reports",
+    isActive: true,
+  },
 ];
 
+// Mock data for admin users
+const mockAdminUsers: AdminUser[] = [
+  {
+    id: '1',
+    fullName: 'John Doe',
+    mobileNumber: '1234567890',
+    email: 'john@example.com',
+    role: 'Super Admin',
+    designation: 'Administrator',
+    address: '123 Admin St, City',
+    isActive: true,
+  } as AdminUser,
+  {
+    id: '2',
+    fullName: 'Jane Smith',
+    mobileNumber: '0987654321',
+    email: 'jane@example.com',
+    role: 'Editor',
+    designation: 'Editor',
+    address: '456 Editor Ave, Town',
+    isActive: false,
+  } as AdminUser,
+];
 
+export default function AdminRolesPage() {
+  const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(mockAdminUsers);
+  const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<AdminUser | null>(null);
+  
+  const dispatch = useAppDispatch();
+  const { isOpen, modalType, data } = useAppSelector((state) => state.modal);
 
-export default function AdminManagementPage() {
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
+  const lastItemIndex = currentPage * itemsPerPage;
+  const firstItemIndex = lastItemIndex - itemsPerPage;
+  const currentItems = rolesData.slice(firstItemIndex, lastItemIndex);
 
-    interface Admin {
-        _id?: string;
-        id?: string;
-        fullName: string;
-        mobileNo: string;
-        emailAddress: string;
-        password?: string;
-        confirmPassword?: string;
-        roleName: string;
-        designation: string;
-        address: string;
-        profileImage?: string | File;
-        isActive?: boolean;
-        permissions?: string[];
-        lastLoginAt?: Date | null;
-        createdAt?: Date;
-        updatedAt?: Date;
+  const totalPages = Math.ceil(adminUsers.length / itemsPerPage);
+
+  const handleSaveAdmin = (adminData: AdminUser) => {
+    if (editingAdmin) {
+      // Update existing admin
+      setAdminUsers(adminUsers.map(admin => 
+        admin.id === editingAdmin.id ? { ...admin, ...adminData } : admin
+      ));
+    } else {
+      // Add new admin
+      const newAdmin = {
+        ...adminData,
+        id: Date.now().toString(),
+        isActive: true // Default to active when creating new admin
+      };
+      setAdminUsers([...adminUsers, newAdmin]);
     }
-    
-    // Use RTK Query to fetch admins
-    const { data: admins = [], isLoading, error } = useGetAdminsQuery(undefined);
+    setEditingAdmin(null);
+    setIsAddAdminOpen(false);
+  };
 
-    const openModal = (admin: AdminUser | null = null) => {
-        setEditingAdmin(admin);
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setEditingAdmin(null);
-    };
-
-    const handleSaveAdmin = (adminData: AdminUser) => {
-        // Note: AddAdminForm is assumed to handle its own API calls for create/update
-        closeModal();
-    };
-    
-    const handleDeleteAdmin = (id?: string) => {
-        // Note: AddAdminForm is assumed to handle its own API call for delete
-    };
-    
-    if (isLoading) {
-        return <div className="p-4 sm:p-6 lg:p-8">Loading...</div>;
+  const handleDeleteAdmin = (id?: string) => {
+    if (id) {
+      setAdminUsers(adminUsers.filter(admin => admin.id !== id));
     }
+  };
 
-    if (error) {
-        return <div className="p-4 sm:p-6 lg:p-8">Error loading admins</div>;
-    }
+  const handleEditAdmin = (admin: AdminUser) => {
+    // Create a deep copy of the admin object to avoid reference issues
+    const adminCopy = { ...admin };
+    setEditingAdmin(adminCopy);
+    setIsAddAdminOpen(true);
+  };
+
+  const handleOpenModal = (type: 'addRole' | 'editRole', role?: AdminUser) => {
+    dispatch(openModal({ modalType: type, data: role }));
+  };
+
+  const handleCloseModal = () => {
+    dispatch(closeModal());
+  };
+  
+  const handleDeleteClick = (role:AdminUser) => {
+    setSelectedRole(role);
+    setIsDeleteModalOpen(true);
+  };
+  
+  const handleConfirmDelete = () => {
+    // API call to delete role
+    setIsDeleteModalOpen(false);
+    setSelectedRole(null);
+  }
+
+  const isModalOpen = isOpen && (modalType === 'addRole' || modalType === 'editRole');
 
     return (
       <div className="p-4 sm:p-6 lg:p-8">

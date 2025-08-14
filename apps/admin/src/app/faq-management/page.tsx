@@ -17,18 +17,21 @@ const faqData = [
     id: 1,
     question: "What is Monorepo Maestro?",
     answer: "Monorepo Maestro is a powerful, scalable, and unified structure for your Next.js projects, designed to streamline development across multiple applications and shared packages.",
+    category: "Booking",
     visible: true,
   },
   {
     id: 2,
     question: "How do I get started?",
     answer: "You can get started by cloning the repository, installing dependencies with `npm install`, and running the development server with `npm run dev`. Make sure to set up your `.env` file first.",
+    category: "Booking",
     visible: true,
   },
   {
     id: 3,
     question: "Can I use a different database?",
     answer: "Yes, while the project is set up with MongoDB, you can adapt the database connection logic in `@repo/lib/db` to connect to any database of your choice.",
+    category: "Booking",
     visible: false,
   },
 ];
@@ -41,6 +44,7 @@ export default function FaqManagementPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [isNewCategoryModalOpen, setIsNewCategoryModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -83,10 +87,16 @@ export default function FaqManagementPage() {
               <CardTitle>Frequently Asked Questions</CardTitle>
               <CardDescription>Create, edit, and manage FAQs for the platform.</CardDescription>
             </div>
-            <Button onClick={() => setIsNewModalOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add New FAQ
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setIsNewCategoryModalOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add New Category
+              </Button>
+              <Button onClick={() => setIsNewModalOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add New FAQ
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -95,6 +105,7 @@ export default function FaqManagementPage() {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Question</TableHead>
+                        <TableHead>Category</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -102,7 +113,20 @@ export default function FaqManagementPage() {
                 <TableBody>
                     {currentItems.map((faq) => (
                         <TableRow key={faq.id}>
-                            <TableCell className="font-medium max-w-sm truncate">{faq.question}</TableCell>
+                            <TableCell className="font-medium max-w-sm">
+                                <div>
+                                    <div className="font-semibold">{faq.question}</div>
+                                    <div className="text-sm text-muted-foreground mt-1 line-clamp-2">{faq.answer}</div>
+                                </div>
+                            </TableCell>
+                            <TableCell>
+                                <div>
+                                    <span className="px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                                        {faq.category}
+                                    </span>
+                                    <div className="text-sm text-muted-foreground mt-1">Category description goes here.</div>
+                                </div>
+                            </TableCell>
                             <TableCell>
                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                     faq.visible
@@ -244,6 +268,32 @@ export default function FaqManagementPage() {
                     >
                         Delete
                     </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Add New Category Modal */}
+        <Dialog open={isNewCategoryModalOpen} onOpenChange={setIsNewCategoryModalOpen}>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Add New Category</DialogTitle>
+                    <DialogDescription>
+                        Create a new category for organizing FAQs.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="category-name">Category Name</Label>
+                        <Input id="category-name" placeholder="Enter the category name" />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="category-description">Description</Label>
+                        <Textarea id="category-description" placeholder="Enter the category description" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="secondary" onClick={() => setIsNewCategoryModalOpen(false)}>Cancel</Button>
+                    <Button type="submit">Save Category</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
