@@ -73,7 +73,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
               href={item.href}
               onClick={isMobile ? toggleSidebar : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary min-w-0",
+                "flex items-center text-sm gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary min-w-0",
                 pathname === item.href && "bg-secondary text-primary",
                 !isOpen && !isMobile && "justify-center"
               )}
