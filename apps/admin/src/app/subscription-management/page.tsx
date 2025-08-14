@@ -78,6 +78,43 @@ export default function SubscriptionManagementPage() {
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
+  
+  // Form state for new plan
+  const [planForm, setPlanForm] = useState({
+    name: '',
+    duration: '1',
+    durationType: 'months',
+    price: '99900'
+  });
+  
+  // Dropdown options
+  const durationOptions = [
+    { value: '1', label: '1' },
+    { value: '3', label: '3' },
+    { value: '6', label: '6' },
+    { value: '12', label: '12' }
+  ];
+  
+  const priceOptions = [
+    { value: '9900', label: '₹99' },
+    { value: '24900', label: '₹249' },
+    { value: '49900', label: '₹499' },
+    { value: '99900', label: '₹999' }
+  ];
+  
+  const durationTypeOptions = [
+    { value: 'days', label: 'Days' },
+    { value: 'weeks', label: 'Weeks' },
+    { value: 'months', label: 'Months' },
+    { value: 'years', label: 'Years' }
+  ];
+  
+  const handleInputChange = (field: string, value: string) => {
+    setPlanForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   const handleOpenPlanModal = (type: 'add' | 'edit', plan?: Plan) => {
     setModalType(type);
@@ -101,6 +138,19 @@ export default function SubscriptionManagementPage() {
     setIsDeleteModalOpen(false);
     setSelectedPlan(null);
   }
+
+  const handleSavePlan = (e: React.FormEvent) => {
+    e.preventDefault();
+    const planData = {
+      name: planForm.name,
+      duration: parseInt(planForm.duration),
+      durationType: planForm.durationType,
+      price: parseInt(planForm.price)
+    };
+    console.log('New Plan Details:', planData);
+    setIsPlanModalOpen(false);
+    setPlanForm({ name: '', duration: '', durationType: 'months', price: '' });
+  };
 
   const [activeSubscriptions, setActiveSubscriptions] = useState(
     subscriptionsData.reduce((acc, sub) => {
@@ -279,40 +329,84 @@ export default function SubscriptionManagementPage() {
               {modalType === 'edit' ? 'Update the details for this plan.' : 'Enter the details for the new plan.'}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="planName">Plan Name</Label>
-              <Input id="planName" defaultValue={selectedPlan?.name || ''} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+          <form onSubmit={handleSavePlan}>
+            <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="duration">Duration</Label>
-                <Input id="duration" type="number" defaultValue={selectedPlan?.duration || ''} />
+                <Label htmlFor="planName">Plan Name</Label>
+                <Input 
+                  id="planName" 
+                  name="planName"
+                  value={planForm.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  required
+                  placeholder="Enter plan name"
+                />
               </div>
-               <div className="space-y-2">
-                <Label htmlFor="durationType">Duration Type</Label>
-                <Select defaultValue={selectedPlan?.durationType || 'months'}>
-                  <SelectTrigger id="durationType">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="days">Days</SelectItem>
-                    <SelectItem value="weeks">Weeks</SelectItem>
-                    <SelectItem value="months">Months</SelectItem>
-                    <SelectItem value="years">Years</SelectItem>
-                  </SelectContent>
-                </Select>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Duration</Label>
+                  <Select 
+                    value={planForm.duration}
+                    onValueChange={(value) => handleInputChange('duration', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {durationOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Duration Type</Label>
+                  <Select 
+                    value={planForm.durationType}
+                    onValueChange={(value) => handleInputChange('durationType', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {durationTypeOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Price</Label>
+                  <Select 
+                    value={planForm.price}
+                    onValueChange={(value) => handleInputChange('price', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {priceOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
-            <div className="space-y-2">
-                <Label htmlFor="price">Price (in paise)</Label>
-                <Input id="price" type="number" defaultValue={selectedPlan?.price || ''} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setIsPlanModalOpen(false)}>Cancel</Button>
-            <Button type="submit">Save Plan</Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={() => setIsPlanModalOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Plan</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
       
