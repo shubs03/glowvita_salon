@@ -7,7 +7,6 @@ import './globals.css';
 import { AdminLayout } from '@/components/AdminLayout';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { usePathname } from 'next/navigation';
-import { AuthInitializer } from '@/components/AuthInitializer';
 
 export default function RootLayout({
   children,
@@ -32,9 +31,7 @@ export default function RootLayout({
                 enableSystem
                 disableTransitionOnChange
             >
-                <AuthInitializer>
-                    {showLayout ? <AdminLayout>{children}</AdminLayout> : children}
-                </AuthInitializer>
+                {showLayout ? <AdminLayout>{children}</AdminLayout> : children}
             </ThemeProvider>
         </StoreProvider>
       </body>
