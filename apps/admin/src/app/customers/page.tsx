@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
-import { Eye, FileDown, X, IndianRupee, Percent, Users, FileText, Plus } from 'lucide-react';
+import { Eye, FileDown, X, IndianRupee, Percent, Users, FileText, Plus, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
 
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
@@ -55,6 +55,8 @@ export default function CustomerManagementPage() {
     // State for viewing salon customers
     const [isViewCustomersModalOpen, setIsViewCustomersModalOpen] = useState(false);
     const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
+    const [salonCustomerSearch, setSalonCustomerSearch] = useState('');
+    const [salonCustomerTypeFilter, setSalonCustomerTypeFilter] = useState('all');
 
     // Customer Orders State from Redux
     const {
@@ -103,9 +105,24 @@ export default function CustomerManagementPage() {
         return filteredSalons.slice(firstItemIndex, lastItemIndex);
     }, [filteredSalons, salonPagination]);
     
+     const filteredSalonCustomers = useMemo(() => {
+        return salonCustomers.filter(customer => {
+            const matchesSearch = customer.name.toLowerCase().includes(salonCustomerSearch.toLowerCase()) ||
+                                  customer.contact.includes(salonCustomerSearch) ||
+                                  (customer.email && customer.email.toLowerCase().includes(salonCustomerSearch.toLowerCase()));
+            const matchesType = salonCustomerTypeFilter === 'all' || customer.type === salonCustomerTypeFilter;
+            return matchesSearch && matchesType;
+        });
+    }, [salonCustomerSearch, salonCustomerTypeFilter]);
+    
     const handleViewCustomersClick = (salon: Salon) => {
         setSelectedSalon(salon);
         setIsViewCustomersModalOpen(true);
+    };
+
+    const clearSalonCustomerFilters = () => {
+        setSalonCustomerSearch('');
+        setSalonCustomerTypeFilter('all');
     };
 
   return (
@@ -418,14 +435,39 @@ export default function CustomerManagementPage() {
         </Dialog>
         
         <Dialog open={isViewCustomersModalOpen} onOpenChange={setIsViewCustomersModalOpen}>
-            <DialogContent className="sm:max-w-3xl">
+            <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Customers at {selectedSalon?.salonName}</DialogTitle>
                     <DialogDescription>
                         A list of all customers who have visited this salon.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="py-4">
+                 <div className="py-4 space-y-4">
+                     <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search by name, contact, or email..."
+                                className="w-full pl-8"
+                                value={salonCustomerSearch}
+                                onChange={(e) => setSalonCustomerSearch(e.target.value)}
+                            />
+                        </div>
+                        <Select value={salonCustomerTypeFilter} onValueChange={setSalonCustomerTypeFilter}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Filter by type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Types</SelectItem>
+                                <SelectItem value="Online">Online</SelectItem>
+                                <SelectItem value="Offline">Offline</SelectItem>
+                            </SelectContent>
+                        </Select>
+                         <Button variant="ghost" onClick={clearSalonCustomerFilters}>
+                            <X className="mr-2 h-4 w-4" /> Clear
+                        </Button>
+                    </div>
                     <div className="overflow-x-auto no-scrollbar rounded-md border">
                         <Table>
                             <TableHeader>
@@ -437,7 +479,7 @@ export default function CustomerManagementPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {salonCustomers.map((customer) => (
+                                {filteredSalonCustomers.map((customer) => (
                                     <TableRow key={customer.id}>
                                         <TableCell className="font-medium">{customer.name}</TableCell>
                                         <TableCell>{customer.type}</TableCell>
@@ -445,6 +487,13 @@ export default function CustomerManagementPage() {
                                         <TableCell>{customer.email || 'N/A'}</TableCell>
                                     </TableRow>
                                 ))}
+                                {filteredSalonCustomers.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                            No customers found.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </div>
@@ -459,5 +508,3 @@ export default function CustomerManagementPage() {
     </div>
   );
 }
-
-    
