@@ -40,7 +40,7 @@ export const sidebarNavItems: NavItem[] = [
     permission: "doctors-dermats",
   },
   {
-    title: "Vendor Approval",
+    title: "Approvals",
     href: "/vendor-approval",
     Icon: FaCheckCircle,
     permission: "vendor-approval",
@@ -76,7 +76,7 @@ export const sidebarNavItems: NavItem[] = [
     permission: "referral-management",
   },
    {
-    title: "Dropdown Management",
+    title: "Dropdowns",
     href: "/dropdown-management",
     Icon: FaListUl,
     permission: "dropdown-management",
@@ -112,3 +112,5 @@ export const sidebarNavItems: NavItem[] = [
     permission: "faq-management",
   },
 ];
+
+    

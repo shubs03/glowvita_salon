@@ -221,7 +221,7 @@ export default function VendorApprovalPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Vendor & Service Approval</h1>
+      <h1 className="text-2xl font-bold font-headline mb-6">Approvals</h1>
 
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -633,5 +633,7 @@ export default function VendorApprovalPage() {
     </div>
   );
 }
+
+    
 
     

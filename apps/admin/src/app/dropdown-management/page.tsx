@@ -403,7 +403,7 @@ export default function DropdownManagementPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Dropdown Management</h1>
+      <h1 className="text-2xl font-bold font-headline mb-6">Dropdowns</h1>
       
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-4xl mb-6">
@@ -452,5 +452,7 @@ export default function DropdownManagementPage() {
     </div>
   );
 }
+
+    
 
     
