@@ -144,9 +144,14 @@ export default function SupplierManagementPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isOrderViewModalOpen, setIsOrderViewModalOpen] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<SupplierOrder | null>(null);
   const [actionType, setActionType] = useState<ActionType | null>(null);
+
+  // Inventory modal state
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [inventoryStatusFilter, setInventoryStatusFilter] = useState('all');
   
   // New supplier form state
   interface State {
@@ -363,6 +368,12 @@ export default function SupplierManagementPage() {
   const firstOrderIndex = lastOrderIndex - ordersPerPage;
   const currentOrders = filteredOrders.slice(firstOrderIndex, lastOrderIndex);
   const totalOrdersPages = Math.ceil(filteredOrders.length / ordersPerPage);
+  
+  const filteredInventory = supplierProductsData.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(inventorySearch.toLowerCase());
+      const matchesStatus = inventoryStatusFilter === 'all' || product.status === inventoryStatusFilter;
+      return matchesSearch && matchesStatus;
+  });
 
   const handleActionClick = (supplier: Supplier, action: ActionType) => {
     setSelectedSupplier(supplier);
@@ -374,6 +385,11 @@ export default function SupplierManagementPage() {
     setSelectedSupplier(supplier);
     setIsViewModalOpen(true);
   };
+  
+  const handleInventoryClick = (supplier: Supplier) => {
+      setSelectedSupplier(supplier);
+      setIsInventoryModalOpen(true);
+  }
 
   const handleViewOrderClick = (order: SupplierOrder) => {
     setSelectedOrder(order);
@@ -735,6 +751,81 @@ export default function SupplierManagementPage() {
               </DialogFooter>
           </DialogContent>
       </Dialog>
+      
+      {/* View Inventory Modal */}
+        <Dialog open={isInventoryModalOpen} onOpenChange={setIsInventoryModalOpen}>
+            <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Product Inventory: {selectedSupplier?.name}</DialogTitle>
+                    <DialogDescription>
+                        A list of all products from this supplier.
+                    </DialogDescription>
+                </DialogHeader>
+                 <div className="py-4 space-y-4">
+                     <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search by product name..."
+                                className="w-full pl-8"
+                                value={inventorySearch}
+                                onChange={(e) => setInventorySearch(e.target.value)}
+                            />
+                        </div>
+                        <Select value={inventoryStatusFilter} onValueChange={setInventoryStatusFilter}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Filter by status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                <SelectItem value="In Stock">In Stock</SelectItem>
+                                <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="overflow-x-auto no-scrollbar rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Product ID</TableHead>
+                                    <TableHead>Product Name</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredInventory.map((product) => (
+                                    <TableRow key={product.id}>
+                                        <TableCell className="font-medium">{product.id}</TableCell>
+                                        <TableCell>{product.name}</TableCell>
+                                        <TableCell>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                                product.status === 'In Stock' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                            }`}>
+                                                {product.status}
+                                            </span>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {filteredInventory.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                            No products found.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsInventoryModalOpen(false)}>
+                        Close
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
 
       {/* New Supplier Modal */}
       <Dialog open={isNewModalOpen} onOpenChange={setIsNewModalOpen}>

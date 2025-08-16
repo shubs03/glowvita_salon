@@ -7,13 +7,14 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
-import { CheckCircle, Eye, XCircle, Trash2, User, ThumbsUp, Hourglass, BarChart, Plus, FileDown, X } from 'lucide-react';
+import { CheckCircle, Eye, XCircle, Trash2, User, ThumbsUp, Hourglass, BarChart, Plus, FileDown, X, Stethoscope } from 'lucide-react';
 import { Badge } from '@repo/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Textarea } from '@repo/ui/textarea';
+import { DoctorForm, type Doctor } from '@/components/DoctorForm';
 
 const doctorsData = [
   {
@@ -68,7 +69,22 @@ const doctorsData = [
   },
 ];
 
-type Doctor = typeof doctorsData[0];
+// Extending the Doctor type with additional fields from the form
+type Doctor = typeof doctorsData[0] & {
+  email?: string;
+  phone?: string;
+  registrationNumber?: string;
+  specialization?: string;
+  experience?: string;
+  clinicAddress?: string;
+  state?: string;
+  city?: string;
+  pincode?: string;
+  consultationFee?: string;
+  about?: string;
+  qualification?: string;
+  registrationYear?: string;
+};
 type ActionType = 'approve' | 'reject' | 'delete';
 
 export default function DoctorsDermatsPage() {
@@ -77,15 +93,16 @@ export default function DoctorsDermatsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isNewDoctorModalOpen, setIsNewDoctorModalOpen] = useState(false);
+    const [doctors, setDoctors] = useState<Doctor[]>(doctorsData);
     const [isSpecializationModalOpen, setIsSpecializationModalOpen] = useState(false);
     const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
     const [actionType, setActionType] = useState<ActionType | null>(null);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
-    const currentItems = doctorsData.slice(firstItemIndex, lastItemIndex);
+    const currentItems = doctors.slice(firstItemIndex, lastItemIndex);
 
-    const totalPages = Math.ceil(doctorsData.length / itemsPerPage);
+    const totalPages = Math.ceil(doctors.length / itemsPerPage);
 
     const handleActionClick = (doctor: Doctor, action: ActionType) => {
         setSelectedDoctor(doctor);
@@ -96,6 +113,33 @@ export default function DoctorsDermatsPage() {
     const handleViewClick = (doctor: Doctor) => {
         setSelectedDoctor(doctor);
         setIsViewModalOpen(true);
+    };
+
+    const handleAddDoctor = (newDoctor: Doctor) => {
+        // Generate a new ID for the doctor
+        const newId = `DOC-${String(doctors.length + 1).padStart(3, '0')}`;
+        const doctorToAdd = {
+            ...newDoctor,
+            id: newId,
+            registrationTimestamp: new Date().toISOString(),
+            registrationVia: 'Admin',
+            subscriptionStatus: 'Active',
+            status: 'Approved',
+            category: newDoctor.specialization || 'Dermatologist',
+        };
+        
+        setDoctors(prev => [doctorToAdd, ...prev]);
+        setIsNewDoctorModalOpen(false);
+    };
+
+    const handleUpdateDoctor = (updatedDoctor: Doctor) => {
+        setDoctors(prev => 
+            prev.map(doctor => 
+                doctor.id === updatedDoctor.id ? { ...doctor, ...updatedDoctor } : doctor
+            )
+        );
+        setIsNewDoctorModalOpen(false);
+        setSelectedDoctor(null);
     };
     
     const handleConfirmAction = () => {
@@ -197,10 +241,13 @@ export default function DoctorsDermatsPage() {
                           <CardDescription>Verify and manage doctor profiles.</CardDescription>
                       </div>
                       <div className="flex gap-2">
-                          <Button onClick={() => setIsNewDoctorModalOpen(true)}>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add New Doctor
-                          </Button>
+                          <Button onClick={() => {
+                            setSelectedDoctor(null);
+                            setIsNewDoctorModalOpen(true);
+                        }}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add New Doctor
+                        </Button>
                           <Button onClick={() => setIsSpecializationModalOpen(true)}>
                               <Plus className="mr-2 h-4 w-4" />
                               Add Specialization
@@ -267,22 +314,29 @@ export default function DoctorsDermatsPage() {
                                     {doctor.status}
                                 </span>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-center">
                                 <Button variant="ghost" size="icon" onClick={() => handleViewClick(doctor)}>
                                     <Eye className="h-4 w-4" />
-                                    <span className="sr-only">View Details</span>
+                                </Button>
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={() => {
+                                        setSelectedDoctor(doctor);
+                                        setIsNewDoctorModalOpen(true);
+                                    }}
+                                    title="Edit"
+                                >
+                                    <Stethoscope className="h-4 w-4" />
                                 </Button>
                                 <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'approve')}>
-                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                    <span className="sr-only">Approve</span>
+                                    <ThumbsUp className="h-4 w-4" />
                                 </Button>
                                 <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'reject')}>
-                                    <XCircle className="h-4 w-4 text-orange-600" />
-                                    <span className="sr-only">Reject</span>
+                                    <X className="h-4 w-4" />
                                 </Button>
                                 <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'delete')}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                    <span className="sr-only">Delete</span>
+                                    <Trash2 className="h-4 w-4" />
                                 </Button>
                             </TableCell>
                         </TableRow>
@@ -378,59 +432,19 @@ export default function DoctorsDermatsPage() {
             </DialogContent>
         </Dialog>
 
-        {/* Add New Doctor Modal */}
-        <Dialog open={isNewDoctorModalOpen} onOpenChange={setIsNewDoctorModalOpen}>
-            <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>Add New Doctor</DialogTitle>
-                    <DialogDescription>
-                        Fill in the details below to add a new doctor.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="doctor-name">Doctor Name</Label>
-                        <Input id="doctor-name" placeholder="e.g., Dr. John Doe" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="clinic-name">Clinic Name</Label>
-                        <Input id="clinic-name" placeholder="e.g., Sunrise Clinic" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="contact-no">Contact No.</Label>
-                        <Input id="contact-no" type="tel" placeholder="e.g., 9876543210" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="email-id">Email ID</Label>
-                        <Input id="email-id" type="email" placeholder="e.g., john.doe@example.com" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="reg-date">Registration Date</Label>
-                        <Input id="reg-date" type="date" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="specialization">Specialization</Label>
-                        <Select>
-                            <SelectTrigger id="specialization">
-                                <SelectValue placeholder="Select a specialization" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="dermatologist">Dermatologist</SelectItem>
-                                <SelectItem value="trichologist">Trichologist</SelectItem>
-                                <SelectItem value="homeopath">Homeopath</SelectItem>
-                                <SelectItem value="aesthetic-dermatologist">Aesthetic Dermatologist</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button type="button" variant="secondary" onClick={() => setIsNewDoctorModalOpen(false)}>Cancel</Button>
-                    <Button type="submit">Add Doctor</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-        
-        {/* Add New Specialization Modal */}
+        {/* Add/Edit Doctor Modal */}
+        <DoctorForm 
+            isOpen={isNewDoctorModalOpen}
+            onClose={() => {
+                setIsNewDoctorModalOpen(false);
+                setSelectedDoctor(null);
+            }}
+            doctor={selectedDoctor}
+            isEditMode={!!selectedDoctor}
+            onSubmit={selectedDoctor ? handleUpdateDoctor : handleAddDoctor}
+        />
+
+        {/* Specialization Management Modal */}
         <Dialog open={isSpecializationModalOpen} onOpenChange={setIsSpecializationModalOpen}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>

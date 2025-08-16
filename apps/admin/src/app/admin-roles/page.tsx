@@ -8,6 +8,8 @@ import { Plus, Edit } from 'lucide-react';
 import { sidebarNavItems } from '@/lib/routes';
 import AddAdminForm, { AdminUser } from '@/components/AddAdminForm';
 import { useGetAdminsQuery } from '../../../../../packages/store/src/services/api.js';
+import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
+import { closeModal, openModal } from '@repo/store/slices/modal';
  
 
 const rolesData = [
@@ -40,34 +42,14 @@ const rolesData = [
   },
 ];
 
-// Mock data for admin users
-const mockAdminUsers: AdminUser[] = [
-  {
-    id: '1',
-    fullName: 'John Doe',
-    mobileNumber: '1234567890',
-    email: 'john@example.com',
-    role: 'Super Admin',
-    designation: 'Administrator',
-    address: '123 Admin St, City',
-    isActive: true,
-  } as AdminUser,
-  {
-    id: '2',
-    fullName: 'Jane Smith',
-    mobileNumber: '0987654321',
-    email: 'jane@example.com',
-    role: 'Editor',
-    designation: 'Editor',
-    address: '456 Editor Ave, Town',
-    isActive: false,
-  } as AdminUser,
-];
+  
+
+
 
 export default function AdminRolesPage() {
   const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(mockAdminUsers);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(adminUsers);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
