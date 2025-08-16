@@ -2,7 +2,8 @@
 import {
     FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaBox, FaUserMd, 
     FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, 
-    FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync
+    FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync,
+    FaMapMarkedAlt, FaBell
 } from "react-icons/fa";
 import { FaListUl } from "react-icons/fa";
 import { IconType } from "react-icons";
@@ -51,6 +52,12 @@ export const sidebarNavItems: NavItem[] = [
     Icon: FaTruck,
     permission: "supplier-management",
   },
+   {
+    title: "Geo-fencing",
+    href: "/geo-fencing",
+    Icon: FaMapMarkedAlt,
+    permission: "geo-fencing",
+  },
   {
     title: "Admin Roles",
     href: "/admin-roles",
@@ -94,6 +101,12 @@ export const sidebarNavItems: NavItem[] = [
     permission: "payout",
   },
   {
+    title: "Push Notifications",
+    href: "/push-notifications",
+    Icon: FaBell,
+    permission: "push-notifications",
+  },
+  {
     title: "Marketing",
     href: "/marketing",
     Icon: FaBullhorn,
@@ -112,5 +125,3 @@ export const sidebarNavItems: NavItem[] = [
     permission: "faq-management",
   },
 ];
-
-    

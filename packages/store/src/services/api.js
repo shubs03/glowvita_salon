@@ -176,6 +176,56 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["offers"],
     }),
+
+    // refferal endpoints
+
+     getReferrals: builder.query({
+      query: (referralType) => ({
+        url: '/admin/referrals',
+        params: { referralType },
+      }),
+      providesTags: ['Referrals'],
+    }),
+    createReferral: builder.mutation({
+      query: (referral) => ({
+        url: '/admin/referrals',
+        method: 'POST',
+        body: referral,
+      }),
+      invalidatesTags: ['Referrals'],
+    }),
+    updateReferral: builder.mutation({
+      query: (referral) => ({
+        url: '/admin/referrals',
+        method: 'PUT',
+        body: referral,
+      }),
+      invalidatesTags: ['Referrals'],
+    }),
+    deleteReferral: builder.mutation({
+      query: (id) => ({
+        url: '/admin/referrals',
+        method: 'DELETE',
+        body: { id },
+      }),
+      invalidatesTags: ['Referrals'],
+    }),
+    updateSettings: builder.mutation({
+      query: ({ referralType, settings }) => ({
+        url: '/admin/referrals',
+        method: 'PATCH',
+        body: { referralType, settings },
+      }),
+      invalidatesTags: ['Settings'],
+    }),
+    getSettings: builder.query({
+      query: (referralType) => ({
+        url: '/admin/referrals',
+        params: { settings: true, referralType },
+      }),
+      providesTags: ['Settings'],
+    }),
+
   }),
 });
 
@@ -195,4 +245,12 @@ export const {
   useCreateAdminOfferMutation,
   useUpdateAdminOfferMutation,
   useDeleteAdminOfferMutation,
+
+  // refferal
+  useGetReferralsQuery,
+  useCreateReferralMutation,
+  useUpdateReferralMutation,
+  useDeleteReferralMutation,
+  useUpdateSettingsMutation,
+  useGetSettingsQuery
 } = glowvitaApi;

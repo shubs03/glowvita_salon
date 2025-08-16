@@ -7,4 +7,3 @@ export * from "./slices/modalSlice";
 export * from "./slices/customerSlice";
 export * from "./slices/salonSlice";
 export * from "./slices/doctorsDermatsSlice";
-    
