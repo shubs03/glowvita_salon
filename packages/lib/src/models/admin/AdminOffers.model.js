@@ -46,6 +46,16 @@ const adminOfferSchema = new mongoose.Schema({
     enum: ['Men', 'Women', 'Unisex', ''], // Allow empty string for backward compatibility
     default: [],
   },
+  // New field for offer image
+  offerImage: {
+    type: String, // Base64 encoded image string
+    default: null,
+  },
+  // New field to track if code is custom or auto-generated
+  isCustomCode: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
