@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -10,22 +10,45 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Plus, Edit, Trash2, Eye, Map, MapPin, Globe, Rows } from 'lucide-react';
+import mapboxgl from 'mapbox-gl';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+
+// Set the Mapbox access token
+if (process.env.NEXT_PUBLIC_MAPBOX_API_KEY) {
+    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_API_KEY;
+}
 
 interface Fence {
   id: string;
   name: string;
   city: string;
-  coordinates: string;
+  coordinates: GeoJSON.Feature<GeoJSON.Polygon>;
   createdAt: string;
 }
 
 const fencesData: Fence[] = [
-  { id: 'FNC-001', name: 'Downtown Core', city: 'Metropolis', coordinates: 'Polygon(...43.65, -79.38...)', createdAt: '2024-08-15' },
-  { id: 'FNC-002', name: 'North Suburbs', city: 'Metropolis', coordinates: 'Polygon(...43.75, -79.41...)', createdAt: '2024-08-14' },
-  { id: 'FNC-003', name: 'Airport Zone', city: 'Gotham', coordinates: 'Polygon(...40.71, -74.00...)', createdAt: '2024-08-13' },
+  { 
+    id: 'FNC-001', 
+    name: 'Downtown Core', 
+    city: 'Metropolis', 
+    coordinates: {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [[-79.38, 43.65], [-79.37, 43.65], [-79.37, 43.66], [-79.38, 43.66], [-79.38, 43.65]]
+        ]
+      }
+    },
+    createdAt: '2024-08-15' 
+  },
 ];
 
 export default function GeoFencingPage() {
+  const [fences, setFences] = useState<Fence[]>(fencesData);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -35,10 +58,71 @@ export default function GeoFencingPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  const mapContainer = useRef<HTMLDivElement | null>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const draw = useRef<MapboxDraw | null>(null);
+
+  const initializeMap = useCallback(() => {
+    if (map.current) return;
+    if (!mapContainer.current) return;
+    if (!mapboxgl.accessToken) {
+        console.error("Mapbox Access Token is not set.");
+        return;
+    }
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-74.5, 40],
+      zoom: 9
+    });
+
+    draw.current = new MapboxDraw({
+      displayControlsDefault: false,
+      controls: {
+        polygon: true,
+        trash: true
+      },
+      defaultMode: 'draw_polygon'
+    });
+
+    map.current.addControl(draw.current);
+
+    map.current.on('draw.create', updateArea);
+    map.current.on('draw.delete', updateArea);
+    map.current.on('draw.update', updateArea);
+
+    function updateArea(e: any) {
+      // You can get the drawn GeoJSON data here
+      const data = draw.current?.getAll();
+      if (data && data.features.length > 0) {
+        console.log(data.features[0]);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      // Use a timeout to ensure the dialog is rendered before initializing the map
+      setTimeout(() => {
+        initializeMap();
+        if (isEditMode && selectedFence && draw.current) {
+          draw.current.set({
+            type: 'FeatureCollection',
+            features: [selectedFence.coordinates]
+          });
+        } else if (draw.current) {
+          draw.current.deleteAll();
+        }
+      }, 100);
+    }
+  }, [isModalOpen, isEditMode, selectedFence, initializeMap]);
+
+
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
-  const currentItems = fencesData.slice(firstItemIndex, lastItemIndex);
-  const totalPages = Math.ceil(fencesData.length / itemsPerPage);
+  const currentItems = fences.slice(firstItemIndex, lastItemIndex);
+  const totalPages = Math.ceil(fences.length / itemsPerPage);
 
   const handleOpenModal = (fence: Fence | null = null) => {
     setSelectedFence(fence);
@@ -58,8 +142,7 @@ export default function GeoFencingPage() {
 
   const handleConfirmDelete = () => {
     if(selectedFence) {
-      console.log(`Deleting fence: ${selectedFence.name}`);
-      // API call to delete fence would go here
+      setFences(fences.filter(f => f.id !== selectedFence.id));
     }
     setIsDeleteModalOpen(false);
     setSelectedFence(null);
@@ -68,15 +151,27 @@ export default function GeoFencingPage() {
   const handleSaveFence = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const fenceData = {
-      name: formData.get('fenceName'),
-      city: formData.get('cityName'),
-    };
+    const fenceName = formData.get('fenceName') as string;
+    const cityName = formData.get('cityName') as string;
     
-    if (isEditMode) {
-      console.log('Updating fence:', { id: selectedFence?.id, ...fenceData });
+    const drawnData = draw.current?.getAll();
+    if (!drawnData || drawnData.features.length === 0) {
+        alert("Please draw a fence on the map.");
+        return;
+    }
+    const coordinates = drawnData.features[0] as GeoJSON.Feature<GeoJSON.Polygon>;
+    
+    if (isEditMode && selectedFence) {
+      setFences(fences.map(f => f.id === selectedFence.id ? { ...f, name: fenceName, city: cityName, coordinates } : f));
     } else {
-      console.log('Creating new fence:', fenceData);
+      const newFence: Fence = {
+        id: `FNC-${Date.now()}`,
+        name: fenceName,
+        city: cityName,
+        coordinates,
+        createdAt: new Date().toISOString().split('T')[0]
+      };
+      setFences([...fences, newFence]);
     }
     
     setIsModalOpen(false);
@@ -94,7 +189,7 @@ export default function GeoFencingPage() {
             <Map className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{fencesData.length}</div>
+            <div className="text-2xl font-bold">{fences.length}</div>
             <p className="text-xs text-muted-foreground">Across all cities</p>
           </CardContent>
         </Card>
@@ -104,7 +199,7 @@ export default function GeoFencingPage() {
             <MapPin className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{[...new Set(fencesData.map(f => f.city))].length}</div>
+            <div className="text-2xl font-bold">{[...new Set(fences.map(f => f.city))].length}</div>
             <p className="text-xs text-muted-foreground">Unique cities with fences</p>
           </CardContent>
         </Card>
@@ -162,7 +257,7 @@ export default function GeoFencingPage() {
                     <TableCell className="font-mono text-xs">{fence.id}</TableCell>
                     <TableCell className="font-medium">{fence.name}</TableCell>
                     <TableCell>{fence.city}</TableCell>
-                    <TableCell className="font-mono text-xs max-w-xs truncate">{fence.coordinates}</TableCell>
+                    <TableCell className="font-mono text-xs max-w-xs truncate">{JSON.stringify(fence.coordinates.geometry.coordinates)}</TableCell>
                     <TableCell>{fence.createdAt}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => handleViewClick(fence)}>
@@ -187,7 +282,7 @@ export default function GeoFencingPage() {
                 onPageChange={setCurrentPage}
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
-                totalItems={fencesData.length}
+                totalItems={fences.length}
             />
         </CardContent>
       </Card>
@@ -215,9 +310,10 @@ export default function GeoFencingPage() {
               </div>
               <div className="space-y-2">
                 <Label>Draw Fence</Label>
-                <div className="h-96 w-full bg-secondary rounded-md flex items-center justify-center">
-                  <p className="text-muted-foreground">Map component with polygon tools will be here.</p>
-                </div>
+                <div ref={mapContainer} className="h-96 w-full rounded-md" />
+                 {!mapboxgl.accessToken && (
+                    <p className="text-sm text-destructive">Mapbox API key is not configured.</p>
+                )}
               </div>
             </div>
             <DialogFooter>

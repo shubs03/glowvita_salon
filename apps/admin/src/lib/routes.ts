@@ -3,7 +3,7 @@ import {
     FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaBox, FaUserMd, 
     FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, 
     FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync,
-    FaMapMarkedAlt
+    FaMapMarkedAlt, FaBell
 } from "react-icons/fa";
 import { FaListUl } from "react-icons/fa";
 import { IconType } from "react-icons";
@@ -99,6 +99,12 @@ export const sidebarNavItems: NavItem[] = [
     href: "/payout",
     Icon: FaMoneyCheckAlt,
     permission: "payout",
+  },
+  {
+    title: "Push Notifications",
+    href: "/push-notifications",
+    Icon: FaBell,
+    permission: "push-notifications",
   },
   {
     title: "Marketing",
