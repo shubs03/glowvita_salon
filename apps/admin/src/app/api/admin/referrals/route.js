@@ -6,34 +6,66 @@ await _db();
 
 // Helper function to validate bonus
 const validateBonus = (bonus, prefix = '') => {
+  if (!bonus || typeof bonus !== 'object') {
+    return `${prefix} bonus object is missing or invalid`;
+  }
   if (!['discount', 'amount'].includes(bonus.bonusType)) {
     return `${prefix} bonus type is invalid`;
   }
   if (typeof bonus.bonusValue !== 'number' || bonus.bonusValue < 0) {
     return `${prefix} bonus value is invalid`;
   }
-  if (!bonus.creditTime) {
-    return `${prefix} credit time is required`;
+  if (!bonus.creditTime || typeof bonus.creditTime !== 'string') {
+    return `${prefix} credit time is required and must be a string`;
   }
   return null;
 };
 
 // Helper function to validate referral settings
 const validateSettings = (settings) => {
+  if (!settings || typeof settings !== 'object') {
+    return "Settings object is missing or invalid";
+  }
+
+  // Validate referrerBonus
   const referrerError = validateBonus(settings.referrerBonus, 'Referrer');
   if (referrerError) return referrerError;
 
-  if (settings.refereeBonus.enabled) {
-    const refereeError = validateBonus(settings.refereeBonus, 'Referee');
-    if (refereeError) return refereeError;
+  // Validate refereeBonus only if enabled
+  if (settings.refereeBonus && typeof settings.refereeBonus === 'object') {
+    if (typeof settings.refereeBonus.enabled !== 'boolean') {
+      return "Referee bonus enabled field must be a boolean";
+    }
+    if (settings.refereeBonus.enabled) {
+      const refereeError = validateBonus(settings.refereeBonus, 'Referee');
+      if (refereeError) return refereeError;
+    }
   }
 
+  // Validate usageLimit
   if (!['unlimited', 'manual'].includes(settings.usageLimit)) {
     return "Invalid usage limit";
   }
-  if (settings.usageLimit === 'manual' && (typeof settings.usageCount !== 'number' || settings.usageCount < 0)) {
-    return "Invalid usage count";
+  if (settings.usageLimit === 'manual') {
+    if (settings.usageCount === null || settings.usageCount === undefined) {
+      return "Usage count is required for manual usage limit";
+    }
+    if (typeof settings.usageCount !== 'number' || settings.usageCount < 0) {
+      return "Invalid usage count";
+    }
   }
+
+  // Validate optional fields
+  if (settings.minOrders !== null && settings.minOrders !== undefined && (typeof settings.minOrders !== 'number' || settings.minOrders < 0)) {
+    return "Invalid minimum orders";
+  }
+  if (settings.minBookings !== null && settings.minBookings !== undefined && (typeof settings.minBookings !== 'number' || settings.minBookings < 0)) {
+    return "Invalid minimum bookings";
+  }
+  if (settings.minPayoutCycle !== null && settings.minPayoutCycle !== undefined && (typeof settings.minPayoutCycle !== 'number' || settings.minPayoutCycle < 0)) {
+    return "Invalid minimum payout cycle";
+  }
+
   return null;
 };
 
@@ -85,7 +117,15 @@ export const GET = authMiddlewareAdmin(
         default: return Response.json({ message: "Invalid referral type" }, { status: 400 });
       }
       const settings = await Model.findOne({});
-      return Response.json(settings || {});
+      return Response.json(settings || {
+        referrerBonus: { bonusType: 'amount', bonusValue: 0, creditTime: '7 days' },
+        refereeBonus: { enabled: false }, // Simplified default
+        usageLimit: 'unlimited',
+        usageCount: null,
+        minOrders: null,
+        minBookings: null,
+        minPayoutCycle: null,
+      });
     } else {
       const query = referralType ? { referralType } : {};
       const referrals = await ReferralModel.find(query);
