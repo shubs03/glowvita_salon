@@ -369,10 +369,45 @@ export default function SupplierManagementPage() {
   const currentOrders = filteredOrders.slice(firstOrderIndex, lastOrderIndex);
   const totalOrdersPages = Math.ceil(filteredOrders.length / ordersPerPage);
   
+  // Sample product data for the selected supplier
+  const [supplierProductsData] = useState([
+    {
+      id: 'prod_1',
+      name: 'Product 1',
+      sku: 'SKU001',
+      price: 1999,
+      stock: 50,
+      status: 'in_stock',
+      category: 'Skincare'
+    },
+    {
+      id: 'prod_2',
+      name: 'Product 2',
+      sku: 'SKU002',
+      price: 2999,
+      stock: 25,
+      status: 'low_stock',
+      category: 'Haircare'
+    },
+    {
+      id: 'prod_3',
+      name: 'Product 3',
+      sku: 'SKU003',
+      price: 1499,
+      stock: 0,
+      status: 'out_of_stock',
+      category: 'Makeup'
+    }
+  ]);
+
   const filteredInventory = supplierProductsData.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(inventorySearch.toLowerCase());
-      const matchesStatus = inventoryStatusFilter === 'all' || product.status === inventoryStatusFilter;
-      return matchesSearch && matchesStatus;
+    if (!product || typeof product !== 'object') return false;
+    const name = product.name || '';
+    const status = product.status || '';
+    
+    const matchesSearch = name.toString().toLowerCase().includes(inventorySearch.toLowerCase());
+    const matchesStatus = inventoryStatusFilter === 'all' || status === inventoryStatusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   const handleActionClick = (supplier: Supplier, action: ActionType) => {
