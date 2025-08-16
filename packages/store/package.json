@@ -11,7 +11,8 @@
     "./slices/auth": "./src/slices/auth-slice.js",
     "./slices/modal": "./src/slices/modalSlice.js",
     "./slices/customerSlice": "./src/slices/customerSlice.js",
-    "./slices/salonSlice": "./src/slices/salonSlice.js"
+    "./slices/salonSlice": "./src/slices/salonSlice.js",
+    "./slices/supplierSlice": "./src/slices/supplierSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
