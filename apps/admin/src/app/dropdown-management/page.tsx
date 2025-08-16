@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { Plus, Edit, Trash2, Link as LinkIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Link as LinkIcon, Trash2 as TrashIcon } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { toast } from 'sonner';
@@ -212,7 +212,7 @@ const DropdownManager = ({
 };
 
 export default function DropdownManagementPage() {
-    const { data = [], isLoading, isError } = useGetSuperDataQuery();
+    const { data = [], isLoading, isError } = useGetSuperDataQuery(undefined);
     const [createItem] = useCreateSuperDataItemMutation();
     const [updateItem] = useUpdateSuperDataItemMutation();
     const [deleteItem] = useDeleteSuperDataItemMutation();
@@ -239,16 +239,16 @@ export default function DropdownManagementPage() {
     const LocationManager = () => {
         const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
         const [selectedStateId, setSelectedStateId] = useState<string | null>(null);
-        const [isModalOpen, setIsModalOpen] = useState(false);
-        const [modalConfig, setModalConfig] = useState<{ type: 'country' | 'state' | 'city', parentId?: string | null }>({ type: 'country' });
+        const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+        const [locationModalConfig, setLocationModalConfig] = useState<{ type: 'country' | 'state' | 'city', parentId?: string | null }>({ type: 'country' });
         
         const countries = data.filter(item => item.type === 'country') as DropdownItem[];
         const states = data.filter(item => item.type === 'state' && item.parentId === selectedCountryId) as DropdownItem[];
         const cities = data.filter(item => item.type === 'city' && item.parentId === selectedStateId) as DropdownItem[];
 
-        const handleOpenModal = (type: 'country' | 'state' | 'city', parentId?: string | null) => {
-            setModalConfig({ type, parentId });
-            setIsModalOpen(true);
+        const handleOpenLocationModal = (type: 'country' | 'state' | 'city', parentId?: string | null) => {
+            setLocationModalConfig({ type, parentId });
+            setIsLocationModalOpen(true);
         };
     
         const handleLocationSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -257,11 +257,11 @@ export default function DropdownManagementPage() {
             const name = (form.elements.namedItem('name') as HTMLInputElement).value;
             const itemData: Partial<DropdownItem> = {
                 name,
-                type: modalConfig.type,
-                parentId: modalConfig.parentId,
+                type: locationModalConfig.type,
+                parentId: locationModalConfig.parentId,
             };
             await handleUpdate(itemData, 'add');
-            setIsModalOpen(false);
+            setIsLocationModalOpen(false);
         };
 
         return (
@@ -275,7 +275,7 @@ export default function DropdownManagementPage() {
                         <div className="border p-4 rounded-md space-y-2">
                             <div className="flex justify-between items-center mb-2">
                                 <h4 className="font-semibold">Countries</h4>
-                                <Button size="sm" onClick={() => handleOpenModal('country')}><Plus className="h-4 w-4" /></Button>
+                                <Button size="sm" onClick={() => handleOpenLocationModal('country')}><Plus className="h-4 w-4" /></Button>
                             </div>
                             <div className="max-h-60 overflow-y-auto space-y-1">
                                 {countries.map(country => (
@@ -289,7 +289,7 @@ export default function DropdownManagementPage() {
                         <div className="border p-4 rounded-md space-y-2">
                             <div className="flex justify-between items-center mb-2">
                                 <h4 className="font-semibold">States</h4>
-                                <Button size="sm" disabled={!selectedCountryId} onClick={() => handleOpenModal('state', selectedCountryId)}><Plus className="h-4 w-4" /></Button>
+                                <Button size="sm" disabled={!selectedCountryId} onClick={() => handleOpenLocationModal('state', selectedCountryId)}><Plus className="h-4 w-4" /></Button>
                             </div>
                             <div className="max-h-60 overflow-y-auto space-y-1">
                                 {states.map(state => (
@@ -303,7 +303,7 @@ export default function DropdownManagementPage() {
                         <div className="border p-4 rounded-md space-y-2">
                             <div className="flex justify-between items-center mb-2">
                                 <h4 className="font-semibold">Cities</h4>
-                                <Button size="sm" disabled={!selectedStateId} onClick={() => handleOpenModal('city', selectedStateId)}><Plus className="h-4 w-4" /></Button>
+                                <Button size="sm" disabled={!selectedStateId} onClick={() => handleOpenLocationModal('city', selectedStateId)}><Plus className="h-4 w-4" /></Button>
                             </div>
                             <div className="max-h-60 overflow-y-auto space-y-1">
                                 {cities.map(city => (
@@ -315,18 +315,18 @@ export default function DropdownManagementPage() {
                         </div>
                     </div>
                 </CardContent>
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <Dialog open={isLocationModalOpen} onOpenChange={setIsLocationModalOpen}>
                     <DialogContent className="sm:max-w-md">
                          <form onSubmit={handleLocationSave}>
                             <DialogHeader>
-                                <DialogTitle>Add New {modalConfig.type}</DialogTitle>
+                                <DialogTitle>Add New {locationModalConfig.type.charAt(0).toUpperCase() + locationModalConfig.type.slice(1)}</DialogTitle>
                             </DialogHeader>
                             <div className="py-4">
-                                <Label htmlFor="name">{modalConfig.type.charAt(0).toUpperCase() + modalConfig.type.slice(1)} Name</Label>
+                                <Label htmlFor="name">{locationModalConfig.type.charAt(0).toUpperCase() + locationModalConfig.type.slice(1)} Name</Label>
                                 <Input id="name" name="name" required />
                             </div>
                             <DialogFooter>
-                                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                                <Button type="button" variant="secondary" onClick={() => setIsLocationModalOpen(false)}>Cancel</Button>
                                 <Button type="submit">Save</Button>
                             </DialogFooter>
                         </form>
@@ -350,19 +350,21 @@ export default function DropdownManagementPage() {
         const handleServiceUnassignment = async (serviceId: string) => {
             const serviceToUpdate = services.find(s => s._id === serviceId);
             if (serviceToUpdate) {
-                await handleUpdate({ ...serviceToUpdate, parentId: undefined }, 'edit');
+                // To unassign, we set parentId to null or undefined
+                const { parentId, ...rest } = serviceToUpdate;
+                await handleUpdate({ ...rest, parentId: undefined }, 'edit');
             }
         };
 
         const servicesByCategory = useMemo(() => {
-            const assignedServices = new Set<string>();
+            const assignedServiceIds = new Set<string>();
             const mapping = serviceCategories.reduce((acc, category) => {
                 const assigned = services.filter(s => s.parentId === category._id);
-                assigned.forEach(s => assignedServices.add(s._id));
+                assigned.forEach(s => assignedServiceIds.add(s._id));
                 acc[category._id] = assigned;
                 return acc;
             }, {} as Record<string, DropdownItem[]>);
-            const unassignedServices = services.filter(s => !assignedServices.has(s._id));
+            const unassignedServices = services.filter(s => !s.parentId || !assignedServiceIds.has(s._id));
             return { mapping, unassignedServices };
         }, [serviceCategories, services]);
     
@@ -378,7 +380,7 @@ export default function DropdownManagementPage() {
                           <div key={category._id} className="border p-4 rounded-lg">
                               <h4 className="font-bold mb-2">{category.name}</h4>
                               <div className="mb-2">
-                                  <Select onValueChange={(serviceId) => handleServiceAssignment(category._id, serviceId)}>
+                                  <Select onValueChange={(serviceId) => { if (serviceId) handleServiceAssignment(category._id, serviceId)}}>
                                       <SelectTrigger>
                                           <SelectValue placeholder="Add a service to this category..." />
                                       </SelectTrigger>
@@ -388,7 +390,7 @@ export default function DropdownManagementPage() {
                                                   {service.name}
                                               </SelectItem>
                                           ))}
-                                          {servicesByCategory.unassignedServices.length === 0 && <p className='p-2 text-sm text-muted-foreground'>No unassigned services</p>}
+                                          {servicesByCategory.unassignedServices.length === 0 && <div className='p-2 text-sm text-muted-foreground text-center'>No unassigned services</div>}
                                       </SelectContent>
                                   </Select>
                               </div>
@@ -396,8 +398,8 @@ export default function DropdownManagementPage() {
                                   {servicesByCategory.mapping[category._id]?.map(service => (
                                       <Badge key={service._id} variant="secondary">
                                           {service.name}
-                                          <button onClick={() => handleServiceUnassignment(service._id)} className="ml-2 rounded-full hover:bg-muted-foreground/20">
-                                            <Trash2 className="h-3 w-3"/>
+                                          <button onClick={() => handleServiceUnassignment(service._id)} className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5">
+                                            <TrashIcon className="h-3 w-3"/>
                                           </button>
                                       </Badge>
                                   ))}
