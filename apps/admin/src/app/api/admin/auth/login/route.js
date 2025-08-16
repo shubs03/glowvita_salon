@@ -28,7 +28,7 @@ export async function POST(request) {
     }
 
     // Find admin user by emailAddress field
-    const user = await AdminUserModel.findOne({ emailAddress: email });
+    const user = await AdminUserModel.findOne({ emailAddress: email }).select('+password');
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Invalid credentials" },
