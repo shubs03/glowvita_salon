@@ -12,13 +12,6 @@ import { Textarea } from '@repo/ui/textarea';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { toast } from 'sonner';
-import {
-  useGetSuperDataQuery,
-  useCreateSuperDataItemMutation,
-  useUpdateSuperDataItemMutation,
-  useDeleteSuperDataItemMutation,
-} from '../../../../../packages/store/src/services/api';
 
 interface DropdownItem {
   _id: string;
@@ -39,14 +32,12 @@ const DropdownManager = ({
   items,
   type,
   onUpdate,
-  isLoading,
 }: {
   listTitle: string;
   listDescription: string;
   items: DropdownItem[];
   type: string;
-  onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => void;
-  isLoading: boolean;
+  onUpdate: (item: DropdownItem, action: 'add' | 'edit' | 'delete') => void;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -64,8 +55,9 @@ const DropdownManager = ({
     const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
 
     const action = currentItem ? 'edit' : 'add';
-    const itemData: Partial<DropdownItem> = {
-      _id: currentItem?._id,
+    const itemData: DropdownItem = {
+      ...currentItem,
+      _id: currentItem?._id || `new_${Date.now()}`,
       name,
       description,
       type,
@@ -83,7 +75,7 @@ const DropdownManager = ({
 
   const handleConfirmDelete = () => {
     if (currentItem) {
-      onUpdate({ _id: currentItem._id }, 'delete');
+      onUpdate(currentItem, 'delete');
     }
     setIsDeleteModalOpen(false);
     setCurrentItem(null);
@@ -97,7 +89,7 @@ const DropdownManager = ({
             <CardTitle>{listTitle}</CardTitle>
             <CardDescription>{listDescription}</CardDescription>
           </div>
-          <Button onClick={() => handleOpenModal()} disabled={isLoading}>
+          <Button onClick={() => handleOpenModal()}>
             <Plus className="mr-2 h-4 w-4" />
             Add New
           </Button>
@@ -119,26 +111,19 @@ const DropdownManager = ({
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="text-muted-foreground">{item.description}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
+                    <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)}>
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(item)} disabled={isLoading}>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(item)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TableCell>
                 </TableRow>
               ))}
-              {items.length === 0 && !isLoading && (
+              {items.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={3} className="text-center text-muted-foreground">
                     No items found.
-                  </TableCell>
-                </TableRow>
-              )}
-               {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">
-                    Loading...
                   </TableCell>
                 </TableRow>
               )}
@@ -193,29 +178,59 @@ const DropdownManager = ({
 };
 
 export default function DropdownManagementPage() {
-    const { data = [], isLoading, isError } = useGetSuperDataQuery();
-    const [createItem] = useCreateSuperDataItemMutation();
-    const [updateItem] = useUpdateSuperDataItemMutation();
-    const [deleteItem] = useDeleteSuperDataItemMutation();
+  const [data, setData] = useState<DropdownItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
+  const fetchData = async () => {
+    try {
+      const response = await fetch('/api/super-data');
+      if (response.ok) {
+        const items = await response.json();
+        setData(items);
+      }
+    } catch (error) {
+      console.error("Failed to fetch dropdown data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const handleUpdate = async (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => {
-        try {
-            if (action === 'add') {
-                await createItem(item).unwrap();
-                toast.success('Item added successfully');
-            } else if (action === 'edit') {
-                await updateItem({ id: item._id, ...item }).unwrap();
-                toast.success('Item updated successfully');
-            } else if (action === 'delete') {
-                await deleteItem({ id: item._id }).unwrap();
-                toast.success('Item deleted successfully');
-            }
-        } catch (error) {
-            toast.error(`Failed to ${action} item.`);
-            console.error(`API call failed for ${action}:`, error);
-        }
-    };
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleUpdate = async (item: DropdownItem, action: 'add' | 'edit' | 'delete') => {
+    let response;
+    try {
+      if (action === 'add') {
+        response = await fetch('/api/super-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(item),
+        });
+      } else if (action === 'edit') {
+        response = await fetch('/api/super-data', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item._id, ...item }),
+        });
+      } else if (action === 'delete') {
+        response = await fetch('/api/super-data', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item._id }),
+        });
+      }
+
+      if (response && response.ok) {
+        fetchData(); // Refetch data to update the UI
+      } else {
+        console.error("Failed to update item:", await response?.text());
+      }
+    } catch (error) {
+      console.error("API call failed:", error);
+    }
+  };
 
   const LocationManager = () => {
     const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
@@ -327,8 +342,8 @@ export default function DropdownManagementPage() {
     );
   };
 
-  if (isError) {
-    return <div className="p-8 text-center text-destructive">Error fetching data. Please try again.</div>;
+  if (isLoading) {
+    return <div className="p-8 text-center">Loading...</div>;
   }
 
   const dropdownTypes = [
@@ -366,7 +381,6 @@ export default function DropdownManagementPage() {
                 items={data.filter(item => item.type === d.key)}
                 type={d.key}
                 onUpdate={handleUpdate}
-                isLoading={isLoading}
               />
             ))}
           </div>
@@ -382,7 +396,6 @@ export default function DropdownManagementPage() {
                 items={data.filter(item => item.type === d.key)}
                 type={d.key}
                 onUpdate={handleUpdate}
-                isLoading={isLoading}
               />
             ))}
             <ServiceCategoryManager />
@@ -403,7 +416,6 @@ export default function DropdownManagementPage() {
                 items={data.filter(item => item.type === d.key)}
                 type={d.key}
                 onUpdate={handleUpdate}
-                isLoading={isLoading}
               />
             ))}
           </div>
@@ -419,7 +431,6 @@ export default function DropdownManagementPage() {
                 items={data.filter(item => item.type === d.key)}
                 type={d.key}
                 onUpdate={handleUpdate}
-                isLoading={isLoading}
               />
             ))}
           </div>

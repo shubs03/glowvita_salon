@@ -1,7 +1,15 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { 
+  addPlan, 
+  updatePlan, 
+  deletePlan, 
+  togglePlanStatus, 
+  selectAllPlans 
+} from '@repo/store/slices/subscriptionSlice';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -14,64 +22,59 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Switch } from '@repo/ui/switch';
 
-const plansData = [
-  {
-    id: 'plan_1',
-    name: "Basic Monthly",
-    duration: 1,
-    durationType: 'months',
-    price: 99900,
-  },
-  {
-    id: 'plan_2',
-    name: "Pro Yearly",
-    duration: 1,
-    durationType: 'years',
-    price: 999900,
-  },
-  {
-    id: 'plan_3',
-    name: "Weekly Trial",
-    duration: 7,
-    durationType: 'days',
-    price: 24900,
-  },
-];
+type Plan = {
+  id: string;
+  name: string;
+  duration: number;
+  durationType: string;
+  price: number;
+  status?: boolean;
+};
 
-const subscriptionsData = [
-  {
-    id: 'sub_1',
-    subscriberId: 'CUST-101',
-    subscriberName: 'Alice Johnson',
-    planName: 'Pro Yearly',
-    startDate: '2024-01-15',
-    endDate: '2025-01-15',
-    status: 'Active',
-  },
-  {
-    id: 'sub_2',
-    subscriberId: 'CUST-102',
-    subscriberName: 'Bob Williams',
-    planName: 'Basic Monthly',
-    startDate: '2024-08-01',
-    endDate: '2024-09-01',
-    status: 'Active',
-  },
-  {
-    id: 'sub_3',
-    subscriberId: 'CUST-103',
-    subscriberName: 'Charlie Brown',
-    planName: 'Basic Monthly',
-    startDate: '2024-07-20',
-    endDate: '2024-08-20',
-    status: 'Inactive',
-  },
-];
-
-type Plan = typeof plansData[0];
-type Subscription = typeof subscriptionsData[0];
+type Subscription = {
+  id: string;
+  subscriberId: string;
+  subscriberName: string;
+  planName: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+};
 
 export default function SubscriptionManagementPage() {
+  // Get plans from Redux store
+  const plansData = useSelector((state) => state.subscription.plans);
+  const dispatch = useDispatch();
+
+  const subscriptionsData = [
+    {
+      id: 'sub_1',
+      subscriberId: 'CUST-101',
+      subscriberName: 'Alice Johnson',
+      planName: 'Pro Yearly',
+      startDate: '2024-01-15',
+      endDate: '2025-01-15',
+      status: 'Active',
+    },
+    {
+      id: 'sub_2',
+      subscriberId: 'CUST-102',
+      subscriberName: 'Bob Williams',
+      planName: 'Basic Monthly',
+      startDate: '2024-08-01',
+      endDate: '2024-09-01',
+      status: 'Active',
+    },
+    {
+      id: 'sub_3',
+      subscriberId: 'CUST-103',
+      subscriberName: 'Charlie Brown',
+      planName: 'Basic Monthly',
+      startDate: '2024-07-20',
+      endDate: '2024-08-20',
+      status: 'Inactive',
+    },
+  ];
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -145,11 +148,50 @@ export default function SubscriptionManagementPage() {
       name: planForm.name,
       duration: parseInt(planForm.duration),
       durationType: planForm.durationType,
-      price: parseInt(planForm.price)
+      price: parseInt(planForm.price),
+      status: 'Active'  // Ensure status is set for new plans
     };
-    console.log('New Plan Details:', planData);
+    
+    console.log('Dispatching plan data:', planData);
+    
+    if (modalType === 'add') {
+      dispatch(addPlan(planData));
+    } else if (selectedPlan) {
+      dispatch(updatePlan({
+        id: selectedPlan.id,
+        changes: planData
+      }));
+    }
+    
+    // Reset form and close modal
+    setPlanForm({ name: '', duration: '1', durationType: 'months', price: '0' });
     setIsPlanModalOpen(false);
+  };
+
+  const handleUpdatePlan = () => {
+    if (selectedPlan) {
+      dispatch(updatePlan({
+        id: selectedPlan.id,
+        changes: planForm
+      }));
+      setPlanForm({ name: '', duration: '', durationType: 'months', price: '' });
+      setIsPlanModalOpen(false);
+    }
+  };
+
+  const handleDeletePlan = (planId: string) => {
+    dispatch(deletePlan(planId));
+  };
+
+  const handleAddPlan = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newPlan = {
+      ...planForm,
+      status: true,
+    };
+    dispatch(addPlan(newPlan));
     setPlanForm({ name: '', duration: '', durationType: 'months', price: '' });
+    setIsPlanModalOpen(false);
   };
 
   const [activeSubscriptions, setActiveSubscriptions] = useState(
@@ -159,9 +201,8 @@ export default function SubscriptionManagementPage() {
     }, {} as Record<string, boolean>)
   );
 
-  const handleToggleStatus = (subId: string) => {
-    setActiveSubscriptions(prev => ({ ...prev, [subId]: !prev[subId] }));
-    // API Call to update status
+  const handleToggleStatus = (planId: string) => {
+    dispatch(togglePlanStatus(planId));
   };
 
   return (

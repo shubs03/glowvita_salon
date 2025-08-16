@@ -90,7 +90,7 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
   baseQuery: baseQuery,
-  tagTypes: ["admin"],
+  tagTypes: ["admin", "offers", "Referrals", "Settings", "SuperData"],
   endpoints: (builder) => ({
     // Admin
     registerAdmin: builder.mutation({
@@ -226,6 +226,36 @@ export const glowvitaApi = createApi({
       providesTags: ['Settings'],
     }),
 
+    // SuperData (Dropdowns) Endpoints
+    getSuperData: builder.query({
+      query: () => '/super-data',
+      providesTags: ['SuperData'],
+    }),
+    createSuperDataItem: builder.mutation({
+      query: (item) => ({
+        url: '/super-data',
+        method: 'POST',
+        body: item,
+      }),
+      invalidatesTags: ['SuperData'],
+    }),
+    updateSuperDataItem: builder.mutation({
+      query: (item) => ({
+        url: '/super-data',
+        method: 'PUT',
+        body: item,
+      }),
+      invalidatesTags: ['SuperData'],
+    }),
+    deleteSuperDataItem: builder.mutation({
+      query: ({ id }) => ({
+        url: '/super-data',
+        method: 'DELETE',
+        body: { id },
+      }),
+      invalidatesTags: ['SuperData'],
+    }),
+
   }),
 });
 
@@ -252,5 +282,11 @@ export const {
   useUpdateReferralMutation,
   useDeleteReferralMutation,
   useUpdateSettingsMutation,
-  useGetSettingsQuery
+  useGetSettingsQuery,
+
+  // SuperData (Dropdowns)
+  useGetSuperDataQuery,
+  useCreateSuperDataItemMutation,
+  useUpdateSuperDataItemMutation,
+  useDeleteSuperDataItemMutation,
 } = glowvitaApi;
