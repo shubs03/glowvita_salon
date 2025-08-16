@@ -9,27 +9,34 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
-import { Eye, ToggleRight, ToggleLeft, FileDown, X, Trash2, Plus, FilePenIcon } from 'lucide-react';
+import { Eye, ToggleRight, ToggleLeft, FileDown, X, Trash2, Plus, FilePenIcon, Users, UserCheck, BarChart, UserX } from 'lucide-react';
 import { VendorForm } from "../../components/VendorForm";
 import { VendorEditForm } from "../../components/VendorEditForm";
-import { RootState } from '@repo/store';
+import { useAppSelector } from '@repo/store/hooks';
+import { selectRootState } from '@repo/store/store';
 
 export interface Vendor {
-  id: string;
+  id?: string;
   firstName: string;
   lastName: string;
-  salonName: string;
   email: string;
   phone: string;
+  businessName: string;
+  businessType: string;
+  businessCategory: string;
+  businessEmail: string;
+  businessDescription: string;
+  profileImage?: string;
+  website?: string;
   state: string;
   city: string;
   pincode: string;
   address: string;
-  category: string;
-  subCategories: string[];
-  serviceCategories: string[];
-  profileImage?: string;
-  status?: 'Active' | 'Disabled'; // Add status to the vendor type
+  category?: string;
+  subCategories?: string[];
+  serviceCategories?: string[];
+  status?: 'Active' | 'Disabled';
+  [key: string]: any; // For dynamic access
 }
 
 type ActionType = 'enable' | 'disable' | 'delete';
@@ -42,9 +49,10 @@ export default function VendorManagementPage() {
     const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
     const [isEditModalOpen, setEditModalOpen] = useState(false);
-    const [selectedVendor, setSelectedVendor] = useState(null);
+    const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
 
-    const vendors = useSelector((state: RootState) => state.vendors.vendors);
+    const vendors = useAppSelector((state) => selectRootState(state).vendors);
+    
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -57,7 +65,7 @@ export default function VendorManagementPage() {
         setCreateModalOpen(true);
     };
 
-    const handleOpenEditModal = (vendor) => {
+    const handleOpenEditModal = (vendor: Vendor) => {
         setSelectedVendor(vendor);
         setEditModalOpen(true);
     };
@@ -96,19 +104,19 @@ export default function VendorManagementPage() {
             case 'enable':
                 return {
                     title: 'Enable Vendor?',
-                    description: `Are you sure you want to enable the vendor "${selectedVendor.name}"?`,
+                    description: `Are you sure you want to enable the vendor "${selectedVendor.firstName} ${selectedVendor.lastName}"?`,
                     buttonText: 'Enable'
                 };
             case 'disable':
                 return {
                     title: 'Disable Vendor?',
-                    description: `Are you sure you want to disable the vendor "${selectedVendor.name}"?`,
+                    description: `Are you sure you want to disable the vendor "${selectedVendor.firstName} ${selectedVendor.lastName}"?`,
                     buttonText: 'Disable'
                 };
             case 'delete':
                 return {
                     title: 'Delete Vendor?',
-                    description: `Are you sure you want to permanently delete the vendor "${selectedVendor.name}"? This action is irreversible.`,
+                    description: `Are you sure you want to permanently delete the vendor "${selectedVendor.firstName} ${selectedVendor.lastName}"? This action is irreversible.`,
                     buttonText: 'Delete'
                 };
             default:
@@ -118,8 +126,8 @@ export default function VendorManagementPage() {
 
     const { title, description, buttonText } = getModalContent();
 
-    const activeVendors = vendorsData.filter(v => v.status === 'Active').length;
-    const disabledVendors = vendorsData.filter(v => v.status !== 'Active').length;
+    const activeVendors = vendors.filter((v: Vendor) => v.status === 'Active').length;
+    const disabledVendors = vendors.filter((v: Vendor) => v.status !== 'Active').length;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -132,7 +140,7 @@ export default function VendorManagementPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{vendorsData.length}</div>
+            <div className="text-2xl font-bold">{vendors.length}</div>
             <p className="text-xs text-muted-foreground">+2 from last month</p>
           </CardContent>
         </Card>
@@ -213,7 +221,7 @@ export default function VendorManagementPage() {
               </TableHeader>
               <TableBody>
                 {currentItems.length > 0 ? (
-                  currentItems.map((vendor) => (
+                 currentItems.map((vendor: Vendor) => (
                     <TableRow key={vendor.id}>
                       <TableCell className="font-medium">{vendor.salonName}</TableCell>
                       <TableCell>{`${vendor.firstName} ${vendor.lastName}`}</TableCell>
