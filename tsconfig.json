@@ -1,6 +1,6 @@
+
 {
   "extends": "@repo/typescript-config/base.json",
-  
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
@@ -9,5 +9,4 @@
       "@utils/*": ["packages/utils/*"]
     }
   }
-
 }
