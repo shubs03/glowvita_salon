@@ -179,83 +179,125 @@ export const glowvitaApi = createApi({
 
     // refferal endpoints
 
-     getReferrals: builder.query({
+    getReferrals: builder.query({
       query: (referralType) => ({
-        url: '/admin/referrals',
+        url: "/admin/referrals",
         params: { referralType },
       }),
-      providesTags: ['Referrals'],
+      providesTags: ["Referrals"],
     }),
     createReferral: builder.mutation({
       query: (referral) => ({
-        url: '/admin/referrals',
-        method: 'POST',
+        url: "/admin/referrals",
+        method: "POST",
         body: referral,
       }),
-      invalidatesTags: ['Referrals'],
+      invalidatesTags: ["Referrals"],
     }),
     updateReferral: builder.mutation({
       query: (referral) => ({
-        url: '/admin/referrals',
-        method: 'PUT',
+        url: "/admin/referrals",
+        method: "PUT",
         body: referral,
       }),
-      invalidatesTags: ['Referrals'],
+      invalidatesTags: ["Referrals"],
     }),
     deleteReferral: builder.mutation({
       query: (id) => ({
-        url: '/admin/referrals',
-        method: 'DELETE',
+        url: "/admin/referrals",
+        method: "DELETE",
         body: { id },
       }),
-      invalidatesTags: ['Referrals'],
+      invalidatesTags: ["Referrals"],
     }),
     updateSettings: builder.mutation({
       query: ({ referralType, settings }) => ({
-        url: '/admin/referrals',
-        method: 'PATCH',
+        url: "/admin/referrals",
+        method: "PATCH",
         body: { referralType, settings },
       }),
-      invalidatesTags: ['Settings'],
+      invalidatesTags: ["Settings"],
     }),
     getSettings: builder.query({
       query: (referralType) => ({
-        url: '/admin/referrals',
+        url: "/admin/referrals",
         params: { settings: true, referralType },
       }),
-      providesTags: ['Settings'],
+      providesTags: ["Settings"],
     }),
 
     // SuperData (Dropdowns) Endpoints
     getSuperData: builder.query({
-      query: () => '/super-data',
-      providesTags: ['SuperData'],
+      query: () => "/super-data",
+      providesTags: ["SuperData"],
     }),
     createSuperDataItem: builder.mutation({
       query: (item) => ({
-        url: '/super-data',
-        method: 'POST',
+        url: "/super-data",
+        method: "POST",
         body: item,
       }),
-      invalidatesTags: ['SuperData'],
+      invalidatesTags: ["SuperData"],
     }),
     updateSuperDataItem: builder.mutation({
       query: (item) => ({
-        url: '/super-data',
-        method: 'PUT',
+        url: "/super-data",
+        method: "PUT",
         body: item,
       }),
-      invalidatesTags: ['SuperData'],
+      invalidatesTags: ["SuperData"],
     }),
     deleteSuperDataItem: builder.mutation({
       query: ({ id }) => ({
-        url: '/super-data',
-        method: 'DELETE',
+        url: "/super-data",
+        method: "DELETE",
         body: { id },
       }),
-      invalidatesTags: ['SuperData'],
+      invalidatesTags: ["SuperData"],
     }),
 
+    // Vendor Endpoints
+
+    createVendor: builder.mutation({
+      query: (vendorData) => ({
+        url: "/admin/vendor",
+        method: "POST",
+        body: vendorData,
+      }),
+      invalidatesTags: ["Vendor"],
+    }),
+
+    getVendors: builder.query({
+      query: () => "/admin/vendor",
+      providesTags: ["Vendor"],
+      transformResponse: (response) => response,
+    }),
+
+    getVendorById: builder.query({
+      query: (id) => `/admin/vendor?id=${id}`,
+      providesTags: (result, error, id) => [{ type: "Vendor", id }],
+    }),
+
+    updateVendor: builder.mutation({
+      query: ({ id, ...vendorData }) => ({
+        url: "/admin/vendor",
+        method: "PUT",
+        body: { id, ...vendorData },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Vendor", id },
+        "Vendor",
+      ],
+    }),
+
+    deleteVendor: builder.mutation({
+      query: ({ id }) => ({
+        url: "/admin/vendor",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Vendor"],
+    }),
   }),
 });
 
@@ -289,4 +331,11 @@ export const {
   useCreateSuperDataItemMutation,
   useUpdateSuperDataItemMutation,
   useDeleteSuperDataItemMutation,
+
+  // Vendor Endpoints
+  useCreateVendorMutation,
+  useGetVendorsQuery,
+  useGetVendorByIdQuery,
+  useUpdateVendorMutation,
+  useDeleteVendorMutation,
 } = glowvitaApi;
