@@ -333,7 +333,7 @@ export default function ReferralManagementPage() {
       </Tabs>
       
         <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>Edit {modalType} Referral Settings</DialogTitle>
                      <DialogDescription>
@@ -341,16 +341,14 @@ export default function ReferralManagementPage() {
                     </DialogDescription>
                 </DialogHeader>
                 {modalSettings && (
-                    <div className="grid gap-6 py-4">
+                    <div className="grid gap-4 py-4">
                         <div>
                             <Label className='text-base font-semibold'>Referrer Bonus</Label>
                             <div className="grid grid-cols-2 gap-4 mt-2">
                                 <div className="space-y-2">
                                     <Label>Bonus Type</Label>
                                     <Select value={modalSettings.bonusType} onValueChange={(v) => handleModalChange('bonusType', v)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select type" />
-                                        </SelectTrigger>
+                                        <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="amount">Fixed Amount</SelectItem>
                                             <SelectItem value="discount">Discount (%)</SelectItem>
@@ -364,25 +362,28 @@ export default function ReferralManagementPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label>Usage Limit</Label>
-                            <RadioGroup value={modalSettings.usageLimit} onValueChange={(v) => handleModalChange('usageLimit', v)} className="flex space-x-4">
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="unlimited" id="unlimited" />
-                                    <Label htmlFor="unlimited">Unlimited</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="manual" id="manual" />
-                                    <Label htmlFor="manual">Manual Count</Label>
-                                </div>
-                            </RadioGroup>
-                        </div>
-                        {modalSettings.usageLimit === 'manual' && (
-                             <div className="space-y-2">
-                                <Label htmlFor="usage-count">Number of Referrals</Label>
-                                <Input id="usage-count" type="number" placeholder="e.g., 100" value={modalSettings.usageCount || ''} onChange={(e) => handleModalChange('usageCount', Number(e.target.value))} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Usage Limit</Label>
+                                <RadioGroup value={modalSettings.usageLimit} onValueChange={(v) => handleModalChange('usageLimit', v)} className="flex space-x-4 pt-2">
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="unlimited" id="unlimited" />
+                                        <Label htmlFor="unlimited">Unlimited</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="manual" id="manual" />
+                                        <Label htmlFor="manual">Manual Count</Label>
+                                    </div>
+                                </RadioGroup>
                             </div>
-                        )}
+                            {modalSettings.usageLimit === 'manual' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="usage-count">Number of Referrals</Label>
+                                    <Input id="usage-count" type="number" placeholder="e.g., 100" value={modalSettings.usageCount || ''} onChange={(e) => handleModalChange('usageCount', Number(e.target.value))} />
+                                </div>
+                            )}
+                        </div>
+
                          <div className="space-y-2">
                             <Label htmlFor="credit-time">Credit Time (in days)</Label>
                             <Input id="credit-time" placeholder="e.g., 7" value={modalSettings.creditTime.split(' ')[0]} onChange={(e) => handleModalChange('creditTime', `${e.target.value} days`)} />
@@ -394,26 +395,22 @@ export default function ReferralManagementPage() {
                                 <Switch id="referee-bonus-toggle" checked={modalSettings.refereeBonus.enabled} onCheckedChange={(c) => handleRefereeBonusChange('enabled', c)} />
                             </div>
                             {modalSettings.refereeBonus.enabled && (
-                                <div className='grid gap-4'>
-                                    <div className="grid grid-cols-2 gap-4">
-                                         <div className="space-y-2">
-                                            <Label>Bonus Type</Label>
-                                            <Select value={modalSettings.refereeBonus.bonusType} onValueChange={(v) => handleRefereeBonusChange('bonusType', v)}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select type" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="amount">Fixed Amount</SelectItem>
-                                                    <SelectItem value="discount">Discount (%)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                         <div className="space-y-2">
-                                            <Label htmlFor="referee-bonus-value">Bonus Value</Label>
-                                            <Input id="referee-bonus-value" type="number" value={modalSettings.refereeBonus.bonusValue} onChange={(e) => handleRefereeBonusChange('bonusValue', Number(e.target.value))} />
-                                        </div>
+                                <div className='grid gap-4 md:grid-cols-2'>
+                                    <div className="space-y-2">
+                                        <Label>Bonus Type</Label>
+                                        <Select value={modalSettings.refereeBonus.bonusType} onValueChange={(v) => handleRefereeBonusChange('bonusType', v)}>
+                                            <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="amount">Fixed Amount</SelectItem>
+                                                <SelectItem value="discount">Discount (%)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="space-y-2">
+                                        <Label htmlFor="referee-bonus-value">Bonus Value</Label>
+                                        <Input id="referee-bonus-value" type="number" value={modalSettings.refereeBonus.bonusValue} onChange={(e) => handleRefereeBonusChange('bonusValue', Number(e.target.value))} />
+                                    </div>
+                                    <div className="space-y-2 md:col-span-2">
                                         <Label htmlFor="referee-credit-time">Credit Time (in days)</Label>
                                         <Input id="referee-credit-time" placeholder="e.g., 7" value={modalSettings.refereeBonus.creditTime.split(' ')[0]} onChange={(e) => handleRefereeBonusChange('creditTime', `${e.target.value} days`)} />
                                     </div>
