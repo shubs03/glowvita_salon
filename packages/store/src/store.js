@@ -4,6 +4,7 @@ import authReducer from './slices/auth-slice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
+import notificationReducer from './slices/notificationSlice';
 
 export const makeStore = () => {
   return configureStore({
@@ -13,6 +14,7 @@ export const makeStore = () => {
       modal: modalReducer,
       customer: customerReducer,
       salon: salonReducer,
+      notification: notificationReducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(glowvitaApi.middleware),
