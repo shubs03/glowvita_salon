@@ -52,7 +52,10 @@ const referralSettingsSchema = new mongoose.Schema({
     default: null,
     min: 0,
   },
-  refereeBonus: refereeBonusSchema,
+  refereeBonus: {
+    type: refereeBonusSchema,
+    default: () => ({ enabled: false }), // Default to disabled with no other fields
+  },
   minOrders: {
     type: Number,
     min: 0,
