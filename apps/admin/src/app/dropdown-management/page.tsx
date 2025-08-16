@@ -224,16 +224,16 @@ export default function DropdownManagementPage() {
         try {
             if (action === 'add') {
                 await createItem(item).unwrap();
-                toast.success('Item added successfully');
+                toast.success('Success', { description: 'Item added successfully.' });
             } else if (action === 'edit' && item._id) {
                 await updateItem({ id: item._id, ...item }).unwrap();
-                toast.success('Item updated successfully');
+                toast.success('Success', { description: 'Item updated successfully.' });
             } else if (action === 'delete' && item._id) {
                 await deleteItem({ id: item._id }).unwrap();
-                toast.success('Item deleted successfully');
+                toast.success('Success', { description: 'Item deleted successfully.' });
             }
         } catch (error) {
-            toast.error(`Failed to ${action} item.`);
+            toast.error('Error', { description: `Failed to ${action} item.` });
             console.error(`API call failed for ${action}:`, error);
         }
     };
