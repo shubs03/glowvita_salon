@@ -20,3 +20,5 @@ export const makeStore = () => {
       getDefaultMiddleware().concat(glowvitaApi.middleware),
   });
 };
+
+export const selectRootState = (state) => state;

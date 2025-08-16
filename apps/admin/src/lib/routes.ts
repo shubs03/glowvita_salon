@@ -2,8 +2,10 @@
 import {
     FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaBox, FaUserMd, 
     FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, 
-    FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync
+    FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync,
+    FaMapMarkedAlt, FaBell
 } from "react-icons/fa";
+import { FaListUl } from "react-icons/fa";
 import { IconType } from "react-icons";
 
 export interface NavItem {
@@ -39,7 +41,7 @@ export const sidebarNavItems: NavItem[] = [
     permission: "doctors-dermats",
   },
   {
-    title: "Vendor Approval",
+    title: "Approvals",
     href: "/vendor-approval",
     Icon: FaCheckCircle,
     permission: "vendor-approval",
@@ -49,6 +51,12 @@ export const sidebarNavItems: NavItem[] = [
     href: "/supplier-management",
     Icon: FaTruck,
     permission: "supplier-management",
+  },
+   {
+    title: "Geo-fencing",
+    href: "/geo-fencing",
+    Icon: FaMapMarkedAlt,
+    permission: "geo-fencing",
   },
   {
     title: "Admin Roles",
@@ -74,6 +82,12 @@ export const sidebarNavItems: NavItem[] = [
     Icon: FaUserFriends,
     permission: "referral-management",
   },
+   {
+    title: "Dropdowns",
+    href: "/dropdown-management",
+    Icon: FaListUl,
+    permission: "dropdown-management",
+  },
   {
     title: "Tax & Fees",
     href: "/tax-fees",
@@ -85,6 +99,12 @@ export const sidebarNavItems: NavItem[] = [
     href: "/payout",
     Icon: FaMoneyCheckAlt,
     permission: "payout",
+  },
+  {
+    title: "Push Notifications",
+    href: "/push-notifications",
+    Icon: FaBell,
+    permission: "push-notifications",
   },
   {
     title: "Marketing",

@@ -12,7 +12,11 @@
     "./slices/modal": "./src/slices/modalSlice.js",
     "./slices/customerSlice": "./src/slices/customerSlice.js",
     "./slices/salonSlice": "./src/slices/salonSlice.js",
-    "./slices/vendorSlice": "./src/slices/vendorSlice.js"
+    "./slices/vendorSlice": "./src/slices/vendorSlice.js",
+    "./slices/supplierSlice": "./src/slices/supplierSlice.js",
+    "./slices/subscriptionSlice": "./src/slices/subscriptionSlice.js",
+    "./slices/notificationSlice": "./src/slices/notificationSlice.js",
+    "./slices/geoFencingSlice": "./src/slices/geoFencingSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

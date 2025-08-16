@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -66,14 +67,14 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
         </div>
 
         {/* Navigation Section - Scrollable */}
-        <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden min-h-0">
+        <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden min-h-0 no-scrollbar">
           {visibleNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={isMobile ? toggleSidebar : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary min-w-0",
+                "flex items-center text-sm gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary min-w-0",
                 pathname === item.href && "bg-secondary text-primary",
                 !isOpen && !isMobile && "justify-center"
               )}
@@ -139,3 +140,5 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
     </div>
   );
 }
+
+    
