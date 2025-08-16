@@ -201,10 +201,6 @@ export default function DoctorsDermatsPage() {
                               <Plus className="mr-2 h-4 w-4" />
                               Add New Doctor
                           </Button>
-                          <Button onClick={() => setIsSpecializationModalOpen(true)}>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add Specialization
-                          </Button>
                           <Button variant="outline">
                               <FileDown className="mr-2 h-4 w-4" />
                               Export List
@@ -380,14 +376,14 @@ export default function DoctorsDermatsPage() {
 
         {/* Add New Doctor Modal */}
         <Dialog open={isNewDoctorModalOpen} onOpenChange={setIsNewDoctorModalOpen}>
-            <DialogContent className="sm:max-w-lg">
+            <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Add New Doctor</DialogTitle>
                     <DialogDescription>
                         Fill in the details below to add a new doctor.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
                     <div className="space-y-2">
                         <Label htmlFor="doctor-name">Doctor Name</Label>
                         <Input id="doctor-name" placeholder="e.g., Dr. John Doe" />

@@ -10,6 +10,7 @@ import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import { Badge } from '@repo/ui/badge';
 
 const vendorsData = [
     {
@@ -19,6 +20,9 @@ const vendorsData = [
         phone: "789-012-3456",
         city: "Miami",
         pincode: "33101",
+        state: "Florida",
+        website: "https://newbeauty.com",
+        profileImage: "https://placehold.co/100x100.png"
     },
     {
         id: "VEN-008",
@@ -27,30 +31,9 @@ const vendorsData = [
         phone: "890-123-4567",
         city: "San Diego",
         pincode: "92101",
-    },
-    {
-        id: "VEN-009",
-        name: "Urban Cuts",
-        owner: "Nick Miller",
-        phone: "901-234-5678",
-        city: "Portland",
-        pincode: "97201",
-    },
-    {
-        id: "VEN-010",
-        name: "The Glow Up Studio",
-        owner: "Cece Parekh",
-        phone: "012-345-6789",
-        city: "Seattle",
-        pincode: "98101",
-    },
-    {
-        id: "VEN-011",
-        name: "Chic & Co.",
-        owner: "Schmidt",
-        phone: "123-456-7890",
-        city: "Los Angeles",
-        pincode: "90028",
+        state: "California",
+        website: "",
+        profileImage: "https://placehold.co/100x100.png"
     },
 ];
 
@@ -62,6 +45,7 @@ const servicesData = [
     category: "Hair",
     price: 75.00,
     status: "Pending",
+    description: "A modern haircut using advanced techniques, includes wash and style."
   },
   {
     id: "SRV-002",
@@ -70,22 +54,7 @@ const servicesData = [
     category: "Nails",
     price: 55.00,
     status: "Pending",
-  },
-  {
-    id: "SRV-003",
-    serviceName: "Deep Tissue Massage",
-    vendorName: "Urban Cuts",
-    category: "Spa",
-    price: 120.00,
-    status: "Approved",
-  },
-   {
-    id: "SRV-004",
-    serviceName: "Bridal Makeup",
-    vendorName: "The Glow Up Studio",
-    category: "Makeup",
-    price: 250.00,
-    status: "Pending",
+    description: "Long-lasting gel polish manicure with cuticle care and hand massage."
   },
 ];
 
@@ -97,7 +66,9 @@ const productsData = [
         salonName: "New Beauty Haven",
         price: 85.00,
         salePrice: 75.00,
-        category: "Skincare"
+        category: "Skincare",
+        description: "A hydrating serum made with natural ingredients.",
+        stock: 50,
     },
     {
         id: "PROD-002",
@@ -106,7 +77,9 @@ const productsData = [
         salonName: "The Glow Up Studio",
         price: 25.00,
         salePrice: 25.00,
-        category: "Makeup"
+        category: "Makeup",
+        description: "A long-lasting matte lipstick in a vibrant red shade.",
+        stock: 120,
     }
 ];
 
@@ -116,14 +89,18 @@ const doctorsApprovalData = [
         profileImage: "https://placehold.co/400x400.png",
         doctorName: "Dr. Emily Carter",
         clinicName: "Serene Skin Clinic",
-        specialization: "Dermatologist"
+        specialization: "Dermatologist",
+        experience: "12 years",
+        qualification: "MD, FAAD"
     },
     {
         id: "DOC-APP-002",
         profileImage: "https://placehold.co/400x400.png",
         doctorName: "Dr. Ben Adams",
         clinicName: "Heal & Glow",
-        specialization: "Trichologist"
+        specialization: "Trichologist",
+        experience: "8 years",
+        qualification: "MBBS, DDV"
     }
 ];
 
@@ -166,9 +143,9 @@ export default function VendorApprovalPage() {
         setIsActionModalOpen(true);
     };
 
-    const handleViewClick = (vendor: Vendor) => {
-        setSelectedItem(vendor);
-        setItemType('vendor');
+    const handleViewClick = (item: Vendor | Service | Product | Doctor, type: ItemType) => {
+        setSelectedItem(item);
+        setItemType(type);
         setIsViewModalOpen(true);
     };
 
@@ -303,7 +280,7 @@ export default function VendorApprovalPage() {
                             <TableCell>{vendor.city}</TableCell>
                             <TableCell>{vendor.pincode}</TableCell>
                             <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" onClick={() => handleViewClick(vendor)}>
+                                <Button variant="ghost" size="icon" onClick={() => handleViewClick(vendor, 'vendor')}>
                                     <Eye className="h-4 w-4" />
                                     <span className="sr-only">View Details</span>
                                 </Button>
@@ -374,6 +351,10 @@ export default function VendorApprovalPage() {
                                     </span>
                                 </TableCell>
                                 <TableCell className="text-right">
+                                    <Button variant="ghost" size="icon" onClick={() => handleViewClick(service, 'service')}>
+                                        <Eye className="h-4 w-4" />
+                                        <span className="sr-only">View Details</span>
+                                    </Button>
                                     {service.status === "Pending" && (
                                         <>
                                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'approve')}>
@@ -441,17 +422,18 @@ export default function VendorApprovalPage() {
                                         <TableCell>{product.salonName}</TableCell>
                                         <TableCell>
                                             <div>
-                                                <span>${product.price.toFixed(2)}</span>
+                                                <span className={product.salePrice < product.price ? "line-through text-muted-foreground" : ""}>
+                                                    ${product.price.toFixed(2)}
+                                                </span>
                                                 {product.salePrice < product.price && (
-                                                    <div className="text-sm text-muted-foreground">
-                                                        Sale: <span className="font-semibold text-green-600">${product.salePrice.toFixed(2)}</span>
-                                                    </div>
+                                                    <div className="text-green-600 font-semibold">${product.salePrice.toFixed(2)}</div>
                                                 )}
                                             </div>
+                                            <p className="text-xs text-muted-foreground">Sale price is the discounted price.</p>
                                         </TableCell>
                                         <TableCell>{product.category}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => { /* View logic */ }}>
+                                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(product, 'product')}>
                                                 <Eye className="h-4 w-4" />
                                                 <span className="sr-only">View Details</span>
                                             </Button>
@@ -521,7 +503,7 @@ export default function VendorApprovalPage() {
                                         <TableCell>{doctor.clinicName}</TableCell>
                                         <TableCell>{doctor.specialization}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => { /* View logic */ }}>
+                                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(doctor, 'doctor')}>
                                                 <Eye className="h-4 w-4" />
                                                 <span className="sr-only">View Details</span>
                                             </Button>
@@ -581,34 +563,74 @@ export default function VendorApprovalPage() {
         </Dialog>
         
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-                <DialogTitle>Vendor Details: {(selectedItem as Vendor)?.name}</DialogTitle>
+                <DialogTitle>View Details</DialogTitle>
             </DialogHeader>
-            {selectedItem && itemType === 'vendor' && (
-                <div className="grid gap-4 py-4 text-sm">
-                    <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Vendor ID</span>
-                        <span className="col-span-2">{(selectedItem as Vendor).id}</span>
-                    </div>
-                     <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Owner</span>
-                        <span className="col-span-2">{(selectedItem as Vendor).owner}</span>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Phone</span>
-                        <span className="col-span-2">{(selectedItem as Vendor).phone}</span>
-                    </div>
-                     <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">City</span>
-                        <span className="col-span-2">{(selectedItem as Vendor).city}</span>
-                    </div>
-                    <div className="grid grid-cols-3 items-center gap-4">
-                        <span className="font-semibold text-muted-foreground">Pincode</span>
-                        <span className="col-span-2">{(selectedItem as Vendor).pincode}</span>
-                    </div>
-                </div>
-            )}
+            <div className="grid gap-4 py-4 text-sm">
+                {itemType === 'vendor' && selectedItem && (
+                    <>
+                        <div className="flex items-center gap-4">
+                           <Image src={(selectedItem as Vendor).profileImage} alt={(selectedItem as Vendor).name} width={80} height={80} className="rounded-lg" />
+                           <div>
+                                <h3 className="text-lg font-semibold">{(selectedItem as Vendor).name}</h3>
+                                <p className="text-muted-foreground">{(selectedItem as Vendor).owner}</p>
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Vendor ID</span><span className="col-span-2">{(selectedItem as Vendor).id}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Phone</span><span className="col-span-2">{(selectedItem as Vendor).phone}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">City</span><span className="col-span-2">{(selectedItem as Vendor).city}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">State</span><span className="col-span-2">{(selectedItem as Vendor).state}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Pincode</span><span className="col-span-2">{(selectedItem as Vendor).pincode}</span></div>
+                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Website</span><span className="col-span-2">
+                           {(selectedItem as Vendor).website ? <a href={(selectedItem as Vendor).website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{(selectedItem as Vendor).website}</a> : 'N/A'}
+                         </span></div>
+                    </>
+                )}
+                {itemType === 'service' && selectedItem && (
+                     <>
+                        <h3 className="text-lg font-semibold">{(selectedItem as Service).serviceName}</h3>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Service ID</span><span className="col-span-2">{(selectedItem as Service).id}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Vendor</span><span className="col-span-2">{(selectedItem as Service).vendorName}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Category</span><span className="col-span-2"><Badge>{(selectedItem as Service).category}</Badge></span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Price</span><span className="col-span-2">${(selectedItem as Service).price.toFixed(2)}</span></div>
+                        <div className="grid grid-cols-3 items-start gap-4"><span className="font-semibold text-muted-foreground">Description</span><p className="col-span-2">{(selectedItem as Service).description}</p></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Status</span><span className="col-span-2">{(selectedItem as Service).status}</span></div>
+                    </>
+                )}
+                {itemType === 'product' && selectedItem && (
+                     <>
+                        <div className="flex items-center gap-4">
+                           <Image src={(selectedItem as Product).productImage} alt={(selectedItem as Product).productName} width={80} height={80} className="rounded-lg" />
+                           <div>
+                                <h3 className="text-lg font-semibold">{(selectedItem as Product).productName}</h3>
+                                <p className="text-muted-foreground">{(selectedItem as Product).salonName}</p>
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Product ID</span><span className="col-span-2">{(selectedItem as Product).id}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Category</span><span className="col-span-2"><Badge>{(selectedItem as Product).category}</Badge></span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Price</span><span className="col-span-2">${(selectedItem as Product).price.toFixed(2)}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Sale Price</span><span className="col-span-2">${(selectedItem as Product).salePrice.toFixed(2)}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Stock</span><span className="col-span-2">{(selectedItem as Product).stock} units</span></div>
+                        <div className="grid grid-cols-3 items-start gap-4"><span className="font-semibold text-muted-foreground">Description</span><p className="col-span-2">{(selectedItem as Product).description}</p></div>
+                    </>
+                )}
+                 {itemType === 'doctor' && selectedItem && (
+                     <>
+                        <div className="flex items-center gap-4">
+                           <Image src={(selectedItem as Doctor).profileImage} alt={(selectedItem as Doctor).doctorName} width={80} height={80} className="rounded-full" />
+                           <div>
+                                <h3 className="text-lg font-semibold">{(selectedItem as Doctor).doctorName}</h3>
+                                <p className="text-muted-foreground">{(selectedItem as Doctor).clinicName}</p>
+                           </div>
+                        </div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Doctor ID</span><span className="col-span-2">{(selectedItem as Doctor).id}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Specialization</span><span className="col-span-2"><Badge>{(selectedItem as Doctor).specialization}</Badge></span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Experience</span><span className="col-span-2">{(selectedItem as Doctor).experience}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Qualification</span><span className="col-span-2">{(selectedItem as Doctor).qualification}</span></div>
+                    </>
+                )}
+            </div>
             <DialogFooter>
                 <Button onClick={() => setIsViewModalOpen(false)}>Close</Button>
             </DialogFooter>
@@ -633,7 +655,3 @@ export default function VendorApprovalPage() {
     </div>
   );
 }
-
-    
-
-    
