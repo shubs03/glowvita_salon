@@ -7,7 +7,7 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
-import { Eye, CheckCircle, XCircle, Plus, Box, DollarSign, Hourglass, Search, FileDown, X } from 'lucide-react';
+import { Eye, CheckCircle, XCircle, Plus, Box, DollarSign, Hourglass, Search, FileDown, X, Archive } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
@@ -111,6 +111,12 @@ const supplierOrdersData = [
   },
 ];
 
+const supplierProductsData = [
+    { id: 'P001', name: 'Shampoo', status: 'In Stock' },
+    { id: 'P002', name: 'Conditioner', status: 'Out of Stock' },
+    { id: 'P003', name: 'Hair Gel', status: 'In Stock' },
+];
+
 type Supplier = typeof suppliersData[0];
 type SupplierOrder = typeof supplierOrdersData[0];
 type ActionType = 'approve' | 'reject';
@@ -132,8 +138,13 @@ export default function SupplierManagementPage() {
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [actionType, setActionType] = useState<ActionType | null>(null);
+
+  // Inventory modal state
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [inventoryStatusFilter, setInventoryStatusFilter] = useState('all');
   
   // New supplier form state
   const [newSupplier, setNewSupplier] = useState({
@@ -202,6 +213,12 @@ export default function SupplierManagementPage() {
   const firstOrderIndex = lastOrderIndex - ordersPerPage;
   const currentOrders = filteredOrders.slice(firstOrderIndex, lastOrderIndex);
   const totalOrdersPages = Math.ceil(filteredOrders.length / ordersPerPage);
+  
+  const filteredInventory = supplierProductsData.filter(product => {
+      const matchesSearch = product.name.toLowerCase().includes(inventorySearch.toLowerCase());
+      const matchesStatus = inventoryStatusFilter === 'all' || product.status === inventoryStatusFilter;
+      return matchesSearch && matchesStatus;
+  });
 
   const handleActionClick = (supplier: Supplier, action: ActionType) => {
     setSelectedSupplier(supplier);
@@ -213,6 +230,11 @@ export default function SupplierManagementPage() {
     setSelectedSupplier(supplier);
     setIsViewModalOpen(true);
   };
+  
+  const handleInventoryClick = (supplier: Supplier) => {
+      setSelectedSupplier(supplier);
+      setIsInventoryModalOpen(true);
+  }
 
   const handleConfirmAction = () => {
     if (selectedSupplier && actionType) {
@@ -381,6 +403,10 @@ export default function SupplierManagementPage() {
                             <Eye className="h-4 w-4" />
                             <span className="sr-only">View Details</span>
                         </Button>
+                         <Button variant="ghost" size="icon" onClick={() => handleInventoryClick(supplier)}>
+                            <Archive className="h-4 w-4" />
+                            <span className="sr-only">View Products</span>
+                        </Button>
                         {supplier.status === "Pending" && (
                           <>
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'approve')}>
@@ -548,7 +574,7 @@ export default function SupplierManagementPage() {
                       </div>
                       <div className="grid grid-cols-3 items-center gap-4">
                           <span className="font-semibold text-muted-foreground">Total Sales</span>
-                          <span className="col-span-2">${selectedSupplier.sales.toLocaleString()}</span>
+                          <span className="col-span-2">₹{selectedSupplier.sales.toLocaleString()}</span>
                       </div>
                       <div className="grid grid-cols-3 items-center gap-4">
                           <span className="font-semibold text-muted-foreground">Status</span>
@@ -561,6 +587,81 @@ export default function SupplierManagementPage() {
               </DialogFooter>
           </DialogContent>
       </Dialog>
+      
+      {/* View Inventory Modal */}
+        <Dialog open={isInventoryModalOpen} onOpenChange={setIsInventoryModalOpen}>
+            <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                    <DialogTitle>Product Inventory: {selectedSupplier?.name}</DialogTitle>
+                    <DialogDescription>
+                        A list of all products from this supplier.
+                    </DialogDescription>
+                </DialogHeader>
+                 <div className="py-4 space-y-4">
+                     <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search by product name..."
+                                className="w-full pl-8"
+                                value={inventorySearch}
+                                onChange={(e) => setInventorySearch(e.target.value)}
+                            />
+                        </div>
+                        <Select value={inventoryStatusFilter} onValueChange={setInventoryStatusFilter}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Filter by status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                <SelectItem value="In Stock">In Stock</SelectItem>
+                                <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="overflow-x-auto no-scrollbar rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Product ID</TableHead>
+                                    <TableHead>Product Name</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredInventory.map((product) => (
+                                    <TableRow key={product.id}>
+                                        <TableCell className="font-medium">{product.id}</TableCell>
+                                        <TableCell>{product.name}</TableCell>
+                                        <TableCell>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                                product.status === 'In Stock' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                            }`}>
+                                                {product.status}
+                                            </span>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {filteredInventory.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                            No products found.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsInventoryModalOpen(false)}>
+                        Close
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
 
       {/* New Supplier Modal */}
       <Dialog open={isNewModalOpen} onOpenChange={setIsNewModalOpen}>

@@ -5,6 +5,8 @@ import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
 import refferalReducer from './slices/Admin/refferalSlice';
+import notificationReducer from './slices/notificationSlice';
+import geoFencingReducer from './slices/geoFencingSlice';
 
 export const makeStore = () => {
   return configureStore({
@@ -15,6 +17,8 @@ export const makeStore = () => {
       customer: customerReducer,
       salon: salonReducer,
       refferal: refferalReducer,
+      notification: notificationReducer,
+      geoFencing: geoFencingReducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(glowvitaApi.middleware),

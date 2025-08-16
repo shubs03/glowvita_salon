@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
-import { Download, Eye, DollarSign, Users, UserPlus, ShoppingCart } from 'lucide-react';
+import { Download, Eye, DollarSign, Users, UserPlus, ShoppingCart, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
-
+import { Input } from '@repo/ui/input';
 
 interface Report {
   title: string;
@@ -129,18 +129,47 @@ const DummyReportTable = () => (
 export default function ReportsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const handleViewClick = (report: Report) => {
     setSelectedReport(report);
     setIsModalOpen(true);
   };
+  
+  const filteredReportsData = useMemo(() => {
+    if (!searchTerm) return reportsData;
+
+    return reportsData
+      .map(category => ({
+        ...category,
+        reports: category.reports.filter(report =>
+          report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          report.description.toLowerCase().includes(searchTerm.toLowerCase())
+        ),
+      }))
+      .filter(category => category.reports.length > 0);
+  }, [searchTerm]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-2">Reports</h1>
-      <p className="text-muted-foreground mb-8">
-        Generate and download detailed reports for various components of the platform.
-      </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+        <div>
+            <h1 className="text-2xl font-bold font-headline mb-2">Reports</h1>
+            <p className="text-muted-foreground">
+                Generate and download detailed reports for various components of the platform.
+            </p>
+        </div>
+        <div className="relative mt-4 md:mt-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+                type="search"
+                placeholder="Search reports..."
+                className="w-full md:w-80 pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
+      </div>
 
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>
@@ -186,7 +215,7 @@ export default function ReportsPage() {
       </div>
 
       <div className="space-y-10">
-        {reportsData.map((category) => (
+        {filteredReportsData.length > 0 ? filteredReportsData.map((category) => (
           <div key={category.category}>
             <h2 className="text-xl font-semibold font-headline mb-4 pb-2 border-b">{category.category}</h2>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -213,7 +242,11 @@ export default function ReportsPage() {
               ))}
             </div>
           </div>
-        ))}
+        )) : (
+          <div className="text-center py-16 text-muted-foreground">
+              <p>No reports found matching your search.</p>
+          </div>
+        )}
       </div>
       
        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
