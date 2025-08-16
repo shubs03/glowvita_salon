@@ -4,6 +4,7 @@ import {
     FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, 
     FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync
 } from "react-icons/fa";
+import { FaListUl } from "react-icons/fa";
 import { IconType } from "react-icons";
 
 export interface NavItem {
@@ -39,7 +40,7 @@ export const sidebarNavItems: NavItem[] = [
     permission: "doctors-dermats",
   },
   {
-    title: "Vendor Approval",
+    title: "Approvals",
     href: "/vendor-approval",
     Icon: FaCheckCircle,
     permission: "vendor-approval",
@@ -74,6 +75,12 @@ export const sidebarNavItems: NavItem[] = [
     Icon: FaUserFriends,
     permission: "referral-management",
   },
+   {
+    title: "Dropdowns",
+    href: "/dropdown-management",
+    Icon: FaListUl,
+    permission: "dropdown-management",
+  },
   {
     title: "Tax & Fees",
     href: "/tax-fees",
@@ -105,3 +112,5 @@ export const sidebarNavItems: NavItem[] = [
     permission: "faq-management",
   },
 ];
+
+    

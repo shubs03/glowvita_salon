@@ -81,8 +81,8 @@ export default function AdminPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-2">
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Sales Overview</CardTitle>
             <CardDescription>A summary of your sales for the last 12 months.</CardDescription>
@@ -91,7 +91,7 @@ export default function AdminPage() {
             <SalesChart />
           </CardContent>
         </Card>
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle>Revenue By Month</CardTitle>
             <CardDescription>Your revenue generated per month.</CardDescription>
