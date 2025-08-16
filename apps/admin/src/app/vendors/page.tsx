@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -10,62 +11,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Eye, ToggleRight, ToggleLeft, FileDown, X, Trash2, Plus } from 'lucide-react';
 import { VendorForm } from '@/components/VendorForm';
+import { RootState } from '@repo/store';
 
-const vendorsData = [
-  {
-    id: "VEN-001",
-    name: "Glamour Salon",
-    owner: "Alice Johnson",
-    phone: "123-456-7890",
-    status: "Active",
-  },
-  {
-    id: "VEN-002",
-    name: "Modern Cuts",
-    owner: "Bob Williams",
-    phone: "234-567-8901",
-    status: "Active",
-  },
-  {
-    id: "VEN-003",
-    name: "Style Hub",
-    owner: "Charlie Brown",
-    phone: "345-678-9012",
-    status: "Disabled",
-  },
-  {
-    id: "VEN-004",
-    name: "Beauty Bliss",
-    owner: "Diana Prince",
-    phone: "456-789-0123",
-    status: "Active",
-  },
-  {
-    id: "VEN-005",
-    name: "The Men's Room",
-    owner: "Clark Kent",
-    phone: "567-890-1234",
-    status: "Active",
-  },
-  {
-    id: "VEN-006",
-    name: "Nail Envy",
-    owner: "Lois Lane",
-    phone: "678-901-2345",
-    status: "Disabled",
-  },
-];
-
-export type Vendor = (typeof vendorsData)[0] & {
-  email?: string;
-  state?: string;
-  city?: string;
-  pincode?: string;
-  description?: string;
+export interface Vendor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  salonName: string;
+  email: string;
+  phone: string;
+  state: string;
+  city: string;
+  pincode: string;
+  address: string;
+  category: string;
+  subCategories: string[];
+  serviceCategories: string[];
   profileImage?: string;
-  address?: string;
-  website?: string;
-};
+  status?: 'Active' | 'Disabled'; // Add status to the vendor type
+}
 
 type ActionType = 'enable' | 'disable' | 'delete';
 
@@ -74,25 +38,32 @@ export default function VendorManagementPage() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [actionType, setActionType] = useState<ActionType | null>(null);
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
-    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
     const [isEditMode, setIsEditMode] = useState(false);
 
+    const vendors = useSelector((state: RootState) => state.vendors.vendors);
+
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
-    const currentItems = vendorsData.slice(firstItemIndex, lastItemIndex);
+    const currentItems = vendors.slice(firstItemIndex, lastItemIndex);
 
-    const totalPages = Math.ceil(vendorsData.length / itemsPerPage);
+    const totalPages = Math.ceil(vendors.length / itemsPerPage);
     
-    const handleOpenFormModal = (vendor?: Vendor) => {
-        if (vendor) {
-            setSelectedVendor(vendor);
-            setIsEditMode(true);
-        } else {
-            setSelectedVendor(null);
-            setIsEditMode(false);
-        }
-        setIsFormModalOpen(true);
+    const handleOpenEditModal = (vendor: Vendor) => {
+        setSelectedVendor(vendor);
+        setIsEditModalOpen(true);
+    };
+
+    const handleOpenRegistrationModal = () => {
+        setSelectedVendor(null);
+        setIsRegistrationModalOpen(true);
+    };
+
+    const handleRegistrationSuccess = () => {
+        // Refresh the vendors list or show success message
+        console.log('Vendor registered successfully');
     };
 
     const handleActionClick = (vendor: Vendor, action: ActionType) => {
@@ -107,7 +78,7 @@ export default function VendorManagementPage() {
         setSelectedVendor(null);
     };
     
-     const getModalContent = () => {
+    const getModalContent = () => {
         if (!actionType || !selectedVendor) return { title: '', description: '', buttonText: '' };
         switch (actionType) {
             case 'enable':
@@ -146,14 +117,14 @@ export default function VendorManagementPage() {
               <CardTitle>Vendor List</CardTitle>
               <CardDescription>Details about all registered vendors.</CardDescription>
             </div>
-             <div className="flex gap-2">
+            <div className="flex gap-2">
                 <Button variant="outline">
                     <FileDown className="mr-2 h-4 w-4" />
                     Export List
                 </Button>
-                <Button onClick={() => handleOpenFormModal()}>
+                <Button onClick={handleOpenRegistrationModal}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Add New Vendor
+                    Register New Vendor
                 </Button>
             </div>
           </div>
@@ -186,37 +157,45 @@ export default function VendorManagementPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentItems.map((vendor) => (
+                {currentItems.length > 0 ? (
+                  currentItems.map((vendor) => (
                     <TableRow key={vendor.id}>
-                    <TableCell className="font-medium">{vendor.name}</TableCell>
-                    <TableCell>{vendor.owner}</TableCell>
-                    <TableCell>{vendor.phone}</TableCell>
-                    <TableCell>
+                      <TableCell className="font-medium">{vendor.salonName}</TableCell>
+                      <TableCell>{`${vendor.firstName} ${vendor.lastName}`}</TableCell>
+                      <TableCell>{vendor.phone}</TableCell>
+                      <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                             vendor.status === "Active"
                             ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
                         }`}>
-                            {vendor.status}
+                          {vendor.status || 'Pending'}
                         </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenFormModal(vendor)}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View/Edit</span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(vendor)}>
+                          <Eye className="h-4 w-4" />
+                          <span className="sr-only">View/Edit</span>
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, vendor.status === 'Active' ? 'disable' : 'enable')}
                             className={vendor.status === 'Active' ? 'text-yellow-600 hover:text-yellow-700' : 'text-green-600 hover:text-green-700'}>
-                            {vendor.status === 'Active' ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
-                            <span className="sr-only">{vendor.status === 'Active' ? 'Disable' : 'Enable'}</span>
+                          {vendor.status === 'Active' ? <ToggleLeft className="h-4 w-4" /> : <ToggleRight className="h-4 w-4" />}
+                          <span className="sr-only">{vendor.status === 'Active' ? 'Disable' : 'Enable'}</span>
                         </Button>
                         <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleActionClick(vendor, 'delete')}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
                         </Button>
-                    </TableCell>
+                      </TableCell>
                     </TableRow>
-                ))}
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      No vendors found.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -227,16 +206,24 @@ export default function VendorManagementPage() {
                 onPageChange={setCurrentPage}
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
-                totalItems={vendorsData.length}
+                totalItems={vendors.length}
             />
         </CardContent>
       </Card>
       
       <VendorForm
-        isOpen={isFormModalOpen}
-        onClose={() => setIsFormModalOpen(false)}
+        isOpen={isRegistrationModalOpen}
+        onClose={() => setIsRegistrationModalOpen(false)}
+        onSuccess={handleRegistrationSuccess}
+        isEditMode={false}
+        vendor={null}
+      />
+
+      <VendorForm
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
         vendor={selectedVendor}
-        isEditMode={isEditMode}
+        isEditMode={true}
       />
       
        {/* Confirmation Modal */}
