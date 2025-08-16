@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { Plus, Edit, Trash2, Link as LinkIcon, Trash2 as TrashIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Link as LinkIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { toast } from 'sonner';
@@ -51,9 +51,9 @@ const DropdownManager = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [currentItem, setCurrentItem] = useState<DropdownItem | null>(null);
+  const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
 
-  const handleOpenModal = (item: DropdownItem | null = null) => {
+  const handleOpenModal = (item: Partial<DropdownItem> | null = null) => {
     setCurrentItem(item);
     setIsModalOpen(true);
   };
@@ -62,11 +62,13 @@ const DropdownManager = ({
     e.preventDefault();
     const form = e.currentTarget;
     const name = (form.elements.namedItem('name') as HTMLInputElement).value;
-    const description = (form.elements.namedItem('description') as HTMLTextAreaElement)?.value;
-    const link = (form.elements.namedItem('link') as HTMLInputElement)?.value;
+    const descriptionInput = form.elements.namedItem('description');
+    const linkInput = form.elements.namedItem('link');
+    
+    const description = descriptionInput ? (descriptionInput as HTMLTextAreaElement).value : undefined;
+    const link = linkInput ? (linkInput as HTMLInputElement).value : undefined;
 
-
-    const action = currentItem ? 'edit' : 'add';
+    const action = currentItem?._id ? 'edit' : 'add';
     const itemData: Partial<DropdownItem> = {
       _id: currentItem?._id,
       name,
@@ -121,7 +123,7 @@ const DropdownManager = ({
                 <TableRow key={item._id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="text-muted-foreground">
-                    {type === 'socialPlatform' ? (
+                    {type === 'socialPlatform' && item.description ? (
                         <a href={item.description} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
                             <LinkIcon className="h-3 w-3" />
                             {item.description}
@@ -160,9 +162,9 @@ const DropdownManager = ({
           <DialogContent className="sm:max-w-lg">
             <form onSubmit={handleSave}>
               <DialogHeader>
-                <DialogTitle>{currentItem ? 'Edit' : 'Add'} Item</DialogTitle>
+                <DialogTitle>{currentItem?._id ? 'Edit' : 'Add'} Item</DialogTitle>
                 <DialogDescription>
-                  {currentItem ? `Editing "${currentItem.name}".` : `Add a new item to "${listTitle}".`}
+                  {currentItem?._id ? `Editing "${(currentItem as DropdownItem).name}".` : `Add a new item to "${listTitle}".`}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -197,7 +199,7 @@ const DropdownManager = ({
             <DialogHeader>
               <DialogTitle>Delete Item?</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete "{currentItem?.name}"? This action cannot be undone.
+                Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -223,10 +225,10 @@ export default function DropdownManagementPage() {
             if (action === 'add') {
                 await createItem(item).unwrap();
                 toast.success('Item added successfully');
-            } else if (action === 'edit') {
+            } else if (action === 'edit' && item._id) {
                 await updateItem({ id: item._id, ...item }).unwrap();
                 toast.success('Item updated successfully');
-            } else if (action === 'delete') {
+            } else if (action === 'delete' && item._id) {
                 await deleteItem({ id: item._id }).unwrap();
                 toast.success('Item deleted successfully');
             }
@@ -237,93 +239,139 @@ export default function DropdownManagementPage() {
     };
 
     const LocationManager = () => {
-        const [selectedCountryId, setSelectedCountryId] = useState<string | null>(null);
-        const [selectedStateId, setSelectedStateId] = useState<string | null>(null);
         const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-        const [locationModalConfig, setLocationModalConfig] = useState<{ type: 'country' | 'state' | 'city', parentId?: string | null }>({ type: 'country' });
-        
-        const countries = data.filter(item => item.type === 'country') as DropdownItem[];
-        const states = data.filter(item => item.type === 'state' && item.parentId === selectedCountryId) as DropdownItem[];
-        const cities = data.filter(item => item.type === 'city' && item.parentId === selectedStateId) as DropdownItem[];
+        const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+        const [currentItem, setCurrentItem] = useState<Partial<LocationItem> | null>(null);
+        const [modalConfig, setModalConfig] = useState<{ type: 'country' | 'state' | 'city', parentId?: string, action: 'add' | 'edit'}>({ type: 'country', action: 'add' });
+        const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
-        const handleOpenLocationModal = (type: 'country' | 'state' | 'city', parentId?: string | null) => {
-            setLocationModalConfig({ type, parentId });
+        const locationsByType = useMemo(() => {
+            const countries = data.filter(item => item.type === 'country') as LocationItem[];
+            const states = data.filter(item => item.type === 'state') as LocationItem[];
+            const cities = data.filter(item => item.type === 'city') as LocationItem[];
+            return { countries, states, cities };
+        }, [data]);
+    
+        const handleOpenModal = (action: 'add' | 'edit', type: 'country' | 'state' | 'city', item?: Partial<LocationItem>, parentId?: string) => {
+            setCurrentItem(item || null);
+            setModalConfig({ type, parentId, action });
             setIsLocationModalOpen(true);
         };
     
-        const handleLocationSave = async (e: React.FormEvent<HTMLFormElement>) => {
+        const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
             e.preventDefault();
             const form = e.currentTarget;
             const name = (form.elements.namedItem('name') as HTMLInputElement).value;
-            const itemData: Partial<DropdownItem> = {
+            const itemData: Partial<LocationItem> = {
+                ...currentItem,
                 name,
-                type: locationModalConfig.type,
-                parentId: locationModalConfig.parentId,
+                type: modalConfig.type,
+                parentId: modalConfig.parentId,
             };
-            await handleUpdate(itemData, 'add');
+            
+            await handleUpdate(itemData, modalConfig.action);
             setIsLocationModalOpen(false);
+            setCurrentItem(null);
+        };
+    
+        const handleDeleteClick = (item: LocationItem) => {
+            setCurrentItem(item);
+            setIsDeleteModalOpen(true);
+        };
+    
+        const handleConfirmDelete = () => {
+            if (currentItem?._id) {
+                handleUpdate({ _id: currentItem._id }, 'delete');
+            }
+            setIsDeleteModalOpen(false);
+            setCurrentItem(null);
         };
 
+        const toggleExpand = (id: string) => {
+            setExpandedItems(prev => ({...prev, [id]: !prev[id]}));
+        }
+
+        const renderLocationItem = (item: LocationItem, indentLevel: number) => {
+            const children = item.type === 'country' 
+                ? locationsByType.states.filter(s => s.parentId === item._id) 
+                : locationsByType.cities.filter(c => c.parentId === item._id);
+            const isExpanded = expandedItems[item._id];
+            
+            return (
+                <div key={item._id}>
+                    <div className={`flex items-center gap-2 py-2 pr-2`} style={{ paddingLeft: `${indentLevel * 1.5 + 0.5}rem` }}>
+                        <button onClick={() => toggleExpand(item._id)} className="p-1" disabled={children.length === 0}>
+                            {children.length > 0 ? (
+                                isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
+                            ) : <div className="w-4 h-4"></div>}
+                        </button>
+                        <span className="flex-grow">{item.name}</span>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type as any, item)}>
+                            <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteClick(item)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                    </div>
+                    {isExpanded && children.map(child => renderLocationItem(child, indentLevel + 1))}
+                </div>
+            );
+        }
+    
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Location Management</CardTitle>
-                    <CardDescription>Manage countries, states, and cities.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="border p-4 rounded-md space-y-2">
-                            <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-semibold">Countries</h4>
-                                <Button size="sm" onClick={() => handleOpenLocationModal('country')}><Plus className="h-4 w-4" /></Button>
-                            </div>
-                            <div className="max-h-60 overflow-y-auto space-y-1">
-                                {countries.map(country => (
-                                    <div key={country._id} onClick={() => { setSelectedCountryId(country._id); setSelectedStateId(null); }}
-                                        className={`p-2 rounded-md cursor-pointer ${selectedCountryId === country._id ? 'bg-secondary' : 'hover:bg-secondary/50'}`}>
-                                        {country.name}
-                                    </div>
-                                ))}
-                            </div>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle>Location Management</CardTitle>
+                            <CardDescription>Manage countries, states, and cities.</CardDescription>
                         </div>
-                        <div className="border p-4 rounded-md space-y-2">
-                            <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-semibold">States</h4>
-                                <Button size="sm" disabled={!selectedCountryId} onClick={() => handleOpenLocationModal('state', selectedCountryId)}><Plus className="h-4 w-4" /></Button>
-                            </div>
-                            <div className="max-h-60 overflow-y-auto space-y-1">
-                                {states.map(state => (
-                                    <div key={state._id} onClick={() => setSelectedStateId(state._id)}
-                                        className={`p-2 rounded-md cursor-pointer ${selectedStateId === state._id ? 'bg-secondary' : 'hover:bg-secondary/50'}`}>
-                                        {state.name}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="border p-4 rounded-md space-y-2">
-                            <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-semibold">Cities</h4>
-                                <Button size="sm" disabled={!selectedStateId} onClick={() => handleOpenLocationModal('city', selectedStateId)}><Plus className="h-4 w-4" /></Button>
-                            </div>
-                            <div className="max-h-60 overflow-y-auto space-y-1">
-                                {cities.map(city => (
-                                    <div key={city._id} className="p-2 rounded-md">
-                                        {city.name}
-                                    </div>
-                                ))}
-                            </div>
+                        <div className="flex gap-2">
+                             <Button onClick={() => handleOpenModal('add', 'country')}>
+                                <Plus className="mr-2 h-4 w-4" /> Country
+                            </Button>
+                             <Button onClick={() => handleOpenModal('add', 'state')}>
+                                <Plus className="mr-2 h-4 w-4" /> State
+                            </Button>
+                             <Button onClick={() => handleOpenModal('add', 'city')}>
+                                <Plus className="mr-2 h-4 w-4" /> City
+                            </Button>
                         </div>
                     </div>
+                </CardHeader>
+                <CardContent className="border rounded-md max-h-96 overflow-y-auto">
+                   {locationsByType.countries.map(country => renderLocationItem(country, 0))}
                 </CardContent>
+                
                 <Dialog open={isLocationModalOpen} onOpenChange={setIsLocationModalOpen}>
                     <DialogContent className="sm:max-w-md">
-                         <form onSubmit={handleLocationSave}>
+                        <form onSubmit={handleSave}>
                             <DialogHeader>
-                                <DialogTitle>Add New {locationModalConfig.type.charAt(0).toUpperCase() + locationModalConfig.type.slice(1)}</DialogTitle>
+                                <DialogTitle>
+                                    {modalConfig.action === 'add' ? 'Add New' : 'Edit'} {modalConfig.type.charAt(0).toUpperCase() + modalConfig.type.slice(1)}
+                                </DialogTitle>
                             </DialogHeader>
-                            <div className="py-4">
-                                <Label htmlFor="name">{locationModalConfig.type.charAt(0).toUpperCase() + locationModalConfig.type.slice(1)} Name</Label>
-                                <Input id="name" name="name" required />
+                            <div className="py-4 space-y-4">
+                                {(modalConfig.type === 'state' || modalConfig.type === 'city') && (
+                                     <div className="space-y-2">
+                                        <Label>Parent {modalConfig.type === 'state' ? 'Country' : 'State'}</Label>
+                                         <Select
+                                            value={modalConfig.parentId}
+                                            onValueChange={(value) => setModalConfig(prev => ({...prev, parentId: value}))}
+                                            required
+                                        >
+                                            <SelectTrigger><SelectValue placeholder="Select a parent" /></SelectTrigger>
+                                            <SelectContent>
+                                                {modalConfig.type === 'state' && locationsByType.countries.map(c => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
+                                                {modalConfig.type === 'city' && locationsByType.states.map(s => <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">{modalConfig.type.charAt(0).toUpperCase() + modalConfig.type.slice(1)} Name</Label>
+                                    <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
+                                </div>
                             </div>
                             <DialogFooter>
                                 <Button type="button" variant="secondary" onClick={() => setIsLocationModalOpen(false)}>Cancel</Button>
@@ -331,6 +379,21 @@ export default function DropdownManagementPage() {
                             </DialogFooter>
                         </form>
                     </DialogContent>
+                </Dialog>
+
+                <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Delete Item?</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? Deleting a country or state will also delete all its children. This action cannot be undone.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                      <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                      <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+                    </DialogFooter>
+                  </DialogContent>
                 </Dialog>
             </Card>
         );
@@ -350,9 +413,7 @@ export default function DropdownManagementPage() {
         const handleServiceUnassignment = async (serviceId: string) => {
             const serviceToUpdate = services.find(s => s._id === serviceId);
             if (serviceToUpdate) {
-                // To unassign, we set parentId to null or undefined
-                const { parentId, ...rest } = serviceToUpdate;
-                await handleUpdate({ ...rest, parentId: undefined }, 'edit');
+                await handleUpdate({ ...serviceToUpdate, parentId: undefined }, 'edit');
             }
         };
 
@@ -364,7 +425,7 @@ export default function DropdownManagementPage() {
                 acc[category._id] = assigned;
                 return acc;
             }, {} as Record<string, DropdownItem[]>);
-            const unassignedServices = services.filter(s => !s.parentId || !assignedServiceIds.has(s._id));
+            const unassignedServices = services.filter(s => !s.parentId);
             return { mapping, unassignedServices };
         }, [serviceCategories, services]);
     
@@ -399,7 +460,7 @@ export default function DropdownManagementPage() {
                                       <Badge key={service._id} variant="secondary">
                                           {service.name}
                                           <button onClick={() => handleServiceUnassignment(service._id)} className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5">
-                                            <TrashIcon className="h-3 w-3"/>
+                                            <Trash2 className="h-3 w-3"/>
                                           </button>
                                       </Badge>
                                   ))}
@@ -507,3 +568,4 @@ export default function DropdownManagementPage() {
         </div>
     );
 }
+
