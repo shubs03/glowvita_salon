@@ -14,6 +14,15 @@ import mapboxgl from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
+import {
+  openFenceModal,
+  closeFenceModal,
+  openViewFenceModal,
+  closeViewFenceModal,
+  openDeleteFenceModal,
+  closeDeleteFenceModal,
+} from '@repo/store/slices/geoFencingSlice';
 
 // Set the Mapbox access token
 if (process.env.NEXT_PUBLIC_MAPBOX_API_KEY) {
@@ -48,13 +57,16 @@ const fencesData: Fence[] = [
 ];
 
 export default function GeoFencingPage() {
-  const [fences, setFences] = useState<Fence[]>(fencesData);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedFence, setSelectedFence] = useState<Fence | null>(null);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const dispatch = useAppDispatch();
+  const {
+    isModalOpen,
+    isViewModalOpen,
+    isDeleteModalOpen,
+    selectedFence,
+    isEditMode,
+  } = useAppSelector((state) => state.geoFencing);
 
+  const [fences, setFences] = useState<Fence[]>(fencesData);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -109,7 +121,7 @@ export default function GeoFencingPage() {
         if (isEditMode && selectedFence && draw.current) {
           draw.current.set({
             type: 'FeatureCollection',
-            features: [selectedFence.coordinates]
+            features: [(selectedFence as Fence).coordinates]
           });
         } else if (draw.current) {
           draw.current.deleteAll();
@@ -125,27 +137,26 @@ export default function GeoFencingPage() {
   const totalPages = Math.ceil(fences.length / itemsPerPage);
 
   const handleOpenModal = (fence: Fence | null = null) => {
-    setSelectedFence(fence);
-    setIsEditMode(!!fence);
-    setIsModalOpen(true);
+    dispatch(openFenceModal({ fence, isEditMode: !!fence }));
   };
   
+  const handleCloseModal = () => {
+    dispatch(closeFenceModal());
+  };
+
   const handleDeleteClick = (fence: Fence) => {
-    setSelectedFence(fence);
-    setIsDeleteModalOpen(true);
+    dispatch(openDeleteFenceModal(fence));
   };
   
   const handleViewClick = (fence: Fence) => {
-    setSelectedFence(fence);
-    setIsViewModalOpen(true);
+    dispatch(openViewFenceModal(fence));
   };
 
   const handleConfirmDelete = () => {
     if(selectedFence) {
-      setFences(fences.filter(f => f.id !== selectedFence.id));
+      setFences(fences.filter(f => f.id !== (selectedFence as Fence).id));
     }
-    setIsDeleteModalOpen(false);
-    setSelectedFence(null);
+    dispatch(closeDeleteFenceModal());
   };
   
   const handleSaveFence = (e: React.FormEvent<HTMLFormElement>) => {
@@ -162,7 +173,7 @@ export default function GeoFencingPage() {
     const coordinates = drawnData.features[0] as GeoJSON.Feature<GeoJSON.Polygon>;
     
     if (isEditMode && selectedFence) {
-      setFences(fences.map(f => f.id === selectedFence.id ? { ...f, name: fenceName, city: cityName, coordinates } : f));
+      setFences(fences.map(f => f.id === (selectedFence as Fence).id ? { ...f, name: fenceName, city: cityName, coordinates } : f));
     } else {
       const newFence: Fence = {
         id: `FNC-${Date.now()}`,
@@ -174,8 +185,7 @@ export default function GeoFencingPage() {
       setFences([...fences, newFence]);
     }
     
-    setIsModalOpen(false);
-    setSelectedFence(null);
+    handleCloseModal();
   };
 
   return (
@@ -288,7 +298,7 @@ export default function GeoFencingPage() {
       </Card>
 
       {/* Add/Edit Fence Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
         <DialogContent className="sm:max-w-3xl">
           <form onSubmit={handleSaveFence}>
             <DialogHeader>
@@ -301,11 +311,11 @@ export default function GeoFencingPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fenceName">Fence Name</Label>
-                  <Input id="fenceName" name="fenceName" placeholder="e.g., Downtown Business District" defaultValue={selectedFence?.name || ''} required />
+                  <Input id="fenceName" name="fenceName" placeholder="e.g., Downtown Business District" defaultValue={(selectedFence as Fence)?.name || ''} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cityName">City Name (Optional)</Label>
-                  <Input id="cityName" name="cityName" placeholder="e.g., Metropolis" defaultValue={selectedFence?.city || ''} />
+                  <Input id="cityName" name="cityName" placeholder="e.g., Metropolis" defaultValue={(selectedFence as Fence)?.city || ''} />
                 </div>
               </div>
               <div className="space-y-2">
@@ -317,7 +327,7 @@ export default function GeoFencingPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+              <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancel</Button>
               <Button type="submit">{isEditMode ? 'Save Changes' : 'Create Fence'}</Button>
             </DialogFooter>
           </form>
@@ -325,19 +335,19 @@ export default function GeoFencingPage() {
       </Dialog>
       
       {/* View Fence Modal */}
-       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+       <Dialog open={isViewModalOpen} onOpenChange={() => dispatch(closeViewFenceModal())}>
         <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>View Fence: {selectedFence?.name}</DialogTitle>
+              <DialogTitle>View Fence: {(selectedFence as Fence)?.name}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
                <div className="space-y-2">
                 <h4 className="font-semibold">Fence Details</h4>
                 <div className="text-sm space-y-1">
-                   <p><span className="text-muted-foreground">ID:</span> {selectedFence?.id}</p>
-                   <p><span className="text-muted-foreground">Name:</span> {selectedFence?.name}</p>
-                   <p><span className="text-muted-foreground">City:</span> {selectedFence?.city}</p>
-                   <p><span className="text-muted-foreground">Created At:</span> {selectedFence?.createdAt}</p>
+                   <p><span className="text-muted-foreground">ID:</span> {(selectedFence as Fence)?.id}</p>
+                   <p><span className="text-muted-foreground">Name:</span> {(selectedFence as Fence)?.name}</p>
+                   <p><span className="text-muted-foreground">City:</span> {(selectedFence as Fence)?.city}</p>
+                   <p><span className="text-muted-foreground">Created At:</span> {(selectedFence as Fence)?.createdAt}</p>
                 </div>
               </div>
               <div>
@@ -348,22 +358,22 @@ export default function GeoFencingPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={() => setIsViewModalOpen(false)}>Close</Button>
+              <Button onClick={() => dispatch(closeViewFenceModal())}>Close</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <Dialog open={isDeleteModalOpen} onOpenChange={() => dispatch(closeDeleteFenceModal())}>
         <DialogContent>
             <DialogHeader>
                 <DialogTitle>Delete Fence?</DialogTitle>
                 <DialogDescription>
-                    Are you sure you want to delete the fence "{selectedFence?.name}"? This action cannot be undone.
+                    Are you sure you want to delete the fence "{(selectedFence as Fence)?.name}"? This action cannot be undone.
                 </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-                <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                <Button variant="secondary" onClick={() => dispatch(closeDeleteFenceModal())}>Cancel</Button>
                 <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
             </DialogFooter>
         </DialogContent>
