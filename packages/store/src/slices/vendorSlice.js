@@ -18,6 +18,21 @@ const initialVendors = [
     serviceCategories: ['Styling'],
     profileImage: '',
     status: 'Active',
+    subscription: {
+      plan: 'basic',
+      startDate: '2023-01-01',
+      endDate: '2024-01-01',
+      status: 'active',
+    },
+    gallery: [],
+    bankDetails: {
+      accountHolderName: 'John Doe',
+      accountNumber: '123456789012',
+      bankName: 'Example Bank',
+      ifscCode: 'EXAM0001234',
+    },
+    documents: [],
+    clients: [],
   },
   {
     id: '2',

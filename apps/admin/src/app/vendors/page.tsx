@@ -9,8 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
-import { Eye, ToggleRight, ToggleLeft, FileDown, X, Trash2, Plus } from 'lucide-react';
-import { VendorForm } from '@/components/VendorForm';
+import { Eye, ToggleRight, ToggleLeft, FileDown, X, Trash2, Plus, FilePenIcon } from 'lucide-react';
+import { VendorForm } from "../../components/VendorForm";
+import { VendorEditForm } from "../../components/VendorEditForm";
 import { RootState } from '@repo/store';
 
 export interface Vendor {
@@ -39,9 +40,9 @@ export default function VendorManagementPage() {
     const [actionType, setActionType] = useState<ActionType | null>(null);
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
     const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
-    const [isEditMode, setIsEditMode] = useState(false);
+    const [isCreateModalOpen, setCreateModalOpen] = useState(false);
+    const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [selectedVendor, setSelectedVendor] = useState(null);
 
     const vendors = useSelector((state: RootState) => state.vendors.vendors);
 
@@ -51,9 +52,14 @@ export default function VendorManagementPage() {
 
     const totalPages = Math.ceil(vendors.length / itemsPerPage);
     
-    const handleOpenEditModal = (vendor: Vendor) => {
+    const handleOpenCreateModal = () => {
+        setSelectedVendor(null);
+        setCreateModalOpen(true);
+    };
+
+    const handleOpenEditModal = (vendor) => {
         setSelectedVendor(vendor);
-        setIsEditModalOpen(true);
+        setEditModalOpen(true);
     };
 
     const handleOpenRegistrationModal = () => {
@@ -77,7 +83,13 @@ export default function VendorManagementPage() {
         setIsActionModalOpen(false);
         setSelectedVendor(null);
     };
-    
+
+    const handleCloseModal = () => {
+        setCreateModalOpen(false);
+        setEditModalOpen(false);
+        setSelectedVendor(null);
+    };
+
     const getModalContent = () => {
         if (!actionType || !selectedVendor) return { title: '', description: '', buttonText: '' };
         switch (actionType) {
@@ -122,10 +134,7 @@ export default function VendorManagementPage() {
                     <FileDown className="mr-2 h-4 w-4" />
                     Export List
                 </Button>
-                <Button onClick={handleOpenRegistrationModal}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Register New Vendor
-                </Button>
+                <Button onClick={handleOpenCreateModal}>Add Vendor</Button>
             </div>
           </div>
         </CardHeader>
@@ -174,8 +183,7 @@ export default function VendorManagementPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(vendor)}>
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only">View/Edit</span>
+                          <FilePenIcon className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, vendor.status === 'Active' ? 'disable' : 'enable')}
                             className={vendor.status === 'Active' ? 'text-yellow-600 hover:text-yellow-700' : 'text-green-600 hover:text-green-700'}>
@@ -211,20 +219,19 @@ export default function VendorManagementPage() {
         </CardContent>
       </Card>
       
-      <VendorForm
-        isOpen={isRegistrationModalOpen}
-        onClose={() => setIsRegistrationModalOpen(false)}
-        onSuccess={handleRegistrationSuccess}
-        isEditMode={false}
+      <VendorForm 
+        isOpen={isCreateModalOpen} 
+        onClose={handleCloseModal} 
         vendor={null}
+        isEditMode={false}
       />
-
-      <VendorForm
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        vendor={selectedVendor}
-        isEditMode={true}
-      />
+      {selectedVendor && (
+        <VendorEditForm 
+          isOpen={isEditModalOpen} 
+          onClose={handleCloseModal} 
+          vendor={selectedVendor}
+        />
+      )}
       
        {/* Confirmation Modal */}
         <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
