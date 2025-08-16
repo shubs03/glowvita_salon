@@ -18,7 +18,7 @@ import { DoctorForm, type Doctor } from '@/components/DoctorForm';
 
 const doctorsData = [
   {
-    id: "DOC-001",
+    id: "DOC-101",
     name: "Dr. Evelyn Reed",
     registrationTimestamp: "2024-05-10T10:00:00Z",
     clinicName: "Serenity Skin Clinic",
