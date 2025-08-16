@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -9,181 +8,325 @@ import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
-import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee } from "lucide-react";
+import { Checkbox } from '@repo/ui/checkbox';
+import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee, Upload, X } from "lucide-react";
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { openModal, closeModal } from '@repo/store/slices/modal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { useForm } from 'react-hook-form';
+import { 
+  useGetAdminOffersQuery, 
+  useCreateAdminOfferMutation, 
+  useUpdateAdminOfferMutation, 
+  useDeleteAdminOfferMutation 
+} from '@repo/store/services/api';
+import { toast } from 'sonner';
+import { selectRootState } from '@repo/store/store';
 
-const couponsData = [
-    {
-        id: "coupon_1",
-        code: "SUMMER24",
-        type: "percentage",
-        value: 20,
-        status: "Active",
-        startDate: "2024-06-01",
-        expires: "2024-08-31",
-        redeemed: 150,
-    },
-    {
-        id: "coupon_2",
-        code: "NEWUSER10",
-        type: "fixed",
-        value: 100,
-        status: "Active",
-        startDate: "2024-01-01",
-        expires: "N/A",
-        redeemed: 230,
-    },
-    {
-        id: "coupon_3",
-        code: "EXPIRED01",
-        type: "percentage",
-        value: 15,
-        status: "Expired",
-        startDate: "2023-12-01",
-        expires: "2023-12-31",
-        redeemed: 50,
-    },
-    {
-        id: "coupon_4",
-        code: "HOLIDAYFUN",
-        type: "percentage",
-        value: 25,
-        status: "Active",
-        startDate: "2024-07-01",
-        expires: "2024-07-31",
-        redeemed: 75,
-    },
-    {
-        id: "coupon_5",
-        code: "FLASH30",
-        type: "fixed",
-        value: 300,
-        status: "Expired",
-        startDate: "2023-12-25",
-        expires: "2024-01-01",
-        redeemed: 25,
-    },
-    {
-        id: "coupon_6",
-        code: "WINTER25",
-        type: "percentage",
-        value: 15,
-        status: "Scheduled",
-        startDate: "2024-12-01",
-        expires: "2025-01-31",
-        redeemed: 0,
-    }
-];
+type Coupon = {
+  _id: string;
+  id: string;
+  code: string;
+  type: 'percentage' | 'fixed';
+  value: number;
+  status: string;
+  startDate: string;
+  expires: string;
+  redeemed: number;
+  applicableSpecialties: string[];
+  applicableCategories: string[];
+  offerImage?: string;
+  isCustomCode?: boolean;
+};
 
-type Coupon = typeof couponsData[0];
-type DiscountType = 'percentage' | 'fixed';
+type CouponForm = {
+  code: string;
+  type: 'percentage' | 'fixed';
+  value: number;
+  startDate: string;
+  expires: string;
+  applicableSpecialties: string[];
+  applicableCategories: string[];
+  offerImage?: string;
+  isCustomCode: boolean;
+};
+
+// Predefined options for specialties and categories
+const specialtyOptions = ['Hair Cut', 'Spa', 'Massage', 'Facial', 'Manicure', 'Pedicure'];
+const categoryOptions = ['Men', 'Women', 'Unisex'];
 
 export default function OffersCouponsPage() {
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [useCustomCode, setUseCustomCode] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const dispatch = useAppDispatch();
-    const { isOpen, modalType, data } = useAppSelector((state) => state.modal);
+  const dispatch = useAppDispatch();
+  const { isOpen, modalType, data } = useAppSelector(
+    (state) => selectRootState(state).modal
+  );
+   
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<CouponForm>({
+    defaultValues: {
+      code: '',
+      type: 'percentage',
+      value: 0,
+      startDate: '',
+      expires: '',
+      applicableSpecialties: [],
+      applicableCategories: [],
+      offerImage: '',
+      isCustomCode: false,
+    }
+  });
 
-    const lastItemIndex = currentPage * itemsPerPage;
-    const firstItemIndex = lastItemIndex - itemsPerPage;
-    const currentItems = couponsData.slice(firstItemIndex, lastItemIndex);
+  // RTK Query hooks
+  const { 
+    data: couponsData = [], 
+    isLoading, 
+    isError, 
+    refetch 
+  } = useGetAdminOffersQuery(undefined);
+  
+  const [createOffer, { isLoading: isCreating }] = useCreateAdminOfferMutation();
+  const [updateOffer, { isLoading: isUpdating }] = useUpdateAdminOfferMutation();
+  const [deleteOffer, { isLoading: isDeleting }] = useDeleteAdminOfferMutation();
 
-    const totalPages = Math.ceil(couponsData.length / itemsPerPage);
+  // Convert file to base64
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
 
-    const handleOpenModal = (type: 'addCoupon' | 'editCoupon' | 'viewCoupon', coupon?: Coupon) => {
-        dispatch(openModal({ modalType: type, data: coupon }));
-    };
+  // Handle image upload
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB');
+        return;
+      }
 
-    const handleCloseModal = () => {
-        dispatch(closeModal());
-    };
+      try {
+        const base64 = await convertToBase64(file);
+        setValue('offerImage', base64);
+        setPreviewImage(base64);
+      } catch (error) {
+        toast.error('Error processing image');
+      }
+    }
+  };
 
-    const handleDeleteClick = (coupon: Coupon) => {
-        setSelectedCoupon(coupon);
-        setIsDeleteModalOpen(true);
-    };
+  // Remove uploaded image
+  const removeImage = () => {
+    setValue('offerImage', '');
+    setPreviewImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
-    const handleConfirmDelete = () => {
-        // API logic to delete
+  // Handle specialty selection
+  const handleSpecialtyChange = (specialty: string, checked: boolean) => {
+    const updated = checked 
+      ? [...selectedSpecialties, specialty]
+      : selectedSpecialties.filter(s => s !== specialty);
+    setSelectedSpecialties(updated);
+    setValue('applicableSpecialties', updated);
+  };
+
+  // Handle category selection
+  const handleCategoryChange = (category: string, checked: boolean) => {
+    const updated = checked 
+      ? [...selectedCategories, category]
+      : selectedCategories.filter(c => c !== category);
+    setSelectedCategories(updated);
+    setValue('applicableCategories', updated);
+  };
+
+  // Update form values when editing
+  useEffect(() => {
+    if (modalType === 'editCoupon' && data) {
+      const coupon = data as Coupon;
+      setValue('code', coupon.code || '');
+      setValue('type', coupon.type || 'percentage');
+      setValue('value', coupon.value || 0);
+      setValue('startDate', coupon.startDate ? coupon.startDate.split('T')[0] : '');
+      setValue('expires', coupon.expires ? coupon.expires.split('T')[0] : '');
+      
+      const specialties = Array.isArray(coupon.applicableSpecialties) ? coupon.applicableSpecialties : [];
+      const categories = Array.isArray(coupon.applicableCategories) ? coupon.applicableCategories : [];
+      
+      setSelectedSpecialties(specialties);
+      setSelectedCategories(categories);
+      setValue('applicableSpecialties', specialties);
+      setValue('applicableCategories', categories);
+      setValue('offerImage', coupon.offerImage || '');
+      setPreviewImage(coupon.offerImage || null);
+      setUseCustomCode(coupon.isCustomCode || false);
+      setValue('isCustomCode', coupon.isCustomCode || false);
+    } else {
+      reset();
+      setSelectedSpecialties([]);
+      setSelectedCategories([]);
+      setPreviewImage(null);
+      setUseCustomCode(false);
+    }
+  }, [modalType, data, setValue, reset]);
+
+  const lastItemIndex = currentPage * itemsPerPage;
+  const firstItemIndex = lastItemIndex - itemsPerPage;
+  const currentItems = Array.isArray(couponsData) ? couponsData.slice(firstItemIndex, lastItemIndex) : [];
+
+  const totalPages = Array.isArray(couponsData) ? Math.ceil(couponsData.length / itemsPerPage) : 1;
+
+  const handleOpenModal = (type: 'addCoupon' | 'editCoupon' | 'viewCoupon', coupon?: Coupon) => {
+    dispatch(openModal({ modalType: type, data: coupon }));
+  };
+
+  const handleCloseModal = () => {
+    dispatch(closeModal());
+    reset();
+    setSelectedSpecialties([]);
+    setSelectedCategories([]);
+    setPreviewImage(null);
+    setUseCustomCode(false);
+  };
+
+  const handleDeleteClick = (coupon: Coupon) => {
+    setSelectedCoupon(coupon);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (selectedCoupon) {
+      try {
+        await deleteOffer(selectedCoupon._id).unwrap();
+        toast.success('Coupon deleted successfully');
         setIsDeleteModalOpen(false);
         setSelectedCoupon(null);
-    };
-    
-    const formatDiscount = (coupon: Coupon) => {
-        if (coupon.type === 'percentage') {
-            return `${coupon.value}% Off`;
-        }
-        return `₹${coupon.value} Off`;
+      } catch (error) {
+        toast.error('Failed to delete coupon');
+      }
     }
+  };
 
-    const isModalOpen = isOpen && (modalType === 'addCoupon' || modalType === 'editCoupon' || modalType === 'viewCoupon');
-    const modalCoupon = data as Coupon;
+  const onSubmit = async (formData: CouponForm) => {
+    const processedData = {
+      ...formData,
+      code: useCustomCode ? formData.code : '', // Send empty if auto-generate
+      applicableSpecialties: selectedSpecialties,
+      applicableCategories: selectedCategories,
+      isCustomCode: useCustomCode,
+    };
 
-    const totalDiscountValue = couponsData.reduce((acc, coupon) => {
-        if (coupon.type === 'fixed') {
-            return acc + coupon.value * coupon.redeemed;
-        }
-        // Assuming an average order value of ₹1000 for percentage discounts
-        return acc + (1000 * (coupon.value / 100)) * coupon.redeemed;
-    }, 0);
+    try {
+      if (modalType === 'addCoupon') {
+        await createOffer(processedData).unwrap();
+        toast.success('Coupon created successfully');
+      } else if (modalType === 'editCoupon' && data) {
+        await updateOffer({ id: (data as Coupon)._id, ...processedData }).unwrap();
+        toast.success('Coupon updated successfully');
+      }
+      handleCloseModal();
+      refetch();
+    } catch (error) {
+      toast.error(modalType === 'addCoupon' ? 'Failed to create coupon' : 'Failed to update coupon');
+    }
+  };
+
+  const formatDiscount = (coupon: Coupon) => {
+    if (coupon.type === 'percentage') {
+      return `${coupon.value}% Off`;
+    }
+    return `₹${coupon.value} Off`;
+  };
+
+  const formatList = (list: string[] | undefined | null): string => {
+    if (!Array.isArray(list) || list.length === 0) {
+      return 'All';
+    }
+    return list.join(', ');
+  };
+
+  const totalDiscountValue = Array.isArray(couponsData) ? couponsData.reduce((acc, coupon) => {
+    if (coupon.type === 'fixed') {
+      return acc + coupon.value * coupon.redeemed;
+    }
+    return acc + (1000 * (coupon.value / 100)) * coupon.redeemed;
+  }, 0) : 0;
+
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error loading coupons. Please try again.</div>;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Offers & Coupons Management</h1>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Coupons</CardTitle>
-                <Tag className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{couponsData.length}</div>
-                <p className="text-xs text-muted-foreground">Across all categories</p>
-            </CardContent>
-            </Card>
-            <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Coupons</CardTitle>
-                <CheckSquare className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                    {couponsData.filter(c => c.status === 'Active').length}
-                </div>
-                <p className="text-xs text-muted-foreground">Currently usable by customers</p>
-            </CardContent>
-            </Card>
-            <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Redeemed</CardTitle>
-                <Percent className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">
-                    {couponsData.reduce((acc, c) => acc + c.redeemed, 0)}
-                </div>
-                <p className="text-xs text-muted-foreground">Total times coupons were applied</p>
-            </CardContent>
-            </Card>
-            <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Discount Value</CardTitle>
-                <IndianRupee className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">
-                    ₹{totalDiscountValue.toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground">Estimated value of discounts</p>
-            </CardContent>
-            </Card>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Coupons</CardTitle>
+            <Tag className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{Array.isArray(couponsData) ? couponsData.length : 0}</div>
+            <p className="text-xs text-muted-foreground">Across all categories</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Coupons</CardTitle>
+            <CheckSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {Array.isArray(couponsData) ? couponsData.filter(c => c.status === 'Active').length : 0}
+            </div>
+            <p className="text-xs text-muted-foreground">Currently usable by customers</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Redeemed</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {Array.isArray(couponsData) ? couponsData.reduce((acc, c) => acc + c.redeemed, 0) : 0}
+            </div>
+            <p className="text-xs text-muted-foreground">Total times coupons were applied</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Discount Value</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ₹{totalDiscountValue.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">Estimated value of discounts</p>
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
@@ -192,7 +335,7 @@ export default function OffersCouponsPage() {
               <CardTitle>Manage Coupons</CardTitle>
               <CardDescription>Manage and create new promotional coupons.</CardDescription>
             </div>
-            <Button onClick={() => handleOpenModal('addCoupon')}>
+            <Button onClick={() => handleOpenModal('addCoupon')} disabled={isCreating}>
               <Plus className="mr-2 h-4 w-4" />
               Create New Coupon
             </Button>
@@ -208,175 +351,376 @@ export default function OffersCouponsPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Starts On</TableHead>
                   <TableHead>Expires On</TableHead>
+                  <TableHead>Specialties</TableHead>
+                  <TableHead>Categories</TableHead>
+                  <TableHead>Image</TableHead>
                   <TableHead>Redeemed</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {currentItems.map((coupon) => (
-                    <TableRow key={coupon.id}>
-                    <TableCell className="font-medium">{coupon.code}</TableCell>
+                  <TableRow key={coupon.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {coupon.code}
+                        {coupon.isCustomCode && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">Custom</span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{formatDiscount(coupon)}</TableCell>
                     <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            coupon.status === "Active"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                            : coupon.status === "Scheduled"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                        }`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        coupon.status === "Active"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                          : coupon.status === "Scheduled"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                      }`}>
                         {coupon.status}
-                        </span>
+                      </span>
                     </TableCell>
-                    <TableCell>{coupon.startDate}</TableCell>
-                    <TableCell>{coupon.expires}</TableCell>
+                    <TableCell>{coupon.startDate.split('T')[0]}</TableCell>
+                    <TableCell>{coupon.expires ? coupon.expires.split('T')[0] : 'N/A'}</TableCell>
+                    <TableCell>{formatList(coupon.applicableSpecialties)}</TableCell>
+                    <TableCell>{formatList(coupon.applicableCategories)}</TableCell>
+                    <TableCell>
+                      {coupon.offerImage ? (
+                        <img 
+                          src={coupon.offerImage} 
+                          alt="Offer" 
+                          className="w-10 h-10 object-cover rounded"
+                        />
+                      ) : (
+                        <span className="text-gray-400 text-sm">No image</span>
+                      )}
+                    </TableCell>
                     <TableCell>{coupon.redeemed}</TableCell>
                     <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal('viewCoupon', coupon)}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View</span>
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal('editCoupon', coupon)}>
-                            <Edit2 className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteClick(coupon)}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                        </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal('viewCoupon', coupon)}>
+                        <Eye className="h-4 w-4" />
+                        <span className="sr-only">View</span>
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal('editCoupon', coupon)}>
+                        <Edit2 className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-destructive hover:text-destructive" 
+                        onClick={() => handleDeleteClick(coupon)}
+                        disabled={isDeleting}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
                     </TableCell>
-                    </TableRow>
+                  </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
-            <Pagination
-                className="mt-4"
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-                onItemsPerPageChange={setItemsPerPage}
-                totalItems={couponsData.length}
-            />
+          <Pagination
+            className="mt-4"
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={setItemsPerPage}
+            totalItems={Array.isArray(couponsData) ? couponsData.length : 0}
+          />
         </CardContent>
       </Card>
 
-      {/* Add/Edit/View Modals */}
-      <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={isOpen && (modalType === 'addCoupon' || modalType === 'editCoupon' || modalType === 'viewCoupon')} onOpenChange={handleCloseModal}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-                {modalType === 'addCoupon' && 'Create New Coupon'}
-                {modalType === 'editCoupon' && 'Edit Coupon'}
-                {modalType === 'viewCoupon' && 'Coupon Details'}
+              {modalType === 'addCoupon' && 'Create New Coupon'}
+              {modalType === 'editCoupon' && 'Edit Coupon'}
+              {modalType === 'viewCoupon' && 'Coupon Details'}
             </DialogTitle>
             <DialogDescription>
-                {modalType === 'addCoupon' && "Enter the details for the new coupon."}
-                {modalType === 'editCoupon' && "Update the details for this coupon."}
-                {modalType === 'viewCoupon' && "Viewing details for this coupon."}
+              {modalType === 'addCoupon' && "Enter the details for the new coupon."}
+              {modalType === 'editCoupon' && "Update the details for this coupon."}
+              {modalType === 'viewCoupon' && "Viewing details for this coupon."}
             </DialogDescription>
           </DialogHeader>
           
           {modalType === 'viewCoupon' ? (
-             <div className="grid gap-4 py-4 text-sm">
-                <div className="grid grid-cols-3 items-center gap-4">
-                    <span className="font-semibold text-muted-foreground">Code</span>
-                    <span className="col-span-2">{modalCoupon?.code}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                    <span className="font-semibold text-muted-foreground">Discount</span>
-                    <span className="col-span-2">{modalCoupon ? formatDiscount(modalCoupon) : ''}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                    <span className="font-semibold text-muted-foreground">Status</span>
-                    <span className="col-span-2">{modalCoupon?.status}</span>
-                </div>
-                 <div className="grid grid-cols-3 items-center gap-4">
-                    <span className="font-semibold text-muted-foreground">Starts</span>
-                    <span className="col-span-2">{modalCoupon?.startDate}</span>
-                </div>
-                 <div className="grid grid-cols-3 items-center gap-4">
-                    <span className="font-semibold text-muted-foreground">Expires</span>
-                    <span className="col-span-2">{modalCoupon?.expires}</span>
-                </div>
-                 <div className="grid grid-cols-3 items-center gap-4">
-                    <span className="font-semibold text-muted-foreground">Redeemed</span>
-                    <span className="col-span-2">{modalCoupon?.redeemed}</span>
-                </div>
-             </div>
-          ) : (
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="code">Coupon Code</Label>
-                <Input id="code" defaultValue={modalCoupon?.code || ''} />
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">Code</span>
+                <span className="col-span-2 flex items-center gap-2">
+                  {(data as Coupon)?.code || 'N/A'}
+                  {(data as Coupon)?.isCustomCode && (
+                    <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">Custom</span>
+                  )}
+                </span>
               </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">Discount</span>
+                <span className="col-span-2">{data ? formatDiscount(data as Coupon) : 'N/A'}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">Status</span>
+                <span className="col-span-2">{(data as Coupon)?.status || 'N/A'}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">Starts</span>
+                <span className="col-span-2">{(data as Coupon)?.startDate?.split('T')[0] || 'N/A'}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">Expires</span>
+                <span className="col-span-2">{(data as Coupon)?.expires ? (data as Coupon).expires.split('T')[0] : 'N/A'}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">Specialties</span>
+                <span className="col-span-2">{formatList((data as Coupon)?.applicableSpecialties)}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">Categories</span>
+                <span className="col-span-2">{formatList((data as Coupon)?.applicableCategories)}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">Image</span>
+                <div className="col-span-2">
+                  {(data as Coupon)?.offerImage ? (
+                    <img 
+                      src={(data as Coupon).offerImage} 
+                      alt="Offer" 
+                      className="w-20 h-20 object-cover rounded border"
+                    />
+                  ) : (
+                    <span className="text-gray-400">No image uploaded</span>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">Redeemed</span>
+                <span className="col-span-2">{(data as Coupon)?.redeemed || 0}</span>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
+              {/* Custom Code Toggle */}
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="useCustomCode" 
+                  checked={useCustomCode}
+                  onCheckedChange={(checked) => {
+                    setUseCustomCode(!!checked);
+                    setValue('isCustomCode', !!checked);
+                    if (!checked) {
+                      setValue('code', '');
+                    }
+                  }}
+                />
+                <Label htmlFor="useCustomCode">Use custom coupon code</Label>
+              </div>
+
+              {/* Coupon Code Field */}
+              {useCustomCode && (
+                <div className="space-y-2">
+                  <Label htmlFor="code">Custom Coupon Code</Label>
+                  <Input 
+                    id="code" 
+                    placeholder="Enter custom code (e.g., SAVE20)"
+                    {...register('code', { 
+                      required: useCustomCode ? 'Custom coupon code is required' : false,
+                      pattern: {
+                        value: /^[A-Z0-9]+$/,
+                        message: 'Code must contain only uppercase letters and numbers'
+                      }
+                    })} 
+                  />
+                  {errors.code && <p className="text-red-500 text-sm">{errors.code.message}</p>}
+                  <p className="text-sm text-muted-foreground">
+                    Leave unchecked to auto-generate a unique code
+                  </p>
+                </div>
+              )}
+
+              {/* Discount Type */}
               <div className="space-y-2">
                 <Label htmlFor="type">Discount Type</Label>
-                <Select defaultValue={modalCoupon?.type || 'percentage'}>
-                    <SelectTrigger id="type">
-                        <SelectValue placeholder="Select discount type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="percentage">Percentage (%)</SelectItem>
-                        <SelectItem value="fixed">Fixed Amount (₹)</SelectItem>
-                    </SelectContent>
+                <Select 
+                  defaultValue={(data as Coupon)?.type || 'percentage'} 
+                  onValueChange={(value) => setValue('type', value as 'percentage' | 'fixed')}
+                >
+                  <SelectTrigger id="type">
+                    <SelectValue placeholder="Select discount type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">Percentage (%)</SelectItem>
+                    <SelectItem value="fixed">Fixed Amount (₹)</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
+
+              {/* Discount Value */}
               <div className="space-y-2">
                 <Label htmlFor="value">Discount Value</Label>
-                <Input id="value" type="number" defaultValue={modalCoupon?.value || ''} />
+                <Input 
+                  id="value" 
+                  type="number" 
+                  {...register('value', { 
+                    required: 'Discount value is required',
+                    min: { value: 1, message: 'Value must be greater than 0' }
+                  })} 
+                />
+                {errors.value && <p className="text-red-500 text-sm">{errors.value.message}</p>}
               </div>
+
+              {/* Date Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Starts On</Label>
-                  <Input id="startDate" type="date" defaultValue={modalCoupon?.startDate || ''} />
+                  <Input 
+                    id="startDate" 
+                    type="date" 
+                    {...register('startDate', { required: 'Start date is required' })} 
+                  />
+                  {errors.startDate && <p className="text-red-500 text-sm">{errors.startDate.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="expires">Expires On</Label>
-                  <Input id="expires" type="date" defaultValue={modalCoupon?.expires || ''} />
+                  <Input 
+                    id="expires" 
+                    type="date" 
+                    {...register('expires')} 
+                  />
                 </div>
               </div>
-            </div>
-          )}
 
-          <DialogFooter>
-            {modalType === 'viewCoupon' ? (
-                <Button onClick={handleCloseModal}>Close</Button>
-            ) : (
-              <>
+              {/* Multiple Specialties Selection */}
+              <div className="space-y-2">
+                <Label>Applicable Specialties (Select multiple or none for all)</Label>
+                <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
+                  {specialtyOptions.map((specialty) => (
+                    <div key={specialty} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`specialty-${specialty}`}
+                        checked={selectedSpecialties.includes(specialty)}
+                        onCheckedChange={(checked) => handleSpecialtyChange(specialty, !!checked)}
+                      />
+                      <Label htmlFor={`specialty-${specialty}`} className="text-sm">
+                        {specialty}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {selectedSpecialties.length === 0 ? 'Will apply to all specialties' : `Selected: ${selectedSpecialties.length}`}
+                </p>
+              </div>
+
+              {/* Multiple Categories Selection */}
+              <div className="space-y-2">
+                <Label>Applicable Categories (Select multiple or none for all)</Label>
+                <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
+                  {categoryOptions.map((category) => (
+                    <div key={category} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`category-${category}`}
+                        checked={selectedCategories.includes(category)}
+                        onCheckedChange={(checked) => handleCategoryChange(category, !!checked)}
+                      />
+                      <Label htmlFor={`category-${category}`} className="text-sm">
+                        {category}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {selectedCategories.length === 0 ? 'Will apply to all categories' : `Selected: ${selectedCategories.length}`}
+                </p>
+              </div>
+
+              {/* Image Upload */}
+              <div className="space-y-2">
+                <Label>Offer Image (Optional)</Label>
+                <div className="space-y-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  
+                  {previewImage ? (
+                    <div className="relative">
+                      <img 
+                        src={previewImage} 
+                        alt="Preview" 
+                        className="w-32 h-32 object-cover rounded border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6"
+                        onClick={removeImage}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-32 h-32 border-dashed"
+                    >
+                      <div className="text-center">
+                        <Upload className="h-6 w-6 mx-auto mb-2" />
+                        <span className="text-sm">Upload Image</span>
+                      </div>
+                    </Button>
+                  )}
+                  
+                  <p className="text-sm text-muted-foreground">
+                    Supports JPG, PNG, GIF, WebP. Max size: 5MB
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter>
                 <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancel</Button>
-                <Button type="submit">Save Coupon</Button>
-              </>
-            )}
+                <Button type="submit" disabled={isCreating || isUpdating}>
+                  {modalType === 'addCoupon' ? 'Create Coupon' : 'Update Coupon'}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Coupon?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the coupon "{selectedCoupon?.code}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant='destructive'
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+            >
+              Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-       {/* Delete Confirmation Modal */}
-       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Delete Coupon?</DialogTitle>
-                    <DialogDescription>
-                        Are you sure you want to delete the coupon "{selectedCoupon?.code}"? This action cannot be undone.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                    <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
-                        Cancel
-                    </Button>
-                    <Button
-                        variant='destructive'
-                        onClick={handleConfirmDelete}
-                    >
-                        Delete
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     </div>
   );
 }
-
-    

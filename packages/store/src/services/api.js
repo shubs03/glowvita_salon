@@ -7,8 +7,7 @@ const baseQuery = fetchBaseQuery({
     const adminAuthState = localStorage.getItem("adminAuthState");
     const vendorAccessToken = localStorage.getItem("vendor_access_token");
 
-    const adminAccessToken =
-      adminAuthState && JSON.parse(adminAuthState).token;
+    const adminAccessToken = adminAuthState && JSON.parse(adminAuthState).token;
 
     if (accessToken) {
       headers.set("Authorization", `Bearer ${accessToken}`);
@@ -143,10 +142,47 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["admin"],
     }),
+
+    // offfers
+
+    getAdminOffers: builder.query({
+      query: () => "/admin/offers",
+      providesTags: ["offers"],
+    }),
+
+    createAdminOffer: builder.mutation({
+      query: (offer) => ({
+        url: "/admin/offers",
+        method: "POST",
+        body: offer,
+      }),
+      invalidatesTags: ["offers"],
+    }),
+
+    updateAdminOffer: builder.mutation({
+      query: (offer) => ({
+        url: `/admin/offers`,
+        method: "PUT",
+        body: offer,
+      }),
+      invalidatesTags: ["offers"],
+    }),
+
+    deleteAdminOffer: builder.mutation({
+      query: (id) => ({
+        url: `/admin/offers`,
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["offers"],
+    }),
   }),
 });
 
-export const { 
+export const {
+  // AdminPanel Endpoints
+
+  // adminUsers
   useAdminLoginMutation,
   useRegisterAdminMutation,
   useCreateAdminMutation,
@@ -154,4 +190,9 @@ export const {
   useDeleteAdminMutation,
   useGetAdminsQuery,
 
- } = glowvitaApi;
+  // offers
+  useGetAdminOffersQuery,
+  useCreateAdminOfferMutation,
+  useUpdateAdminOfferMutation,
+  useDeleteAdminOfferMutation,
+} = glowvitaApi;

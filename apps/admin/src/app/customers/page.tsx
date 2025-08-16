@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
-import { Eye, FileDown, X, IndianRupee, Percent, Users, FileText, Plus } from 'lucide-react';
+import { Eye, FileDown, X, IndianRupee, Percent, Users, FileText, Plus, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
 
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
@@ -28,12 +28,35 @@ import {
   clearSalonFilters
 } from '@repo/store/slices/salonSlice';
 
+type Salon = {
+  id: number;
+  salonName: string;
+  vendorContact: string;
+  vendorOwner: string;
+  adminReservation: number;
+  adminPay: number;
+  settlementAmount: number;
+};
+
+const salonCustomers = [
+    { id: 'CUST-01', name: 'Ravi Kumar', type: 'Online', contact: '9876543210', email: 'ravi@example.com' },
+    { id: 'CUST-02', name: 'Sunita Sharma', type: 'Offline', contact: '8765432109', email: 'sunita@example.com' },
+    { id: 'CUST-03', name: 'Amit Patel', type: 'Online', contact: '7654321098', email: '' },
+];
+
+
 export default function CustomerManagementPage() {
     const dispatch = useAppDispatch();
     
     // State for the "Add New Customer" modal
     const { isOpen, modalType } = useAppSelector(state => state.modal);
     const isNewCustomerModalOpen = isOpen && modalType === 'newCustomer';
+    
+    // State for viewing salon customers
+    const [isViewCustomersModalOpen, setIsViewCustomersModalOpen] = useState(false);
+    const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
+    const [salonCustomerSearch, setSalonCustomerSearch] = useState('');
+    const [salonCustomerTypeFilter, setSalonCustomerTypeFilter] = useState('all');
 
     // Customer Orders State from Redux
     const {
@@ -81,6 +104,26 @@ export default function CustomerManagementPage() {
         const lastItemIndex = firstItemIndex + salonPagination.itemsPerPage;
         return filteredSalons.slice(firstItemIndex, lastItemIndex);
     }, [filteredSalons, salonPagination]);
+    
+     const filteredSalonCustomers = useMemo(() => {
+        return salonCustomers.filter(customer => {
+            const matchesSearch = customer.name.toLowerCase().includes(salonCustomerSearch.toLowerCase()) ||
+                                  customer.contact.includes(salonCustomerSearch) ||
+                                  (customer.email && customer.email.toLowerCase().includes(salonCustomerSearch.toLowerCase()));
+            const matchesType = salonCustomerTypeFilter === 'all' || customer.type === salonCustomerTypeFilter;
+            return matchesSearch && matchesType;
+        });
+    }, [salonCustomerSearch, salonCustomerTypeFilter]);
+    
+    const handleViewCustomersClick = (salon: Salon) => {
+        setSelectedSalon(salon);
+        setIsViewCustomersModalOpen(true);
+    };
+
+    const clearSalonCustomerFilters = () => {
+        setSalonCustomerSearch('');
+        setSalonCustomerTypeFilter('all');
+    };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -332,9 +375,9 @@ export default function CustomerManagementPage() {
                                             <TableCell>${salon.adminPay.toFixed(2)}</TableCell>
                                             <TableCell>${salon.settlementAmount.toFixed(2)}</TableCell>
                                             <TableCell className="text-right">
-                                                 <Button variant="ghost" size="icon">
+                                                 <Button variant="ghost" size="icon" onClick={() => handleViewCustomersClick(salon)}>
                                                     <Eye className="h-4 w-4" />
-                                                    <span className="sr-only">View</span>
+                                                    <span className="sr-only">View Customers</span>
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -387,6 +430,78 @@ export default function CustomerManagementPage() {
                 <DialogFooter>
                     <Button type="button" variant="secondary" onClick={() => dispatch(closeModal())}>Cancel</Button>
                     <Button type="submit">Save Customer</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+        
+        <Dialog open={isViewCustomersModalOpen} onOpenChange={setIsViewCustomersModalOpen}>
+            <DialogContent className="sm:max-w-4xl">
+                <DialogHeader>
+                    <DialogTitle>Customers at {selectedSalon?.salonName}</DialogTitle>
+                    <DialogDescription>
+                        A list of all customers who have visited this salon.
+                    </DialogDescription>
+                </DialogHeader>
+                 <div className="py-4 space-y-4">
+                     <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search by name, contact, or email..."
+                                className="w-full pl-8"
+                                value={salonCustomerSearch}
+                                onChange={(e) => setSalonCustomerSearch(e.target.value)}
+                            />
+                        </div>
+                        <Select value={salonCustomerTypeFilter} onValueChange={setSalonCustomerTypeFilter}>
+                            <SelectTrigger className="w-full sm:w-[180px]">
+                                <SelectValue placeholder="Filter by type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Types</SelectItem>
+                                <SelectItem value="Online">Online</SelectItem>
+                                <SelectItem value="Offline">Offline</SelectItem>
+                            </SelectContent>
+                        </Select>
+                         <Button variant="ghost" onClick={clearSalonCustomerFilters}>
+                            <X className="mr-2 h-4 w-4" /> Clear
+                        </Button>
+                    </div>
+                    <div className="overflow-x-auto no-scrollbar rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Customer Name</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Contact No.</TableHead>
+                                    <TableHead>Email</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredSalonCustomers.map((customer) => (
+                                    <TableRow key={customer.id}>
+                                        <TableCell className="font-medium">{customer.name}</TableCell>
+                                        <TableCell>{customer.type}</TableCell>
+                                        <TableCell>{customer.contact}</TableCell>
+                                        <TableCell>{customer.email || 'N/A'}</TableCell>
+                                    </TableRow>
+                                ))}
+                                {filteredSalonCustomers.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                            No customers found.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setIsViewCustomersModalOpen(false)}>
+                        Close
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
