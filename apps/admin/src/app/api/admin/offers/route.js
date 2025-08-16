@@ -8,47 +8,109 @@ const validCategories = ['Men', 'Women', 'Unisex'];
 
 await _db();
 
+// Helper function to generate random coupon code
+const generateCouponCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+// Helper function to validate base64 image
+const isValidBase64Image = (str) => {
+  if (!str || typeof str !== 'string') return false;
+  const base64Regex = /^data:image\/(jpeg|jpg|png|gif|webp|svg\+xml);base64,/;
+  return base64Regex.test(str);
+};
+
 // Create Offer
 export const POST = authMiddlewareAdmin(
   async (req) => {
     const body = await req.json();
-    const { code, type, value, status, startDate, expires, applicableSpecialties, applicableCategories } = body;
+    const { 
+      code, 
+      type, 
+      value, 
+      status, 
+      startDate, 
+      expires, 
+      applicableSpecialties, 
+      applicableCategories, 
+      offerImage,
+      isCustomCode 
+    } = body;
 
     // Validate required fields
-    if (!code || !type || value == null || !startDate) {
+    if (!type || value == null || !startDate) {
       return Response.json(
         { message: "Required fields missing" },
         { status: 400 }
       );
     }
 
-    // Check for duplicate code
-    const existingOffer = await OfferModel.findOne({ code: code.toUpperCase() });
-    if (existingOffer) {
-      return Response.json({ message: "Offer code already exists" }, { status: 400 });
+    let finalCode;
+    let isCustom = false;
+
+    // Handle coupon code generation or validation
+    if (code && code.trim()) {
+      // Custom code provided
+      finalCode = code.toUpperCase().trim();
+      isCustom = true;
+      
+      // Check for duplicate code
+      const existingOffer = await OfferModel.findOne({ code: finalCode });
+      if (existingOffer) {
+        return Response.json({ message: "Offer code already exists" }, { status: 400 });
+      }
+    } else {
+      // Generate unique code
+      let attempts = 0;
+      do {
+        finalCode = generateCouponCode();
+        attempts++;
+        if (attempts > 10) {
+          return Response.json({ message: "Unable to generate unique code" }, { status: 500 });
+        }
+      } while (await OfferModel.findOne({ code: finalCode }));
     }
 
-    // Validate applicableSpecialties
-    const specialties = applicableSpecialties === 'all' ? [] : Array.isArray(applicableSpecialties) ? applicableSpecialties : [];
-    if (specialties.length > 0 && !specialties.every(s => validSpecialties.includes(s))) {
-      return Response.json(
-        { message: `Invalid specialties. Must be one of: ${validSpecialties.join(', ')}` },
-        { status: 400 }
-      );
+    // Validate applicableSpecialties - now supports multiple selections
+    let specialties = [];
+    if (Array.isArray(applicableSpecialties) && applicableSpecialties.length > 0) {
+      specialties = applicableSpecialties;
+      if (!specialties.every(s => validSpecialties.includes(s))) {
+        return Response.json(
+          { message: `Invalid specialties. Must be one of: ${validSpecialties.join(', ')}` },
+          { status: 400 }
+        );
+      }
     }
 
-    // Validate applicableCategories
-    const categories = applicableCategories === 'all' ? [] : Array.isArray(applicableCategories) ? applicableCategories : [];
-    if (categories.length > 0 && !categories.every(c => validCategories.includes(c))) {
+    // Validate applicableCategories - now supports multiple selections
+    let categories = [];
+    if (Array.isArray(applicableCategories) && applicableCategories.length > 0) {
+      categories = applicableCategories;
+      if (!categories.every(c => validCategories.includes(c))) {
+        return Response.json(
+          { message: `Invalid categories. Must be one of: ${validCategories.join(', ')}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate image if provided
+    if (offerImage && !isValidBase64Image(offerImage)) {
       return Response.json(
-        { message: `Invalid categories. Must be one of: ${validCategories.join(', ')}` },
+        { message: "Invalid image format. Must be base64 encoded image." },
         { status: 400 }
       );
     }
 
     // Create offer
     const newOffer = await OfferModel.create({
-      code: code.toUpperCase(),
+      code: finalCode,
       type,
       value,
       status: status || "Scheduled",
@@ -56,6 +118,8 @@ export const POST = authMiddlewareAdmin(
       expires: expires || null,
       applicableSpecialties: specialties,
       applicableCategories: categories,
+      offerImage: offerImage || null,
+      isCustomCode: isCustom,
     });
 
     return Response.json(
@@ -105,20 +169,34 @@ export const PUT = authMiddlewareAdmin(
   async (req) => {
     const { id, ...body } = await req.json();
 
-    // Validate applicableSpecialties
-    const specialties = body.applicableSpecialties === 'all' ? [] : Array.isArray(body.applicableSpecialties) ? body.applicableSpecialties : [];
-    if (specialties.length > 0 && !specialties.every(s => validSpecialties.includes(s))) {
-      return Response.json(
-        { message: `Invalid specialties. Must be one of: ${validSpecialties.join(', ')}` },
-        { status: 400 }
-      );
+    // Validate applicableSpecialties - now supports multiple selections
+    let specialties = [];
+    if (Array.isArray(body.applicableSpecialties) && body.applicableSpecialties.length > 0) {
+      specialties = body.applicableSpecialties;
+      if (!specialties.every(s => validSpecialties.includes(s))) {
+        return Response.json(
+          { message: `Invalid specialties. Must be one of: ${validSpecialties.join(', ')}` },
+          { status: 400 }
+        );
+      }
     }
 
-    // Validate applicableCategories
-    const categories = body.applicableCategories === 'all' ? [] : Array.isArray(body.applicableCategories) ? body.applicableCategories : [];
-    if (categories.length > 0 && !categories.every(c => validCategories.includes(c))) {
+    // Validate applicableCategories - now supports multiple selections
+    let categories = [];
+    if (Array.isArray(body.applicableCategories) && body.applicableCategories.length > 0) {
+      categories = body.applicableCategories;
+      if (!categories.every(c => validCategories.includes(c))) {
+        return Response.json(
+          { message: `Invalid categories. Must be one of: ${validCategories.join(', ')}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate image if provided
+    if (body.offerImage && !isValidBase64Image(body.offerImage)) {
       return Response.json(
-        { message: `Invalid categories. Must be one of: ${validCategories.join(', ')}` },
+        { message: "Invalid image format. Must be base64 encoded image." },
         { status: 400 }
       );
     }
@@ -129,6 +207,19 @@ export const PUT = authMiddlewareAdmin(
       applicableCategories: categories,
       updatedAt: Date.now(),
     };
+
+    // Handle code update if provided
+    if (body.code && body.code.trim()) {
+      const existingOffer = await OfferModel.findOne({ 
+        code: body.code.toUpperCase().trim(),
+        _id: { $ne: id }
+      });
+      if (existingOffer) {
+        return Response.json({ message: "Offer code already exists" }, { status: 400 });
+      }
+      updateData.code = body.code.toUpperCase().trim();
+      updateData.isCustomCode = true;
+    }
 
     const updatedOffer = await OfferModel.findByIdAndUpdate(
       id,
