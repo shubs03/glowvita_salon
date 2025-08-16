@@ -30,7 +30,6 @@ export interface Doctor {
   state: string;
   city: string;
   pincode: string;
-  about: string;
   status?: 'Approved' | 'Pending' | 'Rejected';
   profileImage?: string;
   qualification?: string;
@@ -68,42 +67,41 @@ interface DoctorFormProps {
   onSubmit: (data: Omit<Doctor, 'confirmPassword'>) => void;
 }
 
+// Initial form data template
+const initialFormData = {
+  name: '',
+  email: '',
+  phone: '',
+  gender: 'male',
+  password: '',
+  confirmPassword: '',
+  registrationNumber: '',
+  specialization: '',
+  experience: '',
+  physicalConsultationStartTime: '09:00',
+  physicalConsultationEndTime: '17:00',
+  faculty: '',
+  assistantName: '',
+  assistantContact: '',
+  doctorAvailability: 'Online' as const,
+  landline: '',
+  clinicName: '',
+  clinicAddress: '',
+  state: '',
+  city: '',
+  pincode: ''
+};
+
 export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: DoctorFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
   const [selectedState, setSelectedState] = useState(doctor?.state || "");
   const [cities, setCities] = useState<string[]>([]);
-  
   const [formData, setFormData] = useState<Doctor & { 
     password: string; 
     confirmPassword: string;
     physicalConsultationStartTime: string;
     physicalConsultationEndTime: string;
-  }>({
-    name: '',
-    email: '',
-    phone: '',
-    gender: 'male',
-    password: '',
-    confirmPassword: '',
-    registrationNumber: '',
-    specialization: '',
-    experience: '',
-    physicalConsultationStartTime: '09:00',
-    physicalConsultationEndTime: '17:00',
-    faculty: '',
-    assistantName: '',
-    assistantContact: '',
-    doctorAvailability: 'Online',
-    landline: '',
-    clinicName: '',
-    clinicAddress: '',
-    state: '',
-    city: '',
-    pincode: '',
-    consultationFee: '',
-    about: '',
-    ...(doctor || {})
-  });
+  }>({ ...initialFormData, ...(doctor || {}) });
   
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -113,6 +111,31 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
     doctor?.profileImage || null
   );
+
+  // Reset form when the dialog is opened for a new doctor
+  useEffect(() => {
+    if (isOpen && !isEditMode) {
+      // Create a complete reset of the form data
+      const resetData = {
+        ...initialFormData,
+        // Keep the password fields empty for new doctor
+        password: '',
+        confirmPassword: ''
+      };
+      
+      setFormData(resetData);
+      setSelectedState('');
+      setActiveTab('personal');
+      setProfileImagePreview(null);
+      setPasswordError('');
+      
+      // Also clear any file input
+      const fileInput = document.getElementById('profileImage') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+    }
+  }, [isOpen, isEditMode]);
 
   useEffect(() => {
     if (selectedState) {
@@ -137,25 +160,32 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target as HTMLInputElement;
+    const { name, type } = e.target;
     
     // Handle file input separately
-    if (type === 'file' && name === 'profileImage' && e.target.files?.[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
+    if (type === 'file' && name === 'profileImage') {
+      const fileInput = e.target as HTMLInputElement;
+      const file = fileInput.files?.[0];
       
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setProfileImagePreview(base64String);
-        setFormData(prev => ({
-          ...prev,
-          profileImage: base64String
-        }));
-      };
-      
-      reader.readAsDataURL(file);
+      if (file) {
+        const reader = new FileReader();
+        
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          setProfileImagePreview(base64String);
+          setFormData(prev => ({
+            ...prev,
+            profileImage: base64String
+          }));
+        };
+        
+        reader.readAsDataURL(file);
+      }
       return;
     }
+    
+    // Handle regular input fields
+    const { value } = e.target as HTMLInputElement;
     
     setFormData(prev => ({
       ...prev,
@@ -182,6 +212,10 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     
     // Remove confirmPassword before submitting
     const { confirmPassword, ...submitData } = formData;
+    
+    // Log the form data to console
+    console.log('Doctor Form Data:', JSON.stringify(submitData, null, 2));
+    
     onSubmit(submitData);
   };
 
