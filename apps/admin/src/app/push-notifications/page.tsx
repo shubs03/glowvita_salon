@@ -13,6 +13,8 @@ import { Textarea } from '@repo/ui/textarea';
 import { Plus, Eye, Trash2, Send, MessageSquare, Mail, Users, User, Search, X } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { Badge } from '@repo/ui/badge';
+import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
+import { openNotificationModal, closeNotificationModal } from '@repo/store/slices/notificationSlice';
 
 const notificationsData = [
   { id: 'NOTIF-001', title: 'Summer Sale!', type: 'SMS, Email', target: 'All Vendors', date: '2024-08-15', status: 'Sent' },
@@ -34,7 +36,9 @@ const mockVendors = [
 ];
 
 export default function PushNotificationsPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const dispatch = useAppDispatch();
+  const { isModalOpen, modalType, notificationData } = useAppSelector(state => state.notification);
+  
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [targetType, setTargetType] = useState('all_users');
@@ -69,8 +73,16 @@ export default function PushNotificationsPage() {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Handle form submission logic
-    setIsModalOpen(false);
+    dispatch(closeNotificationModal());
   }
+  
+  const handleOpenModal = (type: 'add' | 'edit' | 'view', data?: any) => {
+    dispatch(openNotificationModal({ modalType: type, data: data }));
+  };
+  
+  const handleCloseModal = () => {
+    dispatch(closeNotificationModal());
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -126,7 +138,7 @@ export default function PushNotificationsPage() {
               <CardTitle>Notification History</CardTitle>
               <CardDescription>A log of all sent and scheduled notifications.</CardDescription>
             </div>
-            <Button onClick={() => setIsModalOpen(true)}>
+            <Button onClick={() => handleOpenModal('add')}>
               <Plus className="mr-2 h-4 w-4" />
               Create New Notification
             </Button>
@@ -160,7 +172,7 @@ export default function PushNotificationsPage() {
                         </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal('view', notification)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" className="text-destructive">
@@ -184,19 +196,26 @@ export default function PushNotificationsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
         <DialogContent className="sm:max-w-2xl">
           <form onSubmit={handleFormSubmit}>
             <DialogHeader>
-              <DialogTitle>Create New Notification</DialogTitle>
+              <DialogTitle>
+                {modalType === 'add' && 'Create New Notification'}
+                {modalType === 'edit' && 'Edit Notification'}
+                {modalType === 'view' && 'View Notification'}
+              </DialogTitle>
               <DialogDescription>
-                Compose and send a new notification to your audience.
+                {modalType === 'view' 
+                  ? `Viewing notification: "${(notificationData as any)?.title}"`
+                  : "Compose and send a new notification to your audience."
+                }
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 py-4">
                 <div className="space-y-2">
                     <Label>Type</Label>
-                    <RadioGroup defaultValue="both" className="flex gap-4">
+                    <RadioGroup defaultValue="both" className="flex gap-4" disabled={modalType === 'view'}>
                         <div className="flex items-center space-x-2">
                             <RadioGroupItem value="sms" id="sms" />
                             <Label htmlFor="sms">SMS</Label>
@@ -213,15 +232,15 @@ export default function PushNotificationsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="title">Title</Label>
-                  <Input id="title" name="title" placeholder="e.g., Special Weekend Offer" required />
+                  <Input id="title" name="title" placeholder="e.g., Special Weekend Offer" required disabled={modalType === 'view'} defaultValue={(notificationData as any)?.title || ''} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="content">Content</Label>
-                  <Textarea id="content" name="content" placeholder="Enter notification content here..." required />
+                  <Textarea id="content" name="content" placeholder="Enter notification content here..." required disabled={modalType === 'view'} defaultValue={""} />
                 </div>
                 <div className="space-y-2">
                     <Label>Target Audience</Label>
-                     <RadioGroup value={targetType} onValueChange={setTargetType} className="grid grid-cols-2 gap-2">
+                     <RadioGroup value={targetType} onValueChange={setTargetType} className="grid grid-cols-2 gap-2" disabled={modalType === 'view'}>
                         <div className="flex items-center space-x-2"><RadioGroupItem value="all_users" id="all_users" /><Label htmlFor="all_users">All Users</Label></div>
                         <div className="flex items-center space-x-2"><RadioGroupItem value="all_vendors" id="all_vendors" /><Label htmlFor="all_vendors">All Vendors</Label></div>
                         <div className="flex items-center space-x-2"><RadioGroupItem value="all_staff" id="all_staff" /><Label htmlFor="all_staff">All Staff</Label></div>
@@ -230,7 +249,7 @@ export default function PushNotificationsPage() {
                     </RadioGroup>
                 </div>
 
-                {(targetType === 'specific_user' || targetType === 'specific_vendor') && (
+                {(targetType === 'specific_user' || targetType === 'specific_vendor') && modalType !== 'view' && (
                     <div className="space-y-2">
                         <Label>Select {targetType === 'specific_user' ? 'Users' : 'Vendors'}</Label>
                         <div className="relative">
@@ -268,8 +287,10 @@ export default function PushNotificationsPage() {
                 )}
             </div>
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-              <Button type="submit">Send Notification</Button>
+              <Button type="button" variant="secondary" onClick={handleCloseModal}>
+                {modalType === 'view' ? 'Close' : 'Cancel'}
+              </Button>
+              {modalType !== 'view' && <Button type="submit">Send Notification</Button>}
             </DialogFooter>
           </form>
         </DialogContent>
