@@ -51,14 +51,13 @@ export default function VendorManagementPage() {
     const [isEditModalOpen, setEditModalOpen] = useState(false);
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
 
-    const vendors = useAppSelector((state) => selectRootState(state).vendors);
+    const vendors = useAppSelector((state) => selectRootState(state).vendors) || [];
     
-
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
-    const currentItems = vendors.slice(firstItemIndex, lastItemIndex);
+    const currentItems = Array.isArray(vendors) ? vendors.slice(firstItemIndex, lastItemIndex) : [];
 
-    const totalPages = Math.ceil(vendors.length / itemsPerPage);
+    const totalPages = Math.ceil((Array.isArray(vendors) ? vendors.length : 0) / itemsPerPage);
     
     const handleOpenCreateModal = () => {
         setSelectedVendor(null);
@@ -126,8 +125,9 @@ export default function VendorManagementPage() {
 
     const { title, description, buttonText } = getModalContent();
 
-    const activeVendors = vendors.filter((v: Vendor) => v.status === 'Active').length;
-    const disabledVendors = vendors.filter((v: Vendor) => v.status !== 'Active').length;
+    const vendorsArray = Array.isArray(vendors) ? vendors : [];
+    const activeVendors = vendorsArray.filter((v: Vendor) => v?.status === 'Active').length;
+    const disabledVendors = vendorsArray.filter((v: Vendor) => v?.status !== 'Active').length;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -263,12 +263,12 @@ export default function VendorManagementPage() {
           </div>
           <Pagination
                 className="mt-4"
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-                onItemsPerPageChange={setItemsPerPage}
-                totalItems={vendors.length}
+                currentPage={Number(currentPage) || 1}
+                totalPages={Math.max(1, Number(totalPages) || 1)}
+                onPageChange={(page) => setCurrentPage(Math.max(1, Number(page) || 1))}
+                itemsPerPage={Math.max(1, Number(itemsPerPage) || 10)}
+                onItemsPerPageChange={(value) => setItemsPerPage(Math.max(1, Number(value) || 10))}
+                totalItems={Math.max(0, Array.isArray(vendors) ? vendors.length : 0)}
             />
         </CardContent>
       </Card>
