@@ -5,7 +5,8 @@
   "exports": {
     "./db": "./src/db.js",
     "./auth": "./src/auth.js",
-    "./models/user": "./src/models/user.js"
+    "./models/user": "./src/models/user.js",
+    "./models": "./src/models"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

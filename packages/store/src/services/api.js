@@ -290,6 +290,18 @@ export const glowvitaApi = createApi({
       ],
     }),
 
+    updateVendorStatus: builder.mutation({
+      query: ({ id, status }) => ({
+        url: "/admin/vendor",
+        method: "PATCH",
+        body: { id, status },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Vendor", id },
+        "Vendor",
+      ],
+    }),
+
     deleteVendor: builder.mutation({
       query: ({ id }) => ({
         url: "/admin/vendor",
@@ -371,6 +383,7 @@ export const {
   useGetVendorsQuery,
   useGetVendorByIdQuery,
   useUpdateVendorMutation,
+  useUpdateVendorStatusMutation,
   useDeleteVendorMutation,
 
   // Doctor Endpoints
