@@ -11,6 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
+import { useGetSuppliersQuery, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/services/api';
+import { toast } from 'sonner';
+
 
 const vendorsData = [
     {
@@ -104,42 +107,30 @@ const doctorsApprovalData = [
     }
 ];
 
-const suppliersData = [
-  {
-    id: "SUP-001",
-    supplierName: "Global Beauty Supplies",
-    businessRegistrationNo: "GSTIN123456789",
-    supplierType: "Hair Care",
-    license: "License_GBS.pdf",
-    status: "Pending",
-    firstName: "John",
-    lastName: "Doe",
-    email: "contact@gbs.com",
-    phone: "123-456-7890",
-  },
-  {
-    id: "SUP-002",
-    supplierName: "Organic Skincare Inc.",
-    businessRegistrationNo: "GSTIN987654321",
-    supplierType: "Skin Care",
-    license: "License_OSI.pdf",
-    status: "Pending",
-    firstName: "Jane",
-    lastName: "Smith",
-    email: "sales@organicskin.com",
-    phone: "234-567-8901",
-  },
-];
-
 type Vendor = typeof vendorsData[0];
 type Service = typeof servicesData[0];
 type Product = typeof productsData[0];
 type Doctor = typeof doctorsApprovalData[0];
-type Supplier = typeof suppliersData[0];
+type Supplier = {
+  _id: string;
+  supplierName: string;
+  businessRegistrationNo: string;
+  supplierType: string;
+  licenseFile: string;
+  status: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+};
 type ActionType = 'approve' | 'reject' | 'delete';
 type ItemType = 'vendor' | 'service' | 'product' | 'doctor' | 'supplier';
 
 export default function VendorApprovalPage() {
+    const { data: suppliersData = [], isLoading: suppliersLoading } = useGetSuppliersQuery(undefined);
+    const [updateSupplier] = useUpdateSupplierMutation();
+    const [deleteSupplier] = useDeleteSupplierMutation();
+
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
@@ -151,6 +142,8 @@ export default function VendorApprovalPage() {
     const [actionType, setActionType] = useState<ActionType | null>(null);
     const [itemType, setItemType] = useState<ItemType | null>(null);
 
+    const pendingSuppliers = suppliersData.filter(s => s.status === 'Pending');
+
     // Pagination logic for each tab
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -158,13 +151,13 @@ export default function VendorApprovalPage() {
     const currentServices = servicesData.slice(firstItemIndex, lastItemIndex);
     const currentProducts = productsData.slice(firstItemIndex, lastItemIndex);
     const currentDoctors = doctorsApprovalData.slice(firstItemIndex, lastItemIndex);
-    const currentSuppliers = suppliersData.slice(firstItemIndex, lastItemIndex);
+    const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
 
     const totalVendorPages = Math.ceil(vendorsData.length / itemsPerPage);
     const totalServicePages = Math.ceil(servicesData.length / itemsPerPage);
     const totalProductPages = Math.ceil(productsData.length / itemsPerPage);
     const totalDoctorPages = Math.ceil(doctorsApprovalData.length / itemsPerPage);
-    const totalSupplierPages = Math.ceil(suppliersData.length / itemsPerPage);
+    const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
 
     const handleActionClick = (item: Vendor | Service | Product | Doctor | Supplier, type: ItemType, action: ActionType) => {
         setSelectedItem(item);
@@ -184,11 +177,28 @@ export default function VendorApprovalPage() {
         setIsImageViewerOpen(true);
     }
 
-    const handleConfirmAction = () => {
-        if (selectedItem && actionType) {
-            const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || (selectedItem as any).supplierName;
-            console.log(`Performing ${actionType} on ${itemType} ${itemName}`);
+    const handleConfirmAction = async () => {
+        if (!selectedItem || !actionType || !itemType) return;
+
+        try {
+            if (itemType === 'supplier') {
+                const supplier = selectedItem as Supplier;
+                if (actionType === 'delete') {
+                    await deleteSupplier(supplier._id).unwrap();
+                    toast.success('Success', { description: `Supplier "${supplier.supplierName}" deleted.` });
+                } else {
+                    const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
+                    await updateSupplier({ id: supplier._id, status: newStatus }).unwrap();
+                    toast.success('Success', { description: `Supplier "${supplier.supplierName}" status updated to ${newStatus}.`});
+                }
+            } else {
+                 const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || (selectedItem as any).supplierName;
+                 console.log(`Performing ${actionType} on ${itemType} ${itemName}`);
+            }
+        } catch (error) {
+            toast.error('Error', { description: `Failed to perform action on ${itemType}.` });
         }
+        
         setIsActionModalOpen(false);
         setSelectedItem(null);
         setActionType(null);
@@ -257,7 +267,7 @@ export default function VendorApprovalPage() {
             <Hourglass className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">5</div>
+            <div className="text-2xl font-bold text-yellow-600">{pendingSuppliers.length}</div>
             <p className="text-xs text-muted-foreground">Waiting for review</p>
           </CardContent>
         </Card>
@@ -592,13 +602,22 @@ export default function VendorApprovalPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {currentSuppliers.map((supplier) => (
-                                <TableRow key={supplier.id}>
+                            {suppliersLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                                </TableRow>
+                            ) : currentSuppliers.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center">No pending supplier approvals.</TableCell>
+                                </TableRow>
+                            ) : (
+                                currentSuppliers.map((supplier) => (
+                                <TableRow key={supplier._id}>
                                     <TableCell className="font-medium">{supplier.supplierName}</TableCell>
                                     <TableCell>{supplier.businessRegistrationNo}</TableCell>
                                     <TableCell>{supplier.supplierType}</TableCell>
                                     <TableCell>
-                                        <a href="#" className="text-primary hover:underline">{supplier.license}</a>
+                                        <a href={supplier.licenseFile} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">View License</a>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={supplier.status === 'Pending' ? 'default' : 'secondary'} className={supplier.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}>{supplier.status}</Badge>
@@ -622,7 +641,7 @@ export default function VendorApprovalPage() {
                                         </Button>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )))}
                         </TableBody>
                     </Table>
                 </div>
@@ -633,7 +652,7 @@ export default function VendorApprovalPage() {
                     onPageChange={setCurrentPage}
                     itemsPerPage={itemsPerPage}
                     onItemsPerPageChange={setItemsPerPage}
-                    totalItems={suppliersData.length}
+                    totalItems={pendingSuppliers.length}
                 />
                 </CardContent>
             </Card>
@@ -734,12 +753,12 @@ export default function VendorApprovalPage() {
                  {itemType === 'supplier' && selectedItem && (
                     <>
                         <h3 className="text-lg font-semibold">{(selectedItem as Supplier).supplierName}</h3>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Supplier ID</span><span className="col-span-2">{(selectedItem as Supplier).id}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Supplier ID</span><span className="col-span-2">{(selectedItem as Supplier)._id}</span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Owner</span><span className="col-span-2">{`${(selectedItem as Supplier).firstName} ${(selectedItem as Supplier).lastName}`}</span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Contact</span><span className="col-span-2">{(selectedItem as Supplier).email}<br />{(selectedItem as Supplier).phone}</span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Business Reg. No.</span><span className="col-span-2">{(selectedItem as Supplier).businessRegistrationNo}</span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Supplier Type</span><span className="col-span-2"><Badge>{(selectedItem as Supplier).supplierType}</Badge></span></div>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">License</span><span className="col-span-2"><a href="#" className="text-primary hover:underline">{(selectedItem as Supplier).license}</a></span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">License</span><span className="col-span-2"><a href={(selectedItem as Supplier).licenseFile} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">View License</a></span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Status</span><span className="col-span-2">{(selectedItem as Supplier).status}</span></div>
                     </>
                 )}
