@@ -7,6 +7,7 @@ import './globals.css';
 import { AdminLayout } from '@/components/AdminLayout';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { usePathname } from 'next/navigation';
+import { Toaster } from 'sonner';
 
 export default function RootLayout({
   children,
@@ -32,6 +33,7 @@ export default function RootLayout({
                 disableTransitionOnChange
             >
                 {showLayout ? <AdminLayout>{children}</AdminLayout> : children}
+                <Toaster position="bottom-right" />
             </ThemeProvider>
         </StoreProvider>
       </body>
