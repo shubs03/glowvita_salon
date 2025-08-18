@@ -13,7 +13,8 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
-import { addSupplier, selectAllSuppliers } from '@repo/store/slices/supplierSlice';
+import { useGetSuppliersQuery, useCreateSupplierMutation, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/services/api';
+import { toast } from 'sonner';
 
 // Sample data for supplier orders
 const supplierOrdersData = [
@@ -69,36 +70,9 @@ const supplierOrdersData = [
   }
 ];
 
-// Sample data for suppliers
-const suppliersData = [
-  {
-    id: "SUP-001",
-    firstName: "John",
-    lastName: "Doe",
-    shopName: "Global Beauty Supplies",
-    businessRegistrationNo: "GSTIN123456789",
-    supplierType: "Hair Care",
-    status: "Approved",
-    contact: "contact@gbs.com",
-    products: 125,
-    sales: 25430,
-  },
-  {
-    id: "SUP-002",
-    firstName: "Michael",
-    lastName: "Brown",
-    shopName: "Spa Essentials",
-    businessRegistrationNo: "GSTIN321654987",
-    supplierType: "Spa & Wellness",
-    status: "Pending",
-    contact: "support@spaessentials.com",
-    products: 60,
-    sales: 9500,
-  },
-];
 
 type Supplier = {
-  id: string;
+  _id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -113,10 +87,9 @@ type Supplier = {
   businessRegistrationNo: string;
   supplierType: string;
   status: string;
-  contact: string;
   products: number;
   sales: number;
-  licenseFileName?: string;
+  licenseFile?: string;
 };
 type SupplierOrder = typeof supplierOrdersData[0];
 type ActionType = 'approve' | 'reject' | 'delete';
@@ -124,8 +97,10 @@ type ActionType = 'approve' | 'reject' | 'delete';
 import stateCityData from '@/lib/state-city.json';
 
 export default function SupplierManagementPage() {
-  const dispatch = useDispatch();
-  const suppliers = useSelector(selectAllSuppliers);
+  const { data: suppliers = [], isLoading, isError, refetch } = useGetSuppliersQuery(undefined);
+  const [createSupplier] = useCreateSupplierMutation();
+  const [updateSupplier] = useUpdateSupplierMutation();
+  const [deleteSupplier] = useDeleteSupplierMutation();
   
   // State for Suppliers Tab
   const [currentPage, setCurrentPage] = useState(1);
@@ -162,9 +137,8 @@ export default function SupplierManagementPage() {
   const states: State[] = stateCityData.states;
   const [cities, setCities] = useState<string[]>([]);
   const [selectedState, setSelectedState] = useState('');
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [newSupplier, setNewSupplier] = useState({
+  
+  const initialNewSupplierState = {
     firstName: '',
     lastName: '',
     email: '',
@@ -181,7 +155,10 @@ export default function SupplierManagementPage() {
     licenseFile: null as File | null,
     password: '',
     confirmPassword: ''
-  });
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [newSupplier, setNewSupplier] = useState(initialNewSupplierState);
   
   const [showPassword, setShowPassword] = useState(false);
   
@@ -195,141 +172,86 @@ export default function SupplierManagementPage() {
     'Hygiene & Cleaning'
   ];
   
-  // Update cities when state changes
   useEffect(() => {
     if (selectedState) {
       const stateData = states.find(s => s.state === selectedState);
       setCities(stateData ? stateData.districts : []);
-      
-      // Update the state in newSupplier
-      setNewSupplier(prev => ({
-        ...prev,
-        state: selectedState,
-        city: '' // Reset city when state changes
-      }));
+      setNewSupplier(prev => ({ ...prev, state: selectedState, city: '' }));
     } else {
       setCities([]);
     }
-  }, [selectedState, states]);
+  }, [selectedState]);
 
   const handleStateChange = (value: string) => {
     setSelectedState(value);
   };
 
   const handleCityChange = (value: string) => {
-    setNewSupplier(prev => ({
-      ...prev,
-      city: value
-    }));
+    setNewSupplier(prev => ({ ...prev, city: value }));
   };
 
   const handleNewSupplierChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    // Handle numeric inputs (mobile and pincode)
     if (name === 'mobile' || name === 'pincode') {
-      // Only allow numbers and limit length
       const numericValue = value.replace(/\D/g, '');
       const maxLength = name === 'mobile' ? 10 : 6;
-      if (numericValue.length > maxLength) return;
-      
-      setNewSupplier(prev => ({
-        ...prev,
-        [name]: numericValue
-      }));
-      return;
+      if (numericValue.length <= maxLength) {
+        setNewSupplier(prev => ({ ...prev, [name]: numericValue }));
+      }
+    } else {
+      setNewSupplier(prev => ({ ...prev, [name]: value }));
     }
-    
-    setNewSupplier(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
   
   const handleSupplierTypeChange = (value: string) => {
-    setNewSupplier(prev => ({
-      ...prev,
-      supplierType: value
-    }));
+    setNewSupplier(prev => ({ ...prev, supplierType: value }));
   };
   
-  const handleAddSupplier = (e: React.FormEvent) => {
+  const handleAddSupplier = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Create form data to handle file upload
-    const formData = new FormData();
-    
-    // Add all form fields to formData
-    Object.entries(newSupplier).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        formData.append(key, value);
-      }
-    });
-    
-    // Create a new supplier object with the form data
-    const newSupplierData = {
-      ...newSupplier,
-      products: 0, // Initialize with 0 products
-      sales: 0,    // Initialize with 0 sales
-      status: "Pending", // Default status
-      contact: newSupplier.email, // Using email as contact if contact is not provided
-    };
-
-    // Dispatch the addSupplier action
-    dispatch(addSupplier(newSupplierData));
-    console.log('New supplier added:', newSupplierData);
-    
-    // Reset form and close modal
-    setNewSupplier({
-      firstName: '',
-      lastName: '',
-      email: '',
-      mobile: '',
-      shopName: '',
-      country: 'India',
-      state: '',
-      city: '',
-      pincode: '',
-      location: '',
-      address: '',
-      businessRegistrationNo: '',
-      supplierType: '',
-      licenseFile: null,
-      password: '',
-      confirmPassword: ''
-    });
-    
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    let licenseFileBase64 = null;
+    if(newSupplier.licenseFile){
+        licenseFileBase64 = await toBase64(newSupplier.licenseFile);
     }
-    
-    setIsNewModalOpen(false);
+
+    try {
+      await createSupplier({ ...newSupplier, licenseFile: licenseFileBase64 }).unwrap();
+      toast.success('Supplier added successfully!');
+      setNewSupplier(initialNewSupplierState);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setLicensePreview(null);
+      setIsNewModalOpen(false);
+    } catch (error) {
+      console.error("Failed to add supplier", error);
+      toast.error('Failed to add supplier.');
+    }
   };
+  
+  const toBase64 = (file: File) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
 
   const [licensePreview, setLicensePreview] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Check if file is an image
       if (!file.type.startsWith('image/')) {
         alert('Please upload an image file (JPEG, PNG, etc.)');
         return;
       }
       
-      // Create preview URL
       const previewUrl = URL.createObjectURL(file);
       setLicensePreview(previewUrl);
       
-      setNewSupplier(prev => ({
-        ...prev,
-        licenseFile: file
-      }));
+      setNewSupplier(prev => ({ ...prev, licenseFile: file }));
     }
   };
 
-  // Clean up preview URL when component unmounts or when file changes
   useEffect(() => {
     return () => {
       if (licensePreview) {
@@ -343,8 +265,7 @@ export default function SupplierManagementPage() {
     const fullName = `${supplier.firstName} ${supplier.lastName}`.toLowerCase();
     const matchesSearch = fullName.includes(supplierSearch.toLowerCase()) ||
                         supplier.shopName.toLowerCase().includes(supplierSearch.toLowerCase()) ||
-                        (supplier.businessRegistrationNo && supplier.businessRegistrationNo.toLowerCase().includes(supplierSearch.toLowerCase())) ||
-                        (supplier.contact && supplier.contact.toLowerCase().includes(supplierSearch.toLowerCase()));
+                        (supplier.businessRegistrationNo && supplier.businessRegistrationNo.toLowerCase().includes(supplierSearch.toLowerCase()));
     const matchesStatus = supplierStatusFilter === 'all' || supplier.status === supplierStatusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -371,33 +292,9 @@ export default function SupplierManagementPage() {
   
   // Sample product data for the selected supplier
   const [supplierProductsData] = useState([
-    {
-      id: 'prod_1',
-      name: 'Product 1',
-      sku: 'SKU001',
-      price: 1999,
-      stock: 50,
-      status: 'in_stock',
-      category: 'Skincare'
-    },
-    {
-      id: 'prod_2',
-      name: 'Product 2',
-      sku: 'SKU002',
-      price: 2999,
-      stock: 25,
-      status: 'low_stock',
-      category: 'Haircare'
-    },
-    {
-      id: 'prod_3',
-      name: 'Product 3',
-      sku: 'SKU003',
-      price: 1499,
-      stock: 0,
-      status: 'out_of_stock',
-      category: 'Makeup'
-    }
+    { id: 'prod_1', name: 'Product 1', sku: 'SKU001', price: 1999, stock: 50, status: 'in_stock', category: 'Skincare' },
+    { id: 'prod_2', name: 'Product 2', sku: 'SKU002', price: 2999, stock: 25, status: 'low_stock', category: 'Haircare' },
+    { id: 'prod_3', name: 'Product 3', sku: 'SKU003', price: 1499, stock: 0, status: 'out_of_stock', category: 'Makeup' }
   ]);
 
   const filteredInventory = supplierProductsData.filter(product => {
@@ -431,10 +328,20 @@ export default function SupplierManagementPage() {
     setIsOrderViewModalOpen(true);
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (selectedSupplier && actionType) {
-        console.log(`Performing ${actionType} on supplier ${selectedSupplier.shopName}`);
-        // API call logic would go here
+        try {
+            if(actionType === 'delete'){
+                await deleteSupplier(selectedSupplier._id).unwrap();
+                toast.success(`Supplier "${selectedSupplier.shopName}" deleted.`);
+            } else {
+                const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
+                await updateSupplier({ id: selectedSupplier._id, status: newStatus }).unwrap();
+                toast.success(`Supplier "${selectedSupplier.shopName}" status updated to ${newStatus}.`);
+            }
+        } catch (error) {
+            toast.error(`Failed to perform action on ${selectedSupplier.shopName}.`);
+        }
     }
     setIsActionModalOpen(false);
     setSelectedSupplier(null);
@@ -445,23 +352,11 @@ export default function SupplierManagementPage() {
     if (!actionType || !selectedSupplier) return { title: '', description: '', buttonText: '' };
     switch (actionType) {
       case 'approve':
-        return {
-          title: 'Approve Supplier?',
-          description: `Are you sure you want to approve the supplier "${selectedSupplier.shopName}"?`,
-          buttonText: 'Approve'
-        };
+        return { title: 'Approve Supplier?', description: `Are you sure you want to approve the supplier "${selectedSupplier.shopName}"?`, buttonText: 'Approve' };
       case 'reject':
-        return {
-          title: 'Reject Supplier?',
-          description: `Are you sure you want to reject the supplier "${selectedSupplier.shopName}"? This action cannot be undone.`,
-          buttonText: 'Reject'
-        };
+        return { title: 'Reject Supplier?', description: `Are you sure you want to reject the supplier "${selectedSupplier.shopName}"? This action cannot be undone.`, buttonText: 'Reject' };
        case 'delete':
-        return {
-          title: 'Delete Supplier?',
-          description: `Are you sure you want to permanently delete the supplier "${selectedSupplier.shopName}"? This action is irreversible.`,
-          buttonText: 'Delete'
-        };
+        return { title: 'Delete Supplier?', description: `Are you sure you want to permanently delete the supplier "${selectedSupplier.shopName}"? This action is irreversible.`, buttonText: 'Delete' };
       default:
         return { title: '', description: '', buttonText: '' };
     }
@@ -469,12 +364,16 @@ export default function SupplierManagementPage() {
 
   const { title, description, buttonText } = getModalContent();
 
+  if(isError) return <div>Error loading suppliers.</div>;
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold font-headline">Supplier Management</h1>
       </div>
-
+      
+      {isLoading ? (<div>Loading suppliers...</div>) : (
+      <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -588,7 +487,7 @@ export default function SupplierManagementPage() {
                 </TableHeader>
                 <TableBody>
                   {currentItems.map((supplier, index) => (
-                    <TableRow key={index}>
+                    <TableRow key={supplier._id}>
                       <TableCell className="font-medium">{supplier.firstName}</TableCell>
                       <TableCell>{supplier.lastName}</TableCell>
                       <TableCell>{supplier.shopName}</TableCell>
@@ -633,7 +532,7 @@ export default function SupplierManagementPage() {
                 onPageChange={setCurrentPage}
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
-                totalItems={suppliersData.length}
+                totalItems={filteredSuppliers.length}
             />
           </CardContent>
         </Card>
@@ -731,6 +630,8 @@ export default function SupplierManagementPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      </>
+      )}
 
       {/* Action Confirmation Modal */}
       <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
@@ -783,7 +684,7 @@ export default function SupplierManagementPage() {
                       </div>
                       <div className="grid grid-cols-3 items-center gap-4">
                           <span className="font-semibold text-muted-foreground">Contact</span>
-                          <span className="col-span-2">{selectedSupplier.contact}</span>
+                          <span className="col-span-2">{selectedSupplier.email}</span>
                       </div>
                       <div className="grid grid-cols-3 items-center gap-4">
                           <span className="font-semibold text-muted-foreground">Status</span>
@@ -948,7 +849,7 @@ export default function SupplierManagementPage() {
                       required
                       minLength={10}
                       maxLength={10}
-                      pattern="\d{10}"
+                      pattern="\\d{10}"
                       title="Please enter a valid 10-digit mobile number"
                       placeholder="1234567890"
                     />
@@ -1085,7 +986,7 @@ export default function SupplierManagementPage() {
                         required
                         minLength={6}
                         maxLength={6}
-                        pattern="\d{6}"
+                        pattern="\\d{6}"
                         title="Please enter a valid 6-digit pincode"
                       />
                       {newSupplier.pincode && newSupplier.pincode.length !== 6 && (
@@ -1320,4 +1221,3 @@ export default function SupplierManagementPage() {
     </div>
   );
 }
-
