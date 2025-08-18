@@ -248,10 +248,6 @@ export default function DoctorsDermatsPage() {
                             <Plus className="h-4 w-4 mr-2" />
                             Add New Doctor
                         </Button>
-                          <Button onClick={() => setIsSpecializationModalOpen(true)}>
-                              <Plus className="mr-2 h-4 w-4" />
-                              Add Specialization
-                          </Button>
                           <Button variant="outline">
                               <FileDown className="mr-2 h-4 w-4" />
                               Export List
@@ -443,32 +439,6 @@ export default function DoctorsDermatsPage() {
             isEditMode={!!selectedDoctor}
             onSubmit={selectedDoctor ? handleUpdateDoctor : handleAddDoctor}
         />
-
-        {/* Specialization Management Modal */}
-        <Dialog open={isSpecializationModalOpen} onOpenChange={setIsSpecializationModalOpen}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Create New Specialization</DialogTitle>
-                    <DialogDescription>
-                       Add a new specialization for doctors.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="spec-name">Specialization Name</Label>
-                        <Input id="spec-name" placeholder="e.g., Cosmetologist" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="spec-desc">Description</Label>
-                        <Textarea id="spec-desc" placeholder="A short description of the specialization." />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button type="button" variant="secondary" onClick={() => setIsSpecializationModalOpen(false)}>Cancel</Button>
-                    <Button type="submit">Save Specialization</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     </div>
   );
 }

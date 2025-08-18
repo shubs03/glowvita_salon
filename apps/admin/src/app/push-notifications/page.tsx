@@ -215,7 +215,7 @@ export default function PushNotificationsPage() {
             <div className="grid gap-6 py-4">
                 <div className="space-y-2">
                     <Label>Type</Label>
-                    <RadioGroup defaultValue="both" className="flex gap-4" disabled={modalType === 'view'}>
+                    <RadioGroup defaultValue="notification" className="flex gap-4" disabled={modalType === 'view'}>
                         <div className="flex items-center space-x-2">
                             <RadioGroupItem value="sms" id="sms" />
                             <Label htmlFor="sms">SMS</Label>
@@ -225,8 +225,8 @@ export default function PushNotificationsPage() {
                             <Label htmlFor="email">Email</Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="both" id="both" />
-                            <Label htmlFor="both">Both</Label>
+                            <RadioGroupItem value="notification" id="notification" />
+                            <Label htmlFor="notification">Notification</Label>
                         </div>
                     </RadioGroup>
                 </div>
