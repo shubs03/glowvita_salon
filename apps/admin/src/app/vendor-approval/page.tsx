@@ -243,14 +243,14 @@ export default function VendorApprovalPage() {
         </Card>
       </div>
 
-    <Tabs defaultValue="vendor-approvals">
+        <Tabs defaultValue="vendor-approvals">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-2xl">
             <TabsTrigger value="vendor-approvals">Vendor Approvals</TabsTrigger>
             <TabsTrigger value="service-approvals">Service Approvals</TabsTrigger>
             <TabsTrigger value="product-approvals">Product Approvals</TabsTrigger>
             <TabsTrigger value="doctor-approvals">Doctor Approvals</TabsTrigger>
         </TabsList>
-        <TabsContent value="vendor-approvals">
+        <TabsContent value="vendor-approvals" className="mt-10 sm:mt-10">
             <Card>
                 <CardHeader>
                 <CardTitle>Pending Approvals</CardTitle>
@@ -314,7 +314,7 @@ export default function VendorApprovalPage() {
                 </CardContent>
             </Card>
         </TabsContent>
-        <TabsContent value="service-approvals">
+        <TabsContent value="service-approvals" className="mt-10 sm:mt-10">
             <Card>
                 <CardHeader>
                 <CardTitle>Pending Service Approvals</CardTitle>
@@ -385,7 +385,7 @@ export default function VendorApprovalPage() {
                 </CardContent>
             </Card>
         </TabsContent>
-        <TabsContent value="product-approvals">
+        <TabsContent value="product-approvals" className="mt-10 sm:mt-10">
             <Card>
                 <CardHeader>
                     <CardTitle>Pending Product Approvals</CardTitle>
@@ -467,7 +467,7 @@ export default function VendorApprovalPage() {
                 </CardContent>
             </Card>
         </TabsContent>
-        <TabsContent value="doctor-approvals">
+        <TabsContent value="doctor-approvals" className="mt-10 sm:mt-10">
             <Card>
                 <CardHeader>
                     <CardTitle>Pending Doctor Approvals</CardTitle>
@@ -537,7 +537,7 @@ export default function VendorApprovalPage() {
                 </CardContent>
             </Card>
         </TabsContent>
-    </Tabs>
+      </Tabs>
 
 
        <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
