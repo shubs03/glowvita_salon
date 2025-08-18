@@ -298,6 +298,40 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Vendor"],
     }),
+
+    // Doctor Endpoints
+
+    getDoctors: builder.query({
+      query: () => "/admin/doctors",
+      providesTags: ["doctors"],
+    }),
+
+    createDoctor: builder.mutation({
+      query: (doctor) => ({
+        url: "/admin/doctors",
+        method: "POST",
+        body: doctor,
+      }),
+      invalidatesTags: ["doctors"],
+    }),
+
+    updateDoctor: builder.mutation({
+      query: (doctor) => ({
+        url: "/admin/doctors",
+        method: "PUT",
+        body: doctor,
+      }),
+      invalidatesTags: ["doctors"],
+    }),
+
+    deleteDoctor: builder.mutation({
+      query: (id) => ({
+        url: "/admin/doctors",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["doctors"],
+    }),
   }),
 });
 
@@ -338,4 +372,11 @@ export const {
   useGetVendorByIdQuery,
   useUpdateVendorMutation,
   useDeleteVendorMutation,
+
+  // Doctor Endpoints
+  useGetDoctorsQuery,
+  useGetDoctorByIdQuery,
+  useCreateDoctorMutation,
+  useUpdateDoctorMutation,
+  useDeleteDoctorMutation,
 } = glowvitaApi;
