@@ -8,7 +8,7 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
-import { Eye, EyeOff, Plus, Search, FileDown, X, DollarSign, Clock } from 'lucide-react';
+import { Eye, EyeOff, Plus, Search, FileDown, X, DollarSign, Clock, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
@@ -119,7 +119,7 @@ type Supplier = {
   licenseFileName?: string;
 };
 type SupplierOrder = typeof supplierOrdersData[0];
-type ActionType = 'approve' | 'reject';
+type ActionType = 'approve' | 'reject' | 'delete';
 
 import stateCityData from '@/lib/state-city.json';
 
@@ -433,7 +433,7 @@ export default function SupplierManagementPage() {
 
   const handleConfirmAction = () => {
     if (selectedSupplier && actionType) {
-        console.log(`Performing ${actionType} on supplier ${selectedSupplier.name}`);
+        console.log(`Performing ${actionType} on supplier ${selectedSupplier.shopName}`);
         // API call logic would go here
     }
     setIsActionModalOpen(false);
@@ -447,14 +447,20 @@ export default function SupplierManagementPage() {
       case 'approve':
         return {
           title: 'Approve Supplier?',
-          description: `Are you sure you want to approve the supplier "${selectedSupplier.name}"?`,
+          description: `Are you sure you want to approve the supplier "${selectedSupplier.shopName}"?`,
           buttonText: 'Approve'
         };
       case 'reject':
         return {
           title: 'Reject Supplier?',
-          description: `Are you sure you want to reject the supplier "${selectedSupplier.name}"? This action cannot be undone.`,
+          description: `Are you sure you want to reject the supplier "${selectedSupplier.shopName}"? This action cannot be undone.`,
           buttonText: 'Reject'
+        };
+       case 'delete':
+        return {
+          title: 'Delete Supplier?',
+          description: `Are you sure you want to permanently delete the supplier "${selectedSupplier.shopName}"? This action is irreversible.`,
+          buttonText: 'Delete'
         };
       default:
         return { title: '', description: '', buttonText: '' };
@@ -602,6 +608,18 @@ export default function SupplierManagementPage() {
                             <Eye className="h-4 w-4" />
                             <span className="sr-only">View Details</span>
                         </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'approve')}>
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <span className="sr-only">Approve</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'reject')}>
+                            <XCircle className="h-4 w-4 text-red-600" />
+                            <span className="sr-only">Reject</span>
+                        </Button>
+                         <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'delete')}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <span className="sr-only">Delete</span>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -726,7 +744,7 @@ export default function SupplierManagementPage() {
               Cancel
             </Button>
             <Button
-              variant={actionType === 'reject' ? 'destructive' : 'default'}
+              variant={actionType === 'reject' || actionType === 'delete' ? 'destructive' : 'default'}
               onClick={handleConfirmAction}
             >
               {buttonText}
@@ -739,7 +757,7 @@ export default function SupplierManagementPage() {
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
           <DialogContent className="sm:max-w-md">
               <DialogHeader>
-                  <DialogTitle>Supplier Details: {selectedSupplier?.name}</DialogTitle>
+                  <DialogTitle>Supplier Details: {selectedSupplier?.shopName}</DialogTitle>
               </DialogHeader>
               {selectedSupplier && (
                   <div className="grid gap-4 py-4 text-sm">
@@ -791,7 +809,7 @@ export default function SupplierManagementPage() {
         <Dialog open={isInventoryModalOpen} onOpenChange={setIsInventoryModalOpen}>
             <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
-                    <DialogTitle>Product Inventory: {selectedSupplier?.name}</DialogTitle>
+                    <DialogTitle>Product Inventory: {selectedSupplier?.shopName}</DialogTitle>
                     <DialogDescription>
                         A list of all products from this supplier.
                     </DialogDescription>
@@ -1302,3 +1320,4 @@ export default function SupplierManagementPage() {
     </div>
   );
 }
+
