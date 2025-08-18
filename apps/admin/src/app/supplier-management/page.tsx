@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { useGetSuppliersQuery, useCreateSupplierMutation, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/services/api';
 import { toast } from 'sonner';
+import { Skeleton } from "@repo/ui/skeleton";
 
 // Sample data for supplier orders
 const supplierOrdersData = [
@@ -95,6 +96,74 @@ type SupplierOrder = typeof supplierOrdersData[0];
 type ActionType = 'approve' | 'reject' | 'delete';
 
 import stateCityData from '@/lib/state-city.json';
+
+const SupplierPageSkeleton = () => (
+    <div className="p-4 sm:p-6 lg:p-8">
+        <div className="flex justify-between items-center mb-6">
+            <Skeleton className="h-8 w-64" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+            {[...Array(5)].map((_, i) => (
+                <Card key={i}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-4" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-7 w-20 mb-1" />
+                        <Skeleton className="h-3 w-32" />
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+        <Card>
+            <CardHeader>
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div className="space-y-2">
+                         <Skeleton className="h-6 w-48" />
+                         <Skeleton className="h-4 w-80" />
+                    </div>
+                    <div className="flex gap-2">
+                        <Skeleton className="h-10 w-48" />
+                        <Skeleton className="h-10 w-36" />
+                        <Skeleton className="h-10 w-28" />
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                 <div className="overflow-x-auto no-scrollbar">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-32" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-40" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-32" /></TableHead>
+                                <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                                <TableHead className="text-right"><Skeleton className="h-5 w-24" /></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {[...Array(5)].map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-5 w-full" /></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </CardContent>
+        </Card>
+    </div>
+);
+
 
 export default function SupplierManagementPage() {
   const { data: suppliers = [], isLoading, isError, refetch } = useGetSuppliersQuery(undefined);
@@ -364,7 +433,18 @@ export default function SupplierManagementPage() {
 
   const { title, description, buttonText } = getModalContent();
 
-  if(isError) return <div>Error loading suppliers.</div>;
+  if(isLoading) return <SupplierPageSkeleton />;
+
+  if(isError) return (
+      <div className="flex flex-col items-center justify-center h-[50vh]">
+        <h2 className="text-xl font-semibold text-destructive mb-2">Failed to Fetch Suppliers</h2>
+        <p className="text-muted-foreground mb-4">There was an error while trying to retrieve the data.</p>
+        <Button onClick={() => refetch()}>
+            <XCircle className="mr-2 h-4 w-4" />
+            Try Again
+        </Button>
+    </div>
+  );
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -372,8 +452,6 @@ export default function SupplierManagementPage() {
         <h1 className="text-2xl font-bold font-headline">Supplier Management</h1>
       </div>
       
-      {isLoading ? (<div>Loading suppliers...</div>) : (
-      <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -486,7 +564,8 @@ export default function SupplierManagementPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {currentItems.map((supplier, index) => (
+                  {currentItems.length > 0 ? (
+                    currentItems.map((supplier, index) => (
                     <TableRow key={supplier._id}>
                       <TableCell className="font-medium">{supplier.firstName}</TableCell>
                       <TableCell>{supplier.lastName}</TableCell>
@@ -521,7 +600,14 @@ export default function SupplierManagementPage() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                        No suppliers found.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -588,7 +674,8 @@ export default function SupplierManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentOrders.map((order) => (
+                    {currentOrders.length > 0 ? (
+                    currentOrders.map((order) => (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">{order.id}</TableCell>
                         <TableCell>{order.supplierName}</TableCell>
@@ -613,7 +700,14 @@ export default function SupplierManagementPage() {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                          No orders found.
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -630,9 +724,7 @@ export default function SupplierManagementPage() {
           </Card>
         </TabsContent>
       </Tabs>
-      </>
-      )}
-
+      
       {/* Action Confirmation Modal */}
       <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
         <DialogContent>
