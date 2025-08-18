@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
-import { useGetSuppliersQuery, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/services/api';
+import { useGetSuppliersQuery, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 
 
@@ -128,6 +128,10 @@ type ItemType = 'vendor' | 'service' | 'product' | 'doctor' | 'supplier';
 
 export default function VendorApprovalPage() {
     const { data: suppliersData = [], isLoading: suppliersLoading } = useGetSuppliersQuery(undefined);
+
+    console.log("Suppliers Data : ", suppliersData);
+    console.log("Supplier Names : ", suppliersData.map(supplier => supplier.firstName + " " + supplier.lastName));  
+
     const [updateSupplier] = useUpdateSupplierMutation();
     const [deleteSupplier] = useDeleteSupplierMutation();
 
@@ -613,7 +617,7 @@ export default function VendorApprovalPage() {
                             ) : (
                                 currentSuppliers.map((supplier) => (
                                 <TableRow key={supplier._id}>
-                                    <TableCell className="font-medium">{supplier.supplierName}</TableCell>
+                                    <TableCell className="font-medium">{supplier.firstName + " " + supplier.lastName}</TableCell>
                                     <TableCell>{supplier.businessRegistrationNo}</TableCell>
                                     <TableCell>{supplier.supplierType}</TableCell>
                                     <TableCell>
