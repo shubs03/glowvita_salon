@@ -90,7 +90,7 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
   baseQuery: baseQuery,
-  tagTypes: ["admin", "offers", "Referrals", "Settings", "SuperData", "Supplier"],
+  tagTypes: ["admin", "offers", "Referrals", "Settings", "SuperData", "Supplier", "SubscriptionPlan"],
   endpoints: (builder) => ({
     // Admin
     registerAdmin: builder.mutation({
@@ -362,6 +362,59 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
+    
+    // Subscription Plans
+    getSubscriptionPlans: builder.query({
+      query: () => '/admin/subscription-plans',
+      providesTags: (result = []) => [
+        'SubscriptionPlan',
+        ...result.map(({ _id }) => ({ type: 'SubscriptionPlan', id: _id }))
+      ]
+    }),
+    
+    createSubscriptionPlan: builder.mutation({
+      query: (planData) => ({
+        url: '/admin/subscription-plans',
+        method: 'POST',
+        body: planData
+      }),
+      invalidatesTags: ['SubscriptionPlan']
+    }),
+    
+    updateSubscriptionPlan: builder.mutation({
+      query: ({ _id, ...updates }) => ({
+        url: `/admin/subscription-plans/${_id}`,
+        method: 'PATCH',
+        body: updates,
+      }),
+      invalidatesTags: (result, error, { _id }) => [
+        { type: 'SubscriptionPlan', id: _id },
+        'SubscriptionPlan'
+      ]
+    }),
+    
+    deleteSubscriptionPlan: builder.mutation({
+      query: (id) => ({
+        url: `/admin/subscription-plans/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: 'SubscriptionPlan', id },
+        'SubscriptionPlan'
+      ]
+    }),
+    
+    toggleSubscriptionPlanStatus: builder.mutation({
+      query: ({ _id, status }) => ({
+        url: `/admin/subscription-plans/${_id}/status`,
+        method: 'PATCH',
+        body: { status: !status },
+      }),
+      invalidatesTags: (result, error, { _id }) => [
+        { type: 'SubscriptionPlan', id: _id },
+        'SubscriptionPlan'
+      ]
+    }),
   }),
 });
 
@@ -415,4 +468,13 @@ export const {
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
+  
+  // Subscription Management
+  
+  // Subscription Plans
+  useGetSubscriptionPlansQuery,
+  useCreateSubscriptionPlanMutation,
+  useUpdateSubscriptionPlanMutation,
+  useDeleteSubscriptionPlanMutation,
+  useToggleSubscriptionPlanStatusMutation,
 } = glowvitaApi;

@@ -1,14 +1,16 @@
-
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
-  addPlan, 
-  updatePlan, 
-  deletePlan, 
-  togglePlanStatus, 
-  selectAllPlans 
+  fetchSubscriptionPlans, 
+  createNewPlan, 
+  updateExistingPlan, 
+  removePlan,
+  selectAllPlans, 
+  selectPlanById,
+  selectLoading,
+  selectError 
 } from '@repo/store/slices/subscriptionSlice';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
@@ -28,6 +30,8 @@ type Plan = {
   duration: number;
   durationType: string;
   price: number;
+  discountedPrice?: number;
+  isAvailableForPurchase: boolean;
   status?: boolean;
 };
 
@@ -45,6 +49,9 @@ export default function SubscriptionManagementPage() {
   // Get plans from Redux store
   const plansData = useSelector((state) => state.subscription.plans);
   const dispatch = useDispatch();
+  const plans = useSelector(selectAllPlans);
+  const loading = useSelector(selectLoading);
+  const error = useSelector(selectError);
 
   const subscriptionsData = [
     {
@@ -87,7 +94,9 @@ export default function SubscriptionManagementPage() {
     name: '',
     duration: '1',
     durationType: 'months',
-    price: '99900'
+    price: '',
+    discountedPrice: '',
+    isAvailableForPurchase: true
   });
   
   // Dropdown options
@@ -98,12 +107,6 @@ export default function SubscriptionManagementPage() {
     { value: '12', label: '12' }
   ];
   
-  const priceOptions = [
-    { value: '9900', label: '₹99' },
-    { value: '24900', label: '₹249' },
-    { value: '49900', label: '₹499' },
-    { value: '99900', label: '₹999' }
-  ];
   
   const durationTypeOptions = [
     { value: 'days', label: 'Days' },
@@ -112,16 +115,40 @@ export default function SubscriptionManagementPage() {
     { value: 'years', label: 'Years' }
   ];
   
-  const handleInputChange = (field: string, value: string) => {
+  // State to track if custom duration is selected
+  
+  const handleInputChange = (field: string, value: string | boolean) => {
     setPlanForm(prev => ({
       ...prev,
-      [field]: value
+      [field]: field === 'isAvailableForPurchase' ? value === 'true' : value
     }));
   };
 
   const handleOpenPlanModal = (type: 'add' | 'edit', plan?: Plan) => {
     setModalType(type);
     setSelectedPlan(plan || null);
+    
+    if (type === 'edit' && plan) {
+      setPlanForm({
+        name: plan.name,
+        duration: plan.duration.toString(),
+        durationType: plan.durationType,
+        price: plan.price.toString(),
+        discountedPrice: plan.discountedPrice?.toString() || '',
+        isAvailableForPurchase: plan.isAvailableForPurchase ?? true
+      });
+    } else {
+      // Reset form for new plan
+      setPlanForm({
+        name: '',
+        duration: '1',
+        durationType: 'months',
+        price: '',
+        discountedPrice: '',
+        isAvailableForPurchase: true
+      });
+    }
+    
     setIsPlanModalOpen(true);
   };
   
@@ -142,30 +169,47 @@ export default function SubscriptionManagementPage() {
     setSelectedPlan(null);
   }
 
-  const handleSavePlan = (e: React.FormEvent) => {
+  const handleSavePlan = async (e: React.FormEvent) => {
     e.preventDefault();
-    const planData = {
-      name: planForm.name,
-      duration: parseInt(planForm.duration),
-      durationType: planForm.durationType,
-      price: parseInt(planForm.price),
-      status: 'Active'  // Ensure status is set for new plans
-    };
     
-    console.log('Dispatching plan data:', planData);
-    
-    if (modalType === 'add') {
-      dispatch(addPlan(planData));
-    } else if (selectedPlan) {
-      dispatch(updatePlan({
-        id: selectedPlan.id,
-        changes: planData
-      }));
+    try {
+      const planData = {
+        name: planForm.name,
+        duration: parseInt(planForm.duration) || 1,
+        durationType: planForm.durationType,
+        price: planForm.price ? parseFloat(planForm.price) : 0,
+        discountedPrice: planForm.discountedPrice ? parseFloat(planForm.discountedPrice) : undefined,
+        isAvailableForPurchase: planForm.isAvailableForPurchase,
+        status: 'Active',
+        features: planForm.features || []
+      };
+      
+      if (modalType === 'add') {
+        await dispatch(createNewPlan(planData)).unwrap();
+      } else if (selectedPlan) {
+        await dispatch(updateExistingPlan({
+          id: selectedPlan.id,
+          ...planData
+        })).unwrap();
+      }
+      
+      // Reset form and close modal
+      setPlanForm({ 
+        name: '', 
+        duration: '1', 
+        durationType: 'months', 
+        price: '',
+        discountedPrice: '',
+        isAvailableForPurchase: true,
+        features: []
+      });
+      
+      setIsPlanModalOpen(false);
+      
+    } catch (error) {
+      console.error('Error saving plan:', error);
+      // Handle error (show toast/notification)
     }
-    
-    // Reset form and close modal
-    setPlanForm({ name: '', duration: '1', durationType: 'months', price: '0' });
-    setIsPlanModalOpen(false);
   };
 
   const handleUpdatePlan = () => {
@@ -187,10 +231,20 @@ export default function SubscriptionManagementPage() {
     e.preventDefault();
     const newPlan = {
       ...planForm,
+      duration: parseInt(planForm.duration),
+      price: planForm.price ? parseInt(planForm.price) : 0,
+      discountedPrice: planForm.discountedPrice ? parseInt(planForm.discountedPrice) : undefined,
       status: true,
     };
     dispatch(addPlan(newPlan));
-    setPlanForm({ name: '', duration: '', durationType: 'months', price: '' });
+    setPlanForm({ 
+      name: '', 
+      duration: '1', 
+      durationType: 'months', 
+      price: '',
+      discountedPrice: '',
+      isAvailableForPurchase: true 
+    });
     setIsPlanModalOpen(false);
   };
 
@@ -332,6 +386,8 @@ export default function SubscriptionManagementPage() {
                       <TableHead>Plan Name</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Price</TableHead>
+                      <TableHead>Discounted Price</TableHead>
+                      <TableHead>Available</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -340,7 +396,9 @@ export default function SubscriptionManagementPage() {
                       <TableRow key={plan.id}>
                         <TableCell className="font-medium">{plan.name}</TableCell>
                         <TableCell>{plan.duration} {plan.durationType}</TableCell>
-                        <TableCell>₹{plan.price / 100}</TableCell>
+                        <TableCell>₹{plan.price}</TableCell>
+                        <TableCell>{plan.discountedPrice ? `₹${plan.discountedPrice}` : '-'}</TableCell>
+                        <TableCell>{plan.isAvailableForPurchase ? 'Yes' : 'No'}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => handleOpenPlanModal('edit', plan)}>
                             <Edit2 className="h-4 w-4" />
@@ -352,8 +410,7 @@ export default function SubscriptionManagementPage() {
                           </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
+                    ))}                 </TableBody>
                 </Table>
               </div>
             </CardContent>
@@ -372,49 +429,47 @@ export default function SubscriptionManagementPage() {
           </DialogHeader>
           <form onSubmit={handleSavePlan}>
             <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="planName">Plan Name</Label>
-                <Input 
-                  id="planName" 
-                  name="planName"
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Plan Name
+                </Label>
+                <Input
+                  id="name"
                   value={planForm.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  required
+                  className="col-span-3"
                   placeholder="Enter plan name"
                 />
               </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Duration</Label>
-                  <Select 
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">
+                  Duration
+                </Label>
+                <div className="col-span-3 flex gap-2">
+                  <Select
                     value={planForm.duration}
                     onValueChange={(value) => handleInputChange('duration', value)}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select duration" />
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue placeholder="Duration" />
                     </SelectTrigger>
                     <SelectContent>
-                      {durationOptions.map(option => (
+                      {durationOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Duration Type</Label>
-                  <Select 
+                  <Select
                     value={planForm.durationType}
                     onValueChange={(value) => handleInputChange('durationType', value)}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Period" />
                     </SelectTrigger>
                     <SelectContent>
-                      {durationTypeOptions.map(option => (
+                      {durationTypeOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -422,24 +477,65 @@ export default function SubscriptionManagementPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label>Price</Label>
-                  <Select 
-                    value={planForm.price}
-                    onValueChange={(value) => handleInputChange('price', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {priceOptions.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="price" className="text-right">
+                  Price (₹)
+                </Label>
+                <Input
+                  id="price"
+                  type="text"
+                  value={planForm.price}
+                  onChange={(e) => handleInputChange('price', e.target.value)}
+                  className="col-span-3"
+                  placeholder="Enter price (e.g., 999 or 999.99)"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="discountedPrice" className="text-right">
+                  Discounted Price (₹)
+                  <span className="text-xs text-gray-500 block">(Optional)</span>
+                </Label>
+                <Input
+                  id="discountedPrice"
+                  type="text"
+                  value={planForm.discountedPrice}
+                  onChange={(e) => handleInputChange('discountedPrice', e.target.value)}
+                  className="col-span-3"
+                  placeholder="Enter discounted price (optional)"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">
+                  Available for Purchase
+                </Label>
+                <div className="flex items-center space-x-2 col-span-3">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="purchase-yes"
+                      name="purchase-availability"
+                      checked={planForm.isAvailableForPurchase}
+                      onChange={() => handleInputChange('isAvailableForPurchase', 'true')}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <Label htmlFor="purchase-yes" className="ml-2">
+                      Yes
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-4">
+                    <input
+                      type="radio"
+                      id="purchase-no"
+                      name="purchase-availability"
+                      checked={!planForm.isAvailableForPurchase}
+                      onChange={() => handleInputChange('isAvailableForPurchase', 'false')}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <Label htmlFor="purchase-no" className="ml-2">
+                      No
+                    </Label>
+                  </div>
                 </div>
               </div>
             </div>
