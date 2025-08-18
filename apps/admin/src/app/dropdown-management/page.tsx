@@ -399,79 +399,21 @@ export default function DropdownManagementPage() {
         );
     };
 
-    const ServiceCategoryManager = () => {
-        const serviceCategories = useMemo(() => data.filter(item => item.type === 'serviceCategory'), [data]);
-        const services = useMemo(() => data.filter(item => item.type === 'service'), [data]);
-    
-        const handleServiceAssignment = async (categoryId: string, serviceId: string) => {
-            const serviceToUpdate = services.find(s => s._id === serviceId);
-            if (serviceToUpdate) {
-                await handleUpdate({ ...serviceToUpdate, parentId: categoryId }, 'edit');
-            }
-        };
-    
-        const handleServiceUnassignment = async (serviceId: string) => {
-            const serviceToUpdate = services.find(s => s._id === serviceId);
-            if (serviceToUpdate) {
-                await handleUpdate({ ...serviceToUpdate, parentId: undefined }, 'edit');
-            }
-        };
-
-        const servicesByCategory = useMemo(() => {
-            const assignedServiceIds = new Set<string>();
-            const mapping = serviceCategories.reduce((acc, category) => {
-                const assigned = services.filter(s => s.parentId === category._id);
-                assigned.forEach(s => assignedServiceIds.add(s._id));
-                acc[category._id] = assigned;
-                return acc;
-            }, {} as Record<string, DropdownItem[]>);
-            const unassignedServices = services.filter(s => !s.parentId);
-            return { mapping, unassignedServices };
-        }, [serviceCategories, services]);
-    
+    const ServiceManager = () => {
+        // This is a placeholder for the actual implementation
         return (
-          <Card>
-              <CardHeader>
-                  <CardTitle>Services by Category</CardTitle>
-                  <CardDescription>Assign services to different categories.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  <div className="space-y-4">
-                      {serviceCategories.map(category => (
-                          <div key={category._id} className="border p-4 rounded-lg">
-                              <h4 className="font-bold mb-2">{category.name}</h4>
-                              <div className="mb-2">
-                                  <Select onValueChange={(serviceId) => { if (serviceId) handleServiceAssignment(category._id, serviceId)}}>
-                                      <SelectTrigger>
-                                          <SelectValue placeholder="Add a service to this category..." />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                          {servicesByCategory.unassignedServices.map(service => (
-                                              <SelectItem key={service._id} value={service._id}>
-                                                  {service.name}
-                                              </SelectItem>
-                                          ))}
-                                          {servicesByCategory.unassignedServices.length === 0 && <div className='p-2 text-sm text-muted-foreground text-center'>No unassigned services</div>}
-                                      </SelectContent>
-                                  </Select>
-                              </div>
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                  {servicesByCategory.mapping[category._id]?.map(service => (
-                                      <Badge key={service._id} variant="secondary">
-                                          {service.name}
-                                          <button onClick={() => handleServiceUnassignment(service._id)} className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5">
-                                            <Trash2 className="h-3 w-3"/>
-                                          </button>
-                                      </Badge>
-                                  ))}
-                              </div>
-                          </div>
-                      ))}
-                  </div>
-              </CardContent>
-          </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Salon Service Management</CardTitle>
+                    <CardDescription>Manage individual salon services and their categories.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p>Service management UI will be implemented here.</p>
+                </CardContent>
+            </Card>
         );
     };
+    
 
     if (isError) {
         return <div className="p-8 text-center text-destructive">Error fetching data. Please try again.</div>;
@@ -482,8 +424,6 @@ export default function DropdownManagementPage() {
         { key: 'faqCategory', title: 'FAQ Categories', description: 'Manage categories for organizing FAQs.', tab: 'general' },
         { key: 'bank', title: 'Bank Names', description: 'Manage a list of supported banks.', tab: 'general' },
         { key: 'documentType', title: 'Document Types', description: 'Manage types of documents required for verification.', tab: 'general' },
-        { key: 'serviceCategory', title: 'Salon Service Categories', description: 'Define categories for various salon services.', tab: 'services' },
-        { key: 'service', title: 'Salon Services', description: 'Manage individual salon services.', tab: 'services' },
         { key: 'designation', title: 'Admin Designations', description: 'Manage the list of available staff designations.', tab: 'admin' },
         { key: 'smsType', title: 'SMS Template Types', description: 'Manage types for SMS templates.', tab: 'marketing' },
         { key: 'socialPlatform', title: 'Social Media Platforms', description: 'Manage platforms for social posts.', tab: 'marketing' },
@@ -517,18 +457,7 @@ export default function DropdownManagementPage() {
                 </TabsContent>
                 <TabsContent value="services">
                     <div className="space-y-8">
-                        {dropdownTypes.filter(d => d.tab === 'services').map(d => (
-                            <DropdownManager
-                                key={d.key}
-                                listTitle={d.title}
-                                listDescription={d.description}
-                                items={data.filter(item => item.type === d.key)}
-                                type={d.key}
-                                onUpdate={handleUpdate}
-                                isLoading={isLoading}
-                            />
-                        ))}
-                        <ServiceCategoryManager />
+                       <ServiceManager />
                     </div>
                 </TabsContent>
                 <TabsContent value="locations">
