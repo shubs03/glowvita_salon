@@ -17,6 +17,7 @@
     "./radio-group": "./src/radio-group.tsx",
     "./switch": "./src/switch.tsx",
     "./checkbox": "./src/checkbox.tsx",
+    "./skeleton": "./src/skeleton.tsx",
     "./globals.css": "./src/globals.css",
     "./tailwind.config": "./tailwind.config.ts",
     "./cn": "./src/cn.ts"
