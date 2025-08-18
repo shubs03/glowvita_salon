@@ -16,8 +16,6 @@ const superDataSchema = new mongoose.Schema({
     enum: [
       'specialization',
       'faqCategory',
-      'serviceCategory',
-      'service',
       'designation',
       'smsType',
       'socialPlatform',
