@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -102,20 +103,18 @@ export default function ReferralManagementPage() {
   };
 
   const handleReferrerBonusChange = (field: string, value: string | number) => {
-    const currentReferrerBonus = modal.settings?.referrerBonus || getDefaultSettings().referrerBonus;
     dispatch(updateModalSettings({
       referrerBonus: {
-        ...currentReferrerBonus,
+        ...modal.settings.referrerBonus,
         [field]: value,
       },
     }));
   };
 
   const handleRefereeBonusChange = (field: string, value: string | number | boolean) => {
-    const currentRefereeBonus = modal.settings?.refereeBonus || getDefaultSettings().refereeBonus;
     dispatch(updateModalSettings({
       refereeBonus: {
-        ...currentRefereeBonus,
+        ...modal.settings.refereeBonus,
         [field]: value,
       },
     }));

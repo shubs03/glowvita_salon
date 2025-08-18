@@ -104,12 +104,40 @@ const doctorsApprovalData = [
     }
 ];
 
+const suppliersData = [
+  {
+    id: "SUP-001",
+    supplierName: "Global Beauty Supplies",
+    businessRegistrationNo: "GSTIN123456789",
+    supplierType: "Hair Care",
+    license: "License_GBS.pdf",
+    status: "Pending",
+    firstName: "John",
+    lastName: "Doe",
+    email: "contact@gbs.com",
+    phone: "123-456-7890",
+  },
+  {
+    id: "SUP-002",
+    supplierName: "Organic Skincare Inc.",
+    businessRegistrationNo: "GSTIN987654321",
+    supplierType: "Skin Care",
+    license: "License_OSI.pdf",
+    status: "Pending",
+    firstName: "Jane",
+    lastName: "Smith",
+    email: "sales@organicskin.com",
+    phone: "234-567-8901",
+  },
+];
+
 type Vendor = typeof vendorsData[0];
 type Service = typeof servicesData[0];
 type Product = typeof productsData[0];
 type Doctor = typeof doctorsApprovalData[0];
+type Supplier = typeof suppliersData[0];
 type ActionType = 'approve' | 'reject' | 'delete';
-type ItemType = 'vendor' | 'service' | 'product' | 'doctor';
+type ItemType = 'vendor' | 'service' | 'product' | 'doctor' | 'supplier';
 
 export default function VendorApprovalPage() {
     const [currentPage, setCurrentPage] = useState(1);
@@ -118,7 +146,7 @@ export default function VendorApprovalPage() {
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     
-    const [selectedItem, setSelectedItem] = useState<Vendor | Service | Product | Doctor | null>(null);
+    const [selectedItem, setSelectedItem] = useState<Vendor | Service | Product | Doctor | Supplier | null>(null);
     const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
     const [actionType, setActionType] = useState<ActionType | null>(null);
     const [itemType, setItemType] = useState<ItemType | null>(null);
@@ -130,20 +158,22 @@ export default function VendorApprovalPage() {
     const currentServices = servicesData.slice(firstItemIndex, lastItemIndex);
     const currentProducts = productsData.slice(firstItemIndex, lastItemIndex);
     const currentDoctors = doctorsApprovalData.slice(firstItemIndex, lastItemIndex);
+    const currentSuppliers = suppliersData.slice(firstItemIndex, lastItemIndex);
 
     const totalVendorPages = Math.ceil(vendorsData.length / itemsPerPage);
     const totalServicePages = Math.ceil(servicesData.length / itemsPerPage);
     const totalProductPages = Math.ceil(productsData.length / itemsPerPage);
     const totalDoctorPages = Math.ceil(doctorsApprovalData.length / itemsPerPage);
+    const totalSupplierPages = Math.ceil(suppliersData.length / itemsPerPage);
 
-    const handleActionClick = (item: Vendor | Service | Product | Doctor, type: ItemType, action: ActionType) => {
+    const handleActionClick = (item: Vendor | Service | Product | Doctor | Supplier, type: ItemType, action: ActionType) => {
         setSelectedItem(item);
         setItemType(type);
         setActionType(action);
         setIsActionModalOpen(true);
     };
 
-    const handleViewClick = (item: Vendor | Service | Product | Doctor, type: ItemType) => {
+    const handleViewClick = (item: Vendor | Service | Product | Doctor | Supplier, type: ItemType) => {
         setSelectedItem(item);
         setItemType(type);
         setIsViewModalOpen(true);
@@ -156,7 +186,7 @@ export default function VendorApprovalPage() {
 
     const handleConfirmAction = () => {
         if (selectedItem && actionType) {
-            const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName;
+            const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || (selectedItem as any).supplierName;
             console.log(`Performing ${actionType} on ${itemType} ${itemName}`);
         }
         setIsActionModalOpen(false);
@@ -168,7 +198,7 @@ export default function VendorApprovalPage() {
     const getModalContent = () => {
         if (!actionType || !selectedItem || !itemType) return { title: '', description: '', buttonText: '' };
         
-        const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName;
+        const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || (selectedItem as any).supplierName;
 
         switch (actionType) {
             case 'approve':
@@ -244,11 +274,12 @@ export default function VendorApprovalPage() {
       </div>
 
     <Tabs defaultValue="vendor-approvals">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-2xl">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-3xl">
             <TabsTrigger value="vendor-approvals">Vendor Approvals</TabsTrigger>
             <TabsTrigger value="service-approvals">Service Approvals</TabsTrigger>
             <TabsTrigger value="product-approvals">Product Approvals</TabsTrigger>
             <TabsTrigger value="doctor-approvals">Doctor Approvals</TabsTrigger>
+            <TabsTrigger value="supplier-approvals">Supplier Approvals</TabsTrigger>
         </TabsList>
         <TabsContent value="vendor-approvals">
             <Card>
@@ -364,6 +395,10 @@ export default function VendorApprovalPage() {
                                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'reject')}>
                                                 <XCircle className="h-4 w-4 text-red-600" />
                                                 <span className="sr-only">Reject</span>
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'delete')}>
+                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                                <span className="sr-only">Delete</span>
                                             </Button>
                                         </>
                                     )}
@@ -537,6 +572,72 @@ export default function VendorApprovalPage() {
                 </CardContent>
             </Card>
         </TabsContent>
+        <TabsContent value="supplier-approvals">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Pending Supplier Approvals</CardTitle>
+                    <CardDescription>Suppliers waiting for verification.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                <div className="overflow-x-auto no-scrollbar">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Supplier Name</TableHead>
+                                <TableHead>Business Reg. No.</TableHead>
+                                <TableHead>Supplier Type</TableHead>
+                                <TableHead>License/Cert.</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {currentSuppliers.map((supplier) => (
+                                <TableRow key={supplier.id}>
+                                    <TableCell className="font-medium">{supplier.supplierName}</TableCell>
+                                    <TableCell>{supplier.businessRegistrationNo}</TableCell>
+                                    <TableCell>{supplier.supplierType}</TableCell>
+                                    <TableCell>
+                                        <a href="#" className="text-primary hover:underline">{supplier.license}</a>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={supplier.status === 'Pending' ? 'default' : 'secondary'} className={supplier.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}>{supplier.status}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => handleViewClick(supplier, 'supplier')}>
+                                            <Eye className="h-4 w-4" />
+                                            <span className="sr-only">View Details</span>
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'supplier', 'approve')}>
+                                            <CheckCircle className="h-4 w-4 text-green-600" />
+                                            <span className="sr-only">Approve</span>
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'supplier', 'reject')}>
+                                            <XCircle className="h-4 w-4 text-red-600" />
+                                            <span className="sr-only">Reject</span>
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'supplier', 'delete')}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                            <span className="sr-only">Delete</span>
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                <Pagination
+                    className="mt-4"
+                    currentPage={currentPage}
+                    totalPages={totalSupplierPages}
+                    onPageChange={setCurrentPage}
+                    itemsPerPage={itemsPerPage}
+                    onItemsPerPageChange={setItemsPerPage}
+                    totalItems={suppliersData.length}
+                />
+                </CardContent>
+            </Card>
+        </TabsContent>
     </Tabs>
 
 
@@ -628,6 +729,18 @@ export default function VendorApprovalPage() {
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Specialization</span><span className="col-span-2"><Badge>{(selectedItem as Doctor).specialization}</Badge></span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Experience</span><span className="col-span-2">{(selectedItem as Doctor).experience}</span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Qualification</span><span className="col-span-2">{(selectedItem as Doctor).qualification}</span></div>
+                    </>
+                )}
+                 {itemType === 'supplier' && selectedItem && (
+                    <>
+                        <h3 className="text-lg font-semibold">{(selectedItem as Supplier).supplierName}</h3>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Supplier ID</span><span className="col-span-2">{(selectedItem as Supplier).id}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Owner</span><span className="col-span-2">{`${(selectedItem as Supplier).firstName} ${(selectedItem as Supplier).lastName}`}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Contact</span><span className="col-span-2">{(selectedItem as Supplier).email}<br />{(selectedItem as Supplier).phone}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Business Reg. No.</span><span className="col-span-2">{(selectedItem as Supplier).businessRegistrationNo}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Supplier Type</span><span className="col-span-2"><Badge>{(selectedItem as Supplier).supplierType}</Badge></span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">License</span><span className="col-span-2"><a href="#" className="text-primary hover:underline">{(selectedItem as Supplier).license}</a></span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Status</span><span className="col-span-2">{(selectedItem as Supplier).status}</span></div>
                     </>
                 )}
             </div>

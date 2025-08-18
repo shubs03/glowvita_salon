@@ -85,9 +85,12 @@ const referralSlice = createSlice({
       state.modal.settings = null;
     },
     updateModalSettings: (state, action) => {
-      // Replace the entire settings object instead of spreading
       if (state.modal.settings) {
-        state.modal.settings = action.payload;
+        // Deep merge the changes into the existing settings
+        state.modal.settings = {
+          ...state.modal.settings,
+          ...action.payload,
+        };
       }
     },
     setPagination: (state, action) => {
