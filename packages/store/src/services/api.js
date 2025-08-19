@@ -90,7 +90,14 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
   baseQuery: baseQuery,
-  tagTypes: ["admin", "offers", "Referrals", "Settings", "SuperData", "Supplier"],
+  tagTypes: [
+    "admin",
+    "offers",
+    "Referrals",
+    "Settings",
+    "SuperData",
+    "Supplier",
+  ],
   endpoints: (builder) => ({
     // Admin
     registerAdmin: builder.mutation({
@@ -344,7 +351,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["doctors"],
     }),
-    
+
     // Supplier Endpoints
     getSuppliers: builder.query({
       query: () => "/admin/suppliers",
@@ -373,6 +380,36 @@ export const glowvitaApi = createApi({
         body: { id },
       }),
       invalidatesTags: ["Supplier"],
+    }),
+
+    // Geo Fence
+    getGeoFences: builder.query({
+      query: () => "/admin/geofence",
+      providesTags: ["GeoFence"],
+    }),
+    createGeoFence: builder.mutation({
+      query: (geoFence) => ({
+        url: "/admin/geofence",
+        method: "POST",
+        body: geoFence,
+      }),
+      invalidatesTags: ["GeoFence"],
+    }),
+    updateGeoFence: builder.mutation({
+      query: ({ _id, ...geoFence }) => ({
+        url: "/admin/geofence",
+        method: "PUT",
+        body: { _id, ...geoFence },
+      }),
+      invalidatesTags: ["GeoFence"],
+    }),
+    deleteGeoFence: builder.mutation({
+      query: (_id) => ({
+        url: "/admin/geofence",
+        method: "DELETE",
+        body: { _id },
+      }),
+      invalidatesTags: ["GeoFence"],
     }),
   }),
 });
@@ -428,4 +465,10 @@ export const {
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
+
+  // Geo Fence Endpoints
+  useGetGeoFencesQuery,
+  useCreateGeoFenceMutation,
+  useUpdateGeoFenceMutation,
+  useDeleteGeoFenceMutation,
 } = glowvitaApi;
