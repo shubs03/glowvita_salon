@@ -3,9 +3,7 @@
 import { StatCard } from '@/components/dashboard/StatCard';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { UpcomingAppointments } from '@/components/dashboard/UpcomingAppointments';
-import { TopServicesChart } from '@/components/dashboard/TopServicesChart';
 import { ClientFeedback } from '@/components/dashboard/ClientFeedback';
-import { ToDoList } from '@/components/dashboard/ToDoList';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { QuickLinks } from '@/components/dashboard/QuickLinks';
 import {
@@ -55,7 +53,7 @@ export default function CrmPage() {
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 {/* Main Content Area */}
                 <div className="lg:col-span-2 space-y-8">
                     <RevenueChart />
@@ -64,10 +62,11 @@ export default function CrmPage() {
 
                 {/* Sidebar Area */}
                 <div className="space-y-8">
-                    <QuickLinks />
-                    <RecentActivity />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-8">
+                        <QuickLinks />
+                        <RecentActivity />
+                    </div>
                     <ClientFeedback />
-                    <ToDoList />
                 </div>
             </div>
         </div>
