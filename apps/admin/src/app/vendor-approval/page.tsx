@@ -96,12 +96,25 @@ type Doctor = {
     id: string;
     profileImage: string;
     name: string;
+    email: string;
+    phone: string;
+    gender: string;
     clinicName: string;
     specialization: string;
     experience: string;
     qualification: string;
     status: 'Approved' | 'Pending' | 'Rejected';
+    registrationNumber: string;
+    state: string;
+    city: string;
+    pincode: string;
+    physicalConsultationStartTime: string;
+    physicalConsultationEndTime: string;
+    assistantName: string;
+    assistantContact: string;
+    doctorAvailability: string;
 };
+
 type Supplier = {
   _id: string;
   supplierName: string;
@@ -250,42 +263,42 @@ export default function VendorApprovalPage() {
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Vendors</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">573</div>
-            <p className="text-xs text-muted-foreground">+2 since last hour</p>
+            <div className="text-2xl font-bold">{vendorsData.length}</div>
+            <p className="text-xs text-muted-foreground">Vendors to review</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Approved</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Services</CardTitle>
             <ThumbsUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">450</div>
-            <p className="text-xs text-muted-foreground">87% approval rate</p>
+            <div className="text-2xl font-bold">{servicesData.length}</div>
+            <p className="text-xs text-muted-foreground">Services to approve</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Doctors</CardTitle>
             <Hourglass className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{pendingSuppliers.length + pendingDoctors.length}</div>
-            <p className="text-xs text-muted-foreground">Waiting for review</p>
+            <div className="text-2xl font-bold text-yellow-600">{pendingDoctors.length}</div>
+            <p className="text-xs text-muted-foreground">Doctors awaiting review</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disapproved</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Suppliers</CardTitle>
             <ThumbsDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">118</div>
-            <p className="text-xs text-muted-foreground">Onboarding rejected</p>
+            <div className="text-2xl font-bold text-red-600">{pendingSuppliers.length}</div>
+            <p className="text-xs text-muted-foreground">Suppliers awaiting review</p>
           </CardContent>
         </Card>
       </div>
@@ -699,7 +712,7 @@ export default function VendorApprovalPage() {
         </Dialog>
         
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto no-scrollbar">
             <DialogHeader>
                 <DialogTitle>View Details</DialogTitle>
             </DialogHeader>
@@ -752,18 +765,28 @@ export default function VendorApprovalPage() {
                     </>
                 )}
                  {itemType === 'doctor' && selectedItem && (
-                     <>
-                        <div className="flex items-center gap-4">
-                           <Image src={(selectedItem as Doctor).profileImage || "https://placehold.co/400x400.png"} alt={(selectedItem as Doctor).name} width={80} height={80} className="rounded-full" />
-                           <div>
+                    <>
+                        <div className="flex items-start gap-4">
+                            <Image src={(selectedItem as Doctor).profileImage || "https://placehold.co/100x100.png"} alt={(selectedItem as Doctor).name} width={80} height={80} className="rounded-lg" />
+                            <div className="flex-1">
                                 <h3 className="text-lg font-semibold">{(selectedItem as Doctor).name}</h3>
-                                <p className="text-muted-foreground">{(selectedItem as Doctor).clinicName}</p>
-                           </div>
+                                <p className="text-sm text-muted-foreground">{(selectedItem as Doctor).clinicName}</p>
+                                <Badge variant="outline" className="mt-2">{(selectedItem as Doctor).specialization}</Badge>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Doctor ID</span><span className="col-span-2">{(selectedItem as Doctor).id}</span></div>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Specialization</span><span className="col-span-2"><Badge>{(selectedItem as Doctor).specialization}</Badge></span></div>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Experience</span><span className="col-span-2">{(selectedItem as Doctor).experience}</span></div>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Qualification</span><span className="col-span-2">{(selectedItem as Doctor).qualification}</span></div>
+                        <div className="mt-4 border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Email:</span><span>{(selectedItem as Doctor).email}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Phone:</span><span>{(selectedItem as Doctor).phone}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Gender:</span><span>{(selectedItem as Doctor).gender}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Reg. No:</span><span>{(selectedItem as Doctor).registrationNumber}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Experience:</span><span>{(selectedItem as Doctor).experience}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Qualification:</span><span>{(selectedItem as Doctor).qualification}</span></div>
+                             <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Availability:</span><span>{(selectedItem as Doctor).doctorAvailability}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Consultation Time:</span><span>{(selectedItem as Doctor).physicalConsultationStartTime} - {(selectedItem as Doctor).physicalConsultationEndTime}</span></div>
+                            <div className="flex justify-between border-b py-1 md:col-span-2"><span className="text-muted-foreground">Location:</span><span>{`${(selectedItem as Doctor).city}, ${(selectedItem as Doctor).state}, ${(selectedItem as Doctor).pincode}`}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Assistant Name:</span><span>{(selectedItem as Doctor).assistantName}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Assistant Contact:</span><span>{(selectedItem as Doctor).assistantContact}</span></div>
+                        </div>
                     </>
                 )}
                  {itemType === 'supplier' && selectedItem && (
