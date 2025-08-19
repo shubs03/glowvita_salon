@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -44,6 +45,8 @@ export interface Doctor {
   assistantContact: string;
   doctorAvailability: 'Online' | 'Offline';
   landline?: string;
+  workingWithHospital?: boolean;
+  videoConsultation?: boolean;
 }
 
 interface State {
@@ -90,7 +93,9 @@ const initialFormData: Doctor & { password: string; confirmPassword: string } = 
   clinicAddress: '',
   state: '',
   city: '',
-  pincode: ''
+  pincode: '',
+  workingWithHospital: false,
+  videoConsultation: false,
 };
 
 export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: DoctorFormProps) {
@@ -110,7 +115,9 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
           faculty: doctor.faculty || '',
           landline: doctor.landline || '',
           assistantName: doctor.assistantName || '',
-          assistantContact: doctor.assistantContact || ''
+          assistantContact: doctor.assistantContact || '',
+          workingWithHospital: doctor.workingWithHospital || false,
+          videoConsultation: doctor.videoConsultation || false,
         }
       : initialFormData
   );
@@ -135,7 +142,9 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
         faculty: doctor.faculty || '',
         landline: doctor.landline || '',
         assistantName: doctor.assistantName || '',
-        assistantContact: doctor.assistantContact || ''
+        assistantContact: doctor.assistantContact || '',
+        workingWithHospital: doctor.workingWithHospital || false,
+        videoConsultation: doctor.videoConsultation || false,
       });
       setSelectedState(doctor.state || '');
       setProfileImagePreview(doctor.profileImage || null);
@@ -207,6 +216,13 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleRadioChange = (name: string, value: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
     }));
   };
 
@@ -539,65 +555,67 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                           <Label className="text-sm font-medium text-gray-700 block">
                             Working With Hospital <span className="text-red-500">*</span>
                           </Label>
-                          <div className="flex space-x-4 mt-1">
-                            <div className="flex items-center">
-                              <input
-                                type="radio"
-                                id="hospitalYes"
-                                name="workingWithHospital"
-                                value="yes"
-                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                              />
-                              <label htmlFor="hospitalYes" className="ml-2 block text-sm text-gray-700">
-                                Yes
-                              </label>
+                           <div className="flex space-x-4 mt-1">
+                                <div className="flex items-center">
+                                <input
+                                    type="radio"
+                                    id="hospitalYes"
+                                    name="workingWithHospital"
+                                    checked={formData.workingWithHospital === true}
+                                    onChange={() => handleRadioChange('workingWithHospital', true)}
+                                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                                />
+                                <label htmlFor="hospitalYes" className="ml-2 block text-sm text-gray-700">
+                                    Yes
+                                </label>
+                                </div>
+                                <div className="flex items-center">
+                                <input
+                                    type="radio"
+                                    id="hospitalNo"
+                                    name="workingWithHospital"
+                                    checked={formData.workingWithHospital === false}
+                                    onChange={() => handleRadioChange('workingWithHospital', false)}
+                                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                                />
+                                <label htmlFor="hospitalNo" className="ml-2 block text-sm text-gray-700">
+                                    No
+                                </label>
+                                </div>
                             </div>
-                            <div className="flex items-center">
-                              <input
-                                type="radio"
-                                id="hospitalNo"
-                                name="workingWithHospital"
-                                value="no"
-                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                                defaultChecked
-                              />
-                              <label htmlFor="hospitalNo" className="ml-2 block text-sm text-gray-700">
-                                No
-                              </label>
-                            </div>
-                          </div>
                         </div>
                         <div className="space-y-1.5">
                           <Label className="text-sm font-medium text-gray-700 block">
                             Video Call Consultation <span className="text-red-500">*</span>
                           </Label>
-                          <div className="flex space-x-4 mt-1">
-                            <div className="flex items-center">
-                              <input
-                                type="radio"
-                                id="videoConsultationYes"
-                                name="videoConsultation"
-                                value="yes"
-                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                              />
-                              <label htmlFor="videoConsultationYes" className="ml-2 block text-sm text-gray-700">
-                                Yes
-                              </label>
+                           <div className="flex space-x-4 mt-1">
+                                <div className="flex items-center">
+                                <input
+                                    type="radio"
+                                    id="videoConsultationYes"
+                                    name="videoConsultation"
+                                    checked={formData.videoConsultation === true}
+                                    onChange={() => handleRadioChange('videoConsultation', true)}
+                                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                                />
+                                <label htmlFor="videoConsultationYes" className="ml-2 block text-sm text-gray-700">
+                                    Yes
+                                </label>
+                                </div>
+                                <div className="flex items-center">
+                                <input
+                                    type="radio"
+                                    id="videoConsultationNo"
+                                    name="videoConsultation"
+                                    checked={formData.videoConsultation === false}
+                                    onChange={() => handleRadioChange('videoConsultation', false)}
+                                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                                />
+                                <label htmlFor="videoConsultationNo" className="ml-2 block text-sm text-gray-700">
+                                    No
+                                </label>
+                                </div>
                             </div>
-                            <div className="flex items-center">
-                              <input
-                                type="radio"
-                                id="videoConsultationNo"
-                                name="videoConsultation"
-                                value="no"
-                                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
-                                defaultChecked
-                              />
-                              <label htmlFor="videoConsultationNo" className="ml-2 block text-sm text-gray-700">
-                                No
-                              </label>
-                            </div>
-                          </div>
                         </div>
                       </div>
                     </div>

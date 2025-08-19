@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const doctorSchema = new mongoose.Schema({
@@ -120,6 +121,14 @@ const doctorSchema = new mongoose.Schema({
   landline: {
     type: String,
     trim: true,
+  },
+  workingWithHospital: {
+    type: Boolean,
+    default: false,
+  },
+  videoConsultation: {
+    type: Boolean,
+    default: false,
   },
   createdAt: {
     type: Date,

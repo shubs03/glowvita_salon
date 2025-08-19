@@ -390,6 +390,73 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
+    
+    // Subscription Plans
+    getSubscriptionPlans: builder.query({
+      query: () => '/admin/subscription-plans',
+      providesTags: (result = []) => [
+        'SubscriptionPlan',
+        ...result.map(({ _id }) => ({ type: 'SubscriptionPlan', id: _id }))
+      ]
+    }),
+    
+    createSubscriptionPlan: builder.mutation({
+      query: (planData) => ({
+        url: '/admin/subscription-plans',
+        method: 'POST',
+        body: planData
+      }),
+      async onQueryStarted(planData, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          glowvitaApi.util.updateQueryData('getSubscriptionPlans', undefined, (draft) => {
+            draft.push({
+              ...planData,
+              _id: 'temp-id',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+          })
+        );
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            glowvitaApi.util.updateQueryData('getSubscriptionPlans', undefined, (draft) => {
+              const index = draft.findIndex(plan => plan._id === 'temp-id');
+              if (index !== -1) {
+                draft[index] = data;
+              }
+            })
+          );
+        } catch (error) {
+          patchResult.undo();
+          throw error;
+        }
+      },
+      invalidatesTags: ['SubscriptionPlan']
+    }),
+    
+    updateSubscriptionPlan: builder.mutation({
+      query: ({ _id, ...updates }) => ({
+        url: `/admin/subscription-plans?id=${_id}`,
+        method: 'PATCH',
+        body: updates,
+      }),
+      invalidatesTags: (result, error, { _id }) => [
+        { type: 'SubscriptionPlan', id: _id },
+        'SubscriptionPlan'
+      ]
+    }),
+    
+    deleteSubscriptionPlan: builder.mutation({
+      query: (id) => ({
+        url: `/admin/subscription-plans?id=${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: 'SubscriptionPlan', id },
+        'SubscriptionPlan'
+      ]    
+    }),
 
     // Geo Fence
     getGeoFences: builder.query({
@@ -564,6 +631,15 @@ export const {
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
+  
+  // Subscription Management
+  
+  // Subscription Plans
+  useGetSubscriptionPlansQuery,
+  useCreateSubscriptionPlanMutation,
+  useUpdateSubscriptionPlanMutation,
+  useDeleteSubscriptionPlanMutation,
+  useToggleSubscriptionPlanStatusMutation,
 
   // Geo Fence Endpoints
   useGetGeoFencesQuery,
