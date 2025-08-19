@@ -1,8 +1,8 @@
 
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
-import { FaArrowRight, FaBook, FaCalendarCheck, FaChartLine, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaRocket, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
+import { FaArrowRight, FaBook, FaCalendarCheck, FaChartLine, FaCheck, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaRocket, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
 import Image from 'next/image';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
@@ -96,6 +96,106 @@ export default function CrmHomePage() {
                             Keep your team in sync with internal chat, shared notes, and a collaborative to-do list.
                          </FeatureItem>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        {/* How it Works */}
+        <section className="py-20 bg-secondary/50">
+            <div className="container mx-auto px-4">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold font-headline">Get Started in 3 Simple Steps</h2>
+                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+                        Launch your salon management to the next level in just a few minutes.
+                    </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                    <Card className="bg-background">
+                        <CardHeader>
+                            <div className="mx-auto bg-primary/10 h-12 w-12 flex items-center justify-center rounded-full text-primary font-bold text-xl">1</div>
+                            <CardTitle className="mt-4">Sign Up</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">Create your account and set up your salon profile in minutes.</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-background">
+                        <CardHeader>
+                            <div className="mx-auto bg-primary/10 h-12 w-12 flex items-center justify-center rounded-full text-primary font-bold text-xl">2</div>
+                            <CardTitle className="mt-4">Add Your Services</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">Easily add your services, pricing, and staff members.</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-background">
+                        <CardHeader>
+                            <div className="mx-auto bg-primary/10 h-12 w-12 flex items-center justify-center rounded-full text-primary font-bold text-xl">3</div>
+                            <CardTitle className="mt-4">Start Booking</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">Begin managing appointments and growing your client base immediately.</p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </section>
+
+        {/* Pricing Section */}
+        <section className="py-20 bg-background">
+            <div className="container mx-auto px-4">
+                 <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold font-headline">Choose Your Plan</h2>
+                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+                        Simple, transparent pricing that scales with your business.
+                    </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <Card className="flex flex-col">
+                        <CardHeader>
+                            <CardTitle>Basic</CardTitle>
+                            <CardDescription>Perfect for individual stylists or small salons.</CardDescription>
+                            <p className="text-4xl font-bold pt-4">₹999<span className="text-lg font-normal text-muted-foreground">/mo</span></p>
+                        </CardHeader>
+                        <CardContent className="flex-grow space-y-3">
+                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Up to 50 Clients</p>
+                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Basic Booking</p>
+                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Email Support</p>
+                        </CardContent>
+                        <CardFooter>
+                           <Button className="w-full" variant="outline">Choose Plan</Button>
+                        </CardFooter>
+                    </Card>
+                     <Card className="border-primary flex flex-col shadow-lg">
+                        <CardHeader>
+                            <CardTitle>Pro</CardTitle>
+                            <CardDescription>For growing businesses that need more power.</CardDescription>
+                            <p className="text-4xl font-bold pt-4">₹2499<span className="text-lg font-normal text-muted-foreground">/mo</span></p>
+                        </CardHeader>
+                        <CardContent className="flex-grow space-y-3">
+                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Unlimited Clients</p>
+                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Advanced Booking & Analytics</p>
+                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Priority Email & Chat Support</p>
+                        </CardContent>
+                        <CardFooter>
+                           <Button className="w-full">Choose Plan</Button>
+                        </CardFooter>
+                    </Card>
+                     <Card className="flex flex-col">
+                        <CardHeader>
+                            <CardTitle>Enterprise</CardTitle>
+                            <CardDescription>Tailored solutions for large-scale operations.</CardDescription>
+                            <p className="text-4xl font-bold pt-4">Contact Us</p>
+                        </CardHeader>
+                        <CardContent className="flex-grow space-y-3">
+                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Multi-location Support</p>
+                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Custom Integrations</p>
+                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Dedicated Account Manager</p>
+                        </CardContent>
+                        <CardFooter>
+                           <Button className="w-full" variant="outline">Contact Sales</Button>
+                        </CardFooter>
+                    </Card>
                 </div>
             </div>
         </section>
