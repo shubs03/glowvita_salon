@@ -18,6 +18,14 @@ import {
   useCreateSuperDataItemMutation,
   useUpdateSuperDataItemMutation,
   useDeleteSuperDataItemMutation,
+  useGetCategoriesQuery,
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
+  useGetServicesQuery,
+  useCreateServiceMutation,
+  useUpdateServiceMutation,
+  useDeleteServiceMutation,
 } from '../../../../../packages/store/src/services/api';
 import { Badge } from '@repo/ui/badge';
 
@@ -32,6 +40,19 @@ interface DropdownItem {
 interface LocationItem extends DropdownItem {
     countryId?: string;
     stateId?: string;
+}
+
+interface ServiceCategory {
+    _id: string;
+    name: string;
+    description?: string;
+}
+
+interface Service {
+    _id: string;
+    name: string;
+    description?: string;
+    category: ServiceCategory | string;
 }
 
 const DropdownManager = ({
@@ -211,6 +232,355 @@ const DropdownManager = ({
       </CardContent>
     </Card>
   );
+};
+
+const ServiceCategoryManager = () => {
+    const { data: categories = [], isLoading, isError } = useGetCategoriesQuery(undefined);
+    const [createCategory] = useCreateCategoryMutation();
+    const [updateCategory] = useUpdateCategoryMutation();
+    const [deleteCategory] = useDeleteCategoryMutation();
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [currentItem, setCurrentItem] = useState<Partial<ServiceCategory> | null>(null);
+
+    const handleOpenModal = (item: Partial<ServiceCategory> | null = null) => {
+        setCurrentItem(item);
+        setIsModalOpen(true);
+    };
+
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+        const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
+
+        const action = currentItem?._id ? 'edit' : 'add';
+        const itemData = {
+            id: currentItem?._id,
+            name,
+            description,
+        };
+
+        try {
+            if (action === 'add') {
+                await createCategory(itemData).unwrap();
+            } else {
+                await updateCategory(itemData).unwrap();
+            }
+            toast.success('Success', { description: `Category ${action}ed successfully.` });
+            setIsModalOpen(false);
+            setCurrentItem(null);
+        } catch (error) {
+            toast.error('Error', { description: `Failed to ${action} category.` });
+        }
+    };
+
+    const handleDeleteClick = (item: ServiceCategory) => {
+        setCurrentItem(item);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (currentItem?._id) {
+            try {
+                await deleteCategory({ id: currentItem._id }).unwrap();
+                toast.success('Success', { description: 'Category deleted successfully.' });
+                setIsDeleteModalOpen(false);
+                setCurrentItem(null);
+            } catch (error) {
+                toast.error('Error', { description: 'Failed to delete category.' });
+            }
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Service Categories</CardTitle>
+                        <CardDescription>Manage categories for salon services.</CardDescription>
+                    </div>
+                    <Button onClick={() => handleOpenModal()} disabled={isLoading}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Category
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="overflow-x-auto no-scrollbar rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {categories.map((item) => (
+                                <TableRow key={item._id}>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell className="text-muted-foreground">{item.description}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(item)} disabled={isLoading}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {categories.length === 0 && !isLoading && (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                        No categories found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            {isLoading && (
+                                <TableRow>
+                                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                        Loading...
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogContent className="sm:max-w-lg">
+                        <form onSubmit={handleSave}>
+                            <DialogHeader>
+                                <DialogTitle>{currentItem?._id ? 'Edit' : 'Add'} Category</DialogTitle>
+                                <DialogDescription>
+                                    {currentItem?._id ? `Editing "${currentItem.name}".` : 'Add a new service category.'}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Name</Label>
+                                    <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="description">Description</Label>
+                                    <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                                <Button type="submit">Save</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete Category?</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to delete "{currentItem?.name}"? This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </CardContent>
+        </Card>
+    );
+};
+
+const ServiceManager = () => {
+    const { data: services = [], isLoading, isError } = useGetServicesQuery(undefined);
+    const { data: categories = [] } = useGetCategoriesQuery(undefined);
+    const [createService] = useCreateServiceMutation();
+    const [updateService] = useUpdateServiceMutation();
+    const [deleteService] = useDeleteServiceMutation();
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [currentItem, setCurrentItem] = useState<Partial<Service> | null>(null);
+
+    const handleOpenModal = (item: Partial<Service> | null = null) => {
+        setCurrentItem(item);
+        setIsModalOpen(true);
+    };
+
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+        const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
+        const category = (form.elements.namedItem('category') as HTMLSelectElement).value;
+        
+        const action = currentItem?._id ? 'edit' : 'add';
+        const itemData = {
+            id: currentItem?._id,
+            name,
+            description,
+            category,
+        };
+        
+        try {
+            if (action === 'add') {
+                await createService(itemData).unwrap();
+            } else {
+                await updateService(itemData).unwrap();
+            }
+            toast.success('Success', { description: `Service ${action}ed successfully.` });
+            setIsModalOpen(false);
+            setCurrentItem(null);
+        } catch (error) {
+            toast.error('Error', { description: `Failed to ${action} service.` });
+        }
+    };
+
+    const handleDeleteClick = (item: Service) => {
+        setCurrentItem(item);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (currentItem?._id) {
+            try {
+                await deleteService({ id: currentItem._id }).unwrap();
+                toast.success('Success', { description: 'Service deleted successfully.' });
+                setIsDeleteModalOpen(false);
+                setCurrentItem(null);
+            } catch (error) {
+                toast.error('Error', { description: 'Failed to delete service.' });
+            }
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Services</CardTitle>
+                        <CardDescription>Manage individual salon services.</CardDescription>
+                    </div>
+                    <Button onClick={() => handleOpenModal()} disabled={isLoading || categories.length === 0}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Service
+                    </Button>
+                </div>
+                 {categories.length === 0 && <p className="text-sm text-yellow-600 mt-2">Please add a category first before adding services.</p>}
+            </CardHeader>
+            <CardContent>
+                <div className="overflow-x-auto no-scrollbar rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Category</TableHead>
+                                <TableHead>Description</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {services.map((item) => (
+                                <TableRow key={item._id}>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="secondary">
+                                            {typeof item.category === 'object' ? item.category.name : 'N/A'}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">{item.description}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(item)} disabled={isLoading}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {services.length === 0 && !isLoading && (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                        No services found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            {isLoading && (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                        Loading...
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogContent className="sm:max-w-lg">
+                        <form onSubmit={handleSave}>
+                            <DialogHeader>
+                                <DialogTitle>{currentItem?._id ? 'Edit' : 'Add'} Service</DialogTitle>
+                                <DialogDescription>
+                                    {currentItem?._id ? `Editing "${currentItem.name}".` : 'Add a new service.'}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Name</Label>
+                                    <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="category">Category</Label>
+                                    <Select name="category" defaultValue={typeof currentItem?.category === 'object' ? currentItem?.category?._id : currentItem?.category} required>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a category" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {categories.map((cat) => (
+                                                <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="description">Description</Label>
+                                    <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} />
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                                <Button type="submit">Save</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete Service?</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to delete "{currentItem?.name}"? This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </CardContent>
+        </Card>
+    );
 };
 
 export default function DropdownManagementPage() {
@@ -399,80 +769,6 @@ export default function DropdownManagementPage() {
         );
     };
 
-    const ServiceCategoryManager = () => {
-        const serviceCategories = useMemo(() => data.filter(item => item.type === 'serviceCategory'), [data]);
-        const services = useMemo(() => data.filter(item => item.type === 'service'), [data]);
-    
-        const handleServiceAssignment = async (categoryId: string, serviceId: string) => {
-            const serviceToUpdate = services.find(s => s._id === serviceId);
-            if (serviceToUpdate) {
-                await handleUpdate({ ...serviceToUpdate, parentId: categoryId }, 'edit');
-            }
-        };
-    
-        const handleServiceUnassignment = async (serviceId: string) => {
-            const serviceToUpdate = services.find(s => s._id === serviceId);
-            if (serviceToUpdate) {
-                await handleUpdate({ ...serviceToUpdate, parentId: undefined }, 'edit');
-            }
-        };
-
-        const servicesByCategory = useMemo(() => {
-            const assignedServiceIds = new Set<string>();
-            const mapping = serviceCategories.reduce((acc, category) => {
-                const assigned = services.filter(s => s.parentId === category._id);
-                assigned.forEach(s => assignedServiceIds.add(s._id));
-                acc[category._id] = assigned;
-                return acc;
-            }, {} as Record<string, DropdownItem[]>);
-            const unassignedServices = services.filter(s => !s.parentId);
-            return { mapping, unassignedServices };
-        }, [serviceCategories, services]);
-    
-        return (
-          <Card>
-              <CardHeader>
-                  <CardTitle>Services by Category</CardTitle>
-                  <CardDescription>Assign services to different categories.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  <div className="space-y-4">
-                      {serviceCategories.map(category => (
-                          <div key={category._id} className="border p-4 rounded-lg">
-                              <h4 className="font-bold mb-2">{category.name}</h4>
-                              <div className="mb-2">
-                                  <Select onValueChange={(serviceId) => { if (serviceId) handleServiceAssignment(category._id, serviceId)}}>
-                                      <SelectTrigger>
-                                          <SelectValue placeholder="Add a service to this category..." />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                          {servicesByCategory.unassignedServices.map(service => (
-                                              <SelectItem key={service._id} value={service._id}>
-                                                  {service.name}
-                                              </SelectItem>
-                                          ))}
-                                          {servicesByCategory.unassignedServices.length === 0 && <div className='p-2 text-sm text-muted-foreground text-center'>No unassigned services</div>}
-                                      </SelectContent>
-                                  </Select>
-                              </div>
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                  {servicesByCategory.mapping[category._id]?.map(service => (
-                                      <Badge key={service._id} variant="secondary">
-                                          {service.name}
-                                          <button onClick={() => handleServiceUnassignment(service._id)} className="ml-2 rounded-full hover:bg-muted-foreground/20 p-0.5">
-                                            <Trash2 className="h-3 w-3"/>
-                                          </button>
-                                      </Badge>
-                                  ))}
-                              </div>
-                          </div>
-                      ))}
-                  </div>
-              </CardContent>
-          </Card>
-        );
-    };
-
     if (isError) {
         return <div className="p-8 text-center text-destructive">Error fetching data. Please try again.</div>;
     }
@@ -482,8 +778,6 @@ export default function DropdownManagementPage() {
         { key: 'faqCategory', title: 'FAQ Categories', description: 'Manage categories for organizing FAQs.', tab: 'general' },
         { key: 'bank', title: 'Bank Names', description: 'Manage a list of supported banks.', tab: 'general' },
         { key: 'documentType', title: 'Document Types', description: 'Manage types of documents required for verification.', tab: 'general' },
-        { key: 'serviceCategory', title: 'Salon Service Categories', description: 'Define categories for various salon services.', tab: 'services' },
-        { key: 'service', title: 'Salon Services', description: 'Manage individual salon services.', tab: 'services' },
         { key: 'designation', title: 'Admin Designations', description: 'Manage the list of available staff designations.', tab: 'admin' },
         { key: 'smsType', title: 'SMS Template Types', description: 'Manage types for SMS templates.', tab: 'marketing' },
         { key: 'socialPlatform', title: 'Social Media Platforms', description: 'Manage platforms for social posts.', tab: 'marketing' },
@@ -515,20 +809,10 @@ export default function DropdownManagementPage() {
                         ))}
                     </div>
                 </TabsContent>
-                <TabsContent value="services">
+                 <TabsContent value="services">
                     <div className="space-y-8">
-                        {dropdownTypes.filter(d => d.tab === 'services').map(d => (
-                            <DropdownManager
-                                key={d.key}
-                                listTitle={d.title}
-                                listDescription={d.description}
-                                items={data.filter(item => item.type === d.key)}
-                                type={d.key}
-                                onUpdate={handleUpdate}
-                                isLoading={isLoading}
-                            />
-                        ))}
-                        <ServiceCategoryManager />
+                       <ServiceCategoryManager />
+                       <ServiceManager />
                     </div>
                 </TabsContent>
                 <TabsContent value="locations">

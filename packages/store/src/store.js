@@ -6,6 +6,11 @@ import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
 import vendorReducer from './slices/vendorSlice';
 import marketingReducer from './slices/marketingSlice';
+import supplierReducer from './slices/supplierSlice';
+import subscriptionReducer from './slices/subscriptionSlice';
+import notificationReducer from './slices/notificationSlice';
+import geoFencingReducer from './slices/geoFencingSlice';
+import refferalReducer from './slices/Admin/refferalSlice.js';
 
 export const makeStore = () => {
   return configureStore({
@@ -17,6 +22,11 @@ export const makeStore = () => {
       salon: salonReducer,
       vendors: vendorReducer,
       marketing: marketingReducer,
+      suppliers: supplierReducer,
+      subscription: subscriptionReducer,
+      notification: notificationReducer,
+      geoFencing: geoFencingReducer,
+      refferal: refferalReducer
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(glowvitaApi.middleware),

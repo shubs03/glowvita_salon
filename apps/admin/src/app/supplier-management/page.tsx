@@ -1,19 +1,64 @@
-
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
+import { useState, useEffect, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
-import { Eye, EyeOff, Plus, Search, FileDown, X, DollarSign, Clock } from 'lucide-react';
-import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@repo/ui/dialog";
+import {
+  Eye,
+  EyeOff,
+  Plus,
+  Search,
+  FileDown,
+  X,
+  DollarSign,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Trash2,
+} from "lucide-react";
+import { Input } from "@repo/ui/input";
+import { Label } from "@repo/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
-import { addSupplier, selectAllSuppliers } from '@repo/store/slices/supplierSlice';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/select";
+import {
+  useGetSuppliersQuery,
+  useCreateSupplierMutation,
+  useUpdateSupplierMutation,
+  useDeleteSupplierMutation,
+} from "@repo/store/api";
+import { toast } from "sonner";
+import { Skeleton } from "@repo/ui/skeleton";
 
 // Sample data for supplier orders
 const supplierOrdersData = [
@@ -25,7 +70,7 @@ const supplierOrdersData = [
     customerName: "Priya Sharma",
     amount: 12500,
     status: "Completed",
-    date: "2025-08-10"
+    date: "2025-08-10",
   },
   {
     id: "ORD-1002",
@@ -35,7 +80,7 @@ const supplierOrdersData = [
     customerName: "Rahul Verma",
     amount: 8700,
     status: "Processing",
-    date: "2025-08-12"
+    date: "2025-08-12",
   },
   {
     id: "ORD-1003",
@@ -45,7 +90,7 @@ const supplierOrdersData = [
     customerName: "Anjali Patel",
     amount: 4200,
     status: "Shipped",
-    date: "2025-08-11"
+    date: "2025-08-11",
   },
   {
     id: "ORD-1004",
@@ -55,7 +100,7 @@ const supplierOrdersData = [
     customerName: "Meera Gupta",
     amount: 6500,
     status: "Delivered",
-    date: "2025-08-09"
+    date: "2025-08-09",
   },
   {
     id: "ORD-1005",
@@ -65,40 +110,12 @@ const supplierOrdersData = [
     customerName: "Vikram Singh",
     amount: 9500,
     status: "Pending",
-    date: "2025-08-13"
-  }
-];
-
-// Sample data for suppliers
-const suppliersData = [
-  {
-    id: "SUP-001",
-    firstName: "John",
-    lastName: "Doe",
-    shopName: "Global Beauty Supplies",
-    businessRegistrationNo: "GSTIN123456789",
-    supplierType: "Hair Care",
-    status: "Approved",
-    contact: "contact@gbs.com",
-    products: 125,
-    sales: 25430,
-  },
-  {
-    id: "SUP-002",
-    firstName: "Michael",
-    lastName: "Brown",
-    shopName: "Spa Essentials",
-    businessRegistrationNo: "GSTIN321654987",
-    supplierType: "Spa & Wellness",
-    status: "Pending",
-    contact: "support@spaessentials.com",
-    products: 60,
-    sales: 9500,
+    date: "2025-08-13",
   },
 ];
 
 type Supplier = {
-  id: string;
+  _id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -113,46 +130,151 @@ type Supplier = {
   businessRegistrationNo: string;
   supplierType: string;
   status: string;
-  contact: string;
   products: number;
   sales: number;
-  licenseFileName?: string;
+  licenseFile?: string;
 };
-type SupplierOrder = typeof supplierOrdersData[0];
-type ActionType = 'approve' | 'reject';
+type SupplierOrder = (typeof supplierOrdersData)[0];
+type ActionType = "approve" | "reject" | "delete";
 
-import stateCityData from '@/lib/state-city.json';
+import stateCityData from "@/lib/state-city.json";
+
+const SupplierPageSkeleton = () => (
+  <div className="p-4 sm:p-6 lg:p-8">
+    <div className="flex justify-between items-center mb-6">
+      <Skeleton className="h-8 w-64" />
+    </div>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+      {[...Array(5)].map((_, i) => (
+        <Card key={i}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-4" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-7 w-20 mb-1" />
+            <Skeleton className="h-3 w-32" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 w-36" />
+            <Skeleton className="h-10 w-28" />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto no-scrollbar">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                  <Skeleton className="h-5 w-24" />
+                </TableHead>
+                <TableHead>
+                  <Skeleton className="h-5 w-24" />
+                </TableHead>
+                <TableHead>
+                  <Skeleton className="h-5 w-32" />
+                </TableHead>
+                <TableHead>
+                  <Skeleton className="h-5 w-40" />
+                </TableHead>
+                <TableHead>
+                  <Skeleton className="h-5 w-32" />
+                </TableHead>
+                <TableHead>
+                  <Skeleton className="h-5 w-20" />
+                </TableHead>
+                <TableHead className="text-right">
+                  <Skeleton className="h-5 w-24" />
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="h-5 w-full" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
 
 export default function SupplierManagementPage() {
-  const dispatch = useDispatch();
-  const suppliers = useSelector(selectAllSuppliers);
-  
+  const {
+    data: suppliers = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useGetSuppliersQuery(undefined);
+  const [createSupplier] = useCreateSupplierMutation();
+  const [updateSupplier] = useUpdateSupplierMutation();
+  const [deleteSupplier] = useDeleteSupplierMutation();
+
   // State for Suppliers Tab
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [supplierSearch, setSupplierSearch] = useState('');
-  const [supplierStatusFilter, setSupplierStatusFilter] = useState('all');
-  
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [supplierStatusFilter, setSupplierStatusFilter] = useState("all");
+
   // State for Orders Tab
   const [currentOrdersPage, setCurrentOrdersPage] = useState(1);
   const [ordersPerPage, setOrdersPerPage] = useState(10);
-  const [orderSearch, setOrderSearch] = useState('');
-  const [orderStatusFilter, setOrderStatusFilter] = useState('all');
-  
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+
   // Modal states
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isOrderViewModalOpen, setIsOrderViewModalOpen] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<SupplierOrder | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
+    null
+  );
+  const [selectedOrder, setSelectedOrder] = useState<SupplierOrder | null>(
+    null
+  );
   const [actionType, setActionType] = useState<ActionType | null>(null);
 
   // Inventory modal state
-  const [inventorySearch, setInventorySearch] = useState('');
-  const [inventoryStatusFilter, setInventoryStatusFilter] = useState('all');
-  
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [inventoryStatusFilter, setInventoryStatusFilter] = useState("all");
+
   // New supplier form state
   interface State {
     state: string;
@@ -161,175 +283,130 @@ export default function SupplierManagementPage() {
 
   const states: State[] = stateCityData.states;
   const [cities, setCities] = useState<string[]>([]);
-  const [selectedState, setSelectedState] = useState('');
+  const [selectedState, setSelectedState] = useState("");
+
+  const initialNewSupplierState = {
+    firstName: "",
+    lastName: "",
+    email: "",
+    mobile: "",
+    shopName: "",
+    country: "India",
+    state: "",
+    city: "",
+    pincode: "",
+    location: "",
+    address: "",
+    businessRegistrationNo: "",
+    supplierType: "",
+    licenseFile: null as File | null,
+    password: "",
+    confirmPassword: "",
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [newSupplier, setNewSupplier] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    mobile: '',
-    shopName: '',
-    country: 'India',
-    state: '',
-    city: '',
-    pincode: '',
-    location: '',
-    address: '',
-    businessRegistrationNo: '',
-    supplierType: '',
-    licenseFile: null as File | null,
-    password: '',
-    confirmPassword: ''
-  });
-  
+  const [newSupplier, setNewSupplier] = useState(initialNewSupplierState);
+
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const supplierTypes = [
-    'Hair Care',
-    'Skin Care',
-    'Nail Care',
-    'Beauty Tools & Equipment',
-    'Spa & Wellness',
-    'Makeup Products',
-    'Hygiene & Cleaning'
+    "Hair Care",
+    "Skin Care",
+    "Nail Care",
+    "Beauty Tools & Equipment",
+    "Spa & Wellness",
+    "Makeup Products",
+    "Hygiene & Cleaning",
   ];
-  
-  // Update cities when state changes
+
   useEffect(() => {
     if (selectedState) {
-      const stateData = states.find(s => s.state === selectedState);
+      const stateData = states.find((s) => s.state === selectedState);
       setCities(stateData ? stateData.districts : []);
-      
-      // Update the state in newSupplier
-      setNewSupplier(prev => ({
-        ...prev,
-        state: selectedState,
-        city: '' // Reset city when state changes
-      }));
+      setNewSupplier((prev) => ({ ...prev, state: selectedState, city: "" }));
     } else {
       setCities([]);
     }
-  }, [selectedState, states]);
+  }, [selectedState]);
 
   const handleStateChange = (value: string) => {
     setSelectedState(value);
   };
 
   const handleCityChange = (value: string) => {
-    setNewSupplier(prev => ({
-      ...prev,
-      city: value
-    }));
+    setNewSupplier((prev) => ({ ...prev, city: value }));
   };
 
-  const handleNewSupplierChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleNewSupplierChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { name, value } = e.target;
-    
-    // Handle numeric inputs (mobile and pincode)
-    if (name === 'mobile' || name === 'pincode') {
-      // Only allow numbers and limit length
-      const numericValue = value.replace(/\D/g, '');
-      const maxLength = name === 'mobile' ? 10 : 6;
-      if (numericValue.length > maxLength) return;
-      
-      setNewSupplier(prev => ({
-        ...prev,
-        [name]: numericValue
-      }));
-      return;
-    }
-    
-    setNewSupplier(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-  
-  const handleSupplierTypeChange = (value: string) => {
-    setNewSupplier(prev => ({
-      ...prev,
-      supplierType: value
-    }));
-  };
-  
-  const handleAddSupplier = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Create form data to handle file upload
-    const formData = new FormData();
-    
-    // Add all form fields to formData
-    Object.entries(newSupplier).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        formData.append(key, value);
+    if (name === "mobile" || name === "pincode") {
+      const numericValue = value.replace(/\D/g, "");
+      const maxLength = name === "mobile" ? 10 : 6;
+      if (numericValue.length <= maxLength) {
+        setNewSupplier((prev) => ({ ...prev, [name]: numericValue }));
       }
-    });
-    
-    // Create a new supplier object with the form data
-    const newSupplierData = {
-      ...newSupplier,
-      products: 0, // Initialize with 0 products
-      sales: 0,    // Initialize with 0 sales
-      status: "Pending", // Default status
-      contact: newSupplier.email, // Using email as contact if contact is not provided
-    };
-
-    // Dispatch the addSupplier action
-    dispatch(addSupplier(newSupplierData));
-    console.log('New supplier added:', newSupplierData);
-    
-    // Reset form and close modal
-    setNewSupplier({
-      firstName: '',
-      lastName: '',
-      email: '',
-      mobile: '',
-      shopName: '',
-      country: 'India',
-      state: '',
-      city: '',
-      pincode: '',
-      location: '',
-      address: '',
-      businessRegistrationNo: '',
-      supplierType: '',
-      licenseFile: null,
-      password: '',
-      confirmPassword: ''
-    });
-    
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    } else {
+      setNewSupplier((prev) => ({ ...prev, [name]: value }));
     }
-    
-    setIsNewModalOpen(false);
   };
+
+  const handleSupplierTypeChange = (value: string) => {
+    setNewSupplier((prev) => ({ ...prev, supplierType: value }));
+  };
+
+  const handleAddSupplier = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    let licenseFileBase64 = null;
+    if (newSupplier.licenseFile) {
+      licenseFileBase64 = await toBase64(newSupplier.licenseFile);
+    }
+
+    try {
+      await createSupplier({
+        ...newSupplier,
+        licenseFile: licenseFileBase64,
+      }).unwrap();
+      toast.success("Supplier added successfully!");
+      setNewSupplier(initialNewSupplierState);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      setLicensePreview(null);
+      setIsNewModalOpen(false);
+    } catch (error) {
+      console.error("Failed to add supplier", error);
+      toast.error("Failed to add supplier.");
+    }
+  };
+
+  const toBase64 = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
 
   const [licensePreview, setLicensePreview] = useState<string | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      // Check if file is an image
-      if (!file.type.startsWith('image/')) {
-        alert('Please upload an image file (JPEG, PNG, etc.)');
+      if (!file.type.startsWith("image/")) {
+        alert("Please upload an image file (JPEG, PNG, etc.)");
         return;
       }
-      
-      // Create preview URL
+
       const previewUrl = URL.createObjectURL(file);
       setLicensePreview(previewUrl);
-      
-      setNewSupplier(prev => ({
-        ...prev,
-        licenseFile: file
-      }));
+
+      setNewSupplier((prev) => ({ ...prev, licenseFile: file }));
     }
   };
 
-  // Clean up preview URL when component unmounts or when file changes
   useEffect(() => {
     return () => {
       if (licensePreview) {
@@ -339,13 +416,18 @@ export default function SupplierManagementPage() {
   }, [licensePreview]);
 
   // Filter and paginate suppliers
-  const filteredSuppliers = suppliers.filter(supplier => {
+  const filteredSuppliers = suppliers.filter((supplier) => {
     const fullName = `${supplier.firstName} ${supplier.lastName}`.toLowerCase();
-    const matchesSearch = fullName.includes(supplierSearch.toLowerCase()) ||
-                        supplier.shopName.toLowerCase().includes(supplierSearch.toLowerCase()) ||
-                        (supplier.businessRegistrationNo && supplier.businessRegistrationNo.toLowerCase().includes(supplierSearch.toLowerCase())) ||
-                        (supplier.contact && supplier.contact.toLowerCase().includes(supplierSearch.toLowerCase()));
-    const matchesStatus = supplierStatusFilter === 'all' || supplier.status === supplierStatusFilter;
+    const matchesSearch =
+      fullName.includes(supplierSearch.toLowerCase()) ||
+      supplier.shopName.toLowerCase().includes(supplierSearch.toLowerCase()) ||
+      (supplier.businessRegistrationNo &&
+        supplier.businessRegistrationNo
+          .toLowerCase()
+          .includes(supplierSearch.toLowerCase()));
+    const matchesStatus =
+      supplierStatusFilter === "all" ||
+      supplier.status === supplierStatusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -355,12 +437,14 @@ export default function SupplierManagementPage() {
   const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
 
   // Filter and paginate orders
-  const filteredOrders = supplierOrdersData.filter(order => {
-    const matchesSearch = order.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                        order.supplierName.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                        order.productName.toLowerCase().includes(orderSearch.toLowerCase()) ||
-                        order.customerName.toLowerCase().includes(orderSearch.toLowerCase());
-    const matchesStatus = orderStatusFilter === 'all' || order.status === orderStatusFilter;
+  const filteredOrders = supplierOrdersData.filter((order) => {
+    const matchesSearch =
+      order.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      order.supplierName.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      order.productName.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      order.customerName.toLowerCase().includes(orderSearch.toLowerCase());
+    const matchesStatus =
+      orderStatusFilter === "all" || order.status === orderStatusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -368,45 +452,49 @@ export default function SupplierManagementPage() {
   const firstOrderIndex = lastOrderIndex - ordersPerPage;
   const currentOrders = filteredOrders.slice(firstOrderIndex, lastOrderIndex);
   const totalOrdersPages = Math.ceil(filteredOrders.length / ordersPerPage);
-  
+
   // Sample product data for the selected supplier
   const [supplierProductsData] = useState([
     {
-      id: 'prod_1',
-      name: 'Product 1',
-      sku: 'SKU001',
+      id: "prod_1",
+      name: "Product 1",
+      sku: "SKU001",
       price: 1999,
       stock: 50,
-      status: 'in_stock',
-      category: 'Skincare'
+      status: "in_stock",
+      category: "Skincare",
     },
     {
-      id: 'prod_2',
-      name: 'Product 2',
-      sku: 'SKU002',
+      id: "prod_2",
+      name: "Product 2",
+      sku: "SKU002",
       price: 2999,
       stock: 25,
-      status: 'low_stock',
-      category: 'Haircare'
+      status: "low_stock",
+      category: "Haircare",
     },
     {
-      id: 'prod_3',
-      name: 'Product 3',
-      sku: 'SKU003',
+      id: "prod_3",
+      name: "Product 3",
+      sku: "SKU003",
       price: 1499,
       stock: 0,
-      status: 'out_of_stock',
-      category: 'Makeup'
-    }
+      status: "out_of_stock",
+      category: "Makeup",
+    },
   ]);
 
-  const filteredInventory = supplierProductsData.filter(product => {
-    if (!product || typeof product !== 'object') return false;
-    const name = product.name || '';
-    const status = product.status || '';
-    
-    const matchesSearch = name.toString().toLowerCase().includes(inventorySearch.toLowerCase());
-    const matchesStatus = inventoryStatusFilter === 'all' || status === inventoryStatusFilter;
+  const filteredInventory = supplierProductsData.filter((product) => {
+    if (!product || typeof product !== "object") return false;
+    const name = product.name || "";
+    const status = product.status || "";
+
+    const matchesSearch = name
+      .toString()
+      .toLowerCase()
+      .includes(inventorySearch.toLowerCase());
+    const matchesStatus =
+      inventoryStatusFilter === "all" || status === inventoryStatusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -420,21 +508,38 @@ export default function SupplierManagementPage() {
     setSelectedSupplier(supplier);
     setIsViewModalOpen(true);
   };
-  
+
   const handleInventoryClick = (supplier: Supplier) => {
-      setSelectedSupplier(supplier);
-      setIsInventoryModalOpen(true);
-  }
+    setSelectedSupplier(supplier);
+    setIsInventoryModalOpen(true);
+  };
 
   const handleViewOrderClick = (order: SupplierOrder) => {
     setSelectedOrder(order);
     setIsOrderViewModalOpen(true);
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (selectedSupplier && actionType) {
-        console.log(`Performing ${actionType} on supplier ${selectedSupplier.name}`);
-        // API call logic would go here
+      try {
+        if (actionType === "delete") {
+          await deleteSupplier(selectedSupplier._id).unwrap();
+          toast.success(`Supplier "${selectedSupplier.shopName}" deleted.`);
+        } else {
+          const newStatus = actionType === "approve" ? "Approved" : "Rejected";
+          await updateSupplier({
+            id: selectedSupplier._id,
+            status: newStatus,
+          }).unwrap();
+          toast.success(
+            `Supplier "${selectedSupplier.shopName}" status updated to ${newStatus}.`
+          );
+        }
+      } catch (error) {
+        toast.error(
+          `Failed to perform action on ${selectedSupplier.shopName}.`
+        );
+      }
     }
     setIsActionModalOpen(false);
     setSelectedSupplier(null);
@@ -442,37 +547,66 @@ export default function SupplierManagementPage() {
   };
 
   const getModalContent = () => {
-    if (!actionType || !selectedSupplier) return { title: '', description: '', buttonText: '' };
+    if (!actionType || !selectedSupplier)
+      return { title: "", description: "", buttonText: "" };
     switch (actionType) {
-      case 'approve':
+      case "approve":
         return {
-          title: 'Approve Supplier?',
-          description: `Are you sure you want to approve the supplier "${selectedSupplier.name}"?`,
-          buttonText: 'Approve'
+          title: "Approve Supplier?",
+          description: `Are you sure you want to approve the supplier "${selectedSupplier.shopName}"?`,
+          buttonText: "Approve",
         };
-      case 'reject':
+      case "reject":
         return {
-          title: 'Reject Supplier?',
-          description: `Are you sure you want to reject the supplier "${selectedSupplier.name}"? This action cannot be undone.`,
-          buttonText: 'Reject'
+          title: "Reject Supplier?",
+          description: `Are you sure you want to reject the supplier "${selectedSupplier.shopName}"? This action cannot be undone.`,
+          buttonText: "Reject",
+        };
+      case "delete":
+        return {
+          title: "Delete Supplier?",
+          description: `Are you sure you want to permanently delete the supplier "${selectedSupplier.shopName}"? This action is irreversible.`,
+          buttonText: "Delete",
         };
       default:
-        return { title: '', description: '', buttonText: '' };
+        return { title: "", description: "", buttonText: "" };
     }
   };
 
   const { title, description, buttonText } = getModalContent();
 
+  if (isLoading) return <SupplierPageSkeleton />;
+
+  if (isError)
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh]">
+        <h2 className="text-xl font-semibold text-destructive mb-2">
+          Failed to Fetch Suppliers
+        </h2>
+        <p className="text-muted-foreground mb-4">
+          There was an error while trying to retrieve the data.
+        </p>
+        <Button onClick={() => refetch()}>
+          <XCircle className="mr-2 h-4 w-4" />
+          Try Again
+        </Button>
+      </div>
+    );
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold font-headline">Supplier Management</h1>
+        <h1 className="text-2xl font-bold font-headline">
+          Supplier Management
+        </h1>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Suppliers</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Suppliers
+            </CardTitle>
             <div className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -482,12 +616,18 @@ export default function SupplierManagementPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Products
+            </CardTitle>
             <div className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{suppliers.reduce((acc, s) => acc + s.products, 0)}</div>
-            <p className="text-xs text-muted-foreground">Across all suppliers</p>
+            <div className="text-2xl font-bold">
+              {suppliers.reduce((acc, s) => acc + s.products, 0)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Across all suppliers
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -496,17 +636,23 @@ export default function SupplierManagementPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{suppliers.reduce((acc, s) => acc + s.sales, 0).toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ₹{suppliers.reduce((acc, s) => acc + s.sales, 0).toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">All-time sales</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Approvals
+            </CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{suppliers.filter(s => s.status === 'Pending').length}</div>
+            <div className="text-2xl font-bold text-yellow-600">
+              {suppliers.filter((s) => s.status === "Pending").length}
+            </div>
             <p className="text-xs text-muted-foreground">Awaiting review</p>
           </CardContent>
         </Card>
@@ -534,7 +680,9 @@ export default function SupplierManagementPage() {
               <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
                   <CardTitle>All Suppliers</CardTitle>
-                  <CardDescription>Manage suppliers and their product listings.</CardDescription>
+                  <CardDescription>
+                    Manage suppliers and their product listings.
+                  </CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <div className="relative">
@@ -547,7 +695,10 @@ export default function SupplierManagementPage() {
                       onChange={(e) => setSupplierSearch(e.target.value)}
                     />
                   </div>
-                  <Select value={supplierStatusFilter} onValueChange={setSupplierStatusFilter}>
+                  <Select
+                    value={supplierStatusFilter}
+                    onValueChange={setSupplierStatusFilter}
+                  >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
@@ -566,59 +717,112 @@ export default function SupplierManagementPage() {
               </div>
             </CardHeader>
 
-          <CardContent>
-            <div className="overflow-x-auto no-scrollbar">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>First Name</TableHead>
-                    <TableHead>Last Name</TableHead>
-                    <TableHead>Shop Name</TableHead>
-                    <TableHead>Business Reg No</TableHead>
-                    <TableHead>Supplier Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentItems.map((supplier, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{supplier.firstName}</TableCell>
-                      <TableCell>{supplier.lastName}</TableCell>
-                      <TableCell>{supplier.shopName}</TableCell>
-                      <TableCell>{supplier.businessRegistrationNo}</TableCell>
-                      <TableCell>{supplier.supplierType}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            supplier.status === "Approved" ? "bg-green-100 text-green-800" :
-                            supplier.status === "Pending" ? "bg-yellow-100 text-yellow-800" :
-                            "bg-red-100 text-red-800"
-                        }`}>
-                          {supplier.status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleViewClick(supplier)}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View Details</span>
-                        </Button>
-                      </TableCell>
+            <CardContent>
+              <div className="overflow-x-auto no-scrollbar">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>First Name</TableHead>
+                      <TableHead>Last Name</TableHead>
+                      <TableHead>Shop Name</TableHead>
+                      <TableHead>Business Reg No</TableHead>
+                      <TableHead>Supplier Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <Pagination
+                  </TableHeader>
+                  <TableBody>
+                    {currentItems.length > 0 ? (
+                      currentItems.map((supplier, index) => (
+                        <TableRow key={supplier._id}>
+                          <TableCell className="font-medium">
+                            {supplier.firstName}
+                          </TableCell>
+                          <TableCell>{supplier.lastName}</TableCell>
+                          <TableCell>{supplier.shopName}</TableCell>
+                          <TableCell>
+                            {supplier.businessRegistrationNo}
+                          </TableCell>
+                          <TableCell>{supplier.supplierType}</TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                supplier.status === "Approved"
+                                  ? "bg-green-100 text-green-800"
+                                  : supplier.status === "Pending"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {supplier.status}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewClick(supplier)}
+                            >
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View Details</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                handleActionClick(supplier, "approve")
+                              }
+                            >
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="sr-only">Approve</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                handleActionClick(supplier, "reject")
+                              }
+                            >
+                              <XCircle className="h-4 w-4 text-red-600" />
+                              <span className="sr-only">Reject</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                handleActionClick(supplier, "delete")
+                              }
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="text-center py-10 text-muted-foreground"
+                        >
+                          No suppliers found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <Pagination
                 className="mt-4"
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={setCurrentPage}
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
-                totalItems={suppliersData.length}
-            />
-          </CardContent>
-        </Card>
+                totalItems={filteredSuppliers.length}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="orders">
@@ -627,7 +831,9 @@ export default function SupplierManagementPage() {
               <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
                   <CardTitle>Supplier Orders</CardTitle>
-                  <CardDescription>View and manage all supplier orders.</CardDescription>
+                  <CardDescription>
+                    View and manage all supplier orders.
+                  </CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <div className="relative">
@@ -640,7 +846,10 @@ export default function SupplierManagementPage() {
                       onChange={(e) => setOrderSearch(e.target.value)}
                     />
                   </div>
-                  <Select value={orderStatusFilter} onValueChange={setOrderStatusFilter}>
+                  <Select
+                    value={orderStatusFilter}
+                    onValueChange={setOrderStatusFilter}
+                  >
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
@@ -671,32 +880,57 @@ export default function SupplierManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.id}</TableCell>
-                        <TableCell>{order.supplierName}</TableCell>
-                        <TableCell>{order.productName}</TableCell>
-                        <TableCell>{order.customerName}</TableCell>
-                        <TableCell>₹{order.amount.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            order.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                            order.status === 'Processing' ? 'bg-blue-100 text-blue-800' :
-                            order.status === 'Shipped' ? 'bg-purple-100 text-purple-800' :
-                            order.status === 'Delivered' ? 'bg-indigo-100 text-indigo-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {order.status}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewOrderClick(order)}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View Order</span>
-                          </Button>
+                    {currentOrders.length > 0 ? (
+                      currentOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">
+                            {order.id}
+                          </TableCell>
+                          <TableCell>{order.supplierName}</TableCell>
+                          <TableCell>{order.productName}</TableCell>
+                          <TableCell>{order.customerName}</TableCell>
+                          <TableCell>
+                            ₹{order.amount.toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                order.status === "Completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : order.status === "Processing"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : order.status === "Shipped"
+                                      ? "bg-purple-100 text-purple-800"
+                                      : order.status === "Delivered"
+                                        ? "bg-indigo-100 text-indigo-800"
+                                        : "bg-yellow-100 text-yellow-800"
+                              }`}
+                            >
+                              {order.status}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewOrderClick(order)}
+                            >
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View Order</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="text-center py-10 text-muted-foreground"
+                        >
+                          No orders found.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -722,11 +956,18 @@ export default function SupplierManagementPage() {
             <DialogDescription>{description}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsActionModalOpen(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => setIsActionModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button
-              variant={actionType === 'reject' ? 'destructive' : 'default'}
+              variant={
+                actionType === "reject" || actionType === "delete"
+                  ? "destructive"
+                  : "default"
+              }
               onClick={handleConfirmAction}
             >
               {buttonText}
@@ -734,150 +975,201 @@ export default function SupplierManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* View Supplier Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-          <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                  <DialogTitle>Supplier Details: {selectedSupplier?.name}</DialogTitle>
-              </DialogHeader>
-              {selectedSupplier && (
-                  <div className="grid gap-4 py-4 text-sm">
-                      <div className="grid grid-cols-3 items-center gap-4">
-                          <span className="font-semibold text-muted-foreground">First Name</span>
-                          <span className="col-span-2">{selectedSupplier.firstName}</span>
-                      </div>
-                      <div className="grid grid-cols-3 items-center gap-4">
-                          <span className="font-semibold text-muted-foreground">Last Name</span>
-                          <span className="col-span-2">{selectedSupplier.lastName}</span>
-                      </div>
-                      <div className="grid grid-cols-3 items-center gap-4">
-                          <span className="font-semibold text-muted-foreground">Shop Name</span>
-                          <span className="col-span-2">{selectedSupplier.shopName}</span>
-                      </div>
-                      <div className="grid grid-cols-3 items-center gap-4">
-                          <span className="font-semibold text-muted-foreground">Business Reg No</span>
-                          <span className="col-span-2">{selectedSupplier.businessRegistrationNo}</span>
-                      </div>
-                      <div className="grid grid-cols-3 items-center gap-4">
-                          <span className="font-semibold text-muted-foreground">Supplier Type</span>
-                          <span className="col-span-2">{selectedSupplier.supplierType}</span>
-                      </div>
-                      <div className="grid grid-cols-3 items-center gap-4">
-                          <span className="font-semibold text-muted-foreground">Contact</span>
-                          <span className="col-span-2">{selectedSupplier.contact}</span>
-                      </div>
-                      <div className="grid grid-cols-3 items-center gap-4">
-                          <span className="font-semibold text-muted-foreground">Status</span>
-                          <span className="col-span-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              selectedSupplier.status === "Approved" ? "bg-green-100 text-green-800" :
-                              selectedSupplier.status === "Pending" ? "bg-yellow-100 text-yellow-800" :
-                              "bg-red-100 text-red-800"
-                            }`}>
-                              {selectedSupplier.status}
-                            </span>
-                          </span>
-                      </div>
-                  </div>
-              )}
-              <DialogFooter>
-                  <Button onClick={() => setIsViewModalOpen(false)}>Close</Button>
-              </DialogFooter>
-          </DialogContent>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Supplier Details: {selectedSupplier?.shopName}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedSupplier && (
+            <div className="grid gap-4 py-4 text-sm">
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">
+                  First Name
+                </span>
+                <span className="col-span-2">{selectedSupplier.firstName}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">
+                  Last Name
+                </span>
+                <span className="col-span-2">{selectedSupplier.lastName}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">
+                  Shop Name
+                </span>
+                <span className="col-span-2">{selectedSupplier.shopName}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">
+                  Business Reg No
+                </span>
+                <span className="col-span-2">
+                  {selectedSupplier.businessRegistrationNo}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">
+                  Supplier Type
+                </span>
+                <span className="col-span-2">
+                  {selectedSupplier.supplierType}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">
+                  Contact
+                </span>
+                <span className="col-span-2">{selectedSupplier.email}</span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">
+                  Status
+                </span>
+                <span className="col-span-2">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                      selectedSupplier.status === "Approved"
+                        ? "bg-green-100 text-green-800"
+                        : selectedSupplier.status === "Pending"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {selectedSupplier.status}
+                  </span>
+                </span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsViewModalOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
-      
-      {/* View Inventory Modal */}
-        <Dialog open={isInventoryModalOpen} onOpenChange={setIsInventoryModalOpen}>
-            <DialogContent className="sm:max-w-3xl">
-                <DialogHeader>
-                    <DialogTitle>Product Inventory: {selectedSupplier?.name}</DialogTitle>
-                    <DialogDescription>
-                        A list of all products from this supplier.
-                    </DialogDescription>
-                </DialogHeader>
-                 <div className="py-4 space-y-4">
-                     <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="relative flex-grow">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Search by product name..."
-                                className="w-full pl-8"
-                                value={inventorySearch}
-                                onChange={(e) => setInventorySearch(e.target.value)}
-                            />
-                        </div>
-                        <Select value={inventoryStatusFilter} onValueChange={setInventoryStatusFilter}>
-                            <SelectTrigger className="w-full sm:w-[180px]">
-                                <SelectValue placeholder="Filter by status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Statuses</SelectItem>
-                                <SelectItem value="In Stock">In Stock</SelectItem>
-                                <SelectItem value="Out of Stock">Out of Stock</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="overflow-x-auto no-scrollbar rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Product ID</TableHead>
-                                    <TableHead>Product Name</TableHead>
-                                    <TableHead>Status</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredInventory.map((product) => (
-                                    <TableRow key={product.id}>
-                                        <TableCell className="font-medium">{product.id}</TableCell>
-                                        <TableCell>{product.name}</TableCell>
-                                        <TableCell>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                product.status === 'In Stock' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                            }`}>
-                                                {product.status}
-                                            </span>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {filteredInventory.length === 0 && (
-                                    <TableRow>
-                                        <TableCell colSpan={3} className="text-center text-muted-foreground">
-                                            No products found.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button variant="secondary" onClick={() => setIsInventoryModalOpen(false)}>
-                        Close
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
 
+      {/* View Inventory Modal */}
+      <Dialog
+        open={isInventoryModalOpen}
+        onOpenChange={setIsInventoryModalOpen}
+      >
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>
+              Product Inventory: {selectedSupplier?.shopName}
+            </DialogTitle>
+            <DialogDescription>
+              A list of all products from this supplier.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-grow">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search by product name..."
+                  className="w-full pl-8"
+                  value={inventorySearch}
+                  onChange={(e) => setInventorySearch(e.target.value)}
+                />
+              </div>
+              <Select
+                value={inventoryStatusFilter}
+                onValueChange={setInventoryStatusFilter}
+              >
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="In Stock">In Stock</SelectItem>
+                  <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="overflow-x-auto no-scrollbar rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product ID</TableHead>
+                    <TableHead>Product Name</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredInventory.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">
+                        {product.id}
+                      </TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            product.status === "In Stock"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {product.status}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredInventory.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={3}
+                        className="text-center text-muted-foreground"
+                      >
+                        No products found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setIsInventoryModalOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* New Supplier Modal */}
       <Dialog open={isNewModalOpen} onOpenChange={setIsNewModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-gray-900">Add New Supplier</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              Add New Supplier
+            </DialogTitle>
             <DialogDescription className="text-gray-600">
-              Fill in the supplier details below. All fields marked with <span className="text-red-500">*</span> are required.
+              Fill in the supplier details below. All fields marked with{" "}
+              <span className="text-red-500">*</span> are required.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddSupplier} className="space-y-6 py-2">
             <div className="space-y-6">
               <div className="bg-white p-6 rounded-lg border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Personal Information
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="firstName"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       First Name <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -890,7 +1182,10 @@ export default function SupplierManagementPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="lastName"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Last Name <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -903,7 +1198,10 @@ export default function SupplierManagementPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="email"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Email <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -917,7 +1215,10 @@ export default function SupplierManagementPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="mobile" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="mobile"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Mobile <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -928,24 +1229,31 @@ export default function SupplierManagementPage() {
                       onChange={handleNewSupplierChange}
                       className="w-full"
                       required
-                      minLength={10}
-                      maxLength={10}
-                      pattern="\d{10}"
-                      title="Please enter a valid 10-digit mobile number"
-                      placeholder="1234567890"
+                      // minLength={10}
+                      // maxLength={10}
+                      // pattern="\\d{10}"
+                      // title="Please enter a valid 10-digit mobile number"
+                      placeholder="12345 67890"
                     />
                     {newSupplier.mobile && newSupplier.mobile.length !== 10 && (
-                      <p className="text-sm text-red-500">Mobile number must be 10 digits</p>
+                      <p className="text-sm text-red-500">
+                        Mobile number must be 10 digits
+                      </p>
                     )}
                   </div>
                 </div>
               </div>
               <div className="bg-white p-6 rounded-lg border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Business Information</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Business Information
+                </h3>
                 <div className="grid grid-cols-1 gap-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shopName" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="shopName"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Shop Name <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -958,7 +1266,10 @@ export default function SupplierManagementPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="businessRegistrationNo" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="businessRegistrationNo"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Business Registration No.
                       </Label>
                       <Input
@@ -972,7 +1283,10 @@ export default function SupplierManagementPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="address" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="address"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Address <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -986,13 +1300,21 @@ export default function SupplierManagementPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="country" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="country"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Country <span className="text-red-500">*</span>
                       </Label>
-                      <Select 
-                        name="country" 
+                      <Select
+                        name="country"
                         value={newSupplier.country}
-                        onValueChange={(value) => setNewSupplier(prev => ({ ...prev, country: value }))}
+                        onValueChange={(value) =>
+                          setNewSupplier((prev) => ({
+                            ...prev,
+                            country: value,
+                          }))
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select country" />
@@ -1007,10 +1329,13 @@ export default function SupplierManagementPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="state" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="state"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         State <span className="text-red-500">*</span>
                       </Label>
-                      <Select 
+                      <Select
                         value={selectedState}
                         onValueChange={handleStateChange}
                         required
@@ -1028,7 +1353,10 @@ export default function SupplierManagementPage() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="city" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="city"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         City <span className="text-red-500">*</span>
                       </Label>
                       <Select
@@ -1038,7 +1366,13 @@ export default function SupplierManagementPage() {
                         required
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder={selectedState ? "Select city" : "Select state first"} />
+                          <SelectValue
+                            placeholder={
+                              selectedState
+                                ? "Select city"
+                                : "Select state first"
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent className="max-h-[300px] overflow-y-auto">
                           {cities.map((city) => (
@@ -1052,7 +1386,10 @@ export default function SupplierManagementPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="pincode" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="pincode"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Pincode <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -1065,17 +1402,23 @@ export default function SupplierManagementPage() {
                         onChange={handleNewSupplierChange}
                         className="w-full"
                         required
-                        minLength={6}
-                        maxLength={6}
-                        pattern="\d{6}"
+                        // minLength={6}
+                        // maxLength={6}
+                        // pattern="\\d{6}"
                         title="Please enter a valid 6-digit pincode"
                       />
-                      {newSupplier.pincode && newSupplier.pincode.length !== 6 && (
-                        <p className="text-sm text-red-500">Pincode must be 6 digits</p>
-                      )}
+                      {newSupplier.pincode &&
+                        newSupplier.pincode.length !== 6 && (
+                          <p className="text-sm text-red-500">
+                            Pincode must be 6 digits
+                          </p>
+                        )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="location" className="text-sm font-medium text-gray-700">
+                      <Label
+                        htmlFor="location"
+                        className="text-sm font-medium text-gray-700"
+                      >
                         Location (Optional)
                       </Label>
                       <Input
@@ -1088,16 +1431,21 @@ export default function SupplierManagementPage() {
                       />
                     </div>
                   </div>
-
                 </div>
               </div>
 
               <div className="bg-white p-6 rounded-lg border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Business Documents</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Business Documents
+                </h3>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="licenseFile" className="block text-sm font-medium text-gray-700">
-                      License/Certification (Image, max 5MB) <span className="text-red-500">*</span>
+                    <Label
+                      htmlFor="licenseFile"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      License/Certification (Image, max 5MB){" "}
+                      <span className="text-red-500">*</span>
                     </Label>
                     <div className="mt-1 flex items-center gap-4">
                       <div className="flex-1">
@@ -1106,11 +1454,26 @@ export default function SupplierManagementPage() {
                           className="relative flex flex-col items-center justify-center w-full px-4 py-6 border-2 border-dashed rounded-lg cursor-pointer border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors"
                         >
                           <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                            <svg className="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-                              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                            <svg
+                              className="w-8 h-8 mb-4 text-gray-500"
+                              aria-hidden="true"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 20 16"
+                            >
+                              <path
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+                              />
                             </svg>
                             <p className="mb-2 text-sm text-gray-500">
-                              <span className="font-semibold">Click to upload</span> or drag and drop
+                              <span className="font-semibold">
+                                Click to upload
+                              </span>{" "}
+                              or drag and drop
                             </p>
                             <p className="text-xs text-gray-500">
                               PNG, JPG, JPEG (MAX. 5MB)
@@ -1126,12 +1489,12 @@ export default function SupplierManagementPage() {
                           />
                         </label>
                       </div>
-                      
+
                       {licensePreview && (
                         <div className="w-24 h-24 border rounded-lg overflow-hidden">
-                          <img 
-                            src={licensePreview} 
-                            alt="License preview" 
+                          <img
+                            src={licensePreview}
+                            alt="License preview"
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -1143,9 +1506,12 @@ export default function SupplierManagementPage() {
                       </p>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="supplierType" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="supplierType"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Supplier Type <span className="text-red-500">*</span>
                     </Label>
                     <Select
@@ -1167,13 +1533,18 @@ export default function SupplierManagementPage() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Password Section */}
               <div className="bg-white p-6 rounded-lg border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Account Security (Optional)</h3>
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Account Security (Optional)
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="password"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Password
                     </Label>
                     <div className="relative">
@@ -1200,7 +1571,10 @@ export default function SupplierManagementPage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                    <Label
+                      htmlFor="confirmPassword"
+                      className="text-sm font-medium text-gray-700"
+                    >
                       Confirm Password
                     </Label>
                     <div className="relative">
@@ -1229,21 +1603,26 @@ export default function SupplierManagementPage() {
                 </div>
               </div>
             </div>
-            
+
             <DialogFooter className="bg-gray-50 px-4 py-3 sm:px-6 rounded-b-lg">
-              <Button type="button" variant="outline" onClick={() => setIsNewModalOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsNewModalOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit">
-                Add Supplier
-              </Button>
+              <Button type="submit">Add Supplier</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* View Order Modal */}
-      <Dialog open={isOrderViewModalOpen} onOpenChange={setIsOrderViewModalOpen}>
+      <Dialog
+        open={isOrderViewModalOpen}
+        onOpenChange={setIsOrderViewModalOpen}
+      >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Order Details: {selectedOrder?.id}</DialogTitle>
@@ -1251,51 +1630,79 @@ export default function SupplierManagementPage() {
           {selectedOrder && (
             <div className="grid gap-4 py-4 text-sm">
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Order ID</span>
+                <span className="font-semibold text-muted-foreground">
+                  Order ID
+                </span>
                 <span className="col-span-2">{selectedOrder.id}</span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Supplier</span>
-                <span className="col-span-2">{selectedOrder.supplierName} ({selectedOrder.supplierId})</span>
+                <span className="font-semibold text-muted-foreground">
+                  Supplier
+                </span>
+                <span className="col-span-2">
+                  {selectedOrder.supplierName} ({selectedOrder.supplierId})
+                </span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Product</span>
+                <span className="font-semibold text-muted-foreground">
+                  Product
+                </span>
                 <span className="col-span-2">{selectedOrder.productName}</span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Customer</span>
+                <span className="font-semibold text-muted-foreground">
+                  Customer
+                </span>
                 <span className="col-span-2">{selectedOrder.customerName}</span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Amount</span>
-                <span className="col-span-2">₹{selectedOrder.amount.toLocaleString()}</span>
+                <span className="font-semibold text-muted-foreground">
+                  Amount
+                </span>
+                <span className="col-span-2">
+                  ₹{selectedOrder.amount.toLocaleString()}
+                </span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Status</span>
+                <span className="font-semibold text-muted-foreground">
+                  Status
+                </span>
                 <span className="col-span-2">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    selectedOrder.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                    selectedOrder.status === 'Processing' ? 'bg-blue-100 text-blue-800' :
-                    selectedOrder.status === 'Shipped' ? 'bg-purple-100 text-purple-800' :
-                    selectedOrder.status === 'Delivered' ? 'bg-indigo-100 text-indigo-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                      selectedOrder.status === "Completed"
+                        ? "bg-green-100 text-green-800"
+                        : selectedOrder.status === "Processing"
+                          ? "bg-blue-100 text-blue-800"
+                          : selectedOrder.status === "Shipped"
+                            ? "bg-purple-100 text-purple-800"
+                            : selectedOrder.status === "Delivered"
+                              ? "bg-indigo-100 text-indigo-800"
+                              : "bg-yellow-100 text-yellow-800"
+                    }`}
+                  >
                     {selectedOrder.status}
                   </span>
                 </span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Order Date</span>
-                <span className="col-span-2">{new Date(selectedOrder.date).toLocaleDateString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric'
-                })}</span>
+                <span className="font-semibold text-muted-foreground">
+                  Order Date
+                </span>
+                <span className="col-span-2">
+                  {new Date(selectedOrder.date).toLocaleDateString("en-IN", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setIsOrderViewModalOpen(false)}>Close</Button>
+            <Button onClick={() => setIsOrderViewModalOpen(false)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

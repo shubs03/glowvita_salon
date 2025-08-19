@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -47,9 +48,8 @@ const rolesData = [
 
 
 export default function AdminRolesPage() {
-  const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(adminUsers);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -57,10 +57,17 @@ export default function AdminRolesPage() {
   
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector((state) => state.modal);
+  const { data: admins, isLoading, isError } = useGetAdminsQuery(undefined);
+
+  useEffect(() => {
+    if (admins) {
+      setAdminUsers(admins);
+    }
+  }, [admins]);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
-  const currentItems = rolesData.slice(firstItemIndex, lastItemIndex);
+  const currentItems = adminUsers.slice(firstItemIndex, lastItemIndex);
 
   const totalPages = Math.ceil(adminUsers.length / itemsPerPage);
 
@@ -80,20 +87,13 @@ export default function AdminRolesPage() {
       setAdminUsers([...adminUsers, newAdmin]);
     }
     setEditingAdmin(null);
-    setIsAddAdminOpen(false);
+    dispatch(closeModal());
   };
 
   const handleDeleteAdmin = (id?: string) => {
     if (id) {
       setAdminUsers(adminUsers.filter(admin => admin.id !== id));
     }
-  };
-
-  const handleEditAdmin = (admin: AdminUser) => {
-    // Create a deep copy of the admin object to avoid reference issues
-    const adminCopy = { ...admin };
-    setEditingAdmin(adminCopy);
-    setIsAddAdminOpen(true);
   };
 
   const handleOpenModal = (type: 'addRole' | 'editRole', role?: AdminUser) => {
@@ -115,7 +115,7 @@ export default function AdminRolesPage() {
     setSelectedRole(null);
   }
 
-  const isModalOpen = isOpen && (modalType === 'addRole' || modalType === 'editRole');
+  const isModalOpen = isOpen && (modalType === 'addAdmin' || modalType === 'editAdmin');
 
     return (
       <div className="p-4 sm:p-6 lg:p-8">
@@ -132,7 +132,7 @@ export default function AdminRolesPage() {
                   Add, edit, and assign permissions to admin users.
                 </CardDescription>
               </div>
-              <Button onClick={() => openModal()}>
+              <Button onClick={() => dispatch(openModal({ modalType: 'addAdmin' }))}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add New Admin
               </Button>
@@ -151,8 +151,18 @@ export default function AdminRolesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {admins.map((admin: Admin) => (
-                    <TableRow key={admin.id}>
+                  {isLoading && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">Loading...</TableCell>
+                    </TableRow>
+                  )}
+                  {isError && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-destructive">Error loading admins.</TableCell>
+                    </TableRow>
+                  )}
+                  {!isLoading && !isError && currentItems.map((admin: AdminUser) => (
+                    <TableRow key={admin._id || admin.id}>
                       <TableCell className="font-medium">
                         {admin.fullName}
                       </TableCell>
@@ -173,7 +183,7 @@ export default function AdminRolesPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => openModal(admin)}
+                          onClick={() => dispatch(openModal({ modalType: 'editAdmin', data: admin }))}
                         >
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Edit</span>
@@ -189,12 +199,12 @@ export default function AdminRolesPage() {
 
         <AddAdminForm
           isOpen={isModalOpen}
-          onClose={closeModal}
+          onClose={handleCloseModal}
           onSave={handleSaveAdmin}
-          initialData={editingAdmin}
-          roles={allRoles}
+          initialData={data as AdminUser}
+          roles={rolesData}
           onDelete={handleDeleteAdmin}
-          isEditMode={!!editingAdmin}
+          isEditMode={modalType === 'editAdmin'}
         />
       </div>
     );
