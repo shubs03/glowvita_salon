@@ -62,8 +62,7 @@ export default function CrmPage() {
 
             {/* Sidebar Area */}
             <div className="space-y-8">
-              <QuickLinks />
-              <RecentActivity />
+              <TeamChat />
             </div>
           </div>
           
@@ -73,10 +72,7 @@ export default function CrmPage() {
               <ToDoList />
            </div>
            
-           <TeamChat />
-
         </div>
-      </main>
     </div>
   );
 }

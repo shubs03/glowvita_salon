@@ -30,16 +30,16 @@ export function TeamChat() {
                                 <p className="text-sm">{msg.message}</p>
                             </div>
                               {msg.user === 'You' && (
-                                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0">
                                     <span className="text-sm font-semibold">Y</span>
                                 </div>
                             )}
                         </div>
                     ))}
                 </div>
-                <div className="flex items-center space-x-2 pt-4 border-t">
-                    <Textarea placeholder="Type your message..." className="min-h-[40px]"/>
-                     <Button size="icon">
+                <div className="flex items-center space-x-2 pt-4 border-t mt-4">
+                    <Textarea placeholder="Type your message..." className="min-h-[40px] resize-none"/>
+                     <Button size="icon" className="flex-shrink-0">
                         <FaPaperPlane className="h-4 w-4" />
                         <span className="sr-only">Send</span>
                     </Button>
