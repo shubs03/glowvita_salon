@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
 import { useGetSuppliersQuery, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/api';
 import { toast } from 'sonner';
+import { useGetDoctorsQuery, useUpdateDoctorMutation, useDeleteDoctorMutation } from '../../../../../packages/store/src/services/api';
 
 
 const vendorsData = [
@@ -86,31 +87,21 @@ const productsData = [
     }
 ];
 
-const doctorsApprovalData = [
-    {
-        id: "DOC-APP-001",
-        profileImage: "https://placehold.co/400x400.png",
-        doctorName: "Dr. Emily Carter",
-        clinicName: "Serene Skin Clinic",
-        specialization: "Dermatologist",
-        experience: "12 years",
-        qualification: "MD, FAAD"
-    },
-    {
-        id: "DOC-APP-002",
-        profileImage: "https://placehold.co/400x400.png",
-        doctorName: "Dr. Ben Adams",
-        clinicName: "Heal & Glow",
-        specialization: "Trichologist",
-        experience: "8 years",
-        qualification: "MBBS, DDV"
-    }
-];
-
 type Vendor = typeof vendorsData[0];
 type Service = typeof servicesData[0];
 type Product = typeof productsData[0];
-type Doctor = typeof doctorsApprovalData[0];
+
+type Doctor = {
+    _id: string;
+    id: string;
+    profileImage: string;
+    name: string;
+    clinicName: string;
+    specialization: string;
+    experience: string;
+    qualification: string;
+    status: 'Approved' | 'Pending' | 'Rejected';
+};
 type Supplier = {
   _id: string;
   supplierName: string;
@@ -128,12 +119,12 @@ type ItemType = 'vendor' | 'service' | 'product' | 'doctor' | 'supplier';
 
 export default function VendorApprovalPage() {
     const { data: suppliersData = [], isLoading: suppliersLoading } = useGetSuppliersQuery(undefined);
-
-    console.log("Suppliers Data : ", suppliersData);
-    console.log("Supplier Names : ", suppliersData.map(supplier => supplier.firstName + " " + supplier.lastName));  
+    const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
 
     const [updateSupplier] = useUpdateSupplierMutation();
     const [deleteSupplier] = useDeleteSupplierMutation();
+    const [updateDoctor] = useUpdateDoctorMutation();
+    const [deleteDoctor] = useDeleteDoctorMutation();
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -146,7 +137,8 @@ export default function VendorApprovalPage() {
     const [actionType, setActionType] = useState<ActionType | null>(null);
     const [itemType, setItemType] = useState<ItemType | null>(null);
 
-    const pendingSuppliers = suppliersData.filter(s => s.status === 'Pending');
+    const pendingSuppliers = suppliersData.filter((s: Supplier) => s.status === 'Pending');
+    const pendingDoctors = doctorsData.filter((d: Doctor) => d.status === 'Pending');
 
     // Pagination logic for each tab
     const lastItemIndex = currentPage * itemsPerPage;
@@ -154,13 +146,13 @@ export default function VendorApprovalPage() {
     const currentVendors = vendorsData.slice(firstItemIndex, lastItemIndex);
     const currentServices = servicesData.slice(firstItemIndex, lastItemIndex);
     const currentProducts = productsData.slice(firstItemIndex, lastItemIndex);
-    const currentDoctors = doctorsApprovalData.slice(firstItemIndex, lastItemIndex);
+    const currentDoctors = pendingDoctors.slice(firstItemIndex, lastItemIndex);
     const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
 
     const totalVendorPages = Math.ceil(vendorsData.length / itemsPerPage);
     const totalServicePages = Math.ceil(servicesData.length / itemsPerPage);
     const totalProductPages = Math.ceil(productsData.length / itemsPerPage);
-    const totalDoctorPages = Math.ceil(doctorsApprovalData.length / itemsPerPage);
+    const totalDoctorPages = Math.ceil(pendingDoctors.length / itemsPerPage);
     const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
 
     const handleActionClick = (item: Vendor | Service | Product | Doctor | Supplier, type: ItemType, action: ActionType) => {
@@ -183,26 +175,37 @@ export default function VendorApprovalPage() {
 
     const handleConfirmAction = async () => {
         if (!selectedItem || !actionType || !itemType) return;
-
+    
+        const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
+    
         try {
             if (itemType === 'supplier') {
                 const supplier = selectedItem as Supplier;
                 if (actionType === 'delete') {
                     await deleteSupplier(supplier._id).unwrap();
-                    toast.success('Success', { description: `Supplier "${supplier.supplierName}" deleted.` });
+                    toast.success('Success', { description: `Supplier "${itemName}" deleted.` });
                 } else {
                     const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
                     await updateSupplier({ id: supplier._id, status: newStatus }).unwrap();
-                    toast.success('Success', { description: `Supplier "${supplier.supplierName}" status updated to ${newStatus}.`});
+                    toast.success('Success', { description: `Supplier "${itemName}" status updated to ${newStatus}.` });
+                }
+            } else if (itemType === 'doctor') {
+                const doctor = selectedItem as Doctor;
+                if (actionType === 'delete') {
+                    await deleteDoctor(doctor._id).unwrap();
+                    toast.success('Success', { description: `Doctor "${itemName}" deleted.` });
+                } else {
+                    const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
+                    await updateDoctor({ id: doctor._id, status: newStatus }).unwrap();
+                    toast.success('Success', { description: `Doctor "${itemName}" status updated to ${newStatus}.` });
                 }
             } else {
-                 const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || (selectedItem as any).supplierName;
-                 console.log(`Performing ${actionType} on ${itemType} ${itemName}`);
+                console.log(`Performing ${actionType} on ${itemType} ${itemName}`);
             }
         } catch (error) {
             toast.error('Error', { description: `Failed to perform action on ${itemType}.` });
         }
-        
+    
         setIsActionModalOpen(false);
         setSelectedItem(null);
         setActionType(null);
@@ -212,7 +215,7 @@ export default function VendorApprovalPage() {
     const getModalContent = () => {
         if (!actionType || !selectedItem || !itemType) return { title: '', description: '', buttonText: '' };
         
-        const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || (selectedItem as any).supplierName;
+        const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
 
         switch (actionType) {
             case 'approve':
@@ -271,7 +274,7 @@ export default function VendorApprovalPage() {
             <Hourglass className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{pendingSuppliers.length}</div>
+            <div className="text-2xl font-bold text-yellow-600">{pendingSuppliers.length + pendingDoctors.length}</div>
             <p className="text-xs text-muted-foreground">Waiting for review</p>
           </CardContent>
         </Card>
@@ -534,19 +537,28 @@ export default function VendorApprovalPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {currentDoctors.map((doctor) => (
-                                    <TableRow key={doctor.id}>
+                                {doctorsLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center">Loading...</TableCell>
+                                    </TableRow>
+                                ) : currentDoctors.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center">No pending doctor approvals.</TableCell>
+                                    </TableRow>
+                                ) : (
+                                    currentDoctors.map((doctor) => (
+                                    <TableRow key={doctor._id}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
                                                  <Image 
-                                                    src={doctor.profileImage} 
-                                                    alt={doctor.doctorName} 
+                                                    src={doctor.profileImage || "https://placehold.co/400x400.png"} 
+                                                    alt={doctor.name} 
                                                     width={40} 
                                                     height={40} 
                                                     className="rounded-full cursor-pointer"
-                                                    onClick={() => handleImageClick(doctor.profileImage)}
+                                                    onClick={() => handleImageClick(doctor.profileImage || "https://placehold.co/400x400.png")}
                                                 />
-                                                <span className="font-medium">{doctor.doctorName}</span>
+                                                <span className="font-medium">{doctor.name}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>{doctor.clinicName}</TableCell>
@@ -570,7 +582,7 @@ export default function VendorApprovalPage() {
                                             </Button>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                )))}
                             </TableBody>
                         </Table>
                     </div>
@@ -581,7 +593,7 @@ export default function VendorApprovalPage() {
                         onPageChange={setCurrentPage}
                         itemsPerPage={itemsPerPage}
                         onItemsPerPageChange={setItemsPerPage}
-                        totalItems={doctorsApprovalData.length}
+                        totalItems={pendingDoctors.length}
                     />
                 </CardContent>
             </Card>
@@ -742,9 +754,9 @@ export default function VendorApprovalPage() {
                  {itemType === 'doctor' && selectedItem && (
                      <>
                         <div className="flex items-center gap-4">
-                           <Image src={(selectedItem as Doctor).profileImage} alt={(selectedItem as Doctor).doctorName} width={80} height={80} className="rounded-full" />
+                           <Image src={(selectedItem as Doctor).profileImage || "https://placehold.co/400x400.png"} alt={(selectedItem as Doctor).name} width={80} height={80} className="rounded-full" />
                            <div>
-                                <h3 className="text-lg font-semibold">{(selectedItem as Doctor).doctorName}</h3>
+                                <h3 className="text-lg font-semibold">{(selectedItem as Doctor).name}</h3>
                                 <p className="text-muted-foreground">{(selectedItem as Doctor).clinicName}</p>
                            </div>
                         </div>
