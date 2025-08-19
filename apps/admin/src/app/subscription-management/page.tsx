@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation } from '@repo/store/services/api';
+import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation } from '@repo/store/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
