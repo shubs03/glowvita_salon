@@ -8,7 +8,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { useAppDispatch } from '@repo/store/hooks';
 import { setAdminAuth } from '@repo/store/slices/auth';
-import { useAdminLoginMutation } from '@repo/store/services/api';
+import { useAdminLoginMutation } from '../../../../../packages/store/src/services/api';
 import { Eye, EyeOff } from 'lucide-react';
 
 
