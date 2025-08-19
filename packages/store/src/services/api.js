@@ -99,6 +99,15 @@ export const glowvitaApi = createApi({
     "Supplier",
   ],
   endpoints: (builder) => ({
+
+    getUsers: builder.query({
+      query: () => ({
+        url: "/users",
+        method: "GET",
+      }),
+      providesTags: ["admin"],
+    }),
+
     // Admin
     registerAdmin: builder.mutation({
       query: (admin) => ({
@@ -410,67 +419,97 @@ export const glowvitaApi = createApi({
         body: { _id },
       }),
       invalidatesTags: ["GeoFence"],
-    // Categories
-    getCategories: builder.query({
-      query: () => '/admin/categories',
-      providesTags: ['Category'],
     }),
-    createCategory: builder.mutation({
-      query: (category) => ({
-        url: '/admin/categories',
-        method: 'POST',
-        body: category,
+      // Categories
+      getCategories: builder.query({
+        query: () => "/admin/categories",
+        providesTags: ["Category"],
       }),
-      invalidatesTags: ['Category'],
-    }),
-    updateCategory: builder.mutation({
-      query: (category) => ({
-        url: `/admin/categories`,
-        method: 'PUT',
-        body: category,
+      createCategory: builder.mutation({
+        query: (category) => ({
+          url: "/admin/categories",
+          method: "POST",
+          body: category,
+        }),
+        invalidatesTags: ["Category"],
       }),
-      invalidatesTags: ['Category'],
-    }),
-    deleteCategory: builder.mutation({
-      query: ({ id }) => ({
-        url: `/admin/categories`,
-        method: 'DELETE',
-        body: { id },
+      updateCategory: builder.mutation({
+        query: (category) => ({
+          url: `/admin/categories`,
+          method: "PUT",
+          body: category,
+        }),
+        invalidatesTags: ["Category"],
       }),
-      invalidatesTags: ['Category'],
-    }),
+      deleteCategory: builder.mutation({
+        query: ({ id }) => ({
+          url: `/admin/categories`,
+          method: "DELETE",
+          body: { id },
+        }),
+        invalidatesTags: ["Category"],
+      }),
 
-    // Services
-    getServices: builder.query({
-      query: () => '/admin/services',
-      providesTags: ['Service'],
-    }),
-    createService: builder.mutation({
-      query: (service) => ({
-        url: '/admin/services',
-        method: 'POST',
-        body: service,
+      // Services
+      getServices: builder.query({
+        query: () => "/admin/services",
+        providesTags: ["Service"],
       }),
-      invalidatesTags: ['Service'],
-    }),
-    updateService: builder.mutation({
-      query: (service) => ({
-        url: `/admin/services`,
-        method: 'PUT',
-        body: service,
+      createService: builder.mutation({
+        query: (service) => ({
+          url: "/admin/services",
+          method: "POST",
+          body: service,
+        }),
+        invalidatesTags: ["Service"],
       }),
-      invalidatesTags: ['Service'],
-    }),
-    deleteService: builder.mutation({
-      query: ({ id }) => ({
-        url: `/admin/services`,
-        method: 'DELETE',
-        body: { id },
+      updateService: builder.mutation({
+        query: (service) => ({
+          url: `/admin/services`,
+          method: "PUT",
+          body: service,
+        }),
+        invalidatesTags: ["Service"],
       }),
-      invalidatesTags: ['Service'],
+      deleteService: builder.mutation({
+        query: ({ id }) => ({
+          url: `/admin/services`,
+          method: "DELETE",
+          body: { id },
+        }),
+        invalidatesTags: ["Service"],
+      }),
+
+      // Notifications
+      getNotifications: builder.query({
+        query: () => "/admin/custompushnotification",
+        providesTags: ["Notification"],
+      }),
+      createNotification: builder.mutation({
+        query: (notification) => ({
+          url: "/admin/custompushnotification",
+          method: "POST",
+          body: notification,
+        }),
+        invalidatesTags: ["Notification"],
+      }),
+      updateNotification: builder.mutation({
+        query: (notification) => ({
+          url: `/admin/custompushnotification`,
+          method: "PUT",
+          body: notification,
+        }),
+        invalidatesTags: ["Notification"],
+      }),
+      deleteNotification: builder.mutation({
+        query: ({ _id }) => ({
+          url: `/admin/custompushnotification`,
+          method: "DELETE",
+          body: { _id },
+        }),
+        invalidatesTags: ["Notification"],
       }),
     }),
-  }),
 });
 
 export const {
@@ -483,6 +522,7 @@ export const {
   useUpdateAdminMutation,
   useDeleteAdminMutation,
   useGetAdminsQuery,
+  useGetUsersQuery,
 
   // offers
   useGetAdminOffersQuery,
@@ -530,6 +570,7 @@ export const {
   useCreateGeoFenceMutation,
   useUpdateGeoFenceMutation,
   useDeleteGeoFenceMutation,
+
   // Category and Service Endpoints
   useGetCategoriesQuery,
   useCreateCategoryMutation,
@@ -539,4 +580,11 @@ export const {
   useCreateServiceMutation,
   useUpdateServiceMutation,
   useDeleteServiceMutation,
+
+  // Admin CustoPush Notification Endpoints
+  useGetNotificationsQuery,
+  useGetNotificationByIdQuery,
+  useCreateNotificationMutation,
+  useUpdateNotificationMutation,
+  useDeleteNotificationMutation,
 } = glowvitaApi;
