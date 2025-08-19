@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -16,8 +17,8 @@ import { Badge } from '@repo/ui/badge';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { openNotificationModal, closeNotificationModal } from '@repo/store/slices/notificationSlice';
-import { useGetNotificationsQuery, useCreateNotificationMutation, useUpdateNotificationMutation, useDeleteNotificationMutation } from '@repo/store/api';
-import { useGetUsersQuery, useGetVendorsQuery } from '@repo/store/api';
+import { useGetNotificationsQuery, useCreateNotificationMutation, useUpdateNotificationMutation, useDeleteNotificationMutation, useGetUsersQuery, useGetVendorsQuery } from '@repo/store/api';
+
 
 interface Target {
   id: string;
@@ -39,7 +40,7 @@ export default function PushNotificationsPage() {
   const dispatch = useAppDispatch();
   const { isModalOpen, modalType, notificationData } = useAppSelector(state => state.notification);
   
-  const { data: notifications = [], isLoading: isNotificationsLoading } = useGetNotificationsQuery();
+  const { data: notifications = [], isLoading: isNotificationsLoading } = useGetNotificationsQuery(undefined);
   const { data: users = [], isLoading: isUsersLoading } = useGetUsersQuery();
   const { data: vendors = [], isLoading: isVendorsLoading } = useGetVendorsQuery();
   const [createNotification] = useCreateNotificationMutation();

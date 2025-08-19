@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { Plus, Edit, Trash2, MoreVertical, Search, Clock, DollarSign, Tag, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, MoreVertical, Search, Clock, DollarSign, Tag, Image as ImageIcon, Star, BarChart2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@repo/ui/dropdown-menu';
 
 type Service = {
@@ -62,6 +62,48 @@ export default function ServicesPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Services</CardTitle>
+                        <Tag className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{services.length}</div>
+                        <p className="text-xs text-muted-foreground">Total services offered</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Most Popular</CardTitle>
+                        <Star className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">Deluxe Haircut</div>
+                        <p className="text-xs text-muted-foreground">Top-selling service</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Avg. Service Price</CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">₹125.00</div>
+                        <p className="text-xs text-muted-foreground">Average across all services</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Categories</CardTitle>
+                        <BarChart2 className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{new Set(services.map(s => s.category)).size}</div>
+                        <p className="text-xs text-muted-foreground">Unique service categories</p>
+                    </CardContent>
+                </Card>
+            </div>
             <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
                 <div>
                     <h1 className="text-2xl font-bold font-headline">Service Management</h1>
