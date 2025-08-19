@@ -11,11 +11,11 @@ import { TeamChat } from '@/components/dashboard/TeamChat';
 import { ClientFeedback } from '@/components/dashboard/ClientFeedback';
 import { ToDoList } from '@/components/dashboard/ToDoList';
 import {
-  DollarSign,
-  Users,
-  Calendar,
-  ClipboardList,
-} from 'lucide-react';
+  FaDollarSign,
+  FaUsers,
+  FaCalendarAlt,
+  FaClipboardList,
+} from "react-icons/fa";
 
 export default function CrmPage() {
 
@@ -30,28 +30,28 @@ export default function CrmPage() {
               title="Total Revenue"
               value="₹1,25,832"
               change="+12.5%"
-              icon={DollarSign}
+              icon={FaDollarSign}
               iconColor="text-green-500"
             />
             <StatCard
               title="New Clients"
               value="24"
               change="+8.2%"
-              icon={Users}
+              icon={FaUsers}
               iconColor="text-blue-500"
             />
             <StatCard
               title="Today's Bookings"
               value="12"
               change="-2.1%"
-              icon={Calendar}
+              icon={FaCalendarAlt}
               iconColor="text-purple-500"
             />
              <StatCard
               title="Pending Tasks"
               value="3"
               change="2 new"
-              icon={ClipboardList}
+              icon={FaClipboardList}
               iconColor="text-yellow-500"
             />
           </div>

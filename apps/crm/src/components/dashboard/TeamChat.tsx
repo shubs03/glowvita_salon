@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar';
 import { Textarea } from "@repo/ui/textarea";
 import { Button } from "@repo/ui/button";
-import { Send } from "lucide-react";
+import { FaPaperPlane } from "react-icons/fa";
 
 const messages = [
     { user: 'Alice', message: 'Hey team, just a reminder that the new inventory arrives tomorrow morning.' },
@@ -43,7 +43,7 @@ export function TeamChat() {
                 <div className="flex items-center space-x-2 pt-4 border-t">
                     <Textarea placeholder="Type your message..." className="min-h-[40px]"/>
                      <Button size="icon">
-                        <Send className="h-4 w-4" />
+                        <FaPaperPlane className="h-4 w-4" />
                         <span className="sr-only">Send</span>
                     </Button>
                 </div>

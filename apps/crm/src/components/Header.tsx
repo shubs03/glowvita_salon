@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@repo/ui/dropdown-menu';
-import { Bell, Search, Menu } from 'lucide-react';
+import { FaBell, FaSearch, FaBars } from 'react-icons/fa';
 import { Input } from '@repo/ui/input';
 
 export function Header() {
@@ -32,7 +32,7 @@ export function Header() {
           size="icon"
           className="shrink-0 md:hidden"
         >
-          <Menu className="h-5 w-5" />
+          <FaBars className="h-5 w-5" />
           <span className="sr-only">Toggle navigation menu</span>
         </Button>
       </div>
@@ -41,7 +41,7 @@ export function Header() {
       <div className="w-full flex-1">
         <form>
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <FaSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search clients, bookings..."
@@ -53,7 +53,7 @@ export function Header() {
       
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" className="rounded-full">
-            <Bell className="h-5 w-5" />
+            <FaBell className="h-5 w-5" />
             <span className="sr-only">Toggle notifications</span>
         </Button>
 
