@@ -4,9 +4,10 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { RevenueChart } from '@/components/dashboard/RevenueChart';
 import { UpcomingAppointments } from '@/components/dashboard/UpcomingAppointments';
 import { TopServicesChart } from '@/components/dashboard/TopServicesChart';
-import { TeamChat } from '@/components/dashboard/TeamChat';
 import { ClientFeedback } from '@/components/dashboard/ClientFeedback';
 import { ToDoList } from '@/components/dashboard/ToDoList';
+import { RecentActivity } from '@/components/dashboard/RecentActivity';
+import { QuickLinks } from '@/components/dashboard/QuickLinks';
 import {
   FaDollarSign,
   FaUsers,
@@ -63,7 +64,8 @@ export default function CrmPage() {
 
                 {/* Sidebar Area */}
                 <div className="space-y-8">
-                    <TeamChat />
+                    <QuickLinks />
+                    <RecentActivity />
                 </div>
             </div>
           
