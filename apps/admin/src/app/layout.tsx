@@ -33,7 +33,7 @@ export default function RootLayout({
                 disableTransitionOnChange
             >
                 {showLayout ? <AdminLayout>{children}</AdminLayout> : children}
-                <Toaster position="bottom-right" />
+                <Toaster position="bottom-right" richColors />
             </ThemeProvider>
         </StoreProvider>
       </body>
