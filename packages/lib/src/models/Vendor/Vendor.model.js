@@ -47,16 +47,33 @@ const vendorSchema = new mongoose.Schema({
     trim: true,
     match: [/^\d{6}$/, "Please enter a valid 6-digit pincode"],
   },
+  location: {
+    lat: {
+      type: Number,
+      required: true,
+    },
+    lng: {
+      type: Number,
+      required: true,
+    },
+  },
+  address: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   category: {
     type: String,
     enum: ["unisex", "men", "women"],
     required: true,
   },
-  subCategories: [{
-    type: String,
-    enum: ["shop", "shop-at-home", "onsite"],
-    required: true,
-  }],
+  subCategories: [
+    {
+      type: String,
+      enum: ["shop", "shop-at-home", "onsite"],
+      required: true,
+    },
+  ],
   status: {
     type: String,
     enum: ["Approved", "Pending", "Rejected"],
@@ -73,11 +90,6 @@ const vendorSchema = new mongoose.Schema({
     match: [/^https?:\/\/[^\s$.?#].[^\s]*$/, "Please enter a valid URL"],
     default: null,
   },
-  address: {
-    type: String,
-    required: true,
-    trim: true,
-  },
   description: {
     type: String,
     trim: true,
@@ -87,11 +99,13 @@ const vendorSchema = new mongoose.Schema({
     type: String, // Base64 encoded image string
     default: null,
   },
-  services:[{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Service",
-    default: null,
-  }],
+  services: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Service",
+      default: null,
+    },
+  ],
   subscription: {
     plan: {
       type: mongoose.Schema.Types.ObjectId,
@@ -110,10 +124,12 @@ const vendorSchema = new mongoose.Schema({
       default: null,
     },
   },
-  gallery: [{
-    type: String, // Base64 encoded image strings or URLs
-    default: null,
-  }],
+  gallery: [
+    {
+      type: String, // Base64 encoded image strings or URLs
+      default: null,
+    },
+  ],
   bankDetails: {
     bankName: {
       type: String,
@@ -158,10 +174,12 @@ const vendorSchema = new mongoose.Schema({
       type: String,
       default: null,
     },
-    otherDocs: [{
-      type: String,
-      default: null,
-    }],
+    otherDocs: [
+      {
+        type: String,
+        default: null,
+      },
+    ],
   },
   createdAt: {
     type: Date,
@@ -173,6 +191,7 @@ const vendorSchema = new mongoose.Schema({
   },
 });
 
-const VendorModel = mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);
+const VendorModel =
+  mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);
 
 export default VendorModel;
