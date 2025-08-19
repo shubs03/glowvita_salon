@@ -576,7 +576,50 @@ export const glowvitaApi = createApi({
         }),
         invalidatesTags: ["Notification"],
       }),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Crm Endpoints  
+
+  vendorLogin: builder.mutation({
+    query: (credentials) => ({
+      url: "/crm/auth/login",
+      method: "POST",
+      body: credentials,
     }),
+  }),
+
+  vendorRegister: builder.mutation({
+    query: (vendorData) => ({
+      url: "/crm/auth/register",
+      method: "POST",
+      body: vendorData,
+    }),
+  }),
+
+
+   }),
 });
 
 export const {
@@ -663,4 +706,22 @@ export const {
   useCreateNotificationMutation,
   useUpdateNotificationMutation,
   useDeleteNotificationMutation,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // Vendor Endpoints
+
+  useVendorLoginMutation,
+  useVendorRegisterMutation,
 } = glowvitaApi;
