@@ -38,6 +38,8 @@ export default function BookingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [hoveredDay, setHoveredDay] = useState<number | null>(null);
+
 
   const daysInMonth = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -98,7 +100,13 @@ export default function BookingsPage() {
           const appointmentsForDay = mockAppointments.filter(a => a.date.toDateString() === date.toDateString());
 
           return (
-            <div key={day} className="h-32 border-r border-b p-1.5 flex flex-col cursor-pointer hover:bg-secondary/50" onClick={() => handleDayClick(day)}>
+            <div 
+              key={day} 
+              className="h-32 border-r border-b p-1.5 flex flex-col cursor-pointer hover:bg-secondary/50 relative" 
+              onClick={() => handleDayClick(day)}
+              onMouseEnter={() => setHoveredDay(day)}
+              onMouseLeave={() => setHoveredDay(null)}
+            >
               <span className={cn("font-medium text-sm", isToday && "bg-primary text-primary-foreground rounded-full h-6 w-6 flex items-center justify-center")}>{day}</span>
               <div className="flex-grow overflow-y-auto space-y-1 mt-1 no-scrollbar">
                 {appointmentsForDay.map(appt => (
@@ -108,6 +116,19 @@ export default function BookingsPage() {
                   </div>
                 ))}
               </div>
+              {hoveredDay === day && appointmentsForDay.length > 0 && (
+                <div className="absolute z-10 top-full left-0 mt-1 w-64 bg-background border rounded-lg shadow-lg p-3 text-sm">
+                    <h4 className="font-bold mb-2">Appointments for {date.toLocaleDateString()}</h4>
+                    <ul className="space-y-1">
+                        {appointmentsForDay.map(appt => (
+                            <li key={appt.id} className="flex items-center justify-between">
+                                <span>{appt.clientName}</span>
+                                <span className="text-xs text-muted-foreground">{appt.startTime}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+              )}
             </div>
           );
         })}

@@ -5,13 +5,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, FaTimes, FaBars } from 'react-icons/fa';
+import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, FaTimes, FaBars, FaClipboardList, FaBoxOpen } from 'react-icons/fa';
 
 const sidebarNavItems = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt },
   { title: "Bookings", href: "/bookings", Icon: FaCalendarAlt },
+  { title: "Appointments", href: "/appointments", Icon: FaClipboardList },
   { title: "Clients", href: "/clients", Icon: FaUsers },
   { title: "Services", href: "/services", Icon: FaCut },
+  { title: "Orders", href: "/orders", Icon: FaBoxOpen },
 ];
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {

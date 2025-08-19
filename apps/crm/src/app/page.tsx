@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
-import { FaArrowRight, FaBook, FaCalendarCheck, FaChartLine, FaCheck, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaRocket, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
+import { FaArrowRight, FaBook, FaCalendarCheck, FaChartLine, FaCheck, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaRocket, FaSignInAlt, FaUserPlus, FaUsers, FaShieldAlt, FaCogs } from 'react-icons/fa';
 import Image from 'next/image';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
@@ -15,6 +15,16 @@ const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: 
       <p className="mt-1 text-muted-foreground">{children}</p>
     </div>
   </div>
+);
+
+const BenefitItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
+    <div className="text-center p-6 bg-background rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
+        <div className="mx-auto bg-primary/10 h-12 w-12 flex items-center justify-center rounded-full text-primary mb-4">
+            {icon}
+        </div>
+        <h3 className="text-xl font-semibold mb-2">{title}</h3>
+        <p className="text-muted-foreground">{children}</p>
+    </div>
 );
 
 export default function CrmHomePage() {
@@ -100,8 +110,31 @@ export default function CrmHomePage() {
             </div>
         </section>
 
-        {/* How it Works */}
+        {/* Why Choose Us */}
         <section className="py-20 bg-secondary/50">
+            <div className="container mx-auto px-4">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold font-headline">Why Choose Our CRM?</h2>
+                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+                        We provide the tools to not just manage, but to grow your business.
+                    </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <BenefitItem icon={<FaRocket className="h-6 w-6" />} title="Boost Efficiency">
+                        Automate reminders, streamline bookings, and reduce administrative tasks by up to 40%.
+                    </BenefitItem>
+                    <BenefitItem icon={<FaUsers className="h-6 w-6" />} title="Enhance Client Loyalty">
+                        Personalize client experiences with detailed history and preferences, increasing retention.
+                    </BenefitItem>
+                     <BenefitItem icon={<FaChartLine className="h-6 w-6" />} title="Increase Revenue">
+                        Utilize analytics to identify popular services and opportunities for growth.
+                    </BenefitItem>
+                </div>
+            </div>
+        </section>
+
+        {/* How it Works */}
+        <section className="py-20 bg-background">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold font-headline">Get Started in 3 Simple Steps</h2>
@@ -141,8 +174,41 @@ export default function CrmHomePage() {
             </div>
         </section>
 
-        {/* Pricing Section */}
+        {/* Who it's for */}
+        <section className="py-20 bg-secondary/50">
+            <div className="container mx-auto px-4">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold font-headline">Designed For Every Salon</h2>
+                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+                       Whether you're a solo artist or a multi-location chain, our CRM scales with you.
+                    </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <Card><CardHeader><CardTitle>Individual Stylists</CardTitle></CardHeader><CardContent><p>Manage your personal brand and clients with ease.</p></CardContent></Card>
+                    <Card><CardHeader><CardTitle>Small Salons</CardTitle></CardHeader><CardContent><p>A perfect fit for teams looking to grow and organize.</p></CardContent></Card>
+                    <Card><CardHeader><CardTitle>Large Chains</CardTitle></CardHeader><CardContent><p>Robust features for multi-location management.</p></CardContent></Card>
+                </div>
+            </div>
+        </section>
+
+        {/* Integration Showcase */}
         <section className="py-20 bg-background">
+            <div className="container mx-auto px-4 text-center">
+                 <h2 className="text-3xl font-bold font-headline mb-4">Connect Your Favorite Tools</h2>
+                 <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+                    Our CRM integrates with popular tools to streamline your workflow.
+                 </p>
+                 <div className="flex justify-center items-center gap-8 opacity-50">
+                     <FaCalendarCheck className="h-10 w-10"/>
+                     <FaCreditCard className="h-10 w-10"/>
+                     <FaComments className="h-10 w-10"/>
+                     <FaChartLine className="h-10 w-10"/>
+                 </div>
+            </div>
+        </section>
+
+        {/* Pricing Section */}
+        <section className="py-20 bg-secondary/50">
             <div className="container mx-auto px-4">
                  <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold font-headline">Choose Your Plan</h2>
@@ -201,14 +267,14 @@ export default function CrmHomePage() {
         </section>
 
         {/* Testimonial Section */}
-        <section className="py-20 bg-secondary/50">
+        <section className="py-20 bg-background">
           <div className="container mx-auto px-4 text-center">
              <h2 className="text-3xl font-bold font-headline mb-4">Loved by Salon Owners</h2>
             <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
               Hear what our partners have to say about how our CRM has transformed their business.
             </p>
             <div className="max-w-md mx-auto">
-                <Card className="bg-background">
+                <Card className="bg-secondary/50">
                     <CardContent className="pt-6">
                         <blockquote className="text-lg">
                             "This CRM has been a game-changer for my salon. I'm more organized, my clients are happier, and my revenue has increased by 20% in just three months!"
@@ -223,15 +289,15 @@ export default function CrmHomePage() {
         </section>
 
         {/* FAQ Section */}
-        <section className="py-20 bg-background">
+        <section className="py-20 bg-secondary/50">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-3xl font-bold text-center mb-12 font-headline">Frequently Asked Questions</h2>
             <div className="space-y-4">
-              <Card>
+              <Card className="bg-background">
                 <CardHeader><CardTitle className="flex items-center gap-3"><FaQuestionCircle className="text-primary"/> Is my data secure?</CardTitle></CardHeader>
                 <CardContent><p className="text-muted-foreground">Yes, we use industry-standard encryption and security practices to keep your business and client data safe.</p></CardContent>
               </Card>
-              <Card>
+              <Card className="bg-background">
                 <CardHeader><CardTitle className="flex items-center gap-3"><FaQuestionCircle className="text-primary"/> Can I use this on multiple devices?</CardTitle></CardHeader>
                 <CardContent><p className="text-muted-foreground">Absolutely. Our CRM is fully responsive and works beautifully on desktops, tablets, and smartphones.</p></CardContent>
               </Card>
@@ -240,7 +306,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* Final CTA */}
-        <section className="py-20 text-center">
+        <section className="py-20 text-center bg-background">
             <div className="container mx-auto px-4">
                 <h2 className="text-3xl font-bold font-headline mb-4">Ready to Grow Your Business?</h2>
                 <p className="text-muted-foreground mb-8">Join hundreds of successful salons. Get started today.</p>
