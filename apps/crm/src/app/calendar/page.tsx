@@ -9,7 +9,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, User } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { cn } from '@repo/ui/cn';
 
@@ -17,6 +17,7 @@ type Appointment = {
   id: string;
   clientName: string;
   service: string;
+  staffName: string;
   date: Date;
   startTime: string;
   endTime: string;
@@ -25,12 +26,14 @@ type Appointment = {
 };
 
 const mockAppointments: Appointment[] = [
-  { id: '1', clientName: 'Alice Johnson', service: 'Deluxe Haircut', date: new Date(2024, 7, 12), startTime: '10:00', endTime: '11:00', status: 'confirmed' },
-  { id: '2', clientName: 'Bob Williams', service: 'Manicure', date: new Date(2024, 7, 12), startTime: '12:30', endTime: '13:30', status: 'completed' },
-  { id: '3', clientName: 'Charlie Brown', service: 'Facial', date: new Date(2024, 7, 15), startTime: '14:00', endTime: '15:00', status: 'pending' },
-  { id: '4', clientName: 'Diana Prince', service: 'Color & Style', date: new Date(2024, 7, 20), startTime: '09:00', endTime: '12:00', status: 'confirmed' },
-  { id: '5', clientName: 'Ethan Hunt', service: 'Beard Trim', date: new Date(2024, 8, 5), startTime: '16:00', endTime: '16:30', status: 'confirmed' },
+  { id: '1', clientName: 'Alice Johnson', service: 'Deluxe Haircut', staffName: 'Jane Doe', date: new Date(2024, 7, 12), startTime: '10:00', endTime: '11:00', status: 'confirmed' },
+  { id: '2', clientName: 'Bob Williams', service: 'Manicure', staffName: 'Emily White', date: new Date(2024, 7, 12), startTime: '12:30', endTime: '13:30', status: 'completed' },
+  { id: '3', clientName: 'Charlie Brown', service: 'Facial', staffName: 'Jane Doe', date: new Date(2024, 7, 15), startTime: '14:00', endTime: '15:00', status: 'pending' },
+  { id: '4', clientName: 'Diana Prince', service: 'Color & Style', staffName: 'John Smith', date: new Date(2024, 7, 20), startTime: '09:00', endTime: '12:00', status: 'confirmed' },
+  { id: '5', clientName: 'Ethan Hunt', service: 'Beard Trim', staffName: 'John Smith', date: new Date(2024, 8, 5), startTime: '16:00', endTime: '16:30', status: 'confirmed' },
 ];
+
+const staffMembers = ['All Staff', 'Jane Doe', 'John Smith', 'Emily White'];
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -39,6 +42,7 @@ export default function CalendarPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState('All Staff');
 
   const daysInMonth = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -96,7 +100,10 @@ export default function CalendarPage() {
         {days.map(day => {
           const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
           const isToday = today.toDateString() === date.toDateString();
-          const appointmentsForDay = mockAppointments.filter(a => a.date.toDateString() === date.toDateString());
+          const appointmentsForDay = mockAppointments.filter(a => 
+              a.date.toDateString() === date.toDateString() &&
+              (selectedStaff === 'All Staff' || a.staffName === selectedStaff)
+          );
 
           return (
             <div 
@@ -121,7 +128,7 @@ export default function CalendarPage() {
                     <ul className="space-y-1">
                         {appointmentsForDay.map(appt => (
                             <li key={appt.id} className="flex items-center justify-between">
-                                <span>{appt.clientName}</span>
+                                <span>{appt.clientName} ({appt.staffName})</span>
                                 <span className="text-xs text-muted-foreground">{appt.startTime}</span>
                             </li>
                         ))}
@@ -158,6 +165,16 @@ export default function CalendarPage() {
               <Button variant="outline" onClick={() => setCurrentDate(new Date())}>Today</Button>
             </div>
              <div className="flex items-center gap-4">
+                <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+                    <SelectTrigger className="w-[180px]">
+                         <SelectValue placeholder="Select Staff" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {staffMembers.map(staff => (
+                            <SelectItem key={staff} value={staff}>{staff}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
                 <Tabs defaultValue="month" onValueChange={(value) => setView(value as 'month' | 'week')}>
                     <TabsList>
                         <TabsTrigger value="month">Month</TabsTrigger>
