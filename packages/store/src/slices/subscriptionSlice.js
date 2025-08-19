@@ -1,74 +1,126 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { glowvitaApi } from '../services/api';
 
 const initialState = {
-  plans: [
-    {
-      id: 'PLAN-001',
-      name: 'Basic Monthly',
-      duration: 1,
-      durationType: 'months',
-      price: 99900, // in paise (₹999.00)
-      status: 'Active',
-      features: ['Basic feature 1', 'Basic feature 2']
-    },
-    {
-      id: 'PLAN-002',
-      name: 'Premium Monthly',
-      duration: 1,
-      durationType: 'months',
-      price: 199900, // in paise (₹1,999.00)
-      status: 'Active',
-      features: ['Premium feature 1', 'Premium feature 2', '24/7 Support']
-    },
-    {
-      id: 'PLAN-003',
-      name: 'Basic Yearly',
-      duration: 12,
-      durationType: 'months',
-      price: 999900, // in paise (₹9,999.00)
-      status: 'Inactive',
-      features: ['Yearly feature 1', 'Yearly feature 2', '2 months free']
-    }
-  ]
+  plans: [],
+  loading: false,
+  error: null,
 };
+
+// Async thunks (retained for compatibility, but simplified)
+export const fetchSubscriptionPlans = createAsyncThunk(
+  'subscription/fetchPlans',
+  async (_, { dispatch }) => {
+    try {
+      const result = await dispatch(glowvitaApi.endpoints.getSubscriptionPlans.initiate());
+      if (result.error) throw result.error;
+      return result.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+);
+
+export const createNewPlan = createAsyncThunk(
+  'subscription/createPlan',
+  async (planData, { dispatch }) => {
+    try {
+      const result = await dispatch(glowvitaApi.endpoints.createSubscriptionPlan.initiate(planData));
+      if (result.error) throw result.error;
+      return result.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+);
+
+export const updateExistingPlan = createAsyncThunk(
+  'subscription/updatePlan',
+  async ({ _id, ...updates }, { dispatch }) => { // Changed id to _id
+    try {
+      const result = await dispatch(
+        glowvitaApi.endpoints.updateSubscriptionPlan.initiate({ _id, ...updates })
+      );
+      if (result.error) throw result.error;
+      return result.data;
+    } catch (error) {
+      throw error;
+    }
+  }
+);
+
+export const removePlan = createAsyncThunk(
+  'subscription/deletePlan',
+  async (_id, { dispatch }) => { // Changed id to _id
+    try {
+      const result = await dispatch(glowvitaApi.endpoints.deleteSubscriptionPlan.initiate(_id));
+      if (result.error) throw result.error;
+      return _id;
+    } catch (error) {
+      throw error;
+    }
+  }
+);
 
 const subscriptionSlice = createSlice({
   name: 'subscription',
   initialState,
-  reducers: {
-    addPlan: (state, action) => {
-      const newPlan = {
-        ...action.payload,
-        id: `PLAN-${String(state.plans.length + 1).padStart(3, '0')}`,
-        status: 'Active',
-        features: action.payload.features || []
-      };
-      state.plans.push(newPlan);
-    },
-    updatePlan: (state, action) => {
-      const index = state.plans.findIndex(plan => plan.id === action.payload.id);
-      if (index !== -1) {
-        state.plans[index] = { ...state.plans[index], ...action.payload };
-      }
-    },
-    deletePlan: (state, action) => {
-      state.plans = state.plans.filter(plan => plan.id !== action.payload);
-    },
-    togglePlanStatus: (state, action) => {
-      const plan = state.plans.find(plan => plan.id === action.payload);
-      if (plan) {
-        plan.status = plan.status === 'Active' ? 'Inactive' : 'Active';
-      }
-    }
-  }
-});
+  reducers: {},
+  extraReducers: (builder) => {
+    // Fetch plans
+    builder.addCase(fetchSubscriptionPlans.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(fetchSubscriptionPlans.fulfilled, (state, action) => {
+      state.loading = false;
+      state.plans = action.payload || [];
+    });
+    builder.addCase(fetchSubscriptionPlans.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message;
+    });
 
-// Actions
-export const { addPlan, updatePlan, deletePlan, togglePlanStatus } = subscriptionSlice.actions;
+    // Create plan (no manual state update; rely on getSubscriptionPlans refetch)
+    builder.addCase(createNewPlan.fulfilled, (state) => {
+      state.loading = false;
+    });
+    builder.addCase(createNewPlan.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message;
+    });
+
+    // Update plan (no manual state update; rely on getSubscriptionPlans refetch)
+    builder.addCase(updateExistingPlan.fulfilled, (state) => {
+      state.loading = false;
+    });
+    builder.addCase(updateExistingPlan.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message;
+    });
+
+    // Delete plan
+    builder.addCase(removePlan.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(removePlan.fulfilled, (state, action) => {
+      state.loading = false;
+      // Remove the deleted plan from the state
+      state.plans = state.plans.filter(plan => plan._id !== action.payload);
+    });
+    builder.addCase(removePlan.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message;
+    });
+  },
+});
 
 // Selectors
 export const selectAllPlans = (state) => state.subscription.plans;
-export const selectPlanById = (state, planId) => 
-  state.subscription.plans.find(plan => plan.id === planId);
+export const selectPlanById = (state, planId) =>
+  state.subscription.plans.find((plan) => plan._id === planId); // Changed id to _id
+export const selectLoading = (state) => state.subscription.loading;
+export const selectError = (state) => state.subscription.error;
 
 export default subscriptionSlice.reducer;

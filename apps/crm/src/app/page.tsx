@@ -1,34 +1,84 @@
+
 'use client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { Button } from "@repo/ui/button";
-import { useRouter } from "next/navigation";
+import { Header } from '@/components/Header';
+import { StatCard } from '@/components/dashboard/StatCard';
+import { RevenueChart } from '@/components/dashboard/RevenueChart';
+import { UpcomingAppointments } from '@/components/dashboard/UpcomingAppointments';
+import { RecentActivity } from '@/components/dashboard/RecentActivity';
+import { TopServicesChart } from '@/components/dashboard/TopServicesChart';
+import { QuickLinks } from '@/components/dashboard/QuickLinks';
+import { TeamChat } from '@/components/dashboard/TeamChat';
+import { ClientFeedback } from '@/components/dashboard/ClientFeedback';
+import { ToDoList } from '@/components/dashboard/ToDoList';
+import {
+  DollarSign,
+  Users,
+  Calendar,
+  ClipboardList,
+} from 'lucide-react';
 
 export default function CrmPage() {
-  const router = useRouter();
-  const handleLogout = async () => {
-    // This assumes the API endpoint is available on this domain
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-  };
 
   return (
-    <div className="flex flex-col min-h-screen bg-secondary">
-      <header className="bg-background border-b">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold font-headline">Vendor CRM</h1>
-          <Button variant="ghost" onClick={handleLogout}>Logout</Button>
+    <div className="flex flex-col min-h-screen bg-secondary/50">
+      <Header />
+      <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-8">
+          {/* Stat Cards */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Total Revenue"
+              value="₹1,25,832"
+              change="+12.5%"
+              icon={DollarSign}
+              iconColor="text-green-500"
+            />
+            <StatCard
+              title="New Clients"
+              value="24"
+              change="+8.2%"
+              icon={Users}
+              iconColor="text-blue-500"
+            />
+            <StatCard
+              title="Today's Bookings"
+              value="12"
+              change="-2.1%"
+              icon={Calendar}
+              iconColor="text-purple-500"
+            />
+             <StatCard
+              title="Pending Tasks"
+              value="3"
+              change="2 new"
+              icon={ClipboardList}
+              iconColor="text-yellow-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content Area */}
+            <div className="lg:col-span-2 space-y-8">
+              <RevenueChart />
+              <UpcomingAppointments />
+            </div>
+
+            {/* Sidebar Area */}
+            <div className="space-y-8">
+              <QuickLinks />
+              <RecentActivity />
+            </div>
+          </div>
+          
+           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <TopServicesChart />
+              <ClientFeedback />
+              <ToDoList />
+           </div>
+           
+           <TeamChat />
+
         </div>
-      </header>
-      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome, Vendor!</CardTitle>
-            <CardDescription>Manage your products and orders.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>This is the main dashboard for vendors. More features coming soon!</p>
-          </CardContent>
-        </Card>
       </main>
     </div>
   );
