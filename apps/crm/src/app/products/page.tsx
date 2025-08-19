@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -13,97 +14,93 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Search, FileDown, Eye, Edit, Trash2 } from 'lucide-react';
 import { Textarea } from '@repo/ui/textarea';
 
-type Booking = {
+type Product = {
   id: string;
-  clientName: string;
-  service: string;
-  staffName: string;
-  date: string;
-  time: string;
-  duration: number; // in minutes
-  cost: number;
-  status: 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled';
-  notes?: string;
+  productImage: string;
+  productName: string;
+  price: number;
+  salePrice: number;
+  category: string;
+  stock: number;
+  status: 'Published' | 'Draft' | 'Archived';
 };
 
-const mockBookings: Booking[] = [
-  { id: 'APP-001', clientName: 'Alice Johnson', service: 'Deluxe Haircut', staffName: 'Jane Doe', date: '2024-08-25', time: '10:00', duration: 60, cost: 75, status: 'Confirmed' },
-  { id: 'APP-002', clientName: 'Bob Williams', service: 'Manicure', staffName: 'Emily White', date: '2024-08-25', time: '12:30', duration: 45, cost: 40, status: 'Completed' },
-  { id: 'APP-003', clientName: 'Charlie Brown', service: 'Facial', staffName: 'Jane Doe', date: '2024-08-26', time: '14:00', duration: 75, cost: 120, status: 'Confirmed' },
-  { id: 'APP-004', clientName: 'Diana Prince', service: 'Color & Style', staffName: 'John Smith', date: '2024-08-27', time: '09:00', duration: 180, cost: 250, status: 'Pending' },
+const mockProducts: Product[] = [
+    { id: 'PROD-001', productImage: "https://placehold.co/400x400.png", productName: "Organic Face Serum", price: 85.00, salePrice: 75.00, category: 'Skincare', stock: 50, status: 'Published' },
+    { id: 'PROD-002', productImage: "https://placehold.co/400x400.png", productName: "Matte Lipstick", price: 25.00, salePrice: 25.00, category: 'Makeup', stock: 120, status: 'Published' },
+    { id: 'PROD-003', productImage: "https://placehold.co/400x400.png", productName: "Keratin Shampoo", price: 45.00, salePrice: 40.00, category: 'Haircare', stock: 0, status: 'Archived' },
+    { id: 'PROD-004', productImage: "https://placehold.co/400x400.png", productName: "Professional Hair Dryer", price: 120.00, salePrice: 120.00, category: 'Tools', stock: 30, status: 'Draft' },
 ];
 
-export default function BookingsPage() {
-    const [bookings, setBookings] = useState<Booking[]>(mockBookings);
+export default function ProductsPage() {
+    const [products, setProducts] = useState<Product[]>(mockProducts);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
 
-    const filteredBookings = useMemo(() => {
-        return bookings.filter(appt => 
-            (appt.clientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-             appt.service.toLowerCase().includes(searchTerm.toLowerCase())) &&
-            (statusFilter === 'all' || appt.status === statusFilter)
+    const filteredProducts = useMemo(() => {
+        return products.filter(product => 
+            (product.productName.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            (statusFilter === 'all' || product.status === statusFilter)
         );
-    }, [bookings, searchTerm, statusFilter]);
+    }, [products, searchTerm, statusFilter]);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
-    const currentItems = filteredBookings.slice(firstItemIndex, lastItemIndex);
-    const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+    const currentItems = filteredProducts.slice(firstItemIndex, lastItemIndex);
+    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-    const handleOpenModal = (type: 'add' | 'edit' | 'view', booking?: Booking) => {
+    const handleOpenModal = (type: 'add' | 'edit' | 'view', product?: Product) => {
         setModalType(type);
-        setSelectedBooking(booking || null);
+        setSelectedProduct(product || null);
         setIsModalOpen(true);
     };
 
-    const handleDeleteClick = (booking: Booking) => {
-        setSelectedBooking(booking);
+    const handleDeleteClick = (product: Product) => {
+        setSelectedProduct(product);
         setIsDeleteModalOpen(true);
     };
     
     const handleConfirmDelete = () => {
-        if(selectedBooking) {
-            setBookings(bookings.filter(a => a.id !== selectedBooking.id));
+        if(selectedProduct) {
+            setProducts(products.filter(p => p.id !== selectedProduct.id));
             setIsDeleteModalOpen(false);
-            setSelectedBooking(null);
+            setSelectedProduct(null);
         }
     };
 
-    const getStatusColor = (status: Booking['status']) => {
+    const getStatusColor = (status: Product['status']) => {
         switch (status) {
-          case 'Confirmed': return 'bg-blue-100 text-blue-800';
-          case 'Completed': return 'bg-green-100 text-green-800';
-          case 'Pending': return 'bg-yellow-100 text-yellow-800';
-          case 'Cancelled': return 'bg-red-100 text-red-800';
+          case 'Published': return 'bg-green-100 text-green-800';
+          case 'Draft': return 'bg-yellow-100 text-yellow-800';
+          case 'Archived': return 'bg-gray-100 text-gray-800';
           default: return 'bg-gray-100 text-gray-800';
         }
     };
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
-            <h1 className="text-2xl font-bold font-headline mb-6">Manage Bookings</h1>
+            <h1 className="text-2xl font-bold font-headline mb-6">Manage Products</h1>
 
             <Card>
                 <CardHeader>
                     <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                          <div>
-                            <CardTitle>All Bookings</CardTitle>
-                            <CardDescription>View, create, and manage all client bookings.</CardDescription>
+                            <CardTitle>All Products</CardTitle>
+                            <CardDescription>View, create, and manage all your products.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
                             <div className="relative">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input 
                                     type="search" 
-                                    placeholder="Search by client or service..."
+                                    placeholder="Search by product name..."
                                     className="w-full md:w-64 pl-8"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -115,10 +112,9 @@ export default function BookingsPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Statuses</SelectItem>
-                                    <SelectItem value="Confirmed">Confirmed</SelectItem>
-                                    <SelectItem value="Pending">Pending</SelectItem>
-                                    <SelectItem value="Completed">Completed</SelectItem>
-                                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                    <SelectItem value="Published">Published</SelectItem>
+                                    <SelectItem value="Draft">Draft</SelectItem>
+                                    <SelectItem value="Archived">Archived</SelectItem>
                                 </SelectContent>
                             </Select>
                             <Button variant="outline">
@@ -127,7 +123,7 @@ export default function BookingsPage() {
                             </Button>
                             <Button onClick={() => handleOpenModal('add')}>
                                 <Plus className="mr-2 h-4 w-4" />
-                                New Booking
+                                New Product
                             </Button>
                         </div>
                     </div>
@@ -137,36 +133,54 @@ export default function BookingsPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Client</TableHead>
-                                    <TableHead>Service</TableHead>
-                                    <TableHead>Staff</TableHead>
-                                    <TableHead>Date & Time</TableHead>
-                                    <TableHead>Cost</TableHead>
+                                    <TableHead>Product</TableHead>
+                                    <TableHead>Category</TableHead>
+                                    <TableHead>Price</TableHead>
+                                    <TableHead>Stock</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {currentItems.map(appt => (
-                                    <TableRow key={appt.id}>
-                                        <TableCell className="font-medium">{appt.clientName}</TableCell>
-                                        <TableCell>{appt.service}</TableCell>
-                                        <TableCell>{appt.staffName}</TableCell>
-                                        <TableCell>{appt.date} at {appt.time}</TableCell>
-                                        <TableCell>₹{appt.cost.toFixed(2)}</TableCell>
+                                {currentItems.map(product => (
+                                    <TableRow key={product.id}>
                                         <TableCell>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(appt.status)}`}>
-                                                {appt.status}
+                                            <div className="flex items-center gap-3">
+                                                <Image 
+                                                    src={product.productImage} 
+                                                    alt={product.productName} 
+                                                    width={40} 
+                                                    height={40} 
+                                                    className="rounded-md"
+                                                />
+                                                <span className="font-medium">{product.productName}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{product.category}</TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <span className={product.salePrice < product.price ? "line-through text-muted-foreground text-xs" : ""}>
+                                                    ₹{product.price.toFixed(2)}
+                                                </span>
+                                                {product.salePrice < product.price && (
+                                                    <span className="font-semibold">₹{product.salePrice.toFixed(2)}</span>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{product.stock > 0 ? `${product.stock} units` : <span className="text-red-600">Out of Stock</span>}</TableCell>
+                                        <TableCell>
+                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(product.status)}`}>
+                                                {product.status}
                                             </span>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal('view', appt)}>
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal('view', product)}>
                                                 <Eye className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal('edit', appt)}>
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal('edit', product)}>
                                                 <Edit className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(appt)}>
+                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(product)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </TableCell>
@@ -182,7 +196,7 @@ export default function BookingsPage() {
                         onPageChange={setCurrentPage}
                         itemsPerPage={itemsPerPage}
                         onItemsPerPageChange={setItemsPerPage}
-                        totalItems={filteredBookings.length}
+                        totalItems={filteredProducts.length}
                     />
                 </CardContent>
             </Card>
@@ -190,28 +204,12 @@ export default function BookingsPage() {
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{modalType === 'add' ? 'New Booking' : 'Booking Details'}</DialogTitle>
+                        <DialogTitle>{modalType === 'add' ? 'New Product' : 'Product Details'}</DialogTitle>
                         <DialogDescription>
-                            {modalType === 'add' ? 'Create a new booking.' : `Viewing/editing details for booking #${selectedBooking?.id}`}
+                            {modalType === 'add' ? 'Create a new product.' : `Viewing/editing details for product #${selectedProduct?.id}`}
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="clientName">Client Name</Label>
-                            <Input id="clientName" defaultValue={selectedBooking?.clientName || ''} disabled={modalType==='view'} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="date">Date</Label>
-                                <Input id="date" type="date" defaultValue={selectedBooking?.date || ''} disabled={modalType==='view'}/>
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="time">Time</Label>
-                                <Input id="time" type="time" defaultValue={selectedBooking?.time || ''} disabled={modalType==='view'}/>
-                            </div>
-                        </div>
-                        {/* More fields here */}
-                    </div>
+                    {/* Add form here */}
                     <DialogFooter>
                         {modalType !== 'view' && <Button>Save Changes</Button>}
                         <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Close</Button>
@@ -222,9 +220,9 @@ export default function BookingsPage() {
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete Booking?</DialogTitle>
+                        <DialogTitle>Delete Product?</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete the booking for "{selectedBooking?.clientName}"? This action cannot be undone.
+                            Are you sure you want to delete "{selectedProduct?.productName}"? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

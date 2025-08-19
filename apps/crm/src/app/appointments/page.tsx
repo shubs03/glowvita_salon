@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Plus, Search, FileDown, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, FileDown, Eye, Edit, Trash2, CalendarCheck, CalendarX, UserCheck, Clock } from 'lucide-react';
 import { Textarea } from '@repo/ui/textarea';
 
 type Appointment = {
@@ -90,6 +90,49 @@ export default function AppointmentsPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl font-bold font-headline mb-6">Manage Appointments</h1>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
+                        <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{appointments.length}</div>
+                        <p className="text-xs text-muted-foreground">All scheduled appointments</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
+                        <UserCheck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-blue-600">{appointments.filter(a => a.status === 'Confirmed').length}</div>
+                        <p className="text-xs text-muted-foreground">Upcoming confirmed bookings</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-yellow-600">{appointments.filter(a => a.status === 'Pending').length}</div>
+                        <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
+                        <CalendarX className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-red-600">{appointments.filter(a => a.status === 'Cancelled').length}</div>
+                        <p className="text-xs text-muted-foreground">Cancelled by client or staff</p>
+                    </CardContent>
+                </Card>
+            </div>
 
             <Card>
                 <CardHeader>

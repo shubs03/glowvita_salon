@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
-import { Plus, Search, FileDown, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, FileDown, Eye, Edit, Trash2, Users, UserPlus, UserX, ShoppingBag } from 'lucide-react';
 
 type Client = {
   id: string;
@@ -81,6 +81,49 @@ export default function ClientsPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl font-bold font-headline mb-6">Client Management</h1>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{clients.length}</div>
+                        <p className="text-xs text-muted-foreground">+2 from last month</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">New Clients (30d)</CardTitle>
+                        <UserPlus className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{clients.filter(c => c.status === 'New').length}</div>
+                        <p className="text-xs text-muted-foreground">New clients this month</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+                        <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{clients.reduce((acc, c) => acc + c.totalBookings, 0)}</div>
+                        <p className="text-xs text-muted-foreground">All time bookings</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Inactive Clients</CardTitle>
+                        <UserX className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-red-600">{clients.filter(c => c.status === 'Inactive').length}</div>
+                        <p className="text-xs text-muted-foreground">Clients with no recent activity</p>
+                    </CardContent>
+                </Card>
+            </div>
 
             <Card>
                 <CardHeader>

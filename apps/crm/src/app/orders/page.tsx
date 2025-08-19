@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination } from "@repo/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Input } from '@repo/ui/input';
-import { Search, Eye } from 'lucide-react';
+import { Search, Eye, ShoppingCart, Truck, PackageCheck, Ban } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 
 
@@ -76,6 +76,50 @@ export default function OrdersPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl font-bold font-headline mb-6">Product Orders</h1>
+            
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                        <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{orders.length}</div>
+                        <p className="text-xs text-muted-foreground">All-time product orders</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Pending</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-yellow-600">{orders.filter(o => o.status === 'Pending').length}</div>
+                        <p className="text-xs text-muted-foreground">Orders awaiting processing</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Shipped</CardTitle>
+                        <Truck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-blue-600">{orders.filter(o => o.status === 'Shipped').length}</div>
+                        <p className="text-xs text-muted-foreground">Orders on their way</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+                        <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-600">{orders.filter(o => o.status === 'Delivered').length}</div>
+                        <p className="text-xs text-muted-foreground">Successfully delivered orders</p>
+                    </CardContent>
+                </Card>
+            </div>
+
             <Card>
                 <CardHeader>
                     <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -184,4 +228,3 @@ export default function OrdersPage() {
         </div>
     );
 }
-
