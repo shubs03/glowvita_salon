@@ -410,6 +410,65 @@ export const glowvitaApi = createApi({
         body: { _id },
       }),
       invalidatesTags: ["GeoFence"],
+    // Categories
+    getCategories: builder.query({
+      query: () => '/admin/categories',
+      providesTags: ['Category'],
+    }),
+    createCategory: builder.mutation({
+      query: (category) => ({
+        url: '/admin/categories',
+        method: 'POST',
+        body: category,
+      }),
+      invalidatesTags: ['Category'],
+    }),
+    updateCategory: builder.mutation({
+      query: (category) => ({
+        url: `/admin/categories`,
+        method: 'PUT',
+        body: category,
+      }),
+      invalidatesTags: ['Category'],
+    }),
+    deleteCategory: builder.mutation({
+      query: ({ id }) => ({
+        url: `/admin/categories`,
+        method: 'DELETE',
+        body: { id },
+      }),
+      invalidatesTags: ['Category'],
+    }),
+
+    // Services
+    getServices: builder.query({
+      query: () => '/admin/services',
+      providesTags: ['Service'],
+    }),
+    createService: builder.mutation({
+      query: (service) => ({
+        url: '/admin/services',
+        method: 'POST',
+        body: service,
+      }),
+      invalidatesTags: ['Service'],
+    }),
+    updateService: builder.mutation({
+      query: (service) => ({
+        url: `/admin/services`,
+        method: 'PUT',
+        body: service,
+      }),
+      invalidatesTags: ['Service'],
+    }),
+    deleteService: builder.mutation({
+      query: ({ id }) => ({
+        url: `/admin/services`,
+        method: 'DELETE',
+        body: { id },
+      }),
+      invalidatesTags: ['Service'],
+      }),
     }),
   }),
 });
@@ -471,4 +530,13 @@ export const {
   useCreateGeoFenceMutation,
   useUpdateGeoFenceMutation,
   useDeleteGeoFenceMutation,
+  // Category and Service Endpoints
+  useGetCategoriesQuery,
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
+  useGetServicesQuery,
+  useCreateServiceMutation,
+  useUpdateServiceMutation,
+  useDeleteServiceMutation,
 } = glowvitaApi;

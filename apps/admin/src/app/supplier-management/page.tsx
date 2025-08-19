@@ -56,7 +56,7 @@ import {
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
-} from "@repo/store/services/api";
+} from "@repo/store/api";
 import { toast } from "sonner";
 import { Skeleton } from "@repo/ui/skeleton";
 
