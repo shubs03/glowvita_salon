@@ -13,7 +13,7 @@ const appointments = [
 
 export function UpcomingAppointments() {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <div className="flex justify-between items-center">
             <div>
@@ -33,7 +33,7 @@ export function UpcomingAppointments() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {appointments.map((appt, index) => (
+                {appointments.slice(0, 4).map((appt, index) => (
                 <TableRow key={index}>
                     <TableCell>
                         <div className="font-medium">{appt.name}</div>

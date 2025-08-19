@@ -1,13 +1,11 @@
 
 'use client';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { RevenueChart } from '@/components/dashboard/RevenueChart';
+import { SalesChart } from '@/components/dashboard/SalesChart';
 import { UpcomingAppointments } from '@/components/dashboard/UpcomingAppointments';
-import { TopServicesChart } from '@/components/dashboard/TopServicesChart';
 import { ClientFeedback } from '@/components/dashboard/ClientFeedback';
-import { ToDoList } from '@/components/dashboard/ToDoList';
-import { RecentActivity } from '@/components/dashboard/RecentActivity';
-import { QuickLinks } from '@/components/dashboard/QuickLinks';
+import { TopServicesChart } from '@/components/dashboard/TopServicesChart';
+
 import {
   FaDollarSign,
   FaUsers,
@@ -23,52 +21,49 @@ export default function CrmPage() {
             <div className="flex items-center justify-between space-y-2">
                 <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
             </div>
+            
             {/* Stat Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <StatCard
-                title="Total Revenue"
-                value="₹1,25,832"
-                change="+12.5%"
-                icon={FaDollarSign}
-                iconColor="text-green-500"
+                    title="Total Revenue"
+                    value="₹1,25,832"
+                    change="+12.5%"
+                    icon={FaDollarSign}
+                    iconColor="text-green-500"
                 />
                 <StatCard
-                title="New Clients"
-                value="24"
-                change="+8.2%"
-                icon={FaUsers}
-                iconColor="text-blue-500"
+                    title="New Clients"
+                    value="24"
+                    change="+8.2%"
+                    icon={FaUsers}
+                    iconColor="text-blue-500"
                 />
                 <StatCard
-                title="Today's Bookings"
-                value="12"
-                change="-2.1%"
-                icon={FaCalendarAlt}
-                iconColor="text-purple-500"
+                    title="Today's Bookings"
+                    value="12"
+                    change="-2.1%"
+                    icon={FaCalendarAlt}
+                    iconColor="text-purple-500"
                 />
                 <StatCard
-                title="Pending Tasks"
-                value="3"
-                change="2 new"
-                icon={FaClipboardList}
-                iconColor="text-yellow-500"
+                    title="Pending Tasks"
+                    value="3"
+                    change="2 new"
+                    icon={FaClipboardList}
+                    iconColor="text-yellow-500"
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Main Content Area */}
-                <div className="lg:col-span-2 space-y-8">
-                    <RevenueChart />
-                    <UpcomingAppointments />
-                </div>
+            {/* Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <SalesChart />
+                <TopServicesChart />
+            </div>
 
-                {/* Sidebar Area */}
-                <div className="space-y-8">
-                    <QuickLinks />
-                    <RecentActivity />
-                    <ClientFeedback />
-                    <ToDoList />
-                </div>
+            {/* Tables */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                 <UpcomingAppointments />
+                 <ClientFeedback />
             </div>
         </div>
     </div>
