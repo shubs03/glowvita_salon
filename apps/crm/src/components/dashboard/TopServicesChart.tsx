@@ -14,7 +14,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export function TopServicesChart() {
   return (
-    <Card>
+    <Card className="lg:col-span-1">
         <CardHeader>
             <CardTitle>Top Services</CardTitle>
         </CardHeader>

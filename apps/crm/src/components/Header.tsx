@@ -13,6 +13,7 @@ import {
 } from '@repo/ui/dropdown-menu';
 import { FaBell, FaSearch, FaBars, FaSignOutAlt } from 'react-icons/fa';
 import { Input } from '@repo/ui/input';
+import { ThemeToggle } from './ThemeToggle';
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
@@ -48,6 +49,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
       </div>
       
       <div className="flex items-center gap-2 md:gap-4 min-w-0">
+        <ThemeToggle />
         <Button variant="ghost" size="icon" className="rounded-full">
             <FaBell className="h-5 w-5" />
             <span className="sr-only">Toggle notifications</span>

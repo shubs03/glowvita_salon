@@ -16,7 +16,7 @@ const data = [
 
 export function RevenueChart() {
   return (
-    <Card>
+    <Card className="lg:col-span-2">
       <CardHeader>
         <CardTitle>Weekly Revenue</CardTitle>
         <CardDescription>A summary of your revenue for the last 7 days.</CardDescription>

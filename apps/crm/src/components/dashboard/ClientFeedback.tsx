@@ -10,7 +10,7 @@ const feedback = [
 
 export function ClientFeedback() {
     return (
-        <Card>
+        <Card className="lg:col-span-1">
             <CardHeader>
                 <CardTitle>Recent Client Feedback</CardTitle>
             </CardHeader>

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import StoreProvider from '@repo/store/provider';
 import './globals.css';
 import { CrmLayout } from '@/components/CrmLayout';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export default function RootLayout({
   children,
@@ -16,7 +17,7 @@ export default function RootLayout({
   const showLayout = pathname !== '/login' && pathname !== '/';
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -24,7 +25,14 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          {showLayout ? <CrmLayout>{children}</CrmLayout> : children}
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {showLayout ? <CrmLayout>{children}</CrmLayout> : children}
+          </ThemeProvider>
         </StoreProvider>
       </body>
     </html>
