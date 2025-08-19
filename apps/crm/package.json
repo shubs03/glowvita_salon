@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@radix-ui/react-avatar": "^1.1.0",
     "@repo/lib": "*",
     "@repo/store": "*",
     "@repo/ui": "*",

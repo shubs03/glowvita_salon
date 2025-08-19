@@ -3,7 +3,6 @@
 
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,10 +59,9 @@ export function Header() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="https://placehold.co/32x32.png" alt="@vendor" />
-                <AvatarFallback>V</AvatarFallback>
-              </Avatar>
+                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                    <span className="font-semibold">V</span>
+                </div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

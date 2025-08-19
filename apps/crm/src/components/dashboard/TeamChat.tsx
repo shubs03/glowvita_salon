@@ -1,6 +1,5 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar';
 import { Textarea } from "@repo/ui/textarea";
 import { Button } from "@repo/ui/button";
 import { FaPaperPlane } from "react-icons/fa";
@@ -22,20 +21,18 @@ export function TeamChat() {
                     {messages.map((msg, index) => (
                         <div key={index} className={`flex items-start gap-3 ${msg.user === 'You' ? 'justify-end' : ''}`}>
                             {msg.user !== 'You' && (
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={`https://placehold.co/32x32.png?text=${msg.user.charAt(0)}`} />
-                                    <AvatarFallback>{msg.user.charAt(0)}</AvatarFallback>
-                                </Avatar>
+                                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                                    <span className="text-sm font-semibold">{msg.user.charAt(0)}</span>
+                                </div>
                             )}
                             <div className={`rounded-lg p-3 max-w-xs ${msg.user === 'You' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
                                 {msg.user !== 'You' && <p className="font-semibold text-xs mb-1">{msg.user}</p>}
                                 <p className="text-sm">{msg.message}</p>
                             </div>
                               {msg.user === 'You' && (
-                                <Avatar className="h-8 w-8">
-                                    <AvatarImage src={`https://placehold.co/32x32.png?text=Y`} />
-                                    <AvatarFallback>Y</AvatarFallback>
-                                </Avatar>
+                                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                                    <span className="text-sm font-semibold">Y</span>
+                                </div>
                             )}
                         </div>
                     ))}

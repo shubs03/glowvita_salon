@@ -1,6 +1,5 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 
 const activities = [
     { user: 'Liam Johnson', action: 'booked a new appointment for', subject: 'Classic Haircut' },
@@ -18,10 +17,9 @@ export function RecentActivity() {
       <CardContent className="space-y-4">
         {activities.map((activity, index) => (
             <div key={index} className="flex items-center gap-4">
-                <Avatar className="h-9 w-9">
-                    <AvatarImage src={`https://placehold.co/36x36.png?text=${activity.user.charAt(0)}`} alt="Avatar" />
-                    <AvatarFallback>{activity.user.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center">
+                    <span className="text-sm font-semibold text-secondary-foreground">{activity.user.charAt(0)}</span>
+                </div>
                 <div className="grid gap-1">
                     <p className="text-sm font-medium">
                         {activity.user}

@@ -1,6 +1,5 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar';
 import { Button } from "@repo/ui/button";
 
 const appointments = [
@@ -25,10 +24,9 @@ export function UpcomingAppointments() {
       <CardContent className="space-y-4">
         {appointments.map((appt, index) => (
           <div key={index} className="flex items-center gap-4">
-            <Avatar className="hidden h-9 w-9 sm:flex">
-              <AvatarImage src={`https://placehold.co/36x36.png?text=${appt.name.charAt(0)}`} alt="Avatar" />
-              <AvatarFallback>{appt.name.charAt(0)}</AvatarFallback>
-            </Avatar>
+            <div className="hidden h-9 w-9 sm:flex items-center justify-center rounded-full bg-secondary">
+              <span className="font-semibold">{appt.name.charAt(0)}</span>
+            </div>
             <div className="grid gap-1 flex-1">
               <p className="text-sm font-medium leading-none">{appt.name}</p>
               <p className="text-sm text-muted-foreground">{appt.service}</p>
