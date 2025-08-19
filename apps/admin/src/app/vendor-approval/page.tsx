@@ -11,6 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
+import { useGetSuppliersQuery, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/api';
+import { toast } from 'sonner';
+import { useGetDoctorsQuery, useUpdateDoctorMutation, useDeleteDoctorMutation } from '../../../../../packages/store/src/services/api';
+
 
 const vendorsData = [
     {
@@ -83,63 +87,58 @@ const productsData = [
     }
 ];
 
-const doctorsApprovalData = [
-    {
-        id: "DOC-APP-001",
-        profileImage: "https://placehold.co/400x400.png",
-        doctorName: "Dr. Emily Carter",
-        clinicName: "Serene Skin Clinic",
-        specialization: "Dermatologist",
-        experience: "12 years",
-        qualification: "MD, FAAD"
-    },
-    {
-        id: "DOC-APP-002",
-        profileImage: "https://placehold.co/400x400.png",
-        doctorName: "Dr. Ben Adams",
-        clinicName: "Heal & Glow",
-        specialization: "Trichologist",
-        experience: "8 years",
-        qualification: "MBBS, DDV"
-    }
-];
-
-const suppliersData = [
-  {
-    id: "SUP-001",
-    supplierName: "Global Beauty Supplies",
-    businessRegistrationNo: "GSTIN123456789",
-    supplierType: "Hair Care",
-    license: "License_GBS.pdf",
-    status: "Pending",
-    firstName: "John",
-    lastName: "Doe",
-    email: "contact@gbs.com",
-    phone: "123-456-7890",
-  },
-  {
-    id: "SUP-002",
-    supplierName: "Organic Skincare Inc.",
-    businessRegistrationNo: "GSTIN987654321",
-    supplierType: "Skin Care",
-    license: "License_OSI.pdf",
-    status: "Pending",
-    firstName: "Jane",
-    lastName: "Smith",
-    email: "sales@organicskin.com",
-    phone: "234-567-8901",
-  },
-];
-
 type Vendor = typeof vendorsData[0];
 type Service = typeof servicesData[0];
 type Product = typeof productsData[0];
-type Doctor = typeof doctorsApprovalData[0];
-type Supplier = typeof suppliersData[0];
+
+type Doctor = {
+    _id: string;
+    id: string;
+    profileImage: string;
+    name: string;
+    email: string;
+    phone: string;
+    gender: string;
+    clinicName: string;
+    specialization: string;
+    experience: string;
+    qualification: string;
+    status: 'Approved' | 'Pending' | 'Rejected';
+    registrationNumber: string;
+    state: string;
+    city: string;
+    pincode: string;
+    physicalConsultationStartTime: string;
+    physicalConsultationEndTime: string;
+    assistantName: string;
+    assistantContact: string;
+    doctorAvailability: string;
+};
+
+type Supplier = {
+  _id: string;
+  supplierName: string;
+  businessRegistrationNo: string;
+  supplierType: string;
+  licenseFile: string;
+  status: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+};
 type ActionType = 'approve' | 'reject' | 'delete';
 type ItemType = 'vendor' | 'service' | 'product' | 'doctor' | 'supplier';
 
 export default function VendorApprovalPage() {
+    const { data: suppliersData = [], isLoading: suppliersLoading } = useGetSuppliersQuery(undefined);
+    const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
+
+    const [updateSupplier] = useUpdateSupplierMutation();
+    const [deleteSupplier] = useDeleteSupplierMutation();
+    const [updateDoctor] = useUpdateDoctorMutation();
+    const [deleteDoctor] = useDeleteDoctorMutation();
+
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
@@ -151,20 +150,23 @@ export default function VendorApprovalPage() {
     const [actionType, setActionType] = useState<ActionType | null>(null);
     const [itemType, setItemType] = useState<ItemType | null>(null);
 
+    const pendingSuppliers = suppliersData.filter((s: Supplier) => s.status === 'Pending');
+    const pendingDoctors = doctorsData.filter((d: Doctor) => d.status === 'Pending');
+
     // Pagination logic for each tab
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
     const currentVendors = vendorsData.slice(firstItemIndex, lastItemIndex);
     const currentServices = servicesData.slice(firstItemIndex, lastItemIndex);
     const currentProducts = productsData.slice(firstItemIndex, lastItemIndex);
-    const currentDoctors = doctorsApprovalData.slice(firstItemIndex, lastItemIndex);
-    const currentSuppliers = suppliersData.slice(firstItemIndex, lastItemIndex);
+    const currentDoctors = pendingDoctors.slice(firstItemIndex, lastItemIndex);
+    const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
 
     const totalVendorPages = Math.ceil(vendorsData.length / itemsPerPage);
     const totalServicePages = Math.ceil(servicesData.length / itemsPerPage);
     const totalProductPages = Math.ceil(productsData.length / itemsPerPage);
-    const totalDoctorPages = Math.ceil(doctorsApprovalData.length / itemsPerPage);
-    const totalSupplierPages = Math.ceil(suppliersData.length / itemsPerPage);
+    const totalDoctorPages = Math.ceil(pendingDoctors.length / itemsPerPage);
+    const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
 
     const handleActionClick = (item: Vendor | Service | Product | Doctor | Supplier, type: ItemType, action: ActionType) => {
         setSelectedItem(item);
@@ -184,11 +186,39 @@ export default function VendorApprovalPage() {
         setIsImageViewerOpen(true);
     }
 
-    const handleConfirmAction = () => {
-        if (selectedItem && actionType) {
-            const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || (selectedItem as any).supplierName;
-            console.log(`Performing ${actionType} on ${itemType} ${itemName}`);
+    const handleConfirmAction = async () => {
+        if (!selectedItem || !actionType || !itemType) return;
+    
+        const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
+    
+        try {
+            if (itemType === 'supplier') {
+                const supplier = selectedItem as Supplier;
+                if (actionType === 'delete') {
+                    await deleteSupplier(supplier._id).unwrap();
+                    toast.success('Success', { description: `Supplier "${itemName}" deleted.` });
+                } else {
+                    const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
+                    await updateSupplier({ id: supplier._id, status: newStatus }).unwrap();
+                    toast.success('Success', { description: `Supplier "${itemName}" status updated to ${newStatus}.` });
+                }
+            } else if (itemType === 'doctor') {
+                const doctor = selectedItem as Doctor;
+                if (actionType === 'delete') {
+                    await deleteDoctor(doctor._id).unwrap();
+                    toast.success('Success', { description: `Doctor "${itemName}" deleted.` });
+                } else {
+                    const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
+                    await updateDoctor({ id: doctor._id, status: newStatus }).unwrap();
+                    toast.success('Success', { description: `Doctor "${itemName}" status updated to ${newStatus}.` });
+                }
+            } else {
+                console.log(`Performing ${actionType} on ${itemType} ${itemName}`);
+            }
+        } catch (error) {
+            toast.error('Error', { description: `Failed to perform action on ${itemType}.` });
         }
+    
         setIsActionModalOpen(false);
         setSelectedItem(null);
         setActionType(null);
@@ -198,7 +228,7 @@ export default function VendorApprovalPage() {
     const getModalContent = () => {
         if (!actionType || !selectedItem || !itemType) return { title: '', description: '', buttonText: '' };
         
-        const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || (selectedItem as any).supplierName;
+        const itemName = (selectedItem as any).name || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).doctorName || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
 
         switch (actionType) {
             case 'approve':
@@ -233,42 +263,42 @@ export default function VendorApprovalPage() {
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Vendors</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">573</div>
-            <p className="text-xs text-muted-foreground">+2 since last hour</p>
+            <div className="text-2xl font-bold">{vendorsData.length}</div>
+            <p className="text-xs text-muted-foreground">Vendors to review</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Approved</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Services</CardTitle>
             <ThumbsUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">450</div>
-            <p className="text-xs text-muted-foreground">87% approval rate</p>
+            <div className="text-2xl font-bold">{servicesData.length}</div>
+            <p className="text-xs text-muted-foreground">Services to approve</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Doctors</CardTitle>
             <Hourglass className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">5</div>
-            <p className="text-xs text-muted-foreground">Waiting for review</p>
+            <div className="text-2xl font-bold text-yellow-600">{pendingDoctors.length}</div>
+            <p className="text-xs text-muted-foreground">Doctors awaiting review</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disapproved</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Suppliers</CardTitle>
             <ThumbsDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">118</div>
-            <p className="text-xs text-muted-foreground">Onboarding rejected</p>
+            <div className="text-2xl font-bold text-red-600">{pendingSuppliers.length}</div>
+            <p className="text-xs text-muted-foreground">Suppliers awaiting review</p>
           </CardContent>
         </Card>
       </div>
@@ -520,19 +550,28 @@ export default function VendorApprovalPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {currentDoctors.map((doctor) => (
-                                    <TableRow key={doctor.id}>
+                                {doctorsLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center">Loading...</TableCell>
+                                    </TableRow>
+                                ) : currentDoctors.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center">No pending doctor approvals.</TableCell>
+                                    </TableRow>
+                                ) : (
+                                    currentDoctors.map((doctor) => (
+                                    <TableRow key={doctor._id}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
                                                  <Image 
-                                                    src={doctor.profileImage} 
-                                                    alt={doctor.doctorName} 
+                                                    src={doctor.profileImage || "https://placehold.co/400x400.png"} 
+                                                    alt={doctor.name} 
                                                     width={40} 
                                                     height={40} 
                                                     className="rounded-full cursor-pointer"
-                                                    onClick={() => handleImageClick(doctor.profileImage)}
+                                                    onClick={() => handleImageClick(doctor.profileImage || "https://placehold.co/400x400.png")}
                                                 />
-                                                <span className="font-medium">{doctor.doctorName}</span>
+                                                <span className="font-medium">{doctor.name}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>{doctor.clinicName}</TableCell>
@@ -556,7 +595,7 @@ export default function VendorApprovalPage() {
                                             </Button>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                )))}
                             </TableBody>
                         </Table>
                     </div>
@@ -567,7 +606,7 @@ export default function VendorApprovalPage() {
                         onPageChange={setCurrentPage}
                         itemsPerPage={itemsPerPage}
                         onItemsPerPageChange={setItemsPerPage}
-                        totalItems={doctorsApprovalData.length}
+                        totalItems={pendingDoctors.length}
                     />
                 </CardContent>
             </Card>
@@ -592,13 +631,22 @@ export default function VendorApprovalPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {currentSuppliers.map((supplier) => (
-                                <TableRow key={supplier.id}>
-                                    <TableCell className="font-medium">{supplier.supplierName}</TableCell>
+                            {suppliersLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                                </TableRow>
+                            ) : currentSuppliers.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center">No pending supplier approvals.</TableCell>
+                                </TableRow>
+                            ) : (
+                                currentSuppliers.map((supplier) => (
+                                <TableRow key={supplier._id}>
+                                    <TableCell className="font-medium">{supplier.firstName + " " + supplier.lastName}</TableCell>
                                     <TableCell>{supplier.businessRegistrationNo}</TableCell>
                                     <TableCell>{supplier.supplierType}</TableCell>
                                     <TableCell>
-                                        <a href="#" className="text-primary hover:underline">{supplier.license}</a>
+                                        <a href={supplier.licenseFile} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">View License</a>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={supplier.status === 'Pending' ? 'default' : 'secondary'} className={supplier.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}>{supplier.status}</Badge>
@@ -622,7 +670,7 @@ export default function VendorApprovalPage() {
                                         </Button>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )))}
                         </TableBody>
                     </Table>
                 </div>
@@ -633,7 +681,7 @@ export default function VendorApprovalPage() {
                     onPageChange={setCurrentPage}
                     itemsPerPage={itemsPerPage}
                     onItemsPerPageChange={setItemsPerPage}
-                    totalItems={suppliersData.length}
+                    totalItems={pendingSuppliers.length}
                 />
                 </CardContent>
             </Card>
@@ -664,7 +712,7 @@ export default function VendorApprovalPage() {
         </Dialog>
         
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto no-scrollbar">
             <DialogHeader>
                 <DialogTitle>View Details</DialogTitle>
             </DialogHeader>
@@ -717,29 +765,39 @@ export default function VendorApprovalPage() {
                     </>
                 )}
                  {itemType === 'doctor' && selectedItem && (
-                     <>
-                        <div className="flex items-center gap-4">
-                           <Image src={(selectedItem as Doctor).profileImage} alt={(selectedItem as Doctor).doctorName} width={80} height={80} className="rounded-full" />
-                           <div>
-                                <h3 className="text-lg font-semibold">{(selectedItem as Doctor).doctorName}</h3>
-                                <p className="text-muted-foreground">{(selectedItem as Doctor).clinicName}</p>
-                           </div>
+                    <>
+                        <div className="flex items-start gap-4">
+                            <Image src={(selectedItem as Doctor).profileImage || "https://placehold.co/100x100.png"} alt={(selectedItem as Doctor).name} width={80} height={80} className="rounded-lg" />
+                            <div className="flex-1">
+                                <h3 className="text-lg font-semibold">{(selectedItem as Doctor).name}</h3>
+                                <p className="text-sm text-muted-foreground">{(selectedItem as Doctor).clinicName}</p>
+                                <Badge variant="outline" className="mt-2">{(selectedItem as Doctor).specialization}</Badge>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Doctor ID</span><span className="col-span-2">{(selectedItem as Doctor).id}</span></div>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Specialization</span><span className="col-span-2"><Badge>{(selectedItem as Doctor).specialization}</Badge></span></div>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Experience</span><span className="col-span-2">{(selectedItem as Doctor).experience}</span></div>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Qualification</span><span className="col-span-2">{(selectedItem as Doctor).qualification}</span></div>
+                        <div className="mt-4 border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Email:</span><span>{(selectedItem as Doctor).email}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Phone:</span><span>{(selectedItem as Doctor).phone}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Gender:</span><span>{(selectedItem as Doctor).gender}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Reg. No:</span><span>{(selectedItem as Doctor).registrationNumber}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Experience:</span><span>{(selectedItem as Doctor).experience}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Qualification:</span><span>{(selectedItem as Doctor).qualification}</span></div>
+                             <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Availability:</span><span>{(selectedItem as Doctor).doctorAvailability}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Consultation Time:</span><span>{(selectedItem as Doctor).physicalConsultationStartTime} - {(selectedItem as Doctor).physicalConsultationEndTime}</span></div>
+                            <div className="flex justify-between border-b py-1 md:col-span-2"><span className="text-muted-foreground">Location:</span><span>{`${(selectedItem as Doctor).city}, ${(selectedItem as Doctor).state}, ${(selectedItem as Doctor).pincode}`}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Assistant Name:</span><span>{(selectedItem as Doctor).assistantName}</span></div>
+                            <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Assistant Contact:</span><span>{(selectedItem as Doctor).assistantContact}</span></div>
+                        </div>
                     </>
                 )}
                  {itemType === 'supplier' && selectedItem && (
                     <>
                         <h3 className="text-lg font-semibold">{(selectedItem as Supplier).supplierName}</h3>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Supplier ID</span><span className="col-span-2">{(selectedItem as Supplier).id}</span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Supplier ID</span><span className="col-span-2">{(selectedItem as Supplier)._id}</span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Owner</span><span className="col-span-2">{`${(selectedItem as Supplier).firstName} ${(selectedItem as Supplier).lastName}`}</span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Contact</span><span className="col-span-2">{(selectedItem as Supplier).email}<br />{(selectedItem as Supplier).phone}</span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Business Reg. No.</span><span className="col-span-2">{(selectedItem as Supplier).businessRegistrationNo}</span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Supplier Type</span><span className="col-span-2"><Badge>{(selectedItem as Supplier).supplierType}</Badge></span></div>
-                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">License</span><span className="col-span-2"><a href="#" className="text-primary hover:underline">{(selectedItem as Supplier).license}</a></span></div>
+                        <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">License</span><span className="col-span-2"><a href={(selectedItem as Supplier).licenseFile} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">View License</a></span></div>
                         <div className="grid grid-cols-3 items-center gap-4"><span className="font-semibold text-muted-foreground">Status</span><span className="col-span-2">{(selectedItem as Supplier).status}</span></div>
                     </>
                 )}

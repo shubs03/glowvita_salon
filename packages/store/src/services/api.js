@@ -90,8 +90,17 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
   baseQuery: baseQuery,
-  tagTypes: ["admin", "offers", "Referrals", "Settings", "SuperData", "TaxFeeSettings"],
+  tagTypes: ["admin", "offers", "Referrals", "Settings", "SuperData", "Supplier"],
   endpoints: (builder) => ({
+
+    getUsers: builder.query({
+      query: () => ({
+        url: "/users",
+        method: "GET",
+      }),
+      providesTags: ["admin"],
+    }),
+
     // Admin
     registerAdmin: builder.mutation({
       query: (admin) => ({
@@ -304,6 +313,18 @@ export const glowvitaApi = createApi({
       ],
     }),
 
+    updateVendorStatus: builder.mutation({
+      query: ({ id, status }) => ({
+        url: "/admin/vendor",
+        method: "PATCH",
+        body: { id, status },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Vendor", id },
+        "Vendor",
+      ],
+    }),
+
     deleteVendor: builder.mutation({
       query: ({ id }) => ({
         url: "/admin/vendor",
@@ -311,6 +332,70 @@ export const glowvitaApi = createApi({
         body: { id },
       }),
       invalidatesTags: ["Vendor"],
+    }),
+
+    // Doctor Endpoints
+
+    getDoctors: builder.query({
+      query: () => "/admin/doctors",
+      providesTags: ["doctors"],
+    }),
+
+    createDoctor: builder.mutation({
+      query: (doctor) => ({
+        url: "/admin/doctors",
+        method: "POST",
+        body: doctor,
+      }),
+      invalidatesTags: ["doctors"],
+    }),
+
+    updateDoctor: builder.mutation({
+      query: (doctor) => ({
+        url: "/admin/doctors",
+        method: "PUT",
+        body: doctor,
+      }),
+      invalidatesTags: ["doctors"],
+    }),
+
+    deleteDoctor: builder.mutation({
+      query: (id) => ({
+        url: "/admin/doctors",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["doctors"],
+    }),
+    
+    // Supplier Endpoints
+    getSuppliers: builder.query({
+      query: () => "/admin/suppliers",
+      providesTags: ["Supplier"],
+    }),
+    createSupplier: builder.mutation({
+      query: (supplierData) => ({
+        url: "/admin/suppliers",
+        method: "POST",
+        body: supplierData,
+      }),
+      invalidatesTags: ["Supplier"],
+    }),
+    updateSupplier: builder.mutation({
+      query: ({ id, ...supplierData }) => ({
+        url: `/admin/suppliers`,
+        method: "PUT",
+        body: { id, ...supplierData },
+      }),
+      invalidatesTags: ["Supplier"],
+    }),
+    deleteSupplier: builder.mutation({
+      query: (id) => ({
+        url: `/admin/suppliers`,
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Supplier"],
     }),
   }),
 });
@@ -325,6 +410,7 @@ export const {
   useUpdateAdminMutation,
   useDeleteAdminMutation,
   useGetAdminsQuery,
+  useGetUsersQuery,
 
   // offers
   useGetAdminOffersQuery,
@@ -355,5 +441,19 @@ export const {
   useGetVendorsQuery,
   useGetVendorByIdQuery,
   useUpdateVendorMutation,
+  useUpdateVendorStatusMutation,
   useDeleteVendorMutation,
+
+  // Doctor Endpoints
+  useGetDoctorsQuery,
+  useGetDoctorByIdQuery,
+  useCreateDoctorMutation,
+  useUpdateDoctorMutation,
+  useDeleteDoctorMutation,
+
+  // Supplier Endpoints
+  useGetSuppliersQuery,
+  useCreateSupplierMutation,
+  useUpdateSupplierMutation,
+  useDeleteSupplierMutation,
 } = glowvitaApi;

@@ -1,24 +1,69 @@
 "use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
-import { CheckCircle, Eye, XCircle, Trash2, User, ThumbsUp, Hourglass, BarChart, Plus, FileDown, X, Stethoscope } from 'lucide-react';
-import { Badge } from '@repo/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogTrigger,
+} from "@repo/ui/dialog";
+import {
+  CheckCircle,
+  Eye,
+  XCircle,
+  Trash2,
+  User,
+  ThumbsUp,
+  Hourglass,
+  BarChart,
+  Plus,
+  FileDown,
+  X,
+  Stethoscope,
+} from "lucide-react";
+import { Badge } from "@repo/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Textarea } from '@repo/ui/textarea';
-import { DoctorForm } from '@/components/DoctorForm';
-import { useGetDoctorsQuery, useCreateDoctorMutation, useUpdateDoctorMutation, useDeleteDoctorMutation } from '../../../../../packages/store/src/services/api';
+import { Input } from "@repo/ui/input";
+import { Label } from "@repo/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/select";
+import { Textarea } from "@repo/ui/textarea";
+import { DoctorForm } from "@/components/DoctorForm";
+import {
+  useGetDoctorsQuery,
+  useCreateDoctorMutation,
+  useUpdateDoctorMutation,
+  useDeleteDoctorMutation,
+} from "../../../../../packages/store/src/services/api";
 
 // Doctor type aligned with MongoDB schema
 type Doctor = {
- _id: string;
+  _id: string;
   id: string;
   name: string;
   email: string;
@@ -32,7 +77,7 @@ type Doctor = {
   state: string;
   city: string;
   pincode: string;
-  status: 'Approved' | 'Pending' | 'Rejected';
+  status: "Approved" | "Pending" | "Rejected";
   profileImage?: string;
   qualification?: string;
   registrationYear?: string;
@@ -41,13 +86,13 @@ type Doctor = {
   faculty?: string;
   assistantName: string;
   assistantContact: string;
-  doctorAvailability: 'Online' | 'Offline';
+  doctorAvailability: "Online" | "Offline";
   landline?: string;
   createdAt: string;
   updatedAt: string;
 };
 
-type ActionType = 'approve' | 'reject' | 'delete';
+type ActionType = "approve" | "reject" | "delete";
 
 export default function DoctorsDermatsPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -55,12 +100,17 @@ export default function DoctorsDermatsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isNewDoctorModalOpen, setIsNewDoctorModalOpen] = useState(false);
-  const [isSpecializationModalOpen, setIsSpecializationModalOpen] = useState(false);
+  const [isSpecializationModalOpen, setIsSpecializationModalOpen] =
+    useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [actionType, setActionType] = useState<ActionType | null>(null);
 
   // Fetch doctors using RTK Query
-  const { data: doctors = [], isLoading, error } = useGetDoctorsQuery(undefined );
+  const {
+    data: doctors = [],
+    isLoading,
+    error,
+  } = useGetDoctorsQuery(undefined);
   const [createDoctor] = useCreateDoctorMutation();
   const [updateDoctor] = useUpdateDoctorMutation();
   const [deleteDoctor] = useDeleteDoctorMutation();
@@ -81,39 +131,47 @@ export default function DoctorsDermatsPage() {
     setIsViewModalOpen(true);
   };
 
-  const handleAddDoctor = async (newDoctor: Omit<Doctor, '_id' | 'createdAt' | 'updatedAt' | 'confirmPassword'>) => {
+  const handleAddDoctor = async (
+    newDoctor: Omit<
+      Doctor,
+      "_id" | "createdAt" | "updatedAt" | "confirmPassword"
+    >
+  ) => {
     try {
       await createDoctor(newDoctor).unwrap();
       setIsNewDoctorModalOpen(false);
     } catch (err) {
-      console.error('Failed to add doctor:', err);
+      console.error("Failed to add doctor:", err);
     }
   };
-  
-  const handleUpdateDoctor = async (updatedDoctor: Omit<Doctor, 'confirmPassword'>) => {
+
+  const handleUpdateDoctor = async (
+    updatedDoctor: Omit<Doctor, "confirmPassword">
+  ) => {
     try {
       // Ensure we have the _id for the update
       if (!updatedDoctor._id) {
-        console.error('Doctor ID is required for update');
+        console.error("Doctor ID is required for update");
         return;
       }
       await updateDoctor({ id: updatedDoctor._id, ...updatedDoctor }).unwrap();
       setIsNewDoctorModalOpen(false);
       setSelectedDoctor(null);
     } catch (err) {
-      console.error('Failed to update doctor:', err);
+      console.error("Failed to update doctor:", err);
     }
   };
 
   const handleConfirmAction = async () => {
     if (selectedDoctor && actionType) {
       try {
-        if (actionType === 'delete') {
+        if (actionType === "delete") {
           await deleteDoctor(selectedDoctor._id).unwrap();
         } else {
           await updateDoctor({
-            DoctorId: selectedDoctor._id,
-            status: actionType === 'approve' ? 'Approved' : 'Rejected',
+            id: selectedDoctor._id,
+
+            status: actionType === "approve" ? "Approved" : "Rejected",
           }).unwrap();
         }
       } catch (err) {
@@ -126,28 +184,29 @@ export default function DoctorsDermatsPage() {
   };
 
   const getModalContent = () => {
-    if (!actionType || !selectedDoctor) return { title: '', description: '', buttonText: '' };
+    if (!actionType || !selectedDoctor)
+      return { title: "", description: "", buttonText: "" };
     switch (actionType) {
-      case 'approve':
+      case "approve":
         return {
-          title: 'Approve Doctor?',
+          title: "Approve Doctor?",
           description: `Are you sure you want to approve the registration for "${selectedDoctor.name}"?`,
-          buttonText: 'Approve',
+          buttonText: "Approve",
         };
-      case 'reject':
+      case "reject":
         return {
-          title: 'Reject Doctor?',
+          title: "Reject Doctor?",
           description: `Are you sure you want to reject the registration for "${selectedDoctor.name}"? This action cannot be undone.`,
-          buttonText: 'Reject',
+          buttonText: "Reject",
         };
-      case 'delete':
+      case "delete":
         return {
-          title: 'Delete Doctor?',
+          title: "Delete Doctor?",
           description: `Are you sure you want to permanently delete the registration for "${selectedDoctor.name}"? This action is irreversible.`,
-          buttonText: 'Delete',
+          buttonText: "Delete",
         };
       default:
-        return { title: '', description: '', buttonText: '' };
+        return { title: "", description: "", buttonText: "" };
     }
   };
 
@@ -163,7 +222,9 @@ export default function DoctorsDermatsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Doctors & Dermatologists</h1>
+      <h1 className="text-2xl font-bold font-headline mb-6">
+        Doctors & Dermatologists
+      </h1>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -178,36 +239,50 @@ export default function DoctorsDermatsPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Approved Doctors</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Approved Doctors
+            </CardTitle>
             <ThumbsUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {doctors.filter((d : Doctor) => d.status === 'Approved').length}
+              {doctors.filter((d: Doctor) => d.status === "Approved").length}
             </div>
-            <p className="text-xs text-muted-foreground">Ready for consultations</p>
+            <p className="text-xs text-muted-foreground">
+              Ready for consultations
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Verifications</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Verifications
+            </CardTitle>
             <Hourglass className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {doctors.filter((d: { status: string; }) => d.status === 'Pending').length}
+              {
+                doctors.filter(
+                  (d: { status: string }) => d.status === "Pending"
+                ).length
+              }
             </div>
             <p className="text-xs text-muted-foreground">Awaiting review</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Business</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Business
+            </CardTitle>
             <BarChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">$15,231.89</div>
-            <p className="text-xs text-muted-foreground">+12.1% from last month</p>
+            <p className="text-xs text-muted-foreground">
+              +12.1% from last month
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -223,7 +298,9 @@ export default function DoctorsDermatsPage() {
               <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
                   <CardTitle>Manage Registrations</CardTitle>
-                  <CardDescription>Verify and manage doctor profiles.</CardDescription>
+                  <CardDescription>
+                    Verify and manage doctor profiles.
+                  </CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -234,10 +311,6 @@ export default function DoctorsDermatsPage() {
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Add New Doctor
-                  </Button>
-                  <Button onClick={() => setIsSpecializationModalOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Specialization
                   </Button>
                   <Button variant="outline">
                     <FileDown className="mr-2 h-4 w-4" />
@@ -279,34 +352,50 @@ export default function DoctorsDermatsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentItems.map((doctor : Doctor, index: number) => (
+                    {currentItems.map((doctor: Doctor, index: number) => (
                       <TableRow key={doctor._id}>
                         <TableCell>{firstItemIndex + index + 1}</TableCell>
-                        <TableCell className="font-medium">{doctor.name}</TableCell>
-                        <TableCell>{new Date(doctor.createdAt).toLocaleString()}</TableCell>
-                        <TableCell>{doctor.clinicName || 'N/A'}</TableCell>
+                        <TableCell className="font-medium">
+                          {doctor.name}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(doctor.createdAt).toLocaleString()}
+                        </TableCell>
+                        <TableCell>{doctor.clinicName || "N/A"}</TableCell>
                         <TableCell>Admin</TableCell>
                         <TableCell>
-                          <Badge variant={doctor.status === 'Approved' ? 'default' : 'secondary'}>
-                            {doctor.status === 'Approved' ? 'Active' : doctor.status}
+                          <Badge
+                            variant={
+                              doctor.status === "Approved"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {doctor.status === "Approved"
+                              ? "Active"
+                              : doctor.status}
                           </Badge>
                         </TableCell>
                         <TableCell>{doctor.specialization}</TableCell>
                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              doctor.status === 'Approved'
-                                ? 'bg-green-100 text-green-800'
-                                : doctor.status === 'Pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
+                              doctor.status === "Approved"
+                                ? "bg-green-100 text-green-800"
+                                : doctor.status === "Pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
                             }`}
                           >
                             {doctor.status}
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewClick(doctor)}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleViewClick(doctor)}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button
@@ -320,13 +409,25 @@ export default function DoctorsDermatsPage() {
                           >
                             <Stethoscope className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'approve')}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleActionClick(doctor, "approve")}
+                          >
                             <ThumbsUp className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'reject')}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleActionClick(doctor, "reject")}
+                          >
                             <X className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'delete')}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleActionClick(doctor, "delete")}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -351,10 +452,14 @@ export default function DoctorsDermatsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Business Generated</CardTitle>
-              <CardDescription>Analytics on revenue from doctor consultations.</CardDescription>
+              <CardDescription>
+                Analytics on revenue from doctor consultations.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <p>Charts and detailed reports on business generated will be here.</p>
+              <p>
+                Charts and detailed reports on business generated will be here.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -371,7 +476,11 @@ export default function DoctorsDermatsPage() {
               Cancel
             </Button>
             <Button
-              variant={actionType === 'delete' || actionType === 'reject' ? 'destructive' : 'default'}
+              variant={
+                actionType === "delete" || actionType === "reject"
+                  ? "destructive"
+                  : "default"
+              }
               onClick={handleConfirmAction}
             >
               {buttonText}
@@ -388,31 +497,55 @@ export default function DoctorsDermatsPage() {
           {selectedDoctor && (
             <div className="grid gap-4 py-4 text-sm">
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Doctor ID</span>
+                <span className="font-semibold text-muted-foreground">
+                  Doctor ID
+                </span>
                 <span className="col-span-2">{selectedDoctor.id}</span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Clinic</span>
-                <span className="col-span-2">{selectedDoctor.clinicName || 'N/A'}</span>
+                <span className="font-semibold text-muted-foreground">
+                  Clinic
+                </span>
+                <span className="col-span-2">
+                  {selectedDoctor.clinicName || "N/A"}
+                </span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Category</span>
-                <span className="col-span-2">{selectedDoctor.specialization}</span>
+                <span className="font-semibold text-muted-foreground">
+                  Category
+                </span>
+                <span className="col-span-2">
+                  {selectedDoctor.specialization}
+                </span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Registered At</span>
-                <span className="col-span-2">{new Date(selectedDoctor.createdAt).toLocaleString()}</span>
+                <span className="font-semibold text-muted-foreground">
+                  Registered At
+                </span>
+                <span className="col-span-2">
+                  {new Date(selectedDoctor.createdAt).toLocaleString()}
+                </span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Registered By</span>
+                <span className="font-semibold text-muted-foreground">
+                  Registered By
+                </span>
                 <span className="col-span-2">Admin</span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Subscription</span>
-                <span className="col-span-2">{selectedDoctor.status === 'Approved' ? 'Active' : selectedDoctor.status}</span>
+                <span className="font-semibold text-muted-foreground">
+                  Subscription
+                </span>
+                <span className="col-span-2">
+                  {selectedDoctor.status === "Approved"
+                    ? "Active"
+                    : selectedDoctor.status}
+                </span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Status</span>
+                <span className="font-semibold text-muted-foreground">
+                  Status
+                </span>
                 <span className="col-span-2">{selectedDoctor.status}</span>
               </div>
             </div>
@@ -432,14 +565,14 @@ export default function DoctorsDermatsPage() {
         }}
         doctor={selectedDoctor}
         isEditMode={!!selectedDoctor}
-        onSubmit={(data: Omit<Doctor, 'confirmPassword'>) => {
+        onSubmit={(data: Omit<Doctor, "confirmPassword">) => {
           if (selectedDoctor) {
             // For edit mode, ensure we have the required fields from selectedDoctor
             const updatedDoctor = {
               ...data,
               _id: selectedDoctor._id,
               createdAt: selectedDoctor.createdAt,
-              updatedAt: selectedDoctor.updatedAt
+              updatedAt: selectedDoctor.updatedAt,
             };
             handleUpdateDoctor(updatedDoctor);
           } else {
@@ -449,32 +582,6 @@ export default function DoctorsDermatsPage() {
           }
         }}
       />
-
-      {/* Specialization Management Modal */}
-      <Dialog open={isSpecializationModalOpen} onOpenChange={setIsSpecializationModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Specialization</DialogTitle>
-            <DialogDescription>Add a new specialization for doctors.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="spec-name">Specialization Name</Label>
-              <Input id="spec-name" placeholder="e.g., Cosmetologist" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="spec-desc">Description</Label>
-              <Textarea id="spec-desc" placeholder="A short description of the specialization." />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setIsSpecializationModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Save Specialization</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

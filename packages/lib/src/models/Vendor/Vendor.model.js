@@ -1,12 +1,17 @@
 import mongoose from "mongoose";
 
 const vendorSchema = new mongoose.Schema({
-  owner: {
+  firstName: {
     type: String,
     required: true,
     trim: true,
   },
-  name: {
+  lastName: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  businessName: {
     type: String,
     required: true,
     trim: true,
@@ -42,16 +47,48 @@ const vendorSchema = new mongoose.Schema({
     trim: true,
     match: [/^\d{6}$/, "Please enter a valid 6-digit pincode"],
   },
-  website: {
-    type: String,
-    trim: true,
-    match: [/^https?:\/\/[^\s$.?#].[^\s]*$/, "Please enter a valid URL"],
-    default: null,
+  location: {
+    lat: {
+      type: Number,
+      required: true,
+    },
+    lng: {
+      type: Number,
+      required: true,
+    },
   },
   address: {
     type: String,
     required: true,
     trim: true,
+  },
+  category: {
+    type: String,
+    enum: ["unisex", "men", "women"],
+    required: true,
+  },
+  subCategories: [
+    {
+      type: String,
+      enum: ["shop", "shop-at-home", "onsite"],
+      required: true,
+    },
+  ],
+  status: {
+    type: String,
+    enum: ["Approved", "Pending", "Rejected"],
+    default: "Pending",
+  },
+  password: {
+    type: String,
+    required: false, // Only required for new vendors, not in edit mode
+    minlength: [8, "Password must be at least 8 characters"],
+  },
+  website: {
+    type: String,
+    trim: true,
+    match: [/^https?:\/\/[^\s$.?#].[^\s]*$/, "Please enter a valid URL"],
+    default: null,
   },
   description: {
     type: String,
@@ -62,11 +99,20 @@ const vendorSchema = new mongoose.Schema({
     type: String, // Base64 encoded image string
     default: null,
   },
+  services: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Service",
+      default: null,
+    },
+  ],
   subscription: {
     plan: {
-      type: String,
-      enum: ["Basic", "Pro Monthly", "Pro Yearly"],
-      default: "Basic",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubscriptionPlan",
+      // type: String,
+      // enum: ["Basic", "Pro Monthly", "Pro Yearly"],
+      // default: "Basic",
     },
     status: {
       type: String,
@@ -78,10 +124,12 @@ const vendorSchema = new mongoose.Schema({
       default: null,
     },
   },
-  gallery: [{
-    type: String, // Base64 encoded image strings or URLs
-    default: null,
-  }],
+  gallery: [
+    {
+      type: String, // Base64 encoded image strings or URLs
+      default: null,
+    },
+  ],
   bankDetails: {
     bankName: {
       type: String,
@@ -126,10 +174,12 @@ const vendorSchema = new mongoose.Schema({
       type: String,
       default: null,
     },
-    otherDocs: [{
-      type: String,
-      default: null,
-    }],
+    otherDocs: [
+      {
+        type: String,
+        default: null,
+      },
+    ],
   },
   createdAt: {
     type: Date,
@@ -141,6 +191,7 @@ const vendorSchema = new mongoose.Schema({
   },
 });
 
-const VendorModel = mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);
+const VendorModel =
+  mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);
 
 export default VendorModel;

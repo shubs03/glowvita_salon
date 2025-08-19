@@ -1,12 +1,13 @@
-import _db from "../../../../../../../packages/lib/src/db.js";
-import VendorModel from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js";
-import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import _db from "../../../../../../../packages/lib/src/db";
+import VendorModel from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
+import { authMiddlewareAdmin } from "../../../../middlewareAdmin";
+import bcrypt from "bcryptjs";
 
 await _db();
 
 // Helper function to validate base64 image
 const isValidBase64Image = (str) => {
-  if (!str || typeof str !== 'string') return false;
+  if (!str || typeof str !== "string") return false;
   const base64Regex = /^data:image\/(jpeg|jpg|png|gif|webp|svg\+xml);base64,/;
   return base64Regex.test(str);
 };
@@ -16,13 +17,17 @@ export const POST = authMiddlewareAdmin(
   async (req) => {
     const body = await req.json();
     const {
-      owner,
-      name,
+      firstName,
+      lastName,
+      businessName,
       email,
       phone,
       state,
       city,
       pincode,
+      category,
+      subCategories,
+      password,
       website,
       address,
       description,
@@ -34,73 +39,101 @@ export const POST = authMiddlewareAdmin(
     } = body;
 
     // Validate required fields
-    if (!owner || !name || !email || !phone || !state || !city || !pincode || !address) {
+    if (
+      !firstName ||
+      !lastName ||
+      !businessName ||
+      !email ||
+      !phone ||
+      !state ||
+      !city ||
+      !pincode ||
+      !category ||
+      !subCategories ||
+      subCategories.length === 0 ||
+      !address ||
+      !password
+    ) {
       return Response.json(
-        { message: "Required fields missing" },
+        { message: "All required fields must be provided" },
         { status: 400 }
       );
     }
 
-    // Validate email
+    // Validate formats
     if (!/^\S+@\S+\.\S+$/.test(email)) {
       return Response.json(
-        { message: "Invalid email format" },
+        { message: "Please enter a valid email address" },
         { status: 400 }
       );
     }
-
-    // Validate phone
     if (!/^\d{10}$/.test(phone)) {
       return Response.json(
-        { message: "Invalid phone number. Must be 10 digits" },
+        { message: "Please enter a valid 10-digit phone number" },
         { status: 400 }
       );
     }
-
-    // Validate pincode
     if (!/^\d{6}$/.test(pincode)) {
       return Response.json(
-        { message: "Invalid pincode. Must be 6 digits" },
+        { message: "Please enter a valid 6-digit pincode" },
         { status: 400 }
       );
     }
-
-    // Validate website if provided
     if (website && !/^https?:\/\/[^\s$.?#].[^\s]*$/.test(website)) {
       return Response.json(
-        { message: "Invalid website URL" },
+        { message: "Please enter a valid URL" },
         { status: 400 }
       );
     }
-
-    // Validate profile image if provided
+    if (password.length < 8) {
+      return Response.json(
+        { message: "Password must be at least 8 characters" },
+        { status: 400 }
+      );
+    }
+    if (!["unisex", "men", "women"].includes(category)) {
+      return Response.json({ message: "Invalid category" }, { status: 400 });
+    }
+    if (
+      !subCategories.every((sc) =>
+        ["shop", "shop-at-home", "onsite"].includes(sc)
+      )
+    ) {
+      return Response.json(
+        { message: "Invalid subCategories" },
+        { status: 400 }
+      );
+    }
     if (profileImage && !isValidBase64Image(profileImage)) {
       return Response.json(
-        { message: "Invalid profile image format. Must be base64 encoded image." },
+        {
+          message:
+            "Invalid profile image format. Must be base64 encoded image.",
+        },
         { status: 400 }
       );
     }
-
-    // Validate gallery images if provided
     if (gallery && Array.isArray(gallery)) {
       for (const image of gallery) {
         if (image && !isValidBase64Image(image)) {
           return Response.json(
-            { message: "Invalid gallery image format. Must be base64 encoded image." },
+            {
+              message:
+                "Invalid gallery image format. Must be base64 encoded image.",
+            },
             { status: 400 }
           );
         }
       }
     }
-
-    // Validate bank details if provided
-    if (bankDetails) {
-      if (bankDetails.ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.ifscCode)) {
-        return Response.json(
-          { message: "Invalid IFSC code format" },
-          { status: 400 }
-        );
-      }
+    if (
+      bankDetails?.ifscCode &&
+      !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.ifscCode)
+    ) {
+      return Response.json(
+        { message: "Please enter a valid IFSC code" },
+        { status: 400 }
+      );
     }
 
     // Check for duplicate email or phone
@@ -109,32 +142,92 @@ export const POST = authMiddlewareAdmin(
     });
     if (existingVendor) {
       return Response.json(
-        { message: "Vendor with this email or phone already exists" },
+        { message: "Email or phone number already in use" },
         { status: 400 }
       );
     }
 
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Transform subscription fields
+    const subscriptionData = subscription
+      ? {
+          plan: subscription.package || "Basic",
+          status: subscription.isActive ? "Active" : "Pending",
+          expires: subscription.endDate ? new Date(subscription.endDate) : null,
+        }
+      : { plan: "Basic", status: "Pending", expires: null };
+
+    // Transform bankDetails
+    const bankDetailsData = bankDetails
+      ? {
+          bankName: bankDetails.bankName || null,
+          accountNumber: bankDetails.accountNumber || null,
+          ifscCode: bankDetails.ifscCode || null,
+          accountHolder: bankDetails.accountHolderName || null,
+        }
+      : {
+          bankName: null,
+          accountNumber: null,
+          ifscCode: null,
+          accountHolder: null,
+        };
+
+    // Transform documents
+    const documentsData = documents
+      ? {
+          aadharCard: documents.find((d) => d.type === "aadhar")?.file || null,
+          panCard: documents.find((d) => d.type === "pan")?.file || null,
+          udyogAadhar: documents.find((d) => d.type === "gst")?.file || null,
+          shopLicense:
+            documents.find((d) => d.type === "license")?.file || null,
+          udhayamCert:
+            documents.find((d) => d.type === "udhayam")?.file || null,
+          otherDocs:
+            documents.filter((d) => d.type === "other").map((d) => d.file) ||
+            [],
+        }
+      : {
+          aadharCard: null,
+          panCard: null,
+          udyogAadhar: null,
+          shopLicense: null,
+          udhayamCert: null,
+          otherDocs: [],
+        };
+
     // Create vendor
     const newVendor = await VendorModel.create({
-      owner,
-      name,
+      firstName,
+      lastName,
+      businessName,
       email,
       phone,
       state,
       city,
       pincode,
+      category,
+      subCategories,
+      password: hashedPassword,
       website: website || null,
       address,
       description: description || null,
       profileImage: profileImage || null,
-      subscription: subscription || { plan: "Basic", status: "Pending", expires: null },
+      subscription: subscriptionData,
       gallery: gallery || [],
-      bankDetails: bankDetails || {},
-      documents: documents || {},
+      bankDetails: bankDetailsData,
+      documents: documentsData,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     });
 
+    // Remove password from response
+    const vendorData = newVendor.toObject();
+    delete vendorData.password;
+
     return Response.json(
-      { message: "Vendor created successfully", vendor: newVendor },
+      { message: "Vendor created successfully", vendor: vendorData },
       { status: 201 }
     );
   },
@@ -142,114 +235,264 @@ export const POST = authMiddlewareAdmin(
 );
 
 // Get All Vendors
-export const GET = authMiddlewareAdmin(
-  async () => {
-    const vendors = await VendorModel.find();
-    return Response.json(vendors);
-  },
-  ["superadmin", "admin"]
-);
+export const GET = authMiddlewareAdmin(async () => {
+  const vendors = await VendorModel.find().select("-password");
+  return Response.json(vendors);
+}, ["superadmin", "admin"]);
 
 // Update Vendor
 export const PUT = authMiddlewareAdmin(
   async (req) => {
     const { id, ...body } = await req.json();
+    const {
+      firstName,
+      lastName,
+      businessName,
+      email,
+      phone,
+      state,
+      city,
+      pincode,
+      category,
+      subCategories,
+      password,
+      website,
+      address,
+      description,
+      profileImage,
+      subscription,
+      gallery,
+      bankDetails,
+      documents,
+    } = body;
 
     // Validate required fields
-    if (body.email && !/^\S+@\S+\.\S+$/.test(body.email)) {
+    if (
+      !firstName ||
+      !lastName ||
+      !businessName ||
+      !email ||
+      !phone ||
+      !state ||
+      !city ||
+      !pincode ||
+      !category ||
+      !subCategories ||
+      subCategories.length === 0 ||
+      !address
+    ) {
       return Response.json(
-        { message: "Invalid email format" },
+        { message: "All required fields must be provided" },
         { status: 400 }
       );
     }
 
-    if (body.phone && !/^\d{10}$/.test(body.phone)) {
+    // Validate formats
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
       return Response.json(
-        { message: "Invalid phone number. Must be 10 digits" },
+        { message: "Please enter a valid email address" },
         { status: 400 }
       );
     }
-
-    if (body.pincode && !/^\d{6}$/.test(body.pincode)) {
+    if (!/^\d{10}$/.test(phone)) {
       return Response.json(
-        { message: "Invalid pincode. Must be 6 digits" },
+        { message: "Please enter a valid 10-digit phone number" },
         { status: 400 }
       );
     }
-
-    if (body.website && !/^https?:\/\/[^\s$.?#].[^\s]*$/.test(body.website)) {
+    if (!/^\d{6}$/.test(pincode)) {
       return Response.json(
-        { message: "Invalid website URL" },
+        { message: "Please enter a valid 6-digit pincode" },
         { status: 400 }
       );
     }
-
-    // Validate profile image if provided
-    if (body.profileImage && !isValidBase64Image(body.profileImage)) {
+    if (website && !/^https?:\/\/[^\s$.?#].[^\s]*$/.test(website)) {
       return Response.json(
-        { message: "Invalid profile image format. Must be base64 encoded image." },
+        { message: "Please enter a valid URL" },
         { status: 400 }
       );
     }
-
-    // Validate gallery images if provided
-    if (body.gallery && Array.isArray(body.gallery)) {
-      for (const image of body.gallery) {
+    if (password && password.length < 8) {
+      return Response.json(
+        { message: "Password must be at least 8 characters" },
+        { status: 400 }
+      );
+    }
+    if (!["unisex", "men", "women"].includes(category)) {
+      return Response.json({ message: "Invalid category" }, { status: 400 });
+    }
+    if (
+      !subCategories.every((sc) =>
+        ["shop", "shop-at-home", "onsite"].includes(sc)
+      )
+    ) {
+      return Response.json(
+        { message: "Invalid subCategories" },
+        { status: 400 }
+      );
+    }
+    if (profileImage && !isValidBase64Image(profileImage)) {
+      return Response.json(
+        {
+          message:
+            "Invalid profile image format. Must be base64 encoded image.",
+        },
+        { status: 400 }
+      );
+    }
+    if (gallery && Array.isArray(gallery)) {
+      for (const image of gallery) {
         if (image && !isValidBase64Image(image)) {
           return Response.json(
-            { message: "Invalid gallery image format. Must be base64 encoded image." },
+            {
+              message:
+                "Invalid gallery image format. Must be base64 encoded image.",
+            },
             { status: 400 }
           );
         }
       }
     }
-
-    // Validate bank details if provided (not read-only in create mode)
-    if (body.bankDetails && !body.isEditMode) {
-      if (body.bankDetails.ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(body.bankDetails.ifscCode)) {
-        return Response.json(
-          { message: "Invalid IFSC code format" },
-          { status: 400 }
-        );
-      }
+    if (
+      bankDetails?.ifscCode &&
+      !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.ifscCode)
+    ) {
+      return Response.json(
+        { message: "Please enter a valid IFSC code" },
+        { status: 400 }
+      );
     }
 
     // Check for duplicate email or phone (excluding current vendor)
-    if (body.email || body.phone) {
+    if (email || phone) {
       const existingVendor = await VendorModel.findOne({
-        $or: [{ email: body.email }, { phone: body.phone }],
+        $or: [{ email }, { phone }],
         _id: { $ne: id },
       });
       if (existingVendor) {
         return Response.json(
-          { message: "Vendor with this email or phone already exists" },
+          { message: "Email or phone number already in use" },
           { status: 400 }
         );
       }
     }
 
+    // Transform subscription fields
+    const subscriptionData = subscription
+      ? {
+          plan: subscription.package || "Basic",
+          status: subscription.isActive ? "Active" : "Pending",
+          expires: subscription.endDate ? new Date(subscription.endDate) : null,
+        }
+      : { plan: "Basic", status: "Pending", expires: null };
+
+    // Transform bankDetails
+    const bankDetailsData = bankDetails
+      ? {
+          bankName: bankDetails.bankName || null,
+          accountNumber: bankDetails.accountNumber || null,
+          ifscCode: bankDetails.ifscCode || null,
+          accountHolder: bankDetails.accountHolderName || null,
+        }
+      : {
+          bankName: null,
+          accountNumber: null,
+          ifscCode: null,
+          accountHolder: null,
+        };
+
+    // Transform documents safely
+    const documentsArray = Array.isArray(documents) ? documents : [];
+
+    const documentsData = {
+      aadharCard: documentsArray.find((d) => d.type === "aadhar")?.file || null,
+      panCard: documentsArray.find((d) => d.type === "pan")?.file || null,
+      udyogAadhar: documentsArray.find((d) => d.type === "gst")?.file || null,
+      shopLicense:
+        documentsArray.find((d) => d.type === "license")?.file || null,
+      udhayamCert:
+        documentsArray.find((d) => d.type === "udhayam")?.file || null,
+      otherDocs:
+        documentsArray.filter((d) => d.type === "other").map((d) => d.file) ||
+        [],
+    };
+
+    // Hash password if provided
     const updateData = {
-      ...body,
+      firstName,
+      lastName,
+      businessName,
+      email,
+      phone,
+      state,
+      city,
+      pincode,
+      category,
+      subCategories,
+      password: password ? await bcrypt.hash(password, 10) : undefined,
+      website: website || null,
+      address,
+      description: description || null,
+      profileImage: profileImage || null,
+      subscription: subscriptionData,
+      gallery: gallery || [],
+      bankDetails: bankDetailsData,
+      documents: documentsData,
       updatedAt: Date.now(),
     };
 
-    // Prevent updating bank details and documents in edit mode
-    if (body.isEditMode) {
-      delete updateData.bankDetails;
-      delete updateData.documents;
-    }
+    // Remove undefined fields to avoid overwriting with undefined
+    if (!password) delete updateData.password;
 
-    const updatedVendor = await VendorModel.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    );
+    const updatedVendor = await VendorModel.findByIdAndUpdate(id, updateData, {
+      new: true,
+    }).select("-password");
 
     if (!updatedVendor) {
       return Response.json({ message: "Vendor not found" }, { status: 404 });
     }
 
-    return Response.json(updatedVendor);
+    return Response.json({
+      message: "Vendor updated successfully",
+      vendor: updatedVendor,
+    });
+  },
+  ["superadmin"]
+);
+
+// Approve or Disapprove Vendor
+export const PATCH = authMiddlewareAdmin(
+  async (req) => {
+    const { id, status } = await req.json();
+
+    // Validate required fields
+    if (!id || !status) {
+      return Response.json(
+        { message: "Vendor ID and action (approve/disapprove) are required" },
+        { status: 400 }
+      );
+    }
+
+
+    // Prepare update data
+    const updateData = {
+      status: status, 
+    };
+
+    const updatedVendor = await VendorModel.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true }
+    ).select("-password");
+
+    if (!updatedVendor) {
+      return Response.json({ message: "Vendor not found" }, { status: 404 });
+    }
+
+    return Response.json({
+      message: `Vendor ${status === "Approved" ? "Approved" : "Disapproved"} successfully`,
+      vendor: updatedVendor,
+    });
   },
   ["superadmin"]
 );

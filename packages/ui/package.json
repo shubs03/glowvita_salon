@@ -17,9 +17,11 @@
     "./radio-group": "./src/radio-group.tsx",
     "./switch": "./src/switch.tsx",
     "./checkbox": "./src/checkbox.tsx",
+    "./skeleton": "./src/skeleton.tsx",
     "./globals.css": "./src/globals.css",
     "./tailwind.config": "./tailwind.config.ts",
-    "./cn": "./src/cn.ts"
+    "./cn": "./src/cn.ts",
+    "./dropdown-menu": "./src/dropdown-menu.tsx"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -28,6 +30,7 @@
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.1",
+    "@radix-ui/react-dropdown-menu": "^2.1.1",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-radio-group": "^1.2.0",
     "@radix-ui/react-select": "^2.1.1",
