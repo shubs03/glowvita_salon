@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
-import { Star } from 'lucide-react';
+import { FaStar } from 'react-icons/fa';
 
 const feedback = [
     { client: 'Sarah L.', comment: "Amazing service! My nails have never looked better.", rating: 5 },
@@ -10,7 +10,7 @@ const feedback = [
 
 export function ClientFeedback() {
     return (
-        <Card>
+        <Card className="lg:col-span-1">
             <CardHeader>
                 <CardTitle>Recent Client Feedback</CardTitle>
             </CardHeader>
@@ -21,10 +21,10 @@ export function ClientFeedback() {
                             <p className="font-semibold text-sm">{item.client}</p>
                             <div className="flex items-center gap-1">
                                 {[...Array(item.rating)].map((_, i) => (
-                                    <Star key={i} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                                    <FaStar key={i} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
                                 ))}
                                 {[...Array(5 - item.rating)].map((_, i) => (
-                                    <Star key={i} className="h-4 w-4 text-gray-300" />
+                                    <FaStar key={i} className="h-4 w-4 text-gray-300" />
                                 ))}
                             </div>
                         </div>

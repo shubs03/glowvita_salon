@@ -1,13 +1,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
-import { type LucideIcon } from "lucide-react";
+import { type IconType } from "react-icons";
 import { cn } from "@repo/ui/cn";
 
 interface StatCardProps {
   title: string;
   value: string;
   change: string;
-  icon: LucideIcon;
+  icon: IconType;
   iconColor?: string;
 }
 

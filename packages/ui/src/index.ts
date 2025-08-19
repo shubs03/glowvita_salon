@@ -15,5 +15,4 @@ export * from "./radio-group";
 export * from "./switch";
 export * from "./checkbox";
 export * from "./skeleton";
-export * from "./avatar";
 export * from "./dropdown-menu";

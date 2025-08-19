@@ -1,6 +1,7 @@
+
 // middlewares/auth.js
 import jwt from "jsonwebtoken";
-import VendorUserModel from "../../../packages/lib/src/models/vendor/VendorUser.model.js";
+import VendorUserModel from "../../../packages/lib/src/models/Vendor/Vendor.model.js";
 import _db from "../../../packages/lib/src/db.js";
 import { JWT_SECRET_VENDOR } from "../../../packages/config/config.js";
 
@@ -8,7 +9,6 @@ export function authMiddlewareVendor(handler, allowedRoles = []) {
   return async (req, ctx) => {
     await _db();
 
-    // Change the header for vendor token
     const token = req.headers.get("vendor-authorization")?.split(" ")[1];
     if (!token) {
       return Response.json(
@@ -18,14 +18,12 @@ export function authMiddlewareVendor(handler, allowedRoles = []) {
     }
 
     try {
-      // Change the secret
       if (!JWT_SECRET_VENDOR) {
         throw new Error("JWT_SECRET_VENDOR is not defined on the server.");
       }
 
       const decoded = jwt.verify(token, JWT_SECRET_VENDOR);
 
-      // Change the model
       const vendor = await VendorUserModel.findById(decoded.userId).select(
         "-password"
       );
