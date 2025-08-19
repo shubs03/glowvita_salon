@@ -3,17 +3,18 @@ import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { FaArrowRight, FaBook, FaCalendarCheck, FaChartLine, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaRocket, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
+import Image from 'next/image';
 
-const FeatureCard = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
-    <Card className="transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
-    <CardHeader className="flex flex-row items-center gap-4">
-      <div className="bg-primary/10 p-3 rounded-full">{icon}</div>
-      <CardTitle>{title}</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p className="text-muted-foreground">{children}</p>
-    </CardContent>
-  </Card>
+const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
+  <div className="flex gap-4 items-start">
+    <div className="flex-shrink-0 bg-primary/10 p-3 rounded-full">
+      {icon}
+    </div>
+    <div>
+      <h3 className="text-lg font-semibold">{title}</h3>
+      <p className="mt-1 text-muted-foreground">{children}</p>
+    </div>
+  </div>
 );
 
 export default function CrmHomePage() {
@@ -57,34 +58,46 @@ export default function CrmHomePage() {
 
         {/* Features Section */}
         <section className="py-20 bg-background">
-          <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold font-headline">Powerful Features, Effortless Control</h2>
-            <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-              Everything you need to manage and grow your salon, all in one place.
-            </p>
+            <div className="container mx-auto px-4">
+                <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold font-headline">Powerful Features, Effortless Control</h2>
+                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+                        Everything you need to manage and grow your salon, all in one place.
+                    </p>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <div className="relative rounded-lg overflow-hidden shadow-2xl">
+                         <Image 
+                            src="https://placehold.co/600x700.png" 
+                            alt="CRM Dashboard Preview" 
+                            width={600} 
+                            height={700}
+                            className="w-full h-auto object-cover transform transition-transform duration-500 hover:scale-105"
+                            data-ai-hint="dashboard professional"
+                        />
+                    </div>
+                    <div className="space-y-8">
+                         <FeatureItem icon={<FaBook className="h-6 w-6 text-primary" />} title="Client Management">
+                            Keep track of all your client details, history, and preferences in one organized place.
+                         </FeatureItem>
+                         <FeatureItem icon={<FaCalendarCheck className="h-6 w-6 text-primary" />} title="Smart Booking">
+                            An intuitive calendar to manage appointments, reduce no-shows, and handle rescheduling with ease.
+                         </FeatureItem>
+                         <FeatureItem icon={<FaCreditCard className="h-6 w-6 text-primary" />} title="Seamless Payments">
+                            Integrate payments directly into your workflow. Handle transactions, invoices, and payouts effortlessly.
+                         </FeatureItem>
+                         <FeatureItem icon={<FaCut className="h-6 w-6 text-primary" />} title="Service Management">
+                            Define and manage your service offerings, durations, and pricing with a flexible system.
+                         </FeatureItem>
+                         <FeatureItem icon={<FaChartLine className="h-6 w-6 text-primary" />} title="Business Analytics">
+                            Gain valuable insights into your revenue, client growth, and top-performing services with visual reports.
+                         </FeatureItem>
+                         <FeatureItem icon={<FaComments className="h-6 w-6 text-primary" />} title="Team Collaboration">
+                            Keep your team in sync with internal chat, shared notes, and a collaborative to-do list.
+                         </FeatureItem>
+                    </div>
+                </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <FeatureCard icon={<FaBook className="h-6 w-6 text-primary" />} title="Client Management">
-                Keep track of all your client details, history, and preferences in one organized place.
-              </FeatureCard>
-              <FeatureCard icon={<FaCalendarCheck className="h-6 w-6 text-primary" />} title="Smart Booking">
-                An intuitive calendar to manage appointments, reduce no-shows, and handle rescheduling with ease.
-              </FeatureCard>
-              <FeatureCard icon={<FaCreditCard className="h-6 w-6 text-primary" />} title="Seamless Payments">
-                Integrate payments directly into your workflow. Handle transactions, invoices, and payouts effortlessly.
-              </FeatureCard>
-              <FeatureCard icon={<FaCut className="h-6 w-6 text-primary" />} title="Service Management">
-                Define and manage your service offerings, durations, and pricing with a flexible system.
-              </FeatureCard>
-              <FeatureCard icon={<FaChartLine className="h-6 w-6 text-primary" />} title="Business Analytics">
-                Gain valuable insights into your revenue, client growth, and top-performing services with visual reports.
-              </FeatureCard>
-              <FeatureCard icon={<FaComments className="h-6 w-6 text-primary" />} title="Team Collaboration">
-                Keep your team in sync with internal chat, shared notes, and a collaborative to-do list.
-              </FeatureCard>
-            </div>
-          </div>
         </section>
 
         {/* Testimonial Section */}
