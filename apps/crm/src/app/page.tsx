@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { FaArrowRight, FaBook, FaCalendarCheck, FaChartLine, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaRocket, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
 
 const FeatureCard = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
-  <Card>
+    <Card className="transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
     <CardHeader className="flex flex-row items-center gap-4">
       <div className="bg-primary/10 p-3 rounded-full">{icon}</div>
       <CardTitle>{title}</CardTitle>
@@ -56,9 +56,14 @@ export default function CrmHomePage() {
         </section>
 
         {/* Features Section */}
-        <section className="py-20">
+        <section className="py-20 bg-background">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center mb-12 font-headline">Powerful Features, Effortless Control</h2>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold font-headline">Powerful Features, Effortless Control</h2>
+            <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+              Everything you need to manage and grow your salon, all in one place.
+            </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               <FeatureCard icon={<FaBook className="h-6 w-6 text-primary" />} title="Client Management">
                 Keep track of all your client details, history, and preferences in one organized place.
@@ -83,14 +88,14 @@ export default function CrmHomePage() {
         </section>
 
         {/* Testimonial Section */}
-        <section className="py-20 bg-background">
+        <section className="py-20 bg-secondary/50">
           <div className="container mx-auto px-4 text-center">
              <h2 className="text-3xl font-bold font-headline mb-4">Loved by Salon Owners</h2>
             <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
               Hear what our partners have to say about how our CRM has transformed their business.
             </p>
             <div className="max-w-md mx-auto">
-                <Card className="bg-secondary">
+                <Card className="bg-background">
                     <CardContent className="pt-6">
                         <blockquote className="text-lg">
                             "This CRM has been a game-changer for my salon. I'm more organized, my clients are happier, and my revenue has increased by 20% in just three months!"
@@ -105,7 +110,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* FAQ Section */}
-        <section className="py-20">
+        <section className="py-20 bg-background">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-3xl font-bold text-center mb-12 font-headline">Frequently Asked Questions</h2>
             <div className="space-y-4">
