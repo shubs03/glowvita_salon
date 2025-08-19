@@ -3,8 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@repo/ui/tabs';
 import { Button } from '@repo/ui/button';
+import { Input } from '@repo/ui/input';
+import { Label } from '@repo/ui/label';
+import { Textarea } from '@repo/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Checkbox } from '@repo/ui/checkbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
+import { Trash2, UploadCloud, CheckCircle2, Users } from 'lucide-react';
+import stateCityData from '@/lib/state-city.json';
+import { updateVendor } from '@repo/store/slices/vendorSlice';
+
 interface Subscription {
   startDate: string;
   endDate: string;
@@ -22,17 +32,30 @@ interface BankDetails {
   upiId?: string;
 }
 
+interface Document {
+  id: string;
+  name: string;
+  type: 'aadhar' | 'pan' | 'gst' | 'license' | 'other';
+  file: string; // base64 or URL
+  uploadDate: string;
+  status: 'pending' | 'approved' | 'rejected';
+  notes?: string;
+}
+
+type SalonCategory = 'unisex' | 'men' | 'women';
+type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
+
 interface Vendor {
+  _id?: string;
   id?: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   businessName: string;
-  businessType: string;
-  businessCategory: string;
-  businessEmail: string;
-  businessDescription: string;
+  category: SalonCategory;
+  subCategories: SubCategory[];
+  description: string;
   profileImage?: string;
   website?: string;
   state: string;
@@ -43,32 +66,21 @@ interface Vendor {
   gallery?: string[];
   documents?: Document[];
   bankDetails?: BankDetails;
-  [key: string]: any; // For dynamic access
 }
-import { updateVendor } from '@repo/store/slices/vendorSlice';
-import stateCityData from '@/lib/state-city.json';
-import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
-import { Textarea } from '@repo/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
-import { 
-  Trash2, 
-  UploadCloud, 
-  CheckCircle2, 
-  Search, 
-  Phone, 
-  Calendar, 
-  UserCheck, 
-  IndianRupee, 
-  MessageSquareText, 
-  MoreHorizontal, 
-  Users, 
-  Plus 
-} from 'lucide-react';
 
-// Tab Components defined in-file
-const PersonalInformationTab = ({ formData, handleInputChange, errors, states, cities, selectedState, setSelectedState, setFormData }) => {
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  lastVisit: string;
+  totalVisits: number;
+  totalSpent: number;
+  status: 'active' | 'inactive' | 'new';
+  avatar?: string;
+}
+
+const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxChange, errors, states, cities, selectedState, setSelectedState, setFormData }) => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -81,16 +93,14 @@ const PersonalInformationTab = ({ formData, handleInputChange, errors, states, c
         setFormData((prev: Vendor) => ({
           ...prev,
           profileImage: reader.result as string,
-          // Ensure all required fields are maintained
           firstName: prev.firstName || '',
           lastName: prev.lastName || '',
           email: prev.email || '',
           phone: prev.phone || '',
           businessName: prev.businessName || '',
-          businessType: prev.businessType || '',
-          businessCategory: prev.businessCategory || '',
-          businessEmail: prev.businessEmail || '',
-          businessDescription: prev.businessDescription || '',
+          category: prev.category || 'unisex',
+          subCategories: prev.subCategories || [],
+          description: prev.description || '',
           state: prev.state || '',
           city: prev.city || '',
           pincode: prev.pincode || '',
@@ -100,6 +110,18 @@ const PersonalInformationTab = ({ formData, handleInputChange, errors, states, c
       reader.readAsDataURL(file);
     }
   };
+
+  const salonCategories = [
+    { value: 'unisex' as const, label: 'Unisex Salon' },
+    { value: 'men' as const, label: "Men's Salon" },
+    { value: 'women' as const, label: "Women's Salon" },
+  ];
+
+  const subCategories: { id: SubCategory; label: string }[] = [
+    { id: 'shop', label: 'Shop' },
+    { id: 'shop-at-home', label: 'Shop at Home' },
+    { id: 'onsite', label: 'Onsite' },
+  ];
 
   return (
     <Card>
@@ -161,69 +183,45 @@ const PersonalInformationTab = ({ formData, handleInputChange, errors, states, c
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="businessType">Business Type <span className="text-red-500">*</span></Label>
+              <Label htmlFor="category">Salon Category <span className="text-red-500">*</span></Label>
               <Select 
-                value={formData.businessType || ''} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, businessType: value }))}
+                value={formData.category || ''} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value as SalonCategory }))}
               >
-                <SelectTrigger className={errors.businessType ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Select business type" />
+                <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Select salon category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="salon">Salon</SelectItem>
-                  <SelectItem value="spa">Spa</SelectItem>
-                  <SelectItem value="barber">Barber Shop</SelectItem>
-                  <SelectItem value="clinic">Clinic</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  {salonCategories.map(category => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {errors.businessType && <p className="text-sm text-red-500 mt-1">{errors.businessType}</p>}
+              {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="businessCategory">Business Category <span className="text-red-500">*</span></Label>
-              <Select 
-                value={formData.businessCategory || ''} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, businessCategory: value }))}
-              >
-                <SelectTrigger className={errors.businessCategory ? 'border-red-500' : ''}>
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beauty">Beauty & Wellness</SelectItem>
-                  <SelectItem value="hair">Hair Care</SelectItem>
-                  <SelectItem value="nails">Nails</SelectItem>
-                  <SelectItem value="spa">Spa & Massage</SelectItem>
-                  <SelectItem value="barber">Barber Services</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.businessCategory && <p className="text-sm text-red-500 mt-1">{errors.businessCategory}</p>}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="businessEmail">Business Email <span className="text-red-500">*</span></Label>
-              <Input 
-                id="businessEmail" 
-                name="businessEmail" 
-                type="email" 
-                value={formData.businessEmail || ''} 
-                onChange={handleInputChange} 
-                className={errors.businessEmail ? 'border-red-500' : ''} 
-              />
-              {errors.businessEmail && <p className="text-sm text-red-500 mt-1">{errors.businessEmail}</p>}
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
-              <Input 
-                id="phone" 
-                name="phone" 
-                type="tel" 
-                value={formData.phone || ''} 
-                onChange={handleInputChange} 
-                className={errors.phone ? 'border-red-500' : ''} 
-              />
-              {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
+              <Label>Sub Categories <span className="text-red-500">*</span></Label>
+              <div className={`space-y-2 p-3 rounded-md ${errors.subCategories ? 'border border-red-200 bg-red-50' : ''}`}>
+                {subCategories.map((subCat) => (
+                  <div key={subCat.id} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={subCat.id}
+                      checked={formData.subCategories.includes(subCat.id)}
+                      onCheckedChange={(checked) => handleCheckboxChange('subCategories', subCat.id, checked as boolean)}
+                    />
+                    <label
+                      htmlFor={subCat.id}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {subCat.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+              {errors.subCategories && <p className="text-sm text-red-500 mt-1">{errors.subCategories}</p>}
             </div>
             
             <div className="space-y-2">
@@ -242,17 +240,17 @@ const PersonalInformationTab = ({ formData, handleInputChange, errors, states, c
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="businessDescription">Business Description</Label>
+            <Label htmlFor="description">Business Description</Label>
             <Textarea 
-              id="businessDescription" 
-              name="businessDescription" 
+              id="description" 
+              name="description" 
               rows={3}
-              value={formData.businessDescription || ''} 
+              value={formData.description || ''} 
               onChange={handleInputChange} 
               placeholder="Tell us about your business..."
-              className={errors.businessDescription ? 'border-red-500' : ''}
+              className={errors.description ? 'border-red-500' : ''}
             />
-            {errors.businessDescription && <p className="text-sm text-red-500 mt-1">{errors.businessDescription}</p>}
+            {errors.description && <p className="text-sm text-red-500 mt-1">{errors.description}</p>}
           </div>
         </div>
 
@@ -268,11 +266,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, errors, states, c
             {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName}</p>}
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="salonName">Salon Name <span className="text-red-500">*</span></Label>
-          <Input id="salonName" name="salonName" value={formData.salonName} onChange={handleInputChange} className={errors.salonName ? 'border-red-500' : ''} />
-          {errors.salonName && <p className="text-sm text-red-500 mt-1">{errors.salonName}</p>}
-        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
@@ -285,45 +278,44 @@ const PersonalInformationTab = ({ formData, handleInputChange, errors, states, c
             {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
           </div>
         </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="state">State <span className="text-red-500">*</span></Label>
-          <Select value={formData.state} onValueChange={(value) => { setSelectedState(value); setFormData(prev => ({ ...prev, state: value, city: '' })); }}>
-            <SelectTrigger className={errors.state ? 'border-red-500' : ''}><SelectValue placeholder="Select state" /></SelectTrigger>
-            <SelectContent className="max-h-48 overflow-y-auto">
-              {states.map((state) => (<SelectItem key={state.state} value={state.state}>{state.state}</SelectItem>))}
-            </SelectContent>
-          </Select>
-          {errors.state && <p className="text-sm text-red-500 mt-1">{errors.state}</p>}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="state">State <span className="text-red-500">*</span></Label>
+            <Select value={formData.state} onValueChange={(value) => { setSelectedState(value); setFormData(prev => ({ ...prev, state: value, city: '' })); }}>
+              <SelectTrigger className={errors.state ? 'border-red-500' : ''}><SelectValue placeholder="Select state" /></SelectTrigger>
+              <SelectContent className="max-h-48 overflow-y-auto">
+                {states.map((state) => (<SelectItem key={state.state} value={state.state}>{state.state}</SelectItem>))}
+              </SelectContent>
+            </Select>
+            {errors.state && <p className="text-sm text-red-500 mt-1">{errors.state}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="city">City <span className="text-red-500">*</span></Label>
+            <Select value={formData.city} onValueChange={(value) => setFormData(prev => ({ ...prev, city: value }))} disabled={!selectedState}>
+              <SelectTrigger className={errors.city ? 'border-red-500' : ''}><SelectValue placeholder="Select city" /></SelectTrigger>
+              <SelectContent className="max-h-48 overflow-y-auto">
+                {cities.length > 0 ? (cities.map((city) => (<SelectItem key={city} value={city}>{city}</SelectItem>))) : (<SelectItem value="-" disabled>Select a state first</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {errors.city && <p className="text-sm text-red-500 mt-1">{errors.city}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pincode">Pincode <span className="text-red-500">*</span></Label>
+            <Input id="pincode" name="pincode" value={formData.pincode} onChange={handleInputChange} className={errors.pincode ? 'border-red-500' : ''} />
+            {errors.pincode && <p className="text-sm text-red-500 mt-1">{errors.pincode}</p>}
+          </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="city">City <span className="text-red-500">*</span></Label>
-          <Select value={formData.city} onValueChange={(value) => setFormData(prev => ({ ...prev, city: value }))} disabled={!selectedState}>
-            <SelectTrigger className={errors.city ? 'border-red-500' : ''}><SelectValue placeholder="Select city" /></SelectTrigger>
-            <SelectContent className="max-h-48 overflow-y-auto">
-              {cities.length > 0 ? (cities.map((city) => (<SelectItem key={city} value={city}>{city}</SelectItem>))) : (<SelectItem value="-" disabled>Select a state first</SelectItem>)}
-            </SelectContent>
-          </Select>
-          {errors.city && <p className="text-sm text-red-500 mt-1">{errors.city}</p>}
+          <Label htmlFor="address">Complete Address <span className="text-red-500">*</span></Label>
+          <Textarea id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Enter complete salon address" className={errors.address ? 'border-red-500' : ''} />
+          {errors.address && <p className="text-sm text-red-500 mt-1">{errors.address}</p>}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="pincode">Pincode <span className="text-red-500">*</span></Label>
-          <Input id="pincode" name="pincode" value={formData.pincode} onChange={handleInputChange} className={errors.pincode ? 'border-red-500' : ''} />
-          {errors.pincode && <p className="text-sm text-red-500 mt-1">{errors.pincode}</p>}
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="address">Complete Address <span className="text-red-500">*</span></Label>
-        <Textarea id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Enter complete salon address" className={errors.address ? 'border-red-500' : ''} />
-        {errors.address && <p className="text-sm text-red-500 mt-1">{errors.address}</p>}
-      </div>
-    </CardContent>
-  </Card>
+      </CardContent>
+    </Card>
   );
 };
 
 const SubscriptionTab = ({ vendor, formData, handleInputChange, errors }) => {
-  // Set default values if not present
   const subscription = formData.subscription || {
     startDate: '',
     endDate: '',
@@ -455,14 +447,12 @@ const SubscriptionTab = ({ vendor, formData, handleInputChange, errors }) => {
 };
 
 const GalleryTab = ({ vendor, formData, handleInputChange, errors }) => {
-  // Initialize gallery with empty array if not present
   const gallery = formData.gallery || [];
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    // Filter for image files and limit to 10 images
     const imageFiles = files
       .filter(file => file.type.startsWith('image/'))
       .slice(0, 10 - gallery.length); // Limit to 10 images max
@@ -472,7 +462,6 @@ const GalleryTab = ({ vendor, formData, handleInputChange, errors }) => {
       return;
     }
 
-    // Process each image file
     const newImages: string[] = [];
     let processed = 0;
 
@@ -489,7 +478,6 @@ const GalleryTab = ({ vendor, formData, handleInputChange, errors }) => {
           newImages.push(reader.result as string);
         }
         
-        // Update form data after all images are processed
         if (processed === imageFiles.length && newImages.length > 0) {
           handleInputChange({
             target: {
@@ -613,7 +601,6 @@ const GalleryTab = ({ vendor, formData, handleInputChange, errors }) => {
 };
 
 const BankDetailsTab = ({ vendor, formData, handleInputChange, errors }) => {
-  // Initialize bank details with default values
   const bankDetails = formData.bankDetails || {
     accountHolderName: '',
     accountNumber: '',
@@ -762,7 +749,6 @@ const BankDetailsTab = ({ vendor, formData, handleInputChange, errors }) => {
           </div>
         </div>
 
-        {/* Preview Section */}
         {(bankDetails.accountNumber || bankDetails.accountHolderName) && (
           <div className="mt-6 p-4 bg-gray-50 rounded-md border">
             <h4 className="font-medium text-gray-700 mb-3">Bank Details Preview</h4>
@@ -810,16 +796,6 @@ const BankDetailsTab = ({ vendor, formData, handleInputChange, errors }) => {
   );
 };
 
-interface Document {
-  id: string;
-  name: string;
-  type: 'aadhar' | 'pan' | 'gst' | 'license' | 'other';
-  file: string; // base64 or URL
-  uploadDate: string;
-  status: 'pending' | 'approved' | 'rejected';
-  notes?: string;
-}
-
 const documentTypes = [
   { value: 'aadhar', label: 'Aadhar Card' },
   { value: 'pan', label: 'PAN Card' },
@@ -838,13 +814,11 @@ const DocumentsTab = ({ vendor, formData, handleInputChange, errors }) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('File size should not exceed 5MB');
       return;
     }
 
-    // Check file type
     const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
     if (!validTypes.includes(file.type)) {
       alert('Only PDF, JPEG, and PNG files are allowed');
@@ -874,7 +848,6 @@ const DocumentsTab = ({ vendor, formData, handleInputChange, errors }) => {
         }
       });
       
-      // Reset form
       setSelectedDocType('');
       setDocumentNotes('');
       setIsUploading(false);
@@ -928,7 +901,6 @@ const DocumentsTab = ({ vendor, formData, handleInputChange, errors }) => {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Upload Section */}
         <div className="border-2 border-dashed rounded-lg p-6 text-center">
           <div className="flex flex-col items-center justify-center space-y-4">
             <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
@@ -983,7 +955,6 @@ const DocumentsTab = ({ vendor, formData, handleInputChange, errors }) => {
           </div>
         </div>
 
-        {/* Documents List */}
         <div>
           <h4 className="font-medium mb-4">Uploaded Documents</h4>
           {documents.length > 0 ? (
@@ -1032,7 +1003,6 @@ const DocumentsTab = ({ vendor, formData, handleInputChange, errors }) => {
           )}
         </div>
 
-        {/* Required Documents List */}
         <div className="mt-8">
           <h4 className="font-medium mb-3">Required Documents</h4>
           <div className="space-y-2 text-sm">
@@ -1069,18 +1039,6 @@ const DocumentsTab = ({ vendor, formData, handleInputChange, errors }) => {
     </Card>
   );
 };
-
-interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  lastVisit: string;
-  totalVisits: number;
-  totalSpent: number;
-  status: 'active' | 'inactive' | 'new';
-  avatar?: string;
-}
 
 interface ClientsTabProps {
   vendor: Vendor;
@@ -1164,20 +1122,22 @@ interface VendorEditFormProps {
   isOpen: boolean;
   onClose: () => void;
   vendor: Vendor | null;
+  onSubmit: (vendor: Vendor) => void;
 }
 
-export function VendorEditForm({ isOpen, onClose, vendor }: VendorEditFormProps) {
+export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEditFormProps) {
   const dispatch = useDispatch();
   const [formData, setFormData] = useState<Vendor>({
+    _id: '',
+    id: '',
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     businessName: '',
-    businessType: '',
-    businessCategory: '',
-    businessEmail: '',
-    businessDescription: '',
+    category: 'unisex',
+    subCategories: [],
+    description: '',
     profileImage: '',
     website: '',
     state: '',
@@ -1191,7 +1151,7 @@ export function VendorEditForm({ isOpen, onClose, vendor }: VendorEditFormProps)
       isActive: false
     },
     gallery: [],
-    ...(vendor || {})
+    documents: [],
   });
   const [errors, setErrors] = useState<Partial<Vendor>>({});
   const [selectedState, setSelectedState] = useState<string>('');
@@ -1199,15 +1159,15 @@ export function VendorEditForm({ isOpen, onClose, vendor }: VendorEditFormProps)
   useEffect(() => {
     if (vendor) {
       setFormData({
+        _id: vendor._id || '',
         firstName: vendor.firstName || '',
         lastName: vendor.lastName || '',
         email: vendor.email || '',
         phone: vendor.phone || '',
         businessName: vendor.businessName || '',
-        businessType: vendor.businessType || '',
-        businessCategory: vendor.businessCategory || '',
-        businessEmail: vendor.businessEmail || '',
-        businessDescription: vendor.businessDescription || '',
+        category: vendor.category || 'unisex',
+        subCategories: vendor.subCategories || [],
+        description: vendor.description || '',
         profileImage: vendor.profileImage || '',
         website: vendor.website || '',
         state: vendor.state || '',
@@ -1220,7 +1180,8 @@ export function VendorEditForm({ isOpen, onClose, vendor }: VendorEditFormProps)
           package: '',
           isActive: false
         },
-        gallery: vendor.gallery || []
+        gallery: vendor.gallery || [],
+        documents: vendor.documents || []
       });
       setSelectedState(vendor.state || '');
     } else {
@@ -1230,10 +1191,9 @@ export function VendorEditForm({ isOpen, onClose, vendor }: VendorEditFormProps)
         email: '',
         phone: '',
         businessName: '',
-        businessType: '',
-        businessCategory: '',
-        businessEmail: '',
-        businessDescription: '',
+        category: 'unisex',
+        subCategories: [],
+        description: '',
         profileImage: '',
         website: '',
         state: '',
@@ -1246,7 +1206,8 @@ export function VendorEditForm({ isOpen, onClose, vendor }: VendorEditFormProps)
           package: '',
           isActive: false
         },
-        gallery: []
+        gallery: [],
+        documents: []
       });
       setSelectedState('');
     }
@@ -1254,16 +1215,62 @@ export function VendorEditForm({ isOpen, onClose, vendor }: VendorEditFormProps)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => (prev ? { ...prev, [name]: value } : null));
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...prev[parent as keyof Vendor],
+          [child]: value
+        }
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  const handleCheckboxChange = (field: 'subCategories', id: SubCategory, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: checked
+        ? Array.from(new Set([...prev[field], id]))
+        : prev[field].filter((item: SubCategory) => item !== id)
+    }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
   };
 
   const validateForm = () => {
-    if (!formData) return false;
     const newErrors: Partial<Vendor> = {};
-    if (!formData.firstName) newErrors.firstName = 'First name is required.';
-    if (!formData.lastName) newErrors.lastName = 'Last name is required.';
-    if (!formData.salonName) newErrors.salonName = 'Salon name is required.';
-    // Add other validations as needed
+    if (!formData.firstName) newErrors.firstName = 'First name is required';
+    if (!formData.lastName) newErrors.lastName = 'Last name is required';
+    if (!formData.businessName) newErrors.businessName = 'Business name is required';
+    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.phone) newErrors.phone = 'Phone number is required';
+    if (!formData.state) newErrors.state = 'State is required';
+    if (!formData.city) newErrors.city = 'City is required';
+    if (!formData.pincode) newErrors.pincode = 'Pincode is required';
+    if (!formData.address) newErrors.address = 'Address is required';
+    if (!formData.category) newErrors.category = 'Salon category is required';
+    if (formData.subCategories.length === 0) newErrors.subCategories = 'At least one sub-category is required';
+
+    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    if (formData.phone && !/^\d{10}$/.test(formData.phone)) {
+      newErrors.phone = 'Phone number must be 10 digits';
+    }
+    if (formData.pincode && !/^\d{6}$/.test(formData.pincode)) {
+      newErrors.pincode = 'Pincode must be 6 digits';
+    }
+    if (formData.website && !/^https?:\/\/[^\s$.?#].[^\s]*$/.test(formData.website)) {
+      newErrors.website = 'Please enter a valid URL';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -1272,6 +1279,9 @@ export function VendorEditForm({ isOpen, onClose, vendor }: VendorEditFormProps)
     e.preventDefault();
     if (validateForm() && formData) {
       dispatch(updateVendor(formData));
+      if (onSubmit) {
+        onSubmit(formData);
+      }
       onClose();
     }
   };
@@ -1304,6 +1314,7 @@ export function VendorEditForm({ isOpen, onClose, vendor }: VendorEditFormProps)
               <PersonalInformationTab 
                 formData={formData}
                 handleInputChange={handleInputChange}
+                handleCheckboxChange={handleCheckboxChange}
                 errors={errors}
                 states={states}
                 cities={cities}

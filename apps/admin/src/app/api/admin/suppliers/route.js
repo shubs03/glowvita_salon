@@ -6,6 +6,21 @@ import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();
 
+// Helper to validate supplier data
+const validateSupplierData = (data) => {
+    const { firstName, lastName, email, mobile, shopName, country, state, city, pincode, address, supplierType, password } = data;
+    if (!firstName || !lastName || !email || !mobile || !shopName || !country || !state || !city || !pincode || !address || !supplierType || !password) {
+        return "Missing required fields";
+    }
+    if (!/^\d{10}$/.test(mobile)) {
+        return "Mobile number must be 10 digits";
+    }
+    if (!/^\d{6}$/.test(pincode)) {
+        return "Pincode must be 6 digits";
+    }
+    return null;
+}
+
 // GET all suppliers
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
@@ -22,6 +37,11 @@ export const POST = authMiddlewareAdmin(async (req) => {
   try {
     const body = await req.json();
     const { licenseFile, ...supplierData } = body;
+
+    const validationError = validateSupplierData(supplierData);
+    if(validationError){
+        return NextResponse.json({ message: validationError }, { status: 400 });
+    }
 
     let licenseFileUrl = null;
     if (licenseFile && licenseFile.startsWith('data:')) {
@@ -51,6 +71,14 @@ export const PUT = authMiddlewareAdmin(async (req) => {
 
     if (!id) {
       return NextResponse.json({ message: "ID is required for update" }, { status: 400 });
+    }
+    
+    // Server-side validation for updates
+    if (updateData.mobile && !/^\d{10}$/.test(updateData.mobile)) {
+        return NextResponse.json({ message: "Mobile number must be 10 digits" }, { status: 400 });
+    }
+    if (updateData.pincode && !/^\d{6}$/.test(updateData.pincode)) {
+        return NextResponse.json({ message: "Pincode must be 6 digits" }, { status: 400 });
     }
 
     const existingSupplier = await SupplierModel.findById(id);

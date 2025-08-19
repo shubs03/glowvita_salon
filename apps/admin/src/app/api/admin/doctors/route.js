@@ -1,3 +1,4 @@
+
 import _db from "../../../../../../../packages/lib/src/db.js";
 import DoctorModel from "../../../../../../../packages/lib/src/models/Vendor/Docters.model.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
@@ -32,6 +33,8 @@ export const POST = authMiddlewareAdmin(
       assistantContact,
       doctorAvailability,
       landline,
+      workingWithHospital,
+      videoConsultation,
     } = body;
 
     // 1️⃣ Validate required fields
@@ -53,7 +56,9 @@ export const POST = authMiddlewareAdmin(
       !physicalConsultationEndTime ||
       !assistantName ||
       !assistantContact ||
-      !doctorAvailability
+      !doctorAvailability ||
+      workingWithHospital === undefined ||
+      videoConsultation === undefined
     ) {
       return Response.json(
         { message: "All required fields must be provided" },
@@ -100,6 +105,8 @@ export const POST = authMiddlewareAdmin(
       assistantContact,
       doctorAvailability,
       landline: landline || null,
+      workingWithHospital,
+      videoConsultation,
     });
 
     // 5️⃣ Remove password before returning
