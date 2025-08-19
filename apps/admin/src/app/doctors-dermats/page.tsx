@@ -169,7 +169,8 @@ export default function DoctorsDermatsPage() {
           await deleteDoctor(selectedDoctor._id).unwrap();
         } else {
           await updateDoctor({
-            DoctorId: selectedDoctor._id,
+            id: selectedDoctor._id,
+
             status: actionType === "approve" ? "Approved" : "Rejected",
           }).unwrap();
         }
