@@ -5,6 +5,7 @@ import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
 import vendorReducer from './slices/vendorSlice';
+import marketingReducer from './slices/marketingSlice';
 
 export const makeStore = () => {
   return configureStore({
@@ -15,6 +16,7 @@ export const makeStore = () => {
       customer: customerReducer,
       salon: salonReducer,
       vendors: vendorReducer,
+      marketing: marketingReducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(glowvitaApi.middleware),
