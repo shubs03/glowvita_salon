@@ -10,6 +10,7 @@ import { useAppDispatch } from '@repo/store/hooks';
 import { setAdminAuth } from '@repo/store/slices/auth';
 import { useAdminLoginMutation } from '../../../../../packages/store/src/services/api';
 import { Eye, EyeOff } from 'lucide-react';
+import { toast } from 'sonner';
 
 
 export default function LoginPage() {
@@ -30,12 +31,15 @@ export default function LoginPage() {
       const response = await adminLogin({ email, password }).unwrap();
       if (response.success) {
         dispatch(setAdminAuth({ user: response.user, token: response.admin_access_token }));
+        toast.success("Login successful!");
         router.push('/');
       } else {
         setError(response.error || 'Invalid email or password.');
+        toast.error(response.error || 'Login failed. Please try again.');
     }
     } catch (err: any) {
       setError(err.data?.error || 'An unexpected error occurred.');
+      toast.error(err.data?.error || 'An unexpected error occurred.');
     }
   };
   

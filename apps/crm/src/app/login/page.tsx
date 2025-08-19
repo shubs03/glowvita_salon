@@ -22,14 +22,17 @@ export default function LoginPage() {
     e.preventDefault();
     
     try {
-      const result = await vendorLogin({ email, password }).unwrap();
-      
-      toast.success('Login successful!', {
-        description: 'Welcome back to your vendor dashboard.',
-        duration: 3000,
-      });
-      
-      router.push('/');
+      const response = await vendorLogin({ email, password }).unwrap();
+
+      if(response.success) {
+        localStorage.setItem('vendor_access_token', response.vendor_access_token);
+        localStorage.setItem('vendor_refresh_token', response.vendor_refresh_token);
+        toast.success('Login successful!', {
+          description: 'Welcome back to your vendor dashboard.',
+          duration: 3000,
+        });
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       toast.error('Login failed', {
         description: error?.data?.message || error?.message || 'Invalid credentials. Please try again.',

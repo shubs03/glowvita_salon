@@ -7,6 +7,7 @@ import StoreProvider from '@repo/store/provider';
 import './globals.css';
 import { CrmLayout } from '@/components/CrmLayout';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { Toaster } from 'sonner';
 
 export default function RootLayout({
   children,
@@ -25,6 +26,7 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
+          <Toaster richColors />
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -33,6 +35,7 @@ export default function RootLayout({
           >
             {showLayout ? <CrmLayout>{children}</CrmLayout> : children}
           </ThemeProvider>
+          
         </StoreProvider>
       </body>
     </html>
