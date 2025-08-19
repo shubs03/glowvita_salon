@@ -16,7 +16,8 @@
     "./slices/supplierSlice": "./src/slices/supplierSlice.js",
     "./slices/subscriptionSlice": "./src/slices/subscriptionSlice.js",
     "./slices/notificationSlice": "./src/slices/notificationSlice.js",
-    "./slices/geoFencingSlice": "./src/slices/geoFencingSlice.js"
+    "./slices/geoFencingSlice": "./src/slices/geoFencingSlice.js",
+    "./slices/marketingSlice": "./src/slices/marketingSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

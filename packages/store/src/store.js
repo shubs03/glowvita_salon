@@ -5,6 +5,7 @@ import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
 import vendorReducer from './slices/vendorSlice';
+import marketingReducer from './slices/marketingSlice';
 import supplierReducer from './slices/supplierSlice';
 import subscriptionReducer from './slices/subscriptionSlice';
 import notificationReducer from './slices/notificationSlice';
@@ -20,6 +21,7 @@ export const makeStore = () => {
       customer: customerReducer,
       salon: salonReducer,
       vendors: vendorReducer,
+      marketing: marketingReducer,
       suppliers: supplierReducer,
       subscription: subscriptionReducer,
       notification: notificationReducer,
