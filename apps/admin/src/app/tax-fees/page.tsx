@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import { toast } from "sonner";
+import { useGetTaxFeeSettingsQuery, useUpdateTaxFeeSettingsMutation } from '@repo/store/services/api';
 
 type FeeType = 'percentage' | 'fixed';
 
@@ -16,10 +18,13 @@ interface FeeSettings {
   serviceTaxType: FeeType;
   platformFeeEnabled: boolean;
   serviceTaxEnabled: boolean;
+  _id?: string;
 }
 
 export default function TaxAndFeesPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: currentSettings, isLoading: isFetching } = useGetTaxFeeSettingsQuery();
+  const [updateTaxFeeSettings, { isLoading: isUpdating }] = useUpdateTaxFeeSettingsMutation();
+  
   const [settings, setSettings] = useState<FeeSettings>({
     platformFee: 15,
     serviceTax: 18,
@@ -28,6 +33,21 @@ export default function TaxAndFeesPage() {
     platformFeeEnabled: true,
     serviceTaxEnabled: true
   });
+
+  // Update local state when settings are fetched
+  useEffect(() => {
+    if (currentSettings) {
+      setSettings({
+        platformFee: currentSettings.platformFee || 15,
+        serviceTax: currentSettings.serviceTax || 18,
+        platformFeeType: currentSettings.platformFeeType || 'percentage',
+        serviceTaxType: currentSettings.serviceTaxType || 'percentage',
+        platformFeeEnabled: currentSettings.platformFeeEnabled ?? true,
+        serviceTaxEnabled: currentSettings.serviceTaxEnabled ?? true,
+        _id: currentSettings._id
+      });
+    }
+  }, [currentSettings]);
 
   const handleInputChange = (field: keyof FeeSettings, value: string | boolean) => {
     setSettings(prev => ({
@@ -38,19 +58,31 @@ export default function TaxAndFeesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
     try {
-      // TODO: Implement API call to save settings
-      console.log('Saving settings:', settings);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Show success message
+      const result = await updateTaxFeeSettings(settings).unwrap();
+      toast.success("Tax and fee settings updated successfully");
+      
+      // Update local state with the returned settings
+      if (result) {
+        setSettings(prev => ({
+          ...prev,
+          ...result
+        }));
+      }
     } catch (error) {
       console.error('Failed to save settings:', error);
-      // Show error message
-    } finally {
-      setIsLoading(false);
+      toast.error(error?.data?.message || "Failed to update settings");
     }
   };
+
+  if (isFetching) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -305,12 +337,12 @@ export default function TaxAndFeesPage() {
                   serviceTaxEnabled: prev.serviceTaxEnabled
                 }));
               }}
-              disabled={isLoading}
+              disabled={isUpdating}
             >
               Reset
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Saving...' : 'Save Changes'}
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </form>
