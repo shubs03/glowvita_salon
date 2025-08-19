@@ -24,7 +24,7 @@ export function ToDoList() {
                             <Checkbox id={`task-${task.id}`} checked={task.done} />
                             <label
                                 htmlFor={`task-${task.id}`}
-                                className={`text-sm font-medium leading-none ${task.done ? 'line-through text-muted-foreground' : ''}`}
+                                className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${task.done ? 'line-through text-muted-foreground' : ''}`}
                             >
                               {task.label}
                             </label>
