@@ -378,12 +378,38 @@ export const glowvitaApi = createApi({
         method: 'POST',
         body: planData
       }),
+      async onQueryStarted(planData, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          glowvitaApi.util.updateQueryData('getSubscriptionPlans', undefined, (draft) => {
+            draft.push({
+              ...planData,
+              _id: 'temp-id',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+          })
+        );
+        try {
+          const { data } = await queryFulfilled;
+          dispatch(
+            glowvitaApi.util.updateQueryData('getSubscriptionPlans', undefined, (draft) => {
+              const index = draft.findIndex(plan => plan._id === 'temp-id');
+              if (index !== -1) {
+                draft[index] = data;
+              }
+            })
+          );
+        } catch (error) {
+          patchResult.undo();
+          throw error;
+        }
+      },
       invalidatesTags: ['SubscriptionPlan']
     }),
     
     updateSubscriptionPlan: builder.mutation({
       query: ({ _id, ...updates }) => ({
-        url: `/admin/subscription-plans/${_id}`,
+        url: `/admin/subscription-plans?id=${_id}`,
         method: 'PATCH',
         body: updates,
       }),
@@ -395,23 +421,11 @@ export const glowvitaApi = createApi({
     
     deleteSubscriptionPlan: builder.mutation({
       query: (id) => ({
-        url: `/admin/subscription-plans/${id}`,
+        url: `/admin/subscription-plans?id=${id}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, id) => [
         { type: 'SubscriptionPlan', id },
-        'SubscriptionPlan'
-      ]
-    }),
-    
-    toggleSubscriptionPlanStatus: builder.mutation({
-      query: ({ _id, status }) => ({
-        url: `/admin/subscription-plans/${_id}/status`,
-        method: 'PATCH',
-        body: { status: !status },
-      }),
-      invalidatesTags: (result, error, { _id }) => [
-        { type: 'SubscriptionPlan', id: _id },
         'SubscriptionPlan'
       ]
     }),

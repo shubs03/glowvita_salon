@@ -1,31 +1,22 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { 
-  fetchSubscriptionPlans, 
-  createNewPlan, 
-  updateExistingPlan, 
-  removePlan,
-  selectAllPlans, 
-  selectPlanById,
-  selectLoading,
-  selectError 
-} from '@repo/store/slices/subscriptionSlice';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { Button } from "@repo/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
-import { Pagination } from "@repo/ui/pagination";
+import { useState } from 'react';
+import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation } from '@repo/store/services/api';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
+import { Button } from '@repo/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
+import { Pagination } from '@repo/ui/pagination';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Switch } from '@repo/ui/switch';
+import { toast } from 'react-toastify';
 
 type Plan = {
-  id: string;
+  _id: string;
   name: string;
   duration: number;
   durationType: string;
@@ -46,12 +37,10 @@ type Subscription = {
 };
 
 export default function SubscriptionManagementPage() {
-  // Get plans from Redux store
-  const plansData = useSelector((state) => state.subscription.plans);
-  const dispatch = useDispatch();
-  const plans = useSelector(selectAllPlans);
-  const loading = useSelector(selectLoading);
-  const error = useSelector(selectError);
+  const { data: plans = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery();
+  const [createNewPlan] = useCreateSubscriptionPlanMutation();
+  const [updateExistingPlan] = useUpdateSubscriptionPlanMutation();
+  const [deletePlan] = useDeleteSubscriptionPlanMutation();
 
   const subscriptionsData = [
     {
@@ -82,52 +71,54 @@ export default function SubscriptionManagementPage() {
       status: 'Inactive',
     },
   ];
+
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
-  
-  // Form state for new plan
+
   const [planForm, setPlanForm] = useState({
     name: '',
     duration: '1',
     durationType: 'months',
     price: '',
     discountedPrice: '',
-    isAvailableForPurchase: true
+    isAvailableForPurchase: true,
   });
-  
-  // Dropdown options
+
+  // Pagination state
+  const [currentPlanPage, setCurrentPlanPage] = useState(1);
+  const [currentSubPage, setCurrentSubPage] = useState(1);
+  const [planItemsPerPage, setPlanItemsPerPage] = useState<number>(5); // Explicit number type
+  const [subItemsPerPage, setSubItemsPerPage] = useState<number>(5); // Explicit number type
+
   const durationOptions = [
     { value: '1', label: '1' },
     { value: '3', label: '3' },
     { value: '6', label: '6' },
-    { value: '12', label: '12' }
+    { value: '12', label: '12' },
   ];
-  
-  
+
   const durationTypeOptions = [
     { value: 'days', label: 'Days' },
     { value: 'weeks', label: 'Weeks' },
     { value: 'months', label: 'Months' },
-    { value: 'years', label: 'Years' }
+    { value: 'years', label: 'Years' },
   ];
-  
-  // State to track if custom duration is selected
-  
+
   const handleInputChange = (field: string, value: string | boolean) => {
-    setPlanForm(prev => ({
+    setPlanForm((prev) => ({
       ...prev,
-      [field]: field === 'isAvailableForPurchase' ? value === 'true' : value
+      [field]: field === 'isAvailableForPurchase' ? value === 'true' : value,
     }));
   };
 
   const handleOpenPlanModal = (type: 'add' | 'edit', plan?: Plan) => {
     setModalType(type);
     setSelectedPlan(plan || null);
-    
+
     if (type === 'edit' && plan) {
       setPlanForm({
         name: plan.name,
@@ -135,43 +126,58 @@ export default function SubscriptionManagementPage() {
         durationType: plan.durationType,
         price: plan.price.toString(),
         discountedPrice: plan.discountedPrice?.toString() || '',
-        isAvailableForPurchase: plan.isAvailableForPurchase ?? true
+        isAvailableForPurchase: plan.isAvailableForPurchase ?? true,
       });
     } else {
-      // Reset form for new plan
       setPlanForm({
         name: '',
         duration: '1',
         durationType: 'months',
         price: '',
         discountedPrice: '',
-        isAvailableForPurchase: true
+        isAvailableForPurchase: true,
       });
     }
-    
+
     setIsPlanModalOpen(true);
   };
-  
+
   const handleOpenSubModal = (type: 'edit' | 'view', sub: Subscription) => {
     setModalType(type);
     setSelectedSubscription(sub);
     setIsSubModalOpen(true);
   };
-  
+
   const handleDeleteClick = (plan: Plan) => {
     setSelectedPlan(plan);
     setIsDeleteModalOpen(true);
-  }
+  };
 
-  const handleConfirmDelete = () => {
-    // API Call to delete plan
-    setIsDeleteModalOpen(false);
-    setSelectedPlan(null);
-  }
+  const handleConfirmDelete = async () => {
+    if (selectedPlan) {
+      try {
+        await deletePlan(selectedPlan._id).unwrap();
+        toast.success('Plan deleted successfully!');
+        setIsDeleteModalOpen(false);
+        setSelectedPlan(null);
+        
+        // Reset to valid page if necessary
+        const newTotalPlanPages = Math.max(1, Math.ceil((plans.length - 1) / planItemsPerPage));
+        if (currentPlanPage > newTotalPlanPages) {
+          setCurrentPlanPage(newTotalPlanPages);
+        }
+      } catch (error) {
+        console.error('Error deleting plan:', error);
+        toast.error(`Error deleting plan: ${error.message || 'Unknown error'}`);
+      } finally {
+        setIsDeleteModalOpen(false);
+      }
+    }
+  };
 
   const handleSavePlan = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const planData = {
         name: planForm.name,
@@ -181,71 +187,34 @@ export default function SubscriptionManagementPage() {
         discountedPrice: planForm.discountedPrice ? parseFloat(planForm.discountedPrice) : undefined,
         isAvailableForPurchase: planForm.isAvailableForPurchase,
         status: 'Active',
-        features: planForm.features || []
+        features: planForm.features || [],
       };
-      
+
       if (modalType === 'add') {
-        await dispatch(createNewPlan(planData)).unwrap();
+        await createNewPlan(planData).unwrap();
+        toast.success('Plan created successfully!');
       } else if (selectedPlan) {
-        await dispatch(updateExistingPlan({
-          id: selectedPlan.id,
-          ...planData
-        })).unwrap();
+        await updateExistingPlan({ _id: selectedPlan._id, ...planData }).unwrap();
+        toast.success('Plan updated successfully!');
       }
-      
-      // Reset form and close modal
-      setPlanForm({ 
-        name: '', 
-        duration: '1', 
-        durationType: 'months', 
+
+      setPlanForm({
+        name: '',
+        duration: '1',
+        durationType: 'months',
         price: '',
         discountedPrice: '',
         isAvailableForPurchase: true,
-        features: []
+        features: [],
       });
-      
+
       setIsPlanModalOpen(false);
-      
+      // Reset to first page to show new plan
+      setCurrentPlanPage(1);
     } catch (error) {
       console.error('Error saving plan:', error);
-      // Handle error (show toast/notification)
+      toast.error(`Error saving plan: ${error.message || 'Unknown error'}`);
     }
-  };
-
-  const handleUpdatePlan = () => {
-    if (selectedPlan) {
-      dispatch(updatePlan({
-        id: selectedPlan.id,
-        changes: planForm
-      }));
-      setPlanForm({ name: '', duration: '', durationType: 'months', price: '' });
-      setIsPlanModalOpen(false);
-    }
-  };
-
-  const handleDeletePlan = (planId: string) => {
-    dispatch(deletePlan(planId));
-  };
-
-  const handleAddPlan = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newPlan = {
-      ...planForm,
-      duration: parseInt(planForm.duration),
-      price: planForm.price ? parseInt(planForm.price) : 0,
-      discountedPrice: planForm.discountedPrice ? parseInt(planForm.discountedPrice) : undefined,
-      status: true,
-    };
-    dispatch(addPlan(newPlan));
-    setPlanForm({ 
-      name: '', 
-      duration: '1', 
-      durationType: 'months', 
-      price: '',
-      discountedPrice: '',
-      isAvailableForPurchase: true 
-    });
-    setIsPlanModalOpen(false);
   };
 
   const [activeSubscriptions, setActiveSubscriptions] = useState(
@@ -255,22 +224,55 @@ export default function SubscriptionManagementPage() {
     }, {} as Record<string, boolean>)
   );
 
-  const handleToggleStatus = (planId: string) => {
-    dispatch(togglePlanStatus(planId));
+  const handleToggleStatus = (subId: string) => {
+    setActiveSubscriptions((prev) => ({
+      ...prev,
+      [subId]: !prev[subId],
+    }));
+  };
+
+  // Pagination logic with safeguards
+  const totalPlanPages = Math.ceil(plans.length / (planItemsPerPage || 1)) || 1;
+  const totalSubPages = Math.ceil(subscriptionsData.length / (subItemsPerPage || 1)) || 1;
+
+  const paginatedPlans = plans.slice(
+    (currentPlanPage - 1) * planItemsPerPage,
+    currentPlanPage * planItemsPerPage
+  );
+
+  const paginatedSubscriptions = subscriptionsData.slice(
+    (currentSubPage - 1) * subItemsPerPage,
+    currentSubPage * subItemsPerPage
+  );
+
+  // Handlers for items per page change with validation
+  const handlePlanItemsPerPageChange = (items: number) => {
+    const validItems = Math.max(1, Number(items) || 5); // Fallback to 5 if invalid
+    setPlanItemsPerPage(validItems);
+    setCurrentPlanPage(1); // Reset to first page
+  };
+
+  const handleSubItemsPerPageChange = (items: number) => {
+    const validItems = Math.max(1, Number(items) || 5); // Fallback to 5 if invalid
+    setSubItemsPerPage(validItems);
+    setCurrentSubPage(1); // Reset to first page
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Subscription Management</h1>
-      
-       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+
+      {isLoading && <p>Loading plans...</p>}
+      {error && <p>Error: {error.status || 'An error occurred'}</p>}
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Plans</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{plansData.length}</div>
+            <div className="text-2xl font-bold">{plans.length}</div>
             <p className="text-xs text-muted-foreground">Available subscription plans</p>
           </CardContent>
         </Card>
@@ -291,7 +293,7 @@ export default function SubscriptionManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-                {Object.values(activeSubscriptions).filter(Boolean).length}
+              {Object.values(activeSubscriptions).filter(Boolean).length}
             </div>
             <p className="text-xs text-muted-foreground">Currently active plans</p>
           </CardContent>
@@ -310,8 +312,8 @@ export default function SubscriptionManagementPage() {
 
       <Tabs defaultValue="subscribers">
         <TabsList className="grid w-full grid-cols-2 max-w-md">
-            <TabsTrigger value="subscribers">Subscriber List</TabsTrigger>
-            <TabsTrigger value="plans">Manage Plans</TabsTrigger>
+          <TabsTrigger value="subscribers">Subscriber List</TabsTrigger>
+          <TabsTrigger value="plans">Manage Plans</TabsTrigger>
         </TabsList>
         <TabsContent value="subscribers">
           <Card>
@@ -333,34 +335,50 @@ export default function SubscriptionManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {subscriptionsData.map((sub) => (
-                      <TableRow key={sub.id}>
-                        <TableCell className="font-medium">{sub.subscriberName}</TableCell>
-                        <TableCell>{sub.planName}</TableCell>
-                        <TableCell>{sub.startDate}</TableCell>
-                        <TableCell>{sub.endDate}</TableCell>
-                        <TableCell>
-                          <Switch
-                            checked={activeSubscriptions[sub.id]}
-                            onCheckedChange={() => handleToggleStatus(sub.id)}
-                            aria-label={`Toggle subscription for ${sub.subscriberName}`}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenSubModal('view', sub)}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenSubModal('edit', sub)}>
-                            <Edit2 className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
+                    {paginatedSubscriptions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center">
+                          No subscriptions available.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      paginatedSubscriptions.map((sub) => (
+                        <TableRow key={sub.id}>
+                          <TableCell className="font-medium">{sub.subscriberName}</TableCell>
+                          <TableCell>{sub.planName}</TableCell>
+                          <TableCell>{sub.startDate}</TableCell>
+                          <TableCell>{sub.endDate}</TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={activeSubscriptions[sub.id]}
+                              onCheckedChange={() => handleToggleStatus(sub.id)}
+                              aria-label={`Toggle subscription for ${sub.subscriberName}`}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenSubModal('view', sub)}>
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenSubModal('edit', sub)}>
+                              <Edit2 className="h-4 w-4" />
+                              <span className="sr-only">Edit</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
+              <Pagination
+                currentPage={currentSubPage}
+                totalPages={totalSubPages}
+                onPageChange={(page) => setCurrentSubPage(page)}
+                onItemsPerPageChange={handleSubItemsPerPageChange}
+                itemsPerPage={subItemsPerPage}
+                totalItems={subscriptionsData.length} // Added for "Showing X to Y of Z"
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -392,33 +410,60 @@ export default function SubscriptionManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {plansData.map((plan) => (
-                      <TableRow key={plan.id}>
-                        <TableCell className="font-medium">{plan.name}</TableCell>
-                        <TableCell>{plan.duration} {plan.durationType}</TableCell>
-                        <TableCell>₹{plan.price}</TableCell>
-                        <TableCell>{plan.discountedPrice ? `₹${plan.discountedPrice}` : '-'}</TableCell>
-                        <TableCell>{plan.isAvailableForPurchase ? 'Yes' : 'No'}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenPlanModal('edit', plan)}>
-                            <Edit2 className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(plan)}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
+                    {paginatedPlans.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center">
+                          No plans available.
                         </TableCell>
                       </TableRow>
-                    ))}                 </TableBody>
+                    ) : (
+                      paginatedPlans.map((plan) => (
+                        <TableRow key={plan._id}>
+                          <TableCell className="font-medium">{plan.name}</TableCell>
+                          <TableCell>
+                            {plan.duration} {plan.durationType}
+                          </TableCell>
+                          <TableCell>₹{plan.price}</TableCell>
+                          <TableCell>{plan.discountedPrice ? `₹${plan.discountedPrice}` : '-'}</TableCell>
+                          <TableCell>{plan.isAvailableForPurchase ? 'Yes' : 'No'}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenPlanModal('edit', plan)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                              <span className="sr-only">Edit</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => handleDeleteClick(plan)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
                 </Table>
               </div>
+              <Pagination
+                currentPage={currentPlanPage}
+                totalPages={totalPlanPages}
+                onPageChange={(page) => setCurrentPlanPage(page)}
+                onItemsPerPageChange={handlePlanItemsPerPageChange}
+                itemsPerPage={planItemsPerPage}
+                totalItems={plans.length} // Added for "Showing X to Y of Z"
+              />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-      
-      {/* Add/Edit Plan Modal */}
+
       <Dialog open={isPlanModalOpen} onOpenChange={setIsPlanModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -442,9 +487,7 @@ export default function SubscriptionManagementPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">
-                  Duration
-                </Label>
+                <Label className="text-right">Duration</Label>
                 <div className="col-span-3 flex gap-2">
                   <Select
                     value={planForm.duration}
@@ -506,9 +549,7 @@ export default function SubscriptionManagementPage() {
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">
-                  Available for Purchase
-                </Label>
+                <Label className="text-right">Available for Purchase</Label>
                 <div className="flex items-center space-x-2 col-span-3">
                   <div className="flex items-center space-x-2">
                     <input
@@ -519,9 +560,7 @@ export default function SubscriptionManagementPage() {
                       onChange={() => handleInputChange('isAvailableForPurchase', 'true')}
                       className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
                     />
-                    <Label htmlFor="purchase-yes" className="ml-2">
-                      Yes
-                    </Label>
+                    <Label htmlFor="purchase-yes" className="ml-2">Yes</Label>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
                     <input
@@ -532,82 +571,79 @@ export default function SubscriptionManagementPage() {
                       onChange={() => handleInputChange('isAvailableForPurchase', 'false')}
                       className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
                     />
-                    <Label htmlFor="purchase-no" className="ml-2">
-                      No
-                    </Label>
+                    <Label htmlFor="purchase-no" className="ml-2">No</Label>
                   </div>
                 </div>
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="secondary" onClick={() => setIsPlanModalOpen(false)}>Cancel</Button>
+              <Button type="button" variant="secondary" onClick={() => setIsPlanModalOpen(false)}>
+                Cancel
+              </Button>
               <Button type="submit">Save Plan</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-      
-      {/* Edit/View Subscription Modal */}
+
       <Dialog open={isSubModalOpen} onOpenChange={setIsSubModalOpen}>
         <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-                <DialogTitle>{modalType === 'edit' ? 'Edit Subscription' : 'Subscription Details'}</DialogTitle>
-            </DialogHeader>
-            {selectedSubscription && (
-                <div className="grid gap-4 py-4">
-                     <div className="space-y-2">
-                        <Label>Subscriber Name</Label>
-                        <Input value={selectedSubscription.subscriberName} readOnly={modalType === 'view'} />
-                    </div>
-                     <div className="space-y-2">
-                        <Label>Plan</Label>
-                        <Input value={selectedSubscription.planName} readOnly={modalType === 'view'} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Start Date</Label>
-                            <Input type="date" value={selectedSubscription.startDate} readOnly={modalType === 'view'} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>End Date</Label>
-                            <Input type="date" value={selectedSubscription.endDate} readOnly={modalType === 'view'} />
-                        </div>
-                    </div>
-                     <div className="flex items-center space-x-2">
-                        <Label>Status</Label>
-                        <p>{activeSubscriptions[selectedSubscription.id] ? "Active" : "Inactive"}</p>
-                     </div>
+          <DialogHeader>
+            <DialogTitle>{modalType === 'edit' ? 'Edit Subscription' : 'Subscription Details'}</DialogTitle>
+          </DialogHeader>
+          {selectedSubscription && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label>Subscriber Name</Label>
+                <Input value={selectedSubscription.subscriberName} readOnly={modalType === 'view'} />
+              </div>
+              <div className="space-y-2">
+                <Label>Plan</Label>
+                <Input value={selectedSubscription.planName} readOnly={modalType === 'view'} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Input type="date" value={selectedSubscription.startDate} readOnly={modalType === 'view'} />
                 </div>
-            )}
-            <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setIsSubModalOpen(false)}>Close</Button>
-                {modalType === 'edit' && <Button type="submit">Save Changes</Button>}
-            </DialogFooter>
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <Input type="date" value={selectedSubscription.endDate} readOnly={modalType === 'view'} />
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Label>Status</Label>
+                <p>{activeSubscriptions[selectedSubscription.id] ? 'Active' : 'Inactive'}</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="secondary" onClick={() => setIsSubModalOpen(false)}>
+              Close
+            </Button>
+            {modalType === 'edit' && <Button type="submit">Save Changes</Button>}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {/* Delete Confirmation Modal */}
-       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Delete Plan?</DialogTitle>
-                    <DialogDescription>
-                        Are you sure you want to delete the plan "{selectedPlan?.name}"? This action cannot be undone.
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                    <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
-                        Cancel
-                    </Button>
-                    <Button
-                        variant='destructive'
-                        onClick={handleConfirmDelete}
-                    >
-                        Delete
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Plan?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the plan "{selectedPlan?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

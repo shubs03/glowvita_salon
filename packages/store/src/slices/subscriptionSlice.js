@@ -1,7 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../services/api';
 
-// Async thunks using the API endpoints directly
+const initialState = {
+  plans: [],
+  loading: false,
+  error: null,
+};
+
+// Async thunks (retained for compatibility, but simplified)
 export const fetchSubscriptionPlans = createAsyncThunk(
   'subscription/fetchPlans',
   async (_, { dispatch }) => {
@@ -30,10 +36,10 @@ export const createNewPlan = createAsyncThunk(
 
 export const updateExistingPlan = createAsyncThunk(
   'subscription/updatePlan',
-  async ({ id, ...updates }, { dispatch }) => {
+  async ({ _id, ...updates }, { dispatch }) => { // Changed id to _id
     try {
       const result = await dispatch(
-        glowvitaApi.endpoints.updateSubscriptionPlan.initiate({ id, ...updates })
+        glowvitaApi.endpoints.updateSubscriptionPlan.initiate({ _id, ...updates })
       );
       if (result.error) throw result.error;
       return result.data;
@@ -45,22 +51,16 @@ export const updateExistingPlan = createAsyncThunk(
 
 export const removePlan = createAsyncThunk(
   'subscription/deletePlan',
-  async (id, { dispatch }) => {
+  async (_id, { dispatch }) => { // Changed id to _id
     try {
-      const result = await dispatch(glowvitaApi.endpoints.deleteSubscriptionPlan.initiate(id));
+      const result = await dispatch(glowvitaApi.endpoints.deleteSubscriptionPlan.initiate(_id));
       if (result.error) throw result.error;
-      return id;
+      return _id;
     } catch (error) {
       throw error;
     }
   }
 );
-
-const initialState = {
-  plans: [],
-  loading: false,
-  error: null
-};
 
 const subscriptionSlice = createSlice({
   name: 'subscription',
@@ -81,34 +81,45 @@ const subscriptionSlice = createSlice({
       state.error = action.error.message;
     });
 
-    // Create plan
-    builder.addCase(createNewPlan.fulfilled, (state, action) => {
-      if (action.payload) {
-        state.plans.push(action.payload);
-      }
+    // Create plan (no manual state update; rely on getSubscriptionPlans refetch)
+    builder.addCase(createNewPlan.fulfilled, (state) => {
+      state.loading = false;
+    });
+    builder.addCase(createNewPlan.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message;
     });
 
-    // Update plan
-    builder.addCase(updateExistingPlan.fulfilled, (state, action) => {
-      if (action.payload) {
-        const index = state.plans.findIndex(plan => plan.id === action.payload.id);
-        if (index !== -1) {
-          state.plans[index] = action.payload;
-        }
-      }
+    // Update plan (no manual state update; rely on getSubscriptionPlans refetch)
+    builder.addCase(updateExistingPlan.fulfilled, (state) => {
+      state.loading = false;
+    });
+    builder.addCase(updateExistingPlan.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message;
     });
 
     // Delete plan
-    builder.addCase(removePlan.fulfilled, (state, action) => {
-      state.plans = state.plans.filter(plan => plan.id !== action.payload);
+    builder.addCase(removePlan.pending, (state) => {
+      state.loading = true;
+      state.error = null;
     });
-  }
+    builder.addCase(removePlan.fulfilled, (state, action) => {
+      state.loading = false;
+      // Remove the deleted plan from the state
+      state.plans = state.plans.filter(plan => plan._id !== action.payload);
+    });
+    builder.addCase(removePlan.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message;
+    });
+  },
 });
 
 // Selectors
 export const selectAllPlans = (state) => state.subscription.plans;
-export const selectPlanById = (state, planId) => 
-  state.subscription.plans.find(plan => plan.id === planId);
+export const selectPlanById = (state, planId) =>
+  state.subscription.plans.find((plan) => plan._id === planId); // Changed id to _id
 export const selectLoading = (state) => state.subscription.loading;
 export const selectError = (state) => state.subscription.error;
 
