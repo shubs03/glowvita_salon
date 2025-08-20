@@ -12,7 +12,7 @@ function generateTokens(_id, role = "user") {
       secretKey = JWT_SECRET_ADMIN;
       refreshSecret = JWT_REFRESH_SECRET_ADMIN;
       break;
-    case "Vendor":
+    case "vendor":
       secretKey = JWT_SECRET_VENDOR;
       refreshSecret = JWT_REFRESH_SECRET_VENDOR;
       break;
@@ -23,7 +23,7 @@ function generateTokens(_id, role = "user") {
   }
 
   if (!secretKey || !refreshSecret) {
-    throw new Error("JWT secrets are missing");
+    throw new Error("JWT secrets are missing for role: " + role);
   }
 
   const payload = {

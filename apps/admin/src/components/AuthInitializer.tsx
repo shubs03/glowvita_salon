@@ -4,12 +4,11 @@
 import { useAppDispatch } from '@repo/store/hooks';
 import { setAdminAuth, clearAdminAuth } from '@repo/store/slices/auth';
 import { useEffect, type ReactNode } from 'react';
-import { jwtDecode } from 'jwt-decode';
 
-interface DecodedToken {
-  exp: number;
-  [key: string]: any;
-}
+// NOTE: JWT decoding is now handled by server-side middleware for security.
+// This component's responsibility is to rehydrate the Redux state from localStorage
+// so that the UI can reflect the logged-in user's information.
+// The middleware is the source of truth for whether a user is truly authenticated.
 
 export function AuthInitializer({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
@@ -19,19 +18,12 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
       const storedState = localStorage.getItem('adminAuthState');
       if (storedState) {
         const { admin, token } = JSON.parse(storedState);
-        
         if (admin && token) {
-          const decodedToken: DecodedToken = jwtDecode(token);
-          const currentTime = Date.now() / 1000;
-          
-          if (decodedToken.exp > currentTime) {
-            // Token is valid
-            dispatch(setAdminAuth({ user: admin, token }));
-          } else {
-            // Token is expired
-            console.warn("Expired token detected on app load. Clearing session.");
-            dispatch(clearAdminAuth());
-          }
+          // Rehydrate the state. The middleware will have already validated the token.
+          dispatch(setAdminAuth({ user: admin, token }));
+        } else {
+          // If state is malformed, clear it
+          dispatch(clearAdminAuth());
         }
       }
     } catch (error) {

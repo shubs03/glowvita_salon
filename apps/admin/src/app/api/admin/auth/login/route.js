@@ -55,7 +55,7 @@ export async function POST(request) {
     user.lastLoginAt = new Date();
     await user.save();
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Login Successful",
       user: safeUser,
@@ -63,6 +63,16 @@ export async function POST(request) {
       admin_refresh_token: refreshToken,
       role: user.roleName,
     });
+
+    response.cookies.set('admin_access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 1 day
+    });
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(

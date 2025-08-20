@@ -1,23 +1,28 @@
+
 "use client";
 
 import { FaBell, FaBars } from "react-icons/fa";
 import { Button } from "@repo/ui/button";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import { useAppDispatch } from '@repo/store/hooks';
+import { clearAdminAuth } from '@repo/store/slices/auth';
+import Cookies from 'js-cookie';
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
   const handleLogout = async () => {
-    try {
-      // This assumes the API endpoint is available on this domain
-      await fetch('/api/admin/auth/logout', { method: 'POST' });
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-      // Still redirect to login on error
-      router.push('/login');
-    }
+    // Clear client-side state
+    dispatch(clearAdminAuth());
+    
+    // Remove the cookie
+    Cookies.remove('admin_access_token');
+    
+    // Redirect to login page
+    router.push('/login');
+    router.refresh();
   };
 
   return (

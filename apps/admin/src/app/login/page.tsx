@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -11,7 +12,7 @@ import { setAdminAuth } from '@repo/store/slices/auth';
 import { useAdminLoginMutation } from '../../../../../packages/store/src/services/api';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
-
+import Cookies from 'js-cookie';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,7 +22,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const [adminLogin] = useAdminLoginMutation();
+  const [adminLogin, { isLoading }] = useAdminLoginMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,9 +31,18 @@ export default function LoginPage() {
     try {
       const response = await adminLogin({ email, password }).unwrap();
       if (response.success) {
+        // Set the token in an httpOnly cookie via the API response header is best,
+        // but for this setup, we'll set it client-side.
+        Cookies.set('admin_access_token', response.admin_access_token, {
+          expires: 1, // Expires in 1 day
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+        });
+        
         dispatch(setAdminAuth({ user: response.user, token: response.admin_access_token }));
         toast.success("Login successful!");
         router.push('/');
+        router.refresh(); // Refresh to ensure middleware runs with new cookie
       } else {
         setError(response.error || 'Invalid email or password.');
         toast.error(response.error || 'Login failed. Please try again.');
@@ -68,6 +78,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div className="grid gap-2">
@@ -80,6 +91,7 @@ export default function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)} 
                       required
                       className="pr-10"
+                      disabled={isLoading}
                     />
                     <Button
                         type="button"
@@ -87,6 +99,7 @@ export default function LoginPage() {
                         size="icon"
                         className="absolute inset-y-0 right-0 h-full px-3"
                         onClick={togglePasswordVisibility}
+                        disabled={isLoading}
                     >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         <span className="sr-only">
@@ -96,8 +109,8 @@ export default function LoginPage() {
                 </div>
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <Button type="submit" className="w-full">
-                Login
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Logging in...' : 'Login'}
               </Button>
             </div>
           </form>
