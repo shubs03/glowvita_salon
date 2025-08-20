@@ -37,7 +37,7 @@ export default function PushNotificationsPage() {
   const [selectedNotification, setSelectedNotification] = useState<typeof notificationsData[0] | null>(null);
 
   // Form states
-  const [targetType, setTargetType] = useState('all');
+  const [targetType, setTargetType] = useState('all_clients');
   const [selectedTargets, setSelectedTargets] = useState<{id: string, name: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -69,7 +69,7 @@ export default function PushNotificationsPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedNotification(null);
-    setTargetType('all');
+    setTargetType('all_clients');
     setSelectedTargets([]);
     setSearchQuery('');
   };
@@ -226,47 +226,10 @@ export default function PushNotificationsPage() {
                 <div className="space-y-2">
                     <Label>Target Audience</Label>
                      <RadioGroup value={targetType} onValueChange={setTargetType} className="flex gap-4" disabled={modalType === 'view'}>
-                        <div className="flex items-center space-x-2"><RadioGroupItem value="all" id="all" /><Label htmlFor="all">All Clients</Label></div>
-                        <div className="flex items-center space-x-2"><RadioGroupItem value="specific" id="specific" /><Label htmlFor="specific">Specific Client(s)</Label></div>
+                        <div className="flex items-center space-x-2"><RadioGroupItem value="all_clients" id="all_clients" /><Label htmlFor="all_clients">All Clients</Label></div>
+                        <div className="flex items-center space-x-2"><RadioGroupItem value="all_staffs" id="all_staffs" /><Label htmlFor="all_staffs">All Staffs</Label></div>
                     </RadioGroup>
                 </div>
-
-                {targetType === 'specific' && modalType !== 'view' && (
-                    <div className="space-y-2">
-                        <Label>Select Clients</Label>
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                                placeholder="Search for a client..." 
-                                className="pl-8"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
-                        {searchQuery && (
-                            <Card className="max-h-40 overflow-y-auto">
-                                <CardContent className="p-2">
-                                    {filteredTargets.map(t => (
-                                        <div key={t.id} onClick={() => handleSelectTarget(t)} className="p-2 hover:bg-accent rounded-md cursor-pointer text-sm">
-                                            {t.name}
-                                        </div>
-                                    ))}
-                                     {filteredTargets.length === 0 && <p className="p-2 text-sm text-muted-foreground">No results found.</p>}
-                                </CardContent>
-                            </Card>
-                        )}
-                        <div className="flex flex-wrap gap-2 mt-2">
-                            {selectedTargets.map(t => (
-                                <Badge key={t.id} variant="secondary">
-                                    {t.name}
-                                    <button onClick={() => handleRemoveTarget(t.id)} className="ml-2 rounded-full hover:bg-muted-foreground/20">
-                                        <X className="h-3 w-3"/>
-                                    </button>
-                                </Badge>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={handleCloseModal}>

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Plus, Search, FileDown, Eye, Edit, Trash2, Clock, Truck, PackageCheck } from 'lucide-react';
+import { Plus, Search, FileDown, Eye, Edit, Trash2, Clock, Truck, PackageCheck, DollarSign, Archive, Check } from 'lucide-react';
 import { Textarea } from '@repo/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 
@@ -129,6 +129,49 @@ export default function ProductsAndOrdersPage() {
         <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl font-bold font-headline mb-6">Products & Orders</h1>
 
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+                        <PackageCheck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{products.length}</div>
+                        <p className="text-xs text-muted-foreground">Total products in catalog</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                        <Truck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{orders.length}</div>
+                        <p className="text-xs text-muted-foreground">All-time product orders</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Published Products</CardTitle>
+                        <Check className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-600">{products.filter(p => p.status === 'Published').length}</div>
+                        <p className="text-xs text-muted-foreground">Currently live for sale</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Out of Stock</CardTitle>
+                        <Archive className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-red-600">{products.filter(p => p.stock === 0).length}</div>
+                        <p className="text-xs text-muted-foreground">Products needing restock</p>
+                    </CardContent>
+                </Card>
+            </div>
+
             <Tabs defaultValue="products">
                 <TabsList>
                     <TabsTrigger value="products">Products</TabsTrigger>
@@ -176,68 +219,37 @@ export default function ProductsAndOrdersPage() {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="overflow-x-auto no-scrollbar rounded-md border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Product</TableHead>
-                                            <TableHead>Category</TableHead>
-                                            <TableHead>Price</TableHead>
-                                            <TableHead>Stock</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {currentItems.map(product => (
-                                            <TableRow key={product.id}>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <Image 
-                                                            src={product.productImage} 
-                                                            alt={product.productName} 
-                                                            width={40} 
-                                                            height={40} 
-                                                            className="rounded-md"
-                                                        />
-                                                        <span className="font-medium">{product.productName}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>{product.category}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col">
-                                                        <span className={product.salePrice < product.price ? "line-through text-muted-foreground text-xs" : ""}>
-                                                            ₹{product.price.toFixed(2)}
-                                                        </span>
-                                                        {product.salePrice < product.price && (
-                                                            <span className="font-semibold">₹{product.salePrice.toFixed(2)}</span>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>{product.stock > 0 ? `${product.stock} units` : <span className="text-red-600">Out of Stock</span>}</TableCell>
-                                                <TableCell>
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(product.status)}`}>
-                                                        {product.status}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenModal('view', product)}>
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenModal('edit', product)}>
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(product)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {currentItems.map(product => (
+                                     <Card key={product.id} className="flex flex-col">
+                                        <CardHeader className="p-0">
+                                            <div className="relative aspect-square">
+                                                <Image src={product.productImage} alt={product.productName} layout="fill" className="object-cover rounded-t-lg" />
+                                                <Badge className={`absolute top-2 left-2 ${getStatusColor(product.status)}`}>{product.status}</Badge>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="p-4 flex-grow flex flex-col">
+                                            <div className="flex-grow">
+                                                <p className="text-sm text-muted-foreground">{product.category}</p>
+                                                <CardTitle className="text-base leading-tight mt-1">{product.productName}</CardTitle>
+                                                <div className="flex items-baseline gap-2 mt-2">
+                                                    <span className="text-lg font-bold">₹{product.salePrice.toFixed(2)}</span>
+                                                    {product.price > product.salePrice && <span className="text-sm text-muted-foreground line-through">₹{product.price.toFixed(2)}</span>}
+                                                </div>
+                                            </div>
+                                            <div className="mt-4 flex justify-between items-center text-sm text-muted-foreground">
+                                                <span>Stock: {product.stock > 0 ? product.stock : <span className="text-red-600 font-bold">Out</span>}</span>
+                                                <div className="flex items-center gap-1">
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenModal('edit', product)}><Edit className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteClick(product)}><Trash2 className="h-4 w-4" /></Button>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
                             </div>
                             <Pagination
-                                className="mt-4"
+                                className="mt-6"
                                 currentPage={currentPage}
                                 totalPages={totalPages}
                                 onPageChange={setCurrentPage}
