@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
-import { useGetCategoriesQuery, useCreateCategoryMutation } from '@repo/store/api';
+import { useGetCategoriesQuery, useCreateCategoryMutation, useGetServicesQuery } from '@repo/store/api';
 
 type Service = {
   id: string;
@@ -47,32 +47,80 @@ const mockServices: Service[] = [
 
 const mockStaff = ['Jane Doe', 'John Smith', 'Emily White'];
 
+const AddCategoryModal = ({isOpen, onClose, onCategoryCreated}: {isOpen: boolean, onClose: () => void, onCategoryCreated: (category: any) => void}) => {
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [createCategory, { isLoading }] = useCreateCategoryMutation();
+
+    const handleCreateCategory = async () => {
+        if (newCategoryName.trim()) {
+            try {
+                const newCategory = await createCategory({ name: newCategoryName }).unwrap();
+                setNewCategoryName('');
+                onCategoryCreated(newCategory);
+                onClose();
+            } catch (error) {
+                console.error("Failed to create category", error);
+            }
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-xs">
+                <DialogHeader>
+                    <DialogTitle>Create New Category</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2">
+                    <Label htmlFor="new-category">Category Name</Label>
+                    <Input id="new-category" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} disabled={isLoading}/>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancel</Button>
+                    <Button onClick={handleCreateCategory} disabled={isLoading}>
+                        {isLoading ? "Creating..." : "Create"}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean, onClose: () => void, service: Service | null, type: 'add' | 'edit' | 'view' }) => {
     const [activeTab, setActiveTab] = useState('basic');
     const { data: categories = [], isLoading: categoriesLoading } = useGetCategoriesQuery(undefined);
-    
+    const { data: allServices = [], isLoading: servicesLoading } = useGetServicesQuery(undefined);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+    const [isCreatingNewService, setIsCreatingNewService] = useState(false);
 
     const [formData, setFormData] = useState<Partial<Service>>(service || {});
 
     useEffect(() => {
-    setFormData(service || {});
-    setActiveTab('basic');
+        const initialData = service || {};
+        setFormData(initialData);
+        setActiveTab('basic');
+        // If it's a new service, default to creating a new service name
+        setIsCreatingNewService(!service);
     }, [service, isOpen]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target as HTMLInputElement;
-    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+        const { name, value, type, checked } = e.target as HTMLInputElement;
+        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
     const handleSelectChange = (name: string, value: string | string[]) => {
       setFormData(prev => ({...prev, [name]: value}));
     };
 
+    const handleCategoryChange = (categoryId: string) => {
+        const category = categories.find((c: any) => c._id === categoryId);
+        setFormData(prev => ({ ...prev, category: category?.name, name: '' })); // Reset service name on category change
+        setIsCreatingNewService(false); // Default to selecting an existing service
+    };
+
     const handleCheckboxChange = (name: string, id: string, checked: boolean) => {
-    const currentValues = formData[name as keyof Service] as string[] || [];
-    const newValues = checked ? [...currentValues, id] : currentValues.filter(val => val !== id);
-    setFormData(prev => ({...prev, [name]: newValues}));
+        const currentValues = formData[name as keyof Service] as string[] || [];
+        const newValues = checked ? [...currentValues, id] : currentValues.filter(val => val !== id);
+        setFormData(prev => ({...prev, [name]: newValues}));
     }
 
     const handleNestedChange = (parent: keyof Service, child: string, value: any) => {
@@ -84,25 +132,46 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
             }
         }));
     };
+
+    const handleCategoryCreated = (newCategory: any) => {
+        setFormData(prev => ({ ...prev, category: newCategory.name }));
+        setIsCreatingNewService(true); // After creating a new category, expect a new service name
+    };
     
+    const servicesForCategory = formData.category 
+      ? allServices.filter((s: any) => s.category?.name === formData.category) 
+      : [];
+
     const renderBasicInfoTab = () => (
     <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-            <Label htmlFor="category">Service Category</Label>
-            <div className="flex gap-2">
-                <Select value={formData.category} onValueChange={(value) => handleSelectChange('category', value)}>
-                    <SelectTrigger><SelectValue placeholder="Select Category"/></SelectTrigger>
-                    <SelectContent>
-                        {categoriesLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : categories.map((cat:any) => <SelectItem key={cat._id} value={cat.name}>{cat.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-                <Button type="button" variant="outline" size="icon" onClick={() => setIsCategoryModalOpen(true)}><Plus className="h-4 w-4"/></Button>
-            </div>
+                <Label htmlFor="category">Service Category</Label>
+                <div className="flex gap-2">
+                    <Select onValueChange={handleCategoryChange} value={categories.find((c: any) => c.name === formData.category)?._id || ''}>
+                        <SelectTrigger><SelectValue placeholder="Select Category"/></SelectTrigger>
+                        <SelectContent>
+                            {categoriesLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : categories.map((cat:any) => <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="icon" onClick={() => setIsCategoryModalOpen(true)}><Plus className="h-4 w-4"/></Button>
+                </div>
             </div>
             <div className="space-y-2">
                 <Label htmlFor="name">Service Name</Label>
-                <Input id="name" name="name" value={formData.name} onChange={handleInputChange} />
+                {isCreatingNewService || servicesForCategory.length === 0 ? (
+                     <Input id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder="Enter a new service name" />
+                ) : (
+                    <div className="flex gap-2">
+                        <Select value={formData.name} onValueChange={(value) => handleSelectChange('name', value)}>
+                            <SelectTrigger><SelectValue placeholder="Select Service"/></SelectTrigger>
+                            <SelectContent>
+                                {servicesForCategory.map((s:any) => <SelectItem key={s._id} value={s.name}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setIsCreatingNewService(true)}>New</Button>
+                    </div>
+                )}
             </div>
         </div>
         <div className="space-y-2">
@@ -138,6 +207,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
             <Label htmlFor="image">Service Image</Label>
             <Input id="image" type="file" />
         </div>
+        <AddCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onCategoryCreated={handleCategoryCreated} />
     </div>
     );
 
@@ -258,41 +328,6 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
 };
 
 
-const AddCategoryModal = ({isOpen, onClose}: {isOpen: boolean, onClose: () => void}) => {
-    const [newCategoryName, setNewCategoryName] = useState('');
-    const [createCategory] = useCreateCategoryMutation();
-
-    const handleCreateCategory = async () => {
-        if (newCategoryName.trim()) {
-            try {
-                await createCategory({ name: newCategoryName }).unwrap();
-                setNewCategoryName('');
-                onClose();
-            } catch (error) {
-                console.error("Failed to create category", error);
-            }
-        }
-    };
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-xs">
-                <DialogHeader>
-                    <DialogTitle>Create New Category</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-2">
-                    <Label htmlFor="new-category">Category Name</Label>
-                    <Input id="new-category" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button onClick={handleCreateCategory}>Create</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )
-}
-
 export default function ServicesPage() {
     const [services, setServices] = useState<Service[]>(mockServices);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -300,8 +335,6 @@ export default function ServicesPage() {
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
     const [searchTerm, setSearchTerm] = useState('');
-    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-
 
     const filteredServices = services.filter(service => 
         service.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
