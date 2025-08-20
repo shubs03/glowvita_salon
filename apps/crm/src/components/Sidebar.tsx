@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, FaBell } from 'react-icons/fa';
+import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaBook ,FaCut, FaSignOutAlt, FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, FaBell } from 'react-icons/fa';
 
 const sidebarNavItems = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt },
