@@ -6,8 +6,8 @@ import { FaArrowRight, FaBook, FaCalendarCheck, FaChartLine, FaCheck, FaComments
 import Image from 'next/image';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
-  <div className="flex gap-4 items-start">
-    <div className="flex-shrink-0 bg-primary/10 p-3 rounded-full">
+  <div className="flex gap-4 items-start p-4 rounded-lg transition-all duration-300 hover:bg-secondary">
+    <div className="flex-shrink-0 bg-primary/10 p-3 rounded-full text-primary">
       {icon}
     </div>
     <div>
@@ -26,6 +26,26 @@ const BenefitItem = ({ icon, title, children }: { icon: React.ReactNode, title: 
         <p className="text-muted-foreground">{children}</p>
     </div>
 );
+
+const ActivityMarquee = () => (
+    <div className="relative flex overflow-x-hidden border-t border-b bg-background mt-16 py-3">
+        <div className="animate-marquee whitespace-nowrap flex gap-12 items-center">
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Glamour Salon</span> just got a new 5-star review.</p>
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Modern Cuts</span> has a new booking for 2:30 PM.</p>
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Style Hub</span> just added a new service: "Keratin Treatment".</p>
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Beauty Bliss</span> has 5 new clients this week.</p>
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">The Barber Shop</span> successfully processed a payment of ₹1,500.</p>
+        </div>
+        <div className="absolute top-0 animate-marquee2 whitespace-nowrap flex gap-12 items-center">
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Glamour Salon</span> just got a new 5-star review.</p>
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Modern Cuts</span> has a new booking for 2:30 PM.</p>
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Style Hub</span> just added a new service: "Keratin Treatment".</p>
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Beauty Bliss</span> has 5 new clients this week.</p>
+            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">The Barber Shop</span> successfully processed a payment of ₹1,500.</p>
+        </div>
+    </div>
+);
+
 
 export default function CrmHomePage() {
   return (
@@ -50,59 +70,70 @@ export default function CrmHomePage() {
       {/* Main Content */}
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="py-20 text-center bg-background">
-          <div className="container mx-auto px-4">
-            <h1 className="text-4xl md:text-5xl font-extrabold font-headline tracking-tight mb-4">
-              Elevate Your Salon Business
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-              The all-in-one CRM designed for modern salons and stylists. Manage your clients, bookings, and payments seamlessly.
-            </p>
-            <Button size="lg" asChild>
-              <Link href="/dashboard">
-                Go to Dashboard <FaRocket className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
+        <section className="relative py-20 md:py-32 text-center bg-background overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-background to-secondary/30"></div>
+            <div className="absolute inset-0 opacity-5 [background:radial-gradient(125%_125%_at_50%_10%,#fff_40%,#63e_100%)]"></div>
+            <div className="container mx-auto px-4 relative z-10">
+                <h1 className="text-4xl md:text-6xl font-extrabold font-headline tracking-tighter mb-4">
+                Elevate Your Salon Business
+                </h1>
+                <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+                The all-in-one CRM designed for modern salons and stylists. Manage your clients, bookings, and payments seamlessly to unlock your salon's full potential.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button size="lg" asChild>
+                    <Link href="/dashboard">
+                        Go to Dashboard <FaRocket className="ml-2 h-5 w-5" />
+                    </Link>
+                    </Button>
+                    <Button size="lg" variant="outline" asChild>
+                    <Link href="#">
+                        Learn More
+                    </Link>
+                    </Button>
+                </div>
+            </div>
+            <ActivityMarquee/>
         </section>
 
         {/* Features Section */}
         <section className="py-20 bg-background">
             <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
+                <div className="text-center mb-16">
                     <h2 className="text-3xl font-bold font-headline">Powerful Features, Effortless Control</h2>
                     <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
                         Everything you need to manage and grow your salon, all in one place.
                     </p>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                    <div className="relative rounded-lg overflow-hidden shadow-2xl">
+                    <div className="relative rounded-lg overflow-hidden shadow-2xl group">
                          <Image 
                             src="https://placehold.co/600x700.png" 
                             alt="CRM Dashboard Preview" 
                             width={600} 
                             height={700}
-                            className="w-full h-auto object-cover transform transition-transform duration-500 hover:scale-105"
+                            className="w-full h-auto object-cover transform transition-transform duration-500 group-hover:scale-105"
                             data-ai-hint="dashboard professional"
                         />
+                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                     </div>
-                    <div className="space-y-8">
-                         <FeatureItem icon={<FaBook className="h-6 w-6 text-primary" />} title="Client Management">
+                    <div className="space-y-6">
+                         <FeatureItem icon={<FaBook className="h-6 w-6" />} title="Client Management">
                             Keep track of all your client details, history, and preferences in one organized place.
                          </FeatureItem>
-                         <FeatureItem icon={<FaCalendarCheck className="h-6 w-6 text-primary" />} title="Smart Booking">
+                         <FeatureItem icon={<FaCalendarCheck className="h-6 w-6" />} title="Smart Booking">
                             An intuitive calendar to manage appointments, reduce no-shows, and handle rescheduling with ease.
                          </FeatureItem>
-                         <FeatureItem icon={<FaCreditCard className="h-6 w-6 text-primary" />} title="Seamless Payments">
+                         <FeatureItem icon={<FaCreditCard className="h-6 w-6" />} title="Seamless Payments">
                             Integrate payments directly into your workflow. Handle transactions, invoices, and payouts effortlessly.
                          </FeatureItem>
-                         <FeatureItem icon={<FaCut className="h-6 w-6 text-primary" />} title="Service Management">
+                         <FeatureItem icon={<FaCut className="h-6 w-6" />} title="Service Management">
                             Define and manage your service offerings, durations, and pricing with a flexible system.
                          </FeatureItem>
-                         <FeatureItem icon={<FaChartLine className="h-6 w-6 text-primary" />} title="Business Analytics">
+                         <FeatureItem icon={<FaChartLine className="h-6 w-6" />} title="Business Analytics">
                             Gain valuable insights into your revenue, client growth, and top-performing services with visual reports.
                          </FeatureItem>
-                         <FeatureItem icon={<FaComments className="h-6 w-6 text-primary" />} title="Team Collaboration">
+                         <FeatureItem icon={<FaComments className="h-6 w-6" />} title="Team Collaboration">
                             Keep your team in sync with internal chat, shared notes, and a collaborative to-do list.
                          </FeatureItem>
                     </div>
@@ -326,3 +357,4 @@ export default function CrmHomePage() {
     </div>
   );
 }
+

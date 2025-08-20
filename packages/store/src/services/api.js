@@ -1,95 +1,74 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-const baseQuery = fetchBaseQuery({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || "/api",
-  prepareHeaders: (headers, { getState }) => {
-    const accessToken = localStorage.getItem("accessToken");
-    const adminAuthState = localStorage.getItem("adminAuthState");
-    const vendorAccessToken = localStorage.getItem("vendor_access_token");
+// Define the base URLs for each service
+const API_BASE_URLS = {
+  admin: 'http://localhost:3002/api',
+  crm: 'http://localhost:3001/api',
+  web: 'http://localhost:3000/api',
+};
 
-    const adminAccessToken = adminAuthState && JSON.parse(adminAuthState).token;
-
-    if (accessToken) {
-      headers.set("Authorization", `Bearer ${accessToken}`);
-    }
-    if (adminAccessToken) {
-      headers.set("Admin-Authorization", `Bearer ${adminAccessToken}`);
-    }
-    if (vendorAccessToken) {
-      headers.set("Student-Authorization", `Bearer ${vendorAccessToken}`);
-    }
-
-    return headers;
-  },
-  credentials: "include",
-});
-
-const baseQueryWithReauth = async (args, api, extraOptions) => {
-  let result = await baseQuery(args, api, extraOptions);
-  const { userAuth, auth } = api.getState();
-  const { refreshToken, tokenRefreshing } = userAuth;
-
-  if (result.error?.status === 401) {
-    const isAdminRequest =
-      (typeof args.url === "string" && args.url.startsWith("/admin")) ||
-      result.error?.data?.error?.includes("admin");
-
-    const refreshTokenToUse = isAdminRequest ? adminRefreshToken : refreshToken;
-    const refreshEndpoint = isAdminRequest
-      ? "/admin/refreshtoken"
-      : "/user/refreshtoken";
-    const updateTokensAction = isAdminRequest
-      ? updateAdminTokens
-      : updateTokens;
-    const logoutAction = isAdminRequest ? logoutAdmin : logout;
-
-    if (tokenRefreshing) {
-      return new Promise((resolve) => {
-        const checkRefresh = setInterval(async () => {
-          if (!api.getState().userAuth.tokenRefreshing) {
-            clearInterval(checkRefresh);
-            resolve(await baseQuery(args, api, extraOptions));
-          }
-        }, 100);
-      });
-    }
-
-    api.dispatch(setTokenRefreshing(true));
-    try {
-      const refreshResult = await baseQuery(
-        {
-          url: refreshEndpoint,
-          method: "POST",
-          body: { refreshToken: refreshTokenToUse },
-        },
-        api,
-        extraOptions
-      );
-
-      if (refreshResult.data?.success) {
-        const { accessToken, refreshToken: newRefreshToken } =
-          refreshResult.data.data;
-        api.dispatch(
-          updateTokensAction({ accessToken, refreshToken: newRefreshToken })
-        );
-        result = await baseQuery(args, api, extraOptions);
-      } else {
-        api.dispatch(logoutAction());
-      }
-    } catch (error) {
-      console.error("Token refresh error:", error);
-      api.dispatch(logoutAction());
-    } finally {
-      api.dispatch(setTokenRefreshing(false));
-    }
+// This is the core fetch function that will be used by all endpoints.
+const baseQueryWithDynamicBaseUrl = async (args, api, extraOptions) => {
+  // Determine the request URL safely, whether args is a string or an object
+  const requestUrl = typeof args === 'string' ? args : args.url;
+  
+  if (typeof requestUrl !== 'string') {
+    // Handle cases where the URL is not provided, though this should be rare
+    // with standardized endpoints.
+    console.error("Request URL is not a string:", requestUrl);
+    return { error: { status: 'CUSTOM_ERROR', error: 'Invalid URL provided' } };
   }
 
-  return result;
+  // Determine the target service based on the URL prefix
+  let targetService = 'web'; // Default service
+  let baseUrl = API_BASE_URLS.web;
+
+  if (requestUrl.startsWith('/admin')) {
+    targetService = 'admin';
+    baseUrl = API_BASE_URLS.admin;
+  } else if (requestUrl.startsWith('/crm')) {
+    targetService = 'crm';
+    baseUrl = API_BASE_URLS.crm;
+  }
+  
+  // Use a dynamically configured fetchBaseQuery for each call
+  const rawBaseQuery = fetchBaseQuery({
+    baseUrl: baseUrl,
+    prepareHeaders: (headers, { getState }) => {
+      // Get tokens from localStorage
+      const adminAuthState = localStorage.getItem("adminAuthState");
+      const vendorAccessToken = localStorage.getItem("vendor_access_token");
+      
+      // Attach the correct token based on the target service
+      if (targetService === 'admin' && adminAuthState) {
+        try {
+            const adminToken = JSON.parse(adminAuthState).token;
+            if (adminToken) {
+              headers.set("Admin-Authorization", `Bearer ${adminToken}`);
+            }
+        } catch (e) {
+            console.error("Could not parse admin auth state:", e);
+        }
+      }
+      
+      if (targetService === 'crm' && vendorAccessToken) {
+        headers.set("Vendor-Authorization", `Bearer ${vendorAccessToken}`);
+      }
+      
+      return headers;
+    },
+    credentials: "include",
+  });
+  
+  // The URL for the actual fetch call should be relative to the new baseUrl
+  const finalArgs = typeof args === 'string' ? { url: args } : args;
+
+  return rawBaseQuery(finalArgs, api, extraOptions);
 };
 
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
-  baseQuery: baseQuery,
+  baseQuery: baseQueryWithDynamicBaseUrl,
   tagTypes: [
     "admin",
     "offers",
@@ -97,11 +76,19 @@ export const glowvitaApi = createApi({
     "Settings",
     "SuperData",
     "Supplier", "Subscription",
+    "Vendor", "doctors", "GeoFence", "Category", "Service", "Notification", "TaxFeeSettings", "SubscriptionPlan", "User"
   ],
   endpoints: (builder) => ({
+    // Web App Endpoints
+    getMe: builder.query({
+      query: () => ({ url: '/auth/me', method: 'GET' }),
+      providesTags: ["User"],
+    }),
+
+    // Admin Panel Endpoints
     getUsers: builder.query({
       query: () => ({
-        url: "/users",
+        url: "/admin/users", // Assumes an endpoint exists at /api/admin/users
         method: "GET",
       }),
       providesTags: ["admin"],
@@ -110,7 +97,7 @@ export const glowvitaApi = createApi({
     // Admin
     registerAdmin: builder.mutation({
       query: (admin) => ({
-        url: "/admin/register",
+        url: "/admin/auth/register",
         method: "POST",
         body: admin,
       }),
@@ -127,7 +114,7 @@ export const glowvitaApi = createApi({
     }),
 
     getAdmins: builder.query({
-      query: () => "/admin",
+      query: () => ({ url: "/admin", method: "GET" }), 
       providesTags: ["admin"],
     }),
 
@@ -161,7 +148,7 @@ export const glowvitaApi = createApi({
     // offfers
 
     getAdminOffers: builder.query({
-      query: () => "/admin/offers",
+      query: () => ({ url: "/admin/offers", method: "GET" }),
       providesTags: ["offers"],
     }),
 
@@ -197,6 +184,7 @@ export const glowvitaApi = createApi({
     getReferrals: builder.query({
       query: (referralType) => ({
         url: "/admin/referrals",
+        method: "GET",
         params: { referralType },
       }),
       providesTags: ["Referrals"],
@@ -233,9 +221,11 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Settings"],
     }),
+    
     getSettings: builder.query({
       query: (referralType) => ({
         url: "/admin/referrals",
+        method: "GET",
         params: { settings: true, referralType },
       }),
       providesTags: ["Settings"],
@@ -243,28 +233,31 @@ export const glowvitaApi = createApi({
 
     // SuperData (Dropdowns) Endpoints
     getSuperData: builder.query({
-      query: () => "/super-data",
+      query: () => ({ url: "/admin/super-data", method: "GET" }),
       providesTags: ["SuperData"],
     }),
+    
     createSuperDataItem: builder.mutation({
       query: (item) => ({
-        url: "/super-data",
+        url: "/admin/super-data",
         method: "POST",
         body: item,
       }),
       invalidatesTags: ["SuperData"],
     }),
+    
     updateSuperDataItem: builder.mutation({
       query: (item) => ({
-        url: "/super-data",
+        url: "/admin/super-data",
         method: "PUT",
         body: item,
       }),
       invalidatesTags: ["SuperData"],
     }),
+    
     deleteSuperDataItem: builder.mutation({
       query: ({ id }) => ({
-        url: "/super-data",
+        url: "/admin/super-data",
         method: "DELETE",
         body: { id },
       }),
@@ -272,7 +265,7 @@ export const glowvitaApi = createApi({
     }),
 
     // Vendor Endpoints
-
+    
     createVendor: builder.mutation({
       query: (vendorData) => ({
         url: "/admin/vendor",
@@ -283,7 +276,7 @@ export const glowvitaApi = createApi({
     }),
 
     getVendors: builder.query({
-      query: () => "/admin/vendor",
+      query: () => ({ url: "/admin/vendor", method: "GET" }),
       providesTags: ["Vendor"],
       transformResponse: (response) => response,
     }),
@@ -329,10 +322,10 @@ export const glowvitaApi = createApi({
     // Doctor Endpoints
 
     getDoctors: builder.query({
-      query: () => "/admin/doctors",
+      query: () => ({ url: "/admin/doctors", method: "GET" }),
       providesTags: ["doctors"],
     }),
-
+    
     createDoctor: builder.mutation({
       query: (doctor) => ({
         url: "/admin/doctors",
@@ -362,8 +355,8 @@ export const glowvitaApi = createApi({
     
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
-      query: () => '/admin/subscription-plans',
-      providesTags: ['Subscription']
+      query: () => ({ url: '/admin/subscription-plans', method: 'GET' }),
+      providesTags: ['SubscriptionPlan']
     }),
     
     createSubscriptionPlan: builder.mutation({
@@ -395,9 +388,10 @@ export const glowvitaApi = createApi({
 
     // Supplier Endpoints
     getSuppliers: builder.query({
-      query: () => "/admin/suppliers",
+      query: () => ({ url: "/admin/suppliers", method: "GET" }),
       providesTags: ["Supplier"],
     }),
+    
     createSupplier: builder.mutation({
       query: (supplierData) => ({
         url: "/admin/suppliers",
@@ -406,6 +400,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
+    
     updateSupplier: builder.mutation({
       query: ({ id, ...supplierData }) => ({
         url: `/admin/suppliers`,
@@ -414,6 +409,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
+    
     deleteSupplier: builder.mutation({
       query: (id) => ({
         url: `/admin/suppliers`,
@@ -500,9 +496,10 @@ export const glowvitaApi = createApi({
 
     // Geo Fence
     getGeoFences: builder.query({
-      query: () => "/admin/geofence",
+      query: () => ({ url: "/admin/geofence", method: "GET" }),
       providesTags: ["GeoFence"],
     }),
+    
     createGeoFence: builder.mutation({
       query: (geoFence) => ({
         url: "/admin/geofence",
@@ -511,6 +508,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["GeoFence"],
     }),
+    
     updateGeoFence: builder.mutation({
       query: ({ _id, ...geoFence }) => ({
         url: "/admin/geofence",
@@ -519,6 +517,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["GeoFence"],
     }),
+    
     deleteGeoFence: builder.mutation({
       query: (_id) => ({
         url: "/admin/geofence",
@@ -529,9 +528,10 @@ export const glowvitaApi = createApi({
     }),
     // Categories
     getCategories: builder.query({
-      query: () => "/admin/categories",
+      query: () => ({ url: "/admin/categories", method: "GET" }),
       providesTags: ["Category"],
     }),
+    
     createCategory: builder.mutation({
       query: (category) => ({
         url: "/admin/categories",
@@ -540,6 +540,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Category"],
     }),
+    
     updateCategory: builder.mutation({
       query: (category) => ({
         url: `/admin/categories`,
@@ -548,6 +549,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Category"],
     }),
+    
     deleteCategory: builder.mutation({
       query: ({ id }) => ({
         url: `/admin/categories`,
@@ -559,9 +561,10 @@ export const glowvitaApi = createApi({
 
     // Services
     getServices: builder.query({
-      query: () => "/admin/services",
+      query: () => ({ url: "/admin/services", method: "GET" }),
       providesTags: ["Service"],
     }),
+    
     createService: builder.mutation({
       query: (service) => ({
         url: "/admin/services",
@@ -570,6 +573,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Service"],
     }),
+    
     updateService: builder.mutation({
       query: (service) => ({
         url: `/admin/services`,
@@ -578,6 +582,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Service"],
     }),
+    
     deleteService: builder.mutation({
       query: ({ id }) => ({
         url: `/admin/services`,
@@ -589,9 +594,10 @@ export const glowvitaApi = createApi({
 
     // Notifications
     getNotifications: builder.query({
-      query: () => "/admin/custompushnotification",
+      query: () => ({ url: "/admin/custompushnotification", method: "GET" }),
       providesTags: ["Notification"],
     }),
+    
     createNotification: builder.mutation({
       query: (notification) => ({
         url: "/admin/custompushnotification",
@@ -600,6 +606,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Notification"],
     }),
+    
     updateNotification: builder.mutation({
       query: (notification) => ({
         url: `/admin/custompushnotification`,
@@ -608,6 +615,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Notification"],
     }),
+    
     deleteNotification: builder.mutation({
       query: ({ _id }) => ({
         url: `/admin/custompushnotification`,
@@ -619,9 +627,10 @@ export const glowvitaApi = createApi({
 
     // Tax Fee Settings Endpoints
     getTaxFeeSettings: builder.query({
-      query: () => "/admin/tax-fees",
+      query: () => ({ url: "/admin/tax-fees", method: "GET" }),
       providesTags: ["TaxFeeSettings"],
     }),
+    
     updateTaxFeeSettings: builder.mutation({
       query: (settings) => ({
         url: "/admin/tax-fees",
@@ -652,9 +661,9 @@ export const glowvitaApi = createApi({
 });
 
 export const {
-  // AdminPanel Endpoints
-
-  // adminUsers
+  // Web App
+  useGetMeQuery,
+  // Admin Panel
   useAdminLoginMutation,
   useRegisterAdminMutation,
   useCreateAdminMutation,

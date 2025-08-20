@@ -1,47 +1,314 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { Plus, Edit, Trash2, MoreVertical, Search, Clock, DollarSign, Tag, Image as ImageIcon, Star, BarChart2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, DollarSign, Tag, Star, BarChart2, Eye, MoreVertical, X, UploadCloud, Users, CheckSquare, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@repo/ui/dropdown-menu';
+import { Checkbox } from '@repo/ui/checkbox';
+import { Switch } from '@repo/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import { Badge } from '@repo/ui/badge';
+import { useGetCategoriesQuery, useCreateCategoryMutation } from '@repo/store/api';
 
 type Service = {
   id: string;
   name: string;
   category: string;
   price: number;
+  discountedPrice?: number;
   duration: number; // in minutes
   description: string;
   image: string;
+  gender: 'men' | 'women' | 'unisex';
+  staff: string[];
+  commission: boolean;
+  homeService: { available: boolean; charges?: number };
+  weddingService: { available: boolean; charges?: number };
+  bookingInterval: number;
+  tax: { enabled: boolean; type: 'percentage' | 'fixed'; value?: number };
+  onlineBooking: boolean;
+  status: 'active' | 'inactive';
 };
 
 const mockServices: Service[] = [
-  { id: 'SRV-001', name: 'Deluxe Haircut', category: 'Hair Styling', price: 75, duration: 60, description: 'A premium haircut experience with wash, cut, and style.', image: 'https://placehold.co/400x400.png' },
-  { id: 'SRV-002', name: 'Gel Manicure', category: 'Nail Care', price: 55, duration: 45, description: 'Long-lasting gel polish with detailed nail care.', image: 'https://placehold.co/400x400.png' },
-  { id: 'SRV-003', name: 'Deep Cleansing Facial', category: 'Skincare', price: 120, duration: 75, description: 'A rejuvenating facial to cleanse and refresh your skin.', image: 'https://placehold.co/400x400.png' },
-  { id: 'SRV-004', name: 'Balayage Color', category: 'Hair Coloring', price: 250, duration: 180, description: 'Natural-looking, sun-kissed hair color.', image: 'https://placehold.co/400x400.png' },
+  { id: 'SRV-001', name: 'Deluxe Haircut', category: 'Hair Styling', price: 75, discountedPrice: 65, duration: 60, description: 'A premium haircut experience with wash, cut, and style.', image: 'https://placehold.co/400x400.png', gender: 'unisex', staff: ['Jane Doe', 'John Smith'], commission: true, homeService: { available: true, charges: 20 }, weddingService: { available: false }, bookingInterval: 15, tax: { enabled: true, type: 'percentage', value: 18 }, onlineBooking: true, status: 'active' },
+  { id: 'SRV-002', name: 'Gel Manicure', category: 'Nail Care', price: 55, duration: 45, description: 'Long-lasting gel polish with detailed nail care.', image: 'https://placehold.co/400x400.png', gender: 'women', staff: ['Emily White'], commission: false, homeService: { available: false }, weddingService: { available: false }, bookingInterval: 10, tax: { enabled: false, type: 'fixed', value: 0 }, onlineBooking: true, status: 'active' },
+  { id: 'SRV-003', name: 'Deep Cleansing Facial', category: 'Skincare', price: 120, duration: 75, description: 'A rejuvenating facial to cleanse and refresh your skin.', image: 'https://placehold.co/400x400.png', gender: 'unisex', staff: ['Jane Doe'], commission: true, homeService: { available: false }, weddingService: { available: true, charges: 50 }, bookingInterval: 30, tax: { enabled: true, type: 'fixed', value: 10 }, onlineBooking: true, status: 'inactive' },
+  { id: 'SRV-004', name: 'Balayage Color', category: 'Hair Coloring', price: 250, duration: 180, description: 'Natural-looking, sun-kissed hair color.', image: 'https://placehold.co/400x400.png', gender: 'unisex', staff: ['John Smith'], commission: true, homeService: { available: false }, weddingService: { available: true, charges: 100 }, bookingInterval: 60, tax: { enabled: true, type: 'percentage', value: 18 }, onlineBooking: false, status: 'active' },
 ];
+
+const mockStaff = ['Jane Doe', 'John Smith', 'Emily White'];
+
+const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean, onClose: () => void, service: Service | null, type: 'add' | 'edit' | 'view' }) => {
+    const [activeTab, setActiveTab] = useState('basic');
+    const { data: categories = [], isLoading: categoriesLoading } = useGetCategoriesQuery(undefined);
+    
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
+    const [formData, setFormData] = useState<Partial<Service>>(service || {});
+
+    useEffect(() => {
+    setFormData(service || {});
+    setActiveTab('basic');
+    }, [service, isOpen]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type, checked } = e.target as HTMLInputElement;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    };
+
+    const handleSelectChange = (name: string, value: string | string[]) => {
+      setFormData(prev => ({...prev, [name]: value}));
+    };
+
+    const handleCheckboxChange = (name: string, id: string, checked: boolean) => {
+    const currentValues = formData[name as keyof Service] as string[] || [];
+    const newValues = checked ? [...currentValues, id] : currentValues.filter(val => val !== id);
+    setFormData(prev => ({...prev, [name]: newValues}));
+    }
+
+    const handleNestedChange = (parent: keyof Service, child: string, value: any) => {
+        setFormData(prev => ({
+            ...prev,
+            [parent]: {
+                ...(prev[parent] as object),
+                [child]: value
+            }
+        }));
+    };
+    
+    const renderBasicInfoTab = () => (
+    <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+            <Label htmlFor="category">Service Category</Label>
+            <div className="flex gap-2">
+                <Select value={formData.category} onValueChange={(value) => handleSelectChange('category', value)}>
+                    <SelectTrigger><SelectValue placeholder="Select Category"/></SelectTrigger>
+                    <SelectContent>
+                        {categoriesLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : categories.map((cat:any) => <SelectItem key={cat._id} value={cat.name}>{cat.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="icon" onClick={() => setIsCategoryModalOpen(true)}><Plus className="h-4 w-4"/></Button>
+            </div>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="name">Service Name</Label>
+                <Input id="name" name="name" value={formData.name} onChange={handleInputChange} />
+            </div>
+        </div>
+        <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                <Label htmlFor="price">Price (₹)</Label>
+                <Input id="price" name="price" type="number" value={formData.price} onChange={handleInputChange} />
+            </div>
+                <div className="space-y-2">
+                <Label htmlFor="discountedPrice">Discounted Price (₹)</Label>
+                <Input id="discountedPrice" name="discountedPrice" type="number" value={formData.discountedPrice} onChange={handleInputChange} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="duration">Duration (minutes)</Label>
+                <Input id="duration" name="duration" type="number" value={formData.duration} onChange={handleInputChange} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="gender">Gender</Label>
+                <Select value={formData.gender} onValueChange={(value) => handleSelectChange('gender', value)}>
+                <SelectTrigger><SelectValue/></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="unisex">Unisex</SelectItem>
+                    <SelectItem value="men">Men</SelectItem>
+                    <SelectItem value="women">Women</SelectItem>
+                </SelectContent>
+                </Select>
+            </div>
+        </div>
+            <div className="space-y-2">
+            <Label htmlFor="image">Service Image</Label>
+            <Input id="image" type="file" />
+        </div>
+    </div>
+    );
+
+    const renderAdvancedTab = () => (
+    <div className="space-y-4">
+        <div className="space-y-2">
+            <Label>Staff</Label>
+            <div className="p-4 border rounded-md max-h-48 overflow-y-auto space-y-2">
+            <div className="flex items-center space-x-2">
+                <Checkbox id="staff-all" checked={formData.staff?.length === mockStaff.length} onCheckedChange={(checked) => handleSelectChange('staff', checked ? mockStaff : [])}/>
+                <Label htmlFor="staff-all" className="font-semibold">Select All Staff</Label>
+            </div>
+            {mockStaff.map(staff => (
+                <div key={staff} className="flex items-center space-x-2">
+                <Checkbox id={`staff-${staff}`} checked={formData.staff?.includes(staff)} onCheckedChange={(checked) => handleCheckboxChange('staff', staff, checked as boolean)} />
+                <Label htmlFor={`staff-${staff}`}>{staff}</Label>
+                </div>
+            ))}
+            </div>
+        </div>
+        <div className="flex items-center space-x-2">
+            <Switch id="commission" checked={formData.commission} onCheckedChange={(checked) => handleSelectChange('commission', checked as any)} />
+            <Label htmlFor="commission">Enable Staff Commission</Label>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 border rounded-md space-y-2">
+            <div className="flex items-center space-x-2">
+                <Switch id="home-service" checked={formData.homeService?.available} onCheckedChange={(checked) => handleNestedChange('homeService', 'available', checked)}/>
+                <Label htmlFor="home-service">Home Service</Label>
+            </div>
+            {formData.homeService?.available && <Input placeholder="Additional Charges (₹)" type="number" value={formData.homeService.charges} onChange={(e) => handleNestedChange('homeService', 'charges', Number(e.target.value))} />}
+            </div>
+            <div className="p-4 border rounded-md space-y-2">
+            <div className="flex items-center space-x-2">
+                <Switch id="wedding-service" checked={formData.weddingService?.available} onCheckedChange={(checked) => handleNestedChange('weddingService', 'available', checked)}/>
+                <Label htmlFor="wedding-service">Wedding Service</Label>
+            </div>
+            {formData.weddingService?.available && <Input placeholder="Additional Charges (₹)" type="number" value={formData.weddingService.charges} onChange={(e) => handleNestedChange('weddingService', 'charges', Number(e.target.value))}/>}
+            </div>
+        </div>
+    </div>
+    );
+
+    const renderBookingTab = () => (
+    <div className="space-y-4">
+        <div className="space-y-2">
+            <Label htmlFor="bookingInterval">Booking Interval</Label>
+            <Select value={String(formData.bookingInterval)} onValueChange={(value) => handleSelectChange('bookingInterval', value)}>
+                <SelectTrigger><SelectValue/></SelectTrigger>
+                <SelectContent>
+                    {[5,10,15,20,25,30,45,60,90,120].map(i => <SelectItem key={i} value={String(i)}>{i} minutes</SelectItem>)}
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="flex items-center space-x-2">
+            <Switch id="tax-enabled" checked={formData.tax?.enabled} onCheckedChange={(checked) => handleNestedChange('tax', 'enabled', checked)} />
+            <Label htmlFor="tax-enabled">Enable Service Tax</Label>
+        </div>
+        {formData.tax?.enabled && (
+            <div className="grid grid-cols-2 gap-4">
+                <Select value={formData.tax.type} onValueChange={(value) => handleNestedChange('tax', 'type', value)}>
+                    <SelectTrigger><SelectValue/></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="percentage">Percentage</SelectItem>
+                        <SelectItem value="fixed">Fixed</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Input type="number" placeholder="Tax Value" value={formData.tax.value} onChange={(e) => handleNestedChange('tax', 'value', Number(e.target.value))}/>
+            </div>
+        )}
+        <div className="flex items-center space-x-2">
+            <Switch id="onlineBooking" checked={formData.onlineBooking} onCheckedChange={(checked) => handleSelectChange('onlineBooking', checked as any)} />
+            <Label htmlFor="onlineBooking">Enable Online Booking</Label>
+        </div>
+    </div>
+    );
+
+    if (type === 'view') {
+    return (
+        <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+                <DialogTitle>{service?.name}</DialogTitle>
+                <DialogDescription>{service?.description}</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                {/* Display all details here */}
+            </div>
+            <DialogFooter>
+                <Button variant="secondary" onClick={onClose}>Close</Button>
+            </DialogFooter>
+        </DialogContent>
+    );
+    }
+
+    return (
+    <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+            <DialogTitle>{type === 'add' ? 'Add New Service' : 'Edit Service'}</DialogTitle>
+        </DialogHeader>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col">
+            <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                <TabsTrigger value="advanced" disabled={!formData.name}>Advanced</TabsTrigger>
+                <TabsTrigger value="booking" disabled={!formData.name}>Booking & Tax</TabsTrigger>
+            </TabsList>
+            <div className="py-4 flex-grow overflow-y-auto">
+                <TabsContent value="basic">{renderBasicInfoTab()}</TabsContent>
+                <TabsContent value="advanced">{renderAdvancedTab()}</TabsContent>
+                <TabsContent value="booking">{renderBookingTab()}</TabsContent>
+            </div>
+        </Tabs>
+            <DialogFooter className="flex-shrink-0 pt-4 border-t">
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button>Save Service</Button>
+        </DialogFooter>
+    </DialogContent>
+    )
+};
+
+
+const AddCategoryModal = ({isOpen, onClose}: {isOpen: boolean, onClose: () => void}) => {
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [createCategory] = useCreateCategoryMutation();
+
+    const handleCreateCategory = async () => {
+        if (newCategoryName.trim()) {
+            try {
+                await createCategory({ name: newCategoryName }).unwrap();
+                setNewCategoryName('');
+                onClose();
+            } catch (error) {
+                console.error("Failed to create category", error);
+            }
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-xs">
+                <DialogHeader>
+                    <DialogTitle>Create New Category</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2">
+                    <Label htmlFor="new-category">Category Name</Label>
+                    <Input id="new-category" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>Cancel</Button>
+                    <Button onClick={handleCreateCategory}>Create</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
 export default function ServicesPage() {
     const [services, setServices] = useState<Service[]>(mockServices);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedService, setSelectedService] = useState<Service | null>(null);
-    const [modalType, setModalType] = useState<'add' | 'edit'>('add');
+    const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
     const [searchTerm, setSearchTerm] = useState('');
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
 
     const filteredServices = services.filter(service => 
         service.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         service.category.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleOpenModal = (type: 'add' | 'edit', service?: Service) => {
+    const handleOpenModal = (type: 'add' | 'edit' | 'view', service?: Service) => {
         setModalType(type);
         setSelectedService(service || null);
         setIsModalOpen(true);
@@ -59,7 +326,7 @@ export default function ServicesPage() {
         setIsDeleteModalOpen(false);
         setSelectedService(null);
     };
-
+    
     return (
         <div className="p-4 sm:p-6 lg:p-8">
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -127,96 +394,57 @@ export default function ServicesPage() {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredServices.map(service => (
-                    <Card key={service.id} className="flex flex-col">
-                        <CardHeader className="p-0">
-                             <div className="relative aspect-video">
-                                <img src={service.image} alt={service.name} className="w-full h-full object-cover rounded-t-lg" />
-                                <div className="absolute top-2 right-2">
-                                     <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="secondary" size="icon" className="h-8 w-8 bg-background/70 hover:bg-background">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => handleOpenModal('edit', service)}>
-                                                <Edit className="mr-2 h-4 w-4" /> Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(service)}>
-                                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-4 flex-grow flex flex-col">
-                           <div className="flex-grow">
-                             <CardTitle className="text-lg leading-tight">{service.name}</CardTitle>
-                             <p className="text-sm text-muted-foreground mt-2">{service.description}</p>
-                           </div>
-                            <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                                <span className="inline-flex items-center bg-secondary text-secondary-foreground rounded-full px-2.5 py-1">
-                                    <Tag className="mr-1.5 h-3 w-3" /> {service.category}
-                                </span>
-                                <span className="inline-flex items-center bg-secondary text-secondary-foreground rounded-full px-2.5 py-1">
-                                    <DollarSign className="mr-1.5 h-3 w-3" /> {service.price.toFixed(2)}
-                                </span>
-                                <span className="inline-flex items-center bg-secondary text-secondary-foreground rounded-full px-2.5 py-1">
-                                    <Clock className="mr-1.5 h-3 w-3" /> {service.duration} mins
-                                </span>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>{modalType === 'add' ? 'Add New Service' : 'Edit Service'}</DialogTitle>
-                        <DialogDescription>
-                            {modalType === 'add' ? 'Enter details for the new service.' : `Editing service: ${selectedService?.name}`}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Service Name</Label>
-                            <Input id="name" defaultValue={selectedService?.name || ''} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                             <div className="space-y-2">
-                                <Label htmlFor="category">Category</Label>
-                                <Input id="category" defaultValue={selectedService?.category || ''} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="price">Price (₹)</Label>
-                                <Input id="price" type="number" defaultValue={selectedService?.price || ''} />
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="duration">Duration (minutes)</Label>
-                            <Input id="duration" type="number" defaultValue={selectedService?.duration || ''} />
-                        </div>
-                         <div className="space-y-2">
-                            <Label htmlFor="description">Description</Label>
-                            <Textarea id="description" defaultValue={selectedService?.description || ''} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="image">Image</Label>
-                             <div className="flex items-center gap-4">
-                                {selectedService?.image && <img src={selectedService.image} alt="preview" className="h-16 w-16 rounded-md object-cover"/>}
-                                <Input id="image" type="file" className="flex-1"/>
-                             </div>
-                        </div>
+            <Card>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Service</TableHead>
+                                    <TableHead>Category</TableHead>
+                                    <TableHead>Duration</TableHead>
+                                    <TableHead>Price</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredServices.map(service => (
+                                    <TableRow key={service.id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <img src={service.image} alt={service.name} className="h-10 w-10 rounded-md object-cover"/>
+                                                <span className="font-medium">{service.name}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell><Badge variant="outline">{service.category}</Badge></TableCell>
+                                        <TableCell>{service.duration} mins</TableCell>
+                                        <TableCell>₹{service.price.toFixed(2)}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={service.status === 'active' ? 'default' : 'secondary'}>{service.status}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4"/></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent>
+                                                    <DropdownMenuItem onClick={() => handleOpenModal('view', service)}><Eye className="mr-2 h-4 w-4"/> View</DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleOpenModal('edit', service)}><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(service)}><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </div>
-                    <DialogFooter>
-                        <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        <Button>Save</Button>
-                    </DialogFooter>
-                </DialogContent>
+                </CardContent>
+            </Card>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <ServiceFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} service={selectedService} type={modalType} />
             </Dialog>
 
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
