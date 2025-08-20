@@ -129,45 +129,102 @@ export function VendorForm({ isOpen, onClose, vendor, isEditMode = false, onSubm
     { id: 'onsite', label: 'Onsite' },
   ];
 
-  // Initialize Mapbox when modal opens
+  // Initialize Mapbox when modal opens - FIXED VERSION
   useEffect(() => {
-    if (!isMapOpen || !mapContainer.current || !MAPBOX_TOKEN) return;
+    if (!isMapOpen || !MAPBOX_TOKEN) return;
 
-    try {
-      mapboxgl.accessToken = MAPBOX_TOKEN;
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v11',
-        center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
-        zoom: 10,
-      });
+    // Add a small delay to ensure the container is rendered
+    const initMap = () => {
+      if (!mapContainer.current) return;
 
-      marker.current = new mapboxgl.Marker({
-        draggable: true,
-      })
-        .setLngLat(formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599])
-        .addTo(map.current);
+      try {
+        // Set the access token
+        mapboxgl.accessToken = MAPBOX_TOKEN;
+        
+        // Remove existing map if it exists
+        if (map.current) {
+          map.current.remove();
+        }
 
-      marker.current.on('dragend', () => {
-        const lngLat = marker.current!.getLngLat();
-        setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
-        fetchAddress([lngLat.lng, lngLat.lat]);
-      });
+        // Create new map instance
+        map.current = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: 'mapbox://styles/mapbox/streets-v11',
+          center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599], // Default to center of India
+          zoom: formData.location ? 15 : 5,
+          attributionControl: false // Remove attribution for cleaner look
+        });
 
-      // Ensure map resizes properly
-      map.current.on('load', () => {
-        map.current!.resize();
-      });
-    } catch (error) {
-      console.error('Error initializing Mapbox:', error);
-      setErrors(prev => ({ ...prev, location: 'Failed to load map. Please check Mapbox configuration.' }));
-    }
+        // Remove existing marker
+        if (marker.current) {
+          marker.current.remove();
+        }
 
-    return () => {
-      if (map.current) {
-        map.current.remove();
+        // Create new marker
+        marker.current = new mapboxgl.Marker({
+          draggable: true,
+          color: '#3B82F6' // Blue color
+        })
+          .setLngLat(formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599])
+          .addTo(map.current);
+
+        // Handle marker drag
+        marker.current.on('dragend', () => {
+          const lngLat = marker.current!.getLngLat();
+          setFormData(prev => ({ 
+            ...prev, 
+            location: { lat: lngLat.lat, lng: lngLat.lng } 
+          }));
+          fetchAddress([lngLat.lng, lngLat.lat]);
+        });
+
+        // Handle map click to move marker
+        map.current.on('click', (e) => {
+          const { lng, lat } = e.lngLat;
+          setFormData(prev => ({ 
+            ...prev, 
+            location: { lat, lng } 
+          }));
+          marker.current!.setLngLat([lng, lat]);
+          fetchAddress([lng, lat]);
+        });
+
+        // Ensure map resizes properly after load
+        map.current.on('load', () => {
+          setTimeout(() => {
+            map.current!.resize();
+          }, 100);
+        });
+
+      } catch (error) {
+        console.error('Error initializing Mapbox:', error);
+        setErrors(prev => ({ ...prev, location: 'Failed to load map. Please check Mapbox configuration.' }));
       }
     };
+
+    // Small delay to ensure DOM is ready
+    const timeoutId = setTimeout(initMap, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+      if (marker.current) {
+        marker.current.remove();
+        marker.current = null;
+      }
+    };
+  }, [isMapOpen, MAPBOX_TOKEN]);
+
+  // Resize map when modal is fully opened
+  useEffect(() => {
+    if (isMapOpen && map.current) {
+      setTimeout(() => {
+        map.current!.resize();
+      }, 300); // Wait for modal animation to complete
+    }
   }, [isMapOpen]);
 
   // Load cities when state changes
@@ -213,44 +270,59 @@ export function VendorForm({ isOpen, onClose, vendor, isEditMode = false, onSubm
     }
   }, [vendor]);
 
-  // Search for locations using Mapbox Geocoding API
+  // Search for locations using Mapbox Geocoding API - FIXED VERSION
   const handleSearch = async (query: string) => {
-    if (!query) {
+    if (!query || !MAPBOX_TOKEN) {
       setSearchResults([]);
       return;
     }
+    
     try {
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
           query
-        )}.json?access_token=${MAPBOX_TOKEN}&country=IN`
+        )}.json?access_token=${MAPBOX_TOKEN}&country=IN&types=place,locality,neighborhood,address`
       );
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       const data: { features: MapboxFeature[] } = await response.json();
-      setSearchResults(data.features);
+      setSearchResults(data.features || []);
     } catch (error) {
       console.error('Error searching locations:', error);
       setSearchResults([]);
     }
   };
 
-  // Fetch address from coordinates using reverse geocoding
+  // Fetch address from coordinates using reverse geocoding - FIXED VERSION
   const fetchAddress = async (coordinates: [number, number]) => {
+    if (!MAPBOX_TOKEN) return;
+    
     try {
-      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${MAPBOX_TOKEN}`);
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,neighborhood,address`
+      );
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       const data: { features: MapboxFeature[] } = await response.json();
       if (data.features && data.features.length > 0) {
         const address = data.features[0].place_name;
         const context = data.features[0].context || [];
         const state = context.find(c => c.id.includes('region'))?.text || '';
         const city = context.find(c => c.id.includes('place'))?.text || '';
-        setSelectedState(state);
-        setFormData(prev => ({ ...prev, address, state, city }));
+        
+        if (state) setSelectedState(state);
+        setFormData(prev => ({ 
+          ...prev, 
+          address, 
+          state: state || prev.state, 
+          city: city || prev.city 
+        }));
       }
     } catch (error) {
       console.error('Error fetching address:', error);
@@ -427,6 +499,36 @@ export function VendorForm({ isOpen, onClose, vendor, isEditMode = false, onSubm
     }
   };
 
+  // Handle search result selection
+  const handleSearchResultSelect = (result: MapboxFeature) => {
+    const coordinates = result.geometry.coordinates;
+    const newLocation = { lat: coordinates[1], lng: coordinates[0] };
+    
+    setFormData(prev => ({
+      ...prev,
+      location: newLocation,
+      address: result.place_name,
+      state: result.context?.find(c => c.id.includes('region'))?.text || prev.state,
+      city: result.context?.find(c => c.id.includes('place'))?.text || prev.city,
+    }));
+    
+    const state = result.context?.find(c => c.id.includes('region'))?.text;
+    if (state) setSelectedState(state);
+    
+    if (map.current) {
+      map.current.setCenter(coordinates);
+      map.current.setZoom(15);
+      setTimeout(() => map.current!.resize(), 100);
+    }
+    
+    if (marker.current) {
+      marker.current.setLngLat(coordinates);
+    }
+    
+    setSearchResults([]);
+    setSearchQuery('');
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -521,7 +623,7 @@ export function VendorForm({ isOpen, onClose, vendor, isEditMode = false, onSubm
               <div className="flex items-center gap-2">
                 <Input
                   id="location"
-                  value={`formData.location ? ${formData?.location?.lat}, ${formData?.location?.lng} : ''`}
+                  value={formData.location ? `${formData.location.lat.toFixed(6)}, ${formData.location.lng.toFixed(6)}` : ''}
                   placeholder="Select location from map"
                   readOnly
                   className={errors.location ? 'border-red-500' : ''}
@@ -803,60 +905,77 @@ export function VendorForm({ isOpen, onClose, vendor, isEditMode = false, onSubm
         </DialogContent>
       </Dialog>
 
-      {/* Map Modal */}
+      {/* Map Modal - IMPROVED VERSION */}
       <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-4xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Select Location</DialogTitle>
             <DialogDescription>
-              Search for a location or drag the marker to select the exact position.
+              Search for a location, click on the map, or drag the marker to select the exact position.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              placeholder="Search for a location"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                handleSearch(e.target.value);
-              }}
-              className="w-full"
-            />
-            {searchResults.length > 0 && (
-              <div className="border rounded-md p-2 max-h-40 overflow-y-auto bg-white shadow-md">
-                {searchResults.map((result) => (
-                  <div
-                    key={result.id}
-                    className="p-2 hover:bg-gray-100 cursor-pointer"
-                    onClick={() => {
-                      const coordinates = result.geometry.coordinates;
-                      setFormData(prev => ({
-                        ...prev,
-                        location: { lat: coordinates[1], lng: coordinates[0] },
-                        address: result.place_name,
-                        state: result.context?.find(c => c.id.includes('region'))?.text || '',
-                        city: result.context?.find(c => c.id.includes('place'))?.text || '',
-                      }));
-                      setSelectedState(result.context?.find(c => c.id.includes('region'))?.text || '');
-                      if (map.current) {
-                        map.current.setCenter(coordinates);
-                        map.current.resize();
-                      }
-                      if (marker.current) {
-                        marker.current.setLngLat(coordinates);
-                      }
-                      setSearchResults([]);
-                      setSearchQuery('');
-                    }}
-                  >
-                    {result.place_name}
-                  </div>
-                ))}
+          <div className="space-y-4 flex flex-col h-[60vh]">
+            {/* Search Input */}
+            <div className="relative">
+              <Input
+                placeholder="Search for a location (e.g., Mumbai, Delhi, Bangalore)"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                className="w-full"
+              />
+              {searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto mt-1">
+                  {searchResults.map((result) => (
+                    <div
+                      key={result.id}
+                      className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0 text-sm"
+                      onClick={() => handleSearchResultSelect(result)}
+                    >
+                      <div className="font-medium">{result.place_name}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {/* Current Location Display */}
+            {formData.location && (
+              <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                <strong>Selected Location:</strong> {formData.location.lat.toFixed(6)}, {formData.location.lng.toFixed(6)}
               </div>
             )}
-            <div ref={mapContainer} className="w-full h-96 rounded-md" style={{ minHeight: '384px' }} />
+            
+            {/* Map Container */}
+            <div className="flex-1 relative border rounded-lg overflow-hidden" style={{ minHeight: '400px' }}>
+              <div 
+                ref={mapContainer} 
+                className="w-full h-full"
+                style={{ minHeight: '400px' }}
+              />
+              
+              {/* Loading overlay */}
+              {!MAPBOX_TOKEN && (
+                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                  <div className="text-center">
+                    <p className="text-gray-600">Map unavailable</p>
+                    <p className="text-sm text-gray-500">Mapbox API key not configured</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Instructions */}
+            <div className="text-xs text-gray-500 space-y-1">
+              <p>• Click anywhere on the map to place the marker</p>
+              <p>• Drag the marker to adjust the location</p>
+              <p>• Use the search box to find specific places</p>
+            </div>
           </div>
-          <DialogFooter>
+          
+          <DialogFooter className="mt-4">
             <Button type="button" variant="outline" onClick={() => setIsMapOpen(false)}>
               Cancel
             </Button>
@@ -865,12 +984,16 @@ export function VendorForm({ isOpen, onClose, vendor, isEditMode = false, onSubm
               onClick={() => {
                 if (formData.location) {
                   setIsMapOpen(false);
+                  // Clear any location-related errors
+                  if (errors.location) {
+                    setErrors(prev => ({ ...prev, location: '' }));
+                  }
                 } else {
                   setErrors(prev => ({ ...prev, location: 'Please select a location on the map' }));
                 }
               }}
             >
-              Confirm
+              Confirm Location
             </Button>
           </DialogFooter>
         </DialogContent>
