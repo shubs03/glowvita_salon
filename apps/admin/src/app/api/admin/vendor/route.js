@@ -1,5 +1,6 @@
 import _db from "../../../../../../../packages/lib/src/db";
 import VendorModel from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
+import PlanModel from "../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin";
 import bcrypt from "bcryptjs";
 
@@ -29,6 +30,7 @@ export const POST = authMiddlewareAdmin(
       subCategories,
       password,
       website,
+      location,
       address,
       description,
       profileImage,
@@ -51,6 +53,7 @@ export const POST = authMiddlewareAdmin(
       !category ||
       !subCategories ||
       subCategories.length === 0 ||
+      !location ||
       !address ||
       !password
     ) {
@@ -150,14 +153,23 @@ export const POST = authMiddlewareAdmin(
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Transform subscription fields
+    // Transform subscription fields (resolve plan ObjectId)
+    let planId = null;
+    if (subscription?.package) {
+      const planDoc = await PlanModel.findOne({ name: subscription.package });
+      planId = planDoc ? planDoc._id : null;
+    }
     const subscriptionData = subscription
       ? {
-          plan: subscription.package || "Basic",
+          plan: planId, // ObjectId reference
           status: subscription.isActive ? "Active" : "Pending",
           expires: subscription.endDate ? new Date(subscription.endDate) : null,
         }
-      : { plan: "Basic", status: "Pending", expires: null };
+      : {
+          plan: (await PlanModel.findOne({ name: "Basic" }))?._id || null,
+          status: "Pending",
+          expires: null,
+        };
 
     // Transform bankDetails
     const bankDetailsData = bankDetails
@@ -212,6 +224,7 @@ export const POST = authMiddlewareAdmin(
       password: hashedPassword,
       website: website || null,
       address,
+      location,
       description: description || null,
       profileImage: profileImage || null,
       subscription: subscriptionData,
@@ -377,14 +390,23 @@ export const PUT = authMiddlewareAdmin(
       }
     }
 
-    // Transform subscription fields
+    // Transform subscription fields (resolve plan ObjectId)
+    let planId = null;
+    if (subscription?.package) {
+      const planDoc = await PlanModel.findOne({ name: subscription.package });
+      planId = planDoc ? planDoc._id : null;
+    }
     const subscriptionData = subscription
       ? {
-          plan: subscription.package || "Basic",
+          plan: planId, // ObjectId reference
           status: subscription.isActive ? "Active" : "Pending",
           expires: subscription.endDate ? new Date(subscription.endDate) : null,
         }
-      : { plan: "Basic", status: "Pending", expires: null };
+      : {
+          plan: (await PlanModel.findOne({ name: "Basic" }))?._id || null,
+          status: "Pending",
+          expires: null,
+        };
 
     // Transform bankDetails
     const bankDetailsData = bankDetails
@@ -473,10 +495,9 @@ export const PATCH = authMiddlewareAdmin(
       );
     }
 
-
     // Prepare update data
     const updateData = {
-      status: status, 
+      status: status,
     };
 
     const updatedVendor = await VendorModel.findByIdAndUpdate(

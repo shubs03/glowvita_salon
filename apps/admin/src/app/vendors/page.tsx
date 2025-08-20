@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
+import { Skeleton } from '@repo/ui/skeleton';
 import { Eye, ToggleRight, ToggleLeft, FileDown, X, Trash2, Plus, FilePenIcon, Users, UserCheck, BarChart, UserX, CheckCircle, XCircle } from 'lucide-react';
 import { VendorForm } from "../../components/VendorForm";
 import { VendorEditForm } from "../../components/VendorEditForm";
@@ -34,6 +35,7 @@ export interface Vendor {
   subCategories?: string[];
   serviceCategories?: string[];
   status?: 'Active' | 'Disabled' | 'Pending' | 'Approved' | 'Disapproved';
+  location?: { lat: number; lng: number };
   [key: string]: any;
 }
 
@@ -89,13 +91,11 @@ export default function VendorManagementPage() {
         }
     };
 
-
     const handleActionClick = (vendor: Vendor, action: ActionType) => {
         setSelectedVendor(vendor);
         setActionType(action);
         setIsActionModalOpen(true);
     };
-
 
     const handleConfirmAction = async () => {
         if (!selectedVendor || !actionType) return;
@@ -161,7 +161,7 @@ export default function VendorManagementPage() {
             case 'delete':
                 return {
                     title: 'Delete Vendor?',
-                    description: `Are you sure you want to permanently delete the vendor "${selectedVendor.firstName} ${selectedVendor.lastName}"? This action is irreversible.`,
+                    description: `Are you sure you want to permanently delete the vendor "${selectedVendor.firstName} ${selectedVendor.firstName} ${selectedVendor.lastName}"? This action is irreversible.`,
                     buttonText: 'Delete'
                 };
             default:
@@ -177,55 +177,71 @@ export default function VendorManagementPage() {
     const approvedVendors = vendorsArray.filter((v: Vendor) => v?.status === 'Approved').length;
     const disapprovedVendors = vendorsArray.filter((v: Vendor) => v?.status === 'Disapproved').length;
 
-    if (isLoading) return <div>Loading...</div>;
-    if (error) return <div>Error loading vendors</div>;
+    if (error) return <div className="p-4 sm:p-6 lg:p-8 text-red-600">Error loading vendors</div>;
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl font-bold font-headline mb-6">Vendor Management</h1>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{vendors.length}</div>
-                        <p className="text-xs text-muted-foreground">+2 from last month</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Vendors</CardTitle>
-                        <UserCheck className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">{activeVendors}</div>
-                        <p className="text-xs text-muted-foreground">Currently operational</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Disabled Vendors</CardTitle>
-                        <UserX className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-destructive">{disabledVendors}</div>
-                        <p className="text-xs text-muted-foreground">Temporarily inactive</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Approved Vendors</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-blue-600">{approvedVendors}</div>
-                        <p className="text-xs text-muted-foreground">Approved vendors</p>
-                    </CardContent>
-                </Card>
-            </div>
+            {isLoading ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                    {[...Array(4)].map((_, index) => (
+                        <Card key={index}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-4 w-4" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-8 w-16 mb-2" />
+                                <Skeleton className="h-3 w-32" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{vendors.length}</div>
+                            <p className="text-xs text-muted-foreground">+2 from last month</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Active Vendors</CardTitle>
+                            <UserCheck className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-green-600">{activeVendors}</div>
+                            <p className="text-xs text-muted-foreground">Currently operational</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Disabled Vendors</CardTitle>
+                            <UserX className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-destructive">{disabledVendors}</div>
+                            <p className="text-xs text-muted-foreground">Temporarily inactive</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Approved Vendors</CardTitle>
+                            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-blue-600">{approvedVendors}</div>
+                            <p className="text-xs text-muted-foreground">Approved vendors</p>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
 
             <Card>
                 <CardHeader>
@@ -235,11 +251,11 @@ export default function VendorManagementPage() {
                             <CardDescription>Details about all registered vendors.</CardDescription>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline">
+                            <Button variant="outline" disabled={isLoading}>
                                 <FileDown className="mr-2 h-4 w-4" />
                                 Export List
                             </Button>
-                            <Button onClick={handleOpenCreateModal}>Add Vendor</Button>
+                            <Button onClick={handleOpenCreateModal} disabled={isLoading}>Add Vendor</Button>
                         </div>
                     </div>
                 </CardHeader>
@@ -247,15 +263,15 @@ export default function VendorManagementPage() {
                     <div className="mb-6 p-4 rounded-lg bg-secondary">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold">Filters</h3>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" disabled={isLoading}>
                                 <X className="mr-2 h-4 w-4" />
                                 Clear Filters
                             </Button>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            <Input type="text" placeholder="Filter by Salon Name..." />
-                            <Input type="text" placeholder="Filter by Owner Name..." />
-                            <Input type="text" placeholder="Filter by Phone..." />
+                            <Input type="text" placeholder="Filter by Salon Name..." disabled={isLoading} />
+                            <Input type="text" placeholder="Filter by Owner Name..." disabled={isLoading} />
+                            <Input type="text" placeholder="Filter by Phone..." disabled={isLoading} />
                         </div>
                     </div>
 
@@ -271,7 +287,25 @@ export default function VendorManagementPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {currentItems.length > 0 ? (
+                                {isLoading ? (
+                                    [...Array(itemsPerPage)].map((_, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Skeleton className="h-8 w-8" />
+                                                    <Skeleton className="h-8 w-8" />
+                                                    <Skeleton className="h-8 w-8" />
+                                                    <Skeleton className="h-8 w-8" />
+                                                    <Skeleton className="h-8 w-8" />
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : currentItems.length > 0 ? (
                                     currentItems.map((vendor: Vendor) => (
                                         <TableRow key={vendor.id}>
                                             <TableCell className="font-medium">{vendor.businessName}</TableCell>
@@ -340,15 +374,23 @@ export default function VendorManagementPage() {
                             </TableBody>
                         </Table>
                     </div>
-                    <Pagination
-                        className="mt-4"
-                        currentPage={Number(currentPage) || 1}
-                        totalPages={Math.max(1, Number(totalPages) || 1)}
-                        onPageChange={(page) => setCurrentPage(Math.max(1, Number(page) || 1))}
-                        itemsPerPage={Math.max(1, Number(itemsPerPage) || 10)}
-                        onItemsPerPageChange={(value) => setItemsPerPage(Math.max(1, Number(value) || 10))}
-                        totalItems={Math.max(0, Array.isArray(vendors) ? vendors.length : 0)}
-                    />
+                    {isLoading ? (
+                        <div className="mt-4 flex justify-between items-center">
+                            <Skeleton className="h-8 w-24" />
+                            <Skeleton className="h-8 w-32" />
+                            <Skeleton className="h-8 w-24" />
+                        </div>
+                    ) : (
+                        <Pagination
+                            className="mt-4"
+                            currentPage={Number(currentPage) || 1}
+                            totalPages={Math.max(1, Number(totalPages) || 1)}
+                            onPageChange={(page) => setCurrentPage(Math.max(1, Number(page) || 1))}
+                            itemsPerPage={Math.max(1, Number(itemsPerPage) || 10)}
+                            onItemsPerPageChange={(value) => setItemsPerPage(Math.max(1, Number(value) || 10))}
+                            totalItems={Math.max(0, Array.isArray(vendors) ? vendors.length : 0)}
+                        />
+                    )}
                 </CardContent>
             </Card>
 
