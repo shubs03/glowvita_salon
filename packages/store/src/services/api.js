@@ -1,74 +1,86 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
-// Define the base URLs for each service
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { clearAdminAuth } from "../slices/auth-slice.js";
+
 const API_BASE_URLS = {
   admin: 'http://localhost:3002/api',
   crm: 'http://localhost:3001/api',
   web: 'http://localhost:3000/api',
 };
 
-// This is the core fetch function that will be used by all endpoints.
-const baseQueryWithDynamicBaseUrl = async (args, api, extraOptions) => {
-  // Determine the request URL safely, whether args is a string or an object
-  const requestUrl = typeof args === 'string' ? args : args.url;
+// Base query function that determines the API URL and sets headers.
+const baseQuery = fetchBaseQuery({
+  baseUrl: '/', // Default base, will be overridden dynamically
+  prepareHeaders: (headers, { getState, endpoint }) => {
+    // Determine the target service from the endpoint definition if available,
+    // otherwise fallback to localStorage check for broader compatibility.
+    const state = getState();
+    const adminToken = state.auth.token;
+    const vendorAccessToken = localStorage.getItem("vendor_access_token");
+
+    // Check which token to use based on the endpoint, defaulting to admin for now.
+    // This logic assumes endpoints are defined in a way that we can infer the target.
+    // For this setup, we'll primarily check for the admin token.
+    if (adminToken) {
+      headers.set("Admin-Authorization", `Bearer ${adminToken}`);
+    } else if (vendorAccessToken) {
+      // In a real scenario, you'd differentiate between CRM and Admin calls here.
+      headers.set("Vendor-Authorization", `Bearer ${vendorAccessToken}`);
+    }
+    
+    return headers;
+  },
+});
+
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+  let requestUrl = typeof args === 'string' ? args : args.url;
   
+  // This ensures requestUrl is always a string for the checks below.
   if (typeof requestUrl !== 'string') {
-    // Handle cases where the URL is not provided, though this should be rare
-    // with standardized endpoints.
     console.error("Request URL is not a string:", requestUrl);
     return { error: { status: 'CUSTOM_ERROR', error: 'Invalid URL provided' } };
   }
-
-  // Determine the target service based on the URL prefix
-  let targetService = 'web'; // Default service
-  let baseUrl = API_BASE_URLS.web;
-
+  
+  let targetService = 'web'; // Default
   if (requestUrl.startsWith('/admin')) {
     targetService = 'admin';
-    baseUrl = API_BASE_URLS.admin;
   } else if (requestUrl.startsWith('/crm')) {
     targetService = 'crm';
-    baseUrl = API_BASE_URLS.crm;
   }
   
-  // Use a dynamically configured fetchBaseQuery for each call
-  const rawBaseQuery = fetchBaseQuery({
-    baseUrl: baseUrl,
-    prepareHeaders: (headers, { getState }) => {
-      // Get tokens from localStorage
-      const adminAuthState = localStorage.getItem("adminAuthState");
-      const vendorAccessToken = localStorage.getItem("vendor_access_token");
-      
-      // Attach the correct token based on the target service
-      if (targetService === 'admin' && adminAuthState) {
-        try {
-            const adminToken = JSON.parse(adminAuthState).token;
-            if (adminToken) {
-              headers.set("Admin-Authorization", `Bearer ${adminToken}`);
-            }
-        } catch (e) {
-            console.error("Could not parse admin auth state:", e);
-        }
-      }
-      
-      if (targetService === 'crm' && vendorAccessToken) {
-        headers.set("Vendor-Authorization", `Bearer ${vendorAccessToken}`);
-      }
-      
-      return headers;
-    },
-    credentials: "include",
-  });
-  
-  // The URL for the actual fetch call should be relative to the new baseUrl
-  const finalArgs = typeof args === 'string' ? { url: args } : args;
+  const baseUrl = API_BASE_URLS[targetService];
 
-  return rawBaseQuery(finalArgs, api, extraOptions);
+  // Create a new fetchBaseQuery instance for this specific call with the dynamic base URL.
+  const dynamicFetch = fetchBaseQuery({ 
+    baseUrl,
+    prepareHeaders: (headers, { getState }) => {
+      const token = getState().auth.token;
+      if (token && targetService === 'admin') {
+        headers.set('Admin-Authorization', `Bearer ${token}`);
+      }
+      // Add other auth logic if needed (e.g., for CRM/vendor)
+      return headers;
+    }
+  });
+
+  let result = await dynamicFetch(args, api, extraOptions);
+
+  // If we receive a 401 error, it means the token is invalid or expired.
+  // We log the user out by clearing their auth state.
+  if (result.error && result.error.status === 401) {
+    console.warn('Received 401 Unauthorized. Logging out.');
+    api.dispatch(clearAdminAuth());
+    // Optionally, you can redirect here, but it's better handled in UI components
+    // to avoid breaking React's rendering flow.
+  }
+  
+  return result;
 };
+
 
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
-  baseQuery: baseQueryWithDynamicBaseUrl,
+  baseQuery: baseQueryWithReauth,
   tagTypes: [
     "admin",
     "offers",
@@ -128,10 +140,10 @@ export const glowvitaApi = createApi({
     }),
 
     updateAdmin: builder.mutation({
-      query: (admin) => ({
+      query: ({ id, ...data }) => ({
         url: `/admin`,
         method: "PUT",
-        body: admin,
+        body: { _id: id, ...data },
       }),
       invalidatesTags: ["admin"],
     }),
@@ -140,13 +152,12 @@ export const glowvitaApi = createApi({
       query: (id) => ({
         url: `/admin`,
         method: "DELETE",
-        body: { id },
+        body: { _id: id },
       }),
       invalidatesTags: ["admin"],
     }),
-
+    
     // offfers
-
     getAdminOffers: builder.query({
       query: () => ({ url: "/admin/offers", method: "GET" }),
       providesTags: ["offers"],
@@ -180,7 +191,6 @@ export const glowvitaApi = createApi({
     }),
 
     // refferal endpoints
-
     getReferrals: builder.query({
       query: (referralType) => ({
         url: "/admin/referrals",
@@ -265,7 +275,6 @@ export const glowvitaApi = createApi({
     }),
 
     // Vendor Endpoints
-    
     createVendor: builder.mutation({
       query: (vendorData) => ({
         url: "/admin/vendor",
@@ -282,7 +291,7 @@ export const glowvitaApi = createApi({
     }),
 
     getVendorById: builder.query({
-      query: (id) => `/admin/vendor?id=${id}`,
+      query: (id) => ({ url: `/admin/vendor?id=${id}` }),
       providesTags: (result, error, id) => [{ type: "Vendor", id }],
     }),
 
@@ -320,7 +329,6 @@ export const glowvitaApi = createApi({
     }),
 
     // Doctor Endpoints
-
     getDoctors: builder.query({
       query: () => ({ url: "/admin/doctors", method: "GET" }),
       providesTags: ["doctors"],
@@ -356,7 +364,10 @@ export const glowvitaApi = createApi({
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
       query: () => ({ url: '/admin/subscription-plans', method: 'GET' }),
-      providesTags: ['SubscriptionPlan']
+      providesTags: (result = []) => [
+        "SubscriptionPlan",
+        ...result.map(({ _id }) => ({ type: "SubscriptionPlan", id: _id })),
+      ],
     }),
     
     createSubscriptionPlan: builder.mutation({
@@ -365,7 +376,7 @@ export const glowvitaApi = createApi({
         method: 'POST',
         body: plan
       }),
-      invalidatesTags: ['Subscription']
+      invalidatesTags: ['SubscriptionPlan']
     }),
 
     updateSubscriptionPlan: builder.mutation({
@@ -374,7 +385,7 @@ export const glowvitaApi = createApi({
         method: 'PUT',
         body: plan
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Subscription', id }]
+      invalidatesTags: (result, error, { _id }) => [{ type: 'SubscriptionPlan', id: _id }]
     }),
 
     deleteSubscriptionPlan: builder.mutation({
@@ -383,7 +394,7 @@ export const glowvitaApi = createApi({
         method: 'DELETE',
         body: { id }
       }),
-      invalidatesTags: ['Subscription']
+      invalidatesTags: ['SubscriptionPlan']
     }),
 
     // Supplier Endpoints
@@ -417,81 +428,6 @@ export const glowvitaApi = createApi({
         body: { id },
       }),
       invalidatesTags: ["Supplier"],
-    }),
-
-    // Subscription Plans
-    getSubscriptionPlans: builder.query({
-      query: () => "/admin/subscription-plans",
-      providesTags: (result = []) => [
-        "SubscriptionPlan",
-        ...result.map(({ _id }) => ({ type: "SubscriptionPlan", id: _id })),
-      ],
-    }),
-
-    createSubscriptionPlan: builder.mutation({
-      query: (planData) => ({
-        url: "/admin/subscription-plans",
-        method: "POST",
-        body: planData,
-      }),
-      async onQueryStarted(planData, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          glowvitaApi.util.updateQueryData(
-            "getSubscriptionPlans",
-            undefined,
-            (draft) => {
-              draft.push({
-                ...planData,
-                _id: "temp-id",
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              });
-            }
-          )
-        );
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(
-            glowvitaApi.util.updateQueryData(
-              "getSubscriptionPlans",
-              undefined,
-              (draft) => {
-                const index = draft.findIndex((plan) => plan._id === "temp-id");
-                if (index !== -1) {
-                  draft[index] = data;
-                }
-              }
-            )
-          );
-        } catch (error) {
-          patchResult.undo();
-          throw error;
-        }
-      },
-      invalidatesTags: ["SubscriptionPlan"],
-    }),
-
-    updateSubscriptionPlan: builder.mutation({
-      query: ({ _id, ...updates }) => ({
-        url: `/admin/subscription-plans?id=${_id}`,
-        method: "PATCH",
-        body: updates,
-      }),
-      invalidatesTags: (result, error, { _id }) => [
-        { type: "SubscriptionPlan", id: _id },
-        "SubscriptionPlan",
-      ],
-    }),
-
-    deleteSubscriptionPlan: builder.mutation({
-      query: (id) => ({
-        url: `/admin/subscription-plans?id=${id}`,
-        method: "DELETE",
-      }),
-      invalidatesTags: (result, error, id) => [
-        { type: "SubscriptionPlan", id },
-        "SubscriptionPlan",
-      ],
     }),
 
     // Geo Fence
@@ -641,7 +577,6 @@ export const glowvitaApi = createApi({
     }),
 
     // Crm Endpoints
-
     vendorLogin: builder.mutation({
       query: (credentials) => ({
         url: "/crm/auth/login",
@@ -702,7 +637,6 @@ export const {
 
   // Doctor Endpoints
   useGetDoctorsQuery,
-  useGetDoctorByIdQuery,
   useCreateDoctorMutation,
   useUpdateDoctorMutation,
   useDeleteDoctorMutation,
@@ -718,7 +652,6 @@ export const {
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
-  useToggleSubscriptionPlanStatusMutation,
 
   // Geo Fence Endpoints
   useGetGeoFencesQuery,
@@ -738,7 +671,6 @@ export const {
 
   // Admin CustoPush Notification Endpoints
   useGetNotificationsQuery,
-  useGetNotificationByIdQuery,
   useCreateNotificationMutation,
   useUpdateNotificationMutation,
   useDeleteNotificationMutation,
@@ -748,7 +680,6 @@ export const {
   useUpdateTaxFeeSettingsMutation,
 
   // Vendor Endpoints
-
   useVendorLoginMutation,
   useVendorRegisterMutation,
 } = glowvitaApi;

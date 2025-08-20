@@ -9,10 +9,13 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // The Redux state is initialized from localStorage, so this effect
-    // primarily just handles the loading state on initial mount.
-    setIsLoading(false);
-  }, []);
+    // The Redux state is now initialized from localStorage by AuthInitializer,
+    // which also handles token validation.
+    // The loading state is to prevent flickers while the initial check runs.
+    if(isAdminAuthenticated || localStorage.getItem('adminAuthState') === null){
+        setIsLoading(false);
+    }
+  }, [isAdminAuthenticated]);
 
   return {
     admin,

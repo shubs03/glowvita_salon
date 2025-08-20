@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
@@ -10,7 +11,7 @@ import { sidebarNavItems } from '@/lib/routes';
 export function AdminLayout({ children }: { children: React.ReactNode; }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { admin, isLoading } = useAuth();
+  const { admin, isLoading, isAdminAuthenticated } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -30,7 +31,7 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   }, []);
      
   useEffect(() => {
-    if (!isLoading && !admin) {
+    if (!isLoading && !isAdminAuthenticated) {
         router.push('/login');
         return; // Early return to prevent further checks
     }
@@ -53,16 +54,16 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
         router.push('/');
       }
     }
-  }, [admin, isLoading, router, pathname]);
+  }, [admin, isLoading, isAdminAuthenticated, router, pathname]);
 
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
      
-  if (isLoading || !admin) {
+  if (isLoading || !isAdminAuthenticated) {
     return (
-        <div className="flex items-center justify-center h-screen">
-            <div>Loading...</div>
+        <div className="flex items-center justify-center h-screen bg-background">
+            <div className="text-foreground">Loading...</div>
         </div>
     )
   }
