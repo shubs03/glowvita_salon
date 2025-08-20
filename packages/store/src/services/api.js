@@ -11,6 +11,13 @@ const API_BASE_URLS = {
 const baseQueryWithDynamicBaseUrl = async (args, api, extraOptions) => {
   // Determine the request URL safely, whether args is a string or an object
   const requestUrl = typeof args === 'string' ? args : args.url;
+  
+  if (typeof requestUrl !== 'string') {
+    // Handle cases where the URL is not provided, though this should be rare
+    // with standardized endpoints.
+    console.error("Request URL is not a string:", requestUrl);
+    return { error: { status: 'CUSTOM_ERROR', error: 'Invalid URL provided' } };
+  }
 
   // Determine the target service based on the URL prefix
   let targetService = 'web'; // Default service
@@ -106,13 +113,13 @@ export const glowvitaApi = createApi({
     }),
 
     getAdmins: builder.query({
-      query: () => ({ url: "/admin/admin", method: "GET" }), 
+      query: () => ({ url: "/admin", method: "GET" }), 
       providesTags: ["admin"],
     }),
 
     createAdmin: builder.mutation({
       query: (admin) => ({
-        url: "/admin/admin",
+        url: "/admin",
         method: "POST",
         body: admin,
       }),
@@ -121,7 +128,7 @@ export const glowvitaApi = createApi({
 
     updateAdmin: builder.mutation({
       query: ({ id, data }) => ({ 
-        url: `/admin/admin`,
+        url: `/admin`,
         method: "PUT",
         body: { _id: id, ...data }, 
       }),
@@ -130,7 +137,7 @@ export const glowvitaApi = createApi({
 
     deleteAdmin: builder.mutation({
       query: (id) => ({
-        url: `/admin/admin`,
+        url: `/admin`,
         method: "DELETE",
         body: { _id: id },
       }),
