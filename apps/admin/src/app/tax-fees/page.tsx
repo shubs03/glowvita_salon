@@ -7,7 +7,7 @@ import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { toast } from "sonner";
-import { useGetTaxFeeSettingsQuery, useUpdateTaxFeeSettingsMutation } from '@repo/store/services/api';
+import { useGetTaxFeeSettingsQuery, useUpdateTaxFeeSettingsMutation } from '@repo/store/api';
 
 type FeeType = 'percentage' | 'fixed';
 
