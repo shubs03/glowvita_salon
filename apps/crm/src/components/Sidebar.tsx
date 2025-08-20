@@ -5,16 +5,17 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, FaBell } from 'react-icons/fa';
+import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaBook ,FaCut, FaSignOutAlt, FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, FaBell, FaGift, FaUserFriends } from 'react-icons/fa';
 
 const sidebarNavItems = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt },
   { title: "Calendar", href: "/calendar", Icon: FaCalendarAlt },
-  { title: "Bookings", href: "/bookings", Icon: FaBook },
   { title: "Appointments", href: "/appointments", Icon: FaClipboardList },
   { title: "Clients", href: "/clients", Icon: FaUsers },
   { title: "Services", href: "/services", Icon: FaCut },
   { title: "Products", href: "/products", Icon: FaBoxOpen },
+  { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift },
+  { title: "Referrals", href: "/referrals", Icon: FaUserFriends },
   { title: "Marketing", href: "/marketing", Icon: FaBullhorn },
   { title: "Notifications", href: "/push-notifications", Icon: FaBell },
   { title: "Reports", href: "/reports", Icon: FaFileAlt },
