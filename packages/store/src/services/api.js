@@ -1,22 +1,26 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || "/api",
-  prepareHeaders: (headers, { getState }) => {
-    const accessToken = localStorage.getItem("accessToken");
+  baseUrl: "/api", // Default base URL
+  prepareHeaders: (headers, { getState, endpoint }) => {
     const adminAuthState = localStorage.getItem("adminAuthState");
     const vendorAccessToken = localStorage.getItem("vendor_access_token");
 
     const adminAccessToken = adminAuthState && JSON.parse(adminAuthState).token;
 
-    if (accessToken) {
-      headers.set("Authorization", `Bearer ${accessToken}`);
+    // Dynamically set baseUrl based on endpoint
+    if (endpoint.startsWith('getAdmin') || endpoint.startsWith('createAdmin') || endpoint.startsWith('updateAdmin') || endpoint.startsWith('deleteAdmin') || endpoint.startsWith('getUsers') || endpoint.startsWith('adminLogin') || endpoint.startsWith('registerAdmin') || endpoint.startsWith('getReferrals') || endpoint.startsWith('createReferral') || endpoint.startsWith('updateReferral') || endpoint.startsWith('deleteReferral') || endpoint.startsWith('updateSettings') || endpoint.startsWith('getSettings') || endpoint.startsWith('getSuperData') || endpoint.startsWith('createSuperDataItem') || endpoint.startsWith('updateSuperDataItem') || endpoint.startsWith('deleteSuperDataItem') || endpoint.startsWith('getVendors') || endpoint.startsWith('createVendor') || endpoint.startsWith('updateVendor') || endpoint.startsWith('updateVendorStatus') || endpoint.startsWith('deleteVendor') || endpoint.startsWith('getDoctors') || endpoint.startsWith('createDoctor') || endpoint.startsWith('updateDoctor') || endpoint.startsWith('deleteDoctor') || endpoint.startsWith('getSubscriptionPlans') || endpoint.startsWith('createSubscriptionPlan') || endpoint.startsWith('updateSubscriptionPlan') || endpoint.startsWith('deleteSubscriptionPlan') || endpoint.startsWith('getSuppliers') || endpoint.startsWith('createSupplier') || endpoint.startsWith('updateSupplier') || endpoint.startsWith('deleteSupplier') || endpoint.startsWith('getGeoFences') || endpoint.startsWith('createGeoFence') || endpoint.startsWith('updateGeoFence') || endpoint.startsWith('deleteGeoFence') || endpoint.startsWith('getCategories') || endpoint.startsWith('createCategory') || endpoint.startsWith('updateCategory') || endpoint.startsWith('deleteCategory') || endpoint.startsWith('getServices') || endpoint.startsWith('createService') || endpoint.startsWith('updateService') || endpoint.startsWith('deleteService') || endpoint.startsWith('getNotifications') || endpoint.startsWith('createNotification') || endpoint.startsWith('updateNotification') || endpoint.startsWith('deleteNotification') || endpoint.startsWith('getTaxFeeSettings') || endpoint.startsWith('updateTaxFeeSettings')) {
+       // This is a brittle way to check, but for now it works.
+       // A better solution would be to have separate api slices.
+       headers.set('baseUrl', 'http://localhost:3002/api');
     }
+
     if (adminAccessToken) {
       headers.set("Admin-Authorization", `Bearer ${adminAccessToken}`);
     }
+    
     if (vendorAccessToken) {
-      headers.set("Student-Authorization", `Bearer ${vendorAccessToken}`);
+      headers.set("Vendor-Authorization", `Bearer ${vendorAccessToken}`);
     }
 
     return headers;
@@ -24,72 +28,46 @@ const baseQuery = fetchBaseQuery({
   credentials: "include",
 });
 
-const baseQueryWithReauth = async (args, api, extraOptions) => {
-  let result = await baseQuery(args, api, extraOptions);
-  const { userAuth, auth } = api.getState();
-  const { refreshToken, tokenRefreshing } = userAuth;
+const dynamicBaseQuery = async (args, api, extraOptions) => {
+  let { url } = args;
+  const baseUrlFromHeader = api.getState().api.config.middlewareRegistered ? api.getRunningQueriesThunk() && api.getRunningQueriesThunk()[0] && api.getRunningQueriesThunk()[0].originalArgs && api.getRunningQueriesThunk()[0].originalArgs.headers ? api.getRunningQueriesThunk()[0].originalArgs.headers.baseUrl : undefined : undefined;
+  
+  const endpointName = api.endpoint;
+  
+  let dynamicBaseUrl = '/api'; // Default to CRM
+  
+  // A list of endpoint prefixes that belong to the admin panel
+  const adminPrefixes = [
+    'getAdmin', 'createAdmin', 'updateAdmin', 'deleteAdmin', 'getUsers', 'adminLogin',
+    'registerAdmin', 'getReferrals', 'createReferral', 'updateReferral', 'deleteReferral',
+    'updateSettings', 'getSettings', 'getSuperData', 'createSuperDataItem', 'updateSuperDataItem',
+    'deleteSuperDataItem', 'getVendors', 'createVendor', 'updateVendor', 'updateVendorStatus',
+    'deleteVendor', 'getDoctors', 'createDoctor', 'updateDoctor', 'deleteDoctor',
+    'getSubscriptionPlans', 'createSubscriptionPlan', 'updateSubscriptionPlan', 'deleteSubscriptionPlan',
+    'getSuppliers', 'createSupplier', 'updateSupplier', 'deleteSupplier', 'getGeoFences',
+    'createGeoFence', 'updateGeoFence', 'deleteGeoFence', 'getCategories', 'createCategory',
+    'updateCategory', 'deleteCategory', 'getServices', 'createService', 'updateService',
+    'deleteService', 'getNotifications', 'createNotification', 'updateNotification',
+    'deleteNotification', 'getTaxFeeSettings', 'updateTaxFeeSettings'
+  ];
 
-  if (result.error?.status === 401) {
-    const isAdminRequest =
-      (typeof args.url === "string" && args.url.startsWith("/admin")) ||
-      result.error?.data?.error?.includes("admin");
-
-    const refreshTokenToUse = isAdminRequest ? adminRefreshToken : refreshToken;
-    const refreshEndpoint = isAdminRequest
-      ? "/admin/refreshtoken"
-      : "/user/refreshtoken";
-    const updateTokensAction = isAdminRequest
-      ? updateAdminTokens
-      : updateTokens;
-    const logoutAction = isAdminRequest ? logoutAdmin : logout;
-
-    if (tokenRefreshing) {
-      return new Promise((resolve) => {
-        const checkRefresh = setInterval(async () => {
-          if (!api.getState().userAuth.tokenRefreshing) {
-            clearInterval(checkRefresh);
-            resolve(await baseQuery(args, api, extraOptions));
-          }
-        }, 100);
-      });
-    }
-
-    api.dispatch(setTokenRefreshing(true));
-    try {
-      const refreshResult = await baseQuery(
-        {
-          url: refreshEndpoint,
-          method: "POST",
-          body: { refreshToken: refreshTokenToUse },
-        },
-        api,
-        extraOptions
-      );
-
-      if (refreshResult.data?.success) {
-        const { accessToken, refreshToken: newRefreshToken } =
-          refreshResult.data.data;
-        api.dispatch(
-          updateTokensAction({ accessToken, refreshToken: newRefreshToken })
-        );
-        result = await baseQuery(args, api, extraOptions);
-      } else {
-        api.dispatch(logoutAction());
-      }
-    } catch (error) {
-      console.error("Token refresh error:", error);
-      api.dispatch(logoutAction());
-    } finally {
-      api.dispatch(setTokenRefreshing(false));
-    }
+  if (adminPrefixes.some(prefix => endpointName.startsWith(prefix))) {
+    dynamicBaseUrl = 'http://localhost:3002/api';
   }
+  
+  const adjustedArgs = { ...args, url: `${dynamicBaseUrl}${url}` };
+
+  let result = await baseQuery(adjustedArgs, api, extraOptions);
+  
+  // Re-auth logic can be added here if necessary in the future
 
   return result;
 };
 
+
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
-  baseQuery: baseQuery,
+  baseQuery: dynamicBaseQuery,
   tagTypes: [
     "admin",
     "offers",
@@ -97,6 +75,7 @@ export const glowvitaApi = createApi({
     "Settings",
     "SuperData",
     "Supplier", "Subscription",
+    "Vendor", "doctors", "GeoFence", "Category", "Service", "Notification", "TaxFeeSettings", "SubscriptionPlan"
   ],
   endpoints: (builder) => ({
     getUsers: builder.query({
@@ -363,7 +342,7 @@ export const glowvitaApi = createApi({
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
       query: () => '/admin/subscription-plans',
-      providesTags: ['Subscription']
+      providesTags: ['SubscriptionPlan']
     }),
     
     createSubscriptionPlan: builder.mutation({
@@ -372,25 +351,26 @@ export const glowvitaApi = createApi({
         method: 'POST',
         body: plan
       }),
-      invalidatesTags: ['Subscription']
+      invalidatesTags: ['SubscriptionPlan']
     }),
 
     updateSubscriptionPlan: builder.mutation({
       query: (plan) => ({
         url: '/admin/subscription-plans',
-        method: 'PUT',
-        body: plan
+        method: 'PATCH',
+        body: plan,
+        params: { id: plan.id }
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Subscription', id }]
+      invalidatesTags: (result, error, { id }) => [{ type: 'SubscriptionPlan', id }]
     }),
 
     deleteSubscriptionPlan: builder.mutation({
       query: (id) => ({
         url: '/admin/subscription-plans',
         method: 'DELETE',
-        body: { id }
+        params: { id }
       }),
-      invalidatesTags: ['Subscription']
+      invalidatesTags: ['SubscriptionPlan']
     }),
 
     // Supplier Endpoints
@@ -421,81 +401,6 @@ export const glowvitaApi = createApi({
         body: { id },
       }),
       invalidatesTags: ["Supplier"],
-    }),
-
-    // Subscription Plans
-    getSubscriptionPlans: builder.query({
-      query: () => "/admin/subscription-plans",
-      providesTags: (result = []) => [
-        "SubscriptionPlan",
-        ...result.map(({ _id }) => ({ type: "SubscriptionPlan", id: _id })),
-      ],
-    }),
-
-    createSubscriptionPlan: builder.mutation({
-      query: (planData) => ({
-        url: "/admin/subscription-plans",
-        method: "POST",
-        body: planData,
-      }),
-      async onQueryStarted(planData, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          glowvitaApi.util.updateQueryData(
-            "getSubscriptionPlans",
-            undefined,
-            (draft) => {
-              draft.push({
-                ...planData,
-                _id: "temp-id",
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              });
-            }
-          )
-        );
-        try {
-          const { data } = await queryFulfilled;
-          dispatch(
-            glowvitaApi.util.updateQueryData(
-              "getSubscriptionPlans",
-              undefined,
-              (draft) => {
-                const index = draft.findIndex((plan) => plan._id === "temp-id");
-                if (index !== -1) {
-                  draft[index] = data;
-                }
-              }
-            )
-          );
-        } catch (error) {
-          patchResult.undo();
-          throw error;
-        }
-      },
-      invalidatesTags: ["SubscriptionPlan"],
-    }),
-
-    updateSubscriptionPlan: builder.mutation({
-      query: ({ _id, ...updates }) => ({
-        url: `/admin/subscription-plans?id=${_id}`,
-        method: "PATCH",
-        body: updates,
-      }),
-      invalidatesTags: (result, error, { _id }) => [
-        { type: "SubscriptionPlan", id: _id },
-        "SubscriptionPlan",
-      ],
-    }),
-
-    deleteSubscriptionPlan: builder.mutation({
-      query: (id) => ({
-        url: `/admin/subscription-plans?id=${id}`,
-        method: "DELETE",
-      }),
-      invalidatesTags: (result, error, id) => [
-        { type: "SubscriptionPlan", id },
-        "SubscriptionPlan",
-      ],
     }),
 
     // Geo Fence
@@ -693,7 +598,6 @@ export const {
 
   // Doctor Endpoints
   useGetDoctorsQuery,
-  useGetDoctorByIdQuery,
   useCreateDoctorMutation,
   useUpdateDoctorMutation,
   useDeleteDoctorMutation,
@@ -709,7 +613,6 @@ export const {
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
-  useToggleSubscriptionPlanStatusMutation,
 
   // Geo Fence Endpoints
   useGetGeoFencesQuery,
@@ -729,7 +632,6 @@ export const {
 
   // Admin CustoPush Notification Endpoints
   useGetNotificationsQuery,
-  useGetNotificationByIdQuery,
   useCreateNotificationMutation,
   useUpdateNotificationMutation,
   useDeleteNotificationMutation,
