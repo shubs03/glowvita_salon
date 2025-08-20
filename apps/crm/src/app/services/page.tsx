@@ -47,6 +47,252 @@ const mockServices: Service[] = [
 
 const mockStaff = ['Jane Doe', 'John Smith', 'Emily White'];
 
+const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean, onClose: () => void, service: Service | null, type: 'add' | 'edit' | 'view' }) => {
+    const [activeTab, setActiveTab] = useState('basic');
+    const { data: categories = [], isLoading: categoriesLoading } = useGetCategoriesQuery(undefined);
+    
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
+    const [formData, setFormData] = useState<Partial<Service>>(service || {});
+
+    useEffect(() => {
+    setFormData(service || {});
+    setActiveTab('basic');
+    }, [service, isOpen]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type, checked } = e.target as HTMLInputElement;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    };
+
+    const handleSelectChange = (name: string, value: string | string[]) => {
+      setFormData(prev => ({...prev, [name]: value}));
+    };
+
+    const handleCheckboxChange = (name: string, id: string, checked: boolean) => {
+    const currentValues = formData[name as keyof Service] as string[] || [];
+    const newValues = checked ? [...currentValues, id] : currentValues.filter(val => val !== id);
+    setFormData(prev => ({...prev, [name]: newValues}));
+    }
+
+    const handleNestedChange = (parent: keyof Service, child: string, value: any) => {
+        setFormData(prev => ({
+            ...prev,
+            [parent]: {
+                ...(prev[parent] as object),
+                [child]: value
+            }
+        }));
+    };
+    
+    const renderBasicInfoTab = () => (
+    <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+            <Label htmlFor="category">Service Category</Label>
+            <div className="flex gap-2">
+                <Select value={formData.category} onValueChange={(value) => handleSelectChange('category', value)}>
+                    <SelectTrigger><SelectValue placeholder="Select Category"/></SelectTrigger>
+                    <SelectContent>
+                        {categoriesLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : categories.map((cat:any) => <SelectItem key={cat._id} value={cat.name}>{cat.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="icon" onClick={() => setIsCategoryModalOpen(true)}><Plus className="h-4 w-4"/></Button>
+            </div>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="name">Service Name</Label>
+                <Input id="name" name="name" value={formData.name} onChange={handleInputChange} />
+            </div>
+        </div>
+        <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                <Label htmlFor="price">Price (₹)</Label>
+                <Input id="price" name="price" type="number" value={formData.price} onChange={handleInputChange} />
+            </div>
+                <div className="space-y-2">
+                <Label htmlFor="discountedPrice">Discounted Price (₹)</Label>
+                <Input id="discountedPrice" name="discountedPrice" type="number" value={formData.discountedPrice} onChange={handleInputChange} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="duration">Duration (minutes)</Label>
+                <Input id="duration" name="duration" type="number" value={formData.duration} onChange={handleInputChange} />
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="gender">Gender</Label>
+                <Select value={formData.gender} onValueChange={(value) => handleSelectChange('gender', value)}>
+                <SelectTrigger><SelectValue/></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="unisex">Unisex</SelectItem>
+                    <SelectItem value="men">Men</SelectItem>
+                    <SelectItem value="women">Women</SelectItem>
+                </SelectContent>
+                </Select>
+            </div>
+        </div>
+            <div className="space-y-2">
+            <Label htmlFor="image">Service Image</Label>
+            <Input id="image" type="file" />
+        </div>
+    </div>
+    );
+
+    const renderAdvancedTab = () => (
+    <div className="space-y-4">
+        <div className="space-y-2">
+            <Label>Staff</Label>
+            <div className="p-4 border rounded-md max-h-48 overflow-y-auto space-y-2">
+            <div className="flex items-center space-x-2">
+                <Checkbox id="staff-all" checked={formData.staff?.length === mockStaff.length} onCheckedChange={(checked) => handleSelectChange('staff', checked ? mockStaff : [])}/>
+                <Label htmlFor="staff-all" className="font-semibold">Select All Staff</Label>
+            </div>
+            {mockStaff.map(staff => (
+                <div key={staff} className="flex items-center space-x-2">
+                <Checkbox id={`staff-${staff}`} checked={formData.staff?.includes(staff)} onCheckedChange={(checked) => handleCheckboxChange('staff', staff, checked as boolean)} />
+                <Label htmlFor={`staff-${staff}`}>{staff}</Label>
+                </div>
+            ))}
+            </div>
+        </div>
+        <div className="flex items-center space-x-2">
+            <Switch id="commission" checked={formData.commission} onCheckedChange={(checked) => handleSelectChange('commission', checked as any)} />
+            <Label htmlFor="commission">Enable Staff Commission</Label>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 border rounded-md space-y-2">
+            <div className="flex items-center space-x-2">
+                <Switch id="home-service" checked={formData.homeService?.available} onCheckedChange={(checked) => handleNestedChange('homeService', 'available', checked)}/>
+                <Label htmlFor="home-service">Home Service</Label>
+            </div>
+            {formData.homeService?.available && <Input placeholder="Additional Charges (₹)" type="number" value={formData.homeService.charges} onChange={(e) => handleNestedChange('homeService', 'charges', Number(e.target.value))} />}
+            </div>
+            <div className="p-4 border rounded-md space-y-2">
+            <div className="flex items-center space-x-2">
+                <Switch id="wedding-service" checked={formData.weddingService?.available} onCheckedChange={(checked) => handleNestedChange('weddingService', 'available', checked)}/>
+                <Label htmlFor="wedding-service">Wedding Service</Label>
+            </div>
+            {formData.weddingService?.available && <Input placeholder="Additional Charges (₹)" type="number" value={formData.weddingService.charges} onChange={(e) => handleNestedChange('weddingService', 'charges', Number(e.target.value))}/>}
+            </div>
+        </div>
+    </div>
+    );
+
+    const renderBookingTab = () => (
+    <div className="space-y-4">
+        <div className="space-y-2">
+            <Label htmlFor="bookingInterval">Booking Interval</Label>
+            <Select value={String(formData.bookingInterval)} onValueChange={(value) => handleSelectChange('bookingInterval', value)}>
+                <SelectTrigger><SelectValue/></SelectTrigger>
+                <SelectContent>
+                    {[5,10,15,20,25,30,45,60,90,120].map(i => <SelectItem key={i} value={String(i)}>{i} minutes</SelectItem>)}
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="flex items-center space-x-2">
+            <Switch id="tax-enabled" checked={formData.tax?.enabled} onCheckedChange={(checked) => handleNestedChange('tax', 'enabled', checked)} />
+            <Label htmlFor="tax-enabled">Enable Service Tax</Label>
+        </div>
+        {formData.tax?.enabled && (
+            <div className="grid grid-cols-2 gap-4">
+                <Select value={formData.tax.type} onValueChange={(value) => handleNestedChange('tax', 'type', value)}>
+                    <SelectTrigger><SelectValue/></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="percentage">Percentage</SelectItem>
+                        <SelectItem value="fixed">Fixed</SelectItem>
+                    </SelectContent>
+                </Select>
+                <Input type="number" placeholder="Tax Value" value={formData.tax.value} onChange={(e) => handleNestedChange('tax', 'value', Number(e.target.value))}/>
+            </div>
+        )}
+        <div className="flex items-center space-x-2">
+            <Switch id="onlineBooking" checked={formData.onlineBooking} onCheckedChange={(checked) => handleSelectChange('onlineBooking', checked as any)} />
+            <Label htmlFor="onlineBooking">Enable Online Booking</Label>
+        </div>
+    </div>
+    );
+
+    if (type === 'view') {
+    return (
+        <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+                <DialogTitle>{service?.name}</DialogTitle>
+                <DialogDescription>{service?.description}</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                {/* Display all details here */}
+            </div>
+            <DialogFooter>
+                <Button variant="secondary" onClick={onClose}>Close</Button>
+            </DialogFooter>
+        </DialogContent>
+    );
+    }
+
+    return (
+    <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+            <DialogTitle>{type === 'add' ? 'Add New Service' : 'Edit Service'}</DialogTitle>
+        </DialogHeader>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col">
+            <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                <TabsTrigger value="advanced" disabled={!formData.name}>Advanced</TabsTrigger>
+                <TabsTrigger value="booking" disabled={!formData.name}>Booking & Tax</TabsTrigger>
+            </TabsList>
+            <div className="py-4 flex-grow overflow-y-auto">
+                <TabsContent value="basic">{renderBasicInfoTab()}</TabsContent>
+                <TabsContent value="advanced">{renderAdvancedTab()}</TabsContent>
+                <TabsContent value="booking">{renderBookingTab()}</TabsContent>
+            </div>
+        </Tabs>
+            <DialogFooter className="flex-shrink-0 pt-4 border-t">
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button>Save Service</Button>
+        </DialogFooter>
+    </DialogContent>
+    )
+};
+
+
+const AddCategoryModal = ({isOpen, onClose}: {isOpen: boolean, onClose: () => void}) => {
+    const [newCategoryName, setNewCategoryName] = useState('');
+    const [createCategory] = useCreateCategoryMutation();
+
+    const handleCreateCategory = async () => {
+        if (newCategoryName.trim()) {
+            try {
+                await createCategory({ name: newCategoryName }).unwrap();
+                setNewCategoryName('');
+                onClose();
+            } catch (error) {
+                console.error("Failed to create category", error);
+            }
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-xs">
+                <DialogHeader>
+                    <DialogTitle>Create New Category</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-2">
+                    <Label htmlFor="new-category">Category Name</Label>
+                    <Input id="new-category" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>Cancel</Button>
+                    <Button onClick={handleCreateCategory}>Create</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 export default function ServicesPage() {
     const [services, setServices] = useState<Service[]>(mockServices);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,6 +300,8 @@ export default function ServicesPage() {
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
     const [searchTerm, setSearchTerm] = useState('');
+    const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+
 
     const filteredServices = services.filter(service => 
         service.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -78,247 +326,7 @@ export default function ServicesPage() {
         setIsDeleteModalOpen(false);
         setSelectedService(null);
     };
-
-    const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean, onClose: () => void, service: Service | null, type: 'add' | 'edit' | 'view' }) => {
-      const [activeTab, setActiveTab] = useState('basic');
-      const { data: categories = [], isLoading: categoriesLoading } = useGetCategoriesQuery(undefined);
-      const [createCategory] = useCreateCategoryMutation();
-
-      const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-      const [newCategoryName, setNewCategoryName] = useState('');
-
-      const [formData, setFormData] = useState<Partial<Service>>(service || {});
-
-      useEffect(() => {
-        setFormData(service || {});
-        setActiveTab('basic');
-      }, [service, isOpen]);
-
-      const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { name, value, type, checked } = e.target as HTMLInputElement;
-        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-      };
-
-      const handleSelectChange = (name: string, value: string) => {
-        setFormData(prev => ({...prev, [name]: value}));
-      };
-
-      const handleCheckboxChange = (name: string, id: string, checked: boolean) => {
-        const currentValues = formData[name as keyof Service] as string[] || [];
-        const newValues = checked ? [...currentValues, id] : currentValues.filter(val => val !== id);
-        setFormData(prev => ({...prev, [name]: newValues}));
-      }
-
-       const handleNestedChange = (parent: keyof Service, child: string, value: any) => {
-          setFormData(prev => ({
-              ...prev,
-              [parent]: {
-                  ...(prev[parent] as object),
-                  [child]: value
-              }
-          }));
-      };
-
-      const handleCreateCategory = async () => {
-        if (newCategoryName.trim()) {
-            try {
-                await createCategory({ name: newCategoryName }).unwrap();
-                setNewCategoryName('');
-                setIsCategoryModalOpen(false);
-            } catch (error) {
-                console.error("Failed to create category", error);
-            }
-        }
-      };
-      
-      const renderBasicInfoTab = () => (
-        <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Service Category</Label>
-                <div className="flex gap-2">
-                    <Select value={formData.category} onValueChange={(value) => handleSelectChange('category', value)}>
-                        <SelectTrigger><SelectValue placeholder="Select Category"/></SelectTrigger>
-                        <SelectContent>
-                            {categoriesLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : categories.map((cat:any) => <SelectItem key={cat._id} value={cat.name}>{cat.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Button type="button" variant="outline" size="icon" onClick={() => setIsCategoryModalOpen(true)}><Plus className="h-4 w-4"/></Button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                  <Label htmlFor="name">Service Name</Label>
-                  <Input id="name" name="name" value={formData.name} onChange={handleInputChange} />
-              </div>
-            </div>
-            <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                 <div className="space-y-2">
-                    <Label htmlFor="price">Price (₹)</Label>
-                    <Input id="price" name="price" type="number" value={formData.price} onChange={handleInputChange} />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="discountedPrice">Discounted Price (₹)</Label>
-                    <Input id="discountedPrice" name="discountedPrice" type="number" value={formData.discountedPrice} onChange={handleInputChange} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="duration">Duration (minutes)</Label>
-                    <Input id="duration" name="duration" type="number" value={formData.duration} onChange={handleInputChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gender">Gender</Label>
-                  <Select value={formData.gender} onValueChange={(value) => handleSelectChange('gender', value)}>
-                    <SelectTrigger><SelectValue/></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unisex">Unisex</SelectItem>
-                      <SelectItem value="men">Men</SelectItem>
-                      <SelectItem value="women">Women</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-            </div>
-             <div className="space-y-2">
-                <Label htmlFor="image">Service Image</Label>
-                <Input id="image" type="file" />
-            </div>
-        </div>
-      );
-
-      const renderAdvancedTab = () => (
-        <div className="space-y-4">
-           <div className="space-y-2">
-              <Label>Staff</Label>
-              <div className="p-4 border rounded-md max-h-48 overflow-y-auto space-y-2">
-                <div className="flex items-center space-x-2">
-                    <Checkbox id="staff-all" checked={formData.staff?.length === mockStaff.length} onCheckedChange={(checked) => handleSelectChange('staff', checked ? mockStaff : [])}/>
-                    <Label htmlFor="staff-all" className="font-semibold">Select All Staff</Label>
-                </div>
-                {mockStaff.map(staff => (
-                  <div key={staff} className="flex items-center space-x-2">
-                    <Checkbox id={`staff-${staff}`} checked={formData.staff?.includes(staff)} onCheckedChange={(checked) => handleCheckboxChange('staff', staff, checked as boolean)} />
-                    <Label htmlFor={`staff-${staff}`}>{staff}</Label>
-                  </div>
-                ))}
-              </div>
-           </div>
-           <div className="flex items-center space-x-2">
-              <Switch id="commission" checked={formData.commission} onCheckedChange={(checked) => handleSelectChange('commission', checked as any)} />
-              <Label htmlFor="commission">Enable Staff Commission</Label>
-           </div>
-           <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 border rounded-md space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Switch id="home-service" checked={formData.homeService?.available} onCheckedChange={(checked) => handleNestedChange('homeService', 'available', checked)}/>
-                  <Label htmlFor="home-service">Home Service</Label>
-                </div>
-                {formData.homeService?.available && <Input placeholder="Additional Charges (₹)" type="number" value={formData.homeService.charges} onChange={(e) => handleNestedChange('homeService', 'charges', Number(e.target.value))} />}
-              </div>
-              <div className="p-4 border rounded-md space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Switch id="wedding-service" checked={formData.weddingService?.available} onCheckedChange={(checked) => handleNestedChange('weddingService', 'available', checked)}/>
-                  <Label htmlFor="wedding-service">Wedding Service</Label>
-                </div>
-                {formData.weddingService?.available && <Input placeholder="Additional Charges (₹)" type="number" value={formData.weddingService.charges} onChange={(e) => handleNestedChange('weddingService', 'charges', Number(e.target.value))}/>}
-              </div>
-           </div>
-        </div>
-      );
-
-      const renderBookingTab = () => (
-        <div className="space-y-4">
-            <div className="space-y-2">
-                <Label htmlFor="bookingInterval">Booking Interval</Label>
-                <Select value={String(formData.bookingInterval)} onValueChange={(value) => handleSelectChange('bookingInterval', value)}>
-                    <SelectTrigger><SelectValue/></SelectTrigger>
-                    <SelectContent>
-                        {[5,10,15,20,25,30,45,60,90,120].map(i => <SelectItem key={i} value={String(i)}>{i} minutes</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch id="tax-enabled" checked={formData.tax?.enabled} onCheckedChange={(checked) => handleNestedChange('tax', 'enabled', checked)} />
-              <Label htmlFor="tax-enabled">Enable Service Tax</Label>
-            </div>
-            {formData.tax?.enabled && (
-                <div className="grid grid-cols-2 gap-4">
-                    <Select value={formData.tax.type} onValueChange={(value) => handleNestedChange('tax', 'type', value)}>
-                        <SelectTrigger><SelectValue/></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="percentage">Percentage</SelectItem>
-                            <SelectItem value="fixed">Fixed</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Input type="number" placeholder="Tax Value" value={formData.tax.value} onChange={(e) => handleNestedChange('tax', 'value', Number(e.target.value))}/>
-                </div>
-            )}
-            <div className="flex items-center space-x-2">
-              <Switch id="onlineBooking" checked={formData.onlineBooking} onCheckedChange={(checked) => handleSelectChange('onlineBooking', checked as any)} />
-              <Label htmlFor="onlineBooking">Enable Online Booking</Label>
-            </div>
-        </div>
-      );
-
-      if (type === 'view') {
-        return (
-          <DialogContent className="sm:max-w-2xl">
-              <DialogHeader>
-                  <DialogTitle>{service?.name}</DialogTitle>
-                  <DialogDescription>{service?.description}</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                  {/* Display all details here */}
-              </div>
-              <DialogFooter>
-                  <Button variant="secondary" onClick={onClose}>Close</Button>
-              </DialogFooter>
-          </DialogContent>
-        );
-      }
-
-      return (
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
-            <DialogHeader>
-                <DialogTitle>{type === 'add' ? 'Add New Service' : 'Edit Service'}</DialogTitle>
-            </DialogHeader>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col">
-                <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                    <TabsTrigger value="advanced" disabled={!formData.name}>Advanced</TabsTrigger>
-                    <TabsTrigger value="booking" disabled={!formData.name}>Booking & Tax</TabsTrigger>
-                </TabsList>
-                <div className="py-4 flex-grow overflow-y-auto">
-                    <TabsContent value="basic">{renderBasicInfoTab()}</TabsContent>
-                    <TabsContent value="advanced">{renderAdvancedTab()}</TabsContent>
-                    <TabsContent value="booking">{renderBookingTab()}</TabsContent>
-                </div>
-            </Tabs>
-             <DialogFooter className="flex-shrink-0 pt-4 border-t">
-                <Button variant="secondary" onClick={onClose}>Cancel</Button>
-                <Button>Save Service</Button>
-            </DialogFooter>
-
-            <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
-                <DialogContent className="sm:max-w-xs">
-                    <DialogHeader>
-                        <DialogTitle>Create New Category</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-2">
-                        <Label htmlFor="new-category">Category Name</Label>
-                        <Input id="new-category" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} />
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCategoryModalOpen(false)}>Cancel</Button>
-                        <Button onClick={handleCreateCategory}>Create</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </DialogContent>
-      )
-    };
-
+    
     return (
         <div className="p-4 sm:p-6 lg:p-8">
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -435,7 +443,9 @@ export default function ServicesPage() {
                 </CardContent>
             </Card>
 
-            <ServiceFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} service={selectedService} type={modalType} />
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <ServiceFormModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} service={selectedService} type={modalType} />
+            </Dialog>
 
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
@@ -454,4 +464,3 @@ export default function ServicesPage() {
         </div>
     );
 }
-
