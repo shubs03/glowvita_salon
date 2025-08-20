@@ -96,7 +96,7 @@ export const glowvitaApi = createApi({
     "Referrals",
     "Settings",
     "SuperData",
-    "Supplier",
+    "Supplier", "Subscription",
   ],
   endpoints: (builder) => ({
     getUsers: builder.query({
@@ -358,6 +358,39 @@ export const glowvitaApi = createApi({
         body: { id },
       }),
       invalidatesTags: ["doctors"],
+    }),
+    
+    // Subscription Plan Endpoints
+    getSubscriptionPlans: builder.query({
+      query: () => '/admin/subscription-plans',
+      providesTags: ['Subscription']
+    }),
+    
+    createSubscriptionPlan: builder.mutation({
+      query: (plan) => ({
+        url: '/admin/subscription-plans',
+        method: 'POST',
+        body: plan
+      }),
+      invalidatesTags: ['Subscription']
+    }),
+
+    updateSubscriptionPlan: builder.mutation({
+      query: (plan) => ({
+        url: '/admin/subscription-plans',
+        method: 'PUT',
+        body: plan
+      }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Subscription', id }]
+    }),
+
+    deleteSubscriptionPlan: builder.mutation({
+      query: (id) => ({
+        url: '/admin/subscription-plans',
+        method: 'DELETE',
+        body: { id }
+      }),
+      invalidatesTags: ['Subscription']
     }),
 
     // Supplier Endpoints
@@ -670,8 +703,6 @@ export const {
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
-
-  // Subscription Management
 
   // Subscription Plans
   useGetSubscriptionPlansQuery,
