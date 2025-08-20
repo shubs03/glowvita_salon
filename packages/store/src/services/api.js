@@ -90,8 +90,47 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
   baseQuery: baseQuery,
-  tagTypes: ["admin", "offers", "Referrals", "Settings", "SuperData", "Supplier", "Subscription"],
+  tagTypes: ["admin", "offers", "Referrals", "Settings", "SuperData", "Supplier", "Subscription", "Marketing", "SmsPackage"],
   endpoints: (builder) => ({
+    // SMS Packages Endpoints
+    getSmsPackages: builder.query({
+      query: () => '/admin/sms-packages',
+      providesTags: ['SmsPackage']
+    }),
+    
+    getSmsPackageById: builder.query({
+      query: (id) => `/admin/sms-packages/${id}`,
+      providesTags: (result, error, id) => [{ type: 'SmsPackage', id }]
+    }),
+    
+    createSmsPackage: builder.mutation({
+      query: (packageData) => ({
+        url: '/admin/sms-packages',
+        method: 'POST',
+        body: packageData
+      }),
+      invalidatesTags: ['SmsPackage']
+    }),
+    
+    updateSmsPackage: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/admin/sms-packages?id=${id}`,
+        method: 'PUT',
+        body: updates
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        'SmsPackage',
+        { type: 'SmsPackage', id }
+      ]
+    }),
+    
+    deleteSmsPackage: builder.mutation({
+      query: (id) => ({
+        url: `/admin/sms-packages?id=${id}`,
+        method: 'DELETE'
+      }),
+      invalidatesTags: ['SmsPackage']
+    }),
 
     getUsers: builder.query({
       query: () => ({
@@ -277,6 +316,40 @@ export const glowvitaApi = createApi({
         body: settings
       }),
       invalidatesTags: ['TaxFeeSettings']
+    }),
+
+    // Marketing Endpoints
+    // SMS Templates
+    getSmsTemplates: builder.query({
+      query: () => '/admin/marketing?type=sms-templates',
+      providesTags: ['Marketing']
+    }),
+    
+    createSmsTemplate: builder.mutation({
+      query: (template) => ({
+        url: '/admin/marketing?type=sms-templates',
+        method: 'POST',
+        body: template
+      }),
+      invalidatesTags: ['Marketing']
+    }),
+    
+    updateSmsTemplate: builder.mutation({
+      query: (template) => ({
+        url: '/admin/marketing?type=sms-templates',
+        method: 'PUT',
+        body: template
+      }),
+      invalidatesTags: (result, error, { _id }) => [{ type: 'Marketing', id: _id }]
+    }),
+    
+    deleteSmsTemplate: builder.mutation({
+      query: (id) => ({
+        url: '/admin/marketing?type=sms-templates',
+        method: 'DELETE',
+        body: { _id: id }
+      }),
+      invalidatesTags: ['Marketing']
     }),
 
     // Vendor Endpoints
@@ -495,4 +568,10 @@ export const {
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
+  
+  // Marketing hooks
+  useGetSmsTemplatesQuery,
+  useCreateSmsTemplateMutation,
+  useUpdateSmsTemplateMutation,
+  useDeleteSmsTemplateMutation,
 } = glowvitaApi;

@@ -6,12 +6,12 @@ import { Textarea } from '@repo/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Button } from '@repo/ui/button';
 import { 
-  addSmsTemplate, 
-  updateSmsTemplate, 
-  addSmsPackage, 
-  updateSmsPackage,
-  createSocialPost,
-  updateSocialPostAsync
+  useCreateSmsPackageMutation,
+  useUpdateSmsPackageMutation,
+  useCreateSmsTemplateMutation,
+  useUpdateSmsTemplateMutation,
+  useCreateSocialPostMutation,
+  useUpdateSocialPostMutation
 } from '@repo/store/slices/marketingSlice';
 
 type FormType = 'sms_template' | 'sms_package' | 'social_post';
@@ -47,6 +47,14 @@ export function MarketingForm({ type, data: initialData = {}, onSuccess, mode = 
     imagePreview: initialData.image ? String(initialData.image) : ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // RTK Query mutations
+  const [createSmsPackage] = useCreateSmsPackageMutation();
+  const [updatePackage] = useUpdateSmsPackageMutation();
+  const [createSmsTemplate] = useCreateSmsTemplateMutation();
+  const [updateTemplate] = useUpdateSmsTemplateMutation();
+  const [createSocialPost] = useCreateSocialPostMutation();
+  const [updateSocialPost] = useUpdateSocialPostMutation();
 
   // Update local state when initialData changes (for edit mode)
   useEffect(() => {
@@ -100,27 +108,46 @@ export function MarketingForm({ type, data: initialData = {}, onSuccess, mode = 
     try {
       const dataToSave = { ...formData };
       
-      if (dataToSave.price) {
+      // Convert price to number if it exists
+      if (dataToSave.price !== undefined) {
         dataToSave.price = Number(dataToSave.price);
       }
 
       if (type === 'sms_template') {
         if (formData.id) {
-          await dispatch(updateSmsTemplate(formData)).unwrap();
+          const result = await updateTemplate({ id: formData.id, ...dataToSave });
+          if ('error' in result) {
+            throw new Error('Failed to update SMS template');
+          }
         } else {
-          await dispatch(addSmsTemplate(formData)).unwrap();
+          const result = await createSmsTemplate(dataToSave);
+          if ('error' in result) {
+            throw new Error('Failed to create SMS template');
+          }
         }
       } else if (type === 'sms_package') {
         if (formData.id) {
-          await dispatch(updateSmsPackage(formData)).unwrap();
+          const result = await updatePackage({ id: formData.id, ...dataToSave });
+          if ('error' in result) {
+            throw new Error('Failed to update SMS package');
+          }
         } else {
-          await dispatch(addSmsPackage(formData)).unwrap();
+          const result = await createSmsPackage(dataToSave);
+          if ('error' in result) {
+            throw new Error('Failed to create SMS package');
+          }
         }
       } else if (type === 'social_post') {
         if (formData.id) {
-          await dispatch(updateSocialPostAsync(formData)).unwrap();
+          const result = await updateSocialPost({ id: formData.id, ...dataToSave });
+          if ('error' in result) {
+            throw new Error('Failed to update social post');
+          }
         } else {
-          await dispatch(createSocialPost(formData)).unwrap();
+          const result = await createSocialPost(dataToSave);
+          if ('error' in result) {
+            throw new Error('Failed to create social post');
+          }
         }
       }
 
@@ -352,7 +379,7 @@ export function MarketingForm({ type, data: initialData = {}, onSuccess, mode = 
                 id="package-price"
                 type="number"
                 value={formData.price || ''}
-                onChange={(e) => handleChange('price', Number(e.target.value) * 100)}
+                onChange={(e) => handleChange('price', Number(e.target.value))}
                 placeholder="e.g., 999"
                 min="0"
                 step="0.01"

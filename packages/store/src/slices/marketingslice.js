@@ -1,5 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { v4 as uuidv4 } from 'uuid';
+import { glowvitaApi } from '../services/api';
+
+// API hooks will be exported from the extendedApiSlice below
 
 // Initial data
 const initialSmsTemplates = [
@@ -35,44 +38,8 @@ const initialSmsTemplates = [
   }
 ];
 
-const initialSmsPackages = [
-  {
-    id: 'PKG001',
-    name: 'Starter Pack',
-    smsCount: 1000,
-    price: 100000,
-    description: 'Ideal for new vendors.',
-    validityDays: 30,
-    isPopular: false,
-    features: ['1000 SMS', '30 days validity', 'Basic support'],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'PKG002',
-    name: 'Growth Pack',
-    smsCount: 5000,
-    price: 450000,
-    description: 'For growing businesses.',
-    validityDays: 60,
-    isPopular: true,
-    features: ['5000 SMS', '60 days validity', 'Priority support', 'Analytics'],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'PKG003',
-    name: 'Pro Pack',
-    smsCount: 10000,
-    price: 800000,
-    description: 'For high-volume marketing.',
-    validityDays: 90,
-    isPopular: false,
-    features: ['10000 SMS', '90 days validity', '24/7 Priority support', 'Advanced Analytics', 'Dedicated Account Manager'],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
+// Initial empty state for SMS packages
+const initialSmsPackages = [];
 
 const initialSocialPosts = [
   {
@@ -293,28 +260,20 @@ const marketingSlice = createSlice({
     },
 
     // SMS Packages
-    setSmsPackages: (state, action) => {
+    setSmsPackages(state, action) {
       state.smsPackages = action.payload;
-      state.loading = false;
     },
     addSmsPackage(state, action) {
       state.smsPackages.push(action.payload);
-      state.message = 'SMS Package added successfully';
     },
-    updateSmsPackage(state, action) {
-      const index = state.smsPackages.findIndex(pkg => pkg.id === action.payload.id);
+    updateSmsPackageInState(state, action) {
+      const index = state.smsPackages.findIndex(pkg => pkg._id === action.payload._id);
       if (index !== -1) {
-        state.smsPackages[index] = {
-          ...state.smsPackages[index],
-          ...action.payload,
-          updatedAt: new Date().toISOString()
-        };
-        state.message = 'SMS Package updated successfully';
+        state.smsPackages[index] = { ...state.smsPackages[index], ...action.payload };
       }
     },
-    deleteSmsPackage(state, action) {
-      state.smsPackages = state.smsPackages.filter(pkg => pkg.id !== action.payload);
-      state.message = 'SMS Package deleted successfully';
+    removeSmsPackage(state, action) {
+      state.smsPackages = state.smsPackages.filter(pkg => pkg._id !== action.payload);
     },
 
     // Marketing Tickets
@@ -367,10 +326,166 @@ const marketingSlice = createSlice({
     clearMessage: (state) => {
       state.message = '';
     }
+  },
+  extraReducers: (builder) => {
+    // Handle RTK Query actions for SMS Packages
+    builder.addMatcher(
+      glowvitaApi.endpoints.getSmsPackages.matchFulfilled,
+      (state, { payload }) => {
+        state.smsPackages = payload;
+      }
+    );
+    
+    builder.addMatcher(
+      glowvitaApi.endpoints.createSmsPackage.matchFulfilled,
+      (state, { payload }) => {
+        state.smsPackages.push(payload);
+      }
+    );
+    
+    builder.addMatcher(
+      glowvitaApi.endpoints.updateSmsPackage.matchFulfilled,
+      (state, { payload }) => {
+        const index = state.smsPackages.findIndex(pkg => pkg._id === payload._id);
+        if (index !== -1) {
+          state.smsPackages[index] = payload;
+        }
+      }
+    );
+    
+    builder.addMatcher(
+      glowvitaApi.endpoints.deleteSmsPackage.matchFulfilled,
+      (state, { meta }) => {
+        const id = meta.arg.originalArgs;
+        state.smsPackages = state.smsPackages.filter(pkg => pkg._id !== id);
+      }
+    );
+    
+    // Handle loading and error states for all async actions
+    builder.addMatcher(
+      (action) => action.type.endsWith('/pending'),
+      (state) => {
+        state.loading = true;
+        state.error = null;
+      }
+    );
+    
+    builder.addMatcher(
+      (action) => action.type.endsWith('/rejected'),
+      (state, action) => {
+        state.loading = false;
+        state.error = action.error?.message || 'An error occurred';
+      }
+    );
+    
+    builder.addMatcher(
+      (action) => action.type.endsWith('/fulfilled'),
+      (state) => {
+        state.loading = false;
+      }
+    );
   }
 });
 
-// Async Thunks
+// Extend the API with additional endpoints
+const extendedApiSlice = glowvitaApi.injectEndpoints({
+  endpoints: (builder) => ({
+    // SMS Packages
+    getSmsPackages: builder.query({
+      query: () => '/admin/sms-packages',
+      providesTags: ['SmsPackage']
+    }),
+    getSmsPackageById: builder.query({
+      query: (id) => `/admin/sms-packages/${id}`,
+      providesTags: (result, error, id) => [{ type: 'SmsPackage', id }]
+    }),
+    createSmsPackage: builder.mutation({
+      query: (packageData) => ({
+        url: '/admin/sms-packages',
+        method: 'POST',
+        body: packageData
+      }),
+      invalidatesTags: ['SmsPackage']
+    }),
+    updateSmsPackage: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/admin/sms-packages?id=${id}`,
+        method: 'PUT',
+        body: updates
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        'SmsPackage',
+        { type: 'SmsPackage', id }
+      ]
+    }),
+    deleteSmsPackage: builder.mutation({
+      query: (id) => ({
+        url: `/admin/sms-packages?id=${id}`,
+        method: 'DELETE'
+      }),
+      invalidatesTags: ['SmsPackage']
+    }),
+
+    // SMS Templates
+    createSmsTemplate: builder.mutation({
+      query: (templateData) => ({
+        url: '/admin/sms-templates',
+        method: 'POST',
+        body: templateData
+      }),
+      invalidatesTags: ['SmsTemplate']
+    }),
+    updateSmsTemplate: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/admin/sms-templates/${id}`,
+        method: 'PUT',
+        body: updates
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        'SmsTemplate',
+        { type: 'SmsTemplate', id }
+      ]
+    }),
+
+    // Social Posts
+    createSocialPost: builder.mutation({
+      query: (postData) => ({
+        url: '/admin/social-posts',
+        method: 'POST',
+        body: postData
+      }),
+      invalidatesTags: ['SocialPost']
+    }),
+    updateSocialPost: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/admin/social-posts/${id}`,
+        method: 'PUT',
+        body: updates
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        'SocialPost',
+        { type: 'SocialPost', id }
+      ]
+    })
+  })
+});
+
+export const {
+  useGetSmsPackagesQuery,
+  useGetSmsPackageByIdQuery,
+  useCreateSmsPackageMutation,
+  useUpdateSmsPackageMutation,
+  useDeleteSmsPackageMutation,
+  useCreateSmsTemplateMutation,
+  useUpdateSmsTemplateMutation,
+  useCreateSocialPostMutation,
+  useUpdateSocialPostMutation
+} = extendedApiSlice;
+
+// Export the endpoints for use in components
+export const { endpoints } = extendedApiSlice;
+
+// Async Thunks for other features
 export const createSocialPost = createAsyncThunk(
   'marketing/createSocialPost',
   async (postData, { dispatch, getState }) => {
@@ -414,10 +529,10 @@ export const updateSocialPostAsync = createAsyncThunk(
   }
 );
 
-export const {
-  setSocialPosts,
-  addSocialPost,
-  updateSocialPost,
+export const { 
+  setSocialPosts, 
+  addSocialPost, 
+  updateSocialPost, 
   deleteSocialPost,
   setSmsTemplates,
   addSmsTemplate,
@@ -426,6 +541,8 @@ export const {
   toggleSmsTemplateStatus,
   setSmsPackages,
   addSmsPackage,
+  updateSmsPackage: updateSmsPackageInState,
+  deleteSmsPackage: removeSmsPackage,
   setMarketingTickets,
   updateTicketStatus,
   setActiveCampaigns,
@@ -435,7 +552,7 @@ export const {
   setLoading,
   setError,
   clearError,
-  clearMessage,
+  clearMessage
 } = marketingSlice.actions;
 
 export default marketingSlice.reducer;
@@ -447,9 +564,13 @@ export const selectSocialPostById = (state, postId) =>
 export const selectSmsTemplateById = (state, id) => 
   state.marketing.smsTemplates.find(template => template.id === id);
 
-export const selectAllSmsPackages = (state) => state.marketing.smsPackages;
+export const selectAllSmsPackages = (state) => state.marketing.smsPackages || [];
+
 export const selectSmsPackageById = (state, id) => 
-  state.marketing.smsPackages.find(pkg => pkg.id === id);
+  (state.marketing.smsPackages || []).find(pkg => pkg._id === id || pkg.id === id);
+
+export const selectPopularSmsPackages = (state) => 
+  (state.marketing.smsPackages || []).filter(pkg => pkg.isPopular);
 
 export const selectAllMarketingTickets = (state) => state.marketing.marketingTickets;
 export const selectMarketingTicketById = (state, id) => 

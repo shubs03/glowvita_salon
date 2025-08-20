@@ -2,46 +2,36 @@
 
 import { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
+// Import UI components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { MarketingForm } from './components/marketing/MarketingForm';
 import { Button } from "@repo/ui/button";
+import { toast } from 'sonner';
+import { Plus, Eye, Edit, Trash2, Ticket, CheckCircle, XCircle, DollarSign, MessageSquare, Megaphone, AlertCircle, Send, Users, Calendar, Power } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { Plus, Eye, Edit, Trash2, Ticket, CheckCircle, XCircle, DollarSign, MessageSquare, Megaphone, AlertCircle, Send, Users, Calendar, Power } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Switch } from '@repo/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 
-// Data types for the marketing module
+// Import RTK Query hooks and types
+import { 
+  useGetSmsPackagesQuery, 
+  useCreateSmsPackageMutation, 
+  useUpdateSmsPackageMutation, 
+  useDeleteSmsPackageMutation,
+  SmsPackage,
+  SmsTemplate
+} from '../../../../../packages/store/src/slices/marketingslice';
 
-type SmsTemplate = {
-  id: string;
-  name: string;
-  type: string;
-  price: number;
-  status: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-};
+// Import selectors
+const selectAllSmsPackages = (state: any) => state.marketing?.smsPackages || [];
+const selectPopularSmsPackages = (state: any) => 
+  (state.marketing?.smsPackages || []).filter((pkg: any) => pkg.isPopular);
 
-type SmsPackage = {
-  id: string;
-  name: string;
-  smsCount: number;
-  price: number;
-  description: string;
-  validityDays: number;
-  isPopular: boolean;
-  features: string[];
-  createdAt: string;
-  updatedAt: string;
-};
-
+// Additional types for the marketing module
 type SocialMediaPost = {
   id: string;
   title: string;
@@ -51,8 +41,8 @@ type SocialMediaPost = {
   image?: string;
   status: string;
   scheduledDate: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
 type MarketingTicket = {
@@ -101,28 +91,19 @@ type ActiveCampaign = {
 type ModalDataType = SmsTemplate | SmsPackage | SocialMediaPost | MarketingTicket | PurchaseHistory | ActiveCampaign | null;
 
 export default function PlatformMarketingPage() {
-  const dispatch = useAppDispatch();
+  // RTK Query hooks
+  const { data: smsPackages = [], isLoading, error } = useGetSmsPackagesQuery();
+  const [createSmsPackage] = useCreateSmsPackageMutation();
+  const [updateSmsPackage] = useUpdateSmsPackageMutation();
+  const [deleteSmsPackage] = useDeleteSmsPackageMutation();
   
-  // Select data from Redux store
-  const { 
-    smsTemplates,
-    smsPackages,
-    socialPosts,
-    marketingTickets,
-    purchaseHistory,
-    activeCampaigns,
-    loading,
-    error
-  } = useAppSelector((state) => ({
-    smsTemplates: state.marketing.smsTemplates,
-    smsPackages: state.marketing.smsPackages,
-    socialPosts: state.marketing.socialPosts,
-    marketingTickets: state.marketing.marketingTickets,
-    purchaseHistory: state.marketing.purchaseHistory,
-    activeCampaigns: state.marketing.activeCampaigns,
-    loading: state.marketing.loading,
-    error: state.marketing.error
-  }));
+  // Mock data for other sections (replace with actual API calls)
+  const smsTemplates: SmsTemplate[] = [];
+  const socialPosts: SocialMediaPost[] = [];
+  const marketingTickets: MarketingTicket[] = [];
+  const purchaseHistory: PurchaseHistory[] = [];
+  const activeCampaigns: ActiveCampaign[] = [];
+  const popularPackages = smsPackages.filter((pkg: SmsPackage) => pkg.isPopular);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view' | 'confirm'>('add');
@@ -130,17 +111,38 @@ export default function PlatformMarketingPage() {
   const [modalTitle, setModalTitle] = useState('');
   const [modalData, setModalData] = useState<ModalDataType>(null);
   const [modalAction, setModalAction] = useState<(() => void) | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<any>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Initialize data on component mount
   useEffect(() => {
-    // The initial social media posts are already defined in the Redux slice
-    // and will be automatically loaded when the store initializes
-  }, [dispatch]);
+    // Data is automatically loaded by RTK Query hooks
+  }, []);
 
   const handleFormSuccess = () => {
     setIsModalOpen(false);
-    // You might want to add a toast notification here
-    // toast.success('Operation completed successfully!');
+    toast.success('Operation completed successfully!');
+  };
+
+  const handleDeleteClick = (pkg: any) => {
+    setSelectedPackage(pkg);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedPackage) return;
+    
+    try {
+      // Use _id instead of id as that's what the backend expects
+      await deleteSmsPackage(selectedPackage._id || selectedPackage.id).unwrap();
+      toast.success('Package deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete package:', error);
+      toast.error('Failed to delete package');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setSelectedPackage(null);
+    }
   };
 
   const openModal = (title: string, type: 'add' | 'edit' | 'view' | 'confirm', formType?: 'sms_template' | 'sms_package' | 'social_post', data: ModalDataType = null, onConfirm?: () => void) => {
@@ -148,11 +150,25 @@ export default function PlatformMarketingPage() {
     setModalType(type);
     
     if (formType) {
-      setFormData(data || {});
+      // Set default values for a new package if in 'add' mode
+      const defaultData = type === 'add' && formType === 'sms_package' 
+        ? { 
+            name: '',
+            smsCount: 100,
+            price: 0,
+            validityDays: 30,
+            description: '',
+            isPopular: false
+          }
+        : data 
+          ? { ...data, id: (data as any)._id || (data as any).id }
+          : {};
+      
+      setFormData(defaultData);
       setModalContent(
         <MarketingForm 
           type={formType} 
-          data={data || {}} 
+          data={defaultData} 
           onSuccess={handleFormSuccess}
           mode={type === 'view' ? 'view' : type === 'edit' ? 'edit' : 'add'}
         />
@@ -166,51 +182,63 @@ export default function PlatformMarketingPage() {
     setIsModalOpen(true);
   };
 
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = useState<Partial<SmsPackage>>({});
   
   const handleDelete = (type: string, id: string) => {
-    const confirmDelete = () => {
-      if (type === 'sms_template') {
-        dispatch({ type: 'marketing/deleteSmsTemplate', payload: id });
-      } else if (type === 'sms_package') {
-        dispatch({ type: 'marketing/deleteSmsPackage', payload: id });
-      } else if (type === 'social_post') {
-        dispatch({ type: 'marketing/deleteSocialPost', payload: id });
+    const confirmDelete = async () => {
+      try {
+        if (type === 'sms_package') {
+          await deleteSmsPackage(id).unwrap();
+        } else if (type === 'sms_template') {
+          // Handle template deletion
+        } else if (type === 'social_post') {
+          // Handle social post deletion
+        }
+        setIsModalOpen(false);
+      } catch (error) {
+        console.error('Failed to delete:', error);
       }
-      setIsModalOpen(false);
     };
 
     openModal(
       'Confirm Delete',
       'confirm',
       undefined,
-      { id, type },
+      { id, type } as any, // Temporary type assertion
       confirmDelete
     );
   };
   
   // This function is no longer needed as the form handles its own state
-  const handleFormChange = (field: string, value: any) => {
-    setFormData((prev: any) => ({
+  const handleFormChange = (field: keyof SmsPackage, value: any) => {
+    setFormData((prev: Partial<SmsPackage>) => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const viewDetails = (data: any) => (
-    <div className="space-y-2">
-      {Object.entries(data).map(([key, value]) => (
-        <div key={key} className="flex justify-between border-b pb-1">
-          <span className="font-semibold capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
-          <span>{String(value)}</span>
-        </div>
-      ))}
-    </div>
-  );
+  const viewDetails = (data: Record<string, unknown> | null) => {
+    if (!data) return null;
+    
+    return (
+      <div className="space-y-2">
+        {Object.entries(data).map(([key, value]) => (
+          <div key={key} className="flex justify-between border-b pb-1">
+            <span className="font-semibold capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+            <span>{value !== null && value !== undefined ? String(value) : 'N/A'}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+
+  // Data is automatically fetched by RTK Query hooks
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Platform Marketing</h1>
+      <div>
       
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
             <Card>
@@ -274,7 +302,7 @@ export default function PlatformMarketingPage() {
                             <CardTitle>SMS Templates</CardTitle>
                             <CardDescription>Manage predefined SMS templates for vendors.</CardDescription>
                         </div>
-                            <Button onClick={() => openModal('Create New SMS Template', 'add', 'sms_template')}>
+                            <Button onClick={() => modalAction?.()}> 
                                 <Plus className="mr-2 h-4 w-4" />
                                 Create Template
                             </Button>
@@ -299,7 +327,7 @@ export default function PlatformMarketingPage() {
                                         <TableCell>{t.id}</TableCell>
                                         <TableCell>{t.name}</TableCell>
                                         <TableCell>{t.type}</TableCell>
-                                        <TableCell>₹{(t.price / 100).toFixed(2)}</TableCell>
+                                        <TableCell>₹{t.price }</TableCell>
                                         <TableCell>
                                             <span className={`px-2 py-1 text-xs rounded-full ${
                                                 t.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -357,7 +385,7 @@ export default function PlatformMarketingPage() {
                             <CardTitle>SMS Packages</CardTitle>
                             <CardDescription>Create and manage bulk SMS packages for vendors.</CardDescription>
                         </div>
-                        <Button onClick={() => openModal('Create New SMS Package', 'add', 'sms_package')}>
+                        <Button onClick={() => openModal('Create New Package', 'add', 'sms_package')}>
                             <Plus className="mr-2 h-4 w-4" />
                             Create Package
                         </Button>
@@ -368,7 +396,6 @@ export default function PlatformMarketingPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Package ID</TableHead>
                                     <TableHead>Name</TableHead>
                                     <TableHead>SMS Count</TableHead>
                                     <TableHead>Price</TableHead>
@@ -377,10 +404,9 @@ export default function PlatformMarketingPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {smsPackages?.map(pkg => (
+                                {smsPackages.map((pkg: SmsPackage) => (
                                     <TableRow key={pkg.id}>
-                                        <TableCell>{pkg.id}</TableCell>
-                                        <TableCell className="font-medium">
+                                        <TableCell>
                                             {pkg.name}
                                             {pkg.isPopular && (
                                                 <span className="ml-2 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
@@ -389,19 +415,23 @@ export default function PlatformMarketingPage() {
                                             )}
                                         </TableCell>
                                         <TableCell>{pkg.smsCount.toLocaleString()}</TableCell>
-                                        <TableCell>₹{(pkg.price / 100).toFixed(2)}</TableCell>
+                                        <TableCell>₹{pkg.price.toFixed(2)}</TableCell>
                                         <TableCell>{pkg.validityDays} days</TableCell>
                                         <TableCell>
                                             <div className="flex space-x-2">
-                                                <Button variant="ghost" size="icon" onClick={() => openModal('View Package', 'view', 'sms_package', pkg)}>
+                                                <Button variant="ghost" size="icon" onClick={() => openModal('View Package', 'view', 'sms_package', pkg as any)}>
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => openModal('Edit Package', 'edit', 'sms_package', pkg)}>
+                                                <Button variant="ghost" size="icon" onClick={() => openModal('Edit Package', 'edit', 'sms_package', pkg as any)}>
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDelete('sms_package', pkg.id)}>
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
+                                                <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClick(pkg)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -421,7 +451,7 @@ export default function PlatformMarketingPage() {
                             <CardTitle>Social Media Posts</CardTitle>
                             <CardDescription>Manage your social media marketing content.</CardDescription>
                         </div>
-                        <Button onClick={() => openModal('Create New Social Post', 'add', 'social_post')}>
+                        <Button onClick={() => modalAction?.()}> 
                             <Plus className="mr-2 h-4 w-4" />
                             Create Post
                         </Button>
@@ -765,16 +795,46 @@ export default function PlatformMarketingPage() {
               <Button variant="outline" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={modalAction}>
+              <Button variant="destructive" onClick={() => modalAction?.()}>
                 Confirm
               </Button>
             </DialogFooter>
           )}
           {modalType === 'view' && (
-            <DialogFooter>
-              <Button onClick={() => setIsModalOpen(false)}>Close</Button>
-            </DialogFooter>
+            <>
+              <DialogHeader>
+                <DialogTitle>{modalTitle}</DialogTitle>
+                <DialogDescription>View details</DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                {modalData && viewDetails(modalData)}
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setIsModalOpen(false)}>Close</Button>
+              </DialogFooter>
+            </>
           )}
+        </DialogContent>
+      </Dialog>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Package?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the package "{selectedPackage?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
