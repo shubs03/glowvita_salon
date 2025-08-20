@@ -2,10 +2,11 @@
 "use client";
 
 import { useAppSelector } from '@repo/store/hooks';
+import { selectRootState } from '@repo/store/store';
 import { useState, useEffect } from 'react';
 
 export const useAuth = () => {
-  const { admin, isAdminAuthenticated, token } = useAppSelector((state) => state.auth);
+  const { admin, isAdminAuthenticated, token } = useAppSelector((state) => selectRootState(state).auth);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

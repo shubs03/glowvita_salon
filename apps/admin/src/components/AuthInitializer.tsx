@@ -2,7 +2,7 @@
 "use client";
 
 import { useAppDispatch } from '@repo/store/hooks';
-import { setAdminAuth } from '@repo/store/slices/auth';
+import { setAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { useEffect, type ReactNode } from 'react';
 
 export function AuthInitializer({ children }: { children: ReactNode }) {
