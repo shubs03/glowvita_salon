@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
@@ -40,7 +40,7 @@ type Service = {
 
 const mockServices: Service[] = [
   { id: 'SRV-001', name: 'Deluxe Haircut', category: 'Hair Styling', price: 75, discountedPrice: 65, duration: 60, description: 'A premium haircut experience with wash, cut, and style.', image: 'https://placehold.co/400x400.png', gender: 'unisex', staff: ['Jane Doe', 'John Smith'], commission: true, homeService: { available: true, charges: 20 }, weddingService: { available: false }, bookingInterval: 15, tax: { enabled: true, type: 'percentage', value: 18 }, onlineBooking: true, status: 'active' },
-  { id: 'SRV-002', name: 'Gel Manicure', category: 'Nail Care', price: 55, duration: 45, description: 'Long-lasting gel polish with detailed nail care.', image: 'https://placehold.co/400x400.png', gender: 'women', staff: ['Emily White'], commission: false, homeService: { available: false }, weddingService: { available: false }, bookingInterval: 10, tax: { enabled: false }, onlineBooking: true, status: 'active' },
+  { id: 'SRV-002', name: 'Gel Manicure', category: 'Nail Care', price: 55, duration: 45, description: 'Long-lasting gel polish with detailed nail care.', image: 'https://placehold.co/400x400.png', gender: 'women', staff: ['Emily White'], commission: false, homeService: { available: false }, weddingService: { available: false }, bookingInterval: 10, tax: { enabled: false, type: 'fixed', value: 0 }, onlineBooking: true, status: 'active' },
   { id: 'SRV-003', name: 'Deep Cleansing Facial', category: 'Skincare', price: 120, duration: 75, description: 'A rejuvenating facial to cleanse and refresh your skin.', image: 'https://placehold.co/400x400.png', gender: 'unisex', staff: ['Jane Doe'], commission: true, homeService: { available: false }, weddingService: { available: true, charges: 50 }, bookingInterval: 30, tax: { enabled: true, type: 'fixed', value: 10 }, onlineBooking: true, status: 'inactive' },
   { id: 'SRV-004', name: 'Balayage Color', category: 'Hair Coloring', price: 250, duration: 180, description: 'Natural-looking, sun-kissed hair color.', image: 'https://placehold.co/400x400.png', gender: 'unisex', staff: ['John Smith'], commission: true, homeService: { available: false }, weddingService: { available: true, charges: 100 }, bookingInterval: 60, tax: { enabled: true, type: 'percentage', value: 18 }, onlineBooking: false, status: 'active' },
 ];
