@@ -3,6 +3,7 @@
 
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
+import { Badge } from "@repo/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
