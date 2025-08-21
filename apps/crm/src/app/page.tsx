@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
-import { ArrowRight, Book, CalendarCheck, LineChart, Check, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings } from 'lucide-react';
+import { ArrowRight, Book, CalendarCheck, LineChart, Check, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings, Plus } from 'lucide-react';
 import Image from 'next/image';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
@@ -79,65 +79,53 @@ export default function CrmHomePage() {
         </div>
       </header>
 
+      {/* Marquee moved under header */}
+      <ActivityMarquee />
+
       {/* Main Content */}
       <main className="flex-grow">
         {/* Hero Section */}
         <section className="relative py-20 md:py-24 bg-background overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-background to-secondary/30"></div>
-            <div className="absolute inset-0 opacity-5 [background:radial-gradient(125%_125%_at_50%_10%,#fff_40%,#63e_100%)]"></div>
+            {/* Water drop gradient */}
+            <div className="absolute inset-0 opacity-15 [background:radial-gradient(125%_125%_at_50%_10%,hsl(var(--primary))_40%,transparent_100%)]"></div>
             <div className="container mx-auto px-4 relative z-10">
-                <div className="grid lg:grid-cols-2 gap-12 items-center">
-                    <div className="text-center lg:text-left">
-                        <div className="flex justify-center lg:justify-start gap-4 mb-6">
-                            <div className="bg-primary/10 p-3 rounded-full text-primary"><Scissors className="h-6 w-6"/></div>
-                            <div className="bg-primary/10 p-3 rounded-full text-primary"><CalendarCheck className="h-6 w-6"/></div>
-                            <div className="bg-primary/10 p-3 rounded-full text-primary"><LineChart className="h-6 w-6"/></div>
-                        </div>
-                        <h1 className="text-4xl md:text-6xl font-extrabold font-headline tracking-tighter mb-4">
-                        Elevate Your Salon Business
-                        </h1>
-                        <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8">
-                        The all-in-one CRM designed for modern salons and stylists. Manage your clients, bookings, and payments seamlessly to unlock your salon's full potential.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                            <Button size="lg" asChild>
-                            <Link href="/dashboard">
-                                Go to Dashboard <Rocket className="ml-2 h-5 w-5" />
-                            </Link>
-                            </Button>
-                            <Button size="lg" variant="outline" asChild>
-                            <Link href="#">
-                                Learn More
-                            </Link>
-                            </Button>
-                        </div>
-                         <div className="mt-12 text-center lg:text-left">
-                            <p className="text-sm text-muted-foreground mb-4">Trusted by leading salons and stylists</p>
-                            <div className="flex justify-center lg:justify-start items-center gap-6 opacity-60">
-                                <Users className="h-6 w-6" />
-                                <Shield className="h-6 w-6" />
-                                <Settings className="h-6 w-6" />
-                                <Users className="h-6 w-6" />
-                            </div>
-                        </div>
+                <div className="text-center">
+                    <div className="flex justify-center gap-4 mb-6">
+                        <div className="bg-primary/10 p-3 rounded-full text-primary"><Scissors className="h-6 w-6"/></div>
+                        <div className="bg-primary/10 p-3 rounded-full text-primary"><CalendarCheck className="h-6 w-6"/></div>
+                        <div className="bg-primary/10 p-3 rounded-full text-primary"><LineChart className="h-6 w-6"/></div>
                     </div>
-                    <div className="relative hidden lg:block">
-                        <Image 
-                            src="https://placehold.co/800x600.png"
-                            alt="CRM Dashboard Preview"
-                            width={800}
-                            height={600}
-                            className="rounded-lg shadow-2xl transform transition-transform duration-500 hover:scale-105"
-                            data-ai-hint="dashboard professional"
-                        />
-                         <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent rounded-lg"></div>
+                    <h1 className="text-4xl md:text-6xl font-extrabold font-headline tracking-tighter mb-4">
+                      Elevate Your Salon Business
+                    </h1>
+                    <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+                      The all-in-one CRM designed for modern salons and stylists. Manage your clients, bookings, and payments seamlessly to unlock your salon's full potential.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <Button size="lg" asChild>
+                          <Link href="/dashboard">
+                            Go to Dashboard <Rocket className="ml-2 h-5 w-5" />
+                          </Link>
+                        </Button>
+                        <Button size="lg" variant="outline" asChild>
+                          <Link href="#">
+                            Learn More
+                          </Link>
+                        </Button>
+                    </div>
+                    <div className="mt-16 text-center">
+                        <p className="text-sm text-muted-foreground mb-4">Trusted by leading salons and stylists</p>
+                        <div className="flex justify-center items-center gap-8 opacity-60">
+                            <Users className="h-6 w-6" />
+                            <Shield className="h-6 w-6" />
+                            <Settings className="h-6 w-6" />
+                            <Users className="h-6 w-6" />
+                        </div>
                     </div>
                 </div>
             </div>
             <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-secondary/50 to-transparent"></div>
         </section>
-
-        <ActivityMarquee/>
 
         {/* Features Section */}
         <section className="py-20 bg-background">
@@ -400,5 +388,3 @@ export default function CrmHomePage() {
     </div>
   );
 }
-
-    
