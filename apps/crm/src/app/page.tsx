@@ -1,4 +1,6 @@
 
+"use client";
+
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
@@ -71,34 +73,49 @@ export default function CrmHomePage() {
       {/* Main Content */}
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="relative py-20 md:py-24 text-center bg-background overflow-hidden">
+        <section className="relative py-20 md:py-24 bg-background overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-background to-secondary/30"></div>
             <div className="absolute inset-0 opacity-5 [background:radial-gradient(125%_125%_at_50%_10%,#fff_40%,#63e_100%)]"></div>
             <div className="container mx-auto px-4 relative z-10">
-                <div className="flex justify-center gap-4 mb-6">
-                    <div className="bg-primary/10 p-3 rounded-full text-primary"><FaCut className="h-6 w-6"/></div>
-                    <div className="bg-primary/10 p-3 rounded-full text-primary"><FaCalendarCheck className="h-6 w-6"/></div>
-                    <div className="bg-primary/10 p-3 rounded-full text-primary"><FaChartLine className="h-6 w-6"/></div>
+                <div className="grid lg:grid-cols-2 gap-12 items-center">
+                    <div className="text-center lg:text-left">
+                        <div className="flex justify-center lg:justify-start gap-4 mb-6">
+                            <div className="bg-primary/10 p-3 rounded-full text-primary"><FaCut className="h-6 w-6"/></div>
+                            <div className="bg-primary/10 p-3 rounded-full text-primary"><FaCalendarCheck className="h-6 w-6"/></div>
+                            <div className="bg-primary/10 p-3 rounded-full text-primary"><FaChartLine className="h-6 w-6"/></div>
+                        </div>
+                        <h1 className="text-4xl md:text-6xl font-extrabold font-headline tracking-tighter mb-4">
+                        Elevate Your Salon Business
+                        </h1>
+                        <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto lg:mx-0 mb-8">
+                        The all-in-one CRM designed for modern salons and stylists. Manage your clients, bookings, and payments seamlessly to unlock your salon's full potential.
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                            <Button size="lg" asChild>
+                            <Link href="/dashboard">
+                                Go to Dashboard <FaRocket className="ml-2 h-5 w-5" />
+                            </Link>
+                            </Button>
+                            <Button size="lg" variant="outline" asChild>
+                            <Link href="#">
+                                Learn More
+                            </Link>
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="relative hidden lg:block">
+                        <Image 
+                            src="https://placehold.co/800x600.png"
+                            alt="CRM Dashboard Preview"
+                            width={800}
+                            height={600}
+                            className="rounded-lg shadow-2xl transform transition-transform duration-500 hover:scale-105"
+                            data-ai-hint="dashboard professional"
+                        />
+                         <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent rounded-lg"></div>
+                    </div>
                 </div>
-                <h1 className="text-4xl md:text-6xl font-extrabold font-headline tracking-tighter mb-4">
-                Elevate Your Salon Business
-                </h1>
-                <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-                The all-in-one CRM designed for modern salons and stylists. Manage your clients, bookings, and payments seamlessly to unlock your salon's full potential.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                    <Button size="lg" asChild>
-                    <Link href="/dashboard">
-                        Go to Dashboard <FaRocket className="ml-2 h-5 w-5" />
-                    </Link>
-                    </Button>
-                    <Button size="lg" variant="outline" asChild>
-                    <Link href="#">
-                        Learn More
-                    </Link>
-                    </Button>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-12 max-w-4xl mx-auto">
+                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-16 max-w-4xl mx-auto pt-8 border-t">
                     <div className="text-center">
                         <p className="text-4xl font-bold text-primary">10K+</p>
                         <p className="text-muted-foreground">Happy Vendors</p>
