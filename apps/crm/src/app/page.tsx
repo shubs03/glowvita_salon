@@ -243,105 +243,9 @@ export default function CrmHomePage() {
                 </div>
             </div>
         </section>
-
-        {/* How it Works */}
-        <section className="py-20 bg-background">
-            <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold font-headline">Get Started in 3 Simple Steps</h2>
-                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-                        Launch your salon management to the next level in just a few minutes.
-                    </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                    <Card className="bg-background">
-                        <CardHeader>
-                            <div className="mx-auto bg-primary/10 h-12 w-12 flex items-center justify-center rounded-full text-primary font-bold text-xl">1</div>
-                            <CardTitle className="mt-4">Sign Up</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground">Create your account and set up your salon profile in minutes.</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-background">
-                        <CardHeader>
-                            <div className="mx-auto bg-primary/10 h-12 w-12 flex items-center justify-center rounded-full text-primary font-bold text-xl">2</div>
-                            <CardTitle className="mt-4">Add Your Services</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground">Easily add your services, pricing, and staff members.</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-background">
-                        <CardHeader>
-                            <div className="mx-auto bg-primary/10 h-12 w-12 flex items-center justify-center rounded-full text-primary font-bold text-xl">3</div>
-                            <CardTitle className="mt-4">Start Booking</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground">Begin managing appointments and growing your client base immediately.</p>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </section>
-        
-        {/* Salon Types Section */}
-        <section className="py-20 bg-secondary/50">
-            <div className="container mx-auto px-4">
-                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold font-headline">Built for Every Beauty Business</h2>
-                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-                       From solo artists to bustling barbershops, our platform is the perfect fit.
-                    </p>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 h-[600px] text-white font-bold">
-                    <div className="relative rounded-lg overflow-hidden col-span-2 row-span-2 group">
-                        <Image src="https://placehold.co/600x600.png" alt="Beauty Salon" layout="fill" className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint="beauty salon interior" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <h3 className="absolute bottom-4 left-4 text-2xl">Salons</h3>
-                    </div>
-                    <div className="relative rounded-lg overflow-hidden group">
-                        <Image src="https://placehold.co/300x300.png" alt="Barber Shop" layout="fill" className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint="barber shop" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <h3 className="absolute bottom-4 left-4 text-xl">Barber Shops</h3>
-                    </div>
-                    <div className="relative rounded-lg overflow-hidden group">
-                        <Image src="https://placehold.co/300x300.png" alt="Nail Studio" layout="fill" className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint="nail studio" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <h3 className="absolute bottom-4 left-4 text-xl">Nail Studios</h3>
-                    </div>
-                    <div className="relative rounded-lg overflow-hidden group">
-                        <Image src="https://placehold.co/300x300.png" alt="Spa" layout="fill" className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint="spa wellness" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <h3 className="absolute bottom-4 left-4 text-xl">Spas</h3>
-                    </div>
-                     <div className="relative rounded-lg overflow-hidden group">
-                        <Image src="https://placehold.co/300x300.png" alt="Parlor" layout="fill" className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint="beauty parlor" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <h3 className="absolute bottom-4 left-4 text-xl">Parlors</h3>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        {/* Integration Showcase */}
-        <section className="py-20 bg-background">
-            <div className="container mx-auto px-4 text-center">
-                 <h2 className="text-3xl font-bold font-headline mb-4">Connect Your Favorite Tools</h2>
-                 <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-                    Our CRM integrates with popular tools to streamline your workflow.
-                 </p>
-                 <div className="flex justify-center items-center gap-8 opacity-50">
-                     <CalendarCheck className="h-10 w-10"/>
-                     <CreditCard className="h-10 w-10"/>
-                     <MessageSquare className="h-10 w-10"/>
-                     <LineChart className="h-10 w-10"/>
-                 </div>
-            </div>
-        </section>
         
         {/* Pricing Section */}
-        <section className="py-20 bg-secondary/50">
+        <section className="py-20 bg-background">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold font-headline">Simple Plans for Every Stage</h2>
@@ -416,7 +320,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* New "Everything you need" section */}
-        <section className="py-20 bg-background">
+        <section className="py-20 bg-secondary/50">
             <div className="container mx-auto px-4 max-w-6xl">
                 <div className="text-center">
                     <h2 className="text-3xl md:text-4xl font-bold font-headline text-pretty">Everything you need to run your business</h2>
@@ -454,7 +358,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* New Mobile App Promotion Section */}
-        <section className="py-20 bg-secondary/50">
+        <section className="py-20 bg-background">
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-8 rounded-lg">
@@ -488,7 +392,7 @@ export default function CrmHomePage() {
         </section>
 
          {/* New CRM Advantages Section */}
-        <section className="py-20 bg-background relative overflow-hidden">
+        <section className="py-20 bg-secondary/50 relative overflow-hidden">
             <div className="container mx-auto px-4">
                  <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold font-headline">Unlock Your Potential</h2>
@@ -514,7 +418,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* Testimonial Section */}
-        <section className="py-20 bg-secondary/50">
+        <section className="py-20 bg-background">
           <div className="container mx-auto px-4 text-center">
              <h2 className="text-3xl font-bold font-headline mb-4">Loved by Salon Owners</h2>
             <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
@@ -536,7 +440,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* FAQ Section */}
-        <section className="py-20 bg-background">
+        <section className="py-20 bg-secondary/50">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-3xl font-bold text-center mb-12 font-headline">Frequently Asked Questions</h2>
             <div className="space-y-4">
@@ -553,7 +457,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* Final CTA */}
-        <section className="py-20 text-center bg-secondary/50">
+        <section className="py-20 text-center bg-background">
             <div className="container mx-auto px-4">
                 <h2 className="text-3xl font-bold font-headline mb-4">Ready to Grow Your Business?</h2>
                 <p className="text-muted-foreground mb-8">Join hundreds of successful salons. Get started today.</p>
@@ -573,3 +477,4 @@ export default function CrmHomePage() {
     </div>
   );
 }
+
