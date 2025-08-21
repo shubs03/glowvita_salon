@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
-import { ArrowRight, Book, CalendarCheck, LineChart, Check, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings, Plus } from 'lucide-react';
+import { ArrowRight, Book, CalendarCheck, LineChart, Check, CheckCircle, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings, Plus } from 'lucide-react';
 import Image from 'next/image';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
