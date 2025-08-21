@@ -108,7 +108,7 @@ const VideoTestimonialCard = () => (
     </div>
 );
 
-const PlatformForCard = ({ title, imageUrl }: { title: string; imageUrl: string }) => (
+const PlatformForCard = ({ title, imageUrl, hint }: { title: string; imageUrl: string; hint: string }) => (
     <a className="relative inline-block h-[194px] w-[309px] shrink-0 overflow-hidden rounded-lg transition-shadow hover:shadow-xl group" href="#">
       <Image
         className="size-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
@@ -116,6 +116,7 @@ const PlatformForCard = ({ title, imageUrl }: { title: string; imageUrl: string 
         alt={title}
         width={309}
         height={194}
+        data-ai-hint={hint}
       />
       <div className="absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/70 to-transparent">
         <div className="flex flex-row items-center justify-between gap-2 p-4">
@@ -143,14 +144,44 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
     ];
     return (
       <div className="w-full overflow-hidden">
-        <div className={`flex w-fit items-start space-x-8 ${rtl ? 'animate-[slide-rtl_90s_linear_infinite]' : 'animate-[slide_90s_linear_infinite]'} hover:[animation-play-state:paused]`}>
+        <div className={`flex w-fit items-start space-x-8 ${rtl ? 'animate-slide-rtl' : 'animate-slide'} hover:[animation-play-state:paused]`}>
             {[...items, ...items].map((item, index) => (
-                <PlatformForCard key={`${item.title}-${index}`} title={item.title} imageUrl={`${item.imageUrl}?hint=${item.hint}`} />
+                <PlatformForCard key={`${item.title}-${index}`} title={item.title} imageUrl={item.imageUrl} hint={item.hint} />
             ))}
         </div>
       </div>
     );
 };
+
+const AppPromotionSection = ({ appName, title, description, features, appStoreUrl, googlePlayUrl, imageUrl, imageHint, reverse = false }) => (
+    <section className="py-20">
+      <div className="container mx-auto px-4">
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${reverse ? 'lg:grid-flow-col-dense' : ''}`}>
+          <div className={`lg:text-left ${reverse ? 'lg:col-start-2' : ''}`}>
+            <h2 className="text-3xl font-bold font-headline mb-2">{appName}</h2>
+            <p className="text-muted-foreground mb-6">{description}</p>
+            <ul className="space-y-3 mb-6">
+              {features.map((feature, index) => (
+                <li key={index} className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-4 lg:justify-start">
+              <Button size="lg" asChild><Link href={appStoreUrl}><Download className="mr-2 h-4 w-4" /> App Store</Link></Button>
+              <Button size="lg" asChild><Link href={googlePlayUrl}><Download className="mr-2 h-4 w-4" /> Google Play</Link></Button>
+            </div>
+          </div>
+          <div className={`relative flex justify-center ${reverse ? 'lg:col-start-1' : ''}`}>
+            <div className="relative w-80 h-[550px] bg-gray-800 rounded-[40px] border-8 border-gray-900 overflow-hidden shadow-2xl">
+              <Image src={imageUrl} alt={`${appName} screenshot`} layout="fill" objectFit="cover" data-ai-hint={imageHint} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+);
   
 export default function CrmHomePage() {
   const [advantageScroll, setAdvantageScroll] = useState(0);
@@ -233,7 +264,7 @@ export default function CrmHomePage() {
         <section className="py-20 bg-background">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold font-headline">Why Choose Our CRM?</h2>
+                    <h2 className="text-4xl font-bold font-headline">Why Choose Our CRM?</h2>
                     <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
                         We provide the tools to not just manage, but to grow your business.
                     </p>
@@ -268,7 +299,7 @@ export default function CrmHomePage() {
         <section className="py-20 bg-secondary/50">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold font-headline">Simple Plans for Every Stage</h2>
+                    <h2 className="text-4xl font-bold font-headline">Simple Plans for Every Stage</h2>
                     <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
                         Transparent pricing that scales as your business grows. No hidden fees.
                     </p>
@@ -344,7 +375,7 @@ export default function CrmHomePage() {
             <div className="container mx-auto px-4 max-w-6xl">
                 <div className="grid md:grid-cols-2 gap-12 items-center">
                     <div className="md:text-right">
-                         <h2 className="text-3xl md:text-4xl font-bold font-headline text-pretty">Everything you need to run your business</h2>
+                         <h2 className="text-4xl md:text-5xl font-bold font-headline text-pretty">Everything you need to run your business</h2>
                          <p className="mt-4 max-w-xl md:ml-auto text-muted-foreground">
                             Our platform offers innovative features that bring convenience, efficiency, and an improved experience for both your team members and clients.
                          </p>
@@ -380,44 +411,34 @@ export default function CrmHomePage() {
         </section>
 
         {/* Mobile App Promotion Section */}
-        <section className="py-20 bg-secondary/50">
-            <div className="container mx-auto px-4">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-8 rounded-lg text-center lg:text-left">
-                        <h2 className="text-3xl font-bold font-headline mb-2">For Your Clients</h2>
-                        <p className="text-muted-foreground mb-6">Download the <span className="font-semibold text-primary">GlowVita Salon App</span></p>
-                        <ul className="space-y-3 mb-6 inline-block text-left">
-                            <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Book appointments 24/7</li>
-                            <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Reschedule with ease</li>
-                            <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> View past & upcoming bookings</li>
-                        </ul>
-                         <div className="flex gap-4 justify-center lg:justify-start">
-                            <Button size="lg"><Download className="mr-2 h-4 w-4"/> App Store</Button>
-                            <Button size="lg"><Download className="mr-2 h-4 w-4"/> Google Play</Button>
-                        </div>
-                    </div>
-                    <div className="text-center lg:text-left">
-                        <h2 className="text-3xl font-bold font-headline mb-2">For Your Business</h2>
-                        <p className="text-muted-foreground mb-6">Manage on the go with the <span className="font-semibold text-primary">Vendor CRM App</span></p>
-                        <ul className="space-y-3 mb-6 inline-block text-left">
-                            <li className="flex items-center gap-3"><Star className="h-5 w-5 text-yellow-500" /> Manage your calendar</li>
-                            <li className="flex items-center gap-3"><Star className="h-5 w-5 text-yellow-500" /> View client information</li>
-                            <li className="flex items-center gap-3"><Star className="h-5 w-5 text-yellow-500" /> Track your performance</li>
-                        </ul>
-                        <div className="flex gap-4 justify-center lg:justify-start">
-                             <Button size="lg" variant="outline"><Download className="mr-2 h-4 w-4"/> App Store</Button>
-                             <Button size="lg" variant="outline"><Download className="mr-2 h-4 w-4"/> Google Play</Button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <AppPromotionSection
+          appName="For Your Clients"
+          title="GlowVita Salon App"
+          description="Empower your clients with a seamless booking experience."
+          features={["Book appointments 24/7", "Reschedule with ease", "View past & upcoming bookings", "Receive exclusive offers"]}
+          appStoreUrl="#"
+          googlePlayUrl="#"
+          imageUrl="https://placehold.co/375x812.png"
+          imageHint="mobile app screenshot booking"
+        />
+
+        <AppPromotionSection
+          appName="For Your Business"
+          title="Vendor CRM App"
+          description="Manage your salon on the go."
+          features={["Manage your calendar", "View client information", "Track your performance", "Access business reports"]}
+          appStoreUrl="#"
+          googlePlayUrl="#"
+          imageUrl="https://placehold.co/375x812.png"
+          imageHint="mobile crm dashboard"
+          reverse={true}
+        />
 
         {/* CRM Advantages Section */}
         <section className="py-20 bg-background relative overflow-hidden">
             <div className="container mx-auto px-4">
                  <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold font-headline">Unlock Your Potential</h2>
+                    <h2 className="text-4xl font-bold font-headline">Unlock Your Potential</h2>
                     <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
                         See the real-world impact of using our CRM.
                     </p>
@@ -443,7 +464,7 @@ export default function CrmHomePage() {
         <section className="py-20 bg-secondary/50">
             <div className="container mx-auto px-4">
                 <div className="max-w-3xl mx-auto text-center mb-16">
-                    <h2 className="text-3xl font-bold leading-tight text-primary font-headline">Top-Rated by the Industry</h2>
+                    <h2 className="text-4xl font-bold leading-tight text-primary font-headline">Top-Rated by the Industry</h2>
                     <p className="mt-4 text-lg text-muted-foreground">
                         Our dedication to building the best-in-class booking software and delivering exceptional customer experience continues to be recognised time and time again.
                     </p>
@@ -464,7 +485,7 @@ export default function CrmHomePage() {
         {/* Platform for all section */}
         <section className="py-20 bg-background">
             <div className="mx-auto max-w-[2000px] space-y-8">
-                <h2 className="px-5 text-center text-3xl font-bold leading-tight laptop:text-left laptop:text-4xl laptop:leading-tight">A platform suitable for all</h2>
+                <h2 className="px-5 text-center text-4xl font-bold leading-tight laptop:text-left laptop:text-5xl laptop:leading-tight font-headline">A platform suitable for all</h2>
                 <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
                     <PlatformForMarquee />
                 </div>
@@ -478,7 +499,7 @@ export default function CrmHomePage() {
         {/* FAQ Section */}
         <section className="py-20 bg-secondary/50">
           <div className="container mx-auto px-4 max-w-4xl">
-            <h2 className="text-3xl font-bold text-center mb-12 font-headline">Frequently Asked Questions</h2>
+            <h2 className="text-4xl font-bold text-center mb-12 font-headline">Frequently Asked Questions</h2>
             <div className="space-y-4">
               <Card className="bg-background">
                 <CardHeader><CardTitle className="flex items-center gap-3"><HelpCircle className="text-primary"/> Is my data secure?</CardTitle></CardHeader>
@@ -495,7 +516,7 @@ export default function CrmHomePage() {
         {/* Final CTA */}
         <section className="py-20 text-center bg-background">
             <div className="container mx-auto px-4">
-                <h2 className="text-3xl font-bold font-headline mb-4">Ready to Grow Your Business?</h2>
+                <h2 className="text-4xl font-bold font-headline mb-4">Ready to Grow Your Business?</h2>
                 <p className="text-muted-foreground mb-8">Join hundreds of successful salons. Get started today.</p>
                 <Button size="lg" asChild>
                     <Link href="/login">Sign Up Now <UserPlus className="ml-2 h-4 w-4"/></Link>
