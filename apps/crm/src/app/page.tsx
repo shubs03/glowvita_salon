@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { ArrowRight, Book, CalendarCheck, LineChart, Check, CheckCircle, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings, Plus, Star, Phone, Download, Clock, PlayCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
   <div className="flex gap-4 items-start p-4 rounded-lg transition-all duration-300 hover:bg-secondary">
@@ -169,6 +170,9 @@ export default function CrmHomePage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="font-bold text-xl font-headline">Vendor CRM</div>
           <nav className="flex items-center gap-2">
+            <Button variant="ghost" asChild><Link href="#">App Links</Link></Button>
+            <ThemeToggle />
+            <Button variant="ghost" asChild><Link href="#">Support</Link></Button>
             <Button variant="ghost" asChild>
               <Link href="/login">Login</Link>
             </Button>
