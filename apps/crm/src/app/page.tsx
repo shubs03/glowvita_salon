@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { ArrowRight, Book, CalendarCheck, LineChart, Check, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings } from 'lucide-react';
-import { FaRocket, FaBook, FaCalendarCheck, FaChartLine, FaCheck, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaSignInAlt, FaUserPlus, FaUsers, FaShieldAlt, FaCogs } from 'react-icons/fa';
 import Image from 'next/image';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
@@ -30,21 +29,31 @@ const BenefitItem = ({ icon, title, children }: { icon: React.ReactNode, title: 
     </div>
 );
 
-const ActivityMarquee = () => (
-    <div className="relative flex overflow-x-hidden border-t border-b bg-background mt-16 py-3">
-        <div className="animate-marquee whitespace-nowrap flex gap-12 items-center">
-            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Glamour Salon</span> just got a new 5-star review.</p>
-            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Modern Cuts</span> has a new booking for 2:30 PM.</p>
-            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Style Hub</span> just added a new service: "Keratin Treatment".</p>
-            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Beauty Bliss</span> has 5 new clients this week.</p>
-            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">The Barber Shop</span> successfully processed a payment of ₹1,500.</p>
+const MarqueeItem = ({ icon, text }: { icon: React.ReactNode, text: React.ReactNode }) => (
+    <div className="flex items-center gap-3 mx-6">
+        <div className="flex-shrink-0 bg-secondary p-2 rounded-full">
+            {icon}
         </div>
-        <div className="absolute top-0 animate-marquee2 whitespace-nowrap flex gap-12 items-center">
-            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Glamour Salon</span> just got a new 5-star review.</p>
-            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Modern Cuts</span> has a new booking for 2:30 PM.</p>
-            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Style Hub</span> just added a new service: "Keratin Treatment".</p>
-            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Beauty Bliss</span> has 5 new clients this week.</p>
-            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">The Barber Shop</span> successfully processed a payment of ₹1,500.</p>
+        <p className="text-sm text-muted-foreground">{text}</p>
+    </div>
+);
+
+const ActivityMarquee = () => (
+    <div className="relative w-full py-4 bg-background border-y overflow-hidden">
+        <div className="absolute inset-0 z-10 [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]"></div>
+        <div className="flex animate-marquee whitespace-nowrap">
+            <MarqueeItem icon={<CheckCircle className="h-4 w-4 text-green-500"/>} text={<><span className="font-semibold text-foreground">Glamour Salon</span> just got a new 5-star review.</>} />
+            <MarqueeItem icon={<CalendarCheck className="h-4 w-4 text-blue-500"/>} text={<><span className="font-semibold text-foreground">Modern Cuts</span> has a new booking for 2:30 PM.</>} />
+            <MarqueeItem icon={<Plus className="h-4 w-4 text-purple-500"/>} text={<><span className="font-semibold text-foreground">Style Hub</span> added a new service: "Keratin Treatment".</>} />
+            <MarqueeItem icon={<UserPlus className="h-4 w-4 text-indigo-500"/>} text={<><span className="font-semibold text-foreground">Beauty Bliss</span> has 5 new clients this week.</>} />
+            <MarqueeItem icon={<CreditCard className="h-4 w-4 text-pink-500"/>} text={<><span className="font-semibold text-foreground">The Barber Shop</span> processed a payment of ₹1,500.</>} />
+        </div>
+        <div className="absolute top-0 flex animate-marquee2 whitespace-nowrap py-4">
+            <MarqueeItem icon={<CheckCircle className="h-4 w-4 text-green-500"/>} text={<><span className="font-semibold text-foreground">Glamour Salon</span> just got a new 5-star review.</>} />
+            <MarqueeItem icon={<CalendarCheck className="h-4 w-4 text-blue-500"/>} text={<><span className="font-semibold text-foreground">Modern Cuts</span> has a new booking for 2:30 PM.</>} />
+            <MarqueeItem icon={<Plus className="h-4 w-4 text-purple-500"/>} text={<><span className="font-semibold text-foreground">Style Hub</span> added a new service: "Keratin Treatment".</>} />
+            <MarqueeItem icon={<UserPlus className="h-4 w-4 text-indigo-500"/>} text={<><span className="font-semibold text-foreground">Beauty Bliss</span> has 5 new clients this week.</>} />
+            <MarqueeItem icon={<CreditCard className="h-4 w-4 text-pink-500"/>} text={<><span className="font-semibold text-foreground">The Barber Shop</span> processed a payment of ₹1,500.</>} />
         </div>
     </div>
 );
@@ -80,9 +89,9 @@ export default function CrmHomePage() {
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
                     <div className="text-center lg:text-left">
                         <div className="flex justify-center lg:justify-start gap-4 mb-6">
-                            <div className="bg-primary/10 p-3 rounded-full text-primary"><FaCut className="h-6 w-6"/></div>
-                            <div className="bg-primary/10 p-3 rounded-full text-primary"><FaCalendarCheck className="h-6 w-6"/></div>
-                            <div className="bg-primary/10 p-3 rounded-full text-primary"><FaChartLine className="h-6 w-6"/></div>
+                            <div className="bg-primary/10 p-3 rounded-full text-primary"><Scissors className="h-6 w-6"/></div>
+                            <div className="bg-primary/10 p-3 rounded-full text-primary"><CalendarCheck className="h-6 w-6"/></div>
+                            <div className="bg-primary/10 p-3 rounded-full text-primary"><LineChart className="h-6 w-6"/></div>
                         </div>
                         <h1 className="text-4xl md:text-6xl font-extrabold font-headline tracking-tighter mb-4">
                         Elevate Your Salon Business
@@ -93,7 +102,7 @@ export default function CrmHomePage() {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                             <Button size="lg" asChild>
                             <Link href="/dashboard">
-                                Go to Dashboard <FaRocket className="ml-2 h-5 w-5" />
+                                Go to Dashboard <Rocket className="ml-2 h-5 w-5" />
                             </Link>
                             </Button>
                             <Button size="lg" variant="outline" asChild>
@@ -101,6 +110,15 @@ export default function CrmHomePage() {
                                 Learn More
                             </Link>
                             </Button>
+                        </div>
+                         <div className="mt-12 text-center lg:text-left">
+                            <p className="text-sm text-muted-foreground mb-4">Trusted by leading salons and stylists</p>
+                            <div className="flex justify-center lg:justify-start items-center gap-6 opacity-60">
+                                <Users className="h-6 w-6" />
+                                <Shield className="h-6 w-6" />
+                                <Settings className="h-6 w-6" />
+                                <Users className="h-6 w-6" />
+                            </div>
                         </div>
                     </div>
                     <div className="relative hidden lg:block">
@@ -113,20 +131,6 @@ export default function CrmHomePage() {
                             data-ai-hint="dashboard professional"
                         />
                          <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent rounded-lg"></div>
-                    </div>
-                </div>
-                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-16 max-w-4xl mx-auto pt-8 border-t">
-                    <div className="text-center">
-                        <p className="text-4xl font-bold text-primary">10K+</p>
-                        <p className="text-muted-foreground">Happy Vendors</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-4xl font-bold text-primary">40%</p>
-                        <p className="text-muted-foreground">Growth in Bookings</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-4xl font-bold text-primary">24/7</p>
-                        <p className="text-muted-foreground">Instant Support</p>
                     </div>
                 </div>
             </div>
@@ -269,10 +273,10 @@ export default function CrmHomePage() {
                     Our CRM integrates with popular tools to streamline your workflow.
                  </p>
                  <div className="flex justify-center items-center gap-8 opacity-50">
-                     <FaCalendarCheck className="h-10 w-10"/>
-                     <FaCreditCard className="h-10 w-10"/>
-                     <FaComments className="h-10 w-10"/>
-                     <FaChartLine className="h-10 w-10"/>
+                     <CalendarCheck className="h-10 w-10"/>
+                     <CreditCard className="h-10 w-10"/>
+                     <MessageSquare className="h-10 w-10"/>
+                     <LineChart className="h-10 w-10"/>
                  </div>
             </div>
         </section>
@@ -294,9 +298,9 @@ export default function CrmHomePage() {
                             <p className="text-4xl font-bold pt-4">₹999<span className="text-lg font-normal text-muted-foreground">/mo</span></p>
                         </CardHeader>
                         <CardContent className="flex-grow space-y-3">
-                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Up to 50 Clients</p>
-                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Basic Booking</p>
-                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Email Support</p>
+                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Up to 50 Clients</p>
+                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Basic Booking</p>
+                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Email Support</p>
                         </CardContent>
                         <CardFooter>
                            <Button className="w-full" variant="outline">Choose Plan</Button>
@@ -309,9 +313,9 @@ export default function CrmHomePage() {
                             <p className="text-4xl font-bold pt-4">₹2499<span className="text-lg font-normal text-muted-foreground">/mo</span></p>
                         </CardHeader>
                         <CardContent className="flex-grow space-y-3">
-                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Unlimited Clients</p>
-                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Advanced Booking & Analytics</p>
-                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Priority Email & Chat Support</p>
+                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Unlimited Clients</p>
+                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Advanced Booking & Analytics</p>
+                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Priority Email & Chat Support</p>
                         </CardContent>
                         <CardFooter>
                            <Button className="w-full">Choose Plan</Button>
@@ -324,9 +328,9 @@ export default function CrmHomePage() {
                             <p className="text-4xl font-bold pt-4">Contact Us</p>
                         </CardHeader>
                         <CardContent className="flex-grow space-y-3">
-                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Multi-location Support</p>
-                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Custom Integrations</p>
-                            <p className="flex items-center"><FaCheck className="text-green-500 mr-2"/> Dedicated Account Manager</p>
+                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Multi-location Support</p>
+                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Custom Integrations</p>
+                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Dedicated Account Manager</p>
                         </CardContent>
                         <CardFooter>
                            <Button className="w-full" variant="outline">Contact Sales</Button>
