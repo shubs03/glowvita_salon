@@ -51,6 +51,7 @@ export default function VendorManagementPage() {
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
 
     const { data: vendors = [], isLoading, error } = useGetVendorsQuery(undefined);
+    console.log(vendors);
     const [createVendor] = useCreateVendorMutation();
     const [updateVendor] = useUpdateVendorMutation();
     const [deleteVendor] = useDeleteVendorMutation();

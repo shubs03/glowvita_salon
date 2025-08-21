@@ -24,7 +24,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [adminLogin, { isloading }] = useAdminLoginMutation();
+  const [adminLogin] = useAdminLoginMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
