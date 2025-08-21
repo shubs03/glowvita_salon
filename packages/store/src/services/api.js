@@ -1,6 +1,6 @@
 
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { clearAdminAuth } from "../slices/auth-slice.js";
+import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 
 const API_BASE_URLS = {
   admin: 'http://localhost:3002/api',
