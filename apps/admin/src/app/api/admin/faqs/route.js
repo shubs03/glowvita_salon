@@ -43,7 +43,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
 // Update an FAQ
 export const PATCH = authMiddlewareAdmin(async (req) => {
   try {
-    const { id, question, answer } = await req.json();
+    const { id, ...updates } = await req.json();
     
     if (!id) {
       return NextResponse.json(
@@ -52,10 +52,11 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       );
     }
     
-    // Only update question and answer if they are provided
-    const updateFields = { updatedAt: new Date() };
-    if (question !== undefined) updateFields.question = question;
-    if (answer !== undefined) updateFields.answer = answer;
+    // Only update fields that are provided
+    const updateFields = { 
+      ...updates,
+      updatedAt: new Date() 
+    };
     
     const updatedFaq = await Faq.findByIdAndUpdate(
       id,

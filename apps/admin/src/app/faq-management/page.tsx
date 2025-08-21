@@ -77,6 +77,7 @@ export default function FaqManagementPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [faqToDelete, setFaqToDelete] = useState<FAQ | null>(null);
+  const [faqToToggle, setFaqToToggle] = useState<{id: string, visible: boolean} | null>(null);
 
   const [selectedFaq, setSelectedFaq] = useState<(FAQ & { categoryDescription?: string }) | null>(null);
   const [newFaq, setNewFaq] = useState<Partial<FAQ> & { categoryDescription?: string }>({ 
@@ -146,24 +147,30 @@ export default function FaqManagementPage() {
     }
   };
 
-  const handleToggleVisibility = async (id: string) => {
-    const faq = faqs.find(f => f._id === id);
-    if (faq) {
-      try {
-        await dispatch(updateFaqItem({
-          id,
-          visible: !faq.visible
-        })).unwrap();
-        toast.success(`FAQ ${faq.visible ? 'hidden' : 'made visible'} successfully!`, {
-          duration: 5000,
-          style: { background: '#22c55e', color: '#ffffff' },
-        });
-      } catch (err) {
-        toast.error("Failed to toggle FAQ visibility. Please try again.", {
-          description: err.payload?.message || err.message || 'Unknown error',
-          duration: 5000,
-        });
-      }
+  const handleToggleClick = (id: string, currentVisibility: boolean) => {
+    setFaqToToggle({ id, visible: !currentVisibility });
+  };
+
+  const handleConfirmToggle = async () => {
+    if (!faqToToggle) return;
+    
+    try {
+      await dispatch(updateFaqItem({
+        id: faqToToggle.id,
+        visible: faqToToggle.visible
+      })).unwrap();
+      
+      toast.success(`FAQ ${faqToToggle.visible ? 'made visible' : 'hidden'} successfully!`, {
+        duration: 5000,
+        style: { background: '#22c55e', color: '#ffffff' },
+      });
+    } catch (err) {
+      toast.error("Failed to toggle FAQ visibility. Please try again.", {
+        description: err.payload?.message || err.message || 'Unknown error',
+        duration: 5000,
+      });
+    } finally {
+      setFaqToToggle(null);
     }
   };
 
@@ -252,12 +259,13 @@ export default function FaqManagementPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleToggleVisibility(faq.id)}
+                            onClick={() => handleToggleClick(faq._id, faq.visible)}
+                            disabled={status === 'loading'}
                           >
                             {faq.visible ? (
                               <ToggleRight className="h-4 w-4 text-green-600" />
                             ) : (
-                              <ToggleLeft className="h-4 w-4" />
+                              <ToggleLeft className="h-4 w-4 text-gray-400" />
                             )}
                             <span className="sr-only">Toggle Visibility</span>
                           </Button>
@@ -603,6 +611,33 @@ export default function FaqManagementPage() {
           )}
           <DialogFooter>
             <Button onClick={() => setIsViewModalOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Toggle Confirmation Modal */}
+      <Dialog open={!!faqToToggle} onOpenChange={(open) => !open && setFaqToToggle(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm {faqToToggle?.visible ? 'Show' : 'Hide'} FAQ</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to {faqToToggle?.visible ? 'show' : 'hide'} this FAQ? 
+              {faqToToggle?.visible ? ' It will be visible to users.' : ' It will be hidden from users.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setFaqToToggle(null)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant={faqToToggle?.visible ? 'default' : 'secondary'}
+              onClick={handleConfirmToggle}
+            >
+              {faqToToggle?.visible ? 'Make Visible' : 'Keep Hidden'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

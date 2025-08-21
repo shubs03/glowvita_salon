@@ -69,7 +69,10 @@ const faqSlice = createSlice({
       .addCase(updateFaqItem.fulfilled, (state, action) => {
         const index = state.faqs.findIndex(faq => faq._id === action.payload._id);
         if (index !== -1) {
-          state.faqs[index] = action.payload;
+          state.faqs[index] = {
+            ...state.faqs[index],
+            ...action.payload
+          };
         }
       })
       // Delete FAQ
