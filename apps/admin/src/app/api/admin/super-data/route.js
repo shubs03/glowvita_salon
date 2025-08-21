@@ -1,7 +1,7 @@
 
-import _db from "../../../../../../packages/lib/src/db.js";
-import SuperDataModel from "../../../../../../packages/lib/src/models/admin/SuperData.model.js";
-import { authMiddlewareAdmin } from "../../../middlewareAdmin.js";
+import _db from "@repo/lib/db";
+import SuperDataModel from "../../../../../../../packages/lib/src/models/admin/SuperData.model.js";
+import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();
 
