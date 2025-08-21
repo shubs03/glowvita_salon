@@ -97,6 +97,7 @@ export const glowvitaApi = createApi({
     "Settings",
     "SuperData",
     "Supplier",
+    "Faq",
   ],
   endpoints: (builder) => ({
 
@@ -106,6 +107,39 @@ export const glowvitaApi = createApi({
         method: "GET",
       }),
       providesTags: ["admin"],
+    }),
+
+    // FAQ Endpoints
+    getFaqs: builder.query({
+      query: () => '/admin/faqs',
+      providesTags: ['Faq'],
+    }),
+
+    createFaq: builder.mutation({
+      query: (faq) => ({
+        url: '/admin/faqs',
+        method: 'POST',
+        body: faq,
+      }),
+      invalidatesTags: ['Faq'],
+    }),
+
+    updateFaq: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: '/admin/faqs',
+        method: 'PATCH',
+        body: { id, ...updates },
+      }),
+      invalidatesTags: ['Faq'],
+    }),
+
+    deleteFaq: builder.mutation({
+      query: (id) => ({
+        url: '/admin/faqs',
+        method: 'DELETE',
+        body: { id },
+      }),
+      invalidatesTags: ['Faq'],
     }),
 
     // Admin
@@ -663,4 +697,12 @@ export const {
   useCreateNotificationMutation,
   useUpdateNotificationMutation,
   useDeleteNotificationMutation,
+
+
+// FAQ Endpoints
+useGetFaqsQuery,
+useCreateFaqMutation,
+useUpdateFaqMutation,
+useDeleteFaqMutation,
+
 } = glowvitaApi;
