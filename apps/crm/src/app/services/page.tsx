@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
-import { useGetCategoriesQuery, useCreateCategoryMutation, useGetServicesQuery } from '@repo/store/api';
+import { useGetCategoriesQuery, useCreateCategoryMutation, useGetServicesQuery, useCreateServiceMutation } from '@repo/store/api';
 import Image from 'next/image';
 
 type Service = {
@@ -48,21 +48,43 @@ const mockServices: Service[] = [
 
 const mockStaff = ['Jane Doe', 'John Smith', 'Emily White'];
 
-const AddCategoryModal = ({isOpen, onClose, onCategoryCreated}: {isOpen: boolean, onClose: () => void, onCategoryCreated: (category: any) => void}) => {
-    const [newCategoryName, setNewCategoryName] = useState('');
+// Reusable modal for adding categories or services
+const AddItemModal = ({
+  isOpen,
+  onClose,
+  onItemCreated,
+  itemType,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onItemCreated: (item: any) => void;
+  itemType: 'Category' | 'Service';
+}) => {
+    const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [createCategory, { isLoading }] = useCreateCategoryMutation();
 
-    const handleCreateCategory = async () => {
-        if (newCategoryName.trim()) {
+    const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
+    const [createService, { isLoading: isCreatingService }] = useCreateServiceMutation();
+    
+    const isLoading = isCreatingCategory || isCreatingService;
+
+    const handleCreate = async () => {
+        if (name.trim()) {
             try {
-                const newCategory = await createCategory({ name: newCategoryName, description }).unwrap();
-                setNewCategoryName('');
+                let newItem;
+                if (itemType === 'Category') {
+                    newItem = await createCategory({ name, description }).unwrap();
+                } else {
+                    // This assumes you pass categoryId when calling for a service, which we'll need to adapt
+                    // For now, let's make a placeholder for the API call
+                    newItem = { id: `SRV-${Date.now()}`, name, description, category: 'placeholder' }; // Placeholder
+                }
+                setName('');
                 setDescription('');
-                onCategoryCreated(newCategory);
+                onItemCreated(newItem);
                 onClose();
             } catch (error) {
-                console.error("Failed to create category", error);
+                console.error(`Failed to create ${itemType}`, error);
             }
         }
     };
@@ -71,22 +93,22 @@ const AddCategoryModal = ({isOpen, onClose, onCategoryCreated}: {isOpen: boolean
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Create New Category</DialogTitle>
-                    <DialogDescription>Add a new category for your services.</DialogDescription>
+                    <DialogTitle>Create New {itemType}</DialogTitle>
+                    <DialogDescription>Add a new {itemType.toLowerCase()} to your list.</DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
                     <div className="space-y-2">
-                        <Label htmlFor="new-category">Category Name</Label>
-                        <Input id="new-category" placeholder="e.g., Hair Styling" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} disabled={isLoading}/>
+                        <Label htmlFor={`new-${itemType}-name`}>{itemType} Name</Label>
+                        <Input id={`new-${itemType}-name`} placeholder={`e.g., Hair Styling`} value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading}/>
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="new-category-description">Description</Label>
-                        <Textarea id="new-category-description" placeholder="A brief description of the category." value={description} onChange={(e) => setDescription(e.target.value)} disabled={isLoading}/>
+                        <Label htmlFor={`new-${itemType}-description`}>Description</Label>
+                        <Textarea id={`new-${itemType}-description`} placeholder="A brief description." value={description} onChange={(e) => setDescription(e.target.value)} disabled={isLoading}/>
                     </div>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button onClick={handleCreateCategory} disabled={isLoading || !newCategoryName.trim()}>
+                    <Button onClick={handleCreate} disabled={isLoading || !name.trim()}>
                         {isLoading ? "Creating..." : "Create"}
                     </Button>
                 </DialogFooter>
@@ -97,18 +119,18 @@ const AddCategoryModal = ({isOpen, onClose, onCategoryCreated}: {isOpen: boolean
 
 const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean, onClose: () => void, service: Service | null, type: 'add' | 'edit' | 'view' }) => {
     const [activeTab, setActiveTab] = useState('basic');
-    const { data: categories = [], isLoading: categoriesLoading } = useGetCategoriesQuery(undefined);
-    const { data: allServices = [], isLoading: servicesLoading } = useGetServicesQuery(undefined);
+    const { data: categories = [], isLoading: categoriesLoading, refetch: refetchCategories } = useGetCategoriesQuery(undefined);
+    const { data: allServices = [], isLoading: servicesLoading, refetch: refetchServices } = useGetServicesQuery(undefined);
+    
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-    const [isCreatingNewService, setIsCreatingNewService] = useState(false);
+    const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
 
     const [formData, setFormData] = useState<Partial<Service>>(service || {});
-
+    
     useEffect(() => {
         const initialData = service || {};
         setFormData(initialData);
         setActiveTab('basic');
-        setIsCreatingNewService(!service);
     }, [service, isOpen]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -123,7 +145,6 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
     const handleCategoryChange = (categoryId: string) => {
         const category = categories.find((c: any) => c._id === categoryId);
         setFormData(prev => ({ ...prev, category: category?.name, name: '' })); 
-        setIsCreatingNewService(false);
     };
 
     const handleCheckboxChange = (name: string, id: string, checked: boolean) => {
@@ -143,10 +164,15 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
     };
 
     const handleCategoryCreated = (newCategory: any) => {
+        refetchCategories();
         setFormData(prev => ({ ...prev, category: newCategory.name }));
-        setIsCreatingNewService(true);
     };
     
+    const handleServiceCreated = (newService: any) => {
+        refetchServices();
+        setFormData(prev => ({ ...prev, name: newService.name }));
+    };
+
     const servicesForCategory = formData.category 
       ? allServices.filter((s: any) => s.category?.name === formData.category) 
       : [];
@@ -168,19 +194,15 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
             </div>
             <div className="space-y-2">
                 <Label htmlFor="name">Service Name</Label>
-                {isCreatingNewService || servicesForCategory.length === 0 ? (
-                     <Input id="name" name="name" value={formData.name || ''} onChange={handleInputChange} placeholder="Enter a new service name" />
-                ) : (
-                    <div className="flex gap-2">
-                        <Select value={formData.name || ''} onValueChange={(value) => handleSelectChange('name', value)}>
-                            <SelectTrigger><SelectValue placeholder="Select Service"/></SelectTrigger>
-                            <SelectContent>
-                                {servicesForCategory.map((s:any) => <SelectItem key={s._id} value={s.name}>{s.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setIsCreatingNewService(true)}>New</Button>
-                    </div>
-                )}
+                <div className="flex gap-2">
+                    <Select value={formData.name || ''} onValueChange={(value) => handleSelectChange('name', value)} disabled={!formData.category}>
+                        <SelectTrigger><SelectValue placeholder={formData.category ? "Select Service" : "Select Category First"}/></SelectTrigger>
+                        <SelectContent>
+                            {servicesLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : servicesForCategory.map((s:any) => <SelectItem key={s._id} value={s.name}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Button type="button" variant="outline" size="icon" onClick={() => setIsServiceModalOpen(true)} disabled={!formData.category}><Plus className="h-4 w-4"/></Button>
+                </div>
             </div>
         </div>
         <div className="space-y-2">
@@ -216,7 +238,8 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
             <Label htmlFor="image">Service Image</Label>
             <Input id="image" type="file" />
         </div>
-        <AddCategoryModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onCategoryCreated={handleCategoryCreated} />
+        <AddItemModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onItemCreated={handleCategoryCreated} itemType="Category" />
+        <AddItemModal isOpen={isServiceModalOpen} onClose={() => setIsServiceModalOpen(false)} onItemCreated={handleServiceCreated} itemType="Service" />
     </div>
     );
 
@@ -506,5 +529,3 @@ export default function ServicesPage() {
         </div>
     );
 }
-
-    
