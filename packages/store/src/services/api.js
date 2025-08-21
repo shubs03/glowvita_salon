@@ -576,6 +576,40 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["TaxFeeSettings"],
     }),
 
+    
+    // FAQ Endpoints
+    getFaqs: builder.query({
+      query: () => '/admin/faqs',
+      providesTags: ['Faq'],
+    }),
+
+    createFaq: builder.mutation({
+      query: (faq) => ({
+        url: '/admin/faqs',
+        method: 'POST',
+        body: faq,
+      }),
+      invalidatesTags: ['Faq'],
+    }),
+
+    updateFaq: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: '/admin/faqs',
+        method: 'PATCH',
+        body: { id, ...updates },
+      }),
+      invalidatesTags: ['Faq'],
+    }),
+
+    deleteFaq: builder.mutation({
+      query: (id) => ({
+        url: '/admin/faqs',
+        method: 'DELETE',
+        body: { id },
+      }),
+      invalidatesTags: ['Faq'],
+    }),
+
     // Crm Endpoints
     vendorLogin: builder.mutation({
       query: (credentials) => ({
@@ -679,7 +713,14 @@ export const {
   useGetTaxFeeSettingsQuery,
   useUpdateTaxFeeSettingsMutation,
 
+    // FAQ Endpoints
+    useGetFaqsQuery,
+    useCreateFaqMutation,
+    useUpdateFaqMutation,
+    useDeleteFaqMutation,
+
   // Vendor Endpoints
   useVendorLoginMutation,
   useVendorRegisterMutation,
 } = glowvitaApi;
+
