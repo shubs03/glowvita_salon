@@ -9,8 +9,9 @@ import { FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa";
 import { sidebarNavItems } from "@/lib/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppDispatch } from "@repo/store/hooks";
-import { clearAdminAuth } from "@repo/store/slices/auth";
+import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import Cookies from "js-cookie";
+
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();

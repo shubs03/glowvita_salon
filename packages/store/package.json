@@ -8,7 +8,7 @@
     "./provider": "./src/provider.jsx",
     "./api": "./src/services/api.js",
     "./apis/example": "./src/apis/example-api.js",
-    "./slices/auth": "./src/slices/auth-slice.js",
+    "./slices/adminAuthSlice": "./src/slices/Admin/adminAuthSlice.js",
     "./slices/modal": "./src/slices/modalSlice.js",
     "./slices/customerSlice": "./src/slices/customerSlice.js",
     "./slices/salonSlice": "./src/slices/salonSlice.js",

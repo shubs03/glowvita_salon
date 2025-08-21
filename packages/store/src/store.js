@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
-import authReducer from './slices/auth-slice';
+import authReducer from '@repo/store/slices/adminAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
