@@ -2,7 +2,8 @@
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
-import { ArrowRight, FaBook, FaCalendarCheck, FaChartLine, FaCheck, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaRocket, FaSignInAlt, FaUserPlus, FaUsers, FaShieldAlt, FaCogs } from 'lucide-react';
+import { ArrowRight, Book, CalendarCheck, LineChart, Check, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings } from 'lucide-react';
+import { FaRocket, FaBook, FaCalendarCheck, FaChartLine, FaCheck, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaSignInAlt, FaUserPlus, FaUsers, FaShieldAlt, FaCogs } from 'react-icons/fa';
 import Image from 'next/image';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
@@ -139,22 +140,22 @@ export default function CrmHomePage() {
                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                     </div>
                     <div className="space-y-6">
-                         <FeatureItem icon={<FaBook className="h-6 w-6" />} title="Client Management">
+                         <FeatureItem icon={<Book className="h-6 w-6" />} title="Client Management">
                             Keep track of all your client details, history, and preferences in one organized place.
                          </FeatureItem>
-                         <FeatureItem icon={<FaCalendarCheck className="h-6 w-6" />} title="Smart Booking">
+                         <FeatureItem icon={<CalendarCheck className="h-6 w-6" />} title="Smart Booking">
                             An intuitive calendar to manage appointments, reduce no-shows, and handle rescheduling with ease.
                          </FeatureItem>
-                         <FeatureItem icon={<FaCreditCard className="h-6 w-6" />} title="Seamless Payments">
+                         <FeatureItem icon={<CreditCard className="h-6 w-6" />} title="Seamless Payments">
                             Integrate payments directly into your workflow. Handle transactions, invoices, and payouts effortlessly.
                          </FeatureItem>
-                         <FeatureItem icon={<FaCut className="h-6 w-6" />} title="Service Management">
+                         <FeatureItem icon={<Scissors className="h-6 w-6" />} title="Service Management">
                             Define and manage your service offerings, durations, and pricing with a flexible system.
                          </FeatureItem>
-                         <FeatureItem icon={<FaChartLine className="h-6 w-6" />} title="Business Analytics">
+                         <FeatureItem icon={<LineChart className="h-6 w-6" />} title="Business Analytics">
                             Gain valuable insights into your revenue, client growth, and top-performing services with visual reports.
                          </FeatureItem>
-                         <FeatureItem icon={<FaComments className="h-6 w-6" />} title="Team Collaboration">
+                         <FeatureItem icon={<MessageSquare className="h-6 w-6" />} title="Team Collaboration">
                             Keep your team in sync with internal chat, shared notes, and a collaborative to-do list.
                          </FeatureItem>
                     </div>
@@ -172,13 +173,13 @@ export default function CrmHomePage() {
                     </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <BenefitItem icon={<FaRocket className="h-6 w-6" />} title="Boost Efficiency">
+                    <BenefitItem icon={<Rocket className="h-6 w-6" />} title="Boost Efficiency">
                         Automate reminders, streamline bookings, and reduce administrative tasks by up to 40%.
                     </BenefitItem>
-                    <BenefitItem icon={<FaUsers className="h-6 w-6" />} title="Enhance Client Loyalty">
+                    <BenefitItem icon={<Users className="h-6 w-6" />} title="Enhance Client Loyalty">
                         Personalize client experiences with detailed history and preferences, increasing retention.
                     </BenefitItem>
-                     <BenefitItem icon={<FaChartLine className="h-6 w-6" />} title="Increase Revenue">
+                     <BenefitItem icon={<LineChart className="h-6 w-6" />} title="Increase Revenue">
                         Utilize analytics to identify popular services and opportunities for growth.
                     </BenefitItem>
                 </div>
@@ -346,11 +347,11 @@ export default function CrmHomePage() {
             <h2 className="text-3xl font-bold text-center mb-12 font-headline">Frequently Asked Questions</h2>
             <div className="space-y-4">
               <Card className="bg-background">
-                <CardHeader><CardTitle className="flex items-center gap-3"><FaQuestionCircle className="text-primary"/> Is my data secure?</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-3"><HelpCircle className="text-primary"/> Is my data secure?</CardTitle></CardHeader>
                 <CardContent><p className="text-muted-foreground">Yes, we use industry-standard encryption and security practices to keep your business and client data safe.</p></CardContent>
               </Card>
               <Card className="bg-background">
-                <CardHeader><CardTitle className="flex items-center gap-3"><FaQuestionCircle className="text-primary"/> Can I use this on multiple devices?</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center gap-3"><HelpCircle className="text-primary"/> Can I use this on multiple devices?</CardTitle></CardHeader>
                 <CardContent><p className="text-muted-foreground">Absolutely. Our CRM is fully responsive and works beautifully on desktops, tablets, and smartphones.</p></CardContent>
               </Card>
             </div>
@@ -363,7 +364,7 @@ export default function CrmHomePage() {
                 <h2 className="text-3xl font-bold font-headline mb-4">Ready to Grow Your Business?</h2>
                 <p className="text-muted-foreground mb-8">Join hundreds of successful salons. Get started today.</p>
                 <Button size="lg" asChild>
-                    <Link href="/login">Sign Up Now <FaUserPlus className="ml-2 h-4 w-4"/></Link>
+                    <Link href="/login">Sign Up Now <UserPlus className="ml-2 h-4 w-4"/></Link>
                 </Button>
             </div>
         </section>
