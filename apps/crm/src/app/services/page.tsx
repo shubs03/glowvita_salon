@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
 import { useGetCategoriesQuery, useCreateCategoryMutation, useGetServicesQuery } from '@repo/store/api';
+import Image from 'next/image';
 
 type Service = {
   id: string;
@@ -49,13 +50,15 @@ const mockStaff = ['Jane Doe', 'John Smith', 'Emily White'];
 
 const AddCategoryModal = ({isOpen, onClose, onCategoryCreated}: {isOpen: boolean, onClose: () => void, onCategoryCreated: (category: any) => void}) => {
     const [newCategoryName, setNewCategoryName] = useState('');
+    const [description, setDescription] = useState('');
     const [createCategory, { isLoading }] = useCreateCategoryMutation();
 
     const handleCreateCategory = async () => {
         if (newCategoryName.trim()) {
             try {
-                const newCategory = await createCategory({ name: newCategoryName }).unwrap();
+                const newCategory = await createCategory({ name: newCategoryName, description }).unwrap();
                 setNewCategoryName('');
+                setDescription('');
                 onCategoryCreated(newCategory);
                 onClose();
             } catch (error) {
@@ -66,17 +69,24 @@ const AddCategoryModal = ({isOpen, onClose, onCategoryCreated}: {isOpen: boolean
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-xs">
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Create New Category</DialogTitle>
+                    <DialogDescription>Add a new category for your services.</DialogDescription>
                 </DialogHeader>
-                <div className="space-y-2">
-                    <Label htmlFor="new-category">Category Name</Label>
-                    <Input id="new-category" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} disabled={isLoading}/>
+                <div className="space-y-4 py-2">
+                    <div className="space-y-2">
+                        <Label htmlFor="new-category">Category Name</Label>
+                        <Input id="new-category" placeholder="e.g., Hair Styling" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} disabled={isLoading}/>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="new-category-description">Description</Label>
+                        <Textarea id="new-category-description" placeholder="A brief description of the category." value={description} onChange={(e) => setDescription(e.target.value)} disabled={isLoading}/>
+                    </div>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose} disabled={isLoading}>Cancel</Button>
-                    <Button onClick={handleCreateCategory} disabled={isLoading}>
+                    <Button onClick={handleCreateCategory} disabled={isLoading || !newCategoryName.trim()}>
                         {isLoading ? "Creating..." : "Create"}
                     </Button>
                 </DialogFooter>
@@ -98,7 +108,6 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
         const initialData = service || {};
         setFormData(initialData);
         setActiveTab('basic');
-        // If it's a new service, default to creating a new service name
         setIsCreatingNewService(!service);
     }, [service, isOpen]);
 
@@ -113,8 +122,8 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
 
     const handleCategoryChange = (categoryId: string) => {
         const category = categories.find((c: any) => c._id === categoryId);
-        setFormData(prev => ({ ...prev, category: category?.name, name: '' })); // Reset service name on category change
-        setIsCreatingNewService(false); // Default to selecting an existing service
+        setFormData(prev => ({ ...prev, category: category?.name, name: '' })); 
+        setIsCreatingNewService(false);
     };
 
     const handleCheckboxChange = (name: string, id: string, checked: boolean) => {
@@ -135,7 +144,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
 
     const handleCategoryCreated = (newCategory: any) => {
         setFormData(prev => ({ ...prev, category: newCategory.name }));
-        setIsCreatingNewService(true); // After creating a new category, expect a new service name
+        setIsCreatingNewService(true);
     };
     
     const servicesForCategory = formData.category 
@@ -160,10 +169,10 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
             <div className="space-y-2">
                 <Label htmlFor="name">Service Name</Label>
                 {isCreatingNewService || servicesForCategory.length === 0 ? (
-                     <Input id="name" name="name" value={formData.name} onChange={handleInputChange} placeholder="Enter a new service name" />
+                     <Input id="name" name="name" value={formData.name || ''} onChange={handleInputChange} placeholder="Enter a new service name" />
                 ) : (
                     <div className="flex gap-2">
-                        <Select value={formData.name} onValueChange={(value) => handleSelectChange('name', value)}>
+                        <Select value={formData.name || ''} onValueChange={(value) => handleSelectChange('name', value)}>
                             <SelectTrigger><SelectValue placeholder="Select Service"/></SelectTrigger>
                             <SelectContent>
                                 {servicesForCategory.map((s:any) => <SelectItem key={s._id} value={s.name}>{s.name}</SelectItem>)}
@@ -176,34 +185,34 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
         </div>
         <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
+            <Textarea id="description" name="description" value={formData.description || ''} onChange={handleInputChange} placeholder="e.g., A premium haircut experience..." />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="space-y-2">
+            <div className="space-y-2">
                 <Label htmlFor="price">Price (₹)</Label>
-                <Input id="price" name="price" type="number" value={formData.price} onChange={handleInputChange} />
+                <Input id="price" name="price" type="number" placeholder="e.g., 500" value={formData.price} onChange={handleInputChange} />
             </div>
-                <div className="space-y-2">
+            <div className="space-y-2">
                 <Label htmlFor="discountedPrice">Discounted Price (₹)</Label>
-                <Input id="discountedPrice" name="discountedPrice" type="number" value={formData.discountedPrice} onChange={handleInputChange} />
+                <Input id="discountedPrice" name="discountedPrice" type="number" placeholder="e.g., 450" value={formData.discountedPrice} onChange={handleInputChange} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="duration">Duration (minutes)</Label>
-                <Input id="duration" name="duration" type="number" value={formData.duration} onChange={handleInputChange} />
+                <Input id="duration" name="duration" type="number" placeholder="e.g., 60" value={formData.duration} onChange={handleInputChange} />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="gender">Gender</Label>
-                <Select value={formData.gender} onValueChange={(value) => handleSelectChange('gender', value)}>
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="unisex">Unisex</SelectItem>
-                    <SelectItem value="men">Men</SelectItem>
-                    <SelectItem value="women">Women</SelectItem>
-                </SelectContent>
+                <Select value={formData.gender || 'unisex'} onValueChange={(value) => handleSelectChange('gender', value)}>
+                    <SelectTrigger><SelectValue/></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="unisex">Unisex</SelectItem>
+                        <SelectItem value="men">Men</SelectItem>
+                        <SelectItem value="women">Women</SelectItem>
+                    </SelectContent>
                 </Select>
             </div>
         </div>
-            <div className="space-y-2">
+        <div className="space-y-2">
             <Label htmlFor="image">Service Image</Label>
             <Input id="image" type="file" />
         </div>
@@ -256,7 +265,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
         <div className="space-y-2">
             <Label htmlFor="bookingInterval">Booking Interval</Label>
             <Select value={String(formData.bookingInterval)} onValueChange={(value) => handleSelectChange('bookingInterval', value)}>
-                <SelectTrigger><SelectValue/></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select interval" /></SelectTrigger>
                 <SelectContent>
                     {[5,10,15,20,25,30,45,60,90,120].map(i => <SelectItem key={i} value={String(i)}>{i} minutes</SelectItem>)}
                 </SelectContent>
@@ -269,7 +278,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
         {formData.tax?.enabled && (
             <div className="grid grid-cols-2 gap-4">
                 <Select value={formData.tax.type} onValueChange={(value) => handleNestedChange('tax', 'type', value)}>
-                    <SelectTrigger><SelectValue/></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select tax type" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="percentage">Percentage</SelectItem>
                         <SelectItem value="fixed">Fixed</SelectItem>
@@ -446,7 +455,7 @@ export default function ServicesPage() {
                                     <TableRow key={service.id}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
-                                                <img src={service.image} alt={service.name} className="h-10 w-10 rounded-md object-cover"/>
+                                                <Image src={service.image} alt={service.name} width={40} height={40} className="h-10 w-10 rounded-md object-cover"/>
                                                 <span className="font-medium">{service.name}</span>
                                             </div>
                                         </TableCell>
@@ -497,3 +506,5 @@ export default function ServicesPage() {
         </div>
     );
 }
+
+    
