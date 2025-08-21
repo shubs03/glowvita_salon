@@ -19,13 +19,26 @@ const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: 
   </div>
 );
 
-const BenefitItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
-    <div className="text-center p-6 bg-background rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300">
-        <div className="mx-auto bg-primary/10 h-12 w-12 flex items-center justify-center rounded-full text-primary mb-4">
-            {icon}
+const BenefitItem = ({ icon, title, children, features }: { icon: React.ReactNode, title: string, children: React.ReactNode, features: string[] }) => (
+    <div className="group relative p-6 bg-background rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/0 via-primary/50 to-primary/0 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></div>
+        <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 bg-primary/10 h-12 w-12 flex items-center justify-center rounded-lg text-primary">
+                {icon}
+            </div>
+            <div className="flex-1">
+                <h3 className="text-xl font-semibold mb-2">{title}</h3>
+                <p className="text-muted-foreground text-sm mb-4">{children}</p>
+            </div>
         </div>
-        <h3 className="text-xl font-semibold mb-2">{title}</h3>
-        <p className="text-muted-foreground">{children}</p>
+        <ul className="space-y-2 text-sm mt-4">
+            {features.map((feature, index) => (
+                <li key={index} className="flex items-center gap-2 text-muted-foreground">
+                    <Check className="h-4 w-4 text-green-500" />
+                    <span>{feature}</span>
+                </li>
+            ))}
+        </ul>
     </div>
 );
 
@@ -182,14 +195,26 @@ export default function CrmHomePage() {
                     </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <BenefitItem icon={<Rocket className="h-6 w-6" />} title="Boost Efficiency">
-                        Automate reminders, streamline bookings, and reduce administrative tasks by up to 40%.
+                    <BenefitItem 
+                        icon={<Rocket className="h-6 w-6" />} 
+                        title="Boost Efficiency"
+                        features={["Automated Reminders", "Quick Invoicing", "Staff Scheduling"]}
+                    >
+                        Reduce administrative tasks by up to 40% and focus on what you do best: making clients happy.
                     </BenefitItem>
-                    <BenefitItem icon={<Users className="h-6 w-6" />} title="Enhance Client Loyalty">
-                        Personalize client experiences with detailed history and preferences, increasing retention.
+                    <BenefitItem 
+                        icon={<Users className="h-6 w-6" />} 
+                        title="Enhance Client Loyalty"
+                        features={["Detailed Client Profiles", "Purchase History", "Personalized Notes"]}
+                    >
+                        Keep your clients coming back by remembering their preferences and providing a personalized experience every time.
                     </BenefitItem>
-                     <BenefitItem icon={<LineChart className="h-6 w-6" />} title="Increase Revenue">
-                        Utilize analytics to identify popular services and opportunities for growth.
+                     <BenefitItem 
+                        icon={<LineChart className="h-6 w-6" />} 
+                        title="Increase Revenue"
+                        features={["Service Analytics", "Client Spend Tracking", "Targeted Promotions"]}
+                    >
+                        Make data-driven decisions to identify your most popular services and create effective marketing campaigns.
                     </BenefitItem>
                 </div>
             </div>
