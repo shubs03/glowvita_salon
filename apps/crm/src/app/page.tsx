@@ -351,62 +351,84 @@ export default function CrmHomePage() {
             </div>
         </section>
 
-
         {/* Pricing Section */}
         <section className="py-20 bg-background">
             <div className="container mx-auto px-4">
-                 <div className="text-center mb-12">
+                <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold font-headline">Choose Your Plan</h2>
                     <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
                         Simple, transparent pricing that scales with your business.
                     </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <Card className="flex flex-col">
-                        <CardHeader>
-                            <CardTitle>Basic</CardTitle>
-                            <CardDescription>Perfect for individual stylists or small salons.</CardDescription>
-                            <p className="text-4xl font-bold pt-4">₹999<span className="text-lg font-normal text-muted-foreground">/mo</span></p>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-center">
+                    {/* Free Trial Card */}
+                    <Card className="flex flex-col text-center justify-center p-6 md:col-span-1 h-full bg-secondary/50">
+                        <CardHeader className="p-0">
+                            <CardTitle>Free Trial</CardTitle>
+                            <CardDescription>Get a taste of all our features.</CardDescription>
                         </CardHeader>
-                        <CardContent className="flex-grow space-y-3">
-                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Up to 50 Clients</p>
-                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Basic Booking</p>
-                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Email Support</p>
+                        <CardContent className="p-0 mt-4">
+                             <p className="text-4xl font-bold">7<span className="text-lg font-normal text-muted-foreground"> Days</span></p>
                         </CardContent>
-                        <CardFooter>
-                           <Button className="w-full" variant="outline">Choose Plan</Button>
+                        <CardFooter className="p-0 mt-4">
+                           <Button className="w-full" variant="outline">Start Free Trial</Button>
                         </CardFooter>
                     </Card>
-                     <Card className="border-primary flex flex-col shadow-lg">
-                        <CardHeader>
-                            <CardTitle>Pro</CardTitle>
-                            <CardDescription>For growing businesses that need more power.</CardDescription>
-                            <p className="text-4xl font-bold pt-4">₹2499<span className="text-lg font-normal text-muted-foreground">/mo</span></p>
-                        </CardHeader>
-                        <CardContent className="flex-grow space-y-3">
-                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Unlimited Clients</p>
-                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Advanced Booking & Analytics</p>
-                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Priority Email & Chat Support</p>
-                        </CardContent>
-                        <CardFooter>
-                           <Button className="w-full">Choose Plan</Button>
-                        </CardFooter>
-                    </Card>
-                     <Card className="flex flex-col">
-                        <CardHeader>
-                            <CardTitle>Enterprise</CardTitle>
-                            <CardDescription>Tailored solutions for large-scale operations.</CardDescription>
-                            <p className="text-4xl font-bold pt-4">Contact Us</p>
-                        </CardHeader>
-                        <CardContent className="flex-grow space-y-3">
-                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Multi-location Support</p>
-                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Custom Integrations</p>
-                            <p className="flex items-center"><Check className="text-green-500 mr-2"/> Dedicated Account Manager</p>
-                        </CardContent>
-                        <CardFooter>
-                           <Button className="w-full" variant="outline">Contact Sales</Button>
-                        </CardFooter>
-                    </Card>
+                    
+                    {/* Paid Plans */}
+                    <div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <Card className="flex flex-col">
+                            <CardHeader>
+                                <CardTitle>2 Months</CardTitle>
+                                <p className="text-3xl font-bold pt-2">₹500</p>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <p className="text-sm text-muted-foreground">Ideal for getting started and experiencing our core features.</p>
+                            </CardContent>
+                            <CardFooter>
+                               <Button className="w-full" variant="outline">Choose Plan</Button>
+                            </CardFooter>
+                        </Card>
+                         <Card className="border-primary flex flex-col shadow-lg relative">
+                            <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2">
+                                <div className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full">MOST POPULAR</div>
+                            </div>
+                            <CardHeader>
+                                <CardTitle>5 Months</CardTitle>
+                                <p className="text-3xl font-bold pt-2">₹1000</p>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <p className="text-sm text-muted-foreground">Best value for established salons looking for growth.</p>
+                            </CardContent>
+                            <CardFooter>
+                               <Button className="w-full">Choose Plan</Button>
+                            </CardFooter>
+                        </Card>
+                        <Card className="flex flex-col">
+                            <CardHeader>
+                                <CardTitle>8 Months</CardTitle>
+                                <p className="text-3xl font-bold pt-2">₹1500</p>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <p className="text-sm text-muted-foreground">Long-term solution with all features unlocked.</p>
+                            </CardContent>
+                            <CardFooter>
+                               <Button className="w-full" variant="outline">Choose Plan</Button>
+                            </CardFooter>
+                        </Card>
+                        <Card className="flex flex-col">
+                            <CardHeader>
+                                <CardTitle>1 Year</CardTitle>
+                                <p className="text-3xl font-bold pt-2">₹2000</p>
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <p className="text-sm text-muted-foreground">Maximum savings for businesses committed to excellence.</p>
+                            </CardContent>
+                            <CardFooter>
+                               <Button className="w-full" variant="outline">Choose Plan</Button>
+                            </CardFooter>
+                        </Card>
+                    </div>
                 </div>
             </div>
         </section>
