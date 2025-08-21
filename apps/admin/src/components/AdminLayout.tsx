@@ -63,7 +63,7 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   if (isLoading || !isAdminAuthenticated) {
     return (
         <div className="flex items-center justify-center h-screen bg-background">
-            <div className="text-foreground">Loading...</div>
+            <div className="text-foreground">Unauthorized Access</div>
         </div>
     )
   }

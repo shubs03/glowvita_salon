@@ -2,7 +2,7 @@
 "use client";
 
 import { useAppDispatch } from '@repo/store/hooks';
-import { setAdminAuth } from "@repo/store/slices/adminAuthSlice";
+import { clearAdminAuth, setAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { useEffect, type ReactNode } from 'react';
 
 // NOTE: JWT decoding is now handled by server-side middleware for security.
