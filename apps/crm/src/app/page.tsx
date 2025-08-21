@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
-import { ArrowRight, Book, CalendarCheck, LineChart, Check, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings, Plus } from 'lucide-react';
+import { ArrowRight, Book, CalendarCheck, LineChart, Check, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings, Plus, Award } from 'lucide-react';
 import Image from 'next/image';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
@@ -260,20 +260,42 @@ export default function CrmHomePage() {
                 </div>
             </div>
         </section>
-
-        {/* Who it's for */}
+        
+        {/* Salon Types Section */}
         <section className="py-20 bg-secondary/50">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-12">
-                    <h2 className="text-3xl font-bold font-headline">Designed For Every Salon</h2>
+                    <h2 className="text-3xl font-bold font-headline">Built for Every Beauty Business</h2>
                     <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-                       Whether you're a solo artist or a multi-location chain, our CRM scales with you.
+                       From solo artists to bustling barbershops, our platform is the perfect fit.
                     </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <Card><CardHeader><CardTitle>Individual Stylists</CardTitle></CardHeader><CardContent><p>Manage your personal brand and clients with ease.</p></CardContent></Card>
-                    <Card><CardHeader><CardTitle>Small Salons</CardTitle></CardHeader><CardContent><p>A perfect fit for teams looking to grow and organize.</p></CardContent></Card>
-                    <Card><CardHeader><CardTitle>Large Chains</CardTitle></CardHeader><CardContent><p>Robust features for multi-location management.</p></CardContent></Card>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 h-[600px] text-white font-bold">
+                    <div className="relative rounded-lg overflow-hidden col-span-2 row-span-2 group">
+                        <Image src="https://placehold.co/600x600.png" alt="Beauty Salon" layout="fill" className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint="beauty salon interior" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <h3 className="absolute bottom-4 left-4 text-2xl">Salons</h3>
+                    </div>
+                    <div className="relative rounded-lg overflow-hidden group">
+                        <Image src="https://placehold.co/300x300.png" alt="Barber Shop" layout="fill" className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint="barber shop" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <h3 className="absolute bottom-4 left-4 text-xl">Barber Shops</h3>
+                    </div>
+                    <div className="relative rounded-lg overflow-hidden group">
+                        <Image src="https://placehold.co/300x300.png" alt="Nail Studio" layout="fill" className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint="nail studio" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <h3 className="absolute bottom-4 left-4 text-xl">Nail Studios</h3>
+                    </div>
+                    <div className="relative rounded-lg overflow-hidden group">
+                        <Image src="https://placehold.co/300x300.png" alt="Spa" layout="fill" className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint="spa wellness" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <h3 className="absolute bottom-4 left-4 text-xl">Spas</h3>
+                    </div>
+                     <div className="relative rounded-lg overflow-hidden group">
+                        <Image src="https://placehold.co/300x300.png" alt="Parlor" layout="fill" className="object-cover group-hover:scale-105 transition-transform duration-500" data-ai-hint="beauty parlor" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <h3 className="absolute bottom-4 left-4 text-xl">Parlors</h3>
+                    </div>
                 </div>
             </div>
         </section>
@@ -293,9 +315,45 @@ export default function CrmHomePage() {
                  </div>
             </div>
         </section>
+        
+        {/* New Certifications Section */}
+        <section className="py-20 bg-secondary/50">
+            <div className="container mx-auto px-4">
+                 <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold font-headline">Recognized for Excellence</h2>
+                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+                        Our commitment to quality and security is backed by industry certifications.
+                    </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                    <Card className="text-center">
+                        <CardContent className="p-6">
+                            <Image src="https://placehold.co/150x150.png" alt="Certificate 1" width={100} height={100} className="mx-auto mb-4" data-ai-hint="award badge" />
+                            <h3 className="font-semibold">Top CRM Software 2024</h3>
+                            <p className="text-sm text-muted-foreground">by TechReview</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="text-center">
+                        <CardContent className="p-6">
+                            <Image src="https://placehold.co/150x150.png" alt="Certificate 2" width={100} height={100} className="mx-auto mb-4" data-ai-hint="security certificate" />
+                             <h3 className="font-semibold">Data Security Certified</h3>
+                            <p className="text-sm text-muted-foreground">by SecureData Inc.</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="text-center">
+                        <CardContent className="p-6">
+                           <Image src="https://placehold.co/150x150.png" alt="Certificate 3" width={100} height={100} className="mx-auto mb-4" data-ai-hint="customer service award" />
+                             <h3 className="font-semibold">Excellence in Support</h3>
+                            <p className="text-sm text-muted-foreground">by ClientFirst Awards</p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </section>
+
 
         {/* Pricing Section */}
-        <section className="py-20 bg-secondary/50">
+        <section className="py-20 bg-background">
             <div className="container mx-auto px-4">
                  <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold font-headline">Choose Your Plan</h2>
@@ -354,14 +412,14 @@ export default function CrmHomePage() {
         </section>
 
         {/* Testimonial Section */}
-        <section className="py-20 bg-background">
+        <section className="py-20 bg-secondary/50">
           <div className="container mx-auto px-4 text-center">
              <h2 className="text-3xl font-bold font-headline mb-4">Loved by Salon Owners</h2>
             <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
               Hear what our partners have to say about how our CRM has transformed their business.
             </p>
             <div className="max-w-md mx-auto">
-                <Card className="bg-secondary/50">
+                <Card className="bg-background">
                     <CardContent className="pt-6">
                         <blockquote className="text-lg">
                             "This CRM has been a game-changer for my salon. I'm more organized, my clients are happier, and my revenue has increased by 20% in just three months!"
@@ -376,7 +434,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* FAQ Section */}
-        <section className="py-20 bg-secondary/50">
+        <section className="py-20 bg-background">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-3xl font-bold text-center mb-12 font-headline">Frequently Asked Questions</h2>
             <div className="space-y-4">
@@ -393,7 +451,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* Final CTA */}
-        <section className="py-20 text-center bg-background">
+        <section className="py-20 text-center bg-secondary/50">
             <div className="container mx-auto px-4">
                 <h2 className="text-3xl font-bold font-headline mb-4">Ready to Grow Your Business?</h2>
                 <p className="text-muted-foreground mb-8">Join hundreds of successful salons. Get started today.</p>
