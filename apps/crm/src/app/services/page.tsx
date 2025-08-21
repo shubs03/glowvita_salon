@@ -54,11 +54,13 @@ const AddItemModal = ({
   onClose,
   onItemCreated,
   itemType,
+  categoryId, // Pass categoryId for creating a service
 }: {
   isOpen: boolean;
   onClose: () => void;
   onItemCreated: (item: any) => void;
   itemType: 'Category' | 'Service';
+  categoryId?: string;
 }) => {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -74,10 +76,8 @@ const AddItemModal = ({
                 let newItem;
                 if (itemType === 'Category') {
                     newItem = await createCategory({ name, description }).unwrap();
-                } else {
-                    // This assumes you pass categoryId when calling for a service, which we'll need to adapt
-                    // For now, let's make a placeholder for the API call
-                    newItem = { id: `SRV-${Date.now()}`, name, description, category: 'placeholder' }; // Placeholder
+                } else if (itemType === 'Service' && categoryId) {
+                    newItem = await createService({ name, description, category: categoryId }).unwrap();
                 }
                 setName('');
                 setDescription('');
@@ -165,17 +165,22 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
 
     const handleCategoryCreated = (newCategory: any) => {
         refetchCategories();
+        // Automatically select the new category
         setFormData(prev => ({ ...prev, category: newCategory.name }));
     };
     
     const handleServiceCreated = (newService: any) => {
         refetchServices();
+        // Automatically select the new service
         setFormData(prev => ({ ...prev, name: newService.name }));
     };
 
     const servicesForCategory = formData.category 
       ? allServices.filter((s: any) => s.category?.name === formData.category) 
       : [];
+      
+    const selectedCategoryId = categories.find((c: any) => c.name === formData.category)?._id;
+
 
     const renderBasicInfoTab = () => (
     <div className="space-y-4">
@@ -183,7 +188,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
             <div className="space-y-2">
                 <Label htmlFor="category">Service Category</Label>
                 <div className="flex gap-2">
-                    <Select onValueChange={handleCategoryChange} value={categories.find((c: any) => c.name === formData.category)?._id || ''}>
+                    <Select onValueChange={handleCategoryChange} value={selectedCategoryId || ''}>
                         <SelectTrigger><SelectValue placeholder="Select Category"/></SelectTrigger>
                         <SelectContent>
                             {categoriesLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : categories.map((cat:any) => <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>)}
@@ -238,8 +243,6 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
             <Label htmlFor="image">Service Image</Label>
             <Input id="image" type="file" />
         </div>
-        <AddItemModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onItemCreated={handleCategoryCreated} itemType="Category" />
-        <AddItemModal isOpen={isServiceModalOpen} onClose={() => setIsServiceModalOpen(false)} onItemCreated={handleServiceCreated} itemType="Service" />
     </div>
     );
 
@@ -351,6 +354,8 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
                 <TabsContent value="booking">{renderBookingTab()}</TabsContent>
             </div>
         </Tabs>
+        <AddItemModal isOpen={isCategoryModalOpen} onClose={() => setIsCategoryModalOpen(false)} onItemCreated={handleCategoryCreated} itemType="Category" />
+        <AddItemModal isOpen={isServiceModalOpen} onClose={() => setIsServiceModalOpen(false)} onItemCreated={handleServiceCreated} itemType="Service" categoryId={selectedCategoryId} />
             <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
             <Button>Save Service</Button>
