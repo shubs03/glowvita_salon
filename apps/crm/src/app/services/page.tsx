@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
@@ -16,13 +16,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
-import { useGetCategoriesQuery, useCreateCategoryMutation, useGetServicesQuery, useCreateServiceMutation } from '@repo/store/api';
+import { useGetCategoriesQuery, useCreateCategoryMutation, useGetServicesQuery, useCreateServiceMutation, useDeleteServiceMutation, useUpdateServiceMutation } from '@repo/store/api';
 import Image from 'next/image';
+import { Skeleton } from '@repo/ui/skeleton';
+import { Pagination } from '@repo/ui/pagination';
 
 type Service = {
+  _id: string;
   id: string;
   name: string;
-  category: string;
+  category: { name: string };
   price: number;
   discountedPrice?: number;
   duration: number; // in minutes
@@ -39,22 +42,14 @@ type Service = {
   status: 'active' | 'inactive';
 };
 
-const mockServices: Service[] = [
-  { id: 'SRV-001', name: 'Deluxe Haircut', category: 'Hair Styling', price: 75, discountedPrice: 65, duration: 60, description: 'A premium haircut experience with wash, cut, and style.', image: 'https://placehold.co/400x400.png', gender: 'unisex', staff: ['Jane Doe', 'John Smith'], commission: true, homeService: { available: true, charges: 20 }, weddingService: { available: false }, bookingInterval: 15, tax: { enabled: true, type: 'percentage', value: 18 }, onlineBooking: true, status: 'active' },
-  { id: 'SRV-002', name: 'Gel Manicure', category: 'Nail Care', price: 55, duration: 45, description: 'Long-lasting gel polish with detailed nail care.', image: 'https://placehold.co/400x400.png', gender: 'women', staff: ['Emily White'], commission: false, homeService: { available: false }, weddingService: { available: false }, bookingInterval: 10, tax: { enabled: false, type: 'fixed', value: 0 }, onlineBooking: true, status: 'active' },
-  { id: 'SRV-003', name: 'Deep Cleansing Facial', category: 'Skincare', price: 120, duration: 75, description: 'A rejuvenating facial to cleanse and refresh your skin.', image: 'https://placehold.co/400x400.png', gender: 'unisex', staff: ['Jane Doe'], commission: true, homeService: { available: false }, weddingService: { available: true, charges: 50 }, bookingInterval: 30, tax: { enabled: true, type: 'fixed', value: 10 }, onlineBooking: true, status: 'inactive' },
-  { id: 'SRV-004', name: 'Balayage Color', category: 'Hair Coloring', price: 250, duration: 180, description: 'Natural-looking, sun-kissed hair color.', image: 'https://placehold.co/400x400.png', gender: 'unisex', staff: ['John Smith'], commission: true, homeService: { available: false }, weddingService: { available: true, charges: 100 }, bookingInterval: 60, tax: { enabled: true, type: 'percentage', value: 18 }, onlineBooking: false, status: 'active' },
-];
-
 const mockStaff = ['Jane Doe', 'John Smith', 'Emily White'];
 
-// Reusable modal for adding categories or services
 const AddItemModal = ({
   isOpen,
   onClose,
   onItemCreated,
   itemType,
-  categoryId, // Pass categoryId for creating a service
+  categoryId,
 }: {
   isOpen: boolean;
   onClose: () => void;
@@ -144,7 +139,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
 
     const handleCategoryChange = (categoryId: string) => {
         const category = categories.find((c: any) => c._id === categoryId);
-        setFormData(prev => ({ ...prev, category: category?.name, name: '' })); 
+        setFormData(prev => ({ ...prev, category: category, name: '' })); 
     };
 
     const handleCheckboxChange = (name: string, id: string, checked: boolean) => {
@@ -166,7 +161,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
     const handleCategoryCreated = (newCategory: any) => {
         refetchCategories();
         // Automatically select the new category
-        setFormData(prev => ({ ...prev, category: newCategory.name }));
+        setFormData(prev => ({ ...prev, category: newCategory }));
     };
     
     const handleServiceCreated = (newService: any) => {
@@ -176,10 +171,10 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
     };
 
     const servicesForCategory = formData.category 
-      ? allServices.filter((s: any) => s.category?.name === formData.category) 
+      ? allServices.filter((s: any) => s.category?._id === (formData.category as any)?._id) 
       : [];
       
-    const selectedCategoryId = categories.find((c: any) => c.name === formData.category)?._id;
+    const selectedCategoryId = (formData.category as any)?._id;
 
 
     const renderBasicInfoTab = () => (
@@ -327,8 +322,14 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
                 <DialogTitle>{service?.name}</DialogTitle>
                 <DialogDescription>{service?.description}</DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-                {/* Display all details here */}
+            <div className="grid gap-4 py-4 text-sm">
+                <div className="grid grid-cols-2 gap-4">
+                  <div><span className="font-semibold">Category:</span> {service?.category?.name || 'N/A'}</div>
+                  <div><span className="font-semibold">Price:</span> ₹{service?.price.toFixed(2)}</div>
+                  <div><span className="font-semibold">Duration:</span> {service?.duration} mins</div>
+                  <div><span className="font-semibold">Gender:</span> {service?.gender}</div>
+                  <div><span className="font-semibold">Status:</span> {service?.status}</div>
+                </div>
             </div>
             <DialogFooter>
                 <Button variant="secondary" onClick={onClose}>Close</Button>
@@ -366,17 +367,28 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: { isOpen: boolean,
 
 
 export default function ServicesPage() {
-    const [services, setServices] = useState<Service[]>(mockServices);
+    const { data: services = [], isLoading, isError, refetch } = useGetServicesQuery(undefined);
+    const [deleteService] = useDeleteServiceMutation();
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
     const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredServices = services.filter(service => 
-        service.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        service.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredServices = useMemo(() => {
+        return services.filter((service: Service) => 
+            service.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            (service.category && service.category.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        );
+    }, [services, searchTerm]);
+
+    const lastItemIndex = currentPage * itemsPerPage;
+    const firstItemIndex = lastItemIndex - itemsPerPage;
+    const currentItems = filteredServices.slice(firstItemIndex, lastItemIndex);
+    const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
 
     const handleOpenModal = (type: 'add' | 'edit' | 'view', service?: Service) => {
         setModalType(type);
@@ -389,14 +401,54 @@ export default function ServicesPage() {
         setIsDeleteModalOpen(true);
     };
 
-    const handleConfirmDelete = () => {
+    const handleConfirmDelete = async () => {
         if(selectedService) {
-            setServices(services.filter(s => s.id !== selectedService.id));
+            await deleteService({ id: selectedService._id }).unwrap();
         }
         setIsDeleteModalOpen(false);
         setSelectedService(null);
     };
     
+    if (isLoading) {
+        return (
+            <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+                <Skeleton className="h-8 w-64" />
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28" />)}
+                </div>
+                <Skeleton className="h-12 w-full" />
+                <Card>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    {[...Array(6)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>)}
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {[...Array(5)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        {[...Array(6)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    if (isError) {
+        return (
+            <div className="p-8 text-center">
+                <h3 className="text-lg font-semibold text-destructive">Failed to load services</h3>
+                <p className="text-muted-foreground">Please try again later.</p>
+                <Button onClick={() => refetch()} className="mt-4">Retry</Button>
+            </div>
+        );
+    }
+
     return (
         <div className="p-4 sm:p-6 lg:p-8">
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -426,7 +478,7 @@ export default function ServicesPage() {
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">₹125.00</div>
+                        <div className="text-2xl font-bold">₹{ (services.reduce((acc: number, s: Service) => acc + s.price, 0) / services.length || 0).toFixed(2) }</div>
                         <p className="text-xs text-muted-foreground">Average across all services</p>
                     </CardContent>
                 </Card>
@@ -436,7 +488,7 @@ export default function ServicesPage() {
                         <BarChart2 className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{new Set(services.map(s => s.category)).size}</div>
+                        <div className="text-2xl font-bold">{new Set(services.map((s: Service) => s.category?.name)).size}</div>
                         <p className="text-xs text-muted-foreground">Unique service categories</p>
                     </CardContent>
                 </Card>
@@ -479,17 +531,17 @@ export default function ServicesPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredServices.map(service => (
-                                    <TableRow key={service.id}>
+                                {currentItems.length > 0 ? currentItems.map((service: Service) => (
+                                    <TableRow key={service._id}>
                                         <TableCell>
                                             <div className="flex items-center gap-3">
-                                                <Image src={service.image} alt={service.name} width={40} height={40} className="h-10 w-10 rounded-md object-cover"/>
+                                                <Image src={service.image || "https://placehold.co/40x40.png"} alt={service.name} width={40} height={40} className="h-10 w-10 rounded-md object-cover"/>
                                                 <span className="font-medium">{service.name}</span>
                                             </div>
                                         </TableCell>
-                                        <TableCell><Badge variant="outline">{service.category}</Badge></TableCell>
+                                        <TableCell><Badge variant="outline">{service.category?.name || 'Uncategorized'}</Badge></TableCell>
                                         <TableCell>{service.duration} mins</TableCell>
-                                        <TableCell>₹{service.price.toFixed(2)}</TableCell>
+                                        <TableCell>₹{service.price?.toFixed(2)}</TableCell>
                                         <TableCell>
                                             <Badge variant={service.status === 'active' ? 'default' : 'secondary'}>{service.status}</Badge>
                                         </TableCell>
@@ -506,10 +558,28 @@ export default function ServicesPage() {
                                             </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                )) : (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                                            No services found.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </div>
+                    {filteredServices.length > 0 && (
+                        <div className="p-4 border-t">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                                itemsPerPage={itemsPerPage}
+                                onItemsPerPageChange={setItemsPerPage}
+                                totalItems={filteredServices.length}
+                            />
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
