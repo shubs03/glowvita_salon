@@ -1,5 +1,6 @@
 import _db from "../../../../../../../packages/lib/src/db.js";
 import ServiceModel from "../../../../../../../packages/lib/src/models/admin/Service.model.js";
+import CategoryModel from "../../../../../../../packages/lib/src/models/admin/Category.model.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();
