@@ -4,8 +4,9 @@
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
-import { ArrowRight, Book, CalendarCheck, LineChart, Check, CheckCircle, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings, Plus } from 'lucide-react';
+import { ArrowRight, Book, CalendarCheck, LineChart, Check, CheckCircle, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings, Plus, Star, Phone, Download } from 'lucide-react';
 import Image from 'next/image';
+import { useState } from 'react';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
   <div className="flex gap-4 items-start p-4 rounded-lg transition-all duration-300 hover:bg-secondary">
@@ -20,7 +21,7 @@ const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: 
 );
 
 const BenefitItem = ({ icon, title, children, features }: { icon: React.ReactNode, title: string, children: React.ReactNode, features: string[] }) => (
-    <div className="group relative p-6 bg-background rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+    <div className="group relative p-6 bg-background rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden text-left">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/0 via-primary/50 to-primary/0 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></div>
         <div className="flex items-start gap-4">
             <div className="flex-shrink-0 bg-primary/10 h-12 w-12 flex items-center justify-center rounded-lg text-primary">
@@ -71,8 +72,31 @@ const ActivityMarquee = () => (
     </div>
 );
 
+const AdvantageCard = ({ stat, title, description, icon }: { stat: string, title: string, description: string, icon: React.ReactNode }) => (
+    <div className="flex-shrink-0 w-80 h-96 bg-background rounded-lg shadow-lg p-8 flex flex-col justify-between relative overflow-hidden">
+        <div className="absolute -top-10 -right-10 text-primary/5 text-[120px]">
+            {icon}
+        </div>
+        <div className="relative z-10">
+            <p className="text-6xl font-bold text-primary">{stat}</p>
+            <h3 className="text-xl font-semibold mt-2">{title}</h3>
+        </div>
+        <p className="text-muted-foreground relative z-10">{description}</p>
+    </div>
+);
+
 
 export default function CrmHomePage() {
+  const [advantageScroll, setAdvantageScroll] = useState(0);
+
+  const scrollAdvantages = (direction: 'left' | 'right') => {
+      const container = document.getElementById('advantages-container');
+      if (container) {
+          const scrollAmount = container.clientWidth / 2;
+          container.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+      }
+  };
+  
   return (
     <div className="flex flex-col min-h-screen bg-secondary/50 text-foreground">
       {/* Header */}
@@ -264,7 +288,7 @@ export default function CrmHomePage() {
         {/* Salon Types Section */}
         <section className="py-20 bg-secondary/50">
             <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
+                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold font-headline">Built for Every Beauty Business</h2>
                     <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
                        From solo artists to bustling barbershops, our platform is the perfect fit.
@@ -426,9 +450,106 @@ export default function CrmHomePage() {
             </div>
         </section>
 
+        {/* New "Everything you need" section */}
+        <section className="py-20 bg-secondary/50">
+            <div className="container mx-auto px-4 max-w-6xl">
+                <div className="text-center">
+                    <h2 className="text-3xl md:text-4xl font-bold font-headline text-pretty">Everything you need to run your business</h2>
+                    <p className="mt-4 max-w-3xl mx-auto text-muted-foreground">
+                        Our platform offers innovative features that bring convenience, efficiency, and an improved experience for both your team members and clients.
+                    </p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+                    <Card className="bg-background/70 border-0 shadow-lg">
+                        <CardHeader>
+                            <CardTitle>Manage</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">Manage bookings, sales, clients, locations, and team members. Analyse your business with advanced reporting and analytics.</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-background/70 border-0 shadow-lg">
+                        <CardHeader>
+                            <CardTitle>Grow</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">Win new clients on the world’s largest beauty and wellness marketplace. Keep them coming back with powerful marketing features.</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-background/70 border-0 shadow-lg">
+                        <CardHeader>
+                            <CardTitle>Get Paid</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-muted-foreground">Get paid fast with seamless payment processing. Reduce no-shows with upfront payments and simplify checkout for clients.</p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </section>
+
+        {/* New Mobile App Promotion Section */}
+        <section className="py-20 bg-background">
+            <div className="container mx-auto px-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-8 rounded-lg">
+                        <h2 className="text-3xl font-bold font-headline mb-2">For Your Clients</h2>
+                        <p className="text-muted-foreground mb-6">Download the <span className="font-semibold text-primary">GlowVita Salon App</span></p>
+                        <ul className="space-y-3 mb-6">
+                            <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Book appointments 24/7</li>
+                            <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Reschedule with ease</li>
+                            <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> View past & upcoming bookings</li>
+                        </ul>
+                         <div className="flex gap-4">
+                            <Button size="lg"><Download className="mr-2 h-4 w-4"/> App Store</Button>
+                            <Button size="lg"><Download className="mr-2 h-4 w-4"/> Google Play</Button>
+                        </div>
+                    </div>
+                    <div className="text-center lg:text-left">
+                        <h2 className="text-3xl font-bold font-headline mb-2">For Your Business</h2>
+                        <p className="text-muted-foreground mb-6">Manage on the go with the <span className="font-semibold text-primary">Vendor CRM App</span></p>
+                        <ul className="space-y-3 mb-6 inline-block text-left">
+                            <li className="flex items-center gap-3"><Star className="h-5 w-5 text-yellow-500" /> Manage your calendar</li>
+                            <li className="flex items-center gap-3"><Star className="h-5 w-5 text-yellow-500" /> View client information</li>
+                            <li className="flex items-center gap-3"><Star className="h-5 w-5 text-yellow-500" /> Track your performance</li>
+                        </ul>
+                        <div className="flex gap-4 justify-center lg:justify-start">
+                             <Button size="lg" variant="outline"><Download className="mr-2 h-4 w-4"/> App Store</Button>
+                             <Button size="lg" variant="outline"><Download className="mr-2 h-4 w-4"/> Google Play</Button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+         {/* New CRM Advantages Section */}
+        <section className="py-20 bg-secondary/50 relative overflow-hidden">
+            <div className="container mx-auto px-4">
+                 <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold font-headline">Unlock Your Potential</h2>
+                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
+                        See the real-world impact of using our CRM.
+                    </p>
+                </div>
+
+                <div id="advantages-container" className="flex gap-8 pb-8 overflow-x-auto snap-x snap-mandatory no-scrollbar">
+                    <AdvantageCard stat="40%" title="Increase in Bookings" description="Clients booking through our platform are more likely to commit." icon={<CalendarCheck/>}/>
+                    <AdvantageCard stat="25%" title="More Repeat Clients" description="Build loyalty with detailed client profiles and personalized service." icon={<Users/>}/>
+                    <AdvantageCard stat="15%" title="Higher Average Spend" description="Upsell services and products by understanding client history." icon={<LineChart/>}/>
+                    <AdvantageCard stat="50%" title="Less Admin Time" description="Automate reminders and administrative tasks to focus on your craft." icon={<Clock/>}/>
+                </div>
+                
+                <div className="flex justify-end mt-4">
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="icon" onClick={() => scrollAdvantages('left')}><ArrowRight className="h-4 w-4 transform rotate-180" /></Button>
+                        <Button variant="outline" size="icon" onClick={() => scrollAdvantages('right')}><ArrowRight className="h-4 w-4" /></Button>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         {/* Testimonial Section */}
-        <section className="py-20 bg-secondary/50">
+        <section className="py-20 bg-background">
           <div className="container mx-auto px-4 text-center">
              <h2 className="text-3xl font-bold font-headline mb-4">Loved by Salon Owners</h2>
             <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
@@ -450,7 +571,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* FAQ Section */}
-        <section className="py-20 bg-background">
+        <section className="py-20 bg-secondary/50">
           <div className="container mx-auto px-4 max-w-4xl">
             <h2 className="text-3xl font-bold text-center mb-12 font-headline">Frequently Asked Questions</h2>
             <div className="space-y-4">
@@ -467,7 +588,7 @@ export default function CrmHomePage() {
         </section>
 
         {/* Final CTA */}
-        <section className="py-20 text-center bg-secondary/50">
+        <section className="py-20 text-center bg-background">
             <div className="container mx-auto px-4">
                 <h2 className="text-3xl font-bold font-headline mb-4">Ready to Grow Your Business?</h2>
                 <p className="text-muted-foreground mb-8">Join hundreds of successful salons. Get started today.</p>
