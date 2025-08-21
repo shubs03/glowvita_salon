@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
-import { FaArrowRight, FaBook, FaCalendarCheck, FaChartLine, FaCheck, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaRocket, FaSignInAlt, FaUserPlus, FaUsers, FaShieldAlt, FaCogs } from 'react-icons/fa';
+import { ArrowRight, FaBook, FaCalendarCheck, FaChartLine, FaCheck, FaComments, FaCreditCard, FaCut, FaQuestionCircle, FaRocket, FaSignInAlt, FaUserPlus, FaUsers, FaShieldAlt, FaCogs } from 'lucide-react';
 import Image from 'next/image';
 
 const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: string, children: React.ReactNode }) => (
@@ -60,7 +60,7 @@ export default function CrmHomePage() {
             </Button>
             <Button asChild>
               <Link href="/login">
-                Get Started <FaArrowRight className="ml-2 h-4 w-4" />
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </nav>
@@ -70,10 +70,15 @@ export default function CrmHomePage() {
       {/* Main Content */}
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="relative py-20 md:py-32 text-center bg-background overflow-hidden">
+        <section className="relative py-20 md:py-24 text-center bg-background overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-background to-secondary/30"></div>
             <div className="absolute inset-0 opacity-5 [background:radial-gradient(125%_125%_at_50%_10%,#fff_40%,#63e_100%)]"></div>
             <div className="container mx-auto px-4 relative z-10">
+                <div className="flex justify-center gap-4 mb-6">
+                    <div className="bg-primary/10 p-3 rounded-full text-primary"><FaCut className="h-6 w-6"/></div>
+                    <div className="bg-primary/10 p-3 rounded-full text-primary"><FaCalendarCheck className="h-6 w-6"/></div>
+                    <div className="bg-primary/10 p-3 rounded-full text-primary"><FaChartLine className="h-6 w-6"/></div>
+                </div>
                 <h1 className="text-4xl md:text-6xl font-extrabold font-headline tracking-tighter mb-4">
                 Elevate Your Salon Business
                 </h1>
@@ -92,9 +97,25 @@ export default function CrmHomePage() {
                     </Link>
                     </Button>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-12 max-w-4xl mx-auto">
+                    <div className="text-center">
+                        <p className="text-4xl font-bold text-primary">10K+</p>
+                        <p className="text-muted-foreground">Happy Vendors</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-4xl font-bold text-primary">40%</p>
+                        <p className="text-muted-foreground">Growth in Bookings</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-4xl font-bold text-primary">24/7</p>
+                        <p className="text-muted-foreground">Instant Support</p>
+                    </div>
+                </div>
             </div>
-            <ActivityMarquee/>
+            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-secondary/50 to-transparent"></div>
         </section>
+
+        <ActivityMarquee/>
 
         {/* Features Section */}
         <section className="py-20 bg-background">
@@ -357,4 +378,3 @@ export default function CrmHomePage() {
     </div>
   );
 }
-
