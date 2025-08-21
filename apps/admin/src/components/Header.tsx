@@ -6,7 +6,7 @@ import { Button } from "@repo/ui/button";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAppDispatch } from '@repo/store/hooks';
-import { clearAdminAuth } from '@repo/store/slices/auth';
+import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import Cookies from 'js-cookie';
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
