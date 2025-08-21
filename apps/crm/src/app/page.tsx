@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
-import { ArrowRight, Book, CalendarCheck, LineChart, Check, CheckCircle, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings, Plus, Star, Phone, Download, Clock } from 'lucide-react';
+import { ArrowRight, Book, CalendarCheck, LineChart, Check, CheckCircle, MessageSquare, CreditCard, Scissors, HelpCircle, Rocket, LogIn, UserPlus, Users, Shield, Settings, Plus, Star, Phone, Download, Clock, PlayCircle } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 
@@ -21,54 +21,23 @@ const FeatureItem = ({ icon, title, children }: { icon: React.ReactNode, title: 
 );
 
 const BenefitItem = ({ icon, title, children, features }: { icon: React.ReactNode, title: string, children: React.ReactNode, features: string[] }) => (
-    <div className="group relative p-6 bg-background rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden text-left">
+    <div className="group relative p-8 bg-background rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden text-left border">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/0 via-primary/50 to-primary/0 transform -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></div>
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-4 mb-4">
             <div className="flex-shrink-0 bg-primary/10 h-12 w-12 flex items-center justify-center rounded-lg text-primary">
                 {icon}
             </div>
-            <div className="flex-1">
-                <h3 className="text-xl font-semibold mb-2">{title}</h3>
-                <p className="text-muted-foreground text-sm mb-4">{children}</p>
-            </div>
+            <h3 className="text-xl font-semibold">{title}</h3>
         </div>
-        <ul className="space-y-2 text-sm mt-4">
+        <p className="text-muted-foreground text-sm mb-6">{children}</p>
+        <ul className="space-y-3 text-sm">
             {features.map((feature, index) => (
-                <li key={index} className="flex items-center gap-2 text-muted-foreground">
-                    <Check className="h-4 w-4 text-green-500" />
+                <li key={index} className="flex items-center gap-3 text-muted-foreground">
+                    <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
                     <span>{feature}</span>
                 </li>
             ))}
         </ul>
-    </div>
-);
-
-const MarqueeItem = ({ icon, text }: { icon: React.ReactNode, text: React.ReactNode }) => (
-    <div className="flex items-center gap-3 mx-6">
-        <div className="flex-shrink-0 bg-secondary p-2 rounded-full">
-            {icon}
-        </div>
-        <p className="text-sm text-muted-foreground">{text}</p>
-    </div>
-);
-
-const ActivityMarquee = () => (
-    <div className="relative w-full py-4 bg-background border-y overflow-hidden">
-        <div className="absolute inset-0 z-10 [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]"></div>
-        <div className="flex animate-marquee whitespace-nowrap">
-            <MarqueeItem icon={<CheckCircle className="h-4 w-4 text-green-500"/>} text={<><span className="font-semibold text-foreground">Glamour Salon</span> just got a new 5-star review.</>} />
-            <MarqueeItem icon={<CalendarCheck className="h-4 w-4 text-blue-500"/>} text={<><span className="font-semibold text-foreground">Modern Cuts</span> has a new booking for 2:30 PM.</>} />
-            <MarqueeItem icon={<Plus className="h-4 w-4 text-purple-500"/>} text={<><span className="font-semibold text-foreground">Style Hub</span> added a new service: "Keratin Treatment".</>} />
-            <MarqueeItem icon={<UserPlus className="h-4 w-4 text-indigo-500"/>} text={<><span className="font-semibold text-foreground">Beauty Bliss</span> has 5 new clients this week.</>} />
-            <MarqueeItem icon={<CreditCard className="h-4 w-4 text-pink-500"/>} text={<><span className="font-semibold text-foreground">The Barber Shop</span> processed a payment of ₹1,500.</>} />
-        </div>
-        <div className="absolute top-0 flex animate-marquee2 whitespace-nowrap py-4">
-            <MarqueeItem icon={<CheckCircle className="h-4 w-4 text-green-500"/>} text={<><span className="font-semibold text-foreground">Glamour Salon</span> just got a new 5-star review.</>} />
-            <MarqueeItem icon={<CalendarCheck className="h-4 w-4 text-blue-500"/>} text={<><span className="font-semibold text-foreground">Modern Cuts</span> has a new booking for 2:30 PM.</>} />
-            <MarqueeItem icon={<Plus className="h-4 w-4 text-purple-500"/>} text={<><span className="font-semibold text-foreground">Style Hub</span> added a new service: "Keratin Treatment".</>} />
-            <MarqueeItem icon={<UserPlus className="h-4 w-4 text-indigo-500"/>} text={<><span className="font-semibold text-foreground">Beauty Bliss</span> has 5 new clients this week.</>} />
-            <MarqueeItem icon={<CreditCard className="h-4 w-4 text-pink-500"/>} text={<><span className="font-semibold text-foreground">The Barber Shop</span> processed a payment of ₹1,500.</>} />
-        </div>
     </div>
 );
 
@@ -85,7 +54,103 @@ const AdvantageCard = ({ stat, title, description, icon }: { stat: string, title
     </div>
 );
 
+const TestimonialCard = ({ review, author, role, rating }: { review: string, author: string, role: string, rating: number }) => (
+    <div className="shrink-0 snap-center overflow-hidden" style={{width: '300px'}}>
+        <div className="flex h-[480px] flex-col items-start gap-3 overflow-hidden rounded-xl bg-muted p-8 text-muted-foreground">
+            <div className="flex h-5 gap-2 text-yellow-400">
+                {[...Array(rating)].map((_, i) => <Star key={i} className="h-5 w-5" fill="currentColor"/>)}
+                {[...Array(5 - rating)].map((_, i) => <Star key={i+rating} className="h-5 w-5"/>)}
+            </div>
+            <div className="relative flex-1 overflow-hidden">
+                <div className="h-full overflow-hidden">
+                    <p className="text-[17px] leading-6">{review}</p>
+                </div>
+            </div>
+            <div className="flex w-full items-center justify-between gap-2">
+                <div className="flex min-w-0 flex-col">
+                    <p className="text-[17px] font-medium leading-[24px] text-foreground">{author}</p>
+                    <p className="truncate text-[15px] leading-[20px] text-muted-foreground">{role}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+);
 
+const VideoTestimonialCard = () => (
+     <div className="h-[480px] w-[80vw] shrink-0 snap-center overflow-hidden laptop:w-[853px]">
+        <div className="relative size-full overflow-hidden rounded-xl group">
+            <Image 
+                src="https://placehold.co/853x480.png"
+                alt="Testimonial video poster"
+                layout="fill"
+                objectFit="cover"
+                className="transition-transform duration-300 group-hover:scale-105"
+                data-ai-hint="salon professional"
+            />
+            <div className="absolute inset-0 z-10 flex h-full max-w-full flex-col justify-end rounded-xl text-white bg-gradient-to-t from-black/60 to-transparent">
+                <div className="mx-6 flex items-center justify-between gap-2 pb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="relative flex size-10 shrink-0 overflow-hidden rounded-full border border-white">
+                            <Image src="https://placehold.co/40x40.png" alt="Chris Ward" width={40} height={40} data-ai-hint="portrait man" />
+                        </div>
+                        <div>
+                            <p className="text-[17px] font-medium">Chris Ward</p>
+                            <p className="text-[15px] opacity-80">Founder of HUCKLE</p>
+                        </div>
+                    </div>
+                    <Button variant="ghost" className="bg-white/20 hover:bg-white/30 text-white rounded-full p-0 h-12 w-12">
+                        <PlayCircle className="h-8 w-8" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+const PlatformForCard = ({ title, imageUrl }: { title: string; imageUrl: string }) => (
+    <a className="relative inline-block h-[194px] w-[309px] shrink-0 overflow-hidden rounded-lg transition-shadow hover:shadow-xl group" href="#">
+      <Image
+        className="size-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
+        src={imageUrl}
+        alt={title}
+        width={309}
+        height={194}
+      />
+      <div className="absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/70 to-transparent">
+        <div className="flex flex-row items-center justify-between gap-2 p-4">
+          <div className="text-[20px] font-semibold leading-[28px] text-white">{title}</div>
+          <Button
+            size="icon"
+            className="bg-secondary text-secondary-foreground rounded-full opacity-0 transition-opacity duration-300 ease-in-out group-hover:opacity-100"
+            aria-label={title}
+          >
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </a>
+  );
+  
+const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
+    const items = [
+      { title: 'Hair Salon', imageUrl: 'https://placehold.co/309x194.png', hint: 'hair salon'},
+      { title: 'Nail Salon', imageUrl: 'https://placehold.co/309x194.png', hint: 'nail salon'},
+      { title: 'Barbers', imageUrl: 'https://placehold.co/309x194.png', hint: 'barber shop'},
+      { title: 'Waxing Salon', imageUrl: 'https://placehold.co/309x194.png', hint: 'waxing salon' },
+      { title: 'Medspa', imageUrl: 'https://placehold.co/309x194.png', hint: 'spa' },
+      { title: 'Eyebrow Bar', imageUrl: 'https://placehold.co/309x194.png', hint: 'eyebrows' },
+    ];
+    return (
+      <div className="w-full overflow-hidden">
+        <div className={`flex w-fit items-start space-x-8 ${rtl ? 'animate-[slide-rtl_90s_linear_infinite]' : 'animate-[slide_90s_linear_infinite]'} hover:[animation-play-state:paused]`}>
+            {[...items, ...items].map((item, index) => (
+                <PlatformForCard key={`${item.title}-${index}`} title={item.title} imageUrl={`${item.imageUrl}?hint=${item.hint}`} />
+            ))}
+        </div>
+      </div>
+    );
+};
+  
 export default function CrmHomePage() {
   const [advantageScroll, setAdvantageScroll] = useState(0);
 
@@ -116,14 +181,10 @@ export default function CrmHomePage() {
         </div>
       </header>
 
-      {/* Marquee moved under header */}
-      <ActivityMarquee />
-
       {/* Main Content */}
       <main className="flex-grow">
         {/* Hero Section */}
         <section className="relative py-20 md:py-24 bg-background overflow-hidden">
-            {/* Water drop gradient */}
             <div className="absolute inset-0 opacity-15 [background:radial-gradient(125%_125%_at_50%_10%,hsl(var(--primary))_40%,transparent_100%)]"></div>
             <div className="container mx-auto px-4 relative z-10">
                 <div className="text-center">
@@ -164,55 +225,10 @@ export default function CrmHomePage() {
             <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-secondary/50 to-transparent"></div>
         </section>
 
-        {/* Features Section */}
+        {/* Why Choose Us */}
         <section className="py-20 bg-background">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-16">
-                    <h2 className="text-3xl font-bold font-headline">Powerful Features, Effortless Control</h2>
-                    <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
-                        Everything you need to manage and grow your salon, all in one place.
-                    </p>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                    <div className="relative rounded-lg overflow-hidden shadow-2xl group">
-                         <Image 
-                            src="https://placehold.co/600x700.png" 
-                            alt="CRM Dashboard Preview" 
-                            width={600} 
-                            height={700}
-                            className="w-full h-auto object-cover transform transition-transform duration-500 group-hover:scale-105"
-                            data-ai-hint="dashboard professional"
-                        />
-                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                    </div>
-                    <div className="space-y-6">
-                         <FeatureItem icon={<Book className="h-6 w-6" />} title="Client Management">
-                            Keep track of all your client details, history, and preferences in one organized place.
-                         </FeatureItem>
-                         <FeatureItem icon={<CalendarCheck className="h-6 w-6" />} title="Smart Booking">
-                            An intuitive calendar to manage appointments, reduce no-shows, and handle rescheduling with ease.
-                         </FeatureItem>
-                         <FeatureItem icon={<CreditCard className="h-6 w-6" />} title="Seamless Payments">
-                            Integrate payments directly into your workflow. Handle transactions, invoices, and payouts effortlessly.
-                         </FeatureItem>
-                         <FeatureItem icon={<Scissors className="h-6 w-6" />} title="Service Management">
-                            Define and manage your service offerings, durations, and pricing with a flexible system.
-                         </FeatureItem>
-                         <FeatureItem icon={<LineChart className="h-6 w-6" />} title="Business Analytics">
-                            Gain valuable insights into your revenue, client growth, and top-performing services with visual reports.
-                         </FeatureItem>
-                         <FeatureItem icon={<MessageSquare className="h-6 w-6" />} title="Team Collaboration">
-                            Keep your team in sync with internal chat, shared notes, and a collaborative to-do list.
-                         </FeatureItem>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        {/* Why Choose Us */}
-        <section className="py-20 bg-secondary/50">
-            <div className="container mx-auto px-4">
-                <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold font-headline">Why Choose Our CRM?</h2>
                     <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">
                         We provide the tools to not just manage, but to grow your business.
@@ -222,30 +238,30 @@ export default function CrmHomePage() {
                     <BenefitItem 
                         icon={<Rocket className="h-6 w-6" />} 
                         title="Boost Efficiency"
-                        features={["Automated Reminders", "Quick Invoicing", "Staff Scheduling"]}
+                        features={["Automated appointment reminders", "Quick client check-in & check-out", "Staff scheduling & payroll reports", "Centralized client communication logs"]}
                     >
-                        Reduce administrative tasks by up to 40% and focus on what you do best: making clients happy.
+                        Reduce administrative tasks and paperwork by up to 40%. Focus on what you do best: making your clients look and feel amazing.
                     </BenefitItem>
                     <BenefitItem 
                         icon={<Users className="h-6 w-6" />} 
                         title="Enhance Client Loyalty"
-                        features={["Detailed Client Profiles", "Purchase History", "Personalized Notes"]}
+                        features={["Detailed client profiles & history", "Personalized birthday & loyalty rewards", "Targeted marketing campaigns", "Post-visit feedback collection"]}
                     >
-                        Keep your clients coming back by remembering their preferences and providing a personalized experience every time.
+                        Keep your clients coming back for more. Remember their preferences and provide a personalized, high-touch experience every time.
                     </BenefitItem>
                      <BenefitItem 
                         icon={<LineChart className="h-6 w-6" />} 
                         title="Increase Revenue"
-                        features={["Service Analytics", "Client Spend Tracking", "Targeted Promotions"]}
+                        features={["Service & product sales analytics", "Client spend tracking & segmentation", "Smart upselling suggestions", "Online booking to capture new clients 24/7"]}
                     >
-                        Make data-driven decisions to identify your most popular services and create effective marketing campaigns.
+                        Make data-driven decisions. Identify your most popular services, understand client spending habits, and create effective marketing campaigns.
                     </BenefitItem>
                 </div>
             </div>
         </section>
         
         {/* Pricing Section */}
-        <section className="py-20 bg-background">
+        <section className="py-20 bg-secondary/50">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold font-headline">Simple Plans for Every Stage</h2>
@@ -254,20 +270,21 @@ export default function CrmHomePage() {
                     </p>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-5xl mx-auto items-start">
-                    <Card className="flex flex-col text-left h-full bg-background/70 border-0 shadow-lg">
+                     <Card className="flex flex-col text-left h-full bg-background/70 border-0 shadow-lg">
                         <CardHeader>
-                            <CardTitle className="text-lg font-semibold">Free Trial</CardTitle>
-                            <CardDescription>Explore all features, no credit card required.</CardDescription>
+                            <CardTitle className="text-lg font-semibold">Basic Plan</CardTitle>
+                            <CardDescription>Perfect for new and growing salons.</CardDescription>
                         </CardHeader>
                         <CardContent className="flex-grow space-y-4">
-                             <p className="text-4xl font-bold">7<span className="text-base font-normal text-muted-foreground"> Days Free</span></p>
-                             <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Full feature access</li>
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Up to 5 team members</li>
-                             </ul>
+                            <p className="text-4xl font-bold">₹500<span className="text-base font-normal text-muted-foreground">/ 2 months</span></p>
+                            <ul className="space-y-3 text-sm text-muted-foreground">
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span><span className="font-semibold text-foreground">Core CRM Features:</span> Client profiles, appointment booking, and basic reporting.</span></li>
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span>Up to 500 Active Clients</span></li>
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span>Standard Email Support</span></li>
+                            </ul>
                         </CardContent>
                         <CardFooter>
-                           <Button className="w-full" variant="outline">Start Free Trial</Button>
+                           <Button className="w-full" variant="outline">Choose Basic Plan</Button>
                         </CardFooter>
                     </Card>
                     
@@ -281,12 +298,12 @@ export default function CrmHomePage() {
                         </CardHeader>
                         <CardContent className="flex-grow space-y-4">
                             <p className="text-4xl font-bold">₹1000<span className="text-base font-normal text-muted-foreground">/ 5 months</span></p>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Unlimited Clients</li>
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Unlimited Bookings</li>
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Advanced Analytics</li>
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Email & SMS Marketing</li>
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Priority Support</li>
+                            <ul className="space-y-3 text-sm text-muted-foreground">
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span><span className="font-semibold text-foreground">Everything in Basic, plus:</span></span></li>
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span>Unlimited Clients & Bookings</span></li>
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span>Advanced Analytics & Reporting</span></li>
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span>Email & SMS Marketing Tools</span></li>
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span>Priority Phone & Email Support</span></li>
                             </ul>
                         </CardContent>
                         <CardFooter>
@@ -294,22 +311,21 @@ export default function CrmHomePage() {
                         </CardFooter>
                     </Card>
                     
-                     <Card className="flex flex-col text-left h-full bg-background/70 border-0 shadow-lg">
+                    <Card className="flex flex-col text-left h-full bg-background/70 border-0 shadow-lg">
                         <CardHeader>
-                            <CardTitle className="text-lg font-semibold">Basic Plan</CardTitle>
-                            <CardDescription>Perfect for new and growing salons.</CardDescription>
+                            <CardTitle className="text-lg font-semibold">Free Trial</CardTitle>
+                            <CardDescription>Explore all Pro features, no credit card required.</CardDescription>
                         </CardHeader>
                         <CardContent className="flex-grow space-y-4">
-                            <p className="text-4xl font-bold">₹500<span className="text-base font-normal text-muted-foreground">/ 2 months</span></p>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Up to 500 Clients</li>
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Basic Booking Tools</li>
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Standard Reporting</li>
-                                <li className="flex items-center gap-2"><Check className="h-4 w-4 text-green-500" /> Community Support</li>
-                            </ul>
+                             <p className="text-4xl font-bold">7<span className="text-base font-normal text-muted-foreground"> Days Free</span></p>
+                             <ul className="space-y-3 text-sm text-muted-foreground">
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span>Full access to all Pro Plan features.</span></li>
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span>Onboard your team and clients.</span></li>
+                                <li className="flex items-start gap-3"><Check className="h-4 w-4 mt-1 text-green-500" /> <span>Experience the growth potential firsthand.</span></li>
+                             </ul>
                         </CardContent>
                         <CardFooter>
-                           <Button className="w-full" variant="outline">Choose Basic Plan</Button>
+                           <Button className="w-full" variant="outline">Start Free Trial</Button>
                         </CardFooter>
                     </Card>
                 </div>
@@ -319,57 +335,59 @@ export default function CrmHomePage() {
             </div>
         </section>
 
-        {/* New "Everything you need" section */}
-        <section className="py-20 bg-secondary/50">
+        {/* Everything you need section */}
+        <section className="py-20 bg-background">
             <div className="container mx-auto px-4 max-w-6xl">
-                <div className="text-center">
-                    <h2 className="text-3xl md:text-4xl font-bold font-headline text-pretty">Everything you need to run your business</h2>
-                    <p className="mt-4 max-w-3xl mx-auto text-muted-foreground">
-                        Our platform offers innovative features that bring convenience, efficiency, and an improved experience for both your team members and clients.
-                    </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
-                    <Card className="bg-background/70 border-0 shadow-lg">
-                        <CardHeader>
-                            <CardTitle>Manage</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground">Manage bookings, sales, clients, locations, and team members. Analyse your business with advanced reporting and analytics.</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-background/70 border-0 shadow-lg">
-                        <CardHeader>
-                            <CardTitle>Grow</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground">Win new clients on the world’s largest beauty and wellness marketplace. Keep them coming back with powerful marketing features.</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-background/70 border-0 shadow-lg">
-                        <CardHeader>
-                            <CardTitle>Get Paid</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-muted-foreground">Get paid fast with seamless payment processing. Reduce no-shows with upfront payments and simplify checkout for clients.</p>
-                        </CardContent>
-                    </Card>
+                <div className="grid md:grid-cols-2 gap-12 items-center">
+                    <div className="md:text-right">
+                         <h2 className="text-3xl md:text-4xl font-bold font-headline text-pretty">Everything you need to run your business</h2>
+                         <p className="mt-4 max-w-xl md:ml-auto text-muted-foreground">
+                            Our platform offers innovative features that bring convenience, efficiency, and an improved experience for both your team members and clients.
+                         </p>
+                    </div>
+                     <div className="space-y-6">
+                        <Card className="bg-secondary/50 border-l-4 border-primary">
+                            <CardHeader>
+                                <CardTitle>Manage</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-muted-foreground">Manage bookings, sales, clients, locations, and team members. Analyse your business with advanced reporting and analytics.</p>
+                            </CardContent>
+                        </Card>
+                         <Card className="bg-secondary/50 border-l-4 border-primary">
+                            <CardHeader>
+                                <CardTitle>Grow</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-muted-foreground">Win new clients on the world’s largest beauty and wellness marketplace. Keep them coming back with powerful marketing features.</p>
+                            </CardContent>
+                        </Card>
+                         <Card className="bg-secondary/50 border-l-4 border-primary">
+                            <CardHeader>
+                                <CardTitle>Get Paid</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-muted-foreground">Get paid fast with seamless payment processing. Reduce no-shows with upfront payments and simplify checkout for clients.</p>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
         </section>
 
-        {/* New Mobile App Promotion Section */}
-        <section className="py-20 bg-background">
+        {/* Mobile App Promotion Section */}
+        <section className="py-20 bg-secondary/50">
             <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-8 rounded-lg">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-8 rounded-lg text-center lg:text-left">
                         <h2 className="text-3xl font-bold font-headline mb-2">For Your Clients</h2>
                         <p className="text-muted-foreground mb-6">Download the <span className="font-semibold text-primary">GlowVita Salon App</span></p>
-                        <ul className="space-y-3 mb-6">
+                        <ul className="space-y-3 mb-6 inline-block text-left">
                             <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Book appointments 24/7</li>
                             <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> Reschedule with ease</li>
                             <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /> View past & upcoming bookings</li>
                         </ul>
-                         <div className="flex gap-4">
+                         <div className="flex gap-4 justify-center lg:justify-start">
                             <Button size="lg"><Download className="mr-2 h-4 w-4"/> App Store</Button>
                             <Button size="lg"><Download className="mr-2 h-4 w-4"/> Google Play</Button>
                         </div>
@@ -391,8 +409,8 @@ export default function CrmHomePage() {
             </div>
         </section>
 
-         {/* New CRM Advantages Section */}
-        <section className="py-20 bg-secondary/50 relative overflow-hidden">
+        {/* CRM Advantages Section */}
+        <section className="py-20 bg-background relative overflow-hidden">
             <div className="container mx-auto px-4">
                  <div className="text-center mb-12">
                     <h2 className="text-3xl font-bold font-headline">Unlock Your Potential</h2>
@@ -416,28 +434,42 @@ export default function CrmHomePage() {
                 </div>
             </div>
         </section>
-
-        {/* Testimonial Section */}
-        <section className="py-20 bg-background">
-          <div className="container mx-auto px-4 text-center">
-             <h2 className="text-3xl font-bold font-headline mb-4">Loved by Salon Owners</h2>
-            <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Hear what our partners have to say about how our CRM has transformed their business.
-            </p>
-            <div className="max-w-md mx-auto">
-                <Card className="bg-background">
-                    <CardContent className="pt-6">
-                        <blockquote className="text-lg">
-                            "This CRM has been a game-changer for my salon. I'm more organized, my clients are happier, and my revenue has increased by 20% in just three months!"
-                        </blockquote>
-                        <footer className="mt-4">
-                            <p className="font-semibold">— Sarah L., Owner of The Glamour Lounge</p>
-                        </footer>
-                    </CardContent>
-                </Card>
+        
+        {/* Top-rated by the industry Section */}
+        <section className="py-20 bg-secondary/50">
+            <div className="container mx-auto px-4">
+                <div className="max-w-3xl mx-auto text-center mb-16">
+                    <h2 className="text-3xl font-bold leading-tight text-primary font-headline">Top-Rated by the Industry</h2>
+                    <p className="mt-4 text-lg text-muted-foreground">
+                        Our dedication to building the best-in-class booking software and delivering exceptional customer experience continues to be recognised time and time again.
+                    </p>
+                </div>
+                <div className="relative">
+                    <div className="flex snap-x snap-mandatory gap-6 overflow-x-auto scroll-smooth px-5 pb-4" style={{ scrollbarWidth: 'none' }}>
+                        <div className="flex gap-6">
+                            <VideoTestimonialCard />
+                            <TestimonialCard author="Pamela B" role="Salon owner, NYC" rating={5} review="I work with booth renters at my top-rated salon in Manhattan. I love Fresha because it offers my clients a professional appointment booking experience with seamless online booking features, automated reminders, and the best payment processing rates." />
+                            <TestimonialCard author="Alex E" role="Hair stylist and owner" rating={5} review="This appointment scheduling software is very user friendly and it's free! I decided to give it a go and was utterly surprised as it had more functionality than previous software I was using. The Fresha marketplace has been incredible for our salon business too."/>
+                            <TestimonialCard author="Gayle S" role="Business owner" rating={5} review="Coming from a much more complicated system, this was so wonderfully easy to figure out and implement. Customer service has always been so kind and responsive. It's a truly fantastic product, and hands down the best salon scheduling system I've seen."/>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
         </section>
+
+        {/* Platform for all section */}
+        <section className="py-20 bg-background">
+            <div className="mx-auto max-w-[2000px] space-y-8">
+                <h2 className="px-5 text-center text-3xl font-bold leading-tight laptop:text-left laptop:text-4xl laptop:leading-tight">A platform suitable for all</h2>
+                <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
+                    <PlatformForMarquee />
+                </div>
+                <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
+                    <PlatformForMarquee rtl={true} />
+                </div>
+            </div>
+        </section>
+
 
         {/* FAQ Section */}
         <section className="py-20 bg-secondary/50">
@@ -477,4 +509,3 @@ export default function CrmHomePage() {
     </div>
   );
 }
-
