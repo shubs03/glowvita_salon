@@ -40,6 +40,8 @@ import {
   Award,
   Heart,
   Globe,
+  Menu, // For mobile menu
+  X, // For mobile menu close
 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
@@ -76,16 +78,16 @@ const BenefitItem = ({
   children: React.ReactNode;
   features: string[];
 }) => (
-  <div className="group relative p-8 bg-gradient-to-br from-background via-background to-primary/5 rounded-md shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden text-left border border-border/50 hover:border-primary/20">
+  <div className="group relative p-6 md:p-8 bg-gradient-to-br from-background via-background to-primary/5 rounded-md shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden text-left border border-border/50 hover:border-primary/20">
     <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-out"></div>
     <div className="absolute top-4 right-4 w-2 h-2 bg-primary/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
     <div className="absolute bottom-4 left-4 w-1 h-8 bg-gradient-to-t from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
     <div className="flex items-start gap-4 mb-4 relative z-10">
-      <div className="flex-shrink-0 bg-gradient-to-br from-primary/10 to-primary/5 h-14 w-14 flex items-center justify-center rounded-xl text-primary shadow-sm group-hover:shadow-md transition-shadow duration-300">
+      <div className="flex-shrink-0 bg-gradient-to-br from-primary/10 to-primary/5 h-12 w-12 md:h-14 md:w-14 flex items-center justify-center rounded-xl text-primary shadow-sm group-hover:shadow-md transition-shadow duration-300">
         {icon}
       </div>
-      <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+      <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
         {title}
       </h3>
     </div>
@@ -117,8 +119,8 @@ const AdvantageCard = ({
   description: string;
   icon: React.ReactNode;
 }) => (
-  <div className="flex-shrink-0 w-80 h-96 bg-gradient-to-br from-background via-background to-primary/5 rounded-md shadow-xl p-8 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all duration-500 border border-border/50">
-    <div className="absolute -top-10 -right-10 text-primary/5 text-[120px] group-hover:text-primary/10 transition-colors duration-500">
+  <div className="flex-shrink-0 w-64 md:w-80 h-80 md:h-96 bg-gradient-to-br from-background via-background to-primary/5 rounded-md shadow-xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all duration-500 border border-border/50">
+    <div className="absolute -top-10 -right-10 text-primary/5 text-9xl md:text-[120px] group-hover:text-primary/10 transition-colors duration-500">
       {icon}
     </div>
     <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -127,14 +129,14 @@ const AdvantageCard = ({
       <div className="absolute top-6 right-6 w-1 h-1 bg-primary/20 rounded-full"></div>
     </div>
     <div className="relative z-10">
-      <p className="text-6xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary transition-all duration-300">
+      <p className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary transition-all duration-300">
         {stat}
       </p>
-      <h3 className="text-xl font-semibold mt-2 group-hover:text-primary transition-colors duration-300">
+      <h3 className="text-lg md:text-xl font-semibold mt-2 group-hover:text-primary transition-colors duration-300">
         {title}
       </h3>
     </div>
-    <p className="text-muted-foreground relative z-10 group-hover:text-foreground transition-colors duration-300">
+    <p className="text-muted-foreground text-sm md:text-base relative z-10 group-hover:text-foreground transition-colors duration-300">
       {description}
     </p>
   </div>
@@ -239,7 +241,7 @@ const PlatformForCard = ({
   hint: string;
 }) => (
   <a
-    className="relative inline-block h-[194px] w-[309px] shrink-0 overflow-hidden rounded-md transition-all duration-300 hover:shadow-2xl group border border-border/50"
+    className="relative inline-block h-40 w-64 md:h-[194px] md:w-[309px] shrink-0 overflow-hidden rounded-md transition-all duration-300 hover:shadow-2xl group border border-border/50"
     href="#"
   >
     <Image
@@ -251,13 +253,13 @@ const PlatformForCard = ({
       data-ai-hint={hint}
     />
     <div className="absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent">
-      <div className="flex flex-row items-center justify-between gap-2 p-4">
-        <div className="text-[20px] font-semibold leading-[28px] text-white">
+      <div className="flex flex-row items-center justify-between gap-2 p-3 md:p-4">
+        <div className="text-base md:text-xl font-semibold leading-tight text-white">
           {title}
         </div>
         <Button
           size="icon"
-          className="bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 rounded-full opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 hover:scale-110"
+          className="bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 rounded-full opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 hover:scale-110 h-8 w-8 md:h-auto md:w-auto"
           aria-label={title}
         >
           <ArrowRight className="h-4 w-4" />
@@ -303,7 +305,7 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
   return (
     <div className="w-full overflow-hidden">
       <div
-        className={`flex w-fit items-start space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
+        className={`flex w-fit items-start space-x-4 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
       >
         {[...items, ...items].map((item, index) => (
           <PlatformForCard
@@ -318,116 +320,9 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
   );
 };
 
-const PhoneCard = ({ src, alt, hint, className, isMain = false }) => (
-  <div className={className}>
-    <div
-      className={`w-full h-full bg-gradient-to-b from-slate-800 to-slate-900 shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer ${isMain ? 'z-10' : ''}`}
-      style={{ clipPath: "polygon(0 1%, 1% 0%, 92% 0%, 100% 1%, 100% 9%, 92% 100%, 1% 100%, 0% 9%)" }}
-    >
-      <div className={`absolute top-2 md:top-3 left-1/2 transform -translate-x-1/2 w-6 md:w-8 h-0.5 md:h-1 bg-slate-600 rounded-full`}></div>
-      <div className={`mt-4 md:mt-6 h-full p-1 md:p-2`}>
-        <div className="w-full h-full bg-slate-100 rounded-sm overflow-hidden relative">
-          <Image
-            src={src}
-            alt={alt}
-            layout="fill"
-            objectFit="cover"
-            className="group-hover:scale-110 transition-transform duration-500"
-            data-ai-hint={hint}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        </div>
-      </div>
-      {isMain && <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-500 -z-10"></div>}
-    </div>
-  </div>
-);
-
-
-const AppPromotionSection = ({
-  appName,
-  title,
-  description,
-  features,
-  appStoreUrl,
-  googlePlayUrl,
-  images,
-  hints,
-  reverse = false,
-}) => (
-  <section className="py-12 md:py-20 relative overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/10"></div>
-    <div className="absolute top-10 md:top-20 left-4 md:left-10 w-20 md:w-32 h-20 md:h-32 bg-primary/10 rounded-full blur-2xl md:blur-3xl"></div>
-    <div className="absolute bottom-10 md:bottom-20 right-4 md:right-10 w-24 md:w-40 h-24 md:h-40 bg-secondary/15 rounded-full blur-2xl md:blur-3xl"></div>
-
-    <div className="container mx-auto px-4 md:px-6 relative z-10">
-      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center ${reverse ? "lg:grid-flow-col-dense" : ""}`}>
-        <div className={`space-y-4 md:space-y-6 ${reverse ? "lg:col-start-2" : ""} order-2 lg:order-1`}>
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-medium">
-            <Sparkles className="h-3 w-3 md:h-4 md:w-4" />
-            {appName}
-          </div>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text leading-tight">
-            {title}
-          </h2>
-          <p className="text-base md:text-lg text-muted-foreground leading-relaxed">{description}</p>
-          <div className="space-y-3 md:space-y-4">
-            {features.map((feature, index) => (
-              <div key={index} className="flex items-center gap-3 md:gap-4 p-2.5 md:p-3 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-all duration-300 group">
-                <div className="bg-green-100 text-green-600 p-1 rounded-full group-hover:scale-110 transition-transform duration-200 flex-shrink-0">
-                  <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />
-                </div>
-                <span className="text-sm md:text-base group-hover:text-foreground transition-colors duration-300">{feature}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4">
-            <Button size="lg" className="group shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base h-12 md:h-14 px-6 md:px-8" asChild>
-              <Link href={appStoreUrl}>
-                <Download className="mr-2 h-4 w-4 md:h-5 md:w-5 group-hover:scale-110 transition-transform duration-200" />
-                App Store
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="group shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base h-12 md:h-14 px-6 md:px-8" asChild>
-              <Link href={googlePlayUrl}>
-                <Download className="mr-2 h-4 w-4 md:h-5 md:w-5 group-hover:scale-110 transition-transform duration-200" />
-                Google Play
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        <div className={`${reverse ? "lg:col-start-1" : ""} order-1 lg:order-2 flex items-center justify-center min-h-[300px] sm:min-h-[450px] lg:min-h-[600px]`}>
-          <div className="relative w-full h-full flex items-center justify-center scale-90 sm:scale-100">
-            <PhoneCard 
-              src={images[0]} 
-              alt={`${appName} screenshot 1`}
-              hint={hints[0]}
-              className="absolute w-[140px] h-[300px] sm:w-[160px] sm:h-[340px] md:w-[180px] md:h-[380px] lg:w-[220px] lg:h-[460px] rotate-[-12deg] translate-x-[-40%] sm:translate-x-[-50%]"
-            />
-            <PhoneCard 
-              src={images[1]} 
-              alt={`${appName} screenshot 2`}
-              hint={hints[1]}
-              isMain
-              className="relative w-[160px] h-[340px] sm:w-[180px] sm:h-[380px] md:w-[200px] md:h-[420px] lg:w-[240px] lg:h-[500px] z-10"
-            />
-            <PhoneCard 
-              src={images[2]} 
-              alt={`${appName} screenshot 3`}
-              hint={hints[2]}
-              className="absolute w-[140px] h-[300px] sm:w-[160px] sm:h-[340px] md:w-[180px] md:h-[380px] lg:w-[220px] lg:h-[460px] rotate-[12deg] translate-x-[40%] sm:translate-x-[50%]"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-);
-
-
 export default function CrmHomePage() {
   const [advantageScroll, setAdvantageScroll] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const scrollAdvantages = (direction: "left" | "right") => {
     const container = document.getElementById("advantages-container");
@@ -447,7 +342,8 @@ export default function CrmHomePage() {
           <div className="font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
             Vendor CRM
           </div>
-          <nav className="flex items-center gap-2">
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-2">
             <Button variant="ghost" className="hover:bg-primary/10" asChild>
               <Link href="#">App links</Link>
             </Button>
@@ -468,61 +364,80 @@ export default function CrmHomePage() {
               </Link>
             </Button>
           </nav>
+          {/* Mobile Nav Toggle */}
+          <div className="md:hidden flex items-center">
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          </div>
         </div>
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-background/95 backdrop-blur-md border-t border-border/50 absolute top-16 left-0 w-full z-30">
+            <nav className="flex flex-col items-center gap-2 p-4">
+              <Button variant="ghost" className="w-full" asChild><Link href="#">App links</Link></Button>
+              <Button variant="ghost" className="w-full" asChild><Link href="#">Support</Link></Button>
+              <Button variant="ghost" className="w-full" asChild><Link href="/login">Login</Link></Button>
+              <Button className="w-full mt-2" asChild><Link href="/login">Get started</Link></Button>
+            </nav>
+          </div>
+        )}
       </header>
 
       <main className="flex-grow">
-        <section className="relative py-10 md:py-14 bg-background overflow-hidden">
+        <section className="relative py-16 md:py-24 bg-background overflow-hidden">
           <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-primary/40 via-transparent to-secondary/40"></div>
-          <div className="absolute top-20 left-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-20 w-80 h-80 bg-secondary/15 rounded-full blur-3xl"></div>
+          <div className="absolute -top-10 left-0 w-32 h-32 md:w-64 md:h-64 bg-primary/10 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-10 right-0 w-40 h-40 md:w-80 md:h-80 bg-secondary/15 rounded-full blur-3xl"></div>
 
           <div className="absolute top-1/4 left-1/4 animate-bounce delay-1000">
-            <Sparkles className="h-6 w-6 text-primary/30" />
+            <Sparkles className="h-4 w-4 md:h-6 md:w-6 text-primary/30" />
           </div>
           <div className="absolute top-1/3 right-1/3 animate-bounce delay-700">
-            <Zap className="h-8 w-8 text-secondary/40" />
+            <Zap className="h-5 w-5 md:h-8 md:w-8 text-secondary/40" />
           </div>
           <div className="absolute bottom-1/3 left-1/3 animate-bounce delay-300">
-            <Star className="h-5 w-5 text-primary/20" />
+            <Star className="h-3 w-3 md:h-5 md:w-5 text-primary/20" />
           </div>
 
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center">
-              <div className="flex justify-center gap-6 mb-8">
-                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-4 rounded-md text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
-                  <Scissors className="h-8 w-8" />
+              <div className="flex justify-center gap-4 md:gap-6 mb-8">
+                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-4 rounded-md text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
+                  <Scissors className="h-6 w-6 md:h-8 md:w-8" />
                 </div>
-                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-4 rounded-md text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
-                  <CalendarCheck className="h-8 w-8" />
+                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-4 rounded-md text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
+                  <CalendarCheck className="h-6 w-6 md:h-8 md:w-8" />
                 </div>
-                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-4 rounded-md text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
-                  <LineChart className="h-8 w-8" />
+                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-4 rounded-md text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
+                  <LineChart className="h-6 w-6 md:h-8 md:w-8" />
                 </div>
               </div>
-              <h1 className="text-5xl md:text-7xl font-extrabold font-headline tracking-tighter mb-6 bg-gradient-to-r from-foreground via-foreground to-foreground/80 bg-clip-text text-transparent">
+              <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-headline tracking-tighter mb-6 bg-gradient-to-r from-foreground via-foreground to-foreground/80 bg-clip-text text-transparent">
                 Elevate Your Salon Business
               </h1>
-              <p className="text-xl md:text-2xl text-muted-foreground max-w-4xl mx-auto mb-10 leading-relaxed">
+              <p className="text-lg md:text-2xl text-muted-foreground max-w-4xl mx-auto mb-10 leading-relaxed">
                 The all-in-one CRM designed for modern salons and stylists.
                 Manage your clients, bookings, and payments seamlessly to unlock
                 your salon's full potential.
               </p>
-              <div className="flex flex-col sm:flex-row gap-6 justify-center mb-16">
+              <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center mb-12 md:mb-16">
                 <Button
                   size="lg"
-                  className="text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                  className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
                   asChild
                 >
                   <Link href="/dashboard">
                     Go to Dashboard{" "}
-                    <Rocket className="ml-2 h-6 w-6 group-hover:scale-110 transition-transform duration-200" />
+                    <Rocket className="ml-2 h-5 w-5 md:h-6 md:w-6 group-hover:scale-110 transition-transform duration-200" />
                   </Link>
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
+                  className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
                   asChild
                 >
                   <Link href="#">Learn More</Link>
@@ -532,51 +447,51 @@ export default function CrmHomePage() {
                 <p className="text-sm text-muted-foreground mb-6">
                   Trusted by leading salons and stylists
                 </p>
-                <div className="flex justify-center items-center gap-12 opacity-60">
+                <div className="flex justify-center items-center gap-6 md:gap-12 opacity-60 flex-wrap">
                   <div className="flex items-center gap-2 hover:opacity-100 transition-opacity duration-300">
-                    <Users className="h-8 w-8" />
-                    <span className="font-semibold">Teams</span>
+                    <Users className="h-6 w-6 md:h-8 md:w-8" />
+                    <span className="font-semibold text-sm md:text-base">Teams</span>
                   </div>
                   <div className="flex items-center gap-2 hover:opacity-100 transition-opacity duration-300">
-                    <Shield className="h-8 w-8" />
-                    <span className="font-semibold">Secure</span>
+                    <Shield className="h-6 w-6 md:h-8 md:w-8" />
+                    <span className="font-semibold text-sm md:text-base">Secure</span>
                   </div>
                   <div className="flex items-center gap-2 hover:opacity-100 transition-opacity duration-300">
-                    <Award className="h-8 w-8" />
-                    <span className="font-semibold">Award Winning</span>
+                    <Award className="h-6 w-6 md:h-8 md:w-8" />
+                    <span className="font-semibold text-sm md:text-base">Award Winning</span>
                   </div>
                   <div className="flex items-center gap-2 hover:opacity-100 transition-opacity duration-300">
-                    <Globe className="h-8 w-8" />
-                    <span className="font-semibold">Global</span>
+                    <Globe className="h-6 w-6 md:h-8 md:w-8" />
+                    <span className="font-semibold text-sm md:text-base">Global</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-secondary/30 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-16 md:h-32 bg-gradient-to-t from-secondary/30 to-transparent"></div>
         </section>
 
-        <section className="py-20 bg-gradient-to-br from-background via-secondary/10 to-background relative overflow-hidden">
+        <section className="py-16 md:py-20 bg-gradient-to-br from-background via-secondary/10 to-background relative overflow-hidden">
           <div className="absolute top-10 right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
           <div className="absolute bottom-10 left-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl"></div>
 
           <div className="container mx-auto px-4 relative z-10">
-            <div className="text-center mb-16">
+            <div className="text-center mb-12 md:mb-16">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
                 <TrendingUp className="h-4 w-4" />
                 Why Choose Us
               </div>
-              <h2 className="text-4xl lg:text-5xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
                 Why Choose Our CRM?
               </h2>
-              <p className="text-muted-foreground text-lg max-w-3xl mx-auto leading-relaxed">
+              <p className="text-muted-foreground text-base md:text-lg max-w-3xl mx-auto leading-relaxed">
                 We provide the tools to not just manage, but to grow your
                 business with innovative features designed for modern salons.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
               <BenefitItem
-                icon={<Rocket className="h-7 w-7" />}
+                icon={<Rocket className="h-6 w-6 md:h-7 md:w-7" />}
                 title="Boost Efficiency"
                 features={[
                   "Automated appointment reminders",
@@ -589,7 +504,7 @@ export default function CrmHomePage() {
                 what you do best: making your clients look and feel amazing.
               </BenefitItem>
               <BenefitItem
-                icon={<Users className="h-7 w-7" />}
+                icon={<Users className="h-6 w-6 md:h-7 md:w-7" />}
                 title="Enhance Client Loyalty"
                 features={[
                   "Detailed client profiles & history",
@@ -603,7 +518,7 @@ export default function CrmHomePage() {
                 every time.
               </BenefitItem>
               <BenefitItem
-                icon={<LineChart className="h-7 w-7" />}
+                icon={<LineChart className="h-6 w-6 md:h-7 md:w-7" />}
                 title="Increase Revenue"
                 features={[
                   "Service & product sales analytics",
@@ -620,7 +535,7 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        <section className="py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
+        <section className="py-16 md:py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
           <div className="absolute inset-0 opacity-30">
             <div className="absolute top-20 left-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
             <div className="absolute bottom-20 right-20 w-80 h-80 bg-secondary/15 rounded-full blur-3xl"></div>
@@ -628,15 +543,15 @@ export default function CrmHomePage() {
           </div>
 
           <div className="container mx-auto px-4 relative z-10">
-            <div className="text-center mb-16">
+            <div className="text-center mb-12 md:mb-16">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
                 <CreditCard className="h-4 w-4" />
                 Pricing Plans
               </div>
-              <h2 className="text-4xl lg:text-5xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
                 Simple Plans for Every Stage
               </h2>
-              <p className="text-muted-foreground text-lg max-w-3xl mx-auto leading-relaxed">
+              <p className="text-muted-foreground text-base md:text-lg max-w-3xl mx-auto leading-relaxed">
                 Transparent pricing that scales as your business grows. No
                 hidden fees, just pure value.
               </p>
@@ -807,7 +722,7 @@ export default function CrmHomePage() {
                 </Link>
                 .
               </p>
-              <div className="flex justify-center items-center gap-8 text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-green-500" />
                   <span>30-day money back guarantee</span>
@@ -821,37 +736,37 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        <section className="py-20 bg-gradient-to-br from-background via-primary/5 to-background relative overflow-hidden">
+        <section className="py-16 md:py-20 bg-gradient-to-br from-background via-primary/5 to-background relative overflow-hidden">
           <div className="absolute top-10 left-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-20 w-32 h-32 bg-secondary/15 rounded-full blur-2xl"></div>
           <div className="container mx-auto px-4 max-w-7xl relative z-10">
-            <div className="grid md:grid-cols-2 gap-16 items-center">
-              <div className="md:text-right space-y-6">
+            <div className="grid md:grid-cols-2 gap-8 md:gap-16 items-center">
+              <div className="md:text-right space-y-4 md:space-y-6">
                 <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4 md:ml-auto">
                   <Settings className="h-4 w-4" />
                   Complete Solution
                 </div>
-                <h2 className="text-4xl md:text-6xl font-bold font-headline text-pretty bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text leading-tight">
+                <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold font-headline text-pretty bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text leading-tight">
                   Everything you need to run your business
                 </h2>
-                <p className="text-xl max-w-xl md:ml-auto text-muted-foreground leading-relaxed">
+                <p className="text-lg md:text-xl max-w-xl md:ml-auto text-muted-foreground leading-relaxed">
                   Our platform offers innovative features that bring
                   convenience, efficiency, and an improved experience for both
                   your team members and clients.
                 </p>
               </div>
-              <div className="space-y-8">
+              <div className="space-y-6 md:space-y-8">
                 <Card className="bg-gradient-to-br from-background to-primary/5 border-l-4 border-primary shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <CardHeader className="relative z-10">
-                    <CardTitle className="flex items-center gap-3 text-xl">
+                  <CardHeader className="relative z-10 pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
                       <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                         <Settings className="h-5 w-5" />
                       </div>
                       Manage
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="relative z-10">
+                  <CardContent className="relative z-10 pt-0">
                     <p className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors duration-300">
                       Manage bookings, sales, clients, locations, and team
                       members. Analyse your business with advanced reporting and
@@ -861,15 +776,15 @@ export default function CrmHomePage() {
                 </Card>
                 <Card className="bg-gradient-to-br from-background to-primary/5 border-l-4 border-primary shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <CardHeader className="relative z-10">
-                    <CardTitle className="flex items-center gap-3 text-xl">
+                  <CardHeader className="relative z-10 pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
                       <div className="bg-green-100 text-green-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                         <TrendingUp className="h-5 w-5" />
                       </div>
                       Grow
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="relative z-10">
+                  <CardContent className="relative z-10 pt-0">
                     <p className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors duration-300">
                       Win new clients on the world's largest beauty and wellness
                       marketplace. Keep them coming back with marketing
@@ -879,15 +794,15 @@ export default function CrmHomePage() {
                 </Card>
                 <Card className="bg-gradient-to-br from-background to-primary/5 border-l-4 border-primary shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  <CardHeader className="relative z-10">
-                    <CardTitle className="flex items-center gap-3 text-xl">
+                  <CardHeader className="relative z-10 pb-4">
+                    <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
                       <div className="bg-purple-100 text-purple-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                         <CreditCard className="h-5 w-5" />
                       </div>
                       Get Paid
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="relative z-10">
+                  <CardContent className="relative z-10 pt-0">
                     <p className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors duration-300">
                       Get paid fast with seamless payment processing. Reduce
                       no-shows with upfront payments and simplify checkout for
@@ -900,77 +815,29 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        <AppPromotionSection
-          appName="For Your Clients"
-          title="GlowVita Salon App"
-          description="Empower your clients with a seamless booking experience that keeps them coming back for more."
-          features={[
-            "Book appointments 24/7 from anywhere",
-            "Reschedule with ease and flexibility",
-            "View past & upcoming bookings",
-            "Receive exclusive offers and rewards",
-          ]}
-          appStoreUrl="#"
-          googlePlayUrl="#"
-          images={[
-            "https://placehold.co/375x812.png",
-            "https://placehold.co/375x812.png",
-            "https://placehold.co/375x812.png",
-          ]}
-          hints={[
-            "app booking screen",
-            "app profile screen",
-            "app services screen",
-          ]}
-        />
-        <AppPromotionSection
-          appName="For Your Business"
-          title="Vendor CRM App"
-          description="Take control of your salon operations with powerful mobile management tools designed for busy professionals."
-          features={[
-            "Manage your calendar on-the-go",
-            "Access detailed client information instantly",
-            "Track your performance metrics",
-            "View comprehensive business reports",
-          ]}
-          appStoreUrl="#"
-          googlePlayUrl="#"
-          images={[
-            "https://placehold.co/375x812.png",
-            "https://placehold.co/375x812.png",
-            "https://placehold.co/375x812.png",
-          ]}
-          hints={[
-            "crm dashboard mobile",
-            "crm calendar mobile",
-            "crm analytics mobile",
-          ]}
-          reverse={true}
-        />
-
-        <section className="py-20 bg-gradient-to-br from-background via-secondary/10 to-background relative overflow-hidden">
+        <section className="py-16 md:py-20 bg-gradient-to-br from-background via-secondary/10 to-background relative overflow-hidden">
           <div className="absolute inset-0">
             <div className="absolute top-20 left-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
             <div className="absolute bottom-20 right-20 w-80 h-80 bg-secondary/15 rounded-full blur-3xl"></div>
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
           </div>
           <div className="container mx-auto px-4 relative z-10">
-            <div className="text-center mb-16">
+            <div className="text-center mb-12 md:mb-16">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
                 <Award className="h-4 w-4" />
                 Real Results
               </div>
-              <h2 className="text-4xl lg:text-5xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
                 Unlock Your Potential
               </h2>
-              <p className="text-muted-foreground text-lg max-w-3xl mx-auto leading-relaxed">
+              <p className="text-muted-foreground text-base md:text-lg max-w-3xl mx-auto leading-relaxed">
                 See the real-world impact of using our CRM. These metrics
                 represent actual improvements from our satisfied clients.
               </p>
             </div>
             <div
               id="advantages-container"
-              className="flex gap-8 pb-8 overflow-x-auto snap-x snap-mandatory no-scrollbar"
+              className="flex gap-4 md:gap-8 pb-8 overflow-x-auto snap-x snap-mandatory no-scrollbar"
             >
               <AdvantageCard
                 stat="40%"
@@ -1020,33 +887,33 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        <section className="py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
+        <section className="py-16 md:py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
           <div className="absolute top-10 right-10 w-40 h-40 bg-primary/5 rounded-full blur-2xl"></div>
           <div className="absolute bottom-10 left-10 w-32 h-32 bg-secondary/10 rounded-full blur-3xl"></div>
 
           <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-4xl mx-auto text-center mb-16">
+            <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
                 <Star className="h-4 w-4 fill-current" />
                 Client Reviews
               </div>
-              <h2 className="text-4xl lg:text-5xl font-bold leading-tight text-primary font-headline mb-6">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-primary font-headline mb-6">
                 Top-Rated by the Industry
               </h2>
-              <p className="text-xl text-muted-foreground leading-relaxed">
+              <p className="text-lg text-muted-foreground leading-relaxed">
                 Our dedication to building the best-in-class booking software
                 and delivering exceptional customer experience continues to be
                 recognized time and time again.
               </p>
             </div>
             <div className="relative">
-              <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-secondary/20 to-transparent z-10 pointer-events-none"></div>
-              <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-secondary/20 to-transparent z-10 pointer-events-none"></div>
+              <div className="absolute left-0 top-0 bottom-0 w-8 md:w-20 bg-gradient-to-r from-secondary/20 to-transparent z-10 pointer-events-none"></div>
+              <div className="absolute right-0 top-0 bottom-0 w-8 md:w-20 bg-gradient-to-l from-secondary/20 to-transparent z-10 pointer-events-none"></div>
               <div
-                className="flex snap-x snap-mandatory gap-8 overflow-x-auto scroll-smooth px-5 pb-4"
+                className="flex snap-x snap-mandatory gap-6 md:gap-8 overflow-x-auto scroll-smooth px-5 pb-4"
                 style={{ scrollbarWidth: "none" }}
               >
-                <div className="flex gap-8">
+                <div className="flex gap-6 md:gap-8">
                   <VideoTestimonialCard />
                   <TestimonialCard
                     author="Pamela B"
@@ -1072,20 +939,20 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        <section className="py-20 bg-gradient-to-br from-background via-primary/5 to-background relative overflow-hidden">
+        <section className="py-16 md:py-20 bg-gradient-to-br from-background via-primary/5 to-background relative overflow-hidden">
           <div className="absolute top-20 left-20 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-10 right-10 w-64 h-64 bg-secondary/15 rounded-full blur-3xl"></div>
 
-          <div className="mx-auto max-w-[2000px] space-y-12 relative z-10">
-            <div className="text-center space-y-4">
+          <div className="mx-auto max-w-[2000px] space-y-8 md:space-y-12 relative z-10">
+            <div className="text-center space-y-4 px-4">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
                 <Globe className="h-4 w-4" />
                 Universal Platform
               </div>
-              <h2 className="px-5 text-4xl lg:text-6xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+              <h2 className="text-3xl sm:text-4xl lg:text-6xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
                 A platform suitable for all
               </h2>
-              <p className="px-5 text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              <p className="text-base md:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
                 Whether you're running a small boutique salon or managing
                 multiple locations, our platform adapts to your unique business
                 needs.
@@ -1101,27 +968,27 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        <section className="py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
+        <section className="py-16 md:py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
           <div className="absolute top-10 left-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-20 w-32 h-32 bg-secondary/15 rounded-full blur-2xl"></div>
           <div className="container mx-auto px-4 max-w-5xl relative z-10">
-            <div className="text-center mb-16">
+            <div className="text-center mb-12 md:mb-16">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
                 <HelpCircle className="h-4 w-4" />
                 FAQ
               </div>
-              <h2 className="text-4xl lg:text-5xl font-bold mb-4 font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
                 Frequently Asked Questions
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+              <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                 Have questions? We've got answers. Here are the most common
                 questions about our platform.
               </p>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
                 <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-4 text-xl group-hover:text-primary transition-colors duration-300">
+                  <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
                     <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                       <Shield className="h-5 w-5" />
                     </div>
@@ -1140,7 +1007,7 @@ export default function CrmHomePage() {
 
               <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
                 <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-4 text-xl group-hover:text-primary transition-colors duration-300">
+                  <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
                     <div className="bg-green-100 text-green-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                       <Settings className="h-5 w-5" />
                     </div>
@@ -1159,7 +1026,7 @@ export default function CrmHomePage() {
 
               <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
                 <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-4 text-xl group-hover:text-primary transition-colors duration-300">
+                  <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
                     <div className="bg-purple-100 text-purple-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                       <Clock className="h-5 w-5" />
                     </div>
@@ -1179,7 +1046,7 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        <section className="py-20 text-center bg-gradient-to-br from-background via-primary/10 to-background relative overflow-hidden">
+        <section className="py-16 md:py-20 text-center bg-gradient-to-br from-background via-primary/10 to-background relative overflow-hidden">
           <div className="absolute inset-0 opacity-40">
             <div className="absolute top-20 left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
             <div className="absolute bottom-20 right-20 w-80 h-80 bg-secondary/25 rounded-full blur-3xl"></div>
@@ -1201,7 +1068,7 @@ export default function CrmHomePage() {
             </div>
           </div>
           <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-4xl mx-auto space-y-8">
+            <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
                 <UserPlus className="h-4 w-4" />
                 Get Started Today
@@ -1209,14 +1076,14 @@ export default function CrmHomePage() {
               <h2 className="text-4xl lg:text-6xl font-bold font-headline mb-6 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent leading-tight">
                 Ready to Grow Your Business?
               </h2>
-              <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
                 Join hundreds of successful salons worldwide. Transform your
                 business today with our powerful, easy-to-use CRM platform.
               </p>
-              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-8">
+              <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center items-center mb-8">
                 <Button
                   size="lg"
-                  className="text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                  className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
                   asChild
                 >
                   <Link href="/login">
@@ -1227,7 +1094,7 @@ export default function CrmHomePage() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="text-lg px-8 py-4 shadow-xl hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
+                  className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
                   asChild
                 >
                   <Link href="#">
@@ -1236,7 +1103,7 @@ export default function CrmHomePage() {
                 </Button>
               </div>
 
-              <div className="flex justify-center items-center gap-8 text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500" />
                   <span>Free 7-day trial</span>
@@ -1258,8 +1125,8 @@ export default function CrmHomePage() {
       <footer className="bg-gradient-to-r from-background via-secondary/10 to-background border-t border-border/50 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+            <div className="space-y-4 md:col-span-2 lg:col-span-1">
               <div className="font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                 Vendor CRM
               </div>

@@ -71,22 +71,22 @@
   }
 }
 
-@keyframes marquee {
+@keyframes slide {
   from { transform: translateX(0); }
-  to { transform: translateX(-100%); }
+  to { transform: translateX(-50%); }
 }
 
-@keyframes marquee2 {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+@keyframes slide-rtl {
+    from { transform: translateX(-50%); }
+    to { transform: translateX(0); }
 }
 
-.animate-marquee {
-  animation: marquee 40s linear infinite;
+.animate-slide {
+  animation: marquee 90s linear infinite;
   flex-shrink: 0;
 }
 
-.animate-marquee2 {
-  animation: marquee2 40s linear infinite;
+.animate-slide-rtl {
+  animation: marquee-rtl 90s linear infinite;
   flex-shrink: 0;
 }
