@@ -13,11 +13,14 @@ interface HeaderProps {
 
 export function Header({ isMobileMenuOpen, toggleMobileMenu }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50 shadow-sm">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        <div className="font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+    <header className="sticky top-0 z-40 bg-background/60 backdrop-blur-2xl border-b border-border/50 before:absolute before:inset-0 before:bg-background/10 before:backdrop-blur-xl before:backdrop-saturate-150 before:z-[-1] before:border-b before:border-white/10">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between relative">
+        <Link
+          href="/"
+          className="font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent after:absolute after:inset-0 after:bg-gradient-to-r after:from-primary/5 after:to-transparent after:blur-2xl after:z-[-1] hover:opacity-80 transition-opacity"
+        >
           Vendor CRM
-        </div>
+        </Link>
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-2">
           <Button variant="ghost" className="hover:bg-primary/10" asChild>
