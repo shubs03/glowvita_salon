@@ -2,30 +2,49 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
 
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const pathname = usePathname();
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Close mobile menu on route change
   useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
-
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen(!isMobileMenuOpen);
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if(mobile) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+     
+  const toggleSidebar = () => {
+    setSidebarOpen(!isSidebarOpen);
   };
      
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <Header isMobileMenuOpen={isMobileMenuOpen} toggleMobileMenu={toggleMobileMenu} />
-      <main className="flex-grow">
-        {children}
-      </main>
-      <Footer />
+    <div className="flex h-screen overflow-hidden bg-secondary">
+      <Sidebar 
+        isOpen={isSidebarOpen} 
+        toggleSidebar={toggleSidebar} 
+        isMobile={isMobile}
+      />
+             
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+        <Header toggleSidebar={toggleSidebar} />
+                 
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="w-full max-w-none overflow-hidden">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
