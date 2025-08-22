@@ -77,16 +77,10 @@ const BenefitItem = ({
   features: string[];
 }) => (
   <div className="group relative p-8 bg-gradient-to-br from-background via-background to-primary/5 rounded-md shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden text-left border border-border/50 hover:border-primary/20">
-    {/* Animated background gradient */}
     <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-    {/* Top accent line */}
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-out"></div>
-
-    {/* Decorative corner elements */}
     <div className="absolute top-4 right-4 w-2 h-2 bg-primary/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
     <div className="absolute bottom-4 left-4 w-1 h-8 bg-gradient-to-t from-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
     <div className="flex items-start gap-4 mb-4 relative z-10">
       <div className="flex-shrink-0 bg-gradient-to-br from-primary/10 to-primary/5 h-14 w-14 flex items-center justify-center rounded-xl text-primary shadow-sm group-hover:shadow-md transition-shadow duration-300">
         {icon}
@@ -124,20 +118,14 @@ const AdvantageCard = ({
   icon: React.ReactNode;
 }) => (
   <div className="flex-shrink-0 w-80 h-96 bg-gradient-to-br from-background via-background to-primary/5 rounded-md shadow-xl p-8 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all duration-500 border border-border/50">
-    {/* Background decoration */}
     <div className="absolute -top-10 -right-10 text-primary/5 text-[120px] group-hover:text-primary/10 transition-colors duration-500">
       {icon}
     </div>
-
-    {/* Animated gradient overlay */}
     <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-    {/* Top corner decoration */}
     <div className="absolute top-0 right-0 w-16 h-16">
       <div className="absolute top-4 right-4 w-2 h-2 bg-primary/30 rounded-full"></div>
       <div className="absolute top-6 right-6 w-1 h-1 bg-primary/20 rounded-full"></div>
     </div>
-
     <div className="relative z-10">
       <p className="text-6xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary transition-all duration-300">
         {stat}
@@ -334,10 +322,10 @@ const PhoneCard = ({ src, alt, hint, className, isMain = false }) => (
   <div className={className}>
     <div
       className={`w-full h-full bg-gradient-to-b from-slate-800 to-slate-900 shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer ${isMain ? 'z-10' : ''}`}
-      style={{ clipPath: "polygon(0 8%, 8% 0%, 92% 0%, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0% 92%)" }}
+      style={{ clipPath: "polygon(0 1%, 1% 0%, 92% 0%, 100% 1%, 100% 9%, 92% 100%, 1% 100%, 0% 9%)" }}
     >
-      <div className={`absolute top-2 md:top-3 left-1/2 transform -translate-x-1/2 w-6 md:w-${isMain ? '12' : '8'} h-0.5 md:h-1 bg-slate-600 rounded-full`}></div>
-      <div className={`mt-4 md:mt-${isMain ? '8' : '6'} h-full p-1 md:p-2`}>
+      <div className={`absolute top-2 md:top-3 left-1/2 transform -translate-x-1/2 w-6 md:w-8 h-0.5 md:h-1 bg-slate-600 rounded-full`}></div>
+      <div className={`mt-4 md:mt-6 h-full p-1 md:p-2`}>
         <div className="w-full h-full bg-slate-100 rounded-sm overflow-hidden relative">
           <Image
             src={src}
@@ -415,20 +403,20 @@ const AppPromotionSection = ({
               src={images[0]} 
               alt={`${appName} screenshot 1`}
               hint={hints[0]}
-              className="absolute w-[140px] h-[280px] sm:w-[160px] sm:h-[320px] md:w-[180px] md:h-[360px] lg:w-[220px] lg:h-[440px] rotate-[-12deg] translate-x-[-40%] sm:translate-x-[-50%]"
+              className="absolute w-[140px] h-[300px] sm:w-[160px] sm:h-[340px] md:w-[180px] md:h-[380px] lg:w-[220px] lg:h-[460px] rotate-[-12deg] translate-x-[-40%] sm:translate-x-[-50%]"
             />
             <PhoneCard 
               src={images[1]} 
               alt={`${appName} screenshot 2`}
               hint={hints[1]}
               isMain
-              className="relative w-[160px] h-[320px] sm:w-[180px] sm:h-[360px] md:w-[200px] md:h-[400px] lg:w-[240px] lg:h-[480px] z-10"
+              className="relative w-[160px] h-[340px] sm:w-[180px] sm:h-[380px] md:w-[200px] md:h-[420px] lg:w-[240px] lg:h-[500px] z-10"
             />
             <PhoneCard 
               src={images[2]} 
               alt={`${appName} screenshot 3`}
               hint={hints[2]}
-              className="absolute w-[140px] h-[280px] sm:w-[160px] sm:h-[320px] md:w-[180px] md:h-[360px] lg:w-[220px] lg:h-[440px] rotate-[12deg] translate-x-[40%] sm:translate-x-[50%]"
+              className="absolute w-[140px] h-[300px] sm:w-[160px] sm:h-[340px] md:w-[180px] md:h-[380px] lg:w-[220px] lg:h-[460px] rotate-[12deg] translate-x-[40%] sm:translate-x-[50%]"
             />
           </div>
         </div>
@@ -454,7 +442,6 @@ export default function CrmHomePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-secondary/30 via-background to-secondary/20 text-foreground">
-      {/* Header */}
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50 shadow-sm">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
@@ -484,16 +471,12 @@ export default function CrmHomePage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-grow">
-        {/* Hero Section */}
         <section className="relative py-10 md:py-14 bg-background overflow-hidden">
-          {/* Enhanced background */}
           <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-primary/40 via-transparent to-secondary/40"></div>
           <div className="absolute top-20 left-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-20 w-80 h-80 bg-secondary/15 rounded-full blur-3xl"></div>
 
-          {/* Animated particles */}
           <div className="absolute top-1/4 left-1/4 animate-bounce delay-1000">
             <Sparkles className="h-6 w-6 text-primary/30" />
           </div>
@@ -573,9 +556,7 @@ export default function CrmHomePage() {
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-secondary/30 to-transparent"></div>
         </section>
 
-        {/* Why Choose Us */}
         <section className="py-20 bg-gradient-to-br from-background via-secondary/10 to-background relative overflow-hidden">
-          {/* Background decorations */}
           <div className="absolute top-10 right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl"></div>
           <div className="absolute bottom-10 left-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl"></div>
 
@@ -639,10 +620,8 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        {/* Pricing Section */}
         <section className="py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
-          {/* Enhanced background decorations */}
-          <div className="absolute top-0 left-0 w-full h-full opacity-30">
+          <div className="absolute inset-0 opacity-30">
             <div className="absolute top-20 left-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
             <div className="absolute bottom-20 right-20 w-80 h-80 bg-secondary/15 rounded-full blur-3xl"></div>
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
@@ -714,9 +693,7 @@ export default function CrmHomePage() {
               </Card>
 
               <Card className="border-2 border-primary flex flex-col shadow-2xl relative h-full bg-gradient-to-br from-background to-primary/5 backdrop-blur-sm rounded-md overflow-hidden group">
-                {/* Glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
                 <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 z-10">
                   <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-sm font-bold px-6 py-2 rounded-full shadow-lg flex items-center gap-2">
                     <Star className="h-4 w-4 fill-current" />
@@ -844,12 +821,9 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        {/* Everything you need section */}
         <section className="py-20 bg-gradient-to-br from-background via-primary/5 to-background relative overflow-hidden">
-          {/* Background decorations */}
           <div className="absolute top-10 left-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-20 w-32 h-32 bg-secondary/15 rounded-full blur-2xl"></div>
-
           <div className="container mx-auto px-4 max-w-7xl relative z-10">
             <div className="grid md:grid-cols-2 gap-16 items-center">
               <div className="md:text-right space-y-6">
@@ -868,7 +842,6 @@ export default function CrmHomePage() {
               </div>
               <div className="space-y-8">
                 <Card className="bg-gradient-to-br from-background to-primary/5 border-l-4 border-primary shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group overflow-hidden">
-                  {/* Hover effect overlay */}
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <CardHeader className="relative z-10">
                     <CardTitle className="flex items-center gap-3 text-xl">
@@ -927,7 +900,6 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        {/* Mobile App Promotion Sections */}
         <AppPromotionSection
           appName="For Your Clients"
           title="GlowVita Salon App"
@@ -951,7 +923,6 @@ export default function CrmHomePage() {
             "app services screen",
           ]}
         />
-
         <AppPromotionSection
           appName="For Your Business"
           title="Vendor CRM App"
@@ -977,15 +948,12 @@ export default function CrmHomePage() {
           reverse={true}
         />
 
-        {/* CRM Advantages Section */}
         <section className="py-20 bg-gradient-to-br from-background via-secondary/10 to-background relative overflow-hidden">
-          {/* Enhanced background */}
           <div className="absolute inset-0">
             <div className="absolute top-20 left-20 w-64 h-64 bg-primary/10 rounded-full blur-3xl"></div>
             <div className="absolute bottom-20 right-20 w-80 h-80 bg-secondary/15 rounded-full blur-3xl"></div>
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
           </div>
-
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
@@ -1000,7 +968,6 @@ export default function CrmHomePage() {
                 represent actual improvements from our satisfied clients.
               </p>
             </div>
-
             <div
               id="advantages-container"
               className="flex gap-8 pb-8 overflow-x-auto snap-x snap-mandatory no-scrollbar"
@@ -1030,7 +997,6 @@ export default function CrmHomePage() {
                 icon={<Clock />}
               />
             </div>
-
             <div className="flex justify-center mt-8">
               <div className="flex gap-3">
                 <Button
@@ -1054,9 +1020,7 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        {/* Top-rated by the industry Section */}
         <section className="py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
-          {/* Background decorations */}
           <div className="absolute top-10 right-10 w-40 h-40 bg-primary/5 rounded-full blur-2xl"></div>
           <div className="absolute bottom-10 left-10 w-32 h-32 bg-secondary/10 rounded-full blur-3xl"></div>
 
@@ -1076,10 +1040,8 @@ export default function CrmHomePage() {
               </p>
             </div>
             <div className="relative">
-              {/* Gradient masks for smooth scroll effect */}
               <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-secondary/20 to-transparent z-10 pointer-events-none"></div>
               <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-secondary/20 to-transparent z-10 pointer-events-none"></div>
-
               <div
                 className="flex snap-x snap-mandatory gap-8 overflow-x-auto scroll-smooth px-5 pb-4"
                 style={{ scrollbarWidth: "none" }}
@@ -1110,9 +1072,7 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        {/* Platform for all section */}
         <section className="py-20 bg-gradient-to-br from-background via-primary/5 to-background relative overflow-hidden">
-          {/* Background decorations */}
           <div className="absolute top-20 left-20 w-48 h-48 bg-primary/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-10 right-10 w-64 h-64 bg-secondary/15 rounded-full blur-3xl"></div>
 
@@ -1141,12 +1101,9 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        {/* FAQ Section */}
         <section className="py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
-          {/* Background decorations */}
           <div className="absolute top-10 left-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-20 w-32 h-32 bg-secondary/15 rounded-full blur-2xl"></div>
-
           <div className="container mx-auto px-4 max-w-5xl relative z-10">
             <div className="text-center mb-16">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
@@ -1222,16 +1179,12 @@ export default function CrmHomePage() {
           </div>
         </section>
 
-        {/* Final CTA */}
         <section className="py-20 text-center bg-gradient-to-br from-background via-primary/10 to-background relative overflow-hidden">
-          {/* Enhanced background decorations */}
           <div className="absolute inset-0 opacity-40">
             <div className="absolute top-20 left-20 w-64 h-64 bg-primary/20 rounded-full blur-3xl"></div>
             <div className="absolute bottom-20 right-20 w-80 h-80 bg-secondary/25 rounded-full blur-3xl"></div>
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/15 rounded-full blur-3xl"></div>
           </div>
-
-          {/* Floating decorative elements */}
           <div className="absolute top-1/4 left-1/4 animate-bounce delay-1000">
             <div className="bg-primary/20 backdrop-blur-sm rounded-full p-3">
               <Rocket className="h-6 w-6 text-primary" />
@@ -1247,23 +1200,19 @@ export default function CrmHomePage() {
               <Sparkles className="h-6 w-6 text-primary" />
             </div>
           </div>
-
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto space-y-8">
               <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
                 <UserPlus className="h-4 w-4" />
                 Get Started Today
               </div>
-
               <h2 className="text-4xl lg:text-6xl font-bold font-headline mb-6 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent leading-tight">
                 Ready to Grow Your Business?
               </h2>
-
               <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
                 Join hundreds of successful salons worldwide. Transform your
                 business today with our powerful, easy-to-use CRM platform.
               </p>
-
               <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-8">
                 <Button
                   size="lg"
@@ -1306,11 +1255,8 @@ export default function CrmHomePage() {
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="bg-gradient-to-r from-background via-secondary/10 to-background border-t border-border/50 relative overflow-hidden">
-        {/* Background decoration */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
-
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div className="space-y-4">
@@ -1322,7 +1268,6 @@ export default function CrmHomePage() {
                 business and delight their clients.
               </p>
             </div>
-
             <div className="space-y-4">
               <h4 className="font-semibold text-foreground">Product</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
@@ -1352,7 +1297,6 @@ export default function CrmHomePage() {
                 </Link>
               </div>
             </div>
-
             <div className="space-y-4">
               <h4 className="font-semibold text-foreground">Company</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
@@ -1382,7 +1326,6 @@ export default function CrmHomePage() {
                 </Link>
               </div>
             </div>
-
             <div className="space-y-4">
               <h4 className="font-semibold text-foreground">Support</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
@@ -1413,7 +1356,6 @@ export default function CrmHomePage() {
               </div>
             </div>
           </div>
-
           <div className="border-t border-border/50 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="text-center md:text-left text-muted-foreground text-sm">
               &copy; {new Date().getFullYear()} Vendor CRM. All Rights Reserved.
