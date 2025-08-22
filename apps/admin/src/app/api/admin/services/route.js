@@ -21,9 +21,9 @@ export const GET = async () => {
 // POST a new service
 export const POST = async (req) => {
   const body = await req.json();
-  const { name, description, category } = body;
+  const { name, description, category , image} = body;
 
-  if (!name || !category) {
+  if (!name || !category ) {
     return Response.json(
       { message: "Name and category are required" },
       { status: 400 }
@@ -35,6 +35,7 @@ export const POST = async (req) => {
       name,
       description,
       category,
+      serviceImage: image
     });
     return Response.json(newService, { status: 201 });
   } catch (error) {
@@ -48,7 +49,8 @@ export const POST = async (req) => {
 // PUT (update) a service by ID
 export const PUT = authMiddlewareAdmin(
   async (req) => {
-    const { id, ...updateData } = await req.json();
+    const body = await req.json();
+    const { id, ...updateData } = body;
 
     if (!id) {
       return Response.json(
@@ -57,12 +59,19 @@ export const PUT = authMiddlewareAdmin(
       );
     }
 
+    // Rename 'image' to 'serviceImage' if it exists in updateData
+    if (updateData.image !== undefined) {
+      updateData.serviceImage = updateData.image;
+      delete updateData.image;
+    }
+
     try {
       const updatedService = await ServiceModel.findByIdAndUpdate(
         id,
         updateData,
         { new: true }
       );
+      
       if (!updatedService) {
         return Response.json({ message: "Service not found" }, { status: 404 });
       }
