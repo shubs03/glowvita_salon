@@ -3,29 +3,49 @@
 
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
-import { CheckCircle, Download, Shield, BarChart, Users, Star } from 'lucide-react';
+import { CheckCircle, Download, Shield, BarChart, Users, Star, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 
 const AppFeature = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
-  <div className="flex items-start gap-4">
-    <div className="flex-shrink-0 bg-primary/10 text-primary p-3 rounded-full">{icon}</div>
-    <div>
-      <h4 className="font-semibold text-lg">{title}</h4>
-      <p className="text-muted-foreground">{description}</p>
+  <Card className="text-center p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group bg-secondary/50 hover:bg-background">
+    <div className="flex justify-center mb-4">
+        <div className="flex-shrink-0 bg-primary/10 text-primary p-4 rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">{icon}</div>
     </div>
-  </div>
+    <h4 className="font-semibold text-lg mb-2">{title}</h4>
+    <p className="text-muted-foreground text-sm">{description}</p>
+  </Card>
 );
 
 const AppStoreButtons = () => (
-  <div className="flex flex-col sm:flex-row gap-4 mt-6">
-    <Button size="lg" className="w-full sm:w-auto bg-black hover:bg-black/80 text-white">
+  <div className="flex flex-col sm:flex-row gap-4 mt-8">
+    <Button size="lg" className="w-full sm:w-auto bg-black hover:bg-black/80 text-white rounded-full shadow-lg hover:shadow-xl transition-all">
       <Download className="mr-2 h-5 w-5" /> Download on the App Store
     </Button>
-    <Button size="lg" variant="outline" className="w-full sm:w-auto">
+    <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full shadow-lg hover:shadow-xl transition-all">
       <Download className="mr-2 h-5 w-5" /> Get it on Google Play
     </Button>
   </div>
 );
+
+const PhoneMockup = ({ imageUrl, alt, hint, className }: { imageUrl: string, alt: string, hint: string, className?: string }) => (
+    <div className={`relative mx-auto border-gray-800 dark:border-gray-800 bg-gray-800 border-[14px] rounded-[2.5rem] h-[600px] w-[300px] shadow-xl group ${className}`}>
+        <div className="w-[148px] h-[18px] bg-gray-800 top-0 rounded-b-[1rem] left-1/2 -translate-x-1/2 absolute"></div>
+        <div className="h-[46px] w-[3px] bg-gray-800 absolute -left-[17px] top-[124px] rounded-l-lg"></div>
+        <div className="h-[46px] w-[3px] bg-gray-800 absolute -left-[17px] top-[178px] rounded-l-lg"></div>
+        <div className="h-[64px] w-[3px] bg-gray-800 absolute -right-[17px] top-[142px] rounded-r-lg"></div>
+        <div className="rounded-[2rem] overflow-hidden w-full h-full bg-white dark:bg-black">
+            <Image 
+                src={imageUrl} 
+                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500" 
+                alt={alt} 
+                width={300} 
+                height={600} 
+                data-ai-hint={hint}
+            />
+        </div>
+    </div>
+);
+
 
 export default function AppsPage() {
   return (
@@ -41,39 +61,45 @@ export default function AppsPage() {
       </section>
 
       {/* Section 2: GlowVita Salon App */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
-          <div>
+      <section className="py-20 overflow-hidden relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-900/50 dark:via-background dark:to-purple-900/20 opacity-50"></div>
+        <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center relative z-10">
+          <div className="text-center md:text-left">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">GlowVita Salon App (For Clients)</h2>
-            <p className="text-muted-foreground mb-6">Empower your clients with a seamless booking experience. Our client-facing app makes it easy for them to book appointments, view your services, and stay connected.</p>
-            <ul className="space-y-3">
+            <p className="text-muted-foreground mb-6 text-lg">Empower your clients with a seamless booking experience. Our client-facing app makes it easy for them to book appointments, view your services, and stay connected.</p>
+            <ul className="space-y-4">
               <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /><span>Easy appointment booking & rescheduling</span></li>
               <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /><span>View service catalog and pricing</span></li>
               <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /><span>Receive appointment reminders</span></li>
             </ul>
             <AppStoreButtons />
           </div>
-          <div>
-            <Image src="https://placehold.co/600x400.png" alt="GlowVita Salon App" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app booking screen" />
+          <div className="relative h-[600px] flex items-center justify-center">
+            <div className="absolute w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-50 -translate-x-1/4 -translate-y-1/4"></div>
+            <PhoneMockup imageUrl="https://placehold.co/375x812.png" alt="GlowVita Salon App" hint="app booking screen" className="z-10" />
+            <div className="absolute w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-50 translate-x-1/4 translate-y-1/4"></div>
           </div>
         </div>
       </section>
 
       {/* Section 3: CRM App */}
-      <section className="py-20 bg-secondary/50">
-        <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
-          <div className="md:order-2">
+      <section className="py-20 bg-secondary/50 overflow-hidden relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-purple-900/20 dark:via-background dark:to-slate-900/50 opacity-50"></div>
+        <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center relative z-10">
+          <div className="md:order-2 text-center md:text-left">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Vendor CRM App (For Your Business)</h2>
-            <p className="text-muted-foreground mb-6">Manage your entire salon from the palm of your hand. Our vendor app gives you the power to run your business from anywhere, at any time.</p>
-            <ul className="space-y-3">
+            <p className="text-muted-foreground mb-6 text-lg">Manage your entire salon from the palm of your hand. Our vendor app gives you the power to run your business from anywhere, at any time.</p>
+            <ul className="space-y-4">
               <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /><span>Manage your calendar and appointments</span></li>
               <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /><span>Access client information and history</span></li>
               <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /><span>Track sales and performance</span></li>
             </ul>
             <AppStoreButtons />
           </div>
-          <div className="md:order-1">
-             <Image src="https://placehold.co/600x400.png" alt="Vendor CRM App" width={600} height={400} className="rounded-lg shadow-xl" data-ai-hint="app dashboard screen" />
+          <div className="md:order-1 relative h-[600px] flex items-center justify-center">
+            <div className="absolute w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-50 -translate-x-1/4 -translate-y-1/4"></div>
+             <PhoneMockup imageUrl="https://placehold.co/375x812.png" alt="Vendor CRM App" hint="app dashboard screen" className="z-10"/>
+            <div className="absolute w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-50 translate-x-1/4 translate-y-1/4"></div>
           </div>
         </div>
       </section>
@@ -110,7 +136,7 @@ export default function AppsPage() {
       {/* Section 6: Comparison Table */}
       <section className="py-20">
         <div className="container mx-auto px-4">
-            <Card>
+            <Card className="max-w-4xl mx-auto">
                 <CardHeader>
                     <CardTitle>App Features at a Glance</CardTitle>
                     <CardDescription>Compare the features of our client and vendor apps.</CardDescription>
@@ -139,14 +165,14 @@ export default function AppsPage() {
         </div>
       </section>
       
-      {/* Section 7, 8, 9, 10 would follow a similar pattern */}
+      {/* Section 7: Final CTA */}
       <section className="py-20 bg-secondary/50 text-center">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-4">And so much more...</h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">This is just a glimpse. Download the apps to explore all the features designed to help your business thrive.</p>
+            <h2 className="text-3xl font-bold mb-4">Ready to go mobile?</h2>
+            <p className="text-muted-foreground max-w-xl mx-auto mb-6">Download the apps and take your business to the next level.</p>
+            <AppStoreButtons />
           </div>
       </section>
-
     </div>
   );
 }
