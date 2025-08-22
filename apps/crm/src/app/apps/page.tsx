@@ -3,9 +3,11 @@
 
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
-import { Bell, CheckCircle, CalendarCheck, Download, Shield, BarChart, Users, Star, ArrowRight, BookOpen, Video, MessageSquare, Phone, LifeBuoy, Settings, Clock, Check, Award, UserPlus, PlayCircle } from 'lucide-react';
+import { Bell, CheckCircle, CalendarCheck, Download, Shield, BarChart, Users, Star, ArrowRight, BookOpen, Video, MessageSquare, Phone, LifeBuoy, Settings, Clock, Check, Award, UserPlus, PlayCircle, Rocket, TrendingUp, Heart, Globe, Menu, X, Scissors, LineChart } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@repo/ui/cn';
+import Link from "next/link";
+import { useState } from "react";
 
 const FeatureCheck = ({ children }: { children: React.ReactNode }) => (
     <li className="flex items-start gap-3">
@@ -41,25 +43,28 @@ const AppStoreButtons = () => (
 );
 
 const PhoneMockup = ({ imageUrl, alt, hint, className }: { imageUrl: string, alt: string, hint: string, className?: string }) => (
-    <div className={cn("relative w-full aspect-[9/19] bg-slate-400 rounded-xl shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer p-2 border border-slate-400", className)}>
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-16 h-1.5 bg-slate-400 rounded-full z-20"></div>
-        <div className="relative w-full h-full rounded-xl overflow-hidden">
+    <div className={cn("relative mx-auto border-gray-800 dark:border-gray-800 bg-gray-800 border-[8px] rounded-[2.5rem] h-[540px] w-[270px] shadow-xl", className)}>
+        <div className="w-[125px] h-[18px] bg-gray-800 top-0 rounded-b-[1rem] left-1/2 -translate-x-1/2 absolute"></div>
+        <div className="h-[40px] w-[3px] bg-gray-800 absolute -left-[17px] top-[124px] rounded-l-lg"></div>
+        <div className="h-[40px] w-[3px] bg-gray-800 absolute -left-[17px] top-[178px] rounded-l-lg"></div>
+        <div className="h-[56px] w-[3px] bg-gray-800 absolute -right-[17px] top-[142px] rounded-r-lg"></div>
+        <div className="rounded-[2rem] overflow-hidden w-full h-full bg-white dark:bg-black">
             <Image 
                 src={imageUrl} 
-                className="group-hover:scale-110 transition-transform duration-500" 
+                className="w-full h-full object-cover" 
                 alt={alt} 
-                layout="fill"
-                objectFit="cover"
+                width={270}
+                height={540}
                 data-ai-hint={hint}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
         </div>
     </div>
 );
 
+
 const AppPromotionSection = ({ title, description, features, images, reverse = false }: { title: string, description: string, features: { title: string, description: string, icon: React.ReactNode }[], images: { src: string, hint: string }[], reverse?: boolean }) => {
     return (
-        <section className="py-32 overflow-hidden relative">
+        <section className="py-20 md:py-32 overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-900/50 dark:via-background dark:to-purple-900/20 opacity-30"></div>
             <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center relative z-10">
                 <div className={cn("text-center md:text-left", reverse && "md:order-2")}>
@@ -81,17 +86,17 @@ const AppPromotionSection = ({ title, description, features, images, reverse = f
                     <AppStoreButtons />
                 </div>
                 <div className={cn("relative h-[450px] flex items-center justify-center mt-12 md:mt-0", reverse && "md:order-1")}>
-                    <div className="absolute w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-30 -translate-x-1/4 -translate-y-1/4"></div>
+                     <div className="absolute w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-30 -translate-x-1/4 -translate-y-1/4"></div>
                     <div className="absolute w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-30 translate-x-1/4 translate-y-1/4"></div>
-                    <div className="relative flex justify-center items-center h-full w-full">
-                        <div className="absolute w-56 md:w-64 h-auto" style={{ zIndex: 10, transform: 'rotate(-10deg) translateX(-40%) translateY(5%)' }}>
-                            <PhoneMockup imageUrl={images[0].src} alt={`${title} screenshot 1`} hint={images[0].hint} />
+                    <div className="relative w-full h-full flex justify-center items-center group">
+                        <div className="absolute transition-all duration-500 group-hover:rotate-[-5deg] group-hover:-translate-x-4">
+                            <PhoneMockup imageUrl={images[0].src} alt={`${title} screenshot 1`} hint={images[0].hint} className="w-[240px] h-[480px]"/>
                         </div>
-                        <div className="absolute w-56 md:w-64 h-auto" style={{ zIndex: 20, transform: 'rotate(0deg)' }}>
+                        <div className="absolute z-10 transition-all duration-500 group-hover:scale-105">
                             <PhoneMockup imageUrl={images[1].src} alt={`${title} screenshot 2`} hint={images[1].hint} />
                         </div>
-                        <div className="absolute w-56 md:w-64 h-auto" style={{ zIndex: 10, transform: 'rotate(10deg) translateX(40%) translateY(5%)' }}>
-                            <PhoneMockup imageUrl={images[2].src} alt={`${title} screenshot 3`} hint={images[2].hint} />
+                        <div className="absolute transition-all duration-500 group-hover:rotate-[5deg] group-hover:translate-x-4">
+                            <PhoneMockup imageUrl={images[2].src} alt={`${title} screenshot 3`} hint={images[2].hint} className="w-[240px] h-[480px]"/>
                         </div>
                     </div>
                 </div>
@@ -116,16 +121,23 @@ const TestimonialCard = ({ review, author, role, rating }: { review: string, aut
     </Card>
 );
 
-const HowItWorksStep = ({ icon, title, description, step }: { icon: React.ReactNode, title: string, description: string, step: number }) => (
-    <div className="relative pl-16">
-        <div className="absolute left-0 top-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary font-bold text-2xl border-2 border-primary/20">
+const HowItWorksStep = ({ icon, title, description, step, reverse = false }: { icon: React.ReactNode, title: string, description: string, step: number, reverse?: boolean }) => (
+    <div className="flex items-center w-full">
+        <div className={cn("w-full md:w-1/2", reverse ? "md:order-2 md:text-right" : "md:text-left")}>
+            <div className={cn("p-6 rounded-lg bg-background border shadow-lg group hover:border-primary/20 hover:shadow-2xl transition-all duration-300", reverse ? "md:mr-8" : "md:ml-8")}>
+                <div className={cn("flex items-center gap-4 mb-3", reverse && "md:flex-row-reverse")}>
+                    <div className="flex-shrink-0 bg-primary/10 text-primary p-3 rounded-lg group-hover:scale-110 transition-transform">
+                        {icon}
+                    </div>
+                    <h4 className="text-2xl font-semibold">{title}</h4>
+                </div>
+                <p className="text-muted-foreground text-lg leading-relaxed">{description}</p>
+            </div>
+        </div>
+        <div className="hidden md:flex w-16 h-16 rounded-full bg-primary/10 text-primary items-center justify-center font-bold text-3xl border-2 border-primary/20 shadow-lg flex-shrink-0 order-1">
             {step}
         </div>
-        <div className="flex items-center gap-4 mb-2">
-            {icon}
-            <h4 className="text-2xl font-semibold">{title}</h4>
-        </div>
-        <p className="text-muted-foreground text-lg">{description}</p>
+        <div className="hidden md:block w-1/2"></div>
     </div>
 );
 
@@ -137,9 +149,15 @@ export default function AppsPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-900/50 dark:via-background dark:to-purple-900/20 opacity-30"></div>
         <div className="container mx-auto px-4 relative z-10">
           <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4">Your Business, In Your Pocket</h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
             Manage your salon and connect with your clients on the go with our powerful, intuitive mobile apps.
           </p>
+           <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-4 text-muted-foreground">
+                <span className="flex items-center gap-2"><Check className="h-5 w-5 text-blue-500" /> 24/7 Online Booking</span>
+                <span className="flex items-center gap-2"><Check className="h-5 w-5 text-blue-500" /> Client Management</span>
+                <span className="flex items-center gap-2"><Check className="h-5 w-5 text-blue-500" /> Business Analytics</span>
+                <span className="flex items-center gap-2"><Check className="h-5 w-5 text-blue-500" /> Secure Payments</span>
+          </div>
         </div>
       </section>
 
@@ -257,28 +275,28 @@ export default function AppsPage() {
       </section>
 
       <section className="py-20 bg-background">
-          <div className="container mx-auto px-4 max-w-6xl">
-              <div className="text-center mb-16">
-                  <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4">How It Works</h2>
-                  <p className="text-muted-foreground text-lg max-w-3xl mx-auto">A simple and intuitive process for both you and your clients.</p>
-              </div>
-              <div className="relative">
-                  <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-border/80"></div>
-                  <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary/10 animate-pulse"></div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 relative z-10">
-                      <HowItWorksStep step={1} icon={<Download className="h-6 w-6 text-primary" />} title="Download & Setup" description="Get your salon listed and set up your services, staff, and schedule in minutes."/>
-                      <HowItWorksStep step={2} icon={<Users className="h-6 w-6 text-primary" />} title="Clients Book Online" description="Clients find your salon and book appointments 24/7 through the GlowVita app or your website."/>
-                      <HowItWorksStep step={3} icon={<BarChart className="h-6 w-6 text-primary" />} title="Manage & Grow" description="Use the CRM app to manage bookings, process payments, and grow your business with marketing tools."/>
-                  </div>
-              </div>
-          </div>
-      </section>
+        <div className="container mx-auto px-4 max-w-6xl">
+            <div className="text-center mb-16">
+                <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4">How It Works</h2>
+                <p className="text-muted-foreground text-lg max-w-3xl mx-auto">A simple and intuitive process for both you and your clients.</p>
+            </div>
+            <div className="relative">
+                {/* The vertical line connecting the dots */}
+                <div className="absolute left-1/2 top-8 bottom-8 w-0.5 bg-border hidden md:block"></div>
+                <div className="space-y-8 md:space-y-0">
+                    <HowItWorksStep step={1} icon={<Download className="h-7 w-7" />} title="Download & Setup" description="Get your salon listed and set up your services, staff, and schedule in minutes."/>
+                    <HowItWorksStep step={2} icon={<Users className="h-7 w-7" />} title="Clients Book Online" description="Clients find your salon and book appointments 24/7 through the GlowVita app or your website." reverse={true}/>
+                    <HowItWorksStep step={3} icon={<BarChart className="h-7 w-7" />} title="Manage & Grow" description="Use the CRM app to manage bookings, process payments, and grow your business with marketing tools."/>
+                </div>
+            </div>
+        </div>
+    </section>
 
        <section className="py-20 bg-secondary/50">
           <div className="container mx-auto px-4 max-w-6xl">
               <div className="grid md:grid-cols-2 gap-12 items-center">
                   <div className="text-center md:text-left">
-                      <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium mb-4">
+                      <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium mb-4">
                           <Shield size={16}/>
                           Your Data is Safe
                       </div>
@@ -292,8 +310,8 @@ export default function AppsPage() {
                       </ul>
                   </div>
                   <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-200 via-blue-200 to-purple-200 rounded-full blur-3xl opacity-40"></div>
-                    <Shield className="relative z-10 h-48 w-48 text-green-500 drop-shadow-lg" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-200 via-blue-200 to-purple-200 rounded-full blur-3xl opacity-40"></div>
+                    <Shield className="relative z-10 h-48 w-48 text-blue-500 drop-shadow-lg" />
                   </div>
               </div>
           </div>
