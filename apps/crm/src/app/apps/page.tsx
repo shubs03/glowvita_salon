@@ -3,7 +3,7 @@
 
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
-import { CheckCircle, Download, Shield, BarChart, Users, Star, ArrowRight, Video, Calendar, ShoppingBag, Settings, User, Box } from 'lucide-react';
+import { CheckCircle, Check, Download, Shield, BarChart, Users, Star, ArrowRight, Video, Calendar, ShoppingBag, Settings, User, Box } from 'lucide-react';
 import Image from 'next/image';
 
 const AppFeature = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
