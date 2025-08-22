@@ -121,25 +121,32 @@ const TestimonialCard = ({ review, author, role, rating }: { review: string, aut
     </Card>
 );
 
-const HowItWorksStep = ({ icon, title, description, step, reverse = false }: { icon: React.ReactNode, title: string, description: string, step: number, reverse?: boolean }) => (
-    <div className="flex items-center w-full">
-        <div className={cn("w-full md:w-1/2", reverse ? "md:order-2 md:text-right" : "md:text-left")}>
-            <div className={cn("p-6 rounded-lg bg-background border shadow-lg group hover:border-primary/20 hover:shadow-2xl transition-all duration-300", reverse ? "md:mr-8" : "md:ml-8")}>
-                <div className={cn("flex items-center gap-4 mb-3", reverse && "md:flex-row-reverse")}>
-                    <div className="flex-shrink-0 bg-primary/10 text-primary p-3 rounded-lg group-hover:scale-110 transition-transform">
-                        {icon}
-                    </div>
-                    <h4 className="text-2xl font-semibold">{title}</h4>
-                </div>
-                <p className="text-muted-foreground text-lg leading-relaxed">{description}</p>
+const HowItWorksStep = ({ icon, title, description, step, reverse = false }: { icon: React.ReactNode, title: string, description: string, step: number, reverse?: boolean }) => {
+  return (
+    <div className="md:grid md:grid-cols-2 md:items-center md:gap-8">
+      <div className={cn('relative mb-8 md:mb-0', reverse && 'md:order-2')}>
+        {/* Step Card */}
+        <div className="relative z-10 p-6 rounded-lg bg-background border shadow-lg group hover:border-blue-500/20 hover:shadow-2xl transition-all duration-300">
+          {/* Caret pointing to the timeline */}
+          <div className={cn(
+            'absolute top-1/2 -mt-2 w-4 h-4 bg-background border transform rotate-45',
+            reverse ? 'left-0 -ml-2 border-b-0 border-l-0' : 'right-0 -mr-2 border-t-0 border-r-0'
+          )}></div>
+          <div className="flex items-center gap-4 mb-3">
+            <div className="flex-shrink-0 bg-blue-500/10 text-blue-500 p-3 rounded-lg group-hover:scale-110 transition-transform">
+              {icon}
             </div>
+            <h4 className="text-2xl font-semibold">{title}</h4>
+          </div>
+          <p className="text-muted-foreground text-lg leading-relaxed">{description}</p>
         </div>
-        <div className="hidden md:flex w-16 h-16 rounded-full bg-primary/10 text-primary items-center justify-center font-bold text-3xl border-2 border-primary/20 shadow-lg flex-shrink-0 order-1">
-            {step}
-        </div>
-        <div className="hidden md:block w-1/2"></div>
+      </div>
+
+      {/* This empty div is for spacing in the grid */}
+      <div className={cn('hidden md:block', reverse && 'md:order-1')}></div>
     </div>
-);
+  );
+};
 
 export default function AppsPage() {
   return (
@@ -281,12 +288,47 @@ export default function AppsPage() {
                 <p className="text-muted-foreground text-lg max-w-3xl mx-auto">A simple and intuitive process for both you and your clients.</p>
             </div>
             <div className="relative">
-                {/* The vertical line connecting the dots */}
-                <div className="absolute left-1/2 top-8 bottom-8 w-0.5 bg-border hidden md:block"></div>
-                <div className="space-y-8 md:space-y-0">
-                    <HowItWorksStep step={1} icon={<Download className="h-7 w-7" />} title="Download & Setup" description="Get your salon listed and set up your services, staff, and schedule in minutes."/>
-                    <HowItWorksStep step={2} icon={<Users className="h-7 w-7" />} title="Clients Book Online" description="Clients find your salon and book appointments 24/7 through the GlowVita app or your website." reverse={true}/>
-                    <HowItWorksStep step={3} icon={<BarChart className="h-7 w-7" />} title="Manage & Grow" description="Use the CRM app to manage bookings, process payments, and grow your business with marketing tools."/>
+                {/* Central Timeline */}
+                <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-blue-100 rounded-full hidden md:block"></div>
+                
+                <div className="space-y-16 md:space-y-0">
+                    {[
+                        { icon: <Download className="h-7 w-7" />, title: "Download & Setup", description: "Get your salon listed and set up your services, staff, and schedule in minutes." },
+                        { icon: <Users className="h-7 w-7" />, title: "Clients Book Online", description: "Clients find your salon and book appointments 24/7 through the GlowVita app or your website." },
+                        { icon: <BarChart className="h-7 w-7" />, title: "Manage & Grow", description: "Use the CRM app to manage bookings, process payments, and grow your business with marketing tools." }
+                    ].map((step, index) => (
+                         <div key={index} className="relative">
+                            <div className="md:grid md:grid-cols-2 md:gap-8 md:items-center">
+                                {/* Step Bubble */}
+                                <div className={cn("hidden md:flex justify-center", index % 2 === 0 ? 'md:order-2' : 'md:order-1')}>
+                                    <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-500 text-white font-bold text-3xl border-4 border-background shadow-lg z-10">
+                                        {index + 1}
+                                    </div>
+                                </div>
+                                
+                                {/* Step Content */}
+                                <div className={cn('relative', index % 2 === 0 ? 'md:order-1' : 'md:order-2')}>
+                                    <div className="md:hidden flex items-center gap-4 mb-4">
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500 text-white font-bold text-2xl border-4 border-background shadow-lg z-10">
+                                            {index + 1}
+                                        </div>
+                                    </div>
+                                    <div className="relative z-10 p-6 rounded-lg bg-background border shadow-lg group hover:border-blue-500/20 hover:shadow-2xl transition-all duration-300">
+                                        <div className={cn("absolute top-1/2 -mt-2 w-4 h-4 bg-background border transform rotate-45 z-0",
+                                            index % 2 === 0 ? 'md:-right-2 md:border-l-0 md:border-b-0' : 'md:-left-2 md:border-r-0 md:border-t-0'
+                                        )}></div>
+                                        <div className="flex items-center gap-4 mb-3">
+                                            <div className="flex-shrink-0 bg-blue-500/10 text-blue-500 p-3 rounded-lg group-hover:scale-110 transition-transform">
+                                                {step.icon}
+                                            </div>
+                                            <h4 className="text-2xl font-semibold">{step.title}</h4>
+                                        </div>
+                                        <p className="text-muted-foreground text-lg leading-relaxed">{step.description}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
@@ -330,3 +372,4 @@ export default function AppsPage() {
     </div>
   );
 }
+
