@@ -15,7 +15,8 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const showLayout = pathname !== '/login' && pathname !== '/';
+  // Apply CrmLayout to all front-facing pages except login.
+  const showLayout = pathname !== '/login';
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -35,7 +36,6 @@ export default function RootLayout({
           >
             {showLayout ? <CrmLayout>{children}</CrmLayout> : children}
           </ThemeProvider>
-          
         </StoreProvider>
       </body>
     </html>

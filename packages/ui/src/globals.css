@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -82,11 +83,11 @@
 }
 
 .animate-slide {
-  animation: marquee 90s linear infinite;
+  animation: slide 90s linear infinite;
   flex-shrink: 0;
 }
 
 .animate-slide-rtl {
-  animation: marquee-rtl 90s linear infinite;
+  animation: slide-rtl 90s linear infinite;
   flex-shrink: 0;
 }

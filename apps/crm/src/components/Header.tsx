@@ -1,81 +1,69 @@
 
 "use client";
 
-import { useRouter } from 'next/navigation';
-import { Button } from '@repo/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@repo/ui/dropdown-menu';
-import { FaBell, FaSearch, FaBars, FaSignOutAlt } from 'react-icons/fa';
-import { Input } from '@repo/ui/input';
-import { ThemeToggle } from './ThemeToggle';
+import Link from "next/link";
+import { Button } from "@repo/ui/button";
+import { ArrowRight, Menu, X } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
-export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
-  const router = useRouter();
-  
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-  };
+interface HeaderProps {
+  isMobileMenuOpen: boolean;
+  toggleMobileMenu: () => void;
+}
 
+export function Header({ isMobileMenuOpen, toggleMobileMenu }: HeaderProps) {
   return (
-    <header className="flex-shrink-0 sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between lg:justify-end overflow-hidden">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="flex-shrink-0 lg:hidden"
-        onClick={toggleSidebar}
-      >
-        <FaBars className="h-5 w-5" />
-        <span className="sr-only">Toggle navigation menu</span>
-      </Button>
-
-      <div className="w-full flex-1">
-        <form>
-          <div className="relative">
-            <FaSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search clients, bookings..."
-              className="w-full appearance-none bg-secondary pl-8 shadow-none md:w-2/3 lg:w-1/3"
-            />
-          </div>
-        </form>
+    <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border/50 shadow-sm">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+          Vendor CRM
+        </div>
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-2">
+          <Button variant="ghost" className="hover:bg-primary/10" asChild>
+            <Link href="/apps">App links</Link>
+          </Button>
+          <Button variant="ghost" className="hover:bg-primary/10" asChild>
+            <Link href="/pricing">Pricing</Link>
+          </Button>
+          <Button variant="ghost" className="hover:bg-primary/10" asChild>
+            <Link href="/support">Support</Link>
+          </Button>
+          <ThemeToggle />
+          <Button variant="ghost" className="hover:bg-primary/10" asChild>
+            <Link href="/login">Login</Link>
+          </Button>
+          <Button
+            className="shadow-lg hover:shadow-xl transition-shadow duration-300 group"
+            asChild
+          >
+            <Link href="/login">
+              Get started{" "}
+              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
+            </Link>
+          </Button>
+        </nav>
+        {/* Mobile Nav Toggle */}
+        <div className="md:hidden flex items-center">
+          <ThemeToggle />
+          <Button variant="ghost" size="icon" onClick={toggleMobileMenu}>
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            <span className="sr-only">Toggle menu</span>
+          </Button>
+        </div>
       </div>
-      
-      <div className="flex items-center gap-2 md:gap-4 min-w-0">
-        <ThemeToggle />
-        <Button variant="ghost" size="icon" className="rounded-full">
-            <FaBell className="h-5 w-5" />
-            <span className="sr-only">Toggle notifications</span>
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                    <span className="font-semibold">V</span>
-                </div>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem>Support</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2">
-                <FaSignOutAlt/>
-                Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-background/95 backdrop-blur-md border-t border-border/50 absolute top-16 left-0 w-full z-30">
+          <nav className="flex flex-col items-center gap-2 p-4">
+            <Button variant="ghost" className="w-full" asChild><Link href="/apps">App links</Link></Button>
+            <Button variant="ghost" className="w-full" asChild><Link href="/pricing">Pricing</Link></Button>
+            <Button variant="ghost" className="w-full" asChild><Link href="/support">Support</Link></Button>
+            <Button variant="ghost" className="w-full" asChild><Link href="/login">Login</Link></Button>
+            <Button className="w-full mt-2" asChild><Link href="/login">Get started</Link></Button>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
