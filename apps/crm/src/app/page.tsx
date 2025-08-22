@@ -329,7 +329,7 @@ export default function CrmHomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-secondary/30 via-background to-secondary/20 text-foreground">
       <main className="flex-grow">
-        <section className="relative py-16 md:py-24 bg-background overflow-hidden">
+        <section className="relative py-16 md:py-14 bg-background overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center">
               <div className="flex justify-center gap-4 md:gap-6 mb-8">
