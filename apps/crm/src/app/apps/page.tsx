@@ -3,22 +3,30 @@
 
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
-import { CheckCircle, Download, Shield, BarChart, Users, Star, ArrowRight, BookOpen, Video, MessageSquare, Phone, LifeBuoy, Settings, Clock, Check, Award, UserPlus } from 'lucide-react';
+import { CheckCircle, Download, Shield, BarChart, Users, Star, ArrowRight, BookOpen, Video, MessageSquare, Phone, LifeBuoy, Settings, Clock, Check, Award, UserPlus, PlayCircle } from 'lucide-react';
 import Image from 'next/image';
+import { cn } from '@repo/ui/cn';
+
+const FeatureCheck = ({ children }: { children: React.ReactNode }) => (
+    <li className="flex items-start gap-3">
+      <Check className="h-5 w-5 mt-1 text-green-500 flex-shrink-0" />
+      <span className="text-muted-foreground">{children}</span>
+    </li>
+  );
 
 const AppFeature = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
-  <Card className="text-left p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group bg-secondary/50 hover:bg-background border border-transparent hover:border-primary/20">
-     <div className="flex items-start gap-4">
-      <div className="flex-shrink-0 bg-primary/10 text-primary p-3 rounded-lg group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
-        {icon}
+    <Card className="text-left p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group bg-secondary/50 hover:bg-background border border-transparent hover:border-primary/20">
+       <div className="flex items-start gap-4">
+        <div className="flex-shrink-0 bg-primary/10 text-primary p-3 rounded-lg group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+          {icon}
+        </div>
+        <div>
+          <h4 className="font-semibold text-lg mb-1">{title}</h4>
+          <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
+        </div>
       </div>
-      <div>
-        <h4 className="font-semibold text-lg mb-1">{title}</h4>
-        <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
-      </div>
-    </div>
-  </Card>
-);
+    </Card>
+  );
 
 
 const AppStoreButtons = () => (
@@ -32,41 +40,44 @@ const AppStoreButtons = () => (
   </div>
 );
 
-const PhoneMockup = ({ imageUrl, alt, hint, className, style }: { imageUrl: string, alt: string, hint: string, className?: string, style?: React.CSSProperties }) => (
-    <div 
-        className={cn("w-full rounded-xl h-full bg-gradient-to-b from-slate-900 to-slate-900 shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer", className)}
-        style={{clipPath: 'polygon(0 1%, 1% 0, 92% 0, 100% 1%, 100% 99%, 99% 100%, 8% 100%, 0 99%)', ...style}}
-    >
-        <div className="absolute top-2 md:top-3 left-1/2 transform -translate-x-1/2 w-6 md:w-8 h-0.5 md:h-1 bg-slate-600 rounded-full"></div>
-        <div className="mt-4 rounded-xl md:mt-6 h-full p-1 md:p-2">
-            <div className="w-full h-96 bg-slate-100 rounded-sm overflow-hidden relative">
-                <Image 
-                    src={imageUrl} 
-                    className="group-hover:scale-110 transition-transform duration-500" 
-                    alt={alt} 
-                    layout="fill"
-                    objectFit="cover"
-                    data-ai-hint={hint}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            </div>
+const PhoneMockup = ({ imageUrl, alt, hint, className }: { imageUrl: string, alt: string, hint: string, className?: string }) => (
+    <div className={cn("relative w-full aspect-[9/19] bg-slate-900 rounded-3xl shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer p-2 border-4 border-slate-800", className)}>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-16 h-1.5 bg-slate-800 rounded-full z-20"></div>
+        <div className="relative w-full h-full rounded-2xl overflow-hidden">
+            <Image 
+                src={imageUrl} 
+                className="group-hover:scale-110 transition-transform duration-500" 
+                alt={alt} 
+                layout="fill"
+                objectFit="cover"
+                data-ai-hint={hint}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
         </div>
     </div>
 );
 
-const AppPromotionSection = ({ title, description, features, images, reverse = false }: { title: string, description: string, features: string[], images: { src: string, hint: string }[], reverse?: boolean }) => {
+const AppPromotionSection = ({ title, description, features, images, reverse = false }: { title: string, description: string, features: { title: string, description: string, icon: React.ReactNode }[], images: { src: string, hint: string }[], reverse?: boolean }) => {
     return (
-        <section className="py-20 overflow-hidden relative bg-gradient-to-br from-background via-secondary/10 to-background">
+        <section className="py-20 overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-900/50 dark:via-background dark:to-purple-900/20 opacity-30"></div>
             <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center relative z-10">
                 <div className={cn("text-center md:text-left", reverse && "md:order-2")}>
                     <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4 leading-tight">{title}</h2>
-                    <p className="text-muted-foreground mb-6 text-lg">{description}</p>
-                    <ul className="space-y-4">
+                    <p className="text-muted-foreground mb-8 text-lg">{description}</p>
+                    <div className="space-y-6">
                         {features.map((feature, i) => (
-                            <li key={i} className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-green-500" /><span>{feature}</span></li>
+                           <div key={i} className="flex items-start gap-4">
+                               <div className="flex-shrink-0 bg-primary/10 text-primary p-3 rounded-lg">
+                                   {feature.icon}
+                               </div>
+                               <div>
+                                   <h4 className="font-semibold text-base">{feature.title}</h4>
+                                   <p className="text-sm text-muted-foreground">{feature.description}</p>
+                               </div>
+                           </div>
                         ))}
-                    </ul>
+                    </div>
                     <AppStoreButtons />
                 </div>
                 <div className={cn("relative h-[450px] flex items-center justify-center mt-12 md:mt-0", reverse && "md:order-1")}>
@@ -90,31 +101,31 @@ const AppPromotionSection = ({ title, description, features, images, reverse = f
 };
 
 const TestimonialCard = ({ review, author, role, rating }: { review: string, author: string, role: string, rating: number }) => (
-  <div className="w-[320px] h-[320px] shrink-0 snap-center p-8 flex flex-col justify-between bg-background rounded-lg shadow-lg border border-border/50 hover:border-primary/20 hover:shadow-xl transition-all duration-300">
-    <div>
-      <div className="flex items-center gap-1 mb-4">
-        {[...Array(rating)].map((_, i) => <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />)}
-        {[...Array(5 - rating)].map((_, i) => <Star key={i} className="h-5 w-5 text-gray-300" />)}
+    <Card className="w-[320px] h-[320px] shrink-0 snap-center p-8 flex flex-col justify-between bg-background rounded-lg shadow-lg border border-border/50 hover:border-primary/20 hover:shadow-xl transition-all duration-300">
+      <div>
+        <div className="flex items-center gap-1 mb-4">
+          {[...Array(rating)].map((_, i) => <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />)}
+          {[...Array(5 - rating)].map((_, i) => <Star key={i} className="h-5 w-5 text-gray-300" />)}
+        </div>
+        <p className="text-muted-foreground leading-relaxed">"{review}"</p>
       </div>
-      <p className="text-muted-foreground leading-relaxed">"{review}"</p>
-    </div>
-    <div>
-      <p className="font-semibold text-foreground">{author}</p>
-      <p className="text-sm text-muted-foreground">{role}</p>
-    </div>
-  </div>
+      <div>
+        <p className="font-semibold text-foreground">{author}</p>
+        <p className="text-sm text-muted-foreground">{role}</p>
+      </div>
+    </Card>
 );
 
 const HowItWorksStep = ({ icon, title, description, step }: { icon: React.ReactNode, title: string, description: string, step: number }) => (
-    <div className="relative pl-12">
-        <div className="absolute left-0 top-0 flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary font-bold text-lg border-2 border-primary/20">
+    <div className="relative pl-16">
+        <div className="absolute left-0 top-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary font-bold text-2xl border-2 border-primary/20">
             {step}
         </div>
         <div className="flex items-center gap-4 mb-2">
             {icon}
-            <h4 className="text-xl font-semibold">{title}</h4>
+            <h4 className="text-2xl font-semibold">{title}</h4>
         </div>
-        <p className="text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground text-lg">{description}</p>
     </div>
 );
 
@@ -122,8 +133,9 @@ export default function AppsPage() {
   return (
     <div className="bg-background">
       {/* Section 1: Hero */}
-      <section className="py-20 text-center bg-secondary/50">
-        <div className="container mx-auto px-4">
+      <section className="py-20 md:py-28 text-center bg-secondary/50 overflow-hidden relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-900/50 dark:via-background dark:to-purple-900/20 opacity-30"></div>
+        <div className="container mx-auto px-4 relative z-10">
           <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4">Your Business, In Your Pocket</h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
             Manage your salon and connect with your clients on the go with our powerful, intuitive mobile apps.
@@ -136,10 +148,9 @@ export default function AppsPage() {
         title="GlowVita Salon App (For Your Clients)"
         description="Empower your clients with a seamless booking experience. Our client-facing app makes it easy for them to discover, book, and manage their appointments."
         features={[
-          "24/7 online booking & rescheduling",
-          "Discover new services and view pricing",
-          "Automated appointment reminders & notifications",
-          "Securely manage payment methods",
+            { icon: <CalendarCheck size={20} />, title: "24/7 Online Booking", description: "Accept bookings anytime, anywhere, reducing phone calls and manual entries." },
+            { icon: <Star size={20} />, title: "Discover & Rate", description: "Allow clients to discover new services, read reviews, and leave their own feedback." },
+            { icon: <Bell size={20} />, title: "Automated Reminders", description: "Reduce no-shows with automated appointment reminders and notifications." },
         ]}
         images={[
             { src: 'https://placehold.co/375x812.png', hint: 'app booking screen' },
@@ -153,10 +164,9 @@ export default function AppsPage() {
         title="Vendor CRM App (For Your Business)"
         description="Manage your entire salon from the palm of your hand. Our vendor app gives you the power to run your business from anywhere, at any time."
         features={[
-            "Manage your calendar and appointments",
-            "Access client information and history",
-            "Track sales and business performance",
-            "Handle staff schedules and payroll",
+            { icon: <BarChart size={20} />, title: "Business Dashboard", description: "Track sales, appointments, and client growth with an at-a-glance dashboard." },
+            { icon: <BookOpen size={20} />, title: "Calendar Management", description: "Effortlessly manage your team's schedule and view upcoming appointments." },
+            { icon: <Users size={20} />, title: "Client Database", description: "Access client information, booking history, and personal notes on the go." },
         ]}
         images={[
             { src: 'https://placehold.co/375x812.png', hint: 'app dashboard screen' },
@@ -167,7 +177,7 @@ export default function AppsPage() {
       />
       
       {/* Section 4: Features Grid */}
-      <section className="py-20">
+      <section className="py-20 bg-secondary/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-5xl font-bold font-headline">Powerful Features in Both Apps</h2>
@@ -185,13 +195,13 @@ export default function AppsPage() {
       </section>
 
       {/* Section 5: Testimonials */}
-      <section className="py-20 bg-secondary/50 overflow-hidden">
+      <section className="py-20 bg-background overflow-hidden">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4">Loved by Professionals</h2>
           <p className="text-muted-foreground mt-2 text-lg max-w-3xl mx-auto mb-12">See what salon owners and stylists are saying about our mobile apps.</p>
         </div>
         <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
-            <div className="flex w-fit items-start animate-[slide_60s_linear_infinite] hover:[animation-play-state:paused]">
+            <div className="flex w-fit items-start animate-slide hover:[animation-play-state:paused]">
                 {[
                     { review: "The mobile app has been a game-changer for my salon. I can manage everything on the fly, and my clients love how easy it is to book appointments.", author: 'Jane D.', role: 'Owner, The Style Hub', rating: 5 },
                     { review: "Finally, a CRM that understands the beauty industry. The analytics are powerful and the client management features are top-notch.", author: 'Michael S.', role: 'Lead Stylist, Urban Shears', rating: 5 },
@@ -212,7 +222,7 @@ export default function AppsPage() {
       </section>
 
       {/* Section 6: Feature Comparison */}
-      <section className="py-20">
+      <section className="py-20 bg-secondary/50">
         <div className="container mx-auto px-4">
             <div className="text-center mb-12">
                 <h2 className="text-3xl md:text-5xl font-bold font-headline">App Features at a Glance</h2>
@@ -255,8 +265,7 @@ export default function AppsPage() {
               <div className="relative">
                   <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-border/80"></div>
                   <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary/10 animate-pulse"></div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 relative z-10">
                       <HowItWorksStep step={1} icon={<Download className="h-6 w-6 text-primary" />} title="Download & Setup" description="Get your salon listed and set up your services, staff, and schedule in minutes."/>
                       <HowItWorksStep step={2} icon={<Users className="h-6 w-6 text-primary" />} title="Clients Book Online" description="Clients find your salon and book appointments 24/7 through the GlowVita app or your website."/>
                       <HowItWorksStep step={3} icon={<BarChart className="h-6 w-6 text-primary" />} title="Manage & Grow" description="Use the CRM app to manage bookings, process payments, and grow your business with marketing tools."/>
