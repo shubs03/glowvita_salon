@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import validator from "validator";
@@ -30,21 +31,26 @@ export async function POST(request) {
     if (user) {
       userType = "vendor";
       Model = VendorModel;
-    } else {
-      // Check Doctor
+    }
+
+    // If not a vendor, check Doctor
+    if (!user) {
       user = await DoctorModel.findOne({ email }).select('+password');
       if (user) {
         userType = "doctor";
         Model = DoctorModel;
-      } else {
-        // Check Supplier
-        user = await SupplierModel.findOne({ email }).select('+password');
-        if (user) {
-          userType = "supplier";
-          Model = SupplierModel;
-        }
       }
     }
+      
+    // If not a vendor or doctor, check Supplier
+    if (!user) {
+      user = await SupplierModel.findOne({ email }).select('+password');
+      if (user) {
+        userType = "supplier";
+        Model = SupplierModel;
+      }
+    }
+
 
     if (!user) {
       return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
@@ -63,7 +69,7 @@ export async function POST(request) {
       await Model.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: "Login Successful",
       user: safeUser,
@@ -71,6 +77,16 @@ export async function POST(request) {
       refresh_token: refreshToken,
       role: userType,
     });
+
+    response.cookies.set('crm_access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV !== 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 60 * 60 * 24, // 1 day
+    });
+
+    return response;
   } catch (error) {
     console.error("CRM Login error:", error);
     return NextResponse.json({ success: false, error: "Something went wrong" }, { status: 500 });

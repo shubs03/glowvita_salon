@@ -5,11 +5,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaBook, FaCut, FaSignOutAlt, FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, FaBell, FaGift, FaUserFriends, FaUserCircle } from 'react-icons/fa';
+import { 
+  FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, 
+  FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
+  FaBell, FaGift, FaUserFriends, FaUserCircle, FaTruck, FaUserMd 
+} from 'react-icons/fa';
 import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 
-const allNavItems = [
+const vendorNavItems = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
   { title: "Calendar", href: "/calendar", Icon: FaCalendarAlt, permission: 'calendar_view' },
   { title: "Appointments", href: "/appointments", Icon: FaClipboardList, permission: 'appointments_view' },
@@ -23,18 +27,44 @@ const allNavItems = [
   { title: "Reports", href: "/reports", Icon: FaFileAlt, permission: 'reports_view' },
 ];
 
+const doctorNavItems = [
+  { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
+  { title: "Appointments", href: "/appointments", Icon: FaClipboardList, permission: 'appointments_view' },
+  { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
+];
+
+const supplierNavItems = [
+  { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
+  { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
+];
+
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { admin: user, isAdminAuthenticated } = useAppSelector((state) => state.auth);
+  const { admin: user } = useAppSelector((state) => state.auth);
 
   const handleLogout = async () => {
     dispatch(clearAdminAuth());
     router.push('/login');
   };
 
-  const visibleNavItems = allNavItems; // For now, show all. You would filter this based on user.permissions
+  const getNavItemsForRole = () => {
+    switch (user?.role) {
+      case 'vendor':
+        // If staff permissions are implemented, filter here
+        // For now, show all vendor items
+        return vendorNavItems;
+      case 'doctor':
+        return doctorNavItems;
+      case 'supplier':
+        return supplierNavItems;
+      default:
+        return []; // No items if role is unknown or user is not logged in
+    }
+  };
+
+  const visibleNavItems = getNavItemsForRole();
 
   const SidebarContent = () => (
     <div className={cn(
