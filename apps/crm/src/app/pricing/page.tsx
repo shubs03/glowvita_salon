@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@repo/ui/card";
-import { Check, HelpCircle, Shield, Star, Award, Clock } from 'lucide-react';
+import { Check, HelpCircle, Shield, Star, Award, Clock, UserPlus, Phone } from 'lucide-react';
 
 const FeatureCheck = ({ children }: { children: React.ReactNode }) => (
   <li className="flex items-start gap-3">
@@ -126,34 +126,136 @@ export default function PricingPage() {
           </div>
       </section>
 
-      {/* Section 4: FAQ */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 max-w-4xl">
-            <h2 className="text-3xl md:text-4xl font-bold text-center mb-8">Frequently Asked Questions</h2>
-            <div className="space-y-4">
-                <Card><CardHeader><CardTitle>Can I change my plan later?</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">Yes, you can upgrade, downgrade, or cancel your plan at any time from your account settings.</p></CardContent></Card>
-                <Card><CardHeader><CardTitle>What happens after my free trial ends?</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">You will be prompted to choose a paid plan to continue using the service. Your data will be saved.</p></CardContent></Card>
-                <Card><CardHeader><CardTitle>Do you offer support?</CardTitle></CardHeader><CardContent><p className="text-muted-foreground">Yes, all plans come with email support. The Pro plan includes priority phone and email support.</p></CardContent></Card>
+       {/* Section 4: FAQ */}
+      <section className="py-16 md:py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
+          <div className="container mx-auto px-4 max-w-5xl relative z-10">
+            <div className="text-center mb-12 md:mb-16">
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
+                <HelpCircle className="h-4 w-4" />
+                FAQ
+              </div>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+                Frequently Asked Questions
+              </h2>
+              <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                Have questions? We've got answers. Here are the most common
+                questions about our platform.
+              </p>
             </div>
-        </div>
-      </section>
+            <div className="space-y-4 md:space-y-6">
+              <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
+                    <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                      <Shield className="h-5 w-5" />
+                    </div>
+                    Can I change my plan later?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors duration-300">
+                    Yes, you can upgrade, downgrade, or cancel your plan at any time from your account settings. We believe in flexibility to match your business needs as they evolve.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
+                    <div className="bg-green-100 text-green-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                      <Clock className="h-5 w-5" />
+                    </div>
+                    What happens after my free trial ends?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors duration-300">
+                    After your 7-day free trial, you will be prompted to choose a paid plan to continue using the service. All your data and settings will be saved, so you can pick up right where you left off.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
+                    <div className="bg-purple-100 text-purple-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                     <HelpCircle className="h-5 w-5" />
+                    </div>
+                    Do you offer support if I get stuck?
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors duration-300">
+                    Absolutely! All our plans come with comprehensive email support. The Pro plan includes priority phone and email support to ensure you get the help you need, when you need it.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
 
       {/* Section 5: CTA */}
-      <section className="py-20 bg-secondary/50 text-center">
-        <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-4">Ready to get started?</h2>
-            <p className="text-muted-foreground mb-6">Start your 7-day free trial today. No credit card required.</p>
-            <Button size="lg">Start Free Trial</Button>
-        </div>
-      </section>
+      <section className="py-16 md:py-20 text-center bg-gradient-to-br from-background via-primary/10 to-background relative overflow-hidden">
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
+                <UserPlus className="h-4 w-4" />
+                Get Started Today
+              </div>
+              <h2 className="text-4xl lg:text-6xl font-bold font-headline mb-6 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent leading-tight">
+                Ready to Grow Your Business?
+              </h2>
+              <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
+                Join hundreds of successful salons worldwide. Transform your
+                business today with our powerful, easy-to-use CRM platform.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center items-center mb-8">
+                <Button
+                  size="lg"
+                  className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                  asChild
+                >
+                  <Link href="/login">
+                    Start 7-Day Free Trial{" "}
+                    <UserPlus className="ml-2 h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
+                  </Link>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
+                  asChild
+                >
+                  <Link href="#">
+                    Schedule Demo <Phone className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>No credit card required</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-blue-500" />
+                  <span>No setup fees</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-purple-500" />
+                  <span>Cancel anytime</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       
-      {/* Sections 6, 7, 8, 9, 10 would follow a similar pattern */}
       <section className="py-20 text-center">
-          <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4">
             <Award className="h-12 w-12 mx-auto text-primary mb-4"/>
             <h2 className="text-2xl font-bold">Industry Recognized</h2>
             <p className="text-muted-foreground mt-2">Awarded for best usability and customer support.</p>
-          </div>
+        </div>
       </section>
     </div>
   );
