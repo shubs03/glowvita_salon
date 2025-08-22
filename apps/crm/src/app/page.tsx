@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -329,6 +330,32 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
   );
 };
 
+const PhoneCard = ({ src, alt, hint, className, isMain = false }) => (
+  <div className={className}>
+    <div
+      className={`w-full h-full bg-gradient-to-b from-slate-800 to-slate-900 shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer ${isMain ? 'z-10' : ''}`}
+      style={{ clipPath: "polygon(0 8%, 8% 0%, 92% 0%, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0% 92%)" }}
+    >
+      <div className={`absolute top-2 md:top-3 left-1/2 transform -translate-x-1/2 w-6 md:w-${isMain ? '12' : '8'} h-0.5 md:h-1 bg-slate-600 rounded-full`}></div>
+      <div className={`mt-4 md:mt-${isMain ? '8' : '6'} h-full p-1 md:p-2`}>
+        <div className="w-full h-full bg-slate-100 rounded-sm overflow-hidden relative">
+          <Image
+            src={src}
+            alt={alt}
+            layout="fill"
+            objectFit="cover"
+            className="group-hover:scale-110 transition-transform duration-500"
+            data-ai-hint={hint}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        </div>
+      </div>
+      {isMain && <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-500 -z-10"></div>}
+    </div>
+  </div>
+);
+
+
 const AppPromotionSection = ({
   appName,
   title,
@@ -341,70 +368,39 @@ const AppPromotionSection = ({
   reverse = false,
 }) => (
   <section className="py-12 md:py-20 relative overflow-hidden">
-    {/* Background decorations */}
     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/10"></div>
     <div className="absolute top-10 md:top-20 left-4 md:left-10 w-20 md:w-32 h-20 md:h-32 bg-primary/10 rounded-full blur-2xl md:blur-3xl"></div>
     <div className="absolute bottom-10 md:bottom-20 right-4 md:right-10 w-24 md:w-40 h-24 md:h-40 bg-secondary/15 rounded-full blur-2xl md:blur-3xl"></div>
 
     <div className="container mx-auto px-4 md:px-6 relative z-10">
-      <div
-        className={`grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center ${
-          reverse ? "lg:grid-flow-col-dense" : ""
-        }`}
-      >
-        {/* Content Section */}
-        <div
-          className={`space-y-4 md:space-y-6 ${reverse ? "lg:col-start-2" : ""} order-2 lg:order-1`}
-        >
-          {/* App name badge */}
+      <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center ${reverse ? "lg:grid-flow-col-dense" : ""}`}>
+        <div className={`space-y-4 md:space-y-6 ${reverse ? "lg:col-start-2" : ""} order-2 lg:order-1`}>
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 md:px-4 py-1.5 md:py-2 rounded-full text-xs md:text-sm font-medium">
             <Sparkles className="h-3 w-3 md:h-4 md:w-4" />
             {appName}
           </div>
-
-          <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text leading-tight">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text leading-tight">
             {title}
           </h2>
-
-          <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-            {description}
-          </p>
-
-          {/* Features */}
+          <p className="text-base md:text-lg text-muted-foreground leading-relaxed">{description}</p>
           <div className="space-y-3 md:space-y-4">
             {features.map((feature, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 md:gap-4 p-2.5 md:p-3 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-all duration-300 group"
-              >
+              <div key={index} className="flex items-center gap-3 md:gap-4 p-2.5 md:p-3 rounded-lg bg-background/50 backdrop-blur-sm border border-border/50 hover:border-primary/30 transition-all duration-300 group">
                 <div className="bg-green-100 text-green-600 p-1 rounded-full group-hover:scale-110 transition-transform duration-200 flex-shrink-0">
                   <CheckCircle className="h-3 w-3 md:h-4 md:w-4" />
                 </div>
-                <span className="text-sm md:text-base group-hover:text-foreground transition-colors duration-300">
-                  {feature}
-                </span>
+                <span className="text-sm md:text-base group-hover:text-foreground transition-colors duration-300">{feature}</span>
               </div>
             ))}
           </div>
-
-          {/* Download Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4">
-            <Button
-              size="lg"
-              className="group shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base h-12 md:h-14 px-6 md:px-8"
-              asChild
-            >
+            <Button size="lg" className="group shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base h-12 md:h-14 px-6 md:px-8" asChild>
               <Link href={appStoreUrl}>
                 <Download className="mr-2 h-4 w-4 md:h-5 md:w-5 group-hover:scale-110 transition-transform duration-200" />
                 App Store
               </Link>
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="group shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base h-12 md:h-14 px-6 md:px-8"
-              asChild
-            >
+            <Button size="lg" variant="outline" className="group shadow-lg hover:shadow-xl transition-all duration-300 text-sm md:text-base h-12 md:h-14 px-6 md:px-8" asChild>
               <Link href={googlePlayUrl}>
                 <Download className="mr-2 h-4 w-4 md:h-5 md:w-5 group-hover:scale-110 transition-transform duration-200" />
                 Google Play
@@ -413,121 +409,34 @@ const AppPromotionSection = ({
           </div>
         </div>
 
-        {/* Phone Cards Section */}
-        <div
-          className={`${reverse ? "lg:col-start-1" : ""} order-1 lg:order-2`}
-        >
-          <div className="relative flex justify-center items-end h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] px-4 md:px-8">
-            {/* Background glow effects */}
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/5 to-secondary/10 rounded-2xl blur-2xl md:blur-3xl opacity-60"></div>
-
-            {/* Left Phone Card */}
-            <div className="relative w-[80px] sm:w-[100px] md:w-[140px] lg:w-[180px] h-[160px] sm:h-[200px] md:h-[280px] lg:h-[360px] mr-2 sm:mr-4 md:mr-6 lg:mr-8">
-              <div
-                className="w-full h-full bg-gradient-to-b from-slate-800 to-slate-900 shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer"
-                style={{
-                  clipPath:
-                    "polygon(0 8%, 8% 0%, 92% 0%, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0% 92%)",
-                }}
-              >
-                {/* Notch */}
-                <div className="absolute top-2 md:top-3 left-1/2 transform -translate-x-1/2 w-6 md:w-8 h-0.5 md:h-1 bg-slate-600 rounded-full"></div>
-
-                {/* Screen Content */}
-                <div className="mt-4 md:mt-6 h-full p-1 md:p-2">
-                  <div className="w-full h-full bg-slate-100 rounded-sm overflow-hidden relative">
-                    <Image
-                      src={images[0]}
-                      alt={`${appName} screenshot 1`}
-                      layout="fill"
-                      objectFit="cover"
-                      className="group-hover:scale-110 transition-transform duration-500"
-                      data-ai-hint={hints[0]}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Center Phone Card (Main) */}
-            <div className="relative w-[100px] sm:w-[130px] md:w-[180px] lg:w-[220px] h-[200px] sm:h-[260px] md:h-[360px] lg:h-[440px] z-10">
-              <div
-                className="w-full h-full bg-gradient-to-b from-slate-800 to-slate-900 shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer"
-                style={{
-                  clipPath:
-                    "polygon(0 8%, 8% 0%, 92% 0%, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0% 92%)",
-                }}
-              >
-                {/* Notch */}
-                <div className="absolute top-2 md:top-4 left-1/2 transform -translate-x-1/2 w-8 md:w-12 h-0.5 md:h-1 bg-slate-600 rounded-full"></div>
-
-                {/* Screen Content */}
-                <div className="mt-4 md:mt-8 h-full p-1 md:p-2">
-                  <div className="w-full h-full bg-slate-100 rounded-sm overflow-hidden relative">
-                    <Image
-                      src={images[1]}
-                      alt={`${appName} screenshot 2`}
-                      layout="fill"
-                      objectFit="cover"
-                      className="group-hover:scale-110 transition-transform duration-500"
-                      data-ai-hint={hints[1]}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  </div>
-                </div>
-
-                {/* Enhanced glow for main card */}
-                <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-500 -z-10"></div>
-              </div>
-            </div>
-
-            {/* Right Phone Card */}
-            <div className="relative w-[80px] sm:w-[100px] md:w-[140px] lg:w-[180px] h-[160px] sm:h-[200px] md:h-[280px] lg:h-[360px] ml-2 sm:ml-4 md:ml-6 lg:ml-8">
-              <div
-                className="w-full h-full bg-gradient-to-b from-slate-800 to-slate-900 shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer"
-                style={{
-                  clipPath:
-                    "polygon(0 8%, 8% 0%, 92% 0%, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0% 92%)",
-                }}
-              >
-                {/* Notch */}
-                <div className="absolute top-2 md:top-3 left-1/2 transform -translate-x-1/2 w-6 md:w-8 h-0.5 md:h-1 bg-slate-600 rounded-full"></div>
-
-                {/* Screen Content */}
-                <div className="mt-4 md:mt-6 h-full p-1 md:p-2">
-                  <div className="w-full h-full bg-slate-100 rounded-sm overflow-hidden relative">
-                    <Image
-                      src={images[2]}
-                      alt={`${appName} screenshot 3`}
-                      layout="fill"
-                      objectFit="cover"
-                      className="group-hover:scale-110 transition-transform duration-500"
-                      data-ai-hint={hints[2]}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-secondary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Floating accent elements */}
-            <div className="absolute top-4 md:top-8 left-4 md:left-8 animate-pulse">
-              <div className="bg-primary/15 backdrop-blur-sm rounded-full p-1.5 md:p-2">
-                <Star className="h-3 w-3 md:h-4 md:w-4 text-primary" />
-              </div>
-            </div>
-            <div className="absolute bottom-8 md:bottom-16 right-4 md:right-8 animate-pulse delay-1000">
-              <div className="bg-secondary/15 backdrop-blur-sm rounded-full p-1.5 md:p-2">
-                <Heart className="h-3 w-3 md:h-4 md:w-4 text-pink-500" />
-              </div>
-            </div>
+        <div className={`${reverse ? "lg:col-start-1" : ""} order-1 lg:order-2 flex items-center justify-center min-h-[300px] sm:min-h-[450px] lg:min-h-[600px]`}>
+          <div className="relative w-full h-full flex items-center justify-center scale-90 sm:scale-100">
+            <PhoneCard 
+              src={images[0]} 
+              alt={`${appName} screenshot 1`}
+              hint={hints[0]}
+              className="absolute w-[140px] h-[280px] sm:w-[160px] sm:h-[320px] md:w-[180px] md:h-[360px] lg:w-[220px] lg:h-[440px] rotate-[-12deg] translate-x-[-40%] sm:translate-x-[-50%]"
+            />
+            <PhoneCard 
+              src={images[1]} 
+              alt={`${appName} screenshot 2`}
+              hint={hints[1]}
+              isMain
+              className="relative w-[160px] h-[320px] sm:w-[180px] sm:h-[360px] md:w-[200px] md:h-[400px] lg:w-[240px] lg:h-[480px] z-10"
+            />
+            <PhoneCard 
+              src={images[2]} 
+              alt={`${appName} screenshot 3`}
+              hint={hints[2]}
+              className="absolute w-[140px] h-[280px] sm:w-[160px] sm:h-[320px] md:w-[180px] md:h-[360px] lg:w-[220px] lg:h-[440px] rotate-[12deg] translate-x-[40%] sm:translate-x-[50%]"
+            />
           </div>
         </div>
       </div>
     </div>
   </section>
 );
+
 
 export default function CrmHomePage() {
   const [advantageScroll, setAdvantageScroll] = useState(0);
@@ -553,7 +462,7 @@ export default function CrmHomePage() {
           </div>
           <nav className="flex items-center gap-2">
             <Button variant="ghost" className="hover:bg-primary/10" asChild>
-              <Link href="#">App Links</Link>
+              <Link href="#">App links</Link>
             </Button>
             <ThemeToggle />
             <Button variant="ghost" className="hover:bg-primary/10" asChild>
@@ -567,7 +476,7 @@ export default function CrmHomePage() {
               asChild
             >
               <Link href="/login">
-                Get Started{" "}
+                Get started{" "}
                 <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
               </Link>
             </Button>
@@ -963,14 +872,14 @@ export default function CrmHomePage() {
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <CardHeader className="relative z-10">
                     <CardTitle className="flex items-center gap-3 text-xl">
-                      <div className="bg-blue-100 text-blue-600 p-2 rounded">
+                      <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                         <Settings className="h-5 w-5" />
                       </div>
                       Manage
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="relative z-10">
-                    <p className="text-muted-foreground leading-relaxed">
+                    <p className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors duration-300">
                       Manage bookings, sales, clients, locations, and team
                       members. Analyse your business with advanced reporting and
                       analytics.
@@ -981,14 +890,14 @@ export default function CrmHomePage() {
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <CardHeader className="relative z-10">
                     <CardTitle className="flex items-center gap-3 text-xl">
-                      <div className="bg-green-100 text-green-600 p-2 rounded">
+                      <div className="bg-green-100 text-green-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                         <TrendingUp className="h-5 w-5" />
                       </div>
                       Grow
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="relative z-10">
-                    <p className="text-muted-foreground leading-relaxed">
+                    <p className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors duration-300">
                       Win new clients on the world's largest beauty and wellness
                       marketplace. Keep them coming back with marketing
                       features.
@@ -999,14 +908,14 @@ export default function CrmHomePage() {
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <CardHeader className="relative z-10">
                     <CardTitle className="flex items-center gap-3 text-xl">
-                      <div className="bg-purple-100 text-purple-600 p-2 rounded">
+                      <div className="bg-purple-100 text-purple-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                         <CreditCard className="h-5 w-5" />
                       </div>
                       Get Paid
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="relative z-10">
-                    <p className="text-muted-foreground leading-relaxed">
+                    <p className="text-muted-foreground leading-relaxed group-hover:text-foreground transition-colors duration-300">
                       Get paid fast with seamless payment processing. Reduce
                       no-shows with upfront payments and simplify checkout for
                       clients.
