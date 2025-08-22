@@ -23,7 +23,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
+     
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
@@ -38,6 +38,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
              
       <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
         <Header toggleSidebar={toggleSidebar} />
+                 
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="w-full max-w-none overflow-hidden">
             {children}
