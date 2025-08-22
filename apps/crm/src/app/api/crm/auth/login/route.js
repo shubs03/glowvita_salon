@@ -6,6 +6,7 @@ import generateTokens from "../../../../../../../../packages/lib/src/generateTok
 import VendorModel from "../../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js";
 import DoctorModel from "../../../../../../../../packages/lib/src/models/Vendor/Docters.model.js";
 import SupplierModel from "../../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js";
+import StaffModel from "../../../../../../../../packages/lib/src/models/Vendor/Staff.model.js";
 import _db from "../../../../../../../../packages/lib/src/db.js";
 
 await _db();
@@ -25,33 +26,27 @@ export async function POST(request) {
     let user = null;
     let userType = null;
     let Model = null;
+    let permissions = [];
 
-    // Check Vendor
-    user = await VendorModel.findOne({ email }).select('+password');
-    if (user) {
-      userType = "vendor";
-      Model = VendorModel;
-    }
+    // Define search order and corresponding models/roles
+    const userRoles = [
+      { model: VendorModel, type: 'vendor' },
+      { model: DoctorModel, type: 'doctor' },
+      { model: SupplierModel, type: 'supplier' },
+      { model: StaffModel, type: 'staff' },
+    ];
 
-    // If not a vendor, check Doctor
-    if (!user) {
-      user = await DoctorModel.findOne({ email }).select('+password');
-      if (user) {
-        userType = "doctor";
-        Model = DoctorModel;
+    for (const roleInfo of userRoles) {
+      const foundUser = await roleInfo.model.findOne({ email }).select('+password');
+      if (foundUser) {
+        user = foundUser;
+        userType = roleInfo.type;
+        Model = roleInfo.model;
+        permissions = foundUser.permissions || [];
+        break; // Stop searching once a user is found
       }
     }
-      
-    // If not a vendor or doctor, check Supplier
-    if (!user) {
-      user = await SupplierModel.findOne({ email }).select('+password');
-      if (user) {
-        userType = "supplier";
-        Model = SupplierModel;
-      }
-    }
-
-
+    
     if (!user) {
       return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
     }
@@ -61,7 +56,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: "Incorrect password" }, { status: 401 });
     }
 
-    const { accessToken, refreshToken } = generateTokens(user._id, userType);
+    const { accessToken, refreshToken } = generateTokens(user._id, userType, permissions);
 
     const { password: _, ...safeUser } = user.toObject();
 
@@ -76,6 +71,7 @@ export async function POST(request) {
       access_token: accessToken,
       refresh_token: refreshToken,
       role: userType,
+      permissions: permissions, // Include permissions in the response
     });
 
     response.cookies.set('crm_access_token', accessToken, {

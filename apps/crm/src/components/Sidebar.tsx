@@ -50,18 +50,28 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   };
 
   const getNavItemsForRole = () => {
-    switch (user?.role) {
-      case 'vendor':
-        // If staff permissions are implemented, filter here
-        // For now, show all vendor items
+    const role = user?.role;
+    const permissions = user?.permissions || [];
+
+    if (role === 'vendor') {
+      // If the user is a vendor owner (not staff with limited perms), show all.
+      // A more robust check might be `user.isOwner` or similar. For now, we assume
+      // a vendor user has all permissions if they aren't staff.
+      if (permissions.length === 0 && !user.vendorId) { 
         return vendorNavItems;
-      case 'doctor':
-        return doctorNavItems;
-      case 'supplier':
-        return supplierNavItems;
-      default:
-        return []; // No items if role is unknown or user is not logged in
+      }
+      return vendorNavItems.filter(item => permissions.includes(item.permission));
     }
+    if (role === 'staff') {
+      return vendorNavItems.filter(item => permissions.includes(item.permission));
+    }
+    if (role === 'doctor') {
+      return doctorNavItems;
+    }
+    if (role === 'supplier') {
+      return supplierNavItems;
+    }
+    return [];
   };
 
   const visibleNavItems = getNavItemsForRole();
