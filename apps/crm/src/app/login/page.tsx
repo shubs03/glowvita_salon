@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -9,12 +10,15 @@ import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
 import { useVendorLoginMutation } from '@repo/store/api';
 import { Eye, EyeOff, ShoppingBag, Shield, Users, TrendingUp } from 'lucide-react';
+import { useAppDispatch } from '@repo/store/hooks';
+import { setAdminAuth } from '@repo/store/slices/adminAuthSlice';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const dispatch = useAppDispatch();
   
   const [vendorLogin, { isLoading }] = useVendorLoginMutation();
 
@@ -25,17 +29,18 @@ export default function LoginPage() {
       const response = await vendorLogin({ email, password }).unwrap();
 
       if(response.success) {
-        localStorage.setItem('vendor_access_token', response.vendor_access_token);
-        localStorage.setItem('vendor_refresh_token', response.vendor_refresh_token);
+        // Dispatch to Redux store instead of localStorage
+        dispatch(setAdminAuth({ user: response.user, token: response.access_token }));
+        
         toast.success('Login successful!', {
-          description: 'Welcome back to your vendor dashboard.',
+          description: 'Welcome back to your dashboard.',
           duration: 3000,
         });
         router.push('/dashboard');
       }
     } catch (error: any) {
       toast.error('Login failed', {
-        description: error?.data?.message || error?.message || 'Invalid credentials. Please try again.',
+        description: error?.data?.error || 'Invalid credentials. Please try again.',
         duration: 4000,
       });
     }
@@ -135,7 +140,7 @@ export default function LoginPage() {
                 Sign In
               </CardTitle>
               <CardDescription className="text-center text-gray-600">
-                Access your vendor dashboard
+                Access your dashboard
               </CardDescription>
             </CardHeader>
             
@@ -148,7 +153,7 @@ export default function LoginPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="vendor@example.com"
+                    placeholder="Enter your email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -177,6 +182,7 @@ export default function LoginPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                       disabled={isLoading}
+                      tabIndex={-1}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -238,7 +244,7 @@ export default function LoginPage() {
           {/* Footer */}
           <div className="text-center mt-4">
             <p className="text-xs text-gray-500">
-              Trusted by <span className="font-semibold text-blue-600">10K+</span> vendors
+              Trusted by <span className="font-semibold text-blue-600">10K+</span> partners
             </p>
           </div>
         </div>
