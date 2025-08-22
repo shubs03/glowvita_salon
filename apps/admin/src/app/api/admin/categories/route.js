@@ -21,14 +21,14 @@ export const GET = async () => {
 export const POST = 
   async (req) => {
     const body = await req.json();
-    const { name, description } = body;
+    const { name, description, image } = body;
 
     if (!name) {
       return Response.json({ message: "Name is required" }, { status: 400 });
     }
 
     try {
-      const newCategory = await CategoryModel.create({ name, description });
+      const newCategory = await CategoryModel.create({ name, description, categoryImage: image });
       return Response.json(newCategory, { status: 201 });
     } catch (error) {
       return Response.json(
@@ -48,6 +48,12 @@ export const PUT = authMiddlewareAdmin(
         { message: "ID is required for update" },
         { status: 400 }
       );
+    }
+
+    // Rename 'image' to 'categoryImage' if it exists in updateData
+    if (updateData.image !== undefined) {
+      updateData.categoryImage = updateData.image;
+      delete updateData.image;
     }
 
     try {

@@ -5,7 +5,7 @@ import VendorUserModel from "../../../packages/lib/src/models/Vendor/Vendor.mode
 import _db from "../../../packages/lib/src/db.js";
 import { JWT_SECRET_VENDOR } from "../../../packages/config/config.js";
 
-export function authMiddlewareVendor(handler, allowedRoles = []) {
+export function authMiddlewareCrm(handler, allowedRoles = []) {
   return async (req, ctx) => {
     await _db();
 

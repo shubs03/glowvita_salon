@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@repo/ui/card";
@@ -30,21 +29,10 @@ import {
   Star,
   BarChart2,
   Eye,
-  MoreVertical,
-  X,
-  UploadCloud,
-  Users,
-  CheckSquare,
-  Clock,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@repo/ui/dropdown-menu";
 import { Checkbox } from "@repo/ui/checkbox";
 import { Switch } from "@repo/ui/switch";
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Select,
   SelectContent,
@@ -65,76 +53,62 @@ import { Badge } from "@repo/ui/badge";
 import {
   useGetCategoriesQuery,
   useCreateCategoryMutation,
+  useGetVendorServicesQuery,
+  useCreateVendorServicesMutation,
+  useUpdateVendorServicesMutation,
+  useDeleteVendorServicesMutation,
   useGetServicesQuery,
   useCreateServiceMutation,
-  useDeleteServiceMutation,
-  useUpdateServiceMutation,
 } from "@repo/store/api";
 import Image from "next/image";
 import { Skeleton } from "@repo/ui/skeleton";
 import { Pagination } from "@repo/ui/pagination";
+import {
+  setSearchTerm,
+  setModalOpen,
+  setDeleteModalOpen,
+} from "@repo/store/slices/serviceSlice";
 
-type Service = {
-  _id: string;
-  id: string;
-  name: string;
-  category: { name: string };
-  price: number;
-  discountedPrice?: number;
-  duration: number; // in minutes
-  description: string;
-  image: string;
-  gender: "men" | "women" | "unisex";
-  staff: string[];
-  commission: boolean;
-  homeService: { available: boolean; charges?: number };
-  weddingService: { available: boolean; charges?: number };
-  bookingInterval: number;
-  tax: { enabled: boolean; type: "percentage" | "fixed"; value?: number };
-  onlineBooking: boolean;
-  status: "active" | "inactive";
-};
+// Placeholder vendorId (replace with actual vendorId from your app, e.g., auth context)
+const VENDOR_ID = "your-vendor-id-here"; // TODO: Replace with actual vendorId
 
 const mockStaff = ["Jane Doe", "John Smith", "Emily White"];
 
-const AddItemModal = ({
-  isOpen,
-  onClose,
-  onItemCreated,
-  itemType,
-  categoryId,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onItemCreated: (item: any) => void;
-  itemType: "Category" | "Service";
-  categoryId?: string;
-}) => {
+const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState("");
 
-  const [createCategory, { isLoading: isCreatingCategory }] =
-    useCreateCategoryMutation();
-  const [createService, { isLoading: isCreatingService }] =
-    useCreateServiceMutation();
+  const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
+  const [createService, { isLoading: isCreatingService }] = useCreateServiceMutation();
 
   const isLoading = isCreatingCategory || isCreatingService;
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleCreate = async () => {
     if (name.trim()) {
       try {
         let newItem;
         if (itemType === "Category") {
-          newItem = await createCategory({ name, description }).unwrap();
+          newItem = await createCategory({ name, description, image }).unwrap();
         } else if (itemType === "Service" && categoryId) {
-          newItem = await createService({
-            name,
-            description,
-            category: categoryId,
-          }).unwrap();
+          newItem = await createService({ name, description, category: categoryId, image }).unwrap();
+        } else {
+          throw new Error("Invalid item type or missing categoryId");
         }
         setName("");
         setDescription("");
+        setImage("");
         onItemCreated(newItem);
         onClose();
       } catch (error) {
@@ -173,6 +147,10 @@ const AddItemModal = ({
               disabled={isLoading}
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="image">{itemType} Image</Label>
+            <Input id="image" type="file" onChange={handleImageChange} disabled={isLoading} />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
@@ -187,17 +165,7 @@ const AddItemModal = ({
   );
 };
 
-const ServiceFormModal = ({
-  isOpen,
-  onClose,
-  service,
-  type,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  service: Service | null;
-  type: "add" | "edit" | "view";
-}) => {
+const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
   const [activeTab, setActiveTab] = useState("basic");
   const {
     data: categories = [],
@@ -210,77 +178,177 @@ const ServiceFormModal = ({
     refetch: refetchServices,
   } = useGetServicesQuery(undefined);
 
+  const [createVendorServices, { isLoading: isCreating }] = useCreateVendorServicesMutation();
+  const [updateVendorServices, { isLoading: isUpdating }] = useUpdateVendorServicesMutation();
+
+  const isSaving = isCreating || isUpdating;
+
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-
-  const [formData, setFormData] = useState<Partial<Service>>(service || {});
+  const [formData, setFormData] = useState({
+    name: '',
+    category: {},
+    price: '',
+    discountedPrice: '',
+    duration: '',
+    description: '',
+    gender: 'unisex',
+    staff: [],
+    commission: false,
+    homeService: { available: false, charges: null },
+    weddingService: { available: false, charges: null },
+    bookingInterval: '',
+    tax: { enabled: false, type: 'percentage', value: null },
+    onlineBooking: true,
+    image: '',
+  });
 
   useEffect(() => {
-    const initialData = service || {};
-    setFormData(initialData);
-    setActiveTab("basic");
-  }, [service, isOpen]);
+    if (service && type === "edit") {
+      setFormData({
+        name: service.name || '',
+        category: { _id: service.category, name: service.categoryName } || {},
+        price: service.price || '',
+        discountedPrice: service.discountedPrice || '',
+        duration: service.duration || '',
+        description: service.description || '',
+        gender: service.gender || 'unisex',
+        staff: service.staff || [],
+        commission: service.commission || false,
+        homeService: service.homeService || { available: false, charges: null },
+        weddingService: service.weddingService || { available: false, charges: null },
+        bookingInterval: service.bookingInterval || '',
+        tax: service.tax || { enabled: false, type: 'percentage', value: null },
+        onlineBooking: service.onlineBooking || true,
+        image: service.image || '',
+      });
+      setActiveTab("basic");
+    } else {
+      setFormData({
+        name: '',
+        category: {},
+        price: '',
+        discountedPrice: '',
+        duration: '',
+        description: '',
+        gender: 'unisex',
+        staff: [],
+        commission: false,
+        homeService: { available: false, charges: null },
+        weddingService: { available: false, charges: null },
+        bookingInterval: '',
+        tax: { enabled: false, type: 'percentage', value: null },
+        onlineBooking: true,
+        image: '',
+      });
+      setActiveTab("basic");
+    }
+  }, [service, isOpen, type]);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value, type, checked } = e.target as HTMLInputElement;
+  const handleInputChange = (e) => {
+    const { name, value, type } = e.target;
+    const checked = e.target.checked;
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
 
-  const handleSelectChange = (name: string, value: string | string[]) => {
+  const handleSelectChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCategoryChange = (categoryId: string) => {
-    const category = categories.find((c: any) => c._id === categoryId);
-    setFormData((prev) => ({ ...prev, category: category, name: "" }));
+  const handleCategoryChange = (categoryId) => {
+    const category = categories.find((c) => c._id === categoryId);
+    setFormData((prev) => ({ ...prev, category: category || {}, name: "" }));
   };
 
-  const handleCheckboxChange = (name: string, id: string, checked: boolean) => {
-    const currentValues = (formData[name as keyof Service] as string[]) || [];
-    const newValues = checked
-      ? [...currentValues, id]
-      : currentValues.filter((val) => val !== id);
+  const handleCheckboxChange = (name, id, checked) => {
+    const currentValues = (formData[name] || []);
+    const newValues = checked ? [...currentValues, id] : currentValues.filter((val) => val !== id);
     setFormData((prev) => ({ ...prev, [name]: newValues }));
   };
 
-  const handleNestedChange = (
-    parent: keyof Service,
-    child: string,
-    value: any
-  ) => {
+  const handleNestedChange = (parent, child, value) => {
     setFormData((prev) => ({
       ...prev,
       [parent]: {
-        ...(prev[parent] as object),
+        ...(prev[parent] || {}),
         [child]: value,
       },
     }));
   };
 
-  const handleCategoryCreated = (newCategory: any) => {
+  const handleCategoryCreated = (newCategory) => {
     refetchCategories();
-    // Automatically select the new category
     setFormData((prev) => ({ ...prev, category: newCategory }));
   };
 
-  const handleServiceCreated = (newService: any) => {
+  const handleServiceCreated = (newService) => {
     refetchServices();
-    // Automatically select the new service
-    setFormData((prev) => ({ ...prev, name: newService.name }));
+    setFormData((prev) => ({ ...prev, name: newService.name || "" }));
   };
 
-  const servicesForCategory = formData.category
-    ? allServices.filter(
-        (s: any) => s.category?._id === (formData.category as any)?._id
-      )
-    : [];
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData((prev) => ({ ...prev, image: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
-  const selectedCategoryId = (formData.category as any)?._id;
+  const handleSave = async () => {
+    const payload = {
+      ...formData,
+      category: formData.category ? formData.category._id : undefined,
+      price: Number(formData.price) || 0,
+      discountedPrice: Number(formData.discountedPrice) || 0,
+      duration: Number(formData.duration) || 0,
+      homeService: formData.homeService ? {
+        ...formData.homeService,
+        charges: Number(formData.homeService.charges) || null,
+      } : { available: false, charges: null },
+      weddingService: formData.weddingService ? {
+        ...formData.weddingService,
+        charges: Number(formData.weddingService.charges) || null,
+      } : { available: false, charges: null },
+      tax: formData.tax ? {
+        ...formData.tax,
+        value: Number(formData.tax.value) || null,
+      } : { enabled: false, type: 'percentage', value: null },
+      bookingInterval: Number(formData.bookingInterval) || 0,
+      image: formData.image,
+    };
+
+    try {
+      if (type === "add") {
+        await createVendorServices({ vendor: VENDOR_ID, services: [payload] }).unwrap();
+      } else if (type === "edit" && service?._id) {
+        await updateVendorServices({ vendor: VENDOR_ID, services: [{ ...payload, _id: service._id }] }).unwrap();
+      }
+      onClose();  
+    } catch (error) {
+      console.error("Failed to save service", error);
+    }
+  };
+
+  const servicesForCategory = useMemo(() => {
+    const categoryId = formData.category?._id;
+    return categoryId ? allServices.filter((s) => s.category?._id === categoryId) : [];
+  }, [allServices, formData.category]);
+
+  const selectedCategoryId = formData.category?._id || '';
+
+  const handleNextTab = () => {
+    if (activeTab === "basic") {
+      setActiveTab("advanced");
+    } else if (activeTab === "advanced") {
+      setActiveTab("booking");
+    }
+  };
 
   const renderBasicInfoTab = () => (
     <div className="space-y-4">
@@ -290,7 +358,7 @@ const ServiceFormModal = ({
           <div className="flex gap-2">
             <Select
               onValueChange={handleCategoryChange}
-              value={selectedCategoryId || ""}
+              value={selectedCategoryId}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select Category" />
@@ -301,7 +369,7 @@ const ServiceFormModal = ({
                     Loading...
                   </SelectItem>
                 ) : (
-                  categories.map((cat: any) => (
+                  categories.map((cat) => (
                     <SelectItem key={cat._id} value={cat._id}>
                       {cat.name}
                     </SelectItem>
@@ -325,12 +393,12 @@ const ServiceFormModal = ({
             <Select
               value={formData.name || ""}
               onValueChange={(value) => handleSelectChange("name", value)}
-              disabled={!formData.category}
+              disabled={!formData.category?._id}
             >
               <SelectTrigger>
                 <SelectValue
                   placeholder={
-                    formData.category
+                    formData.category?._id
                       ? "Select Service"
                       : "Select Category First"
                   }
@@ -342,7 +410,7 @@ const ServiceFormModal = ({
                     Loading...
                   </SelectItem>
                 ) : (
-                  servicesForCategory.map((s: any) => (
+                  servicesForCategory.map((s) => (
                     <SelectItem key={s._id} value={s.name}>
                       {s.name}
                     </SelectItem>
@@ -355,7 +423,7 @@ const ServiceFormModal = ({
               variant="outline"
               size="icon"
               onClick={() => setIsServiceModalOpen(true)}
-              disabled={!formData.category}
+              disabled={!formData.category?._id}
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -380,7 +448,7 @@ const ServiceFormModal = ({
             name="price"
             type="number"
             placeholder="e.g., 500"
-            value={formData.price}
+            value={formData.price || ""}
             onChange={handleInputChange}
           />
         </div>
@@ -391,7 +459,7 @@ const ServiceFormModal = ({
             name="discountedPrice"
             type="number"
             placeholder="e.g., 450"
-            value={formData.discountedPrice}
+            value={formData.discountedPrice || ""}
             onChange={handleInputChange}
           />
         </div>
@@ -402,7 +470,7 @@ const ServiceFormModal = ({
             name="duration"
             type="number"
             placeholder="e.g., 60"
-            value={formData.duration}
+            value={formData.duration || ""}
             onChange={handleInputChange}
           />
         </div>
@@ -425,8 +493,19 @@ const ServiceFormModal = ({
       </div>
       <div className="space-y-2">
         <Label htmlFor="image">Service Image</Label>
-        <Input id="image" type="file" />
+        {formData.image && !formData.image.startsWith('data:') && (
+          <Image src={formData.image} alt="Current Service Image" width={100} height={100} className="mb-2" />
+        )}
+        <Input id="image" type="file" onChange={handleImageChange} />
       </div>
+      <DialogFooter className="flex justify-end pt-4">
+        <Button variant="outline" onClick={onClose} disabled={isSaving}>
+          Cancel
+        </Button>
+        <Button onClick={handleNextTab} disabled={!formData.name}>
+          Next
+        </Button>
+      </DialogFooter>
     </div>
   );
 
@@ -451,9 +530,9 @@ const ServiceFormModal = ({
             <div key={staff} className="flex items-center space-x-2">
               <Checkbox
                 id={`staff-${staff}`}
-                checked={formData.staff?.includes(staff)}
+                checked={formData.staff?.includes(staff) || false}
                 onCheckedChange={(checked) =>
-                  handleCheckboxChange("staff", staff, checked as boolean)
+                  handleCheckboxChange("staff", staff, checked)
                 }
               />
               <Label htmlFor={`staff-${staff}`}>{staff}</Label>
@@ -464,10 +543,8 @@ const ServiceFormModal = ({
       <div className="flex items-center space-x-2">
         <Switch
           id="commission"
-          checked={formData.commission}
-          onCheckedChange={(checked) =>
-            handleSelectChange("commission", checked as any)
-          }
+          checked={formData.commission || false}
+          onCheckedChange={(checked) => handleSelectChange("commission", checked)}
         />
         <Label htmlFor="commission">Enable Staff Commission</Label>
       </div>
@@ -476,7 +553,7 @@ const ServiceFormModal = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="home-service"
-              checked={formData.homeService?.available}
+              checked={formData.homeService?.available || false}
               onCheckedChange={(checked) =>
                 handleNestedChange("homeService", "available", checked)
               }
@@ -487,13 +564,9 @@ const ServiceFormModal = ({
             <Input
               placeholder="Additional Charges (₹)"
               type="number"
-              value={formData.homeService.charges}
+              value={formData.homeService?.charges || ""}
               onChange={(e) =>
-                handleNestedChange(
-                  "homeService",
-                  "charges",
-                  Number(e.target.value)
-                )
+                handleNestedChange("homeService", "charges", Number(e.target.value))
               }
             />
           )}
@@ -502,7 +575,7 @@ const ServiceFormModal = ({
           <div className="flex items-center space-x-2">
             <Switch
               id="wedding-service"
-              checked={formData.weddingService?.available}
+              checked={formData.weddingService?.available || false}
               onCheckedChange={(checked) =>
                 handleNestedChange("weddingService", "available", checked)
               }
@@ -513,18 +586,22 @@ const ServiceFormModal = ({
             <Input
               placeholder="Additional Charges (₹)"
               type="number"
-              value={formData.weddingService.charges}
+              value={formData.weddingService?.charges || ""}
               onChange={(e) =>
-                handleNestedChange(
-                  "weddingService",
-                  "charges",
-                  Number(e.target.value)
-                )
+                handleNestedChange("weddingService", "charges", Number(e.target.value))
               }
             />
           )}
         </div>
       </div>
+      <DialogFooter className="flex justify-end pt-4">
+        <Button variant="outline" onClick={onClose} disabled={isSaving}>
+          Cancel
+        </Button>
+        <Button onClick={handleNextTab}>
+          Next
+        </Button>
+      </DialogFooter>
     </div>
   );
 
@@ -533,10 +610,8 @@ const ServiceFormModal = ({
       <div className="space-y-2">
         <Label htmlFor="bookingInterval">Booking Interval</Label>
         <Select
-          value={String(formData.bookingInterval)}
-          onValueChange={(value) =>
-            handleSelectChange("bookingInterval", value)
-          }
+          value={String(formData.bookingInterval || "")}
+          onValueChange={(value) => handleSelectChange("bookingInterval", Number(value))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select interval" />
@@ -553,17 +628,15 @@ const ServiceFormModal = ({
       <div className="flex items-center space-x-2">
         <Switch
           id="tax-enabled"
-          checked={formData.tax?.enabled}
-          onCheckedChange={(checked) =>
-            handleNestedChange("tax", "enabled", checked)
-          }
+          checked={formData.tax?.enabled || false}
+          onCheckedChange={(checked) => handleNestedChange("tax", "enabled", checked)}
         />
         <Label htmlFor="tax-enabled">Enable Service Tax</Label>
       </div>
       {formData.tax?.enabled && (
         <div className="grid grid-cols-2 gap-4">
           <Select
-            value={formData.tax.type}
+            value={formData.tax?.type || ""}
             onValueChange={(value) => handleNestedChange("tax", "type", value)}
           >
             <SelectTrigger>
@@ -577,142 +650,163 @@ const ServiceFormModal = ({
           <Input
             type="number"
             placeholder="Tax Value"
-            value={formData.tax.value}
-            onChange={(e) =>
-              handleNestedChange("tax", "value", Number(e.target.value))
-            }
+            value={formData.tax?.value || ""}
+            onChange={(e) => handleNestedChange("tax", "value", Number(e.target.value))}
           />
         </div>
       )}
       <div className="flex items-center space-x-2">
         <Switch
           id="onlineBooking"
-          checked={formData.onlineBooking}
-          onCheckedChange={(checked) =>
-            handleSelectChange("onlineBooking", checked as any)
-          }
+          checked={formData.onlineBooking || false}
+          onCheckedChange={(checked) => handleSelectChange("onlineBooking", checked)}
         />
         <Label htmlFor="onlineBooking">Enable Online Booking</Label>
       </div>
+      <DialogFooter className="flex justify-end pt-4">
+        <Button variant="outline" onClick={onClose} disabled={isSaving}>
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={isSaving || !formData.name}>
+          {isSaving ? "Saving..." : "Save Service"}
+        </Button>
+      </DialogFooter>
     </div>
   );
 
   if (type === "view") {
     return (
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{service?.name}</DialogTitle>
-          <DialogDescription>{service?.description}</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4 text-sm">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <span className="font-semibold">Category:</span>{" "}
-              {service?.category?.name || "N/A"}
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{service?.name}</DialogTitle>
+            <DialogDescription>{service?.description}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 text-sm">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="font-semibold">Category:</span>{" "}
+                {service?.categoryName || "N/A"}
+              </div>
+              <div>
+                <span className="font-semibold">Price:</span> ₹
+                {service?.price?.toFixed(2) || 0}
+              </div>
+              <div>
+                <span className="font-semibold">Duration:</span>{" "}
+                {service?.duration || 0} mins
+              </div>
+              <div>
+                <span className="font-semibold">Gender:</span> {service?.gender || 'N/A'}
+              </div>
+              <div>
+                <span className="font-semibold">Status:</span> {service?.status || 'N/A'}
+              </div>
             </div>
-            <div>
-              <span className="font-semibold">Price:</span> ₹
-              {service?.price.toFixed(2)}
-            </div>
-            <div>
-              <span className="font-semibold">Duration:</span>{" "}
-              {service?.duration} mins
-            </div>
-            <div>
-              <span className="font-semibold">Gender:</span> {service?.gender}
-            </div>
-            <div>
-              <span className="font-semibold">Status:</span> {service?.status}
-            </div>
+            {service?.image && (
+              <div className="mt-4">
+                <span className="font-semibold">Image:</span>
+                <Image src={service.image} alt={service.name} width={100} height={100} className="mt-2" />
+              </div>
+            )}
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+          <DialogFooter>
+            <Button variant="secondary" onClick={onClose}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
-      <DialogHeader>
-        <DialogTitle>
-          {type === "add" ? "Add New Service" : "Edit Service"}
-        </DialogTitle>
-      </DialogHeader>
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="flex-grow flex flex-col"
-      >
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="basic">Basic Info</TabsTrigger>
-          <TabsTrigger value="advanced" disabled={!formData.name}>
-            Advanced
-          </TabsTrigger>
-          <TabsTrigger value="booking" disabled={!formData.name}>
-            Booking & Tax
-          </TabsTrigger>
-        </TabsList>
-        <div className="py-4 flex-grow overflow-y-auto">
-          <TabsContent value="basic">{renderBasicInfoTab()}</TabsContent>
-          <TabsContent value="advanced">{renderAdvancedTab()}</TabsContent>
-          <TabsContent value="booking">{renderBookingTab()}</TabsContent>
-        </div>
-      </Tabs>
-      <AddItemModal
-        isOpen={isCategoryModalOpen}
-        onClose={() => setIsCategoryModalOpen(false)}
-        onItemCreated={handleCategoryCreated}
-        itemType="Category"
-      />
-      <AddItemModal
-        isOpen={isServiceModalOpen}
-        onClose={() => setIsServiceModalOpen(false)}
-        onItemCreated={handleServiceCreated}
-        itemType="Service"
-        categoryId={selectedCategoryId}
-      />
-      <DialogFooter className="flex-shrink-0 pt-4 border-t">
-        <Button variant="secondary" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button>Save Service</Button>
-      </DialogFooter>
-    </DialogContent>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader>
+          <DialogTitle>
+            {type === "add" ? "Add New Service" : "Edit Service"}
+          </DialogTitle>
+        </DialogHeader>
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-grow flex flex-col overflow-hidden"
+        >
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="basic">Basic Info</TabsTrigger>
+            <TabsTrigger value="advanced" disabled={!formData.name}>
+              Advanced
+            </TabsTrigger>
+            <TabsTrigger value="booking" disabled={!formData.name}>
+              Booking & Tax
+            </TabsTrigger>
+          </TabsList>
+          <div className="py-4 flex-grow overflow-y-auto">
+            <TabsContent value="basic">{renderBasicInfoTab()}</TabsContent>
+            <TabsContent value="advanced">{renderAdvancedTab()}</TabsContent>
+            <TabsContent value="booking">{renderBookingTab()}</TabsContent>
+          </div>
+        </Tabs>
+        <AddItemModal
+          isOpen={isCategoryModalOpen}
+          onClose={() => setIsCategoryModalOpen(false)}
+          onItemCreated={handleCategoryCreated}
+          itemType="Category"
+        />
+        <AddItemModal
+          isOpen={isServiceModalOpen}
+          onClose={() => setIsServiceModalOpen(false)}
+          onItemCreated={handleServiceCreated}
+          itemType="Service"
+          categoryId={selectedCategoryId}
+        />
+      </DialogContent>
+    </Dialog>
   );
 };
 
 export default function ServicesPage() {
+  const dispatch = useDispatch();
+  const serviceState = useSelector((state) => state.service || {
+    searchTerm: '',
+    isModalOpen: false,
+    isDeleteModalOpen: false,
+    selectedService: null,
+    modalType: 'add',
+  });
+
   const {
-    data: services = [],
+    searchTerm,
+    isModalOpen,
+    isDeleteModalOpen,
+    selectedService,
+    modalType,
+  } = serviceState;
+
+  const {
+    data = {},
     isLoading,
     isError,
+    error,
     refetch,
-  } = useGetServicesQuery(undefined);
+  } = useGetVendorServicesQuery({ vendorId: VENDOR_ID });
 
-  console.log("Services in service page : ", services)
+  const services = data.services || [];
 
-  const [deleteService] = useDeleteServiceMutation();
+  console.log("services", services);
+
+  const [deleteVendorServices] = useDeleteVendorServicesMutation();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [modalType, setModalType] = useState<"add" | "edit" | "view">("add");
-  const [searchTerm, setSearchTerm] = useState("");
 
   const filteredServices = useMemo(() => {
     return services.filter(
-      (service: Service) =>
+      (service) =>
         service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (service.category &&
-          service.category.name
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()))
+        (service.categoryName &&
+          service.categoryName.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [services, searchTerm]);
 
@@ -721,44 +815,71 @@ export default function ServicesPage() {
   const currentItems = filteredServices.slice(firstItemIndex, lastItemIndex);
   const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
 
-  const handleOpenModal = (
-    type: "add" | "edit" | "view",
-    service?: Service
-  ) => {
-    setModalType(type);
-    setSelectedService(service || null);
-    setIsModalOpen(true);
+  console.log(filteredServices, "filteredServices");
+
+  const handleOpenModal = (type: string, service = null) => {
+    dispatch(setModalOpen({ isOpen: true, modalType: type, selectedService: service }));
   };
 
-  const handleDeleteClick = (service: Service) => {
-    setSelectedService(service);
-    setIsDeleteModalOpen(true);
+  const handleCloseModal = () => {
+    dispatch(setModalOpen({ isOpen: false, modalType: 'add', selectedService: null }));
+    refetch();
+  };
+
+  const handleDeleteClick = (service) => {
+    dispatch(setDeleteModalOpen({ isOpen: true, selectedService: service }));
   };
 
   const handleConfirmDelete = async () => {
-    if (selectedService) {
-      await deleteService({ id: selectedService._id }).unwrap();
-    }
-    setIsDeleteModalOpen(false);
-    setSelectedService(null);
+      try {
+
+        console.log("Deleting service:", selectedService);
+        await deleteVendorServices({
+          vendor: VENDOR_ID,
+          serviceId: selectedService?._id,
+       } ).unwrap();
+        refetch();
+      } catch (error) {
+        console.error("Failed to delete service", error);
+      }
+    dispatch(setDeleteModalOpen({ isOpen: false, selectedService: null }));
   };
+
+  const isNoServicesError = isError && error?.data?.message === "No services found for this vendor";
 
   if (isLoading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-        <Skeleton className="h-8 w-64" />
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+          <div>
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-48 mt-2" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-10 w-28" />
+          </div>
+        </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-28" />
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
           ))}
         </div>
-        <Skeleton className="h-12 w-full" />
         <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  {[...Array(6)].map((_, i) => (
+                  {["Service", "Category", "Duration", "Price", "Status", "Actions"].map((_, i) => (
                     <TableHead key={i}>
                       <Skeleton className="h-5 w-full" />
                     </TableHead>
@@ -768,7 +889,13 @@ export default function ServicesPage() {
               <TableBody>
                 {[...Array(5)].map((_, i) => (
                   <TableRow key={i}>
-                    {[...Array(6)].map((_, j) => (
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-10 w-10 rounded-md" />
+                        <Skeleton className="h-5 w-32" />
+                      </div>
+                    </TableCell>
+                    {[...Array(5)].map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -783,92 +910,12 @@ export default function ServicesPage() {
     );
   }
 
-  if (isError) {
-    return (
-      <div className="p-8 text-center">
-        <h3 className="text-lg font-semibold text-destructive">
-          Failed to load services
-        </h3>
-        <p className="text-muted-foreground">Please try again later.</p>
-        <Button onClick={() => refetch()} className="mt-4">
-          Retry
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Services
-            </CardTitle>
-            <Tag className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{services.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Total services offered
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Most Popular</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Deluxe Haircut</div>
-            <p className="text-xs text-muted-foreground">Top-selling service</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Avg. Service Price
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹
-              {(
-                services.reduce((acc: number, s: Service) => acc + s.price, 0) /
-                  services.length || 0
-              ).toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Average across all services
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Categories
-            </CardTitle>
-            <BarChart2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Set(services.map((s: Service) => s.category?.name)).size}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Unique service categories
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold font-headline">
-            Service Management
-          </h1>
-          <p className="text-muted-foreground">
-            Manage the services your salon offers.
-          </p>
+          <h1 className="text-2xl font-bold font-headline">Service Management</h1>
+          <p className="text-muted-foreground">Manage the services your salon offers.</p>
         </div>
         <div className="flex gap-2">
           <div className="relative">
@@ -878,7 +925,7 @@ export default function ServicesPage() {
               placeholder="Search services..."
               className="pl-8"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => dispatch(setSearchTerm(e.target.value))}
             />
           </div>
           <Button onClick={() => handleOpenModal("add")}>
@@ -887,7 +934,52 @@ export default function ServicesPage() {
           </Button>
         </div>
       </div>
-
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Services</CardTitle>
+            <Tag className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{services.length}</div>
+            <p className="text-xs text-muted-foreground">Total services offered</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Most Popular</CardTitle>
+            <Star className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{services.length > 0 ? services[0].name : "N/A"}</div>
+            <p className="text-xs text-muted-foreground">Top-selling service</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg. Service Price</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ₹{(services.length > 0 ? services.reduce((acc, s) => acc + (s.price || 0), 0) / services.length : 0).toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">Average across all services</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Categories</CardTitle>
+            <BarChart2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {services.length > 0 ? new Set(services.map((s) => s.categoryName)).size : 0}
+            </div>
+            <p className="text-xs text-muted-foreground">Unique service categories</p>
+          </CardContent>
+        </Card>
+      </div>
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -903,15 +995,25 @@ export default function ServicesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentItems.length > 0 ? (
-                  currentItems.map((service: Service) => (
+                {isError && !isNoServicesError ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="text-center py-10 text-muted-foreground"
+                    >
+                      Failed to load services. Please try again later.
+                      <Button onClick={() => refetch()} className="ml-4">
+                        Retry
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ) : currentItems.length > 0 ? (
+                  currentItems.map((service) => (
                     <TableRow key={service._id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Image
-                            src={
-                              service.image || "https://placehold.co/40x40.png"
-                            }
+                            src={service.image || "https://placehold.co/40x40.png"}
                             alt={service.name}
                             width={40}
                             height={40}
@@ -922,48 +1024,28 @@ export default function ServicesPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {service.category?.name || "Uncategorized"}
+                          {service.categoryName || "Uncategorized"}
                         </Badge>
                       </TableCell>
                       <TableCell>{service.duration} mins</TableCell>
                       <TableCell>₹{service.price?.toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge
-                          variant={
-                            service.status === "active"
-                              ? "default"
-                              : "secondary"
-                          }
+                          variant={service.status === "active" ? "default" : "secondary"}
                         >
                           {service.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent>
-                            <DropdownMenuItem
-                              onClick={() => handleOpenModal("view", service)}
-                            >
-                              <Eye className="mr-2 h-4 w-4" /> View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleOpenModal("edit", service)}
-                            >
-                              <Edit className="mr-2 h-4 w-4" /> Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDeleteClick(service)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal("view", service)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal("edit", service)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(service)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
@@ -973,7 +1055,7 @@ export default function ServicesPage() {
                       colSpan={6}
                       className="text-center py-10 text-muted-foreground"
                     >
-                      No services found.
+                      {isNoServicesError ? "No services found for this vendor" : "No services found."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -981,30 +1063,32 @@ export default function ServicesPage() {
             </Table>
           </div>
           {filteredServices.length > 0 && (
-            <div className="p-4 border-t">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-                onItemsPerPageChange={setItemsPerPage}
-                totalItems={filteredServices.length}
-              />
-            </div>
+            <Pagination
+              className="mt-4"
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              onItemsPerPageChange={setItemsPerPage}
+              totalItems={filteredServices.length}
+            />
           )}
         </CardContent>
       </Card>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <ServiceFormModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          service={selectedService}
-          type={modalType}
-        />
-      </Dialog>
+      <ServiceFormModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        service={selectedService}
+        type={modalType}
+      />
 
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <Dialog
+        open={isDeleteModalOpen}
+        onOpenChange={(open) =>
+          dispatch(setDeleteModalOpen({ isOpen: open, selectedService }))
+        }
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Service?</DialogTitle>
@@ -1016,7 +1100,9 @@ export default function ServicesPage() {
           <DialogFooter>
             <Button
               variant="secondary"
-              onClick={() => setIsDeleteModalOpen(false)}
+              onClick={() =>
+                dispatch(setDeleteModalOpen({ isOpen: false, selectedService: null }))
+              }
             >
               Cancel
             </Button>

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -46,6 +45,7 @@ interface ServiceCategory {
     _id: string;
     name: string;
     description?: string;
+    categoryImage?: string;
 }
 
 interface Service {
@@ -53,6 +53,7 @@ interface Service {
     name: string;
     description?: string;
     category: ServiceCategory | string;
+    serviceImage?: string;
 }
 
 const DropdownManager = ({
@@ -243,10 +244,25 @@ const ServiceCategoryManager = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState<Partial<ServiceCategory> | null>(null);
+    const [imageBase64, setImageBase64] = useState<string | null>(null);
 
     const handleOpenModal = (item: Partial<ServiceCategory> | null = null) => {
         setCurrentItem(item);
+        setImageBase64(item?.categoryImage || null);
         setIsModalOpen(true);
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImageBase64(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setImageBase64(null);
+        }
     };
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -260,6 +276,7 @@ const ServiceCategoryManager = () => {
             id: currentItem?._id,
             name,
             description,
+            image: imageBase64,
         };
 
         try {
@@ -271,6 +288,7 @@ const ServiceCategoryManager = () => {
             toast.success('Success', { description: `Category ${action}ed successfully.` });
             setIsModalOpen(false);
             setCurrentItem(null);
+            setImageBase64(null);
         } catch (error) {
             toast.error('Error', { description: `Failed to ${action} category.` });
         }
@@ -315,6 +333,7 @@ const ServiceCategoryManager = () => {
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Description</TableHead>
+                                <TableHead>Image</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -323,6 +342,13 @@ const ServiceCategoryManager = () => {
                                 <TableRow key={item._id}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell className="text-muted-foreground">{item.description}</TableCell>
+                                    <TableCell>
+                                        {item.categoryImage ? (
+                                            <img src={item.categoryImage} alt={item.name} className="h-12 w-12 object-cover rounded" />
+                                        ) : (
+                                            <span className="text-muted-foreground">No image</span>
+                                        )}
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
                                             <Edit className="h-4 w-4" />
@@ -335,14 +361,14 @@ const ServiceCategoryManager = () => {
                             ))}
                             {categories.length === 0 && !isLoading && (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
                                         No categories found.
                                     </TableCell>
                                 </TableRow>
                             )}
                             {isLoading && (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
                                         Loading...
                                     </TableCell>
                                 </TableRow>
@@ -368,6 +394,19 @@ const ServiceCategoryManager = () => {
                                 <div className="space-y-2">
                                     <Label htmlFor="description">Description</Label>
                                     <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="image">Image</Label>
+                                    <Input
+                                        id="image"
+                                        name="image"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                    />
+                                    {imageBase64 && (
+                                        <img src={imageBase64} alt="Preview" className="mt-2 h-24 w-24 object-cover rounded" />
+                                    )}
                                 </div>
                             </div>
                             <DialogFooter>
@@ -407,10 +446,25 @@ const ServiceManager = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState<Partial<Service> | null>(null);
+    const [imageBase64, setImageBase64] = useState<string | null>(null);
 
     const handleOpenModal = (item: Partial<Service> | null = null) => {
         setCurrentItem(item);
+        setImageBase64(item?.serviceImage || null);
         setIsModalOpen(true);
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImageBase64(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setImageBase64(null);
+        }
     };
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -426,6 +480,7 @@ const ServiceManager = () => {
             name,
             description,
             category,
+            image: imageBase64,
         };
         
         try {
@@ -437,6 +492,7 @@ const ServiceManager = () => {
             toast.success('Success', { description: `Service ${action}ed successfully.` });
             setIsModalOpen(false);
             setCurrentItem(null);
+            setImageBase64(null);
         } catch (error) {
             toast.error('Error', { description: `Failed to ${action} service.` });
         }
@@ -483,6 +539,7 @@ const ServiceManager = () => {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Category</TableHead>
                                 <TableHead>Description</TableHead>
+                                <TableHead>Image</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -496,6 +553,13 @@ const ServiceManager = () => {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">{item.description}</TableCell>
+                                    <TableCell>
+                                        {item.serviceImage ? (
+                                            <img src={item.serviceImage} alt={item.name} className="h-12 w-12 object-cover rounded" />
+                                        ) : (
+                                            <span className="text-muted-foreground">No image</span>
+                                        )}
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
                                             <Edit className="h-4 w-4" />
@@ -508,14 +572,14 @@ const ServiceManager = () => {
                             ))}
                             {services.length === 0 && !isLoading && (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                                         No services found.
                                     </TableCell>
                                 </TableRow>
                             )}
                             {isLoading && (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                                         Loading...
                                     </TableCell>
                                 </TableRow>
@@ -555,6 +619,19 @@ const ServiceManager = () => {
                                     <Label htmlFor="description">Description</Label>
                                     <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} />
                                 </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="image">Image</Label>
+                                    <Input
+                                        id="image"
+                                        name="image"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                    />
+                                    {imageBase64 && (
+                                        <img src={imageBase64} alt="Preview" className="mt-2 h-24 w-24 object-cover rounded" />
+                                    )}
+                                </div>
                             </div>
                             <DialogFooter>
                                 <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
@@ -588,7 +665,6 @@ export default function DropdownManagementPage() {
     const [createItem] = useCreateSuperDataItemMutation();
     const [updateItem] = useUpdateSuperDataItemMutation();
     const [deleteItem] = useDeleteSuperDataItemMutation();
-
 
     const handleUpdate = async (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => {
         try {
