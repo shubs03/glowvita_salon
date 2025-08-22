@@ -41,9 +41,9 @@ const AppStoreButtons = () => (
 );
 
 const PhoneMockup = ({ imageUrl, alt, hint, className }: { imageUrl: string, alt: string, hint: string, className?: string }) => (
-    <div className={cn("relative w-full aspect-[9/19] bg-slate-900 rounded-3xl shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer p-2 border-4 border-slate-800", className)}>
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-16 h-1.5 bg-slate-800 rounded-full z-20"></div>
-        <div className="relative w-full h-full rounded-2xl overflow-hidden">
+    <div className={cn("relative w-full aspect-[9/19] bg-slate-400 rounded-xl shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer p-2 border border-slate-400", className)}>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-16 h-1.5 bg-slate-400 rounded-full z-20"></div>
+        <div className="relative w-full h-full rounded-xl overflow-hidden">
             <Image 
                 src={imageUrl} 
                 className="group-hover:scale-110 transition-transform duration-500" 
