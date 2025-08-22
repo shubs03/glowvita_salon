@@ -329,18 +329,18 @@ export default function CrmHomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-secondary/30 via-background to-secondary/20 text-foreground">
       <main className="flex-grow">
-        <section className="relative py-16 md:py-14 bg-background overflow-hidden">
+        <section className="relative py-16 md:py-16 bg-background overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center">
               <div className="flex justify-center gap-4 md:gap-6 mb-8">
-                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-4 rounded-md text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
-                  <Scissors className="h-6 w-6 md:h-8 md:w-8" />
+                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-3 rounded-full text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
+                  <Scissors className="h-6 w-6 md:h-5 md:w-5" />
                 </div>
-                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-4 rounded-md text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
-                  <CalendarCheck className="h-6 w-6 md:h-8 md:w-8" />
+                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-3 rounded-full text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
+                  <CalendarCheck className="h-6 w-6 md:h-5 md:w-5" />
                 </div>
-                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-4 rounded-md text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
-                  <LineChart className="h-6 w-6 md:h-8 md:w-8" />
+                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-3 rounded-full text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
+                  <LineChart className="h-6 w-6 md:h-5 md:w-5" />
                 </div>
               </div>
               <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-headline tracking-tighter mb-6 bg-gradient-to-r from-foreground via-foreground to-foreground/80 bg-clip-text text-transparent">
