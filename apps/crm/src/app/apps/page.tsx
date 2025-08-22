@@ -3,16 +3,16 @@
 
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
-import { CheckCircle, Download, Shield, BarChart, Users, Star, ArrowRight, BookOpen, Video, MessageSquare, Phone, LifeBuoy, Settings, Clock, Check, Award, UserPlus, PlayCircle } from 'lucide-react';
+import { CheckCircle, Download, Shield, BarChart, Users, Star, ArrowRight, BookOpen, Video, MessageSquare, Phone, LifeBuoy, Settings, Clock, Check, Award, UserPlus, PlayCircle, CalendarCheck, Bell } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@repo/ui/cn';
 
 const FeatureCheck = ({ children }: { children: React.ReactNode }) => (
     <li className="flex items-start gap-3">
-      <Check className="h-5 w-5 mt-1 text-green-500 flex-shrink-0" />
+      <Check className="h-5 w-5 mt-1 text-primary flex-shrink-0" />
       <span className="text-muted-foreground">{children}</span>
     </li>
-  );
+);
 
 const AppFeature = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
     <Card className="text-left p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group bg-secondary/50 hover:bg-background border border-transparent hover:border-primary/20">
@@ -40,8 +40,8 @@ const AppStoreButtons = () => (
   </div>
 );
 
-const PhoneMockup = ({ imageUrl, alt, hint, className }: { imageUrl: string, alt: string, hint: string, className?: string }) => (
-    <div className={cn("relative w-full aspect-[9/19] bg-slate-900 rounded-3xl shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer p-2 border-4 border-slate-800", className)}>
+const PhoneCard = ({ imageUrl, alt, hint, className }: { imageUrl: string, alt: string, hint: string, className?: string }) => (
+    <div className={cn("relative w-full aspect-[9/19] bg-slate-900 rounded-3xl shadow-2xl overflow-hidden group hover:scale-105 transition-all duration-500 cursor-pointer p-2 border-4 border-slate-800", className)} style={{clipPath: 'polygon(0 1%, 1% 0, 92% 0, 100% 1%, 100% 99%, 99% 100%, 8% 100%, 0 99%)'}}>
         <div className="absolute top-4 left-1/2 -translate-x-1/2 w-16 h-1.5 bg-slate-800 rounded-full z-20"></div>
         <div className="relative w-full h-full rounded-2xl overflow-hidden">
             <Image 
@@ -57,13 +57,14 @@ const PhoneMockup = ({ imageUrl, alt, hint, className }: { imageUrl: string, alt
     </div>
 );
 
+
 const AppPromotionSection = ({ title, description, features, images, reverse = false }: { title: string, description: string, features: { title: string, description: string, icon: React.ReactNode }[], images: { src: string, hint: string }[], reverse?: boolean }) => {
     return (
         <section className="py-20 overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-900/50 dark:via-background dark:to-purple-900/20 opacity-30"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-white to-purple-50/30 dark:from-slate-900/50 dark:via-background dark:to-purple-900/20"></div>
             <div className="container mx-auto px-4 grid md:grid-cols-2 gap-12 items-center relative z-10">
                 <div className={cn("text-center md:text-left", reverse && "md:order-2")}>
-                    <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4 leading-tight">{title}</h2>
+                    <h2 className="text-4xl md:text-5xl font-bold font-headline mb-4 leading-tight">{title}</h2>
                     <p className="text-muted-foreground mb-8 text-lg">{description}</p>
                     <div className="space-y-6">
                         {features.map((feature, i) => (
@@ -84,14 +85,10 @@ const AppPromotionSection = ({ title, description, features, images, reverse = f
                     <div className="absolute w-72 h-72 bg-purple-200 rounded-full blur-3xl opacity-30 -translate-x-1/4 -translate-y-1/4"></div>
                     <div className="absolute w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-30 translate-x-1/4 translate-y-1/4"></div>
                     <div className="relative flex justify-center items-center h-full w-full">
-                        <div className="absolute w-56 md:w-64 h-auto" style={{ zIndex: 10, transform: 'rotate(-10deg) translateX(-40%) translateY(5%)' }}>
-                            <PhoneMockup imageUrl={images[0].src} alt={`${title} screenshot 1`} hint={images[0].hint} />
-                        </div>
-                        <div className="absolute w-56 md:w-64 h-auto" style={{ zIndex: 20, transform: 'rotate(0deg)' }}>
-                            <PhoneMockup imageUrl={images[1].src} alt={`${title} screenshot 2`} hint={images[1].hint} />
-                        </div>
-                        <div className="absolute w-56 md:w-64 h-auto" style={{ zIndex: 10, transform: 'rotate(10deg) translateX(40%) translateY(5%)' }}>
-                            <PhoneMockup imageUrl={images[2].src} alt={`${title} screenshot 3`} hint={images[2].hint} />
+                       <div className="absolute w-56 md:w-64">
+                            <PhoneCard imageUrl={images[0].src} alt={`${title} screenshot 1`} hint={images[0].hint} className="z-10 transform -rotate-12 -translate-x-16" />
+                            <PhoneCard imageUrl={images[1].src} alt={`${title} screenshot 2`} hint={images[1].hint} className="z-20 transform scale-110" />
+                            <PhoneCard imageUrl={images[2].src} alt={`${title} screenshot 3`} hint={images[2].hint} className="z-10 transform rotate-12 translate-x-16" />
                         </div>
                     </div>
                 </div>
@@ -99,6 +96,7 @@ const AppPromotionSection = ({ title, description, features, images, reverse = f
         </section>
     );
 };
+
 
 const TestimonialCard = ({ review, author, role, rating }: { review: string, author: string, role: string, rating: number }) => (
     <Card className="w-[320px] h-[320px] shrink-0 snap-center p-8 flex flex-col justify-between bg-background rounded-lg shadow-lg border border-border/50 hover:border-primary/20 hover:shadow-xl transition-all duration-300">
@@ -116,18 +114,113 @@ const TestimonialCard = ({ review, author, role, rating }: { review: string, aut
     </Card>
 );
 
-const HowItWorksStep = ({ icon, title, description, step }: { icon: React.ReactNode, title: string, description: string, step: number }) => (
-    <div className="relative pl-16">
-        <div className="absolute left-0 top-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary font-bold text-2xl border-2 border-primary/20">
-            {step}
+const HowItWorksStep = ({ icon, title, description, step, reverse = false }: { icon: React.ReactNode, title: string, description: string, step: number, reverse?: boolean }) => (
+    <div className={cn("relative flex items-center gap-8", reverse ? "flex-row-reverse" : "flex-row")}>
+        <div className="hidden md:flex flex-col items-center">
+             <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 text-primary font-bold text-3xl border-2 border-primary/20 mb-2">
+                {step}
+            </div>
         </div>
-        <div className="flex items-center gap-4 mb-2">
-            {icon}
-            <h4 className="text-2xl font-semibold">{title}</h4>
+        <div className={cn("flex-1 text-center md:text-left", reverse && "md:text-right")}>
+            <div className="inline-flex md:flex items-center gap-4 mb-2">
+                <div className="flex items-center justify-center h-12 w-12 rounded-lg bg-blue-100 text-blue-600 md:hidden">
+                    {icon}
+                </div>
+                <h4 className="text-2xl font-semibold">{title}</h4>
+            </div>
+            <p className="text-muted-foreground text-lg">{description}</p>
         </div>
-        <p className="text-muted-foreground text-lg">{description}</p>
     </div>
 );
+
+const PlatformForCard = ({
+  title,
+  imageUrl,
+  hint,
+}: {
+  title: string;
+  imageUrl: string;
+  hint: string;
+}) => (
+  <a
+    className="relative inline-block h-40 w-64 md:h-[194px] md:w-[309px] shrink-0 overflow-hidden rounded-md transition-all duration-300 hover:shadow-2xl group border border-border/50"
+    href="#"
+  >
+    <Image
+      className="size-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+      src={imageUrl}
+      alt={title}
+      width={309}
+      height={194}
+      data-ai-hint={hint}
+    />
+    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent">
+      <div className="flex flex-row items-center justify-between gap-2 p-3 md:p-4">
+        <div className="text-base md:text-xl font-semibold leading-tight text-white">
+          {title}
+        </div>
+        <Button
+          size="icon"
+          className="bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 rounded-full opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 hover:scale-110 h-8 w-8 md:h-auto md:w-auto"
+          aria-label={title}
+        >
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  </a>
+);
+
+const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
+  const items = [
+    {
+      title: "Hair Salon",
+      imageUrl: "https://placehold.co/309x194.png",
+      hint: "hair salon",
+    },
+    {
+      title: "Nail Salon",
+      imageUrl: "https://placehold.co/309x194.png",
+      hint: "nail salon",
+    },
+    {
+      title: "Barbers",
+      imageUrl: "https://placehold.co/309x194.png",
+      hint: "barber shop",
+    },
+    {
+      title: "Waxing Salon",
+      imageUrl: "https://placehold.co/309x194.png",
+      hint: "waxing salon",
+    },
+    {
+      title: "Medspa",
+      imageUrl: "https://placehold.co/309x194.png",
+      hint: "spa",
+    },
+    {
+      title: "Eyebrow Bar",
+      imageUrl: "https://placehold.co/309x194.png",
+      hint: "eyebrows",
+    },
+  ];
+  return (
+    <div className="w-full overflow-hidden">
+      <div
+        className={`flex w-fit items-start space-x-4 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
+      >
+        {[...items, ...items].map((item, index) => (
+          <PlatformForCard
+            key={`${item.title}-${index}`}
+            title={item.title}
+            imageUrl={item.imageUrl}
+            hint={item.hint}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default function AppsPage() {
   return (
@@ -136,14 +229,25 @@ export default function AppsPage() {
       <section className="py-20 md:py-28 text-center bg-secondary/50 overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-900/50 dark:via-background dark:to-purple-900/20 opacity-30"></div>
         <div className="container mx-auto px-4 relative z-10">
-          <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4">Your Business, In Your Pocket</h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+          <h1 className="text-4xl md:text-7xl font-bold font-headline mb-4">Your Business, In Your Pocket</h1>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
             Manage your salon and connect with your clients on the go with our powerful, intuitive mobile apps.
           </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left text-sm">
+            <FeatureCheck>24/7 Online Booking</FeatureCheck>
+            <FeatureCheck>Client Management</FeatureCheck>
+            <FeatureCheck>Business Analytics</FeatureCheck>
+            <FeatureCheck>Secure Payments</FeatureCheck>
+            <FeatureCheck>Staff Scheduling</FeatureCheck>
+            <FeatureCheck>Automated Reminders</FeatureCheck>
+            <FeatureCheck>Marketing Tools</FeatureCheck>
+            <FeatureCheck>Inventory Control</FeatureCheck>
+          </div>
+          <AppStoreButtons />
         </div>
       </section>
 
-      {/* Section 2: GlowVita Salon App */}
+       {/* Section 2: GlowVita Salon App */}
       <AppPromotionSection
         title="GlowVita Salon App (For Your Clients)"
         description="Empower your clients with a seamless booking experience. Our client-facing app makes it easy for them to discover, book, and manage their appointments."
@@ -180,7 +284,7 @@ export default function AppsPage() {
       <section className="py-20 bg-secondary/50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-5xl font-bold font-headline">Powerful Features in Both Apps</h2>
+            <h2 className="text-4xl md:text-5xl font-bold font-headline">Powerful Features in Both Apps</h2>
             <p className="text-muted-foreground mt-2 text-lg">Built to help you succeed, from day one.</p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -197,7 +301,7 @@ export default function AppsPage() {
       {/* Section 5: Testimonials */}
       <section className="py-20 bg-background overflow-hidden">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4">Loved by Professionals</h2>
+          <h2 className="text-4xl md:text-5xl font-bold font-headline mb-4">Loved by Professionals</h2>
           <p className="text-muted-foreground mt-2 text-lg max-w-3xl mx-auto mb-12">See what salon owners and stylists are saying about our mobile apps.</p>
         </div>
         <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
@@ -225,7 +329,7 @@ export default function AppsPage() {
       <section className="py-20 bg-secondary/50">
         <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-                <h2 className="text-3xl md:text-5xl font-bold font-headline">App Features at a Glance</h2>
+                <h2 className="text-4xl md:text-5xl font-bold font-headline">App Features at a Glance</h2>
                 <p className="text-muted-foreground mt-2 text-lg">Compare the features of our client and vendor apps.</p>
             </div>
             <Card className="max-w-4xl mx-auto shadow-lg border border-border/50">
@@ -259,16 +363,15 @@ export default function AppsPage() {
       <section className="py-20 bg-background">
           <div className="container mx-auto px-4 max-w-6xl">
               <div className="text-center mb-16">
-                  <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4">How It Works</h2>
+                  <h2 className="text-4xl md:text-5xl font-bold font-headline mb-4">How It Works</h2>
                   <p className="text-muted-foreground text-lg max-w-3xl mx-auto">A simple and intuitive process for both you and your clients.</p>
               </div>
               <div className="relative">
-                  <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-border/80"></div>
-                  <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-primary/10 animate-pulse"></div>
+                  <div className="absolute top-1/2 left-0 w-full h-0.5 bg-blue-200/50 hidden md:block"></div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 relative z-10">
-                      <HowItWorksStep step={1} icon={<Download className="h-6 w-6 text-primary" />} title="Download & Setup" description="Get your salon listed and set up your services, staff, and schedule in minutes."/>
-                      <HowItWorksStep step={2} icon={<Users className="h-6 w-6 text-primary" />} title="Clients Book Online" description="Clients find your salon and book appointments 24/7 through the GlowVita app or your website."/>
-                      <HowItWorksStep step={3} icon={<BarChart className="h-6 w-6 text-primary" />} title="Manage & Grow" description="Use the CRM app to manage bookings, process payments, and grow your business with marketing tools."/>
+                      <HowItWorksStep step={1} icon={<Download className="h-6 w-6 text-blue-600" />} title="Download & Setup" description="Get your salon listed and set up your services, staff, and schedule in minutes."/>
+                      <HowItWorksStep step={2} icon={<Users className="h-6 w-6 text-blue-600" />} title="Clients Book Online" description="Clients find your salon and book appointments 24/7 through the GlowVita app or your website." reverse={true}/>
+                      <HowItWorksStep step={3} icon={<BarChart className="h-6 w-6 text-blue-600" />} title="Manage & Grow" description="Use the CRM app to manage bookings, process payments, and grow your business with marketing tools."/>
                   </div>
               </div>
           </div>
@@ -278,11 +381,11 @@ export default function AppsPage() {
           <div className="container mx-auto px-4 max-w-6xl">
               <div className="grid md:grid-cols-2 gap-12 items-center">
                   <div className="text-center md:text-left">
-                      <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium mb-4">
+                      <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium mb-4">
                           <Shield size={16}/>
                           Your Data is Safe
                       </div>
-                      <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4">Security You Can Trust</h2>
+                      <h2 className="text-4xl md:text-5xl font-bold font-headline mb-4">Security You Can Trust</h2>
                       <p className="text-lg text-muted-foreground mb-6">We prioritize the security of your business and client data with enterprise-grade protection.</p>
                       <ul className="space-y-3 text-left">
                           <FeatureCheck><strong>Data Encryption:</strong> All data is encrypted in transit and at rest.</FeatureCheck>
@@ -292,8 +395,8 @@ export default function AppsPage() {
                       </ul>
                   </div>
                   <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-200 via-blue-200 to-purple-200 rounded-full blur-3xl opacity-40"></div>
-                    <Shield className="relative z-10 h-48 w-48 text-green-500 drop-shadow-lg" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-200 via-blue-200 to-purple-200 rounded-full blur-3xl opacity-40"></div>
+                    <Shield className="relative z-10 h-48 w-48 text-blue-500 drop-shadow-lg" />
                   </div>
               </div>
           </div>
