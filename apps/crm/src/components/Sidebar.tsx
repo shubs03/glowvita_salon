@@ -14,7 +14,6 @@ const sidebarNavItems = [
   { title: "Clients", href: "/clients", Icon: FaUsers },
   { title: "Services", href: "/services", Icon: FaCut },
   { title: "Products", href: "/products", Icon: FaBoxOpen },
-  { title: "Salon Profile", href: "/salon-profile", Icon: FaUserCircle },
   { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift },
   { title: "Referrals", href: "/referrals", Icon: FaUserFriends },
   { title: "Marketing", href: "/marketing", Icon: FaBullhorn },

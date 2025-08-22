@@ -1,8 +1,9 @@
 
 "use client";
 
-import { FaBell, FaBars } from "react-icons/fa";
+import { FaBell, FaBars, FaUserCircle } from "react-icons/fa";
 import { Button } from "@repo/ui/button";
+import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -40,6 +41,19 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
         >
           <FaBell className="h-5 w-5" />
           <span className="sr-only">Toggle notifications</span>
+        </Button>
+
+        {/* Profile Link */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex-shrink-0 rounded-full"
+          asChild
+        >
+          <Link href="/salon-profile">
+            <FaUserCircle className="h-5 w-5" />
+            <span className="sr-only">Salon Profile</span>
+          </Link>
         </Button>
 
         {/* Logout button */}
