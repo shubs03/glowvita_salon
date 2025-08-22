@@ -79,7 +79,7 @@ const TestimonialCard = ({ review, author, role, rating }: { review: string, aut
 
 const VideoTestimonialCard = () => (
      <div className="h-[480px] w-[80vw] shrink-0 snap-center overflow-hidden laptop:w-[853px]">
-        <div className="relative size-full overflow-hidden rounded-xl group">
+        <div className="relative size-full overflow-hidden group">
             <Image 
                 src="https://placehold.co/853x480.png"
                 alt="Testimonial video poster"
@@ -153,7 +153,7 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
     );
 };
 
-const AppPromotionSection = ({ appName, title, description, features, appStoreUrl, googlePlayUrl, imageUrl, imageHint, reverse = false }) => (
+const AppPromotionSection = ({ appName, title, description, features, appStoreUrl, googlePlayUrl, images, hints, reverse = false }) => (
     <section className="py-20">
       <div className="container mx-auto px-4">
         <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${reverse ? 'lg:grid-flow-col-dense' : ''}`}>
@@ -173,9 +173,18 @@ const AppPromotionSection = ({ appName, title, description, features, appStoreUr
               <Button size="lg" asChild><Link href={googlePlayUrl}><Download className="mr-2 h-4 w-4" /> Google Play</Link></Button>
             </div>
           </div>
-          <div className={`relative flex justify-center ${reverse ? 'lg:col-start-1' : ''}`}>
-            <div className="relative w-80 h-[550px] bg-gray-800 rounded-[40px] border-8 border-gray-900 overflow-hidden shadow-2xl">
-              <Image src={imageUrl} alt={`${appName} screenshot`} layout="fill" objectFit="cover" data-ai-hint={imageHint} />
+          <div className={`relative flex justify-center items-center h-[600px] ${reverse ? 'lg:col-start-1' : ''}`}>
+            <div className="absolute inset-0 bg-primary/10 rounded-full blur-3xl"></div>
+            <div className="relative w-full h-full flex justify-center items-center">
+                <div className="absolute w-64 h-[500px] bg-gray-800 rounded-[30px] border-4 border-gray-900 overflow-hidden shadow-2xl transform -rotate-12 translate-x-10 translate-y-5">
+                    <Image src={images[0]} alt={`${appName} screenshot 1`} layout="fill" objectFit="cover" data-ai-hint={hints[0]} />
+                </div>
+                <div className="absolute w-72 h-[550px] bg-gray-800 rounded-[40px] border-8 border-gray-900 overflow-hidden shadow-2xl z-10">
+                    <Image src={images[1]} alt={`${appName} screenshot 2`} layout="fill" objectFit="cover" data-ai-hint={hints[1]} />
+                </div>
+                <div className="absolute w-64 h-[500px] bg-gray-800 rounded-[30px] border-4 border-gray-900 overflow-hidden shadow-2xl transform rotate-12 -translate-x-10 translate-y-5">
+                    <Image src={images[2]} alt={`${appName} screenshot 3`} layout="fill" objectFit="cover" data-ai-hint={hints[2]} />
+                </div>
             </div>
           </div>
         </div>
@@ -394,7 +403,7 @@ export default function CrmHomePage() {
                                 <CardTitle>Grow</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-muted-foreground">Win new clients on the world’s largest beauty and wellness marketplace. Keep them coming back with powerful marketing features.</p>
+                                <p className="text-muted-foreground">Win new clients on the world’s largest beauty and wellness marketplace. Keep them coming back with marketing features.</p>
                             </CardContent>
                         </Card>
                          <Card className="bg-secondary/50 border-l-4 border-primary">
@@ -418,8 +427,12 @@ export default function CrmHomePage() {
           features={["Book appointments 24/7", "Reschedule with ease", "View past & upcoming bookings", "Receive exclusive offers"]}
           appStoreUrl="#"
           googlePlayUrl="#"
-          imageUrl="https://placehold.co/375x812.png"
-          imageHint="mobile app screenshot booking"
+          images={[
+            "https://placehold.co/375x812.png", 
+            "https://placehold.co/375x812.png",
+            "https://placehold.co/375x812.png"
+          ]}
+          hints={["app booking", "app profile", "app services"]}
         />
 
         <AppPromotionSection
@@ -429,8 +442,12 @@ export default function CrmHomePage() {
           features={["Manage your calendar", "View client information", "Track your performance", "Access business reports"]}
           appStoreUrl="#"
           googlePlayUrl="#"
-          imageUrl="https://placehold.co/375x812.png"
-          imageHint="mobile crm dashboard"
+          images={[
+            "https://placehold.co/375x812.png", 
+            "https://placehold.co/375x812.png",
+            "https://placehold.co/375x812.png"
+          ]}
+          hints={["crm dashboard", "crm calendar", "crm analytics"]}
           reverse={true}
         />
 
