@@ -1,6 +1,6 @@
 
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { clearAdminAuth } from "@repo/store/slices/Admin/adminAuthSlice";
+import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 
 const API_BASE_URLS = {
