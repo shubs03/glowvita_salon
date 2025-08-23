@@ -5,30 +5,77 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaBook ,FaCut, FaSignOutAlt, FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, FaBell, FaGift, FaUserFriends, FaUserCircle } from 'react-icons/fa';
+import { 
+  FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, 
+  FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
+  FaBell, FaGift, FaUserFriends, FaUserCircle
+} from 'react-icons/fa';
+import { useAppDispatch } from "@repo/store/hooks";
+import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { useCrmAuth } from "@/hooks/useCrmAuth";
+import Cookies from "js-cookie";
 
-const sidebarNavItems = [
-  { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt },
-  { title: "Calendar", href: "/calendar", Icon: FaCalendarAlt },
-  { title: "Appointments", href: "/appointments", Icon: FaClipboardList },
-  { title: "Clients", href: "/clients", Icon: FaUsers },
-  { title: "Services", href: "/services", Icon: FaCut },
-  { title: "Products", href: "/products", Icon: FaBoxOpen },
-  { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift },
-  { title: "Referrals", href: "/referrals", Icon: FaUserFriends },
-  { title: "Marketing", href: "/marketing", Icon: FaBullhorn },
-  { title: "Notifications", href: "/push-notifications", Icon: FaBell },
-  { title: "Reports", href: "/reports", Icon: FaFileAlt },
+const vendorNavItems = [
+  { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
+  { title: "Calendar", href: "/calendar", Icon: FaCalendarAlt, permission: 'calendar_view' },
+  { title: "Appointments", href: "/appointments", Icon: FaClipboardList, permission: 'appointments_view' },
+  { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
+  { title: "Services", href: "/services", Icon: FaCut, permission: 'services_view' },
+  { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
+  { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift, permission: 'offers_view' },
+  { title: "Referrals", href: "/referrals", Icon: FaUserFriends, permission: 'referrals_view' },
+  { title: "Marketing", href: "/marketing", Icon: FaBullhorn, permission: 'marketing_view' },
+  { title: "Notifications", href: "/push-notifications", Icon: FaBell, permission: 'notifications_view' },
+  { title: "Reports", href: "/reports", Icon: FaFileAlt, permission: 'reports_view' },
+];
+
+const doctorNavItems = [
+  { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
+  { title: "Appointments", href: "/appointments", Icon: FaClipboardList, permission: 'appointments_view' },
+  { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
+];
+
+const supplierNavItems = [
+  { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
+  { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
 ];
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { user, permissions, role, isLoading } = useCrmAuth();
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    dispatch(clearCrmAuth());
+    Cookies.remove('crm_access_token');
     router.push('/login');
+    router.refresh();
   };
+  
+  if (isLoading) {
+    return null; // Or a loading skeleton
+  }
+
+  const getNavItemsForRole = () => {
+    const userPermissions = permissions || [];
+    
+    switch (role) {
+      case 'vendor':
+        // A vendor owner has all permissions by default
+        return vendorNavItems;
+      case 'staff':
+        return vendorNavItems.filter(item => userPermissions.includes(item.permission));
+      case 'doctor':
+        return doctorNavItems;
+      case 'supplier':
+        return supplierNavItems;
+      default:
+        return [];
+    }
+  };
+
+  const visibleNavItems = getNavItemsForRole();
 
   const SidebarContent = () => (
     <div className={cn(
@@ -58,7 +105,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
         </div>
 
         <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden min-h-0 no-scrollbar">
-          {sidebarNavItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}

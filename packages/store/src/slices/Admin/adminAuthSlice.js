@@ -1,3 +1,4 @@
+
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
@@ -6,15 +7,24 @@ const initialState = {
   token: null,
 };
 
-// Load state from localStorage
+// Function to safely load state from localStorage
 const loadState = () => {
   try {
-    const serializedState = localStorage.getItem('adminAuthState');
-    if (serializedState === null) {
-      return initialState;
+    // Check if localStorage is available
+    if (typeof localStorage !== 'undefined') {
+      const serializedState = localStorage.getItem('adminAuthState');
+      if (serializedState === null) {
+        return initialState;
+      }
+      const parsedState = JSON.parse(serializedState);
+      // Basic validation of the stored state
+      if (parsedState && typeof parsedState.isAdminAuthenticated === 'boolean') {
+        return parsedState;
+      }
     }
-    return JSON.parse(serializedState);
+    return initialState;
   } catch (e) {
+    console.error("Could not load auth state from localStorage", e);
     return initialState;
   }
 };
@@ -24,27 +34,34 @@ const adminAuthSlice = createSlice({
   initialState: loadState(),
   reducers: { 
     setAdminAuth: (state, action) => {
+      const { user, token } = action.payload;
       state.isAdminAuthenticated = true;
-      state.admin = action.payload.user;
-      state.token = action.payload.token;
+      state.admin = user;
+      state.token = token;
 
-      // Persist state
-      localStorage.setItem(
-        'adminAuthState',
-        JSON.stringify({
-          isAdminAuthenticated: true,
-          admin: action.payload.user,
-          token: action.payload.token,
-        })
-      );
+      // Persist state to localStorage only on the client-side
+      if (typeof localStorage !== 'undefined') {
+        try {
+          const serializedState = JSON.stringify({
+            isAdminAuthenticated: true,
+            admin: user,
+            token: token,
+          });
+          localStorage.setItem('adminAuthState', serializedState);
+        } catch (e) {
+          console.error("Could not save auth state to localStorage", e);
+        }
+      }
     },
     clearAdminAuth: (state) => {
       state.isAdminAuthenticated = false;
       state.admin = null;
       state.token = null;
 
-      // Clear localStorage
-      localStorage.removeItem('adminAuthState');
+      // Clear localStorage only on the client-side
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('adminAuthState');
+      }
     },
   },
 });
