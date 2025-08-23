@@ -12,43 +12,39 @@ export const POST = authMiddlewareCrm(async (req) => {
   const body = await req.json();
   const { services } = body;
 
-  console.log("vendor", vendor);
-
   const vendorId  =  vendor._id.toString();
 
   // 1️⃣ Validate required fields
-  if (!vendor || !services || !Array.isArray(services)) {
+  if (!vendorId || !services || !Array.isArray(services)) {
     return Response.json(
       { message: "Vendor ID and services array are required" },
       { status: 400 }
     );
   }
 
-  // 2️⃣ Validate each service
-  for (const service of services) {
+  // 2️⃣ Validate each service and set status to pending
+  const servicesToInsert = services.map(service => {
     if (!service.name || !service.category || !service.price || !service.duration || !service.description || !service.gender) {
-      return Response.json(
-        { message: "Each service must have name, category, price, duration, description, and gender" },
-        { status: 400 }
-      );
+      throw new Error("Each service must have name, category, price, duration, description, and gender");
     }
-  }
+    return { ...service, status: 'pending', createdAt: new Date(), updatedAt: new Date() };
+  });
 
   // 3️⃣ Create or update VendorServices document
   const vendorServices = await VendorServicesModel.findOneAndUpdate(
-    { vendor },
+    { vendor: vendorId },
     {
-      $push: { services: { $each: services } },
+      $push: { services: { $each: servicesToInsert } },
       $set: { updatedAt: Date.now() },
     },
     { upsert: true, new: true }
   ).populate("services.category");
 
   return Response.json(
-    { message: "Services added successfully", vendorServices },
+    { message: "Services submitted for approval successfully", vendorServices },
     { status: 201 }
   );
-}, ["crm_admin"]);
+}, ["vendor"]);
 
 // GET: Retrieve VendorServices by vendor ID or paginated services
 export const GET = authMiddlewareCrm(async (req) => {
@@ -59,8 +55,6 @@ export const GET = authMiddlewareCrm(async (req) => {
   const status = url.searchParams.get("status");
   const category = url.searchParams.get("category");
 
-  console.log("vendorId get", vendorId);
-
   if (!vendorId) {
     return Response.json(
       { message: "Vendor ID is required" },
@@ -68,25 +62,51 @@ export const GET = authMiddlewareCrm(async (req) => {
     );
   }
 
-  const vendorServices = await VendorServicesModel.getServicesByVendor(
-    vendorId,
-    page,
-    limit,
-    status,
-    category
-  );
+  const vendorServicesDoc = await VendorServicesModel.findOne({ vendor: vendorId })
+    .populate('services.category', 'name')
+    .lean();
 
-  if (!vendorServices || vendorServices.length === 0) {
+  if (!vendorServicesDoc || vendorServicesDoc.services.length === 0) {
     return Response.json(
-      { message: "No services found for this vendor" },
-      { status: 404 }
+      { message: "No services found for this vendor", services: [] },
+      { status: 200 }
     );
   }
+  
+  // Manual population because lean() doesn't work with virtuals well
+  let populatedServices = vendorServicesDoc.services.map(service => ({
+      ...service,
+      categoryName: service.category ? service.category.name : 'Uncategorized'
+  }));
 
-  // ✅ Now each service has "categoryName" along with "category" ObjectId
-  return Response.json(vendorServices[0]);
-}, ["crm_admin"]);
+  // Filtering
+  if (status) {
+      populatedServices = populatedServices.filter(s => s.status === status);
+  }
+  if (category) {
+      populatedServices = populatedServices.filter(s => s.category?._id.toString() === category);
+  }
 
+  // Pagination
+  const totalServices = populatedServices.length;
+  const paginatedServices = populatedServices.slice((page - 1) * limit, page * limit);
+  
+  const response = {
+      _id: vendorServicesDoc._id,
+      vendor: vendorServicesDoc.vendor,
+      services: paginatedServices,
+      createdAt: vendorServicesDoc.createdAt,
+      updatedAt: vendorServicesDoc.updatedAt,
+      pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalServices / limit),
+          totalServices: totalServices,
+          limit: limit,
+      },
+  };
+
+  return Response.json(response);
+}, ["vendor"]);
 
 
 // PUT: Update specific services in the VendorServices document
@@ -103,8 +123,11 @@ export const PUT = authMiddlewareCrm(async (req) => {
   }
 
   // Update each service individually
-  const updatePromises = services.map((service) =>
-    VendorServicesModel.findOneAndUpdate(
+  const updatePromises = services.map((service) => {
+    // If service was disapproved, resubmitting sets it back to pending
+    const status = service.status === 'disapproved' ? 'pending' : service.status;
+    
+    return VendorServicesModel.findOneAndUpdate(
       { vendor: vendorId, "services._id": service._id },
       {
         $set: {
@@ -123,13 +146,13 @@ export const PUT = authMiddlewareCrm(async (req) => {
           "services.$.bookingInterval": service.bookingInterval,
           "services.$.tax": service.tax,
           "services.$.onlineBooking": service.onlineBooking,
-          "services.$.status": service.status,
+          "services.$.status": status, // Set status
           "services.$.updatedAt": Date.now(),
         },
       },
       { new: true }
-    ).populate("services.category")
-  );
+    ).populate("services.category");
+  });
 
   const updatedServices = await Promise.all(updatePromises);
 
@@ -144,7 +167,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
     { message: "Services updated successfully", vendorServices: updatedServices.find((update) => update) },
     { status: 200 }
   );
-}, ["crm_admin"]);
+}, ["vendor"]);
 
 // DELETE: Remove specific services or the entire VendorServices document
 export const DELETE = authMiddlewareCrm(async (req) => {
@@ -189,4 +212,4 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     { message: "Service deleted successfully", vendorServices: result },
     { status: 200 }
   );
-}, ["crm_admin"]);
+}, ["vendor"]);

@@ -1,6 +1,6 @@
 
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
+import { clearAdminAuth } from "@repo/store/slices/Admin/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 
 const API_BASE_URLS = {
@@ -80,6 +80,7 @@ export const glowvitaApi = createApi({
     "TaxFeeSettings",
     "SubscriptionPlan",
     "User",
+    "PendingServices",
   ],
   endpoints: (builder) => ({
     // Web App Endpoints
@@ -95,6 +96,19 @@ export const glowvitaApi = createApi({
         method: "GET",
       }),
       providesTags: ["admin"],
+    }),
+     // Service Approval Endpoints
+    getPendingServices: builder.query({
+      query: () => ({ url: "/admin/services/service-approval", method: "GET" }),
+      providesTags: ["PendingServices"],
+    }),
+    updateServiceStatus: builder.mutation({
+      query: ({ serviceId, status }) => ({
+        url: "/admin/services/service-approval",
+        method: 'PATCH',
+        body: { serviceId, status },
+      }),
+      invalidatesTags: ["PendingServices", "VendorServices"],
     }),
 
     // Admin
@@ -692,6 +706,8 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Offer"],
     }),
   }),
+  
+
 });
 
 export const {
@@ -705,6 +721,10 @@ export const {
   useDeleteAdminMutation,
   useGetAdminsQuery,
   useGetUsersQuery,
+
+  // Service Approval
+  useGetPendingServicesQuery,
+  useUpdateServiceStatusMutation,
 
   // offers
   useGetAdminOffersQuery,
