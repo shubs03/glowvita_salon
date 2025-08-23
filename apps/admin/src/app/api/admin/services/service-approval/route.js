@@ -1,18 +1,46 @@
 import _db from "../../../../../../../packages/lib/src/db.js";
-import ServiceModel from "../../../../../../../packages/lib/src/models/Vendor/VendorServices.model.js";
-import CategoryModel from "../../../../../../../packages/lib/src/models/admin/Category.model.js";
-import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import VendorServicesModel from "../../../../../../../packages/lib/src/models/Vendor/VendorServices.model.js";
 
 await _db();
 
-// GET all services
+// GET all pending services from all vendors
 export const GET = async () => {
   try {
-    const services = await ServiceModel.find({}).populate("category", "name");
-    return Response.json(services, { status: 200 });
+    const pendingServices = await VendorServicesModel.aggregate([
+      // Deconstruct the services array
+      { $unwind: "$services" },
+      // Filter for services with a 'pending' status
+      { $match: { "services.status": "pending" } },
+      // Populate vendor details
+      {
+        $lookup: {
+          from: "vendors", // The actual collection name for VendorModel
+          localField: "vendor",
+          foreignField: "_id",
+          as: "vendorDetails"
+        }
+      },
+      // Deconstruct the vendorDetails array
+      { $unwind: "$vendorDetails" },
+      // Reshape the output
+      {
+        $project: {
+          _id: "$services._id", // Service ID
+          serviceName: "$services.name",
+          category: "$services.category",
+          price: "$services.price",
+          status: "$services.status",
+          description: "$services.description",
+          vendorName: "$vendorDetails.businessName",
+          vendorId: "$vendorDetails._id"
+        }
+      }
+    ]);
+    
+    return Response.json(pendingServices, { status: 200 });
   } catch (error) {
     return Response.json(
-      { message: "Error fetching services", error: error.message },
+      { message: "Error fetching pending services", error: error.message },
       { status: 500 }
     );
   }
@@ -20,32 +48,39 @@ export const GET = async () => {
 
 // PATCH (update status) a service by ID
 export const PATCH = async (req) => {
-  const { id, status } = await req.json();
+  const { serviceId, status } = await req.json();
 
-  if (!id || !status) {
+  if (!serviceId || !status) {
     return Response.json(
-      { message: "ID and status are required" },
+      { message: "Service ID and status are required" },
       { status: 400 }
     );
   }
 
-  if (!['pending', 'approved', 'disapproved'].includes(status)) {
+  if (!['approved', 'disapproved'].includes(status)) {
     return Response.json(
-      { message: "Invalid status. Must be 'pending', 'approved', or 'disapproved'" },
+      { message: "Invalid status. Must be 'approved' or 'disapproved'" },
       { status: 400 }
     );
   }
 
   try {
-    const updatedService = await ServiceModel.findByIdAndUpdate(
-      id,
-      { status, updatedAt: new Date() },
+    const updatedVendorService = await VendorServicesModel.findOneAndUpdate(
+      { "services._id": serviceId },
+      { 
+        $set: { 
+          "services.$.status": status,
+          "services.$.updatedAt": new Date() 
+        } 
+      },
       { new: true }
     );
 
-    if (!updatedService) {
+    if (!updatedVendorService) {
       return Response.json({ message: "Service not found" }, { status: 404 });
     }
+    
+    const updatedService = updatedVendorService.services.find(s => s._id.toString() === serviceId);
 
     return Response.json({ message: "Service status updated successfully", service: updatedService }, { status: 200 });
   } catch (error) {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -68,9 +69,7 @@ import {
   setModalOpen,
   setDeleteModalOpen,
 } from "@repo/store/slices/serviceSlice";
-
-// Placeholder vendorId (replace with actual vendorId from your app, e.g., auth context)
-const VENDOR_ID = "your-vendor-id-here"; // TODO: Replace with actual vendorId
+import { useCrmAuth } from "@/hooks/useCrmAuth";
 
 const mockStaff = ["Jane Doe", "John Smith", "Emily White"];
 
@@ -166,6 +165,9 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }) 
 };
 
 const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
+  const { user } = useCrmAuth();
+  const VENDOR_ID = user?._id;
+
   const [activeTab, setActiveTab] = useState("basic");
   const {
     data: categories = [],
@@ -201,6 +203,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
     tax: { enabled: false, type: 'percentage', value: null },
     onlineBooking: true,
     image: '',
+    status: 'pending',
   });
 
   useEffect(() => {
@@ -221,6 +224,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
         tax: service.tax || { enabled: false, type: 'percentage', value: null },
         onlineBooking: service.onlineBooking || true,
         image: service.image || '',
+        status: service.status || 'pending',
       });
       setActiveTab("basic");
     } else {
@@ -240,6 +244,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
         tax: { enabled: false, type: 'percentage', value: null },
         onlineBooking: true,
         image: '',
+        status: 'pending',
       });
       setActiveTab("basic");
     }
@@ -301,6 +306,11 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
   };
 
   const handleSave = async () => {
+    if (!VENDOR_ID) {
+      console.error("Vendor ID is missing");
+      return;
+    }
+    
     const payload = {
       ...formData,
       category: formData.category ? formData.category._id : undefined,
@@ -321,12 +331,16 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
       } : { enabled: false, type: 'percentage', value: null },
       bookingInterval: Number(formData.bookingInterval) || 0,
       image: formData.image,
+      status: service?._id ? formData.status : 'pending',
     };
 
     try {
       if (type === "add") {
         await createVendorServices({ vendor: VENDOR_ID, services: [payload] }).unwrap();
       } else if (type === "edit" && service?._id) {
+         if (service.status === 'disapproved') {
+          payload.status = 'pending';
+        }
         await updateVendorServices({ vendor: VENDOR_ID, services: [{ ...payload, _id: service._id }] }).unwrap();
       }
       onClose();  
@@ -700,7 +714,20 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
                 <span className="font-semibold">Gender:</span> {service?.gender || 'N/A'}
               </div>
               <div>
-                <span className="font-semibold">Status:</span> {service?.status || 'N/A'}
+                <span className="font-semibold">Status:</span>
+                <Badge 
+                   variant={
+                    service.status === 'approved' ? 'default' : 
+                    service.status === 'disapproved' ? 'destructive' : 'secondary'
+                  }
+                  className={
+                    service.status === 'approved' ? 'bg-green-100 text-green-800' :
+                    service.status === 'disapproved' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }
+                >
+                  {service?.status || 'N/A'}
+                </Badge>
               </div>
             </div>
             {service?.image && (
@@ -767,6 +794,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
 };
 
 export default function ServicesPage() {
+  const { user } = useCrmAuth();
   const dispatch = useDispatch();
   const serviceState = useSelector((state) => state.service || {
     searchTerm: '',
@@ -790,11 +818,9 @@ export default function ServicesPage() {
     isError,
     error,
     refetch,
-  } = useGetVendorServicesQuery({ vendorId: VENDOR_ID });
+  } = useGetVendorServicesQuery({ vendorId: user?._id }, { skip: !user?._id });
 
   const services = data.services || [];
-
-  console.log("services", services);
 
   const [deleteVendorServices] = useDeleteVendorServicesMutation();
 
@@ -815,8 +841,6 @@ export default function ServicesPage() {
   const currentItems = filteredServices.slice(firstItemIndex, lastItemIndex);
   const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
 
-  console.log(filteredServices, "filteredServices");
-
   const handleOpenModal = (type: string, service = null) => {
     dispatch(setModalOpen({ isOpen: true, modalType: type, selectedService: service }));
   };
@@ -832,10 +856,8 @@ export default function ServicesPage() {
 
   const handleConfirmDelete = async () => {
       try {
-
-        console.log("Deleting service:", selectedService);
         await deleteVendorServices({
-          vendor: VENDOR_ID,
+          vendorId: user?._id,
           serviceId: selectedService?._id,
        } ).unwrap();
         refetch();
@@ -1029,14 +1051,27 @@ export default function ServicesPage() {
                       </TableCell>
                       <TableCell>{service.duration} mins</TableCell>
                       <TableCell>₹{service.price?.toFixed(2)}</TableCell>
-                      <TableCell>
+                       <TableCell>
                         <Badge
-                          variant={service.status === "active" ? "default" : "secondary"}
+                          variant={
+                            service.status === 'approved' ? 'default' : 
+                            service.status === 'disapproved' ? 'destructive' : 'secondary'
+                          }
+                          className={
+                            service.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            service.status === 'disapproved' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }
                         >
                           {service.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
+                         {service.status === 'disapproved' && (
+                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal("edit", service)}>
+                                <span className="text-xs">Resubmit</span>
+                            </Button>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => handleOpenModal("view", service)}>
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -1055,7 +1090,7 @@ export default function ServicesPage() {
                       colSpan={6}
                       className="text-center py-10 text-muted-foreground"
                     >
-                      {isNoServicesError ? "No services found for this vendor" : "No services found."}
+                      {isNoServicesError ? "No services found. Add your first service to get started!" : "No matching services found."}
                     </TableCell>
                   </TableRow>
                 )}
@@ -1064,7 +1099,7 @@ export default function ServicesPage() {
           </div>
           {filteredServices.length > 0 && (
             <Pagination
-              className="mt-4"
+              className="mt-4 p-4 border-t"
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}

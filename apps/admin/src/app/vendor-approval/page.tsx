@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -13,30 +14,10 @@ import { Badge } from '@repo/ui/badge';
 import { useGetSuppliersQuery, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/api';
 import { useGetDoctorsQuery, useUpdateDoctorMutation, useDeleteDoctorMutation } from '../../../../../packages/store/src/services/api';
 import { useGetVendorsQuery, useUpdateVendorStatusMutation } from '@repo/store/api';
+import { useGetPendingServicesQuery, useUpdateServiceStatusMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 
-// Static data for services and products (unchanged)
-const servicesData = [
-  {
-    id: "SRV-001",
-    serviceName: "Advanced Haircut",
-    vendorName: "New Beauty Haven",
-    category: "Hair",
-    price: 75.00,
-    status: "Pending",
-    description: "A modern haircut using advanced techniques, includes wash and style."
-  },
-  {
-    id: "SRV-002",
-    serviceName: "Gel Manicure",
-    vendorName: "City Style Salon",
-    category: "Nails",
-    price: 55.00,
-    status: "Pending",
-    description: "Long-lasting gel polish manicure with cuticle care and hand massage."
-  },
-];
-
+// Static data for products (unchanged)
 const productsData = [
   {
     id: "PROD-001",
@@ -89,7 +70,15 @@ type Vendor = {
   };
 };
 
-type Service = typeof servicesData[0];
+type Service = {
+    _id: string;
+    serviceName: string;
+    vendorName: string;
+    category: string;
+    price: number;
+    status: "pending" | "approved" | "disapproved";
+    description: string;
+};
 type Product = typeof productsData[0];
 
 type Doctor = {
@@ -138,6 +127,8 @@ export default function VendorApprovalPage() {
   const [updateVendorStatus] = useUpdateVendorStatusMutation();
   const { data: suppliersData = [], isLoading: suppliersLoading } = useGetSuppliersQuery(undefined);
   const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
+  const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetPendingServicesQuery(undefined);
+  const [updateServiceStatus] = useUpdateServiceStatusMutation();
 
   const [updateSupplier] = useUpdateSupplierMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
@@ -157,20 +148,19 @@ export default function VendorApprovalPage() {
 
   const pendingSuppliers = suppliersData.filter((s: Supplier) => s.status === 'Pending');
   const pendingDoctors = doctorsData.filter((d: Doctor) => d.status === 'Pending');
-  // Include 'Disabled' status for vendors, as per provided data
   const pendingVendors = vendors.filter((v: Vendor) => v.status === 'Pending' || v.status === 'Disabled');
 
   // Pagination logic
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
   const currentVendors = pendingVendors.slice(firstItemIndex, lastItemIndex);
-  const currentServices = servicesData.slice(firstItemIndex, lastItemIndex);
+  const currentServices = pendingServices.slice(firstItemIndex, lastItemIndex);
   const currentProducts = productsData.slice(firstItemIndex, lastItemIndex);
   const currentDoctors = pendingDoctors.slice(firstItemIndex, lastItemIndex);
   const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
 
   const totalVendorPages = Math.ceil(pendingVendors.length / itemsPerPage);
-  const totalServicePages = Math.ceil(servicesData.length / itemsPerPage);
+  const totalServicePages = Math.ceil(pendingServices.length / itemsPerPage);
   const totalProductPages = Math.ceil(productsData.length / itemsPerPage);
   const totalDoctorPages = Math.ceil(pendingDoctors.length / itemsPerPage);
   const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
@@ -228,6 +218,12 @@ export default function VendorApprovalPage() {
           await updateDoctor({ id: doctor._id, status: newStatus }).unwrap();
           toast.success('Success', { description: `Doctor "${itemName}" status updated to ${newStatus}.` });
         }
+      } else if (itemType === 'service') {
+          const service = selectedItem as Service;
+          const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
+          await updateServiceStatus({ serviceId: service._id, status: newStatus }).unwrap();
+          toast.success(`Service "${service.serviceName}" has been ${newStatus}.`);
+          refetchPendingServices(); // Refetch the list of pending services
       } else {
         console.log(`Performing ${actionType} on ${itemType} ${itemName}`);
       }
@@ -293,7 +289,7 @@ export default function VendorApprovalPage() {
             <ThumbsUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{servicesData.length}</div>
+            <div className="text-2xl font-bold">{pendingServices.length}</div>
             <p className="text-xs text-muted-foreground">Services to approve</p>
           </CardContent>
         </Card>
@@ -430,56 +426,49 @@ export default function VendorApprovalPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Service ID</TableHead>
                       <TableHead>Service Name</TableHead>
                       <TableHead>Vendor</TableHead>
-                      <TableHead>Category</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentServices.map((service) => (
-                      <TableRow key={service.id}>
-                        <TableCell className="font-mono text-xs">{service.id}</TableCell>
+                   {servicesLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">Loading...</TableCell>
+                      </TableRow>
+                    ) : currentServices.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">No pending service approvals.</TableCell>
+                      </TableRow>
+                    ) : (
+                      currentServices.map((service) => (
+                      <TableRow key={service._id}>
                         <TableCell className="font-medium">{service.serviceName}</TableCell>
                         <TableCell>{service.vendorName}</TableCell>
-                        <TableCell>{service.category}</TableCell>
-                        <TableCell>${service.price.toFixed(2)}</TableCell>
+                        <TableCell>₹{service.price.toFixed(2)}</TableCell>
                         <TableCell>
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              service.status === "Approved" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                             {service.status}
-                          </span>
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" onClick={() => handleViewClick(service, 'service')}>
                             <Eye className="h-4 w-4" />
                             <span className="sr-only">View Details</span>
                           </Button>
-                          {service.status === "Pending" && (
-                            <>
-                              <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'approve')}>
-                                <CheckCircle className="h-4 w-4 text-green-600" />
-                                <span className="sr-only">Approve</span>
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'reject')}>
-                                <XCircle className="h-4 w-4 text-red-600" />
-                                <span className="sr-only">Reject</span>
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'delete')}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                            </>
-                          )}
+                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'approve')}>
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                            <span className="sr-only">Approve</span>
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'reject')}>
+                            <XCircle className="h-4 w-4 text-red-600" />
+                            <span className="sr-only">Reject</span>
+                          </Button>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )))}
                   </TableBody>
                 </Table>
               </div>
@@ -490,7 +479,7 @@ export default function VendorApprovalPage() {
                 onPageChange={setCurrentPage}
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
-                totalItems={servicesData.length}
+                totalItems={pendingServices.length}
               />
             </CardContent>
           </Card>
@@ -860,20 +849,12 @@ export default function VendorApprovalPage() {
               <>
                 <h3 className="text-lg font-semibold">{(selectedItem as Service).serviceName}</h3>
                 <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Service ID</span>
-                  <span className="col-span-2">{(selectedItem as Service).id}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Vendor</span>
                   <span className="col-span-2">{(selectedItem as Service).vendorName}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Category</span>
-                  <span className="col-span-2"><Badge>{(selectedItem as Service).category}</Badge></span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Price</span>
-                  <span className="col-span-2">${(selectedItem as Service).price.toFixed(2)}</span>
+                  <span className="col-span-2">₹{(selectedItem as Service).price.toFixed(2)}</span>
                 </div>
                 <div className="grid grid-cols-3 items-start gap-4">
                   <span className="font-semibold text-muted-foreground">Description</span>
