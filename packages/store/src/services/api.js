@@ -1,6 +1,7 @@
 
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
+import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 
 const API_BASE_URLS = {
   admin: 'http://localhost:3002/api',
@@ -9,72 +10,59 @@ const API_BASE_URLS = {
 };
 
 // Base query function that determines the API URL and sets headers.
-const baseQuery = fetchBaseQuery({
-  baseUrl: '/', // Default base, will be overridden dynamically
-  prepareHeaders: (headers, { getState, endpoint }) => {
-    // Determine the target service from the endpoint definition if available,
-    // otherwise fallback to localStorage check for broader compatibility.
-    const state = getState();
-    const token = state.auth.token; // Get token from Redux state
-
-    // Attach token if it exists
-    if (token) {
-      // The middleware on the backend will handle which secret to use based on the token's payload
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-        
-    return headers;
-  },
-});
-
-const baseQueryWithReauth = async (args, api, extraOptions) => {
+const baseQuery = async (args, api, extraOptions) => {
   let requestUrl = typeof args === 'string' ? args : args.url;
     
-  // This ensures requestUrl is always a string for the checks below.
   if (typeof requestUrl !== 'string') {
     console.error("Request URL is not a string:", requestUrl);
     return { error: { status: 'CUSTOM_ERROR', error: 'Invalid URL provided' } };
   }
     
   let targetService = 'web'; // Default
+  let token = null;
+  const state = api.getState();
+
   if (requestUrl.startsWith('/admin')) {
     targetService = 'admin';
+    token = state.adminAuth.token;
   } else if (requestUrl.startsWith('/crm')) {
     targetService = 'crm';
+    token = state.crmAuth.token;
+  } else {
+    // For web routes, it might use either, but let's assume a default or check both
+    token = state.crmAuth.token || state.adminAuth.token;
   }
     
   const baseUrl = API_BASE_URLS[targetService];
   
-  // Create a new fetchBaseQuery instance for this specific call with the dynamic base URL.
   const dynamicFetch = fetchBaseQuery({
     baseUrl,
-    prepareHeaders: (headers, { getState }) => {
-      const state = getState();
-      const token = state.auth.token;
-      
+    prepareHeaders: (headers) => {
       if (token) {
         headers.set('Authorization', `Bearer ${token}`);
       }
-      
       return headers;
     }
   });
   
   let result = await dynamicFetch(args, api, extraOptions);
   
-  // If we receive a 401 error, it means the token is invalid or expired.
-  // We log the user out by clearing their auth state.
   if (result.error && result.error.status === 401) {
-    console.warn('Received 401 Unauthorized. Logging out.');
-    api.dispatch(clearAdminAuth());
+    console.warn(`Received 401 Unauthorized for ${targetService}. Logging out.`);
+    if (targetService === 'admin') {
+      api.dispatch(clearAdminAuth());
+    } else if (targetService === 'crm') {
+      api.dispatch(clearCrmAuth());
+    }
   }
     
   return result;
 };
 
+
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
-  baseQuery: baseQueryWithReauth,
+  baseQuery: baseQuery,
   tagTypes: [
     "admin",
     "offers",

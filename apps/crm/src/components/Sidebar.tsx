@@ -10,8 +10,10 @@ import {
   FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
   FaBell, FaGift, FaUserFriends, FaUserCircle
 } from 'react-icons/fa';
-import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
-import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
+import { useAppDispatch } from "@repo/store/hooks";
+import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { useCrmAuth } from "@/hooks/useCrmAuth";
+import Cookies from "js-cookie";
 
 const vendorNavItems = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
@@ -42,27 +44,28 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { admin: user } = useAppSelector((state) => state.auth);
+  const { user, permissions, role, isLoading } = useCrmAuth();
 
   const handleLogout = async () => {
-    dispatch(clearAdminAuth());
+    dispatch(clearCrmAuth());
+    Cookies.remove('crm_access_token');
     router.push('/login');
+    router.refresh();
   };
+  
+  if (isLoading) {
+    return null; // Or a loading skeleton
+  }
 
   const getNavItemsForRole = () => {
-    const role = user?.role;
-    const permissions = user?.permissions || [];
+    const userPermissions = permissions || [];
     
     switch (role) {
       case 'vendor':
-        // A vendor owner might not have a permissions array, so we show all items.
-        // A staff member would have a specific permissions array.
-        if (!permissions.length && !user.vendorId) {
-            return vendorNavItems;
-        }
-        return vendorNavItems.filter(item => permissions.includes(item.permission));
+        // A vendor owner has all permissions by default
+        return vendorNavItems;
       case 'staff':
-        return vendorNavItems.filter(item => permissions.includes(item.permission));
+        return vendorNavItems.filter(item => userPermissions.includes(item.permission));
       case 'doctor':
         return doctorNavItems;
       case 'supplier':

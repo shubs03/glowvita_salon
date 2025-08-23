@@ -9,6 +9,7 @@ import { MarketingLayout } from '@/components/MarketingLayout';
 import { CrmLayout } from '@/components/CrmLayout';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from 'sonner';
+import { CrmAuthInitializer } from '@/components/CrmAuthInitializer';
 
 export default function RootLayout({
   children,
@@ -43,15 +44,17 @@ export default function RootLayout({
         </head>
         <body>
           <StoreProvider>
-            <Toaster richColors />
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-            >
-              {children}
-            </ThemeProvider>
+            <CrmAuthInitializer>
+              <Toaster richColors />
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
+                {children}
+              </ThemeProvider>
+            </CrmAuthInitializer>
           </StoreProvider>
         </body>
       </html>
@@ -67,19 +70,21 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          <Toaster richColors />
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {isPanelPage ? (
-              <CrmLayout>{children}</CrmLayout>
-            ) : (
-              <MarketingLayout>{children}</MarketingLayout>
-            )}
-          </ThemeProvider>
+          <CrmAuthInitializer>
+            <Toaster richColors />
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {isPanelPage ? (
+                <CrmLayout>{children}</CrmLayout>
+              ) : (
+                <MarketingLayout>{children}</MarketingLayout>
+              )}
+            </ThemeProvider>
+          </CrmAuthInitializer>
         </StoreProvider>
       </body>
     </html>
