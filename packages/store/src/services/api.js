@@ -2,14 +2,14 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 
 const API_BASE_URLS = {
-  admin: 'http://localhost:3002/api',
-  crm: 'http://localhost:3001/api',
-  web: 'http://localhost:3000/api',
+  admin: "http://localhost:3002/api",
+  crm: "http://localhost:3001/api",
+  web: "http://localhost:3000/api",
 };
 
 // Base query function that determines the API URL and sets headers.
 const baseQuery = fetchBaseQuery({
-  baseUrl: '/', // Default base, will be overridden dynamically
+  baseUrl: "/", // Default base, will be overridden dynamically
   prepareHeaders: (headers, { getState, endpoint }) => {
     // Determine the target service from the endpoint definition if available,
     // otherwise fallback to localStorage check for broader compatibility.
@@ -26,29 +26,29 @@ const baseQuery = fetchBaseQuery({
       // In a real scenario, you'd differentiate between CRM and Admin calls here.
       headers.set("Vendor-Authorization", `Bearer ${vendorAccessToken}`);
     }
-        
+
     return headers;
   },
 });
 
 const baseQueryWithReauth = async (args, api, extraOptions) => {
-  let requestUrl = typeof args === 'string' ? args : args.url;
-    
+  let requestUrl = typeof args === "string" ? args : args.url;
+
   // This ensures requestUrl is always a string for the checks below.
-  if (typeof requestUrl !== 'string') {
+  if (typeof requestUrl !== "string") {
     console.error("Request URL is not a string:", requestUrl);
-    return { error: { status: 'CUSTOM_ERROR', error: 'Invalid URL provided' } };
+    return { error: { status: "CUSTOM_ERROR", error: "Invalid URL provided" } };
   }
-    
-  let targetService = 'web'; // Default
-  if (requestUrl.startsWith('/admin')) {
-    targetService = 'admin';
-  } else if (requestUrl.startsWith('/crm')) {
-    targetService = 'crm';
+
+  let targetService = "web"; // Default
+  if (requestUrl.startsWith("/admin")) {
+    targetService = "admin";
+  } else if (requestUrl.startsWith("/crm")) {
+    targetService = "crm";
   }
-    
+
   const baseUrl = API_BASE_URLS[targetService];
-  
+
   // Create a new fetchBaseQuery instance for this specific call with the dynamic base URL.
   const dynamicFetch = fetchBaseQuery({
     baseUrl,
@@ -56,41 +56,44 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
       const state = getState();
       const adminToken = state.auth.token;
       const vendorAccessToken = localStorage.getItem("vendor_access_token");
-      
+
       // Handle different auth tokens based on target service
-      if (targetService === 'admin' && adminToken) {
-        headers.set('Admin-Authorization', `Bearer ${adminToken}`);
-      } else if (targetService === 'crm' && vendorAccessToken) {
-        headers.set('Vendor-Authorization', `Bearer ${vendorAccessToken}`);
+      if (targetService === "admin" && adminToken) {
+        headers.set("Admin-Authorization", `Bearer ${adminToken}`);
+      } else if (targetService === "crm" && vendorAccessToken) {
+        headers.set("Vendor-Authorization", `Bearer ${vendorAccessToken}`);
       } else if (vendorAccessToken && !adminToken) {
         // Fallback: if no admin token but vendor token exists, use vendor token
-        headers.set('Vendor-Authorization', `Bearer ${vendorAccessToken}`);
+        headers.set("Vendor-Authorization", `Bearer ${vendorAccessToken}`);
       }
-      
+
       return headers;
-    }
+    },
   });
-  
+
   let result = await dynamicFetch(args, api, extraOptions);
-  
+
   // If we receive a 401 error, it means the token is invalid or expired.
   // We log the user out by clearing their auth state.
   if (result.error && result.error.status === 401) {
-    console.warn('Received 401 Unauthorized. Logging out.');
-    
+    console.warn("Received 401 Unauthorized. Logging out.");
+
     // Clear appropriate auth based on which token was used
-    if (targetService === 'admin' || getState().auth.token) {
+    if (targetService === "admin" || getState().auth.token) {
       api.dispatch(clearAdminAuth());
-    } else if (targetService === 'crm' || localStorage.getItem("vendor_access_token")) {
+    } else if (
+      targetService === "crm" ||
+      localStorage.getItem("vendor_access_token")
+    ) {
       // Clear vendor token from localStorage
       localStorage.removeItem("vendor_access_token");
       // You might want to dispatch a vendor auth clear action here if you have one
     }
-    
+
     // Optionally, you can redirect here, but it's better handled in UI components
     // to avoid breaking React's rendering flow.
   }
-    
+
   return result;
 };
 
@@ -693,6 +696,38 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["VendorServices"],
     }),
+
+    getOffers: builder.query({
+      query: () => "/crm/offers",
+      invalidatesTags: ["Offer"],
+    }),
+
+    createOffer: builder.mutation({
+      query: (body) => ({
+        url: "/crm/offers",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Offer"],
+    }),
+
+    updateOffer: builder.mutation({
+      query: (body) => ({
+        url: "/crm/offers",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Offer"],
+    }),
+
+    deleteOffer: builder.mutation({
+      query: (id) => ({
+        url: "/crm/offers",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Offer"],
+    }),
   }),
 });
 
@@ -770,7 +805,7 @@ export const {
   useUpdateServiceMutation,
   useDeleteServiceMutation,
 
-  // Admin CustoPush Notification Endpoints
+  // Admin Custom Push Notification Endpoints
   useGetNotificationsQuery,
   useCreateNotificationMutation,
   useUpdateNotificationMutation,
@@ -780,11 +815,13 @@ export const {
   useGetTaxFeeSettingsQuery,
   useUpdateTaxFeeSettingsMutation,
 
-    // FAQ Endpoints
-    useGetFaqsQuery,
-    useCreateFaqMutation,
-    useUpdateFaqMutation,
-    useDeleteFaqMutation,
+  // FAQ Endpoints
+  useGetFaqsQuery,
+  useCreateFaqMutation,
+  useUpdateFaqMutation,
+  useDeleteFaqMutation,
+
+  //======================================================== CRM Endpoints ====================================================//
 
   // CRM Endpoints
 
@@ -798,6 +835,9 @@ export const {
   useUpdateVendorServicesMutation,
   useDeleteVendorServicesMutation,
 
-  
+  // Offer Endpoints
+  useGetOffersQuery,
+  useCreateOfferMutation,
+  useUpdateOfferMutation,
+  useDeleteOfferMutation,
 } = glowvitaApi;
-

@@ -22,6 +22,7 @@ const roleToSecretMap = {
   supplier: JWT_SECRET_SUPPLIER,
 };
 
+
 export function authMiddlewareCrm(handler, allowedRoles = []) {
   return async (req, ctx) => {
     await _db();
