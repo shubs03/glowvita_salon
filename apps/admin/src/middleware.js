@@ -4,13 +4,14 @@ import * as jose from 'jose';
 const JWT_SECRET_ADMIN = process.env.JWT_SECRET_ADMIN;
 
 async function verifyJwt(token) {
-  if (!token) return null;
+  if (!token || !JWT_SECRET_ADMIN) return null;
   const secret = new TextEncoder().encode(JWT_SECRET_ADMIN);
   try {
     const { payload } = await jose.jwtVerify(token, secret);
     return payload;
   } catch (error) {
-    console.log("JWT Verification Error in Middleware:", error.message);
+    // This will catch errors for expired tokens, invalid signatures, etc.
+    console.log("Admin JWT Verification Error in Middleware:", error.code);
     return null;
   }
 }

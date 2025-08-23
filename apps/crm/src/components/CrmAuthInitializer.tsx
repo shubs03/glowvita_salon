@@ -4,7 +4,6 @@
 import { useAppDispatch } from '@repo/store/hooks';
 import { clearCrmAuth, setCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import { useEffect, type ReactNode } from 'react';
-import { jwtDecode } from 'jwt-decode';
 
 export function CrmAuthInitializer({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
@@ -15,12 +14,9 @@ export function CrmAuthInitializer({ children }: { children: ReactNode }) {
       if (storedState) {
         const { user, token, role, permissions } = JSON.parse(storedState);
         if (user && token && role) {
-          const decodedToken: { exp: number } = jwtDecode(token);
-          if (decodedToken.exp * 1000 < Date.now()) {
-            dispatch(clearCrmAuth());
-          } else {
-            dispatch(setCrmAuth({ user, token, role, permissions: permissions || [] }));
-          }
+          // Rehydrate the state without checking token expiry here.
+          // Middleware will handle expired tokens.
+          dispatch(setCrmAuth({ user, token, role, permissions: permissions || [] }));
         } else {
           dispatch(clearCrmAuth());
         }
