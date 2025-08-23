@@ -1,4 +1,4 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, getDefaultMiddleware } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import authReducer from '@repo/store/slices/adminAuthSlice';
 import modalReducer from './slices/modalSlice';
@@ -12,9 +12,13 @@ import notificationReducer from './slices/notificationSlice';
 import geoFencingReducer from './slices/geoFencingSlice';
 import refferalReducer from './slices/Admin/refferalSlice.js';
 import faqReducer from './slices/faqSlice';
+import shippingReducer from './slices/shippingSlice';
+import productReducer from './slices/productSlice';
 
 export const makeStore = () => {
   return configureStore({
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware().concat(glowvitaApi.middleware),
     reducer: {
       [glowvitaApi.reducerPath]: glowvitaApi.reducer,
       auth: authReducer,
@@ -28,10 +32,10 @@ export const makeStore = () => {
       notification: notificationReducer,
       geoFencing: geoFencingReducer,
       refferal: refferalReducer,
-      faqs: faqReducer
+      faq: faqReducer,
+      shipping: shippingReducer,
+      products: productReducer,
     },
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(glowvitaApi.middleware),
   });
 };
 
