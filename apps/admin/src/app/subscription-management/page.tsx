@@ -38,7 +38,7 @@ type Subscription = {
 };
 
 export default function SubscriptionManagementPage() {
-  const { data: plans = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery();
+  const { data: plans = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery(undefined);
   const [createNewPlan] = useCreateSubscriptionPlanMutation();
   const [updateExistingPlan] = useUpdateSubscriptionPlanMutation();
   const [deletePlan] = useDeleteSubscriptionPlanMutation();
@@ -95,11 +95,6 @@ export default function SubscriptionManagementPage() {
   const [planItemsPerPage, setPlanItemsPerPage] = useState<number>(5); // Explicit number type
   const [subItemsPerPage, setSubItemsPerPage] = useState<number>(5); // Explicit number type
 
-  const durationOptions = Array.from({ length: 99 }, (_, i) => ({
-    value: (i + 1).toString(),
-    label: (i + 1).toString(),
-  }));
-
   const durationTypeOptions = [
     { value: 'days', label: 'Days' },
     { value: 'weeks', label: 'Weeks' },
@@ -108,6 +103,10 @@ export default function SubscriptionManagementPage() {
   ];
 
   const handleInputChange = (field: string, value: string | boolean) => {
+    if (field === 'duration') {
+        const numValue = Number(value);
+        if (numValue > 99) return;
+    }
     setPlanForm((prev) => ({
       ...prev,
       [field]: field === 'isAvailableForPurchase' ? value === 'true' : value,
@@ -162,7 +161,7 @@ export default function SubscriptionManagementPage() {
         refetch();
       } catch (error) {
         console.error('Error deleting plan:', error);
-        toast.error(`Error deleting plan: ${(error as any).message || 'Unknown error'}`);
+        toast.error(`Error deleting plan: ${(error as any).data?.message || 'Unknown error'}`);
       } finally {
         setIsDeleteModalOpen(false);
       }
@@ -205,7 +204,7 @@ export default function SubscriptionManagementPage() {
       refetch();
     } catch (error) {
       console.error('Error saving plan:', error);
-      toast.error(`Error saving plan: ${(error as any).message || 'Unknown error'}`);
+      toast.error(`Error saving plan: ${(error as any).data?.message || 'Unknown error'}`);
     }
   };
 
@@ -481,21 +480,16 @@ export default function SubscriptionManagementPage() {
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Duration</Label>
                 <div className="col-span-3 flex gap-2">
-                  <Select
+                  <Input
+                    id="duration"
+                    type="number"
                     value={planForm.duration}
-                    onValueChange={(value) => handleInputChange('duration', value)}
-                  >
-                    <SelectTrigger className="w-[100px]">
-                      <SelectValue placeholder="Duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {durationOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(e) => handleInputChange('duration', e.target.value)}
+                    className="w-[100px]"
+                    placeholder="e.g., 30"
+                    min="1"
+                    max="99"
+                  />
                   <Select
                     value={planForm.durationType}
                     onValueChange={(value) => handleInputChange('durationType', value)}
