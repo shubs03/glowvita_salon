@@ -1,6 +1,5 @@
 
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
 
 const bankDetailsSchema = new mongoose.Schema({
     accountHolderName: { type: String, trim: true },
