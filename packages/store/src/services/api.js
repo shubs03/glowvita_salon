@@ -2,6 +2,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { jwtDecode } from "jwt-decode";
 
 const API_BASE_URLS = {
   admin: "http://localhost:3002/api",
@@ -47,12 +48,26 @@ const baseQuery = async (args, api, extraOptions) => {
 
   let result = await dynamicFetch(args, api, extraOptions);
   
+  // Enhanced 401 handling
   if (result.error && result.error.status === 401) {
     console.warn(`Received 401 Unauthorized for ${targetService}. Logging out.`);
     if (targetService === 'admin') {
       api.dispatch(clearAdminAuth());
     } else if (targetService === 'crm') {
       api.dispatch(clearCrmAuth());
+    }
+  }
+  
+  // Check for token expiry on the client-side as well
+  if(token) {
+    const decodedToken = jwtDecode(token);
+    if (decodedToken.exp * 1000 < Date.now()) {
+        console.warn(`Token expired for ${targetService}. Logging out.`);
+         if (targetService === 'admin') {
+          api.dispatch(clearAdminAuth());
+        } else if (targetService === 'crm') {
+          api.dispatch(clearCrmAuth());
+        }
     }
   }
 
@@ -80,6 +95,7 @@ export const glowvitaApi = createApi({
     "TaxFeeSettings",
     "User",
     "PendingServices",
+    "Staff", // Add Staff tag type
   ],
   endpoints: (builder) => ({
     // Web App Endpoints
@@ -610,7 +626,38 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Faq"],
     }),
 
-    // Crm Endpoints
+    //======================================================== CRM Endpoints ====================================================//
+
+    // CRM Staff Endpoints
+    getStaff: builder.query({
+        query: (vendorId) => ({ url: '/crm/staff', params: { vendorId } }),
+        providesTags: ['Staff'],
+    }),
+    createStaff: builder.mutation({
+        query: (staffData) => ({
+            url: '/crm/staff',
+            method: 'POST',
+            body: staffData,
+        }),
+        invalidatesTags: ['Staff'],
+    }),
+    updateStaff: builder.mutation({
+        query: ({ id, ...updateData }) => ({
+            url: '/crm/staff',
+            method: 'PUT',
+            body: { id, ...updateData },
+        }),
+        invalidatesTags: ['Staff'],
+    }),
+    deleteStaff: builder.mutation({
+        query: (id) => ({
+            url: `/crm/staff?id=${id}`,
+            method: 'DELETE',
+        }),
+        invalidatesTags: ['Staff'],
+    }),
+
+    // Vendor Endpoints
     vendorLogin: builder.mutation({
       query: (credentials) => ({
         url: "/crm/auth/login",
@@ -627,6 +674,7 @@ export const glowvitaApi = createApi({
       }),
     }),
 
+    // Services Endpoints
     getVendorServices: builder.query({
       query: ({
         vendorId,
@@ -668,6 +716,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["VendorServices"],
     }),
 
+    // Offer Endpoints
     getOffers: builder.query({
       query: () => "/crm/offers",
       invalidatesTags: ["Offer"],
@@ -799,8 +848,12 @@ export const {
   useDeleteFaqMutation,
 
   //======================================================== CRM Endpoints ====================================================//
-
-  // CRM Endpoints
+  
+  // Staff Endpoints
+  useGetStaffQuery,
+  useCreateStaffMutation,
+  useUpdateStaffMutation,
+  useDeleteStaffMutation,
 
   // Vendor Endpoints
   useVendorLoginMutation,

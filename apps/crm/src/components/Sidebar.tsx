@@ -19,6 +19,7 @@ const vendorNavItems = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
   { title: "Calendar", href: "/calendar", Icon: FaCalendarAlt, permission: 'calendar_view' },
   { title: "Appointments", href: "/appointments", Icon: FaClipboardList, permission: 'appointments_view' },
+  { title: "Staff", href: "/staff", Icon: FaUsers, permission: 'staff_view' },
   { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
   { title: "Services", href: "/services", Icon: FaCut, permission: 'services_view' },
   { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },

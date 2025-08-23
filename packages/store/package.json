@@ -11,6 +11,7 @@
     "./slices/adminAuthSlice": "./src/slices/Admin/adminAuthSlice.js",
     "./slices/crmAuthSlice": "./src/slices/crmAuthSlice.js",
     "./slices/serviceSlice": "./src/slices/CRM/serviceSlice.js",
+    "./slices/staffSlice": "./src/slices/CRM/staffSlice.js",
     "./slices/modal": "./src/slices/modalSlice.js",
     "./slices/customerSlice": "./src/slices/customerSlice.js",
     "./slices/salonSlice": "./src/slices/salonSlice.js",
@@ -28,6 +29,7 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.2.5",
+    "jwt-decode": "^4.0.0",
     "react-redux": "^9.1.2"
   },
   "peerDependencies": {

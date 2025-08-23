@@ -15,6 +15,7 @@ import geoFencingReducer from './slices/geoFencingSlice';
 import refferalReducer from './slices/Admin/refferalSlice.js';
 import faqReducer from './slices/faqSlice';
 import serviceReducer from "./slices/CRM/serviceSlice.js";
+import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
 
 export const makeStore = () => {
   return configureStore({
@@ -33,7 +34,8 @@ export const makeStore = () => {
       geoFencing: geoFencingReducer,
       refferal: refferalReducer,
       faqs: faqReducer,
-      service: serviceReducer
+      service: serviceReducer,
+      staff: staffReducer, // Add staff reducer
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(glowvitaApi.middleware),
