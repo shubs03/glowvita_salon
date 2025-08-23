@@ -70,7 +70,7 @@ export const glowvitaApi = createApi({
     "Settings",
     "SuperData",
     "Supplier",
-    "Subscription",
+    "SubscriptionPlan",
     "Vendor",
     "doctors",
     "GeoFence",
@@ -78,7 +78,6 @@ export const glowvitaApi = createApi({
     "Service",
     "Notification",
     "TaxFeeSettings",
-    "SubscriptionPlan",
     "User",
     "PendingServices",
   ],
@@ -369,10 +368,7 @@ export const glowvitaApi = createApi({
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
       query: () => ({ url: "/admin/subscription-plans", method: "GET" }),
-      providesTags: (result = []) => [
-        "SubscriptionPlan",
-        ...result.map(({ _id }) => ({ type: "SubscriptionPlan", id: _id })),
-      ],
+      providesTags: ["SubscriptionPlan"],
     }),
 
     createSubscriptionPlan: builder.mutation({
@@ -385,24 +381,22 @@ export const glowvitaApi = createApi({
     }),
 
     updateSubscriptionPlan: builder.mutation({
-      query: (plan) => ({
-        url: "/admin/subscription-plans",
-        method: "PUT",
-        body: plan,
+      query: ({ _id, ...planData }) => ({
+        url: `/admin/subscription-plans?id=${_id}`,
+        method: "PATCH",
+        body: planData,
       }),
-      invalidatesTags: (result, error, { _id }) => [
-        { type: "SubscriptionPlan", id: _id },
-      ],
+      invalidatesTags: (result, error, { _id }) => [{ type: "SubscriptionPlan", id: _id }, "SubscriptionPlan"],
     }),
 
     deleteSubscriptionPlan: builder.mutation({
       query: (id) => ({
-        url: "/admin/subscription-plans",
+        url: `/admin/subscription-plans?id=${id}`,
         method: "DELETE",
-        body: { id },
       }),
       invalidatesTags: ["SubscriptionPlan"],
     }),
+
 
     // Supplier Endpoints
     getSuppliers: builder.query({
