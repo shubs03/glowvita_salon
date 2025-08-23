@@ -95,12 +95,10 @@ export default function SubscriptionManagementPage() {
   const [planItemsPerPage, setPlanItemsPerPage] = useState<number>(5); // Explicit number type
   const [subItemsPerPage, setSubItemsPerPage] = useState<number>(5); // Explicit number type
 
-  const durationOptions = [
-    { value: '1', label: '1' },
-    { value: '3', label: '3' },
-    { value: '6', label: '6' },
-    { value: '12', label: '12' },
-  ];
+  const durationOptions = Array.from({ length: 99 }, (_, i) => ({
+    value: (i + 1).toString(),
+    label: (i + 1).toString(),
+  }));
 
   const durationTypeOptions = [
     { value: 'days', label: 'Days' },
@@ -164,7 +162,7 @@ export default function SubscriptionManagementPage() {
         refetch();
       } catch (error) {
         console.error('Error deleting plan:', error);
-        toast.error(`Error deleting plan: ${error.message || 'Unknown error'}`);
+        toast.error(`Error deleting plan: ${(error as any).message || 'Unknown error'}`);
       } finally {
         setIsDeleteModalOpen(false);
       }
@@ -183,7 +181,7 @@ export default function SubscriptionManagementPage() {
         discountedPrice: planForm.discountedPrice ? parseFloat(planForm.discountedPrice) : undefined,
         isAvailableForPurchase: planForm.isAvailableForPurchase,
         status: 'Active',
-        features: planForm.features || [],
+        features: (planForm as any).features || [],
       };
 
       if (modalType === 'add') {
@@ -201,14 +199,13 @@ export default function SubscriptionManagementPage() {
         price: '',
         discountedPrice: '',
         isAvailableForPurchase: true,
-        features: [],
       });
 
       setIsPlanModalOpen(false);
       refetch();
     } catch (error) {
       console.error('Error saving plan:', error);
-      toast.error(`Error saving plan: ${error.message || 'Unknown error'}`);
+      toast.error(`Error saving plan: ${(error as any).message || 'Unknown error'}`);
     }
   };
 
@@ -258,7 +255,7 @@ export default function SubscriptionManagementPage() {
       <h1 className="text-2xl font-bold font-headline mb-6">Subscription Management</h1>
 
       {isLoading && <p>Loading plans...</p>}
-      {error && <p>Error: {error.status || 'An error occurred'}</p>}
+      {error && <p>Error: {(error as any).status || 'An error occurred'}</p>}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
