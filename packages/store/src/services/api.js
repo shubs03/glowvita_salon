@@ -1,3 +1,4 @@
+
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 
@@ -14,17 +15,12 @@ const baseQuery = fetchBaseQuery({
     // Determine the target service from the endpoint definition if available,
     // otherwise fallback to localStorage check for broader compatibility.
     const state = getState();
-    const adminToken = state.auth.token;
-    const vendorAccessToken = localStorage.getItem("vendor_access_token");
+    const token = state.auth.token; // Get token from Redux state
 
-    // Check which token to use based on the endpoint, defaulting to admin for now.
-    // This logic assumes endpoints are defined in a way that we can infer the target.
-    // For this setup, we'll primarily check for the admin token.
-    if (adminToken) {
-      headers.set("Admin-Authorization", `Bearer ${adminToken}`);
-    } else if (vendorAccessToken) {
-      // In a real scenario, you'd differentiate between CRM and Admin calls here.
-      headers.set("Vendor-Authorization", `Bearer ${vendorAccessToken}`);
+    // Attach token if it exists
+    if (token) {
+      // The middleware on the backend will handle which secret to use based on the token's payload
+      headers.set("Authorization", `Bearer ${token}`);
     }
         
     return headers;
@@ -54,17 +50,10 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
     baseUrl,
     prepareHeaders: (headers, { getState }) => {
       const state = getState();
-      const adminToken = state.auth.token;
-      const vendorAccessToken = localStorage.getItem("vendor_access_token");
+      const token = state.auth.token;
       
-      // Handle different auth tokens based on target service
-      if (targetService === 'admin' && adminToken) {
-        headers.set('Admin-Authorization', `Bearer ${adminToken}`);
-      } else if (targetService === 'crm' && vendorAccessToken) {
-        headers.set('Vendor-Authorization', `Bearer ${vendorAccessToken}`);
-      } else if (vendorAccessToken && !adminToken) {
-        // Fallback: if no admin token but vendor token exists, use vendor token
-        headers.set('Vendor-Authorization', `Bearer ${vendorAccessToken}`);
+      if (token) {
+        headers.set('Authorization', `Bearer ${token}`);
       }
       
       return headers;
@@ -77,18 +66,7 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
   // We log the user out by clearing their auth state.
   if (result.error && result.error.status === 401) {
     console.warn('Received 401 Unauthorized. Logging out.');
-    
-    // Clear appropriate auth based on which token was used
-    if (targetService === 'admin' || getState().auth.token) {
-      api.dispatch(clearAdminAuth());
-    } else if (targetService === 'crm' || localStorage.getItem("vendor_access_token")) {
-      // Clear vendor token from localStorage
-      localStorage.removeItem("vendor_access_token");
-      // You might want to dispatch a vendor auth clear action here if you have one
-    }
-    
-    // Optionally, you can redirect here, but it's better handled in UI components
-    // to avoid breaking React's rendering flow.
+    api.dispatch(clearAdminAuth());
   }
     
   return result;
@@ -800,4 +778,3 @@ export const {
 
   
 } = glowvitaApi;
-

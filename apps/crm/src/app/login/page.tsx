@@ -29,7 +29,7 @@ export default function LoginPage() {
       const response = await vendorLogin({ email, password }).unwrap();
 
       if(response.success) {
-        // Dispatch to Redux store instead of localStorage
+        // Dispatch to Redux store and localStorage
         dispatch(setAdminAuth({ user: response.user, token: response.access_token }));
         
         toast.success('Login successful!', {
