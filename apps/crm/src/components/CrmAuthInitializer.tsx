@@ -14,6 +14,8 @@ export function CrmAuthInitializer({ children }: { children: ReactNode }) {
       if (storedState) {
         const { user, token, role, permissions } = JSON.parse(storedState);
         if (user && token && role) {
+          // Rehydrate the state without checking token expiry here.
+          // Middleware will handle expired tokens.
           dispatch(setCrmAuth({ user, token, role, permissions: permissions || [] }));
         } else {
           dispatch(clearCrmAuth());

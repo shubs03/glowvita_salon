@@ -2,6 +2,7 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { jwtDecode } from "jwt-decode";
 
 const API_BASE_URLS = {
   admin: "http://localhost:3002/api",
@@ -47,12 +48,26 @@ const baseQuery = async (args, api, extraOptions) => {
 
   let result = await dynamicFetch(args, api, extraOptions);
   
+  // Enhanced 401 handling
   if (result.error && result.error.status === 401) {
     console.warn(`Received 401 Unauthorized for ${targetService}. Logging out.`);
     if (targetService === 'admin') {
       api.dispatch(clearAdminAuth());
     } else if (targetService === 'crm') {
       api.dispatch(clearCrmAuth());
+    }
+  }
+  
+  // Check for token expiry on the client-side as well
+  if(token) {
+    const decodedToken = jwtDecode(token);
+    if (decodedToken.exp * 1000 < Date.now()) {
+        console.warn(`Token expired for ${targetService}. Logging out.`);
+         if (targetService === 'admin') {
+          api.dispatch(clearAdminAuth());
+        } else if (targetService === 'crm') {
+          api.dispatch(clearCrmAuth());
+        }
     }
   }
 
@@ -69,22 +84,13 @@ export const glowvitaApi = createApi({
     "Referrals",
     "Settings",
     "SuperData",
-    "Supplier",
-    "SubscriptionPlan",
-    "Vendor",
-    "doctors",
-    "GeoFence",
-    "Category",
-    "Service",
-    "Notification",
-    "TaxFeeSettings",
-    "User",
-    "PendingServices",
+    "Supplier", "Subscription",
+    "Vendor", "doctors", "GeoFence", "Category", "Service", "Notification", "TaxFeeSettings", "SubscriptionPlan", "User"
   ],
   endpoints: (builder) => ({
     // Web App Endpoints
     getMe: builder.query({
-      query: () => ({ url: "/auth/me", method: "GET" }),
+      query: () => ({ url: '/auth/me', method: 'GET' }),
       providesTags: ["User"],
     }),
 
@@ -95,19 +101,6 @@ export const glowvitaApi = createApi({
         method: "GET",
       }),
       providesTags: ["admin"],
-    }),
-     // Service Approval Endpoints
-    getPendingServices: builder.query({
-      query: () => ({ url: "/admin/services/service-approval", method: "GET" }),
-      providesTags: ["PendingServices"],
-    }),
-    updateServiceStatus: builder.mutation({
-      query: ({ serviceId, status }) => ({
-        url: "/admin/services/service-approval",
-        method: 'PATCH',
-        body: { serviceId, status },
-      }),
-      invalidatesTags: ["PendingServices", "VendorServices"],
     }),
 
     // Admin
@@ -156,14 +149,15 @@ export const glowvitaApi = createApi({
       query: (id) => ({
         url: `/admin`,
         method: "DELETE",
-        body: { _id: id },
+        body: { id },
       }),
       invalidatesTags: ["admin"],
     }),
 
     // offfers
+
     getAdminOffers: builder.query({
-      query: () => ({ url: "/admin/offers", method: "GET" }),
+      query: () => "/admin/offers",
       providesTags: ["offers"],
     }),
 
@@ -195,10 +189,10 @@ export const glowvitaApi = createApi({
     }),
 
     // refferal endpoints
+
     getReferrals: builder.query({
       query: (referralType) => ({
         url: "/admin/referrals",
-        method: "GET",
         params: { referralType },
       }),
       providesTags: ["Referrals"],
@@ -235,11 +229,10 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Settings"],
     }),
-
+    
     getSettings: builder.query({
       query: (referralType) => ({
         url: "/admin/referrals",
-        method: "GET",
         params: { settings: true, referralType },
       }),
       providesTags: ["Settings"],
@@ -247,31 +240,31 @@ export const glowvitaApi = createApi({
 
     // SuperData (Dropdowns) Endpoints
     getSuperData: builder.query({
-      query: () => ({ url: "/admin/super-data", method: "GET" }),
+      query: () => "/super-data",
       providesTags: ["SuperData"],
     }),
-
+    
     createSuperDataItem: builder.mutation({
       query: (item) => ({
-        url: "/admin/super-data",
+        url: "/super-data",
         method: "POST",
         body: item,
       }),
       invalidatesTags: ["SuperData"],
     }),
-
+    
     updateSuperDataItem: builder.mutation({
       query: (item) => ({
-        url: "/admin/super-data",
+        url: "/super-data",
         method: "PUT",
         body: item,
       }),
       invalidatesTags: ["SuperData"],
     }),
-
+    
     deleteSuperDataItem: builder.mutation({
       query: ({ id }) => ({
-        url: "/admin/super-data",
+        url: "/super-data",
         method: "DELETE",
         body: { id },
       }),
@@ -279,6 +272,7 @@ export const glowvitaApi = createApi({
     }),
 
     // Vendor Endpoints
+
     createVendor: builder.mutation({
       query: (vendorData) => ({
         url: "/admin/vendor",
@@ -289,13 +283,13 @@ export const glowvitaApi = createApi({
     }),
 
     getVendors: builder.query({
-      query: () => ({ url: "/admin/vendor", method: "GET" }),
+      query: () => "/admin/vendor",
       providesTags: ["Vendor"],
       transformResponse: (response) => response,
     }),
 
     getVendorById: builder.query({
-      query: (id) => ({ url: `/admin/vendor?id=${id}` }),
+      query: (id) => `/admin/vendor?id=${id}`,
       providesTags: (result, error, id) => [{ type: "Vendor", id }],
     }),
 
@@ -333,8 +327,9 @@ export const glowvitaApi = createApi({
     }),
 
     // Doctor Endpoints
+
     getDoctors: builder.query({
-      query: () => ({ url: "/admin/doctors", method: "GET" }),
+      query: () => "/admin/doctors",
       providesTags: ["doctors"],
     }),
 
@@ -364,46 +359,49 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["doctors"],
     }),
-
+    
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
-      query: () => ({ url: "/admin/subscription-plans", method: "GET" }),
-      providesTags: ["SubscriptionPlan"],
+      query: () => ({ url: '/admin/subscription-plans', method: 'GET' }),
+      providesTags: (result = []) => [
+        "SubscriptionPlan",
+        ...result.map(({ _id }) => ({ type: "SubscriptionPlan", id: _id })),
+      ],
     }),
-
+    
     createSubscriptionPlan: builder.mutation({
       query: (plan) => ({
-        url: "/admin/subscription-plans",
-        method: "POST",
-        body: plan,
+        url: '/admin/subscription-plans',
+        method: 'POST',
+        body: plan
       }),
-      invalidatesTags: ["SubscriptionPlan"],
+      invalidatesTags: ['SubscriptionPlan']
     }),
 
     updateSubscriptionPlan: builder.mutation({
-      query: ({ _id, ...planData }) => ({
-        url: `/admin/subscription-plans?id=${_id}`,
-        method: "PATCH",
-        body: planData,
+      query: (plan) => ({
+        url: '/admin/subscription-plans',
+        method: 'PUT',
+        body: plan
       }),
-      invalidatesTags: (result, error, { _id }) => [{ type: "SubscriptionPlan", id: _id }, "SubscriptionPlan"],
+      invalidatesTags: (result, error, { _id }) => [{ type: 'SubscriptionPlan', id: _id }]
     }),
 
     deleteSubscriptionPlan: builder.mutation({
       query: (id) => ({
-        url: `/admin/subscription-plans?id=${id}`,
-        method: "DELETE",
+        url: '/admin/subscription-plans',
+        method: 'DELETE',
+        body: { id }
       }),
-      invalidatesTags: ["SubscriptionPlan"],
+      invalidatesTags: ['SubscriptionPlan']
     }),
-
 
     // Supplier Endpoints
     getSuppliers: builder.query({
-      query: () => ({ url: "/admin/suppliers", method: "GET" }),
+      query: () => "/admin/suppliers",
       providesTags: ["Supplier"],
     }),
-
+    
     createSupplier: builder.mutation({
       query: (supplierData) => ({
         url: "/admin/suppliers",
@@ -412,7 +410,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
-
+    
     updateSupplier: builder.mutation({
       query: ({ id, ...supplierData }) => ({
         url: `/admin/suppliers`,
@@ -421,7 +419,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
-
+    
     deleteSupplier: builder.mutation({
       query: (id) => ({
         url: `/admin/suppliers`,
@@ -433,10 +431,10 @@ export const glowvitaApi = createApi({
 
     // Geo Fence
     getGeoFences: builder.query({
-      query: () => ({ url: "/admin/geofence", method: "GET" }),
+      query: () => "/admin/geofence",
       providesTags: ["GeoFence"],
     }),
-
+    
     createGeoFence: builder.mutation({
       query: (geoFence) => ({
         url: "/admin/geofence",
@@ -445,7 +443,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["GeoFence"],
     }),
-
+    
     updateGeoFence: builder.mutation({
       query: ({ _id, ...geoFence }) => ({
         url: "/admin/geofence",
@@ -454,7 +452,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["GeoFence"],
     }),
-
+    
     deleteGeoFence: builder.mutation({
       query: (_id) => ({
         url: "/admin/geofence",
@@ -462,68 +460,67 @@ export const glowvitaApi = createApi({
         body: { _id },
       }),
       invalidatesTags: ["GeoFence"],
-    }),
     // Categories
     getCategories: builder.query({
-      query: () => ({ url: "/admin/categories", method: "GET" }),
-      providesTags: ["Category"],
+      query: () => '/admin/categories',
+      providesTags: ['Category'],
     }),
-
+    
     createCategory: builder.mutation({
       query: (category) => ({
-        url: "/admin/categories",
-        method: "POST",
+        url: '/admin/categories',
+        method: 'POST',
         body: category,
       }),
-      invalidatesTags: ["Category"],
+      invalidatesTags: ['Category'],
     }),
-
+    
     updateCategory: builder.mutation({
       query: (category) => ({
         url: `/admin/categories`,
-        method: "PUT",
+        method: 'PUT',
         body: category,
       }),
-      invalidatesTags: ["Category"],
+      invalidatesTags: ['Category'],
     }),
-
+    
     deleteCategory: builder.mutation({
       query: ({ id }) => ({
         url: `/admin/categories`,
-        method: "DELETE",
+        method: 'DELETE',
         body: { id },
       }),
-      invalidatesTags: ["Category"],
+      invalidatesTags: ['Category'],
     }),
 
     // Services
     getServices: builder.query({
-      query: () => ({ url: "/admin/services", method: "GET" }),
-      providesTags: ["Service"],
+      query: () => '/admin/services',
+      providesTags: ['Service'],
     }),
-
+    
     createService: builder.mutation({
       query: (service) => ({
-        url: "/admin/services",
-        method: "POST",
+        url: '/admin/services',
+        method: 'POST',
         body: service,
       }),
-      invalidatesTags: ["Service"],
+      invalidatesTags: ['Service'],
     }),
-
+    
     updateService: builder.mutation({
       query: (service) => ({
         url: `/admin/services`,
-        method: "PUT",
+        method: 'PUT',
         body: service,
       }),
-      invalidatesTags: ["Service"],
+      invalidatesTags: ['Service'],
     }),
-
+    
     deleteService: builder.mutation({
       query: ({ id }) => ({
         url: `/admin/services`,
-        method: "DELETE",
+        method: 'DELETE',
         body: { id },
       }),
       invalidatesTags: ["Service"],
@@ -534,7 +531,7 @@ export const glowvitaApi = createApi({
       query: () => ({ url: "/admin/custompushnotification", method: "GET" }),
       providesTags: ["Notification"],
     }),
-
+    
     createNotification: builder.mutation({
       query: (notification) => ({
         url: "/admin/custompushnotification",
@@ -543,7 +540,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Notification"],
     }),
-
+    
     updateNotification: builder.mutation({
       query: (notification) => ({
         url: `/admin/custompushnotification`,
@@ -552,7 +549,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Notification"],
     }),
-
+    
     deleteNotification: builder.mutation({
       query: ({ _id }) => ({
         url: `/admin/custompushnotification`,
@@ -567,7 +564,7 @@ export const glowvitaApi = createApi({
       query: () => ({ url: "/admin/tax-fees", method: "GET" }),
       providesTags: ["TaxFeeSettings"],
     }),
-
+    
     updateTaxFeeSettings: builder.mutation({
       query: (settings) => ({
         url: "/admin/tax-fees",
@@ -577,37 +574,38 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["TaxFeeSettings"],
     }),
 
+    
     // FAQ Endpoints
     getFaqs: builder.query({
-      query: () => "/admin/faqs",
-      providesTags: ["Faq"],
+      query: () => '/admin/faqs',
+      providesTags: ['Faq'],
     }),
 
     createFaq: builder.mutation({
       query: (faq) => ({
-        url: "/admin/faqs",
-        method: "POST",
+        url: '/admin/faqs',
+        method: 'POST',
         body: faq,
       }),
-      invalidatesTags: ["Faq"],
+      invalidatesTags: ['Faq'],
     }),
 
     updateFaq: builder.mutation({
       query: ({ id, ...updates }) => ({
-        url: "/admin/faqs",
-        method: "PATCH",
+        url: '/admin/faqs',
+        method: 'PATCH',
         body: { id, ...updates },
       }),
-      invalidatesTags: ["Faq"],
+      invalidatesTags: ['Faq'],
     }),
-
-    deleteFaq: builder.mutation({
+    
+    deleteSubscriptionPlan: builder.mutation({
       query: (id) => ({
-        url: "/admin/faqs",
-        method: "DELETE",
+        url: '/admin/faqs',
+        method: 'DELETE',
         body: { id },
       }),
-      invalidatesTags: ["Faq"],
+      invalidatesTags: ['Faq'],
     }),
 
     // Crm Endpoints
@@ -626,88 +624,13 @@ export const glowvitaApi = createApi({
         body: vendorData,
       }),
     }),
-
-    getVendorServices: builder.query({
-      query: ({
-        vendorId,
-        page = 1,
-        limit = 100,
-        status = null,
-        category = null,
-      }) => ({
-        url: `/crm/services?vendorId=${vendorId}&page=${page}&limit=${limit}${status ? `&status=${status}` : ""}${category ? `&category=${category}` : ""}`,
-        method: "GET",
-      }),
-      providesTags: ["VendorServices"],
-    }),
-
-    createVendorServices: builder.mutation({
-      query: ({ vendor, services }) => ({
-        url: "/crm/services",
-        method: "POST",
-        body: { vendor, services },
-      }),
-      invalidatesTags: ["VendorServices"],
-    }),
-
-    updateVendorServices: builder.mutation({
-      query: ({ vendor, services }) => ({
-        url: "/crm/services",
-        method: "PUT",
-        body: { vendor, services },
-      }),
-      invalidatesTags: ["VendorServices"],
-    }),
-
-    deleteVendorServices: builder.mutation({
-      query: ({ vendor, serviceId }) => ({
-        url: "/crm/services",
-        method: "DELETE",
-        body: { vendor, serviceId },
-      }),
-      invalidatesTags: ["VendorServices"],
-    }),
-
-    getOffers: builder.query({
-      query: () => "/crm/offers",
-      invalidatesTags: ["Offer"],
-    }),
-
-    createOffer: builder.mutation({
-      query: (body) => ({
-        url: "/crm/offers",
-        method: "POST",
-        body,
-      }),
-      invalidatesTags: ["Offer"],
-    }),
-
-    updateOffer: builder.mutation({
-      query: (body) => ({
-        url: "/crm/offers",
-        method: "PUT",
-        body,
-      }),
-      invalidatesTags: ["Offer"],
-    }),
-
-    deleteOffer: builder.mutation({
-      query: (id) => ({
-        url: "/crm/offers",
-        method: "DELETE",
-        body: { id },
-      }),
-      invalidatesTags: ["Offer"],
-    }),
   }),
-  
-
 });
 
 export const {
-  // Web App
-  useGetMeQuery,
-  // Admin Panel
+  // AdminPanel Endpoints
+
+  // adminUsers
   useAdminLoginMutation,
   useRegisterAdminMutation,
   useCreateAdminMutation,
@@ -715,10 +638,6 @@ export const {
   useDeleteAdminMutation,
   useGetAdminsQuery,
   useGetUsersQuery,
-
-  // Service Approval
-  useGetPendingServicesQuery,
-  useUpdateServiceStatusMutation,
 
   // offers
   useGetAdminOffersQuery,
@@ -750,6 +669,7 @@ export const {
 
   // Doctor Endpoints
   useGetDoctorsQuery,
+  useGetDoctorByIdQuery,
   useCreateDoctorMutation,
   useUpdateDoctorMutation,
   useDeleteDoctorMutation,
@@ -759,12 +679,15 @@ export const {
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
-
+  
+  // Subscription Management
+  
   // Subscription Plans
   useGetSubscriptionPlansQuery,
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
+  useToggleSubscriptionPlanStatusMutation,
 
   // Geo Fence Endpoints
   useGetGeoFencesQuery,
@@ -782,7 +705,7 @@ export const {
   useUpdateServiceMutation,
   useDeleteServiceMutation,
 
-  // Admin Custom Push Notification Endpoints
+  // Admin CustoPush Notification Endpoints
   useGetNotificationsQuery,
   useCreateNotificationMutation,
   useUpdateNotificationMutation,
@@ -792,29 +715,13 @@ export const {
   useGetTaxFeeSettingsQuery,
   useUpdateTaxFeeSettingsMutation,
 
-  // FAQ Endpoints
-  useGetFaqsQuery,
-  useCreateFaqMutation,
-  useUpdateFaqMutation,
-  useDeleteFaqMutation,
-
-  //======================================================== CRM Endpoints ====================================================//
-
-  // CRM Endpoints
+    // FAQ Endpoints
+    useGetFaqsQuery,
+    useCreateFaqMutation,
+    useUpdateFaqMutation,
+    useDeleteFaqMutation,
 
   // Vendor Endpoints
   useVendorLoginMutation,
   useVendorRegisterMutation,
-
-  // Services Endpoints
-  useGetVendorServicesQuery,
-  useCreateVendorServicesMutation,
-  useUpdateVendorServicesMutation,
-  useDeleteVendorServicesMutation,
-
-  // Offer Endpoints
-  useGetOffersQuery,
-  useCreateOfferMutation,
-  useUpdateOfferMutation,
-  useDeleteOfferMutation,
 } = glowvitaApi;

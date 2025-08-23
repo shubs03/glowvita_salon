@@ -2,6 +2,14 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
+const bankDetailsSchema = new mongoose.Schema({
+    accountHolderName: { type: String, trim: true },
+    accountNumber: { type: String, trim: true },
+    bankName: { type: String, trim: true },
+    ifscCode: { type: String, trim: true },
+    upiId: { type: String, trim: true }
+}, { _id: false });
+
 const staffSchema = new mongoose.Schema({
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -13,16 +21,58 @@ const staffSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
-  email: {
+  position: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  mobileNo: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  emailAddress: {
     type: String,
     required: true,
     lowercase: true,
     trim: true,
   },
-  phone: {
+  photo: {
+    type: String, // URL or Base64 string
+    default: null,
+  },
+  description: {
     type: String,
-    required: true,
     trim: true,
+    default: '',
+  },
+  salary: {
+    type: Number,
+    default: 0,
+  },
+  startDate: {
+    type: Date,
+    default: null,
+  },
+  endDate: {
+    type: Date,
+    default: null,
+  },
+  yearOfExperience: {
+    type: Number,
+    default: 0,
+  },
+  clientsServed: {
+    type: Number,
+    default: 0,
+  },
+  commission: {
+    type: Boolean,
+    default: false,
+  },
+  bankDetails: {
+    type: bankDetailsSchema,
+    default: () => ({})
   },
   password: {
     type: String,
@@ -39,9 +89,10 @@ const staffSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
-  isActive: {
-    type: Boolean,
-    default: true,
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive'],
+    default: 'Active',
   },
   lastLoginAt: {
     type: Date,
@@ -50,9 +101,9 @@ const staffSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Ensure email is unique per vendor
-staffSchema.index({ vendorId: 1, email: 1 }, { unique: true });
+staffSchema.index({ vendorId: 1, emailAddress: 1 }, { unique: true });
 
-// Hash password before saving
+// Hash password before saving if it's new or modified
 staffSchema.pre("save", async function (next) {
   if (!this.isModified("password")) {
     return next();
