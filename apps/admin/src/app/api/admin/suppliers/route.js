@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import SupplierModel from "../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js";
 import { uploadBase64, deleteFile } from "../../../../../../../packages/utils/uploads.js";
@@ -33,38 +34,50 @@ export const GET = authMiddlewareAdmin(async (req) => {
 }, ["superadmin", "admin"]);
 
 // POST a new supplier
+
 export const POST = authMiddlewareAdmin(async (req) => {
   try {
     const body = await req.json();
-    const { licenseFile, ...supplierData } = body;
+    const { licenseFile, password, ...supplierData } = body;
 
-    const validationError = validateSupplierData(supplierData);
-    if(validationError){
-        return NextResponse.json({ message: validationError }, { status: 400 });
+    const validationError = validateSupplierData({ password, ...supplierData });
+    if (validationError) {
+      return NextResponse.json({ message: validationError }, { status: 400 });
     }
 
     let licenseFileUrl = null;
-    if (licenseFile && licenseFile.startsWith('data:')) {
-      const uploadedUrl = await uploadBase64(licenseFile, `supplier-license-${supplierData.firstName}`);
+    if (licenseFile && licenseFile.startsWith("data:")) {
+      const uploadedUrl = await uploadBase64(
+        licenseFile,
+        `supplier-license-${supplierData.firstName}`
+      );
       if (!uploadedUrl) {
         throw new Error("Failed to upload license file");
       }
       licenseFileUrl = uploadedUrl;
     }
-    
+
+    // 🔑 Hash the password before saving
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     const newSupplier = await SupplierModel.create({
       ...supplierData,
+      password: hashedPassword, // save hashed password
       licenseFile: licenseFileUrl,
     });
 
     return NextResponse.json(newSupplier, { status: 201 });
   } catch (error) {
     console.error("Error creating supplier:", error);
-    return NextResponse.json({ message: "Error creating supplier", error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { message: "Error creating supplier", error: error.message },
+      { status: 500 }
+    );
   }
 }, ["superadmin"]);
 
-// PUT (update) a supplier
+
+// PUT (update) a supplier  
 export const PUT = authMiddlewareAdmin(async (req) => {
   try {
     const { id, licenseFile, ...updateData } = await req.json();
