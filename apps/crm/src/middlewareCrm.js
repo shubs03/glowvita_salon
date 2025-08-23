@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import VendorModel from "../../../packages/lib/src/models/Vendor/Vendor.model.js";
 import DoctorModel from "../../../packages/lib/src/models/Vendor/Docters.model.js";
 import SupplierModel from "../../../packages/lib/src/models/Vendor/Supplier.model.js";
+import StaffModel from "../../../packages/lib/src/models/Vendor/Staff.model.js";
 import _db from "../../../packages/lib/src/db.js";
 import { 
   JWT_SECRET_VENDOR, 
@@ -14,12 +15,14 @@ const roleToModelMap = {
   vendor: VendorModel,
   doctor: DoctorModel,
   supplier: SupplierModel,
+  staff: StaffModel,
 };
 
 const roleToSecretMap = {
   vendor: JWT_SECRET_VENDOR,
   doctor: JWT_SECRET_DOCTOR,
   supplier: JWT_SECRET_SUPPLIER,
+  staff: JWT_SECRET_VENDOR, // Staff uses the same secret as vendors
 };
 
 export function authMiddlewareCrm(handler, allowedRoles = []) {
