@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation } from '@repo/store/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
@@ -13,7 +14,7 @@ import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Switch } from '@repo/ui/switch';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 type Plan = {
   _id: string;
@@ -160,12 +161,7 @@ export default function SubscriptionManagementPage() {
         toast.success('Plan deleted successfully!');
         setIsDeleteModalOpen(false);
         setSelectedPlan(null);
-        
-        // Reset to valid page if necessary
-        const newTotalPlanPages = Math.max(1, Math.ceil((plans.length - 1) / planItemsPerPage));
-        if (currentPlanPage > newTotalPlanPages) {
-          setCurrentPlanPage(newTotalPlanPages);
-        }
+        refetch();
       } catch (error) {
         console.error('Error deleting plan:', error);
         toast.error(`Error deleting plan: ${error.message || 'Unknown error'}`);
@@ -209,8 +205,7 @@ export default function SubscriptionManagementPage() {
       });
 
       setIsPlanModalOpen(false);
-      // Reset to first page to show new plan
-      setCurrentPlanPage(1);
+      refetch();
     } catch (error) {
       console.error('Error saving plan:', error);
       toast.error(`Error saving plan: ${error.message || 'Unknown error'}`);
