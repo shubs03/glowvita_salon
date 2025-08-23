@@ -1,6 +1,8 @@
+
 import { configureStore } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
-import authReducer from '@repo/store/slices/adminAuthSlice';
+import adminAuthReducer from '@repo/store/slices/Admin/adminAuthSlice';
+import crmAuthReducer from '@repo/store/slices/crmAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
@@ -18,7 +20,8 @@ export const makeStore = () => {
   return configureStore({
     reducer: {
       [glowvitaApi.reducerPath]: glowvitaApi.reducer,
-      auth: authReducer,
+      adminAuth: adminAuthReducer,
+      crmAuth: crmAuthReducer,
       modal: modalReducer,
       customer: customerReducer,
       salon: salonReducer,

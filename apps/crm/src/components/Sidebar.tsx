@@ -8,10 +8,12 @@ import { Button } from "@repo/ui/button";
 import { 
   FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, 
   FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
-  FaBell, FaGift, FaUserFriends, FaUserCircle, FaTruck, FaUserMd 
+  FaBell, FaGift, FaUserFriends, FaUserCircle
 } from 'react-icons/fa';
-import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
-import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
+import { useAppDispatch } from "@repo/store/hooks";
+import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { useCrmAuth } from "@/hooks/useCrmAuth";
+import Cookies from "js-cookie";
 
 const vendorNavItems = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
@@ -42,36 +44,35 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { admin: user } = useAppSelector((state) => state.auth);
+  const { user, permissions, role, isLoading } = useCrmAuth();
 
   const handleLogout = async () => {
-    dispatch(clearAdminAuth());
+    dispatch(clearCrmAuth());
+    Cookies.remove('crm_access_token');
     router.push('/login');
+    router.refresh();
   };
+  
+  if (isLoading) {
+    return null; // Or a loading skeleton
+  }
 
   const getNavItemsForRole = () => {
-    const role = user?.role;
-    const permissions = user?.permissions || [];
-
-    if (role === 'vendor') {
-      // If the user is a vendor owner (not staff with limited perms), show all.
-      // A more robust check might be `user.isOwner` or similar. For now, we assume
-      // a vendor user has all permissions if they aren't staff.
-      if (permissions.length === 0 && !user.vendorId) { 
+    const userPermissions = permissions || [];
+    
+    switch (role) {
+      case 'vendor':
+        // A vendor owner has all permissions by default
         return vendorNavItems;
-      }
-      return vendorNavItems.filter(item => permissions.includes(item.permission));
+      case 'staff':
+        return vendorNavItems.filter(item => userPermissions.includes(item.permission));
+      case 'doctor':
+        return doctorNavItems;
+      case 'supplier':
+        return supplierNavItems;
+      default:
+        return [];
     }
-    if (role === 'staff') {
-      return vendorNavItems.filter(item => permissions.includes(item.permission));
-    }
-    if (role === 'doctor') {
-      return doctorNavItems;
-    }
-    if (role === 'supplier') {
-      return supplierNavItems;
-    }
-    return [];
   };
 
   const visibleNavItems = getNavItemsForRole();

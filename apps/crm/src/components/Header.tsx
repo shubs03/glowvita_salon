@@ -6,13 +6,24 @@ import { Button } from "@repo/ui/button";
 import Link from 'next/link';
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import { useAppDispatch } from "@repo/store/hooks";
+import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import Cookies from 'js-cookie';
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
+  const dispatch = useAppDispatch();
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    // Clear client-side state
+    dispatch(clearCrmAuth());
+    
+    // Remove the cookie
+    Cookies.remove('crm_access_token');
+    
+    // Redirect to login page
     router.push('/login');
+    router.refresh();
   };
 
   return (

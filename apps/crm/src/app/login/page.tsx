@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { useVendorLoginMutation } from '@repo/store/api';
 import { Eye, EyeOff, ShoppingBag, Shield, Users, TrendingUp } from 'lucide-react';
 import { useAppDispatch } from '@repo/store/hooks';
-import { setAdminAuth } from '@repo/store/slices/adminAuthSlice';
+import { setCrmAuth } from '@repo/store/slices/crmAuthSlice';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -29,8 +29,8 @@ export default function LoginPage() {
       const response = await vendorLogin({ email, password }).unwrap();
 
       if(response.success) {
-        // Dispatch to Redux store instead of localStorage
-        dispatch(setAdminAuth({ user: response.user, token: response.access_token }));
+        // Dispatch to Redux store and localStorage using the new CRM-specific action
+        dispatch(setCrmAuth({ user: response.user, token: response.access_token, role: response.role, permissions: response.permissions }));
         
         toast.success('Login successful!', {
           description: 'Welcome back to your dashboard.',

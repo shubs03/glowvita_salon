@@ -4,13 +4,13 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
-import { useAppSelector } from '@repo/store/hooks';
 import { useRouter } from 'next/navigation';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const { isAdminAuthenticated: isAuthenticated, isLoading } = useAppSelector(state => state.auth);
+  const { isCrmAuthenticated, isLoading } = useCrmAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -29,16 +29,16 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !isCrmAuthenticated) {
       router.push('/login');
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isCrmAuthenticated, router]);
      
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
 
-  if (isLoading || !isAuthenticated) {
+  if (isLoading || !isCrmAuthenticated) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-foreground">Loading...</div>
