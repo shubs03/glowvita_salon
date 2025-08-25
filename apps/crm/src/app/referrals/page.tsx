@@ -1,35 +1,95 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Share2, Users, Gift, CheckCircle } from 'lucide-react';
+import { Share2, Users, Gift, CheckCircle, Copy } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
+import { useGetReferralsQuery } from '@repo/store/api';
+import { Skeleton } from '@repo/ui/skeleton';
 
 type Referral = {
-    id: string;
-    referredVendor: string;
+    _id: string;
+    referee: string;
     date: string;
     status: 'Pending' | 'Completed' | 'Bonus Paid';
-    bonusAmount: number;
+    bonus: string;
 };
 
-const mockReferrals: Referral[] = [
-    { id: 'REF-001', referredVendor: 'Elite Hair Studio', date: '2024-08-10', status: 'Completed', bonusAmount: 500 },
-    { id: 'REF-002', referredVendor: 'The Nail Bar', date: '2024-07-22', status: 'Bonus Paid', bonusAmount: 500 },
-    { id: 'REF-003', referredVendor: 'Urban Spa', date: '2024-08-15', status: 'Pending', bonusAmount: 500 },
-];
+const SkeletonLoader = () => (
+    <div className="p-4 sm:p-6 lg:p-8">
+        <Skeleton className="h-8 w-64 mb-6" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+            {[...Array(3)].map((_, i) => (
+                <Card key={i}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <Skeleton className="h-4 w-2/4" />
+                        <Skeleton className="h-4 w-4 rounded-full" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-8 w-1/3 mb-2" />
+                        <Skeleton className="h-3 w-3/4" />
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+        <Card className="mb-6">
+            <CardHeader>
+                <Skeleton className="h-6 w-1/3 mb-2" />
+                <Skeleton className="h-4 w-2/3" />
+            </CardHeader>
+            <CardContent>
+                <div className="flex gap-2">
+                    <Skeleton className="h-10 flex-grow" />
+                    <Skeleton className="h-10 w-28" />
+                </div>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+                <Skeleton className="h-6 w-1/3 mb-2" />
+                <Skeleton className="h-4 w-2/3" />
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="grid grid-cols-4 gap-4">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-full" />
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+    </div>
+);
+
 
 export default function ReferralsPage() {
-    const [referrals, setReferrals] = useState<Referral[]>(mockReferrals);
+    const { user } = useCrmAuth();
+    const { data: referralsData, isLoading } = useGetReferralsQuery('V2V', {
+        skip: !user
+    });
+
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
     
-    const referralLink = "https://monorepo-maestro.com/signup?ref=VENDOR123";
+    const referralLink = user?.referralCode 
+        ? `https://monorepo-maestro.com/signup?ref=${user.referralCode}`
+        : "Loading your referral link...";
+
+    const referrals = useMemo(() => {
+        if (!referralsData || !user) return [];
+        // Filter referrals where the current user is the referrer
+        return referralsData.filter((r: any) => r.referrer === user.businessName);
+    }, [referralsData, user]);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -37,8 +97,12 @@ export default function ReferralsPage() {
     const totalPages = Math.ceil(referrals.length / itemsPerPage);
 
     const handleCopyLink = () => {
-        navigator.clipboard.writeText(referralLink);
-        toast.success("Referral link copied to clipboard!");
+        if (user?.referralCode) {
+            navigator.clipboard.writeText(referralLink);
+            toast.success("Referral link copied to clipboard!");
+        } else {
+            toast.error("Referral link not available yet.");
+        }
     };
     
     const getStatusColor = (status: Referral['status']) => {
@@ -49,6 +113,12 @@ export default function ReferralsPage() {
           default: return 'bg-gray-100 text-gray-800';
         }
     };
+    
+    if (isLoading) {
+        return <SkeletonLoader />;
+    }
+
+    const totalBonusEarned = referrals.filter((r: Referral) => r.status === 'Bonus Paid').length * 500; // Assuming 500 is the bonus
     
     return (
         <div className="p-4 sm:p-6 lg:p-8">
@@ -81,7 +151,7 @@ export default function ReferralsPage() {
                         <Gift className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">₹{referrals.filter(r=>r.status === 'Bonus Paid').reduce((acc, r) => acc + r.bonusAmount, 0)}</div>
+                        <div className="text-2xl font-bold">₹{totalBonusEarned.toLocaleString()}</div>
                         <p className="text-xs text-muted-foreground">Bonuses paid out to you</p>
                     </CardContent>
                 </Card>
@@ -95,8 +165,8 @@ export default function ReferralsPage() {
                 <CardContent>
                     <div className="flex flex-col sm:flex-row gap-2">
                         <Input value={referralLink} readOnly />
-                        <Button onClick={handleCopyLink} className="w-full sm:w-auto">
-                            <Share2 className="mr-2 h-4 w-4" /> Copy Link
+                        <Button onClick={handleCopyLink} className="w-full sm:w-auto" disabled={!user?.referralCode}>
+                            <Copy className="mr-2 h-4 w-4" /> Copy Link
                         </Button>
                     </div>
                 </CardContent>
@@ -119,33 +189,40 @@ export default function ReferralsPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {currentItems.map(referral => (
-                                    <TableRow key={referral.id}>
-                                        <TableCell className="font-medium">{referral.referredVendor}</TableCell>
-                                        <TableCell>{referral.date}</TableCell>
+                                {currentItems.length > 0 ? currentItems.map((referral: Referral) => (
+                                    <TableRow key={referral._id}>
+                                        <TableCell className="font-medium">{referral.referee}</TableCell>
+                                        <TableCell>{new Date(referral.date).toLocaleDateString()}</TableCell>
                                         <TableCell>
                                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(referral.status)}`}>
                                                 {referral.status}
                                             </span>
                                         </TableCell>
-                                        <TableCell>₹{referral.bonusAmount.toFixed(2)}</TableCell>
+                                        <TableCell>₹{referral.bonus}</TableCell>
                                     </TableRow>
-                                ))}
+                                )) : (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                                            You haven't referred any vendors yet.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     </div>
-                    <Pagination
-                        className="mt-4"
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                        itemsPerPage={itemsPerPage}
-                        onItemsPerPageChange={setItemsPerPage}
-                        totalItems={referrals.length}
-                    />
+                    {referrals.length > itemsPerPage && (
+                        <Pagination
+                            className="mt-4"
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
+                            itemsPerPage={itemsPerPage}
+                            onItemsPerPageChange={setItemsPerPage}
+                            totalItems={referrals.length}
+                        />
+                    )}
                 </CardContent>
             </Card>
         </div>
     );
 }
-

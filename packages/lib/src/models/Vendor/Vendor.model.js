@@ -181,6 +181,12 @@ const vendorSchema = new mongoose.Schema({
       },
     ],
   },
+  referralCode: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true, // Allows multiple documents to have a null value for this field
+  },
   createdAt: {
     type: Date,
     default: Date.now,
