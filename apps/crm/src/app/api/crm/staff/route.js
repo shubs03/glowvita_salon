@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import StaffModel from '@repo/lib/models/staffModel.js';
+import StaffModel from '../../../../../../../packages/lib/src/models/Vendor/Staff.model.js';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 import bcrypt from "bcryptjs";
@@ -11,6 +11,7 @@ await _db();
 export const GET = authMiddlewareCrm(async (req) => {
     try {
         const vendorId = req.user._id;
+
         const staff = await StaffModel.find({ vendorId: vendorId });
         return NextResponse.json(staff, { status: 200 });
     } catch (error) {
@@ -21,8 +22,14 @@ export const GET = authMiddlewareCrm(async (req) => {
 // POST a new staff member
 export const POST = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+
+        const Vendor = req.user._id;
+
+        const vendorId = Vendor.toString();
+
         const body = await req.json();
+
+        console.log("Vendor ID:", vendorId);
 
         // Basic validation
         if (!body.fullName || !body.emailAddress || !body.mobileNo || !body.position || !body.password) {
@@ -59,7 +66,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 // PUT (update) a staff member
 export const PUT = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        const vendorId = req.user._id.tostring();
         const { id, ...updateData } = await req.json();
 
         if (!id) {
@@ -92,7 +99,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE a staff member
 export const DELETE = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        const vendorId = req.user._id.tostring();
         const url = new URL(req.url);
         const id = url.searchParams.get('id');
 
