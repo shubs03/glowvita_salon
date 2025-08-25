@@ -34,14 +34,16 @@ export default function RootLayout({
   ].some(path => pathname.startsWith(path));
   
   const showMarketingLayout = ['/', '/apps', '/pricing', '/support'].includes(pathname);
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/auth/register');
 
-  if (pathname === '/login') {
+  if (isAuthPage) {
     return (
       <html lang="en" suppressHydrationWarning>
         <head>
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
           <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+          <link href='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css' rel='stylesheet' />
         </head>
         <body>
           <StoreProvider>
@@ -68,6 +70,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+        <link href='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css' rel='stylesheet' />
       </head>
       <body>
         <StoreProvider>
