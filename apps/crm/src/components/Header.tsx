@@ -15,13 +15,13 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const dispatch = useAppDispatch();
 
   const handleLogout = async () => {
-    // Clear client-side state
+    // Clear client-side state from Redux and localStorage
     dispatch(clearCrmAuth());
     
     // Remove the cookie
-    Cookies.remove('crm_access_token');
+    Cookies.remove('crm_access_token', { path: '/' });
     
-    // Redirect to login page
+    // Redirect to login page and refresh to ensure middleware runs
     router.push('/login');
     router.refresh();
   };

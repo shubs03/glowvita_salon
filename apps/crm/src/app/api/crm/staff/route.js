@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import StaffModel from '@repo/lib/models/staffModel.js';
+import StaffModel from '../../../../../../../packages/lib/src/models/Vendor/Staff.model.js';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 import bcrypt from "bcryptjs";
@@ -11,6 +11,7 @@ await _db();
 export const GET = authMiddlewareCrm(async (req) => {
     try {
         const vendorId = req.user._id;
+
         const staff = await StaffModel.find({ vendorId: vendorId });
         return NextResponse.json(staff, { status: 200 });
     } catch (error) {
@@ -21,17 +22,27 @@ export const GET = authMiddlewareCrm(async (req) => {
 // POST a new staff member
 export const POST = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+
+        const Vendor = req.user._id;
+
+        const vendorId = Vendor.toString();
+
         const body = await req.json();
 
+        console.log("Vendor ID:", vendorId);
+
         // Basic validation
-        if (!body.fullName || !body.emailAddress || !body.mobileNo || !body.position) {
-            return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+        if (!body.fullName || !body.emailAddress || !body.mobileNo || !body.position || !body.password) {
+            return NextResponse.json({ message: "Missing required fields, including password" }, { status: 400 });
         }
         
-        // Generate a random password if not provided
-        const password = body.password || Math.random().toString(36).slice(-8);
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // Check for duplicate email within the same vendor
+        const existingStaff = await StaffModel.findOne({ vendorId, emailAddress: body.emailAddress });
+        if (existingStaff) {
+             return NextResponse.json({ message: "A staff member with this email already exists for this vendor." }, { status: 409 });
+        }
+
+        const hashedPassword = await bcrypt.hash(body.password, 10);
         
         const newStaff = await StaffModel.create({
             ...body,
@@ -44,17 +55,18 @@ export const POST = authMiddlewareCrm(async (req) => {
 
         return NextResponse.json({ message: "Staff created successfully", staff: staffData }, { status: 201 });
     } catch (error) {
-        if (error.code === 11000) { // Handle duplicate key error for email
-             return NextResponse.json({ message: "A staff member with this email already exists." }, { status: 409 });
+        if (error.code === 11000) {
+             return NextResponse.json({ message: "A staff member with this email already exists for this vendor." }, { status: 409 });
         }
         return NextResponse.json({ message: "Error creating staff", error: error.message }, { status: 500 });
     }
 }, ['vendor']);
 
+
 // PUT (update) a staff member
 export const PUT = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        const vendorId = req.user._id.tostring();
         const { id, ...updateData } = await req.json();
 
         if (!id) {
@@ -65,6 +77,14 @@ export const PUT = authMiddlewareCrm(async (req) => {
         const staff = await StaffModel.findOne({ _id: id, vendorId: vendorId });
         if (!staff) {
              return NextResponse.json({ message: "Staff not found or access denied" }, { status: 404 });
+        }
+        
+        // If password is being updated, hash it.
+        if (updateData.password) {
+          updateData.password = await bcrypt.hash(updateData.password, 10);
+        } else {
+          // Do not update the password if it's not provided
+          delete updateData.password;
         }
 
         const updatedStaff = await StaffModel.findByIdAndUpdate(id, updateData, { new: true });
@@ -79,9 +99,9 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE a staff member
 export const DELETE = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
-        const { searchParams } = new URL(req.url);
-        const id = searchParams.get('id');
+        const vendorId = req.user._id.tostring();
+        const url = new URL(req.url);
+        const id = url.searchParams.get('id');
 
         if (!id) {
             return NextResponse.json({ message: "Staff ID is required for deletion" }, { status: 400 });
