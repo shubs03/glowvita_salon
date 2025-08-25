@@ -76,6 +76,8 @@ export const glowvitaApi = createApi({
     "GeoFence",
     "Category",
     "Service",
+    "Staff",
+    "Offers",
     "Notification",
     "TaxFeeSettings",
     "User",
@@ -724,7 +726,7 @@ export const glowvitaApi = createApi({
 
     getOffers: builder.query({
       query: () => "/crm/offers",
-      invalidatesTags: ["Offer"],
+      providesTags: ["Offer"],
     }),
 
     createOffer: builder.mutation({
@@ -850,6 +852,39 @@ export const glowvitaApi = createApi({
         body: category,
       }),
       invalidatesTags: ["ProductCategory"],
+    }),
+
+    // Vendor Staff Endpoints
+    getStaff: builder.query({
+      query: () => ({
+        url: "/crm/staff",
+        method: "GET",
+      }),
+      providesTags: ["Staff"],
+    }),
+    createStaff: builder.mutation({
+      query: (staff) => ({
+        url: "/crm/staff",
+        method: "POST",
+        body: staff,
+      }),
+      invalidatesTags: ["Staff"],
+    }), 
+    updateStaff: builder.mutation({
+      query: (staff) => ({
+        url: "/crm/staff",
+        method: "PUT",
+        body: staff,
+      }),
+      invalidatesTags: ["Staff"],
+    }),
+    deleteStaff: builder.mutation({
+      query: (id) => ({
+        url: "/crm/staff",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Staff"],
     }),
   }),
 });
@@ -992,4 +1027,9 @@ export const {
   // product categories endpoints
   useGetProductCategoriesQuery,
   useCreateProductCategoryMutation,
+  // Staff Endpoints
+  useGetStaffQuery,
+  useCreateStaffMutation,
+  useUpdateStaffMutation,
+  useDeleteStaffMutation,
 } = glowvitaApi;

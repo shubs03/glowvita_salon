@@ -14,12 +14,14 @@ import { useCreateStaffMutation, useUpdateStaffMutation } from '@repo/store/api'
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 import { vendorNavItems } from '@/lib/routes';
+import { Eye, EyeOff } from 'lucide-react';
 
 export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
     const { user } = useCrmAuth();
     const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
     const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
     const [activeTab, setActiveTab] = useState('personal');
+    const [showPassword, setShowPassword] = useState(false);
     
     const [formData, setFormData] = useState({
         fullName: '',
@@ -35,6 +37,8 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
         clientsServed: '',
         commission: false,
         permissions: [],
+        password: '',
+        confirmPassword: '',
         bankDetails: {
             accountHolderName: '',
             accountNumber: '',
@@ -60,6 +64,8 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 clientsServed: staff.clientsServed || '',
                 commission: staff.commission || false,
                 permissions: staff.permissions || [],
+                password: '',
+                confirmPassword: '',
                 bankDetails: staff.bankDetails || {
                     accountHolderName: '',
                     accountNumber: '',
@@ -73,6 +79,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
             setFormData({
                 fullName: '', position: '', mobileNo: '', emailAddress: '', photo: null, description: '',
                 salary: '', startDate: '', endDate: '', yearOfExperience: '', clientsServed: '', commission: false, permissions: [],
+                password: '', confirmPassword: '',
                 bankDetails: { accountHolderName: '', accountNumber: '', bankName: '', ifscCode: '', upiId: '' }
             });
         }
@@ -118,10 +125,26 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (!staff && !formData.password) {
+            toast.error("Password is required for new staff members.");
+            return;
+        }
+
+        if (formData.password && formData.password !== formData.confirmPassword) {
+            toast.error("Passwords do not match.");
+            return;
+        }
+        
         const payload = {
             ...formData,
             vendorId: user._id,
         };
+
+        if (!payload.password) {
+            delete payload.password;
+        }
+        delete payload.confirmPassword;
 
         try {
             if (staff) {
@@ -134,7 +157,8 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
             onSuccess();
         } catch (error) {
             console.error("Failed to save staff member:", error);
-            toast.error("Failed to save staff member.");
+            const errorMessage = error?.data?.message || "Failed to save staff member.";
+            toast.error(errorMessage);
         }
     };
 
@@ -164,6 +188,21 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 <div className="space-y-2">
                     <Label htmlFor="emailAddress">Email Address</Label>
                     <Input id="emailAddress" name="emailAddress" type="email" value={formData.emailAddress} onChange={handleInputChange} required/>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="password">{staff ? 'New Password (Optional)' : 'Password'}</Label>
+                    <div className="relative">
+                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleInputChange} required={!staff} />
+                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input id="confirmPassword" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} required={!staff || !!formData.password} />
                 </div>
             </div>
             <div className="space-y-2">

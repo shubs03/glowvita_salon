@@ -77,7 +77,7 @@ const staffSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
-    select: false,
+    select: true, // Select password to check it
   },
   role: {
     type: String,
@@ -102,16 +102,6 @@ const staffSchema = new mongoose.Schema({
 
 // Ensure email is unique per vendor
 staffSchema.index({ vendorId: 1, emailAddress: 1 }, { unique: true });
-
-// Hash password before saving if it's new or modified
-staffSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
-    return next();
-  }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
 
 const StaffModel = mongoose.models.Staff || mongoose.model("Staff", staffSchema);
 

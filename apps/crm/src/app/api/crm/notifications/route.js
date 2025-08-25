@@ -59,9 +59,18 @@ export const POST = authMiddlewareCrm(async (req) => {
   );
 }, ["vendor"]);
 
+
+const targetDisplayMap = {
+  all_online_clients: "All Online Clients",
+  all_offline_clients: "All Offline Clients",
+  all_staffs: "All Staffs",
+  specific_clients: "Specific Clients",
+};
+
 // GET: Retrieve VendorNotifications by vendor ID or paginated notifications
 export const GET = authMiddlewareCrm(async (req) => {
   const vendorId = req.user._id.toString();
+  console.log("Vendor ID from auth:", vendorId);
 
   if (!vendorId) {
     return Response.json(
