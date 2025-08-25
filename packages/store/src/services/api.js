@@ -760,7 +760,7 @@ export const glowvitaApi = createApi({
     }),
 
     // Products endpoints
-    getProducts: builder.query({
+    getCrmProducts: builder.query({
       query: () => ({
         url: "/crm/products",
         method: "GET",
@@ -768,7 +768,7 @@ export const glowvitaApi = createApi({
       providesTags: ["Product"],
     }),
 
-    createProduct: builder.mutation({
+    createCrmProduct: builder.mutation({
       query: (product) => ({
         url: "/crm/products",
         method: "POST",
@@ -777,7 +777,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Product"],
     }),
 
-    updateProduct: builder.mutation({
+    updateCrmProduct: builder.mutation({
       query: (product) => ({
         url: "/crm/products",
         method: "PUT",
@@ -786,7 +786,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Product"],
     }),
 
-    deleteProduct: builder.mutation({
+    deleteCrmProduct: builder.mutation({
       query: (id) => ({
         url: "/crm/products",
         method: "DELETE",
@@ -796,7 +796,7 @@ export const glowvitaApi = createApi({
     }),
 
     // shipping charge endpoints
-    getShippingCharges: builder.query({
+    getShippingConfig: builder.query({
       query: () => ({
         url: "/crm/shipping",
         method: "GET",
@@ -804,7 +804,7 @@ export const glowvitaApi = createApi({
       providesTags: ["ShippingCharge"],
     }),
 
-    updateShippingCharge: builder.mutation({
+    updateShippingConfig: builder.mutation({
       query: (charge) => ({
         url: "/crm/shipping",
         method: "PUT",
@@ -956,4 +956,14 @@ export const {
   useGetVendorNotificationsQuery,
   useCreateVendorNotificationMutation,
   useDeleteVendorNotificationMutation,
+
+  // Products endpoints
+  useGetCrmProductsQuery,
+  useCreateCrmProductMutation,
+  useUpdateCrmProductMutation,
+  useDeleteCrmProductMutation,
+
+  // shipping charge endpoints
+  useGetShippingConfigQuery,
+  useUpdateShippingConfigMutation,
 } = glowvitaApi;
