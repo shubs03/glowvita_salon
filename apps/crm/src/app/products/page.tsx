@@ -48,8 +48,8 @@ import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import {
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
-  useGetProductCategoriesQuery,
-  useCreateProductCategoryMutation,
+  useGetAdminProductCategoriesQuery,
+  useCreateAdminProductCategoryMutation,
   useGetCrmProductsQuery,
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
@@ -197,14 +197,14 @@ export default function ProductsAndOrdersPage() {
   const [orders, setOrders] = useState<ProductOrder[]>(mockOrders);
   
   // Fetch products from CRM API
-  const { data: productsData = [], isLoading: isProductsLoading, refetch: refetchProducts } = useGetCrmProductsQuery();
+  const { data: productsData = [], isLoading: isProductsLoading, refetch: refetchProducts } = useGetCrmProductsQuery({});
   const [createProduct, { isLoading: isCreatingProduct }] = useCreateCrmProductMutation();
   const [updateProduct, { isLoading: isUpdatingProduct }] = useUpdateCrmProductMutation();
   const [deleteProduct, { isLoading: isDeletingProduct }] = useDeleteCrmProductMutation();
   
   // Fetch categories from Admin API
-  const { data: categoriesData, isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetProductCategoriesQuery();
-  const [createCategory, { isLoading: isCreatingCategory }] = useCreateProductCategoryMutation();
+  const { data: categoriesData, isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetAdminProductCategoriesQuery({});
+  const [createCategory, { isLoading: isCreatingCategory }] = useCreateAdminProductCategoryMutation();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -245,7 +245,7 @@ export default function ProductsAndOrdersPage() {
   };
 
   // Fetch shipping config using RTK Query
-  const { data: shippingConfigData, isLoading: isShippingLoading } = useGetShippingConfigQuery();
+  const { data: shippingConfigData, isLoading: isShippingLoading } = useGetShippingConfigQuery({});
   const [updateShippingConfig, { isLoading: isUpdatingShipping }] = useUpdateShippingConfigMutation();
 
 
@@ -256,6 +256,12 @@ export default function ProductsAndOrdersPage() {
   const [isSavingShipping, setIsSavingShipping] = useState(false);
 
   const filteredProducts = useMemo(() => {
+    // Safety check: ensure productsData is an array
+    if (!Array.isArray(productsData)) {
+      console.warn('productsData is not an array:', productsData);
+      return [];
+    }
+    
     return productsData.filter((p: Product) => {
       const matchesSearch = p.productName
         .toLowerCase()
@@ -517,7 +523,7 @@ export default function ProductsAndOrdersPage() {
             <PackageCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{productsData.length}</div>
+            <div className="text-2xl font-bold">{Array.isArray(productsData) ? productsData.length : 0}</div>
             <p className="text-xs text-muted-foreground">Total products in catalog</p>
           </CardContent>
         </Card>
@@ -538,7 +544,7 @@ export default function ProductsAndOrdersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {productsData.filter((p) => p.isActive).length}
+              {Array.isArray(productsData) ? productsData.filter((p) => p.isActive).length : 0}
             </div>
             <p className="text-xs text-muted-foreground">Currently live for sale</p>
           </CardContent>
@@ -550,7 +556,7 @@ export default function ProductsAndOrdersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {productsData.filter((p) => p.stock === 0).length}
+              {Array.isArray(productsData) ? productsData.filter((p) => p.stock === 0).length : 0}
             </div>
             <p className="text-xs text-muted-foreground">Products needing restock</p>
           </CardContent>

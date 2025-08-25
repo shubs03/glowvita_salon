@@ -82,6 +82,8 @@ export const glowvitaApi = createApi({
     "TaxFeeSettings",
     "User",
     "PendingServices",
+    "AdminProductCategory",
+    "ProductCategory",
   ],
   endpoints: (builder) => ({
     // Web App Endpoints
@@ -615,34 +617,53 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Faq"],
     }),
 
-    // Product Categories Endpoints
-    getProductCategories: builder.query({
-      query: () => ({ url: "/admin/productcategories", method: "GET" }),
-      providesTags: ["ProductCategory"],
+    // Admin Product Categories Endpoints
+    getAdminProductCategories: builder.query({
+      query: () => ({
+        url: "/admin/product-categories",
+        method: "GET",
+      }),
+      providesTags: ["AdminProductCategory"],
+      transformResponse: (response) => {
+        // Ensure we always return an array
+        if (Array.isArray(response)) {
+          return response;
+        }
+        if (response && Array.isArray(response.data)) {
+          return response.data;
+        }
+        if (response && response.productCategories && Array.isArray(response.productCategories)) {
+          return response.productCategories;
+        }
+        return [];
+      },
     }),
-    createProductCategory: builder.mutation({
+
+    createAdminProductCategory: builder.mutation({
       query: (category) => ({
-        url: "/admin/productcategories",
+        url: "/admin/product-categories",
         method: "POST",
         body: category,
       }),
-      invalidatesTags: ["ProductCategory"],
+      invalidatesTags: ["AdminProductCategory"],
     }),
-    updateProductCategory: builder.mutation({
+
+    updateAdminProductCategory: builder.mutation({
       query: (category) => ({
-        url: `/admin/productcategories`,
+        url: "/admin/product-categories",
         method: "PUT",
         body: category,
       }),
-      invalidatesTags: ["ProductCategory"],
+      invalidatesTags: ["AdminProductCategory"],
     }),
-    deleteProductCategory: builder.mutation({
+
+    deleteAdminProductCategory: builder.mutation({
       query: ({ id }) => ({
-        url: `/admin/productcategories`,
+        url: "/admin/product-categories",
         method: "DELETE",
         body: { id },
       }),
-      invalidatesTags: ["ProductCategory"],
+      invalidatesTags: ["AdminProductCategory"],
     }),
 
     // Crm Endpoints
@@ -768,6 +789,18 @@ export const glowvitaApi = createApi({
         method: "GET",
       }),
       providesTags: ["Product"],
+      transformResponse: (response) => {
+        // Handle both direct array and wrapped response formats
+        if (Array.isArray(response)) {
+          return response;
+        }
+        if (response && response.success && Array.isArray(response.data)) {
+          return response.data;
+        }
+        // Fallback for unexpected response structure
+        console.warn('Unexpected API response structure for products:', response);
+        return [];
+      },
     }),
 
     createCrmProduct: builder.mutation({
@@ -790,9 +823,8 @@ export const glowvitaApi = createApi({
 
     deleteCrmProduct: builder.mutation({
       query: (id) => ({
-        url: "/crm/products",
+        url: `/crm/products?id=${id}`,
         method: "DELETE",
-        body: { id },
       }),
       invalidatesTags: ["Product"],
     }),
@@ -804,6 +836,7 @@ export const glowvitaApi = createApi({
         method: "GET",
       }),
       providesTags: ["ShippingCharge"],
+      transformResponse: (response) => response.data || response,
     }),
 
     updateShippingConfig: builder.mutation({
@@ -813,6 +846,7 @@ export const glowvitaApi = createApi({
         body: charge,
       }),
       invalidatesTags: ["ShippingCharge"],
+      transformResponse: (response) => response.data || response,
     }),
 
     // product categories endpoints
@@ -903,6 +937,12 @@ export const {
   useUpdateSuperDataItemMutation,
   useDeleteSuperDataItemMutation,
 
+  // Admin Product Categories
+  useGetAdminProductCategoriesQuery,
+  useCreateAdminProductCategoryMutation,
+  useUpdateAdminProductCategoryMutation,
+  useDeleteAdminProductCategoryMutation,
+
   // Vendor Endpoints
   useCreateVendorMutation,
   useGetVendorsQuery,
@@ -961,12 +1001,6 @@ export const {
   useUpdateFaqMutation,
   useDeleteFaqMutation,
 
-  // Product Categories Endpoints
-  useGetProductCategoriesQuery,
-  useCreateProductCategoryMutation,
-  useUpdateProductCategoryMutation,
-  useDeleteProductCategoryMutation,
-
   //======================================================== CRM Endpoints ====================================================//
 
   // CRM Endpoints
@@ -1002,6 +1036,9 @@ export const {
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
 
+  // product categories endpoints
+  useGetProductCategoriesQuery,
+  useCreateProductCategoryMutation,
   // Staff Endpoints
   useGetStaffQuery,
   useCreateStaffMutation,

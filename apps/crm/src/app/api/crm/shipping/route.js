@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import _db from '../../../../../../../packages/lib/src/db.js';
 import ShippingConfigModel from '../../../../../../../packages/lib/src/models/Vendor/Shipping.model.js';
-import { authMiddlewareVendor } from '../../../../middlewareCrm.js';
+import { authMiddlewareCrm } from '../../../../middlewareCrm.js';
 await _db();
 
 // Helper to validate shipping config data
@@ -20,7 +20,7 @@ const validateShippingData = (data) => {
 };
 
 // GET: Retrieve shipping configuration
-export const GET = authMiddlewareVendor(async (req, ctx) => {
+export const GET = authMiddlewareCrm(async (req, ctx) => {
   try {
     console.log('Received GET /api/crm/shipping request');
     console.log('Headers:', Object.fromEntries(req.headers.entries()));
@@ -70,10 +70,10 @@ export const GET = authMiddlewareVendor(async (req, ctx) => {
       }
     );
   }
-}, ['superadmin', 'admin']);
+}, ['vendor']);
 
 // PUT: Update shipping configuration
-export const PUT = authMiddlewareVendor(async (req, ctx) => {
+export const PUT = authMiddlewareCrm(async (req, ctx) => {
   try {
     console.log('Received PUT /api/crm/shipping request');
     const body = await req.json();
@@ -81,7 +81,10 @@ export const PUT = authMiddlewareVendor(async (req, ctx) => {
     
     const validationError = validateShippingData(body);
     if (validationError) {
-      return NextResponse.json({ message: validationError }, { status: 400 });
+      return NextResponse.json({ 
+        success: false,
+        message: validationError 
+      }, { status: 400 });
     }
 
     let config = await ShippingConfigModel.findOne();
@@ -96,12 +99,20 @@ export const PUT = authMiddlewareVendor(async (req, ctx) => {
     }
     
     console.log('Updated config:', config);
-    return NextResponse.json(config, { status: 200 });
+    return NextResponse.json({
+      success: true,
+      data: config,
+      message: 'Shipping configuration updated successfully'
+    }, { status: 200 });
   } catch (error) {
     console.error('Error updating shipping config:', error);
     return NextResponse.json(
-      { message: 'Error updating shipping config', error: error.message },
+      { 
+        success: false,
+        message: 'Error updating shipping config', 
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+      },
       { status: 500 }
     );
   }
-}, ['superadmin']);
+}, ['vendor']);
