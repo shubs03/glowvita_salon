@@ -2,26 +2,9 @@ import { NextResponse } from "next/server";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import ProductModel from "../../../../../../../packages/lib/src/models/Vendor/Product.model.js";
 import ProductCategoryModel from "../../../../../../../packages/lib/src/models/admin/ProductCategory.model.js";
-import { authMiddlewareVendor } from "../../../../middlewareCrm.js";
-await _db();
+import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
 
-// Helper to validate product data
-const validateProductData = (data) => {
-    const { productName, category, price, stock } = data;
-    if (!productName || !category || price === undefined || stock === undefined) {
-        return "Missing required fields: productName, category, price, and stock are required";
-    }
-    if (price < 0) {
-        return "Price cannot be negative";
-    }
-    if (stock < 0) {
-        return "Stock cannot be negative";
-    }
-    if (data.salePrice && data.salePrice < 0) {
-        return "Sale price cannot be negative";
-    }
-    return null;
-}
+await _db();
 
 // GET - Fetch all products
 const getProducts = async (req) => {
@@ -52,7 +35,7 @@ const getProducts = async (req) => {
   }
 };
 
-export const GET = authMiddlewareVendor(getProducts, ["superadmin", "admin"]);
+export const GET = authMiddlewareCrm(getProducts, ["vendor"]);
 
 // POST - Create new product
 const createProduct = async (req) => {
@@ -62,11 +45,18 @@ const createProduct = async (req) => {
         const { productName, description, category, categoryDescription, price, salePrice, stock, productImage, isActive } = body;
 
         // Validate required fields
-        const validationError = validateProductData(body);
-        if (validationError) {
-            console.log('Validation error:', validationError);
+        if (!productName || !category || price === undefined || stock === undefined) {
+            console.log('Validation error: Missing required fields');
             return NextResponse.json(
-                { success: false, message: validationError },
+                { success: false, message: "Missing required fields: productName, category, price, and stock are required" },
+                { status: 400 }
+            );
+        }
+
+        if (price < 0 || stock < 0 || (salePrice && salePrice < 0)) {
+            console.log('Validation error: Negative values not allowed');
+            return NextResponse.json(
+                { success: false, message: "Price, stock, and sale price cannot be negative" },
                 { status: 400 }
             );
         }
@@ -106,8 +96,8 @@ const createProduct = async (req) => {
             stock: Number(stock),
             productImage: imageUrl,
             isActive: Boolean(isActive),
-            createdBy: req.user._id,
-            updatedBy: req.user._id,
+            createdBy: req.user._id.toString(),
+            updatedBy: req.user._id.toString(),
         });
 
         const savedProduct = await newProduct.save();
@@ -128,10 +118,10 @@ const createProduct = async (req) => {
     }
 };
 
-export const POST = authMiddlewareVendor(createProduct, ["superadmin", "admin"]);
+export const POST = authMiddlewareCrm(createProduct, ["vendor"]);
 
 // PUT (update) a product
-export const PUT = authMiddlewareVendor(async (req) => {
+export const PUT = authMiddlewareCrm(async (req) => {
   try {
     const { id, productImage, category, ...updateData } = await req.json();
 
@@ -189,7 +179,7 @@ export const PUT = authMiddlewareVendor(async (req) => {
         ...updateData,
         category: categoryId,
         productImage: imageUrl,
-        updatedBy: req.user._id,
+        updatedBy: req.user._id.toString(),
         updatedAt: new Date()
       },
       { new: true, runValidators: true }
@@ -216,10 +206,10 @@ export const PUT = authMiddlewareVendor(async (req) => {
       error: error.message 
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["vendor"]);
 
 // DELETE a product
-export const DELETE = authMiddlewareVendor(async (req) => {
+export const DELETE = authMiddlewareCrm(async (req) => {
   try {
     // Get ID from URL search params
     const url = new URL(req.url);
@@ -258,4 +248,4 @@ export const DELETE = authMiddlewareVendor(async (req) => {
       error: error.message 
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["vendor"]);

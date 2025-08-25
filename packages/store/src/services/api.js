@@ -789,6 +789,18 @@ export const glowvitaApi = createApi({
         method: "GET",
       }),
       providesTags: ["Product"],
+      transformResponse: (response) => {
+        // Handle both direct array and wrapped response formats
+        if (Array.isArray(response)) {
+          return response;
+        }
+        if (response && response.success && Array.isArray(response.data)) {
+          return response.data;
+        }
+        // Fallback for unexpected response structure
+        console.warn('Unexpected API response structure for products:', response);
+        return [];
+      },
     }),
 
     createCrmProduct: builder.mutation({
