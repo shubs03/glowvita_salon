@@ -76,6 +76,8 @@ export const glowvitaApi = createApi({
     "GeoFence",
     "Category",
     "Service",
+    "Staff",
+    "Offers",
     "Notification",
     "TaxFeeSettings",
     "User",
@@ -703,7 +705,7 @@ export const glowvitaApi = createApi({
 
     getOffers: builder.query({
       query: () => "/crm/offers",
-      invalidatesTags: ["Offer"],
+      providesTags: ["Offer"],
     }),
 
     createOffer: builder.mutation({

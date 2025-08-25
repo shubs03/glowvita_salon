@@ -192,7 +192,7 @@ export const GET = async () => {
 };
 
 // Update Offer
-export const PUT = authMiddlewareCrm(
+export const PUT =
   async (req) => {
     const { id, ...body } = await req.json();
 
@@ -270,12 +270,10 @@ export const PUT = authMiddlewareCrm(
     }
 
     return Response.json(updatedOffer);
-  },
-  ["superadmin"]
-);
+  };
 
 // Delete Offer
-export const DELETE = authMiddlewareCrm(
+export const DELETE =
   async (req) => {
     const { id } = await req.json();
 
@@ -285,6 +283,4 @@ export const DELETE = authMiddlewareCrm(
     }
 
     return Response.json({ message: "Offer deleted successfully" });
-  },
-  ["superadmin"]
-);
+  };
