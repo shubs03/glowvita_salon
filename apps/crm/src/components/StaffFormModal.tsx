@@ -8,9 +8,12 @@ import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
+import { Checkbox } from '@repo/ui/checkbox';
+import { Switch } from '@repo/ui/switch';
 import { useCreateStaffMutation, useUpdateStaffMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
+import { vendorNavItems } from '@/lib/routes';
 
 export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
     const { user } = useCrmAuth();
@@ -30,6 +33,8 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
         endDate: '',
         yearOfExperience: '',
         clientsServed: '',
+        commission: false,
+        permissions: [],
         bankDetails: {
             accountHolderName: '',
             accountNumber: '',
@@ -53,6 +58,8 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 endDate: staff.endDate ? new Date(staff.endDate).toISOString().split('T')[0] : '',
                 yearOfExperience: staff.yearOfExperience || '',
                 clientsServed: staff.clientsServed || '',
+                commission: staff.commission || false,
+                permissions: staff.permissions || [],
                 bankDetails: staff.bankDetails || {
                     accountHolderName: '',
                     accountNumber: '',
@@ -65,10 +72,11 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
             // Reset form for new entry
             setFormData({
                 fullName: '', position: '', mobileNo: '', emailAddress: '', photo: null, description: '',
-                salary: '', startDate: '', endDate: '', yearOfExperience: '', clientsServed: '',
+                salary: '', startDate: '', endDate: '', yearOfExperience: '', clientsServed: '', commission: false, permissions: [],
                 bankDetails: { accountHolderName: '', accountNumber: '', bankName: '', ifscCode: '', upiId: '' }
             });
         }
+        setActiveTab('personal');
     }, [staff, isOpen]);
 
 
@@ -85,6 +93,15 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 ...prev.bankDetails,
                 [name]: value,
             }
+        }));
+    };
+    
+    const handleCheckboxChange = (permission, checked) => {
+        setFormData(prev => ({
+            ...prev,
+            permissions: checked
+                ? [...prev.permissions, permission]
+                : prev.permissions.filter(p => p !== permission)
         }));
     };
 
@@ -120,6 +137,12 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
             toast.error("Failed to save staff member.");
         }
     };
+
+    const handleNextTab = () => {
+        if (activeTab === 'personal') setActiveTab('employment');
+        else if (activeTab === 'employment') setActiveTab('bank');
+        else if (activeTab === 'bank') setActiveTab('permissions');
+    }
 
     const renderPersonalTab = () => (
         <div className="space-y-4">
@@ -181,6 +204,14 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 <Label htmlFor="clientsServed">Clients Served</Label>
                 <Input id="clientsServed" name="clientsServed" type="number" value={formData.clientsServed} onChange={handleInputChange} />
             </div>
+             <div className="flex items-center space-x-2 pt-2">
+                <Switch 
+                    id="commission" 
+                    checked={formData.commission} 
+                    onCheckedChange={(checked) => setFormData(prev => ({...prev, commission: checked}))}
+                />
+                <Label htmlFor="commission">Enable Staff Commission</Label>
+            </div>
         </div>
     );
 
@@ -213,6 +244,25 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
         </div>
     );
 
+     const renderPermissionsTab = () => (
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border p-4 rounded-md">
+                {vendorNavItems.map((item) => (
+                    <div key={item.permission} className="flex items-center space-x-2">
+                        <Checkbox
+                            id={item.permission}
+                            checked={formData.permissions.includes(item.permission)}
+                            onCheckedChange={(checked) => handleCheckboxChange(item.permission, checked)}
+                        />
+                        <Label htmlFor={item.permission} className="text-sm font-medium">
+                            {item.title}
+                        </Label>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -224,10 +274,11 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3">
+                        <TabsList className="grid w-full grid-cols-4">
                             <TabsTrigger value="personal">Personal</TabsTrigger>
                             <TabsTrigger value="employment">Employment</TabsTrigger>
                             <TabsTrigger value="bank">Bank Details</TabsTrigger>
+                            <TabsTrigger value="permissions">Permissions</TabsTrigger>
                         </TabsList>
                         <TabsContent value="personal" className="py-4">
                             {renderPersonalTab()}
@@ -238,14 +289,21 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                         <TabsContent value="bank" className="py-4">
                             {renderBankDetailsTab()}
                         </TabsContent>
+                         <TabsContent value="permissions" className="py-4">
+                            {renderPermissionsTab()}
+                        </TabsContent>
                     </Tabs>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose} disabled={isCreating || isUpdating}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isCreating || isUpdating}>
-                            {isCreating || isUpdating ? 'Saving...' : 'Save Staff'}
-                        </Button>
+                        {activeTab !== 'permissions' ? (
+                            <Button type="button" onClick={handleNextTab}>Next</Button>
+                        ) : (
+                            <Button type="submit" disabled={isCreating || isUpdating}>
+                                {isCreating || isUpdating ? 'Saving...' : 'Save Staff'}
+                            </Button>
+                        )}
                     </DialogFooter>
                 </form>
             </DialogContent>
