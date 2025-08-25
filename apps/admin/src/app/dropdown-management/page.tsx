@@ -948,10 +948,24 @@ export default function DropdownManagementPage() {
 }
 // Product Category Manager Component
 const ProductCategoryManager = () => {
-    const { data: productCategories = [], isLoading, refetch } = useGetAdminProductCategoriesQuery();
+    const { data: productCategoriesData = [], isLoading, refetch } = useGetAdminProductCategoriesQuery();
     const [createCategory] = useCreateAdminProductCategoryMutation();
     const [updateCategory] = useUpdateAdminProductCategoryMutation();
     const [deleteCategory] = useDeleteAdminProductCategoryMutation();
+    
+    // Ensure productCategories is always an array
+    const productCategories = useMemo(() => {
+        if (Array.isArray(productCategoriesData)) {
+            return productCategoriesData;
+        }
+        if (productCategoriesData && Array.isArray(productCategoriesData.data)) {
+            return productCategoriesData.data;
+        }
+        if (productCategoriesData && Array.isArray(productCategoriesData.productCategories)) {
+            return productCategoriesData.productCategories;
+        }
+        return [];
+    }, [productCategoriesData]);
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);

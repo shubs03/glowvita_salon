@@ -48,8 +48,8 @@ import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import {
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
-  useGetProductCategoriesQuery,
-  useCreateProductCategoryMutation,
+  useGetAdminProductCategoriesQuery,
+  useCreateAdminProductCategoryMutation,
   useGetCrmProductsQuery,
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
@@ -203,8 +203,8 @@ export default function ProductsAndOrdersPage() {
   const [deleteProduct, { isLoading: isDeletingProduct }] = useDeleteCrmProductMutation();
   
   // Fetch categories from Admin API
-  const { data: categoriesData, isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetProductCategoriesQuery();
-  const [createCategory, { isLoading: isCreatingCategory }] = useCreateProductCategoryMutation();
+  const { data: categoriesData, isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetAdminProductCategoriesQuery();
+  const [createCategory, { isLoading: isCreatingCategory }] = useCreateAdminProductCategoryMutation();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
