@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import StaffModel from '@repo/lib/models/staffModel';
+import StaffModel from '@repo/lib/models/staffModel.js';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 import bcrypt from "bcryptjs";
