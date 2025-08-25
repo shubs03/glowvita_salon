@@ -22,14 +22,8 @@ export const GET = authMiddlewareCrm(async (req) => {
 // POST a new staff member
 export const POST = authMiddlewareCrm(async (req) => {
     try {
-
-        const Vendor = req.user._id;
-
-        const vendorId = Vendor.toString();
-
+        const vendorId = req.user._id.toString();
         const body = await req.json();
-
-        console.log("Vendor ID:", vendorId);
 
         // Basic validation
         if (!body.fullName || !body.emailAddress || !body.mobileNo || !body.position || !body.password) {
@@ -55,7 +49,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 
         return NextResponse.json({ message: "Staff created successfully", staff: staffData }, { status: 201 });
     } catch (error) {
-        if (error.code === 11000) {
+        if (error.code === 11000) { // Catch duplicate key errors from the database index
              return NextResponse.json({ message: "A staff member with this email already exists for this vendor." }, { status: 409 });
         }
         return NextResponse.json({ message: "Error creating staff", error: error.message }, { status: 500 });
@@ -66,28 +60,28 @@ export const POST = authMiddlewareCrm(async (req) => {
 // PUT (update) a staff member
 export const PUT = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.tostring();
-        const { id, ...updateData } = await req.json();
+        const vendorId = req.user._id;
+        const { _id, ...updateData } = await req.json();
 
-        if (!id) {
+        if (!_id) {
             return NextResponse.json({ message: "Staff ID is required for update" }, { status: 400 });
         }
         
         // Ensure the staff member belongs to the vendor
-        const staff = await StaffModel.findOne({ _id: id, vendorId: vendorId });
+        const staff = await StaffModel.findOne({ _id: _id, vendorId: vendorId });
         if (!staff) {
              return NextResponse.json({ message: "Staff not found or access denied" }, { status: 404 });
         }
         
         // If password is being updated, hash it.
-        if (updateData.password) {
+        if (updateData.password && updateData.password.trim() !== '') {
           updateData.password = await bcrypt.hash(updateData.password, 10);
         } else {
-          // Do not update the password if it's not provided
+          // Do not update the password if it's not provided or empty
           delete updateData.password;
         }
 
-        const updatedStaff = await StaffModel.findByIdAndUpdate(id, updateData, { new: true });
+        const updatedStaff = await StaffModel.findByIdAndUpdate(_id, updateData, { new: true });
         
         return NextResponse.json(updatedStaff, { status: 200 });
     } catch (error) {
@@ -99,9 +93,9 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE a staff member
 export const DELETE = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.tostring();
+        const vendorId = req.user._id;
         const url = new URL(req.url);
-        const id = url.searchParams.get('id');
+        const id = url.searchParams.get('id') || (await req.json()).id;
 
         if (!id) {
             return NextResponse.json({ message: "Staff ID is required for deletion" }, { status: 400 });

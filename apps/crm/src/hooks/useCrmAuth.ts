@@ -11,10 +11,18 @@ export const useCrmAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // The Redux state is now initialized from localStorage by CrmAuthInitializer.
-    // The loading state is to prevent flickers while the initial check runs.
-    if(isCrmAuthenticated || localStorage.getItem('crmAuthState') === null){
+    // The CrmAuthInitializer runs and sets the state from localStorage.
+    // This effect listens for that change. Once isCrmAuthenticated becomes true,
+    // or if the app determines there's no stored session (and isCrmAuthenticated remains false),
+    // we can stop loading.
+    if (isCrmAuthenticated) {
+      setIsLoading(false);
+    } else {
+      // Check if there is a stored auth state to wait for.
+      // If not, we can also stop loading.
+      if (typeof window !== 'undefined' && !localStorage.getItem('crmAuthState')) {
         setIsLoading(false);
+      }
     }
   }, [isCrmAuthenticated]);
 
