@@ -38,7 +38,7 @@ export const makeStore = () => {
       refferal: refferalReducer,
       faq: faqReducer,
       shipping: shippingReducer,
-      products: productReducer,,
+      products: productReducer,
       service: serviceReducer,
       staff: staffReducer, // Add staff reducer
     },

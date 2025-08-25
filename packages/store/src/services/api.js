@@ -1,4 +1,3 @@
-
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -11,22 +10,22 @@ const API_BASE_URLS = {
 
 // Base query function that determines the API URL and sets headers.
 const baseQuery = async (args, api, extraOptions) => {
-  let requestUrl = typeof args === 'string' ? args : args.url;
-    
-  if (typeof requestUrl !== 'string') {
+  let requestUrl = typeof args === "string" ? args : args.url;
+
+  if (typeof requestUrl !== "string") {
     console.error("Request URL is not a string:", requestUrl);
     return { error: { status: "CUSTOM_ERROR", error: "Invalid URL provided" } };
   }
-    
-  let targetService = 'web'; // Default
+
+  let targetService = "web"; // Default
   let token = null;
   const state = api.getState();
 
-  if (requestUrl.startsWith('/admin')) {
-    targetService = 'admin';
+  if (requestUrl.startsWith("/admin")) {
+    targetService = "admin";
     token = state.adminAuth.token;
-  } else if (requestUrl.startsWith('/crm')) {
-    targetService = 'crm';
+  } else if (requestUrl.startsWith("/crm")) {
+    targetService = "crm";
     token = state.crmAuth.token;
   } else {
     // For web routes, it might use either, but let's assume a default or check both
@@ -34,31 +33,32 @@ const baseQuery = async (args, api, extraOptions) => {
   }
 
   const baseUrl = API_BASE_URLS[targetService];
-  
+
   const dynamicFetch = fetchBaseQuery({
     baseUrl,
     prepareHeaders: (headers) => {
       if (token) {
-        headers.set('Authorization', `Bearer ${token}`);
+        headers.set("Authorization", `Bearer ${token}`);
       }
       return headers;
     },
   });
 
   let result = await dynamicFetch(args, api, extraOptions);
-  
+
   if (result.error && result.error.status === 401) {
-    console.warn(`Received 401 Unauthorized for ${targetService}. Logging out.`);
-    if (targetService === 'admin') {
+    console.warn(
+      `Received 401 Unauthorized for ${targetService}. Logging out.`
+    );
+    if (targetService === "admin") {
       api.dispatch(clearAdminAuth());
-    } else if (targetService === 'crm') {
+    } else if (targetService === "crm") {
       api.dispatch(clearCrmAuth());
     }
   }
 
   return result;
 };
-
 
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
@@ -96,7 +96,7 @@ export const glowvitaApi = createApi({
       }),
       providesTags: ["admin"],
     }),
-     // Service Approval Endpoints
+    // Service Approval Endpoints
     getPendingServices: builder.query({
       query: () => ({ url: "/admin/services/service-approval", method: "GET" }),
       providesTags: ["PendingServices"],
@@ -104,7 +104,7 @@ export const glowvitaApi = createApi({
     updateServiceStatus: builder.mutation({
       query: ({ serviceId, status }) => ({
         url: "/admin/services/service-approval",
-        method: 'PATCH',
+        method: "PATCH",
         body: { serviceId, status },
       }),
       invalidatesTags: ["PendingServices", "VendorServices"],
@@ -386,7 +386,10 @@ export const glowvitaApi = createApi({
         method: "PATCH",
         body: planData,
       }),
-      invalidatesTags: (result, error, { _id }) => [{ type: "SubscriptionPlan", id: _id }, "SubscriptionPlan"],
+      invalidatesTags: (result, error, { _id }) => [
+        { type: "SubscriptionPlan", id: _id },
+        "SubscriptionPlan",
+      ],
     }),
 
     deleteSubscriptionPlan: builder.mutation({
@@ -396,7 +399,6 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["SubscriptionPlan"],
     }),
-
 
     // Supplier Endpoints
     getSuppliers: builder.query({
@@ -610,6 +612,36 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Faq"],
     }),
 
+    // Product Categories Endpoints
+    getProductCategories: builder.query({
+      query: () => ({ url: "/admin/productcategories", method: "GET" }),
+      providesTags: ["ProductCategory"],
+    }),
+    createProductCategory: builder.mutation({
+      query: (category) => ({
+        url: "/admin/productcategories",
+        method: "POST",
+        body: category,
+      }),
+      invalidatesTags: ["ProductCategory"],
+    }),
+    updateProductCategory: builder.mutation({
+      query: (category) => ({
+        url: `/admin/productcategories`,
+        method: "PUT",
+        body: category,
+      }),
+      invalidatesTags: ["ProductCategory"],
+    }),
+    deleteProductCategory: builder.mutation({
+      query: ({ id }) => ({
+        url: `/admin/productcategories`,
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["ProductCategory"],
+    }),
+
     // Crm Endpoints
     vendorLogin: builder.mutation({
       query: (credentials) => ({
@@ -700,34 +732,103 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Offer"],
     }),
 
+    getVendorNotifications: builder.query({
+      query: ({ vendorId }) => ({
+        url: `/crm/notifications?vendorId=${vendorId}`,
+        method: "GET",
+      }),
+      providesTags: ["VendorNotifications"],
+    }),
 
-getVendorNotifications: builder.query({
-  query: ({ vendorId }) => ({
-    url: `/crm/notifications?vendorId=${vendorId}`,
-    method: 'GET',
-  }),
-  providesTags: ['VendorNotifications'],
-}),
-
- createVendorNotification: builder.mutation({
+    createVendorNotification: builder.mutation({
       query: (notification) => ({
-        url: '/crm/notifications',
-        method: 'POST',
+        url: "/crm/notifications",
+        method: "POST",
         body: notification,
       }),
-      invalidatesTags: ['VendorNotifications'],
+      invalidatesTags: ["VendorNotifications"],
     }),
 
     deleteVendorNotification: builder.mutation({
       query: ({ notificationId }) => ({
-        url: '/crm/notifications',
-        method: 'DELETE',
+        url: "/crm/notifications",
+        method: "DELETE",
         body: { notificationId },
       }),
-      invalidatesTags: ['VendorNotifications'],
+      invalidatesTags: ["VendorNotifications"],
     }),
 
-})
+    // Products endpoints
+    getProducts: builder.query({
+      query: () => ({
+        url: "/crm/products",
+        method: "GET",
+      }),
+      providesTags: ["Product"],
+    }),
+
+    createProduct: builder.mutation({
+      query: (product) => ({
+        url: "/crm/products",
+        method: "POST",
+        body: product,
+      }),
+      invalidatesTags: ["Product"],
+    }),
+
+    updateProduct: builder.mutation({
+      query: (product) => ({
+        url: "/crm/products",
+        method: "PUT",
+        body: product,
+      }),
+      invalidatesTags: ["Product"],
+    }),
+
+    deleteProduct: builder.mutation({
+      query: (id) => ({
+        url: "/crm/products",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Product"],
+    }),
+
+    // shipping charge endpoints
+    getShippingCharges: builder.query({
+      query: () => ({
+        url: "/crm/shipping",
+        method: "GET",
+      }),
+      providesTags: ["ShippingCharge"],
+    }),
+
+    updateShippingCharge: builder.mutation({
+      query: (charge) => ({
+        url: "/crm/shipping",
+        method: "PUT",
+        body: charge,
+      }),
+      invalidatesTags: ["ShippingCharge"],
+    }),
+
+    // product categories endpoints
+    getProductCategories: builder.query({
+      query: () => ({
+        url: "/crm/productcategories",
+        method: "GET",
+      }),
+      providesTags: ["ProductCategory"],
+    }),
+    createProductCategory: builder.mutation({
+      query: (category) => ({
+        url: "/crm/productcategories",
+        method: "POST",
+        body: category,
+      }),
+      invalidatesTags: ["ProductCategory"],
+    }),
+  }),
 });
 
 export const {
@@ -824,6 +925,12 @@ export const {
   useUpdateFaqMutation,
   useDeleteFaqMutation,
 
+  // Product Categories Endpoints
+  useGetProductCategoriesQuery,
+  useCreateProductCategoryMutation,
+  useUpdateProductCategoryMutation,
+  useDeleteProductCategoryMutation,
+
   //======================================================== CRM Endpoints ====================================================//
 
   // CRM Endpoints
@@ -848,5 +955,4 @@ export const {
   useGetVendorNotificationsQuery,
   useCreateVendorNotificationMutation,
   useDeleteVendorNotificationMutation,
-
 } = glowvitaApi;
