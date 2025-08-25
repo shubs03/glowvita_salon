@@ -599,7 +599,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ['Faq'],
     }),
     
-    deleteSubscriptionPlan: builder.mutation({
+    deleteFaq: builder.mutation({
       query: (id) => ({
         url: '/admin/faqs',
         method: 'DELETE',
