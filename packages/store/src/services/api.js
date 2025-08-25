@@ -602,6 +602,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Faq"],
     }),
+    
 
     deleteFaq: builder.mutation({
       query: (id) => ({
