@@ -829,6 +829,39 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["ProductCategory"],
     }),
+
+    // Vendor Staff Endpoints
+    getStaff: builder.query({
+      query: () => ({
+        url: "/crm/staff",
+        method: "GET",
+      }),
+      providesTags: ["Staff"],
+    }),
+    createStaff: builder.mutation({
+      query: (staff) => ({
+        url: "/crm/staff",
+        method: "POST",
+        body: staff,
+      }),
+      invalidatesTags: ["Staff"],
+    }), 
+    updateStaff: builder.mutation({
+      query: (staff) => ({
+        url: "/crm/staff",
+        method: "PUT",
+        body: staff,
+      }),
+      invalidatesTags: ["Staff"],
+    }),
+    deleteStaff: builder.mutation({
+      query: (id) => ({
+        url: "/crm/staff",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Staff"],
+    }),
   }),
 });
 
@@ -966,4 +999,10 @@ export const {
   // shipping charge endpoints
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
+
+  // Staff Endpoints
+  useGetStaffQuery,
+  useCreateStaffMutation,
+  useUpdateStaffMutation,
+  useDeleteStaffMutation,
 } = glowvitaApi;
