@@ -67,6 +67,10 @@ const vendorSchema = new mongoose.Schema({
     enum: ["unisex", "men", "women"],
     required: true,
   },
+  shippingCharge: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "ShippingConfig",
+  },
   subCategories: [
     {
       type: String,

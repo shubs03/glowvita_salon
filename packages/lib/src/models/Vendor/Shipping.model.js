@@ -1,6 +1,11 @@
 import mongoose from 'mongoose';
 
 const shippingSchema = new mongoose.Schema({
+  vendorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor',
+    required: true,
+  },
   chargeType: {
     type: String,
     enum: ['fixed', 'percentage'],
