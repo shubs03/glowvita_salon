@@ -39,6 +39,8 @@ export default function StaffPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [viewStaff, setViewStaff] = useState<Staff | null>(null);
     
     const filteredStaff = useMemo(() => {
         if (!staffList) return [];
@@ -62,6 +64,11 @@ export default function StaffPage() {
     const handleDeleteClick = (staff: Staff) => {
         setSelectedStaff(staff);
         setIsDeleteModalOpen(true);
+    };
+    
+    const handleViewClick = (staff: Staff) => {
+        setViewStaff(staff);
+        setIsViewModalOpen(true);
     };
     
     const handleConfirmDelete = async () => {
@@ -180,6 +187,9 @@ export default function StaffPage() {
                                             </span>
                                         </TableCell>
                                         <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(staff)}>
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleOpenModal(staff)}>
                                                 <Edit className="h-4 w-4" />
                                             </Button>
@@ -214,6 +224,68 @@ export default function StaffPage() {
                 }}
             />
             
+            {/* View Staff Details Modal */}
+            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Staff Details</DialogTitle>
+                        <DialogDescription>
+                            Complete information for {viewStaff?.fullName}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {viewStaff && (
+                        <div className="space-y-6">
+                            {/* Profile Section */}
+                            <div className="flex items-center space-x-4">
+                                <img 
+                                    src={viewStaff.photo || `https://placehold.co/80x80.png?text=${viewStaff.fullName[0]}`} 
+                                    alt={viewStaff.fullName} 
+                                    className="w-20 h-20 rounded-full object-cover border-2 border-gray-200" 
+                                />
+                                <div>
+                                    <h3 className="text-xl font-semibold">{viewStaff.fullName}</h3>
+                                    <p className="text-gray-600">{viewStaff.position}</p>
+                                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium mt-2 ${getStatusColor(viewStaff.status)}`}>
+                                        {viewStaff.status}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {/* Contact Information */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-3">
+                                    <h4 className="font-semibold text-gray-900">Contact Information</h4>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500">Email Address</Label>
+                                        <p className="mt-1">{viewStaff.emailAddress}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500">Mobile Number</Label>
+                                        <p className="mt-1">{viewStaff.mobileNo}</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-3">
+                                    <h4 className="font-semibold text-gray-900">Work Information</h4>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500">Position</Label>
+                                        <p className="mt-1">{viewStaff.position}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500">Status</Label>
+                                        <p className="mt-1">{viewStaff.status}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            
+            {/* Delete Confirmation Modal */}
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
                     <DialogHeader>
