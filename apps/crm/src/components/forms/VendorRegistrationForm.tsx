@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -11,7 +12,6 @@ import { Checkbox } from '@repo/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from '@repo/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import stateCityData from '@repo/lib/src/state-city.json';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../../packages/config/config';
@@ -39,8 +39,6 @@ interface MapboxFeature {
     text: string;
   }>;
 }
-
-const states: State[] = stateCityData.states;
 
 export function VendorRegistrationForm({ onSuccess }) {
   const [step, setStep] = useState(1);
@@ -73,16 +71,8 @@ export function VendorRegistrationForm({ onSuccess }) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
-  const [cities, setCities] = useState<string[]>([]);
 
   const [registerVendor, { isLoading }] = useVendorRegisterMutation();
-
-  useEffect(() => {
-    if (formData.state) {
-      const stateData = states.find(s => s.state === formData.state);
-      setCities(stateData ? stateData.districts : []);
-    }
-  }, [formData.state]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -154,8 +144,6 @@ export function VendorRegistrationForm({ onSuccess }) {
     }
   };
   
-  // MAPBOX LOGIC
-  // Copied from VendorEditForm and adapted
   useEffect(() => {
     if (!isMapOpen || !MAPBOX_TOKEN) return;
     const initMap = () => {
@@ -282,14 +270,8 @@ export function VendorRegistrationForm({ onSuccess }) {
               </div>
               <Input name="address" placeholder="Full Address" onChange={handleInputChange} value={formData.address} required />
                <div className="grid md:grid-cols-3 gap-4">
-                <Select name="state" onValueChange={(value) => setFormData(prev => ({...prev, state: value, city: ''}))} value={formData.state}>
-                  <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
-                  <SelectContent>{states.map(s => <SelectItem key={s.state} value={s.state}>{s.state}</SelectItem>)}</SelectContent>
-                </Select>
-                <Select name="city" onValueChange={(value) => setFormData(prev => ({...prev, city: value}))} value={formData.city} disabled={!formData.state}>
-                  <SelectTrigger><SelectValue placeholder="City" /></SelectTrigger>
-                  <SelectContent>{cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
+                <Input name="state" placeholder="State" onChange={handleInputChange} value={formData.state} required />
+                <Input name="city" placeholder="City" onChange={handleInputChange} value={formData.city} required />
                 <Input name="pincode" placeholder="Pincode" onChange={handleInputChange} value={formData.pincode} required />
               </div>
             </div>

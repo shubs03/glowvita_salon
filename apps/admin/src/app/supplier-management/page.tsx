@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -137,8 +138,6 @@ type Supplier = {
 type SupplierOrder = (typeof supplierOrdersData)[0];
 type ActionType = "approve" | "reject" | "delete";
 
-import stateCityData from "@repo/lib/state-city.json";
-
 const SupplierPageSkeleton = () => (
   <div className="p-4 sm:p-6 lg:p-8">
     <div className="flex justify-between items-center mb-6">
@@ -275,16 +274,6 @@ export default function SupplierManagementPage() {
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryStatusFilter, setInventoryStatusFilter] = useState("all");
 
-  // New supplier form state
-  interface State {
-    state: string;
-    districts: string[];
-  }
-
-  const states: State[] = stateCityData.states;
-  const [cities, setCities] = useState<string[]>([]);
-  const [selectedState, setSelectedState] = useState("");
-
   const initialNewSupplierState = {
     firstName: "",
     lastName: "",
@@ -318,24 +307,6 @@ export default function SupplierManagementPage() {
     "Makeup Products",
     "Hygiene & Cleaning",
   ];
-
-  useEffect(() => {
-    if (selectedState) {
-      const stateData = states.find((s) => s.state === selectedState);
-      setCities(stateData ? stateData.districts : []);
-      setNewSupplier((prev) => ({ ...prev, state: selectedState, city: "" }));
-    } else {
-      setCities([]);
-    }
-  }, [selectedState]);
-
-  const handleStateChange = (value: string) => {
-    setSelectedState(value);
-  };
-
-  const handleCityChange = (value: string) => {
-    setNewSupplier((prev) => ({ ...prev, city: value }));
-  };
 
   const handleNewSupplierChange = (
     e: React.ChangeEvent<
@@ -1229,10 +1200,6 @@ export default function SupplierManagementPage() {
                       onChange={handleNewSupplierChange}
                       className="w-full"
                       required
-                      // minLength={10}
-                      // maxLength={10}
-                      // pattern="\\d{10}"
-                      // title="Please enter a valid 10-digit mobile number"
                       placeholder="12345 67890"
                     />
                     {newSupplier.mobile && newSupplier.mobile.length !== 10 && (
@@ -1306,27 +1273,14 @@ export default function SupplierManagementPage() {
                       >
                         Country <span className="text-red-500">*</span>
                       </Label>
-                      <Select
+                      <Input
+                        id="country"
                         name="country"
                         value={newSupplier.country}
-                        onValueChange={(value) =>
-                          setNewSupplier((prev) => ({
-                            ...prev,
-                            country: value,
-                          }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="India">India</SelectItem>
-                          <SelectItem value="USA">USA</SelectItem>
-                          <SelectItem value="UK">UK</SelectItem>
-                          <SelectItem value="Canada">Canada</SelectItem>
-                          <SelectItem value="Australia">Australia</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        onChange={handleNewSupplierChange}
+                        className="w-full"
+                        required
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label
@@ -1335,22 +1289,14 @@ export default function SupplierManagementPage() {
                       >
                         State <span className="text-red-500">*</span>
                       </Label>
-                      <Select
-                        value={selectedState}
-                        onValueChange={handleStateChange}
+                      <Input
+                        id="state"
+                        name="state"
+                        value={newSupplier.state}
+                        onChange={handleNewSupplierChange}
+                        className="w-full"
                         required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select state" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px] overflow-y-auto">
-                          {states.map((state) => (
-                            <SelectItem key={state.state} value={state.state}>
-                              {state.state}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label
@@ -1359,29 +1305,14 @@ export default function SupplierManagementPage() {
                       >
                         City <span className="text-red-500">*</span>
                       </Label>
-                      <Select
+                      <Input
+                        id="city"
+                        name="city"
                         value={newSupplier.city}
-                        onValueChange={handleCityChange}
-                        disabled={!selectedState}
+                        onChange={handleNewSupplierChange}
+                        className="w-full"
                         required
-                      >
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={
-                              selectedState
-                                ? "Select city"
-                                : "Select state first"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-[300px] overflow-y-auto">
-                          {cities.map((city) => (
-                            <SelectItem key={city} value={city}>
-                              {city}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1402,10 +1333,6 @@ export default function SupplierManagementPage() {
                         onChange={handleNewSupplierChange}
                         className="w-full"
                         required
-                        // minLength={6}
-                        // maxLength={6}
-                        // pattern="\\d{6}"
-                        title="Please enter a valid 6-digit pincode"
                       />
                       {newSupplier.pincode &&
                         newSupplier.pincode.length !== 6 && (
