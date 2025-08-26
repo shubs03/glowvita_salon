@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Image as ImageIcon, Upload, Map, CheckCircle2, Building, MapPin, User, ChevronRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
@@ -78,8 +78,10 @@ const StepIndicator = ({ currentStep, setStep }) => {
     );
 };
 
+const VendorRegistrationFormContent = ({ onSuccess }) => {
+  const searchParams = useSearchParams();
+  const refCode = searchParams.get('ref');
 
-export function VendorRegistrationForm({ onSuccess }) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -99,7 +101,7 @@ export function VendorRegistrationForm({ onSuccess }) {
     city: '',
     pincode: '',
     location: null,
-    referredByCode: ''
+    referredByCode: refCode || ''
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -112,6 +114,12 @@ export function VendorRegistrationForm({ onSuccess }) {
   const marker = useRef<mapboxgl.Marker | null>(null);
 
   const [registerVendor, { isLoading }] = useVendorRegisterMutation();
+
+  useEffect(() => {
+    if (refCode) {
+      setFormData(prev => ({...prev, referredByCode: refCode}));
+    }
+  }, [refCode]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -381,4 +389,10 @@ export function VendorRegistrationForm({ onSuccess }) {
   );
 }
 
-    
+export function VendorRegistrationForm(props) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VendorRegistrationFormContent {...props} />
+    </Suspense>
+  );
+}

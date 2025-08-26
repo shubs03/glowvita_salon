@@ -27,7 +27,7 @@ const generateReferralCode = async (businessName) => {
   return referralCode;
 };
 
-
+// Removed the authMiddlewareCrm wrapper to make this endpoint public for new registrations.
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -95,7 +95,7 @@ export async function POST(req) {
           referee: newVendor.businessName, // Or newVendor._id
           date: new Date(),
           status: 'Completed', // Or 'Pending' until first purchase
-          bonus: 'Pending Bonus' // Or calculate bonus based on settings
+          bonus: '500' // Or calculate bonus based on settings
         });
       }
     }

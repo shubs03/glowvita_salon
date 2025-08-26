@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 // Schema for bonus details
@@ -90,7 +91,6 @@ const referralSchema = new mongoose.Schema({
   },
   referralId: {
     type: String,
-    required: true,
     unique: true,
     trim: true,
   },
@@ -111,7 +111,7 @@ const referralSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Completed', 'Approved', 'Paid'],
+    enum: ['Pending', 'Completed', 'Bonus Paid'],
     required: true,
   },
   bonus: {

@@ -85,7 +85,7 @@ const vendorSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: false, // Only required for new vendors, not in edit mode
+    required: true,
     minlength: [8, "Password must be at least 8 characters"],
   },
   website: {

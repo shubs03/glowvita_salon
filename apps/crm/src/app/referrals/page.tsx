@@ -82,7 +82,7 @@ export default function ReferralsPage() {
     const [itemsPerPage, setItemsPerPage] = useState(5);
     
     const referralLink = user?.referralCode 
-        ? `https://monorepo-maestro.com/signup?ref=${user.referralCode}`
+        ? `${window.location.origin}/auth/register?ref=${user.referralCode}`
         : "Loading your referral link...";
 
     const referrals = useMemo(() => {
@@ -118,7 +118,7 @@ export default function ReferralsPage() {
         return <SkeletonLoader />;
     }
 
-    const totalBonusEarned = referrals.filter((r: Referral) => r.status === 'Bonus Paid').length * 500; // Assuming 500 is the bonus
+    const totalBonusEarned = referrals.filter((r: Referral) => r.status === 'Bonus Paid').reduce((acc, r) => acc + (Number(r.bonus) || 0), 0);
     
     return (
         <div className="p-4 sm:p-6 lg:p-8">
