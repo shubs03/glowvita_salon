@@ -137,7 +137,7 @@ type Supplier = {
 type SupplierOrder = (typeof supplierOrdersData)[0];
 type ActionType = "approve" | "reject" | "delete";
 
-import stateCityData from "@/lib/state-city.json";
+import stateCityData from "@repo/lib/state-city.json";
 
 const SupplierPageSkeleton = () => (
   <div className="p-4 sm:p-6 lg:p-8">
