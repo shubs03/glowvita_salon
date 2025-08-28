@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, Image as ImageIcon, Upload, Map } from 'lucide-react';
+import { Eye, EyeOff, Image as ImageIcon, Upload, Map, CheckCircle2, Building, MapPin, User, ChevronRight } from 'lucide-react';
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
@@ -9,12 +10,13 @@ import { Textarea } from "@repo/ui/textarea";
 import { Checkbox } from "@repo/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from "@repo/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
-import stateCityData from '@/lib/state-city.json';
+import stateCityData from '@repo/lib/state-city.json';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../packages/config/config';
+import { toast } from 'sonner';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
-// Mapbox access token
 const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
 
 type SalonCategory = 'unisex' | 'men' | 'women';
@@ -927,7 +929,7 @@ export function VendorForm({ isOpen, onClose, vendor, isEditMode = false, onSubm
                 className="w-full"
               />
               {searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto mt-1">
+                <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-background shadow-lg max-h-48 overflow-y-auto mt-1">
                   {searchResults.map((result) => (
                     <div
                       key={result.id}
