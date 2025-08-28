@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from "@repo/ui/card";
 import { Button } from '@repo/ui/button';
-import { User, Building, Stethoscope, ArrowRight } from 'lucide-react';
+import { User, Building, Stethoscope, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { VendorRegistrationForm } from '@/components/forms/VendorRegistrationForm';
 import { DoctorRegistrationForm } from '@/components/forms/DoctorRegistrationForm';
 import { SupplierRegistrationForm } from '@/components/forms/SupplierRegistrationForm';

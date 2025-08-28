@@ -1,3 +1,4 @@
+
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -23,7 +24,7 @@ const baseQuery = async (args, api, extraOptions) => {
 
   if (requestUrl.startsWith("/admin")) {
     targetService = "admin";
-    token = state.adminAuth.token;
+    token = state.adminAuth.token || state.crmAuth.token;
   } else if (requestUrl.startsWith("/crm")) {
     targetService = "crm";
     token = state.crmAuth.token;
@@ -84,8 +85,149 @@ export const glowvitaApi = createApi({
     "PendingServices",
     "AdminProductCategory",
     "ProductCategory",
+    "SmsTemplate",
+    "SmsPackage",
+    "SocialMediaTemplate",
+    "Marketing",
+    "SubscriptionPlan",
+    "Vendor",
+    "doctors",
+    "GeoFence",
+    "Category",
+    "Service",
+    "Staff",
+    "Offers",
+    "Notification",
+    "TaxFeeSettings",
+    "User",
+    "PendingServices",
+    "AdminProductCategory",
+    "ProductCategory",
+    "SmsTemplate",
+    "SmsPackage",
+    "SocialMediaTemplate",
   ],
+
   endpoints: (builder) => ({
+    // SMS Templates Endpoints
+    getSmsTemplates: builder.query({
+      query: () => '/admin/sms-template',
+      providesTags: ['SmsTemplate']
+    }),
+    
+    getSmsTemplateById: builder.query({
+      query: (id) => `/admin/sms-template/${id}`,
+      providesTags: (result, error, id) => [{ type: 'SmsTemplate', id }]
+    }),
+    
+    createSmsTemplate: builder.mutation({
+      query: (templateData) => ({
+        url: '/admin/sms-template',
+        method: 'POST',
+        body: templateData
+      }),
+      invalidatesTags: ['SmsTemplate']
+    }),
+    
+    updateSmsTemplate: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/admin/sms-template?id=${id}`,
+        method: 'PUT',
+        body: updates
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        'SmsTemplate',
+        { type: 'SmsTemplate', id }
+      ]
+    }),
+    
+    deleteSmsTemplate: builder.mutation({
+      query: (id) => ({
+        url: `/admin/sms-template?id=${id}`,
+        method: 'DELETE'
+      }),
+      invalidatesTags: ['SmsTemplate']
+    }),
+
+    // Social Media Template Endpoints
+    getSocialMediaTemplates: builder.query({
+      query: () => '/admin/social-media-templates',
+      providesTags: ['SocialMediaTemplate']
+    }),
+    
+    getSocialMediaTemplateById: builder.query({
+      query: (id) => `/admin/social-media-templates/${id}`,
+      providesTags: (result, error, id) => [{ type: 'SocialMediaTemplate', id }]
+    }),
+    
+    createSocialMediaTemplate: builder.mutation({
+      query: (templateData) => ({
+        url: '/admin/social-media-templates',
+        method: 'POST',
+        body: templateData
+      }),
+      invalidatesTags: ['SocialMediaTemplate']
+    }),
+    
+    updateSocialMediaTemplate: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/admin/social-media-templates?id=${id}`,
+        method: 'PUT',
+        body: updates
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        'SocialMediaTemplate',
+        { type: 'SocialMediaTemplate', id }
+      ]
+    }),
+    
+    deleteSocialMediaTemplate: builder.mutation({
+      query: (id) => ({
+        url: `/admin/social-media-templates?id=${id}`,
+        method: 'DELETE'
+      }),
+      invalidatesTags: ['SocialMediaTemplate']
+    }),
+
+    // SMS Packages Endpoints
+    getSmsPackages: builder.query({
+      query: () => '/admin/sms-packages',
+      providesTags: ['SmsPackage']
+    }),
+    
+    getSmsPackageById: builder.query({
+      query: (id) => `/admin/sms-packages/${id}`,
+      providesTags: (result, error, id) => [{ type: 'SmsPackage', id }]
+    }),
+    
+    createSmsPackage: builder.mutation({
+      query: (packageData) => ({
+        url: '/admin/sms-packages',
+        method: 'POST',
+        body: packageData
+      }),
+      invalidatesTags: ['SmsPackage']
+    }),
+    
+    updateSmsPackage: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/admin/sms-packages?id=${id}`,
+        method: 'PUT',
+        body: updates
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        'SmsPackage',
+        { type: 'SmsPackage', id }
+      ]
+    }),
+    
+    deleteSmsPackage: builder.mutation({
+      query: (id) => ({
+        url: `/admin/sms-packages?id=${id}`,
+        method: 'DELETE'
+      }),
+      invalidatesTags: ['SmsPackage']
+    }),
     // Web App Endpoints
     getMe: builder.query({
       query: () => ({ url: "/auth/me", method: "GET" }),
@@ -282,6 +424,53 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["SuperData"],
     }),
 
+    // Tax Fee Settings Endpoints
+    getTaxFeeSettings: builder.query({
+      query: () => '/admin/tax-fees',
+      providesTags: ['TaxFeeSettings']
+    }),
+    updateTaxFeeSettings: builder.mutation({
+      query: (settings) => ({
+        url: '/admin/tax-fees',
+        method: 'PATCH',
+        body: settings
+      }),
+      invalidatesTags: ['TaxFeeSettings']
+    }),
+
+    // Marketing Endpoints
+    // Other marketing-related endpoints can go here
+    
+    createSmsTemplate: builder.mutation({
+      query: (template) => ({
+        url: '/admin/sms-template',
+        method: 'POST',
+        body: template
+      }),
+      invalidatesTags: ['SmsTemplate']
+    }),
+    
+    updateSmsTemplate: builder.mutation({
+      query: ({ _id, ...updates }) => ({
+        url: `/admin/sms-template?id=${_id}`,
+        method: 'PUT',
+        body: updates
+      }),
+      invalidatesTags: (result, error, { _id }) => [
+        'SmsTemplate',
+        { type: 'SmsTemplate', id: _id }
+      ]
+    }),
+    
+    deleteSmsTemplate: builder.mutation({
+      query: (id) => ({
+        url: `/admin/sms-template?id=${id}`,
+        method: 'DELETE',
+        body: { _id: id }
+      }),
+      invalidatesTags: ['Marketing']
+    }),
+
     // Vendor Endpoints
     createVendor: builder.mutation({
       query: (vendorData) => ({
@@ -437,7 +626,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Supplier"],
     }),
 
-    // Geo Fence
+    // Geo Fence Endpoints
     getGeoFences: builder.query({
       query: () => ({ url: "/admin/geofence", method: "GET" }),
       providesTags: ["GeoFence"],
@@ -865,8 +1054,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["ProductCategory"],
     }),
-
-    // Vendor Staff Endpoints
+    // Staff Endpoints
     getStaff: builder.query({
       query: () => ({
         url: "/crm/staff",
@@ -968,6 +1156,27 @@ export const {
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
+  
+  // Marketing hooks
+  useGetSmsTemplatesQuery,
+  useGetSmsTemplateByIdQuery,
+  useCreateSmsTemplateMutation,
+  useUpdateSmsTemplateMutation,
+  useDeleteSmsTemplateMutation,
+  
+  // SMS Package Endpoints
+  useGetSmsPackagesQuery,
+  useGetSmsPackageByIdQuery,
+  useCreateSmsPackageMutation,
+  useUpdateSmsPackageMutation,
+  useDeleteSmsPackageMutation,
+  
+  // Social Media Template Endpoints
+  useGetSocialMediaTemplatesQuery,
+  useGetSocialMediaTemplateByIdQuery,
+  useCreateSocialMediaTemplateMutation,
+  useUpdateSocialMediaTemplateMutation,
+  useDeleteSocialMediaTemplateMutation,
 
   // Geo Fence Endpoints
   useGetGeoFencesQuery,

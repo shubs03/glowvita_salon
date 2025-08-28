@@ -1,9 +1,9 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, Image as ImageIcon, Upload, Map, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Eye, EyeOff, Image as ImageIcon, Upload, Map, CheckCircle2, Building, MapPin, User, ChevronRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -12,12 +12,12 @@ import { Checkbox } from '@repo/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from '@repo/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import stateCityData from '@/lib/state-city.json';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../../../packages/config/config';
+import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../../packages/config/config';
 import { toast } from 'sonner';
 import { useVendorRegisterMutation } from '@repo/store/api';
+import { cn } from '@repo/ui/cn';
 
 const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
 
@@ -41,9 +41,47 @@ interface MapboxFeature {
   }>;
 }
 
-const states: State[] = stateCityData.states;
+const StepIndicator = ({ currentStep, setStep }) => {
+    const steps = [
+        { id: 1, name: 'Owner Details', icon: User },
+        { id: 2, name: 'Location', icon: MapPin },
+        { id: 3, name: 'Salon Details', icon: Building },
+    ];
 
-export function VendorRegistrationForm({ onSuccess }) {
+    return (
+        <nav aria-label="Progress">
+            <ol role="list" className="space-y-4 md:flex md:space-x-8 md:space-y-0">
+                {steps.map((step, index) => (
+                    <li key={step.name} className="md:flex-1">
+                        <div
+                            onClick={() => (step.id < currentStep ? setStep(step.id) : {})}
+                            className={cn(
+                                "group flex flex-col border-l-4 py-2 pl-4 transition-colors md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4",
+                                step.id < currentStep && "cursor-pointer",
+                                step.id === currentStep
+                                ? "border-primary"
+                                : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
+                            )}
+                        >
+                            <span className={cn(
+                                "text-sm font-medium transition-colors",
+                                step.id === currentStep ? "text-primary" : "text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400"
+                            )}>
+                                Step {step.id}
+                            </span>
+                            <span className="text-sm font-medium">{step.name}</span>
+                        </div>
+                    </li>
+                ))}
+            </ol>
+        </nav>
+    );
+};
+
+const VendorRegistrationFormContent = ({ onSuccess }) => {
+  const searchParams = useSearchParams();
+  const refCode = searchParams.get('ref');
+
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -53,7 +91,7 @@ export function VendorRegistrationForm({ onSuccess }) {
     phone: '',
     password: '',
     confirmPassword: '',
-    category: 'unisex' as SalonCategory,
+    category: '' as SalonCategory | '',
     subCategories: [] as SubCategory[],
     description: '',
     website: '',
@@ -63,7 +101,7 @@ export function VendorRegistrationForm({ onSuccess }) {
     city: '',
     pincode: '',
     location: null,
-    referredByCode: ''
+    referredByCode: refCode || ''
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -74,16 +112,14 @@ export function VendorRegistrationForm({ onSuccess }) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
-  const [cities, setCities] = useState<string[]>([]);
 
   const [registerVendor, { isLoading }] = useVendorRegisterMutation();
 
   useEffect(() => {
-    if (formData.state) {
-      const stateData = states.find(s => s.state === formData.state);
-      setCities(stateData ? stateData.districts : []);
+    if (refCode) {
+      setFormData(prev => ({...prev, referredByCode: refCode}));
     }
-  }, [formData.state]);
+  }, [refCode]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -155,8 +191,6 @@ export function VendorRegistrationForm({ onSuccess }) {
     }
   };
   
-  // MAPBOX LOGIC
-  // Copied from VendorEditForm and adapted
   useEffect(() => {
     if (!isMapOpen || !MAPBOX_TOKEN) return;
     const initMap = () => {
@@ -244,15 +278,15 @@ export function VendorRegistrationForm({ onSuccess }) {
       <CardHeader>
         <CardTitle className="text-2xl">Vendor Registration</CardTitle>
         <CardDescription>Complete the steps to create your vendor account.</CardDescription>
-        <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4">
-            <div className="bg-primary h-2.5 rounded-full" style={{ width: `${(step / 3) * 100}%` }}></div>
+        <div className="pt-4">
+            <StepIndicator currentStep={step} setStep={setStep} />
         </div>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit}>
           {step === 1 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Step 1: Business & Owner Details</h3>
+            <div className="space-y-4 animate-in fade-in-50 duration-500">
+              <h3 className="font-semibold text-lg border-b pb-2">Business & Owner Details</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <Input name="firstName" placeholder="First Name" onChange={handleInputChange} value={formData.firstName} required />
                 <Input name="lastName" placeholder="Last Name" onChange={handleInputChange} value={formData.lastName} required />
@@ -275,29 +309,23 @@ export function VendorRegistrationForm({ onSuccess }) {
             </div>
           )}
           {step === 2 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Step 2: Location Details</h3>
+            <div className="space-y-4 animate-in fade-in-50 duration-500">
+              <h3 className="font-semibold text-lg border-b pb-2">Location Details</h3>
                <div className="flex items-center gap-2">
                 <Input value={formData.location ? `${formData.location.lat.toFixed(4)}, ${formData.location.lng.toFixed(4)}` : ''} placeholder="Select location from map" readOnly />
                 <Button type="button" variant="outline" onClick={() => setIsMapOpen(true)}><Map className="mr-2 h-4 w-4" /> Choose from Map</Button>
               </div>
               <Input name="address" placeholder="Full Address" onChange={handleInputChange} value={formData.address} required />
                <div className="grid md:grid-cols-3 gap-4">
-                <Select name="state" onValueChange={(value) => setFormData(prev => ({...prev, state: value, city: ''}))} value={formData.state}>
-                  <SelectTrigger><SelectValue placeholder="State" /></SelectTrigger>
-                  <SelectContent>{states.map(s => <SelectItem key={s.state} value={s.state}>{s.state}</SelectItem>)}</SelectContent>
-                </Select>
-                <Select name="city" onValueChange={(value) => setFormData(prev => ({...prev, city: value}))} value={formData.city} disabled={!formData.state}>
-                  <SelectTrigger><SelectValue placeholder="City" /></SelectTrigger>
-                  <SelectContent>{cities.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
+                <Input name="state" placeholder="State" onChange={handleInputChange} value={formData.state} required />
+                <Input name="city" placeholder="City" onChange={handleInputChange} value={formData.city} required />
                 <Input name="pincode" placeholder="Pincode" onChange={handleInputChange} value={formData.pincode} required />
               </div>
             </div>
           )}
           {step === 3 && (
-            <div className="space-y-4">
-              <h3 className="font-semibold">Step 3: Salon Details</h3>
+            <div className="space-y-4 animate-in fade-in-50 duration-500">
+              <h3 className="font-semibold text-lg border-b pb-2">Salon Details</h3>
               <Select name="category" onValueChange={(value) => setFormData(prev => ({...prev, category: value as SalonCategory}))} value={formData.category}>
                 <SelectTrigger><SelectValue placeholder="Salon Category" /></SelectTrigger>
                 <SelectContent>
@@ -310,7 +338,7 @@ export function VendorRegistrationForm({ onSuccess }) {
                 <Label>Sub Categories</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {(['shop', 'shop-at-home', 'onsite'] as SubCategory[]).map(sc => (
-                    <div key={sc} className="flex items-center space-x-2">
+                    <div key={sc} className="flex items-center space-x-2 p-2 border rounded-md">
                       <Checkbox id={sc} checked={formData.subCategories.includes(sc)} onCheckedChange={(checked) => handleCheckboxChange(sc, checked as boolean)} />
                       <Label htmlFor={sc} className="capitalize">{sc.replace('-', ' ')}</Label>
                     </div>
@@ -323,8 +351,8 @@ export function VendorRegistrationForm({ onSuccess }) {
             </div>
           )}
           <div className="flex justify-between mt-6">
-            {step > 1 && <Button type="button" variant="outline" onClick={prevStep}>Back</Button>}
-            {step < 3 && <Button type="button" onClick={nextStep} className="ml-auto">Next</Button>}
+            {step > 1 ? <Button type="button" variant="outline" onClick={prevStep}>Back</Button> : <div />}
+            {step < 3 && <Button type="button" onClick={nextStep} className="ml-auto">Next <ChevronRight className="h-4 w-4 ml-1" /></Button>}
             {step === 3 && <Button type="submit" disabled={isLoading} className="ml-auto">{isLoading ? "Registering..." : "Complete Registration"}</Button>}
           </div>
         </form>
@@ -340,9 +368,9 @@ export function VendorRegistrationForm({ onSuccess }) {
             <div className="relative">
               <Input placeholder="Search for a location" value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); handleSearch(e.target.value); }} />
               {searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto mt-1">
+                <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-background shadow-lg max-h-48 overflow-y-auto mt-1">
                   {searchResults.map(result => (
-                    <div key={result.id} className="p-3 hover:bg-gray-100 cursor-pointer" onClick={() => handleSearchResultSelect(result)}>{result.place_name}</div>
+                    <div key={result.id} className="p-3 hover:bg-muted cursor-pointer" onClick={() => handleSearchResultSelect(result)}>{result.place_name}</div>
                   ))}
                 </div>
               )}
@@ -358,5 +386,13 @@ export function VendorRegistrationForm({ onSuccess }) {
         </DialogContent>
       </Dialog>
     </Card>
+  );
+}
+
+export function VendorRegistrationForm(props) {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VendorRegistrationFormContent {...props} />
+    </Suspense>
   );
 }

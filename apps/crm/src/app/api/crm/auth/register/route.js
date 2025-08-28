@@ -1,7 +1,8 @@
+
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import VendorModel from "../../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js";
-import { ReferralModel } from "../../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
+import { ReferralModel, V2VSettingsModel } from "../../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
 import _db from "../../../../../../../../packages/lib/src/db.js";
 import validator from "validator";
 
@@ -26,7 +27,7 @@ const generateReferralCode = async (businessName) => {
   return referralCode;
 };
 
-
+// Removed the authMiddlewareCrm wrapper to make this endpoint public for new registrations.
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -88,13 +89,24 @@ export async function POST(req) {
     if (referredByCode) {
       const referringVendor = await VendorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
       if (referringVendor) {
+        
+        // Fetch V2V referral settings to get dynamic bonus
+        const v2vSettings = await V2VSettingsModel.findOne({});
+        const bonusValue = v2vSettings?.referrerBonus?.bonusValue || 0; // Default to 0 if not set
+
+        // Explicitly generate the referralId here
+        const referralType = 'V2V';
+        const count = await ReferralModel.countDocuments({ referralType });
+        const referralId = `${referralType}-${String(count + 1).padStart(3, '0')}`;
+
         await ReferralModel.create({
-          referralType: 'V2V',
+          referralId,
+          referralType,
           referrer: referringVendor.businessName, // Or referringVendor._id
           referee: newVendor.businessName, // Or newVendor._id
           date: new Date(),
           status: 'Completed', // Or 'Pending' until first purchase
-          bonus: 'Pending Bonus' // Or calculate bonus based on settings
+          bonus: String(bonusValue),
         });
       }
     }
@@ -105,7 +117,7 @@ export async function POST(req) {
 
     return NextResponse.json({ message: "Vendor created successfully", vendor: vendorData }, { status: 201 });
   } catch (err) {
-    console.error("Vendor Registration Error:", err.message);
+    console.error("Vendor Registration Error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

@@ -1,47 +1,97 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
+// Import UI components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { MarketingForm } from './components/marketing/MarketingForm';
+import { SmsPackageForm } from "@/components/SmsPackageForm";
+import { SmsTemplateForm } from "@/components/SmsTemplateForm";
+import SocialMediaTemplateForm from "@/components/SocialMediaTemplateForm";
 import { Button } from "@repo/ui/button";
+import { toast } from 'sonner';
+import { Plus, Eye, Edit, Trash2, Ticket, CheckCircle, XCircle, DollarSign, MessageSquare, Megaphone, AlertCircle, Send, Users, Calendar, Power } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
-import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
-import { Textarea } from '@repo/ui/textarea';
-import { Plus, Eye, Edit, Trash2, Ticket, CheckCircle, XCircle, DollarSign, MessageSquare, Megaphone, AlertCircle, Send, Users, Calendar, Power } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Switch } from '@repo/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 
-// Data types for the marketing module
+// Import RTK Query hooks and types from the store
+import { 
+  useGetSmsTemplatesQuery,
+  useCreateSmsTemplateMutation,
+  useUpdateSmsTemplateMutation,
+  useDeleteSmsTemplateMutation,
+  useGetSmsPackagesQuery,
+  useCreateSmsPackageMutation,
+  useUpdateSmsPackageMutation,
+  useDeleteSmsPackageMutation,
+  useGetSocialMediaTemplatesQuery,
+  useCreateSocialMediaTemplateMutation,
+  useUpdateSocialMediaTemplateMutation,
+  useDeleteSocialMediaTemplateMutation
+} from '../../../../../packages/store/src/services/api';
 
-type SmsTemplate = {
+// TODO: Add SMS package endpoints to the API service
+// For now, we'll use template endpoints as a temporary solution
+
+// Base interface with common fields
+interface BaseEntity {
   id: string;
-  name: string;
-  type: string;
-  price: number;
-  status: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-};
+  _id?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  [key: string]: any; // Allow additional properties
+}
 
-type SmsPackage = {
-  id: string;
+interface SmsPackage extends BaseEntity {
   name: string;
+  description: string;
   smsCount: number;
   price: number;
-  description: string;
   validityDays: number;
   isPopular: boolean;
   features: string[];
-  createdAt: string;
-  updatedAt: string;
-};
+}
 
+interface SmsTemplate extends BaseEntity {
+  name: string;
+  content: string;
+  type: string;
+  status: string;
+  price?: number; // Added to fix the price property error
+}
+
+// Type guard functions
+function isSmsPackage(item: any): item is SmsPackage {
+  return item && 'smsCount' in item && 'validityDays' in item;
+}
+
+function isSmsTemplate(item: any): item is SmsTemplate {
+  return item && 'content' in item && 'type' in item;
+}
+
+function isSocialMediaPost(item: any): item is SocialMediaPost {
+  return item && 'platform' in item && 'scheduledDate' in item;
+}
+
+function isMarketingTicket(item: any): item is MarketingTicket {
+  return item && 'requestDate' in item && 'service' in item;
+}
+
+function isPurchaseHistory(item: any): item is PurchaseHistory {
+  return item && 'item' in item && 'amount' in item;
+}
+
+function isActiveCampaign(item: any): item is ActiveCampaign {
+  return item && 'campaignType' in item && 'budget' in item;
+}
+
+// Import selectors
+const selectAllSmsPackages = (state: any) => state.marketing?.smsPackages || [];
+const selectPopularSmsPackages = (state: any) => 
+  (state.marketing?.smsPackages || []).filter((pkg: any) => pkg.isPopular);
+
+// Additional types for the marketing module
 type SocialMediaPost = {
   id: string;
   title: string;
@@ -51,8 +101,8 @@ type SocialMediaPost = {
   image?: string;
   status: string;
   scheduledDate: string | null;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
 type MarketingTicket = {
@@ -98,119 +148,423 @@ type ActiveCampaign = {
   updatedAt: string;
 };
 
-type ModalDataType = SmsTemplate | SmsPackage | SocialMediaPost | MarketingTicket | PurchaseHistory | ActiveCampaign | null;
+type ModalDataType = SmsTemplate | SmsPackage | SocialMediaPost | MarketingTicket | PurchaseHistory | ActiveCampaign | Record<string, unknown> | null;
 
 export default function PlatformMarketingPage() {
-  const dispatch = useAppDispatch();
+  // Fetch SMS packages and templates
+  const { data: smsPackagesData = [], isLoading: isLoadingPackages } = useGetSmsPackagesQuery();
+  const { data: smsTemplatesData = [], isLoading: isLoadingTemplates, refetch: refetchTemplates } = useGetSmsTemplatesQuery();
   
-  // Select data from Redux store
-  const { 
-    smsTemplates,
-    smsPackages,
-    socialPosts,
-    marketingTickets,
-    purchaseHistory,
-    activeCampaigns,
-    loading,
-    error
-  } = useAppSelector((state) => ({
-    smsTemplates: state.marketing.smsTemplates,
-    smsPackages: state.marketing.smsPackages,
-    socialPosts: state.marketing.socialPosts,
-    marketingTickets: state.marketing.marketingTickets,
-    purchaseHistory: state.marketing.purchaseHistory,
-    activeCampaigns: state.marketing.activeCampaigns,
-    loading: state.marketing.loading,
-    error: state.marketing.error
-  }));
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<'add' | 'edit' | 'view' | 'confirm'>('add');
-  const [modalContent, setModalContent] = useState<React.ReactNode | null>(null);
-  const [modalTitle, setModalTitle] = useState('');
-  const [modalData, setModalData] = useState<ModalDataType>(null);
-  const [modalAction, setModalAction] = useState<(() => void) | null>(null);
-
-  // Initialize data on component mount
-  useEffect(() => {
-    // The initial social media posts are already defined in the Redux slice
-    // and will be automatically loaded when the store initializes
-  }, [dispatch]);
-
-  const handleFormSuccess = () => {
-    setIsModalOpen(false);
-    // You might want to add a toast notification here
-    // toast.success('Operation completed successfully!');
-  };
-
-  const openModal = (title: string, type: 'add' | 'edit' | 'view' | 'confirm', formType?: 'sms_template' | 'sms_package' | 'social_post', data: ModalDataType = null, onConfirm?: () => void) => {
-    setModalTitle(title);
-    setModalType(type);
+  const [createSmsPackage] = useCreateSmsPackageMutation();
+  const [updateSmsPackage] = useUpdateSmsPackageMutation();
+  const [deleteSmsPackage] = useDeleteSmsPackageMutation();
+  
+  const [createSmsTemplate] = useCreateSmsTemplateMutation();
+  const [updateSmsTemplate] = useUpdateSmsTemplateMutation();
+  const [deleteSmsTemplate] = useDeleteSmsTemplateMutation();
+  
+  // Create a custom hook for the mutation to handle JSON headers
+  const [createSocialMediaTemplate, { isLoading: isCreatingSocialTemplate }] = 
+    useCreateSocialMediaTemplateMutation();
     
-    if (formType) {
-      setFormData(data || {});
-      setModalContent(
-        <MarketingForm 
-          type={formType} 
-          data={data || {}} 
-          onSuccess={handleFormSuccess}
-          mode={type === 'view' ? 'view' : type === 'edit' ? 'edit' : 'add'}
-        />
-      );
-    } else if (data) {
-      setModalContent(viewDetails(data));
+  // Wrap the mutation to ensure JSON content type and auth
+  const createTemplate = useCallback(async (data: any) => {
+    // Get the auth state from localStorage
+    const authState = localStorage.getItem('adminAuthState');
+    if (!authState) {
+      throw new Error('Not authenticated');
     }
     
-    setModalData(data);
-    if (onConfirm) setModalAction(() => onConfirm);
-    setIsModalOpen(true);
+    const { token } = JSON.parse(authState);
+    
+    if (!token) {
+      console.error('No auth token found');
+      throw new Error('Authentication token not found');
+    }
+    
+    console.log('Sending request with token:', token ? 'Token exists' : 'No token');
+    
+    const response = await fetch('/api/admin/social-media-templates', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'admin-authorization': `Bearer ${token}` // Updated header name to match middleware
+      },
+      credentials: 'include', // Include cookies for auth
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+      let errorMessage = 'Failed to create template';
+      
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // If we can't parse the error as JSON, use the raw text
+        errorMessage = errorText || errorMessage;
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    return response.json();
+  }, []);
+  
+  const [
+    updateSocialMediaTemplate,
+    { isLoading: isUpdatingSocialTemplate }
+  ] = useUpdateSocialMediaTemplateMutation();
+  
+  const [
+    deleteSocialMediaTemplate,
+    { isLoading: isDeletingSocialTemplate }
+  ] = useDeleteSocialMediaTemplateMutation();
+  
+  const { 
+    data: socialMediaTemplatesResponse, 
+    isLoading: isLoadingSocialTemplates,
+    refetch: refetchSocialMediaTemplates 
+  } = useGetSocialMediaTemplatesQuery();
+  
+  // Cast the data to proper types since we know the shape from the API
+  const smsPackages = Array.isArray(smsPackagesData) ? smsPackagesData as SmsPackage[] : [];
+  const smsTemplates = Array.isArray(smsTemplatesData) ? smsTemplatesData as SmsTemplate[] : [];
+  const marketingTickets: MarketingTicket[] = [];
+  const purchaseHistory: PurchaseHistory[] = [];
+  const activeCampaigns: ActiveCampaign[] = [];
+  const popularPackages = smsPackages.filter((pkg: SmsPackage) => pkg.isPopular);
+  
+  // Ensure socialMediaTemplates is always an array
+  const socialMediaTemplates = Array.isArray(socialMediaTemplatesResponse?.data) 
+    ? socialMediaTemplatesResponse.data 
+    : Array.isArray(socialMediaTemplatesResponse)
+      ? socialMediaTemplatesResponse
+      : [];
+  
+  // Alias for backward compatibility
+  const socialPosts = socialMediaTemplates;
+
+  const [isPackageFormOpen, setIsPackageFormOpen] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<Partial<SmsPackage> | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isTemplateFormOpen, setIsTemplateFormOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<Partial<SmsTemplate> | null>(null);
+  const [isDeleteTemplateModalOpen, setIsDeleteTemplateModalOpen] = useState(false);
+  const [isEditTemplateMode, setIsEditTemplateMode] = useState(false);
+  const [isSocialMediaTemplateFormOpen, setIsSocialMediaTemplateFormOpen] = useState(false);
+  const [isEditSocialMediaTemplateMode, setIsEditSocialMediaTemplateMode] = useState(false);
+  const [selectedSocialMediaTemplate, setSelectedSocialMediaTemplate] = useState<any>(null);
+
+  // Social media templates are automatically fetched by the useGetSocialMediaTemplatesQuery hook
+
+  const handleDeleteClick = (pkg: SmsPackage) => {
+    setSelectedPackage(pkg);
+    setIsDeleteModalOpen(true);
   };
 
-  const [formData, setFormData] = useState<any>({});
-  
-  const handleDelete = (type: string, id: string) => {
-    const confirmDelete = () => {
-      if (type === 'sms_template') {
-        dispatch({ type: 'marketing/deleteSmsTemplate', payload: id });
-      } else if (type === 'sms_package') {
-        dispatch({ type: 'marketing/deleteSmsPackage', payload: id });
-      } else if (type === 'social_post') {
-        dispatch({ type: 'marketing/deleteSocialPost', payload: id });
+  const handleConfirmDelete = async () => {
+    if (!selectedPackage) return;
+    
+    try {
+      const id = selectedPackage._id || selectedPackage.id;
+      if (!id) {
+        throw new Error('No package ID found');
       }
-      setIsModalOpen(false);
-    };
+      await deleteSmsPackage(id).unwrap();
+      toast.success('Package deleted successfully');
+    } catch (error) {
+      console.error('Failed to delete package:', error);
+      toast.error('Failed to delete package');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setSelectedPackage(null);
+    }
+  };
 
-    openModal(
-      'Confirm Delete',
-      'confirm',
-      undefined,
-      { id, type },
-      confirmDelete
+  const handleOpenPackageForm = useCallback((pkg: Partial<SmsPackage> | null = null) => {
+    setSelectedPackage(pkg ? { ...pkg } : null);
+    setIsEditMode(!!pkg);
+    setIsPackageFormOpen(true);
+  }, []);
+
+  const handlePackageSubmit = useCallback(async (formData: SmsPackage) => {
+    try {
+      if (isEditMode && selectedPackage) {
+        const id = selectedPackage._id || selectedPackage.id;
+        if (id) {
+          await updateSmsPackage({ id, ...formData }).unwrap();
+          toast.success('Package updated successfully');
+        }
+      } else {
+        await createSmsPackage(formData).unwrap();
+        toast.success('Package created successfully');
+      }
+      setIsPackageFormOpen(false);
+      setSelectedPackage(null);
+    } catch (error) {
+      console.error('Failed to save package:', error);
+      toast.error('Failed to save package');
+    }
+  }, [isEditMode, selectedPackage, createSmsPackage, updateSmsPackage]);
+
+  const handleOpenTemplateForm = (template: Partial<SmsTemplate> | null = null) => {
+    setSelectedTemplate(template ? { ...template } : null);
+    setIsEditTemplateMode(!!template);
+    setIsTemplateFormOpen(true);
+  };
+
+  const handleTemplateSubmit = async (formData: SmsTemplate) => {
+    try {
+      if (isEditTemplateMode && (selectedTemplate?.id || selectedTemplate?._id)) {
+        const id = selectedTemplate.id || selectedTemplate._id || '';
+        await updateSmsTemplate({ id, ...formData }).unwrap();
+        toast.success('Template updated successfully');
+      } else {
+        await createSmsTemplate(formData).unwrap();
+        toast.success('Template created successfully');
+      }
+      setIsTemplateFormOpen(false);
+      setSelectedTemplate(null);
+      // Force refetch templates
+      refetchTemplates();
+    } catch (error) {
+      console.error('Failed to save template:', error);
+      toast.error(error?.data?.message || 'Failed to save template');
+    }
+  };
+
+  const handleOpenSocialMediaTemplateForm = useCallback((template: any = null) => {
+    setSelectedSocialMediaTemplate(template);
+    setIsEditSocialMediaTemplateMode(!!template);
+    setIsSocialMediaTemplateFormOpen(true);
+  }, []);
+
+  // Custom function to update a social media template
+  const updateTemplate = useCallback(async (data: any) => {
+    try {
+      const authState = localStorage.getItem('adminAuthState');
+      if (!authState) {
+        throw new Error('Not authenticated');
+      }
+      
+      const { token } = JSON.parse(authState);
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const id = data.id || data._id;
+      if (!id) {
+        throw new Error('Template ID is required for update');
+      }
+      
+      const response = await fetch(`/api/admin/social-media-templates?id=${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'admin-authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to update template');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating template:', error);
+      throw error;
+    }
+  }, []);
+
+  // Custom function to delete a social media template
+  const deleteTemplate = useCallback(async (id: string) => {
+    try {
+      const authState = localStorage.getItem('adminAuthState');
+      if (!authState) {
+        throw new Error('Not authenticated');
+      }
+      
+      const { token } = JSON.parse(authState);
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      const response = await fetch(`/api/admin/social-media-templates?id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          'admin-authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to delete template');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      throw error;
+    }
+  }, []);
+
+  const handleSocialMediaTemplateSubmit = useCallback(async (formData: any) => {
+    try {
+      const authState = localStorage.getItem('adminAuthState');
+      if (!authState) {
+        throw new Error('Not authenticated');
+      }
+      
+      const { token } = JSON.parse(authState);
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      const isEdit = isEditSocialMediaTemplateMode && (selectedSocialMediaTemplate?.id || selectedSocialMediaTemplate?._id);
+      const id = isEdit ? (selectedSocialMediaTemplate.id || selectedSocialMediaTemplate._id) : null;
+      
+      let formDataToSend: FormData;
+      
+      // If formData is already a FormData object, use it directly
+      if (formData instanceof FormData) {
+        formDataToSend = formData;
+        // If editing, append the ID
+        if (id) {
+          formDataToSend.append('id', id);
+        }
+      } else {
+        // If it's a plain object, create a new FormData and populate it
+        formDataToSend = new FormData();
+        Object.entries(formData).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            formDataToSend.append(key, value as string | Blob);
+          }
+        });
+        if (id) {
+          formDataToSend.append('id', id);
+        }
+      }
+
+      // Make the appropriate API call
+      const response = await fetch(
+        `/api/admin/social-media-templates${id ? `?id=${id}` : ''}`, 
+        {
+          method: isEdit ? 'PUT' : 'POST',
+          headers: {
+            'admin-authorization': `Bearer ${token}`
+          },
+          body: formDataToSend
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to ${isEdit ? 'update' : 'create'} template`);
+      }
+
+      const result = await response.json();
+      
+      toast.success(`Template ${isEdit ? 'updated' : 'created'} successfully`);
+      setIsSocialMediaTemplateFormOpen(false);
+      setSelectedSocialMediaTemplate(null);
+      refetchSocialMediaTemplates();
+      
+      return result;
+    } catch (error) {
+      console.error('Failed to save social media template:', error);
+      toast.error(error?.message || error?.data?.message || 'Failed to save social media template');
+      throw error;
+    }
+  }, [isEditSocialMediaTemplateMode, selectedSocialMediaTemplate, createTemplate, updateTemplate, refetchSocialMediaTemplates]);
+
+  const handleDeleteSocialMediaTemplate = useCallback(async (id: string) => {
+    if (!id) return;
+    
+    try {
+      await deleteTemplate(id);
+      toast.success('Template deleted successfully');
+      refetchSocialMediaTemplates();
+    } catch (error) {
+      console.error('Failed to delete social media template:', error);
+      toast.error(error?.message || error?.data?.message || 'Failed to delete template');
+    }
+  }, [deleteTemplate, refetchSocialMediaTemplates]);
+
+  const handleDeleteTemplateClick = (template: SmsTemplate) => {
+    setSelectedTemplate(template);
+    setIsDeleteTemplateModalOpen(true);
+  };
+
+  const handleConfirmDeleteTemplate = async () => {
+    if (!selectedTemplate) return;
+    
+    try {
+      const id = selectedTemplate._id || selectedTemplate.id;
+      if (!id) {
+        throw new Error('No template ID found');
+      }
+      await deleteSmsTemplate(id).unwrap();
+      toast.success('Template deleted successfully');
+      refetchTemplates();
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+      toast.error(error?.data?.message || 'Failed to delete template');
+    } finally {
+      setIsDeleteTemplateModalOpen(false);
+      setSelectedTemplate(null);
+    }
+  };
+
+  const handleDelete = async (type: 'sms_package' | 'sms_template' | 'social_post', id: string) => {
+    try {
+      if (type === 'sms_package') {
+        await deleteSmsPackage(id).unwrap();
+        toast.success('Package deleted successfully');
+      } else if (type === 'sms_template') {
+        await deleteSmsTemplate(id).unwrap();
+        toast.success('Template deleted successfully');
+        refetchTemplates();
+      } else if (type === 'social_post') {
+        await deleteSocialMediaTemplate(id).unwrap();
+        toast.success('Social media template deleted successfully');
+        refetchSocialMediaTemplates();
+      }
+    } catch (error) {
+      console.error('Failed to delete:', error);
+      toast.error(error?.data?.message || 'Failed to delete item');
+    }
+  };
+
+  const viewDetails = (data: Record<string, unknown> | null) => {
+    if (!data) return null;
+    
+    return (
+      <div className="space-y-2">
+        {Object.entries(data).map(([key, value]) => (
+          <div key={key} className="flex justify-between border-b pb-1">
+            <span className="font-semibold capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
+            <span>{value !== null && value !== undefined ? String(value) : 'N/A'}</span>
+          </div>
+        ))}
+      </div>
     );
   };
-  
-  // This function is no longer needed as the form handles its own state
-  const handleFormChange = (field: string, value: any) => {
-    setFormData((prev: any) => ({
-      ...prev,
-      [field]: value
-    }));
-  };
 
-  const viewDetails = (data: any) => (
-    <div className="space-y-2">
-      {Object.entries(data).map(([key, value]) => (
-        <div key={key} className="flex justify-between border-b pb-1">
-          <span className="font-semibold capitalize">{key.replace(/([A-Z])/g, ' $1')}:</span>
-          <span>{String(value)}</span>
-        </div>
-      ))}
-    </div>
-  );
+
+  // Data is automatically fetched by RTK Query hooks
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Platform Marketing</h1>
+      <div>
       
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
             <Card>
@@ -260,7 +614,7 @@ export default function PlatformMarketingPage() {
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="sms_templates">SMS Templates</TabsTrigger>
             <TabsTrigger value="sms_packages">SMS Packages</TabsTrigger>
-            <TabsTrigger value="social_media">Social Posts</TabsTrigger>
+            <TabsTrigger value="social_media">Social Media Template</TabsTrigger>
             <TabsTrigger value="marketing_tickets">Marketing Tickets</TabsTrigger>
             <TabsTrigger value="purchase_history">Purchase History</TabsTrigger>
             <TabsTrigger value="active_campaigns">Active Campaigns</TabsTrigger>
@@ -274,7 +628,7 @@ export default function PlatformMarketingPage() {
                             <CardTitle>SMS Templates</CardTitle>
                             <CardDescription>Manage predefined SMS templates for vendors.</CardDescription>
                         </div>
-                            <Button onClick={() => openModal('Create New SMS Template', 'add', 'sms_template')}>
+                            <Button onClick={() => handleOpenTemplateForm()}>
                                 <Plus className="mr-2 h-4 w-4" />
                                 Create Template
                             </Button>
@@ -294,12 +648,12 @@ export default function PlatformMarketingPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {smsTemplates?.map(t => (
-                                    <TableRow key={t.id}>
-                                        <TableCell>{t.id}</TableCell>
+                                {smsTemplates?.map((t, index) => (
+                                    <TableRow key={t.id || t._id}>
+                                        <TableCell>{`TMP${String(index + 1).padStart(3, '0')}`}</TableCell>
                                         <TableCell>{t.name}</TableCell>
                                         <TableCell>{t.type}</TableCell>
-                                        <TableCell>₹{(t.price / 100).toFixed(2)}</TableCell>
+                                        <TableCell>₹{t.price }</TableCell>
                                         <TableCell>
                                             <span className={`px-2 py-1 text-xs rounded-full ${
                                                 t.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -312,14 +666,8 @@ export default function PlatformMarketingPage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    onClick={() => openModal('View Template', 'view', 'sms_template', t)}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    onClick={() => openModal('Edit Template', 'edit', 'sms_template', t)}
+                                                    onClick={() => handleOpenTemplateForm(t)}
+                                                    title="Edit template"
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                 </Button>
@@ -327,7 +675,8 @@ export default function PlatformMarketingPage() {
                                                     variant="ghost" 
                                                     size="icon" 
                                                     className="text-destructive hover:text-destructive/80"
-                                                    onClick={() => handleDelete('sms_template', t.id)}
+                                                    onClick={() => handleDeleteTemplateClick(t)}
+                                                    title="Delete template"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
@@ -357,7 +706,7 @@ export default function PlatformMarketingPage() {
                             <CardTitle>SMS Packages</CardTitle>
                             <CardDescription>Create and manage bulk SMS packages for vendors.</CardDescription>
                         </div>
-                        <Button onClick={() => openModal('Create New SMS Package', 'add', 'sms_package')}>
+                        <Button onClick={() => handleOpenPackageForm()}>
                             <Plus className="mr-2 h-4 w-4" />
                             Create Package
                         </Button>
@@ -368,7 +717,6 @@ export default function PlatformMarketingPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Package ID</TableHead>
                                     <TableHead>Name</TableHead>
                                     <TableHead>SMS Count</TableHead>
                                     <TableHead>Price</TableHead>
@@ -377,10 +725,9 @@ export default function PlatformMarketingPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {smsPackages?.map(pkg => (
+                                {smsPackages.map((pkg: SmsPackage) => (
                                     <TableRow key={pkg.id}>
-                                        <TableCell>{pkg.id}</TableCell>
-                                        <TableCell className="font-medium">
+                                        <TableCell>
                                             {pkg.name}
                                             {pkg.isPopular && (
                                                 <span className="ml-2 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
@@ -389,19 +736,27 @@ export default function PlatformMarketingPage() {
                                             )}
                                         </TableCell>
                                         <TableCell>{pkg.smsCount.toLocaleString()}</TableCell>
-                                        <TableCell>₹{(pkg.price / 100).toFixed(2)}</TableCell>
+                                        <TableCell>₹{pkg.price.toFixed(2)}</TableCell>
                                         <TableCell>{pkg.validityDays} days</TableCell>
                                         <TableCell>
                                             <div className="flex space-x-2">
-                                                <Button variant="ghost" size="icon" onClick={() => openModal('View Package', 'view', 'sms_package', pkg)}>
+                                                <Button variant="ghost" size="icon" onClick={() => openModal('View Package', 'view', 'sms_package', pkg as any)}>
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => openModal('Edit Package', 'edit', 'sms_package', pkg)}>
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDelete('sms_package', pkg.id)}>
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
+                                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleOpenPackageForm(pkg)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                                <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClick(pkg)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -418,99 +773,135 @@ export default function PlatformMarketingPage() {
                 <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
-                            <CardTitle>Social Media Posts</CardTitle>
-                            <CardDescription>Manage your social media marketing content.</CardDescription>
+                            <CardTitle>Social Media Templates</CardTitle>
+                            <CardDescription>Manage your social media marketing templates.</CardDescription>
                         </div>
-                        <Button onClick={() => openModal('Create New Social Post', 'add', 'social_post')}>
+                        <Button 
+                            onClick={() => handleOpenSocialMediaTemplateForm()}
+                            disabled={isCreatingSocialTemplate || isUpdatingSocialTemplate}
+                        >
                             <Plus className="mr-2 h-4 w-4" />
-                            Create Post
+                            {isCreatingSocialTemplate || isUpdatingSocialTemplate ? 'Saving...' : 'Create Template'}
                         </Button>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="overflow-x-auto no-scrollbar">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Title</TableHead>
-                                    <TableHead>Platform</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Price</TableHead>
-                                    <TableHead>Scheduled Date</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {socialPosts?.map((post: SocialMediaPost) => (
-                                    <TableRow key={post.id}>
-                                        <TableCell className="font-medium">
-                                            <div className="flex items-center space-x-2">
-                                                {post.image && (
-                                                    <div className="h-10 w-10 rounded-md overflow-hidden">
-                                                        <img 
-                                                            src={post.image} 
-                                                            alt={post.title} 
-                                                            className="h-full w-full object-cover"
-                                                        />
-                                                    </div>
-                                                )}
-                                                <span>{post.title}</span>
-                                            </div>
+                    {isLoadingSocialTemplates ? (
+                        <div className="flex justify-center items-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto no-scrollbar">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Post Title</TableHead>
+                                        <TableHead>Category</TableHead>
+                                        <TableHead>Availability</TableHead>
+                                        <TableHead>Images</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {socialMediaTemplates?.map((template: any) => (
+                                        <TableRow key={template.id || template._id}>
+                                            <TableCell className="font-medium">
+                                            {template.title || 'Untitled'}
                                         </TableCell>
-                                        <TableCell>{post.platform}</TableCell>
                                         <TableCell>
-                                            <span className={`px-2 py-1 text-xs rounded-full ${
-                                                post.status === 'Active' ? 'bg-green-100 text-green-800' : 
-                                                post.status === 'Draft' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-gray-100 text-gray-800'
-                                            }`}>
-                                                {post.status}
+                                            <span className="capitalize">{template.category || 'Uncategorized'}</span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                                                {template.availableFor || 'admin'}
                                             </span>
                                         </TableCell>
-                                        <TableCell>₹{(post.price / 100).toFixed(2)}</TableCell>
                                         <TableCell>
-                                            {post.scheduledDate ? 
-                                                new Date(post.scheduledDate).toLocaleDateString() : 
-                                                'Not scheduled'}
+                                            {(() => {
+                                                // Use imageUrl from the template
+                                                const imageSrc = template.imageUrl;
+                                                
+                                                if (imageSrc) {
+                                                    // Check if it's a base64 string
+                                                    const isBase64 = imageSrc.startsWith('data:image');
+                                                    
+                                                    // If it's not base64, construct the full URL
+                                                    const src = isBase64 
+                                                        ? imageSrc 
+                                                        : imageSrc.startsWith('http') || imageSrc.startsWith('/')
+                                                            ? imageSrc
+                                                            : `${process.env.NEXT_PUBLIC_API_URL || ''}/uploads/${imageSrc}`;
+                                                        
+                                                    return (
+                                                        <div className="h-20 w-20 rounded-md overflow-hidden border">
+                                                            <img 
+                                                                src={src}
+                                                                alt={template.title || 'Post image'} 
+                                                                className="h-full w-full object-cover"
+                                                                onError={(e) => {
+                                                                    console.error('Error loading image:', {
+                                                                        src: src.substring(0, 50) + '...',
+                                                                        isBase64,
+                                                                        templateId: template._id || template.id
+                                                                    });
+                                                                    e.currentTarget.style.display = 'none';
+                                                                    e.currentTarget.parentElement.innerHTML = (
+                                                                        '<div class="h-20 w-20 rounded-md bg-red-50 flex items-center justify-center">' +
+                                                                        '<span class="text-red-400 text-xs text-center">Image Error</span>' +
+                                                                        '</div>'
+                                                                    );
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    );
+                                                }
+                                                
+                                                return (
+                                                    <div className="h-20 w-20 rounded-md bg-gray-100 flex items-center justify-center">
+                                                        <span className="text-gray-400 text-xs text-center">No image</span>
+                                                    </div>
+                                                );
+                                            })()}
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end space-x-2">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    onClick={() => openModal('View Post', 'view', 'social_post', post)}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    onClick={() => openModal('Edit Post', 'edit', 'social_post', post)}
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    className="text-destructive"
-                                                    onClick={() => handleDelete('social_post', post.id)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                                {(!socialPosts || socialPosts.length === 0) && (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
-                                            No social media posts found. Create one to get started.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end space-x-2">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        onClick={() => handleOpenSocialMediaTemplateForm(template)}
+                                                        disabled={isDeletingSocialTemplate}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="text-destructive hover:text-destructive/80"
+                                                        onClick={() => handleDeleteSocialMediaTemplate(template.id || template._id)}
+                                                        disabled={isDeletingSocialTemplate}
+                                                        title="Delete template"
+                                                    >
+                                                        {isDeletingSocialTemplate ? (
+                                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                                                        ) : (
+                                                            <Trash2 className="h-4 w-4" />
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {(!socialMediaTemplates || socialMediaTemplates.length === 0) && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                                                No social media templates found. Create one to get started.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </TabsContent>
@@ -747,36 +1138,83 @@ export default function PlatformMarketingPage() {
         </TabsContent>
       </Tabs>
       
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+      {/* SMS Template Form Dialog */}
+      <SmsTemplateForm
+        isOpen={isTemplateFormOpen}
+        onClose={() => setIsTemplateFormOpen(false)}
+        templateData={selectedTemplate || {}}
+        isEditMode={isEditTemplateMode}
+        onSubmit={handleTemplateSubmit}
+      />
+      
+      {/* SMS Package Form Dialog */}
+      <SmsPackageForm
+        key={`package-form-${isPackageFormOpen ? 'open' : 'closed'}`}
+        isOpen={isPackageFormOpen}
+        onClose={() => {
+          setIsPackageFormOpen(false);
+          setSelectedPackage(null);
+        }}
+        packageData={selectedPackage || undefined}
+        isEditMode={isEditMode}
+        onSubmit={handlePackageSubmit}
+      />
+
+      {/* Social Media Template Form Dialog */}
+      <Dialog open={isSocialMediaTemplateFormOpen} onOpenChange={setIsSocialMediaTemplateFormOpen}>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>{modalTitle}</DialogTitle>
+            <DialogTitle>
+              {isEditSocialMediaTemplateMode ? 'Edit Social Media Template' : 'Create New Social Media Template'}
+            </DialogTitle>
             <DialogDescription>
-              {modalType === 'confirm' 
-                ? 'Are you sure you want to perform this action? This cannot be undone.'
-                : modalType === 'view' 
-                  ? 'Viewing details of the selected item.'
-                  : `Fill in the form to ${modalType === 'add' ? 'add a new' : 'update the'} item.`}
+              {isEditSocialMediaTemplateMode ? 'Update the social media template details.' : 'Fill in the details to create a new social media template.'}
             </DialogDescription>
           </DialogHeader>
-          {modalContent}
-          {modalType === 'confirm' && (
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={modalAction}>
-                Confirm
-              </Button>
-            </DialogFooter>
-          )}
-          {modalType === 'view' && (
-            <DialogFooter>
-              <Button onClick={() => setIsModalOpen(false)}>Close</Button>
-            </DialogFooter>
-          )}
+          <SocialMediaTemplateForm
+            initialData={selectedSocialMediaTemplate}
+            onSubmit={handleSocialMediaTemplateSubmit}
+            onCancel={() => {
+              setIsSocialMediaTemplateFormOpen(false);
+              setSelectedSocialMediaTemplate(null);
+            }}
+            isSubmitting={isCreatingSocialTemplate || isUpdatingSocialTemplate}
+          />
         </DialogContent>
       </Dialog>
+
+      {/* Delete Package Confirmation Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Package?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the package "{selectedPackage?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Template Confirmation Modal */}
+      <Dialog open={isDeleteTemplateModalOpen} onOpenChange={setIsDeleteTemplateModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Template?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the template "{selectedTemplate?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteTemplateModalOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmDeleteTemplate}>Delete Template</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      </div>
     </div>
   );
 }

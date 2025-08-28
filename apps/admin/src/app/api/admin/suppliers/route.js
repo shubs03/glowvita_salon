@@ -23,19 +23,19 @@ const validateSupplierData = (data) => {
 }
 
 // GET all suppliers
-export const GET = authMiddlewareAdmin(async (req) => {
+export const GET = async (req) => {
   try {
     const suppliers = await SupplierModel.find({});
     return NextResponse.json(suppliers, { status: 200 });
   } catch (error) {
     console.error("Error fetching suppliers:", error);
     return NextResponse.json({ message: "Error fetching suppliers", error: error.message }, { status: 500 });
-  }
-}, ["superadmin", "admin"]);
+  } 
+};
 
 // POST a new supplier
 
-export const POST = authMiddlewareAdmin(async (req) => {
+export const POST = async (req) => {
   try {
     const body = await req.json();
     const { licenseFile, password, ...supplierData } = body;
@@ -74,7 +74,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["superadmin"]);
+};
 
 
 // PUT (update) a supplier  

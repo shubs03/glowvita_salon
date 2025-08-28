@@ -73,20 +73,20 @@ const SkeletonLoader = () => (
 
 
 export default function ReferralsPage() {
-    const { user } = useCrmAuth();
-    const { data: referralsData, isLoading } = useGetReferralsQuery('V2V', {
+    const { user, isLoading: isAuthLoading } = useCrmAuth();
+    const { data: referralsData, isLoading: isReferralsLoading, isError } = useGetReferralsQuery('V2V', {
         skip: !user
     });
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
     
-    const referralLink = user?.referralCode 
-        ? `https://monorepo-maestro.com/signup?ref=${user.referralCode}`
+    const referralLink = user?.referralCode && typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/register?ref=${user.referralCode}`
         : "Loading your referral link...";
 
     const referrals = useMemo(() => {
-        if (!referralsData || !user) return [];
+        if (!Array.isArray(referralsData) || !user) return [];
         // Filter referrals where the current user is the referrer
         return referralsData.filter((r: any) => r.referrer === user.businessName);
     }, [referralsData, user]);
@@ -114,12 +114,17 @@ export default function ReferralsPage() {
         }
     };
     
-    if (isLoading) {
+    if (isAuthLoading || isReferralsLoading) {
         return <SkeletonLoader />;
     }
-
-    const totalBonusEarned = referrals.filter((r: Referral) => r.status === 'Bonus Paid').length * 500; // Assuming 500 is the bonus
     
+    if (isError) {
+        return <div className="p-8 text-center text-destructive">Failed to load referral data. Please try again.</div>
+    }
+
+    const totalBonusEarned = referrals.filter((r: Referral) => r.status === 'Bonus Paid').reduce((acc, r) => acc + (Number(r.bonus) || 0), 0);
+    const successfulReferrals = referrals.filter(r => r.status !== 'Pending').length;
+
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl font-bold font-headline mb-6">Refer a Vendor</h1>
@@ -141,7 +146,7 @@ export default function ReferralsPage() {
                         <CheckCircle className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-green-600">{referrals.filter(r => r.status !== 'Pending').length}</div>
+                        <div className="text-2xl font-bold text-green-600">{successfulReferrals}</div>
                         <p className="text-xs text-muted-foreground">Vendors who successfully signed up</p>
                     </CardContent>
                 </Card>
