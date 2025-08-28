@@ -81,7 +81,7 @@ export default function ReferralsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
     
-    const referralLink = user?.referralCode 
+    const referralLink = user?.referralCode && typeof window !== 'undefined'
         ? `${window.location.origin}/auth/register?ref=${user.referralCode}`
         : "Loading your referral link...";
 
