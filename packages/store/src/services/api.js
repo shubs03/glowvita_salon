@@ -23,8 +23,12 @@ const baseQuery = async (args, api, extraOptions) => {
 
   if (requestUrl.startsWith("/admin")) {
     targetService = "admin";
-    // If the CRM user is authenticated and making a request to an admin endpoint, use the CRM token.
-    token = state.adminAuth.token || state.crmAuth.token;
+    // Check if the request is from an authenticated CRM user
+    if (state.crmAuth?.isCrmAuthenticated && state.crmAuth?.token) {
+      token = state.crmAuth.token;
+    } else {
+      token = state.adminAuth.token;
+    }
   } else if (requestUrl.startsWith("/crm")) {
     targetService = "crm";
     token = state.crmAuth.token;
@@ -1054,7 +1058,6 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["ProductCategory"],
     }),
-
     // Staff Endpoints
     getStaff: builder.query({
       query: () => ({
