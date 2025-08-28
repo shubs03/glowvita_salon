@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Share2, Users, Gift, CheckCircle, Copy } from 'lucide-react';
+import { Share2, Users, Gift, CheckCircle, Copy, UserPlus } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
@@ -173,6 +173,42 @@ export default function ReferralsPage() {
                         <Button onClick={handleCopyLink} className="w-full sm:w-auto" disabled={!user?.referralCode}>
                             <Copy className="mr-2 h-4 w-4" /> Copy Link
                         </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="mb-6">
+                <CardHeader>
+                    <CardTitle>How It Works</CardTitle>
+                    <CardDescription>Earn rewards in 3 simple steps.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-3 gap-6 text-center">
+                    <div className="flex flex-col items-center p-4">
+                        <div className="mb-4 bg-primary/10 text-primary p-4 rounded-full">
+                            <Share2 className="h-8 w-8" />
+                        </div>
+                        <h3 className="font-semibold mb-1">1. Share Your Link</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Copy your personal referral link and share it with other salon owners.
+                        </p>
+                    </div>
+                    <div className="flex flex-col items-center p-4">
+                        <div className="mb-4 bg-primary/10 text-primary p-4 rounded-full">
+                            <UserPlus className="h-8 w-8" />
+                        </div>
+                        <h3 className="font-semibold mb-1">2. They Sign Up</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Your friend uses your link to register their salon on our platform.
+                        </p>
+                    </div>
+                    <div className="flex flex-col items-center p-4">
+                        <div className="mb-4 bg-primary/10 text-primary p-4 rounded-full">
+                            <Gift className="h-8 w-8" />
+                        </div>
+                        <h3 className="font-semibold mb-1">3. Get Rewarded</h3>
+                        <p className="text-sm text-muted-foreground">
+                           Once their registration is complete, you receive a bonus in your account.
+                        </p>
                     </div>
                 </CardContent>
             </Card>
