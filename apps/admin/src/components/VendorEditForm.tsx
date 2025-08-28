@@ -67,6 +67,7 @@ export interface Vendor {
   city: string;
   pincode: string;
   address: string;
+  password?: string;
   subscription?: Subscription;
   gallery?: string[];
   documents?: Document[];
@@ -98,13 +99,15 @@ interface MapboxFeature {
   }>;
 }
 
-const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxChange, errors, setFormData }) => {
+const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxChange, errors, setFormData, isEditMode }) => {
   const [isMapOpen, setIsMapOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
 
   // Initialize Mapbox when modal opens
   useEffect(() => {
@@ -164,7 +167,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
         });
       } catch (error) {
         console.error('Error initializing Mapbox:', error);
-        setErrors(prev => ({ ...prev, location: 'Failed to load map. Please check Mapbox configuration.' }));
+        setFormData(prev => ({ ...prev, errors: { ...prev.errors, location: 'Failed to load map.' } }));
       }
     };
 
@@ -289,18 +292,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
         setFormData((prev: Vendor) => ({
           ...prev,
           profileImage: reader.result as string,
-          firstName: prev.firstName || '',
-          lastName: prev.lastName || '',
-          email: prev.email || '',
-          phone: prev.phone || '',
-          businessName: prev.businessName || '',
-          category: prev.category || 'unisex',
-          subCategories: prev.subCategories || [],
-          description: prev.description || '',
-          state: prev.state || '',
-          city: prev.city || '',
-          pincode: prev.pincode || '',
-          address: prev.address || ''
         }));
       };
       reader.readAsDataURL(file);
@@ -324,7 +315,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
       <Card>
         <CardHeader><CardTitle>Personal & Business Information</CardTitle></CardHeader>
         <CardContent className="space-y-6">
-          {/* Profile Photo Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-6">
               <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200">
@@ -363,7 +353,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
             </div>
           </div>
           
-          {/* Business Information Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Business Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -475,6 +464,27 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
             </div>
           </div>
+          
+          {!isEditMode && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleInputChange} required className={errors.password ? 'border-red-500' : ''} />
+                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                     {errors.password && <p className="text-sm text-red-500 mt-1">{errors.password}</p>}
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
+                    <Input id="confirmPassword" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} required className={errors.confirmPassword ? 'border-red-500' : ''} />
+                     {errors.confirmPassword && <p className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>}
+                </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="location">Location <span className="text-red-500">*</span></Label>
             <div className="flex items-center gap-2">
@@ -643,6 +653,7 @@ const getInitialFormData = (): Vendor => ({
     city: '',
     pincode: '',
     address: '',
+    password: '',
     subscription: { startDate: '', endDate: '', package: '', isActive: false },
     gallery: [],
     documents: [],
@@ -652,6 +663,7 @@ const getInitialFormData = (): Vendor => ({
 export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEditFormProps) {
   const [formData, setFormData] = useState<Vendor>(getInitialFormData());
   const [errors, setErrors] = useState<Partial<Record<keyof Vendor, string>>>({});
+  const isEditMode = !!vendor;
 
   useEffect(() => {
     if (isOpen) {
@@ -685,6 +697,10 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
             isValid = false;
         }
     }
+    if (!isEditMode && !formData.password) {
+        newErrors.password = "Password is required for new vendors";
+        isValid = false;
+    }
     setErrors(newErrors);
     return isValid;
   };
@@ -692,12 +708,14 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm() && formData) {
-      // Remove empty id/ _id fields before submitting for a new vendor
       const submissionData = { ...formData };
-      if (!vendor) { // Only for new vendors
+      
+      // When creating a new vendor, don't send up _id or id fields.
+      if (!isEditMode) {
         delete submissionData._id;
         delete submissionData.id;
       }
+      
       onSubmit(submissionData);
     }
   };
@@ -728,6 +746,7 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
                 handleCheckboxChange={handleCheckboxChange}
                 errors={errors}
                 setFormData={setFormData}
+                isEditMode={isEditMode}
               />
             </TabsContent>
             {/* Other Tabs would be here */}
