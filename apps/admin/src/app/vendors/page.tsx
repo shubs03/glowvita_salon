@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -51,7 +52,6 @@ export default function VendorManagementPage() {
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
 
     const { data: vendors = [], isLoading, error } = useGetVendorsQuery(undefined);
-    console.log(vendors);
     const [createVendor] = useCreateVendorMutation();
     const [updateVendor] = useUpdateVendorMutation();
     const [deleteVendor] = useDeleteVendorMutation();
@@ -308,7 +308,7 @@ export default function VendorManagementPage() {
                                     ))
                                 ) : currentItems.length > 0 ? (
                                     currentItems.map((vendor: Vendor) => (
-                                        <TableRow key={vendor.id}>
+                                        <TableRow key={vendor._id}>
                                             <TableCell className="font-medium">{vendor.businessName}</TableCell>
                                             <TableCell>{`${vendor.firstName} ${vendor.lastName}`}</TableCell>
                                             <TableCell>{vendor.phone}</TableCell>
@@ -395,21 +395,41 @@ export default function VendorManagementPage() {
                 </CardContent>
             </Card>
 
-            <VendorForm
-                isOpen={isCreateModalOpen}
-                onClose={handleCloseModal}
-                vendor={null}
-                isEditMode={false}
-                onSubmit={handleCreateVendor}
-            />
-            {selectedVendor && (
-                <VendorEditForm
-                    isOpen={isEditModalOpen}
-                    onClose={handleCloseModal}
-                    vendor={selectedVendor}
-                    onSubmit={handleUpdateVendor}
-                />
-            )}
+            <Dialog open={isCreateModalOpen} onOpenChange={setCreateModalOpen}>
+                <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Add New Vendor</DialogTitle>
+                        <DialogDescription>
+                            Fill out the form below to add a new vendor to the platform.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <VendorForm
+                        isOpen={isCreateModalOpen}
+                        onClose={handleCloseModal}
+                        vendor={null}
+                        isEditMode={false}
+                        onSubmit={handleCreateVendor}
+                    />
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isEditModalOpen} onOpenChange={setEditModalOpen}>
+                 <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+                     <DialogHeader>
+                        <DialogTitle>Edit Vendor</DialogTitle>
+                        <DialogDescription>
+                            Update the details for {selectedVendor?.businessName}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <VendorEditForm
+                        isOpen={isEditModalOpen}
+                        onClose={handleCloseModal}
+                        vendor={selectedVendor}
+                        onSubmit={handleUpdateVendor}
+                    />
+                </DialogContent>
+            </Dialog>
+           
 
             <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
                 <DialogContent>
