@@ -130,18 +130,6 @@ const referralSchema = new mongoose.Schema({
   },
 });
 
-// Pre-save middleware to generate referral ID
-referralSchema.pre('validate', async function(next) {
-  // Only generate if it's a new document and referralId is not set
-  if (this.isNew && !this.referralId) {
-    const prefix = this.referralType;
-    // Ensure we count documents from the correct model instance
-    const count = await mongoose.model('Referral').countDocuments({ referralType: this.referralType });
-    this.referralId = `${prefix}-${String(count + 1).padStart(3, '0')}`;
-  }
-  next();
-});
-
 const ReferralModel = mongoose.models.Referral || mongoose.model("Referral", referralSchema);
 const C2CSettingsModel = mongoose.models.C2CSettings || mongoose.model("C2CSettings", referralSettingsSchema);
 const C2VSettingsModel = mongoose.models.C2VSettings || mongoose.model("C2VSettings", referralSettingsSchema);

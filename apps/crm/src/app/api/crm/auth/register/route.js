@@ -89,8 +89,15 @@ export async function POST(req) {
     if (referredByCode) {
       const referringVendor = await VendorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
       if (referringVendor) {
+        
+        // Explicitly generate the referralId here
+        const referralType = 'V2V';
+        const count = await ReferralModel.countDocuments({ referralType });
+        const referralId = `${referralType}-${String(count + 1).padStart(3, '0')}`;
+
         await ReferralModel.create({
-          referralType: 'V2V',
+          referralId,
+          referralType,
           referrer: referringVendor.businessName, // Or referringVendor._id
           referee: newVendor.businessName, // Or newVendor._id
           date: new Date(),
@@ -106,7 +113,7 @@ export async function POST(req) {
 
     return NextResponse.json({ message: "Vendor created successfully", vendor: vendorData }, { status: 201 });
   } catch (err) {
-    console.error("Vendor Registration Error:", err.message);
+    console.error("Vendor Registration Error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
