@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import VendorModel from "../../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js";
-import { ReferralModel } from "../../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
+import { ReferralModel, V2VSettingsModel } from "../../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
 import _db from "../../../../../../../../packages/lib/src/db.js";
 import validator from "validator";
 
@@ -90,6 +90,10 @@ export async function POST(req) {
       const referringVendor = await VendorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
       if (referringVendor) {
         
+        // Fetch V2V referral settings to get dynamic bonus
+        const v2vSettings = await V2VSettingsModel.findOne({});
+        const bonusValue = v2vSettings?.referrerBonus?.bonusValue || 0; // Default to 0 if not set
+
         // Explicitly generate the referralId here
         const referralType = 'V2V';
         const count = await ReferralModel.countDocuments({ referralType });
@@ -102,7 +106,7 @@ export async function POST(req) {
           referee: newVendor.businessName, // Or newVendor._id
           date: new Date(),
           status: 'Completed', // Or 'Pending' until first purchase
-          bonus: '500' // Or calculate bonus based on settings
+          bonus: String(bonusValue),
         });
       }
     }

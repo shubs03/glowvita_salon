@@ -1,3 +1,4 @@
+
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -23,12 +24,7 @@ const baseQuery = async (args, api, extraOptions) => {
 
   if (requestUrl.startsWith("/admin")) {
     targetService = "admin";
-    // Check if the request is from an authenticated CRM user
-    if (state.crmAuth?.isCrmAuthenticated && state.crmAuth?.token) {
-      token = state.crmAuth.token;
-    } else {
-      token = state.adminAuth.token;
-    }
+    token = state.adminAuth.token || state.crmAuth.token;
   } else if (requestUrl.startsWith("/crm")) {
     targetService = "crm";
     token = state.crmAuth.token;
