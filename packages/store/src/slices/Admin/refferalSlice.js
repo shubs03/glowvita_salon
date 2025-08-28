@@ -1,54 +1,10 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { glowvitaApi } from '../../services/api';
 
 const initialState = {
-  c2cSettings: {
-    referrerBonus: {
-      bonusType: 'amount',
-      bonusValue: 50,
-      creditTime: '48 hours',
-    },
-    usageLimit: 'unlimited',
-    usageCount: null,
-    refereeBonus: {
-      enabled: false,
-      bonusType: 'discount',
-      bonusValue: 10,
-      creditTime: '24 hours',
-    },
-    minOrders: 1,
-  },
-  c2vSettings: {
-    referrerBonus: {
-      bonusType: 'amount',
-      bonusValue: 500,
-      creditTime: '15 days',
-    },
-    usageLimit: 'manual',
-    usageCount: 100,
-    refereeBonus: {
-      enabled: false,
-      bonusType: 'amount',
-      bonusValue: 200,
-      creditTime: '15 days',
-    },
-    minBookings: 5,
-  },
-  v2vSettings: {
-    referrerBonus: {
-      bonusType: 'amount',
-      bonusValue: 1000,
-      creditTime: '30 days',
-    },
-    usageLimit: 'unlimited',
-    usageCount: null,
-    refereeBonus: {
-      enabled: false,
-      bonusType: 'amount',
-      bonusValue: 500,
-      creditTime: '30 days',
-    },
-    minPayoutCycle: 1,
-  },
+  c2cSettings: null,
+  c2vSettings: null,
+  v2vSettings: null,
   modal: {
     isOpen: false,
     modalType: null,
@@ -58,6 +14,8 @@ const initialState = {
     currentPage: 1,
     itemsPerPage: 5,
   },
+  status: 'idle',
+  error: null,
 };
 
 const referralSlice = createSlice({
@@ -76,7 +34,6 @@ const referralSlice = createSlice({
     openModal: (state, action) => {
       state.modal.isOpen = true;
       state.modal.modalType = action.payload.type;
-      // Create a deep copy of settings to avoid mutation issues
       state.modal.settings = JSON.parse(JSON.stringify(action.payload.settings));
     },
     closeModal: (state) => {
@@ -86,7 +43,6 @@ const referralSlice = createSlice({
     },
     updateModalSettings: (state, action) => {
       if (state.modal.settings) {
-        // Deep merge the changes into the existing settings
         state.modal.settings = {
           ...state.modal.settings,
           ...action.payload,
@@ -97,6 +53,35 @@ const referralSlice = createSlice({
       state.pagination = { ...state.pagination, ...action.payload };
     },
   },
+  extraReducers: (builder) => {
+    builder
+      .addMatcher(
+        glowvitaApi.endpoints.getSettings.matchPending,
+        (state) => {
+          state.status = 'loading';
+          state.error = null;
+        }
+      )
+      .addMatcher(
+        glowvitaApi.endpoints.getSettings.matchFulfilled,
+        (state, action) => {
+          const { referralType } = action.meta.arg.originalArgs;
+          const settings = action.payload;
+          if (referralType === 'C2C') state.c2cSettings = settings;
+          if (referralType === 'C2V') state.c2vSettings = settings;
+          if (referralType === 'V2V') state.v2vSettings = settings;
+          state.status = 'succeeded';
+        }
+      )
+      .addMatcher(
+        glowvitaApi.endpoints.getSettings.matchRejected,
+        (state, action) => {
+          state.status = 'failed';
+          // Store only a serializable error message
+          state.error = action.error?.message || 'Failed to fetch settings';
+        }
+      );
+  }
 });
 
 export const {
