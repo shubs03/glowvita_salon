@@ -5,7 +5,6 @@ import React, { useState } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
 import { useCreateDoctorMutation } from '@repo/store/api';
 
@@ -48,16 +47,12 @@ export function DoctorRegistrationForm({ onSuccess }) {
       return;
     }
     
-    setIsLoading(true);
-    
     try {
       await createDoctor(formData).unwrap();
       toast.success("Doctor registration submitted successfully!");
       onSuccess();
     } catch (err) {
       toast.error(err?.data?.message || "Registration failed. Please try again.");
-    } finally {
-      setIsLoading(false);
     }
   };
 
