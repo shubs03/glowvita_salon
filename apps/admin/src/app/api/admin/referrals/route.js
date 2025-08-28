@@ -99,7 +99,7 @@ export const POST = authMiddlewareAdmin(
 );
 
 // Get Referrals or Settings
-export const GET = authMiddlewareAdmin(
+export const GET = 
   async (req) => {
     const url = new URL(req.url);
     const referralType = url.searchParams.get('referralType');
@@ -131,9 +131,7 @@ export const GET = authMiddlewareAdmin(
       const referrals = await ReferralModel.find(query);
       return Response.json(referrals);
     }
-  },
-  ["superadmin", "admin"]
-);
+  };
 
 // Update Referral
 export const PUT = authMiddlewareAdmin(
