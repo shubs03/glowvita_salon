@@ -24,6 +24,24 @@ export type Staff = {
   emailAddress: string;
   photo?: string;
   status: 'Active' | 'Inactive';
+  timing?: {
+    sunday: { startTime: string; endTime: string; isWorking: boolean };
+    monday: { startTime: string; endTime: string; isWorking: boolean };
+    tuesday: { startTime: string; endTime: string; isWorking: boolean };
+    wednesday: { startTime: string; endTime: string; isWorking: boolean };
+    thursday: { startTime: string; endTime: string; isWorking: boolean };
+    friday: { startTime: string; endTime: string; isWorking: boolean };
+    saturday: { startTime: string; endTime: string; isWorking: boolean };
+  };
+  blockTime?: {
+    entries: Array<{
+      _id?: string;
+      date: string;
+      startTime: string;
+      endTime: string;
+      description: string;
+    }>;
+  };
 };
 
 export default function StaffPage() {
@@ -275,6 +293,34 @@ export default function StaffPage() {
                                         <Label className="text-sm font-medium text-gray-500">Status</Label>
                                         <p className="mt-1">{viewStaff.status}</p>
                                     </div>
+                                    {viewStaff.timing && (
+                                        <div>
+                                            <Label className="text-sm font-medium text-gray-500">Working Hours</Label>
+                                            <div className="mt-1 space-y-1">
+                                                {Object.entries(viewStaff.timing).map(([day, schedule]: [string, any]) => (
+                                                    schedule.isWorking && (
+                                                        <div key={day} className="text-sm">
+                                                            <span className="font-medium capitalize">{day}:</span> {schedule.startTime} - {schedule.endTime}
+                                                        </div>
+                                                    )
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {viewStaff.blockTime && viewStaff.blockTime.entries && viewStaff.blockTime.entries.length > 0 && (
+                                        <div>
+                                            <Label className="text-sm font-medium text-gray-500">Block Time Entries</Label>
+                                            <div className="mt-1 space-y-2">
+                                                {viewStaff.blockTime.entries.map((entry: any, index: number) => (
+                                                    <div key={index} className="text-sm border p-2 rounded bg-red-50">
+                                                        <div><span className="font-medium">Date:</span> {entry.date}</div>
+                                                        <div><span className="font-medium">Time:</span> {entry.startTime} - {entry.endTime}</div>
+                                                        {entry.description && <div><span className="font-medium">Reason:</span> {entry.description}</div>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
