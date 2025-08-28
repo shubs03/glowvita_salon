@@ -27,7 +27,7 @@ const generateReferralCode = async (businessName) => {
   return referralCode;
 };
 
-// Removed the authMiddlewareCrm wrapper to make this endpoint public for new registrations.
+// This endpoint is public for new registrations.
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -47,8 +47,8 @@ export async function POST(req) {
       description,
       profileImage,
       website,
-      location,    // <-- coordinate object from map
-      referredByCode, // New field for referral code input
+      location,
+      referredByCode,
     } = body;
 
     // 1️⃣ Validate required fields
@@ -102,11 +102,11 @@ export async function POST(req) {
         await ReferralModel.create({
           referralId,
           referralType,
-          referrer: referringVendor.businessName, // Or referringVendor._id
-          referee: newVendor.businessName, // Or newVendor._id
+          referrer: referringVendor.businessName,
+          referee: newVendor.businessName,
           date: new Date(),
-          status: 'Completed', // Or 'Pending' until first purchase
-          bonus: String(bonusValue),
+          status: 'Completed',
+          bonus: String(bonusValue), // Use the dynamic bonus value
         });
       }
     }
