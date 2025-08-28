@@ -12,6 +12,7 @@ import notificationReducer from './slices/notificationSlice';
 import geoFencingReducer from './slices/geoFencingSlice';
 import refferalReducer from './slices/Admin/refferalSlice.js';
 
+
 export const makeStore = () => {
   return configureStore({
     reducer: {
@@ -27,6 +28,7 @@ export const makeStore = () => {
       notification: notificationReducer,
       geoFencing: geoFencingReducer,
       refferal: refferalReducer
+     
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware().concat(glowvitaApi.middleware),

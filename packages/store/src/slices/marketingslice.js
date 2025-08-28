@@ -237,7 +237,12 @@ const marketingSlice = createSlice({
       state.loading = false;
     },
     addSmsTemplate: (state, action) => {
-      state.smsTemplates.unshift(action.payload);
+      const nextId = state.smsTemplates.length + 1; // Start from 1
+      const newTemplate = {
+        ...action.payload,
+        id: `TMP${String(nextId).padStart(3, '0')}`
+      };
+      state.smsTemplates.unshift(newTemplate);
       state.message = 'SMS Template added successfully';
     },
     updateSmsTemplate: (state, action) => {
@@ -427,9 +432,17 @@ const extendedApiSlice = glowvitaApi.injectEndpoints({
     }),
 
     // SMS Templates
+    getSmsTemplates: builder.query({
+      query: () => '/admin/sms-template',
+      providesTags: ['SmsTemplate']
+    }),
+    getSmsTemplateById: builder.query({
+      query: (id) => `/admin/sms-template?id=${id}`,
+      providesTags: (result, error, id) => [{ type: 'SmsTemplate', id }]
+    }),
     createSmsTemplate: builder.mutation({
       query: (templateData) => ({
-        url: '/admin/sms-templates',
+        url: '/admin/sms-template',
         method: 'POST',
         body: templateData
       }),
@@ -437,14 +450,23 @@ const extendedApiSlice = glowvitaApi.injectEndpoints({
     }),
     updateSmsTemplate: builder.mutation({
       query: ({ id, ...updates }) => ({
-        url: `/admin/sms-templates/${id}`,
+        url: '/admin/sms-template',
         method: 'PUT',
+        params: { id },
         body: updates
       }),
       invalidatesTags: (result, error, { id }) => [
         'SmsTemplate',
         { type: 'SmsTemplate', id }
       ]
+    }),
+    deleteSmsTemplate: builder.mutation({
+      query: (id) => ({
+        url: '/admin/sms-template',
+        method: 'DELETE',
+        params: { id }
+      }),
+      invalidatesTags: ['SmsTemplate']
     }),
 
     // Social Posts
@@ -471,13 +493,19 @@ const extendedApiSlice = glowvitaApi.injectEndpoints({
 });
 
 export const {
+  // SMS Templates
+  useGetSmsTemplatesQuery,
+  useGetSmsTemplateByIdQuery,
+  useCreateSmsTemplateMutation,
+  useUpdateSmsTemplateMutation,
+  useDeleteSmsTemplateMutation,
+  
+  // SMS Packages
   useGetSmsPackagesQuery,
   useGetSmsPackageByIdQuery,
   useCreateSmsPackageMutation,
   useUpdateSmsPackageMutation,
   useDeleteSmsPackageMutation,
-  useCreateSmsTemplateMutation,
-  useUpdateSmsTemplateMutation,
   useCreateSocialPostMutation,
   useUpdateSocialPostMutation
 } = extendedApiSlice;

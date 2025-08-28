@@ -1,4 +1,4 @@
-declare module '../../../../packages/store/src/slices/marketingslice' {
+declare module '../../../../packages/store/src/slices/marketingSlice' {
   import { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query/react';
   
   export interface SmsPackage {

@@ -1,0 +1,513 @@
+import { NextResponse } from "next/server";
+import _db from "../../../../../../../packages/lib/src/db.js";
+import mongoose from 'mongoose';
+import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+
+// Import the model using relative path to ensure it's registered
+const { default: SocialMediaTemplateModel, modelName } = await import("../../../../../../../packages/lib/src/models/Marketing/socialMediaTemplate.model.js");
+
+export const dynamic = 'force-dynamic'; // Ensure dynamic route handling
+
+// GET all Social Media templates
+export const GET = authMiddlewareAdmin(async (req) => {
+  console.log('GET /api/admin/social-media-templates - Starting request');
+  
+  try {
+    console.log('Connecting to database...');
+    const db = await _db();
+    
+    console.log('Getting model...');
+    let TemplateModel;
+    try {
+      // Try to get existing model first
+      TemplateModel = mongoose.model(modelName);
+      console.log('Using existing model');
+    } catch (e) {
+      // If model doesn't exist, create it
+      console.log('Creating new model...');
+      TemplateModel = mongoose.model(modelName, SocialMediaTemplateModel.schema);
+    }
+    
+    console.log('Ensuring indexes...');
+    try {
+      await TemplateModel.ensureIndexes();
+    } catch (e) {
+      console.warn('Warning: Could not ensure indexes:', e.message);
+    }
+    
+    console.log('Fetching social media templates...');
+    const templates = await TemplateModel.find({})
+      .select('-__v -createdAt -updatedAt')
+      .sort({ createdAt: -1 })
+      .lean()
+      .maxTimeMS(10000) // 10 second timeout
+      .exec()
+      .then(docs => {
+        // Ensure all documents have the availableFor field with a default value
+        return docs.map(doc => ({
+          ...doc,
+          availableFor: doc.availableFor || 'admin' // Add default value if missing
+        }));
+      });
+      
+    console.log(`Successfully retrieved ${templates.length} templates`);
+    
+    return NextResponse.json({
+      success: true,
+      data: templates,
+      count: templates.length
+    }, { 
+      status: 200,
+      headers: {
+        'Cache-Control': 'no-store, max-age=0',
+        'X-Content-Type-Options': 'nosniff',
+      }
+    });
+    
+  } catch (error) {
+    // Enhanced error logging
+    const errorDetails = {
+      message: error.message,
+      name: error.name,
+      ...(error.code && { code: error.code }),
+      ...(error.keyPattern && { keyPattern: error.keyPattern }),
+      connectionState: mongoose.connection?.readyState,
+      ...(process.env.NODE_ENV === 'development' && { 
+        stack: error.stack,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error))
+      })
+    };
+    
+    console.error("Error in GET /api/admin/social-media-templates:", errorDetails);
+    
+    // Determine appropriate status code
+    let statusCode = 500;
+    let errorMessage = 'Failed to fetch social media templates';
+    
+    if (error.name === 'MongoServerError') {
+      statusCode = 503; // Service Unavailable
+      errorMessage = 'Database service unavailable. Please try again later.';
+    } else if (error.name === 'ValidationError') {
+      statusCode = 400; // Bad Request
+      errorMessage = 'Validation error';
+    }
+    
+    return NextResponse.json({
+      success: false,
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      ...(process.env.NODE_ENV === 'development' && { 
+        details: errorDetails
+      })
+    }, { 
+      status: statusCode,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'X-Content-Type-Options': 'nosniff',
+      }
+    });
+  }
+});
+
+// POST a new Social Media template
+// PUT (Update) an existing Social Media template
+export const PUT = authMiddlewareAdmin(async (req, { params }) => {
+  try {
+    // Connect to database
+    await _db();
+    
+    // Get or create the model using the already imported model
+    const SocialMediaTemplate = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
+    
+    // Check content type to handle both JSON and FormData
+    const contentType = req.headers.get('content-type') || '';
+    let body;
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData
+      const formData = await req.formData();
+      body = Object.fromEntries(formData.entries());
+      
+      // Convert File to base64 if present
+      const imageFile = formData.get('imageFile');
+      if (imageFile && imageFile instanceof File) {
+        const arrayBuffer = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Image = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
+        body.image = base64Image;
+      }
+    } else {
+      // Handle JSON
+      body = await req.json().catch(err => {
+        console.error('Error parsing JSON:', err);
+        return NextResponse.json(
+          { success: false, message: 'Invalid request body' },
+          { status: 400 }
+        );
+      });
+    }
+    
+    // Get the template ID from URL params
+    const url = new URL(req.url);
+    const id = url.searchParams.get('id');
+    
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'Template ID is required' },
+        { status: 400 }
+      );
+    }
+    
+    // Get the authenticated user from the request
+    const user = req.user;
+    
+    // Find the existing template
+    const existingTemplate = await SocialMediaTemplate.findById(id);
+    
+    if (!existingTemplate) {
+      return NextResponse.json(
+        { success: false, message: 'Template not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Validate required fields
+    const { title, category, availableFor = 'admin', description = '', image, status = 'Draft' } = body;
+    
+    if (!title || !category || !availableFor) {
+      const missingFields = [];
+      if (!title) missingFields.push('title');
+      if (!category) missingFields.push('category');
+      if (!availableFor) missingFields.push('availableFor');
+      
+      return NextResponse.json(
+        { 
+          success: false,
+          message: `Missing required fields: ${missingFields.join(', ')}`,
+          missingFields 
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Check for duplicate title (case insensitive, excluding current template)
+    const duplicateTemplate = await SocialMediaTemplate.findOne({
+      _id: { $ne: id },
+      title: { $regex: new RegExp(`^${title.trim()}$`, 'i') }
+    });
+    
+    if (duplicateTemplate) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: 'A template with this title already exists' 
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Update template data
+    const updateData = {
+      title: title.trim(),
+      category: category.trim(),
+      availableFor: availableFor.trim(),
+      description: description.trim(),
+      status,
+      updatedBy: user._id,
+      isActive: body.isActive !== undefined ? body.isActive : existingTemplate.isActive
+    };
+
+    // Only update image if provided and valid
+    if (image) {
+      if (!image.startsWith('data:image/')) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Invalid image format. Must be a base64 encoded image.'
+          },
+          { status: 400 }
+        );
+      }
+      updateData.imageUrl = image;
+    }
+    
+    // Update the template
+    const updatedTemplate = await SocialMediaTemplate.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+    
+    return NextResponse.json(
+      { 
+        success: true,
+        message: 'Template updated successfully',
+        data: updatedTemplate
+      },
+      { status: 200 }
+    );
+    
+  } catch (error) {
+    console.error('Error in PUT /api/admin/social-media-templates:', {
+      message: error.message,
+      name: error.name,
+      ...(error.code && { code: error.code }),
+      ...(error.keyPattern && { keyPattern: error.keyPattern }),
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+    
+    return NextResponse.json(
+      { 
+        success: false,
+        message: 'Failed to update template',
+        error: error.message,
+        ...(process.env.NODE_ENV === 'development' && { 
+          details: {
+            name: error.name,
+            ...(error.code && { code: error.code }),
+            ...(error.keyPattern && { keyPattern: error.keyPattern })
+          }
+        })
+      },
+      { status: 500 }
+    );
+  }
+});
+
+// DELETE a Social Media template
+export const DELETE = authMiddlewareAdmin(async (req) => {
+  try {
+    // Connect to database
+    await _db();
+    
+    // Get or create the model using the already imported model
+    const SocialMediaTemplate = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
+    
+    // Get the template ID from URL params
+    const url = new URL(req.url);
+    const id = url.searchParams.get('id');
+    
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: 'Template ID is required' },
+        { status: 400 }
+      );
+    }
+    
+    // Check if template exists
+    const template = await SocialMediaTemplate.findById(id);
+    
+    if (!template) {
+      return NextResponse.json(
+        { success: false, message: 'Template not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Delete the template
+    await SocialMediaTemplate.findByIdAndDelete(id);
+    
+    return NextResponse.json(
+      { 
+        success: true,
+        message: 'Template deleted successfully' 
+      },
+      { status: 200 }
+    );
+    
+  } catch (error) {
+    console.error('Error in DELETE /api/admin/social-media-templates:', {
+      message: error.message,
+      name: error.name,
+      ...(error.code && { code: error.code }),
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+    
+    return NextResponse.json(
+      { 
+        success: false,
+        message: 'Failed to delete template',
+        error: error.message,
+        ...(process.env.NODE_ENV === 'development' && { 
+          details: {
+            name: error.name,
+            ...(error.code && { code: error.code })
+          }
+        })
+      },
+      { status: 500 }
+    );
+  }
+});
+
+export const POST = authMiddlewareAdmin(async (req) => {
+  console.log('POST /api/admin/social-media-templates - Starting request');
+  try {
+    // Connect to database
+    console.log('Connecting to database...');
+    await _db();
+    
+    // Get or create the model using the already imported model
+    const SocialMediaTemplate = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
+    
+    // Check content type to handle both JSON and FormData
+    const contentType = req.headers.get('content-type') || '';
+    let body;
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData
+      const formData = await req.formData();
+      body = Object.fromEntries(formData.entries());
+      
+      // Convert File to base64 if present
+      const imageFile = formData.get('image');
+      if (imageFile && imageFile instanceof File) {
+        const arrayBuffer = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Image = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
+        body.image = base64Image;
+      }
+    } else {
+      // Handle JSON
+      body = await req.json().catch(err => {
+        console.error('Error parsing JSON:', err);
+        return NextResponse.json(
+          { success: false, message: 'Invalid request body' },
+          { status: 400 }
+        );
+      });
+    }
+    
+    console.log('Parsed request body:', { ...body, image: body.image ? '[BASE64_IMAGE]' : null });
+    
+    console.log('Received request body:', {
+      ...body,
+      image: body.image ? '[BASE64_IMAGE_DATA]' : null
+    });
+    
+    // Get the authenticated user from the request (set by authMiddlewareAdmin)
+    const user = req.user;
+    console.log('Authenticated User:', user ? `User ID: ${user._id}` : 'No user');
+    
+    if (!user || !user._id) {
+      console.error('No authenticated user found in request');
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Validate required fields
+    const { title, category, availableFor = 'admin', description = '', image, status = 'Draft' } = body;
+    
+    console.log('Validating fields:', { title, category, availableFor });
+    
+    if (!title || !category || !availableFor) {
+      const missingFields = [];
+      if (!title) missingFields.push('title');
+      if (!category) missingFields.push('category');
+      if (!availableFor) missingFields.push('availableFor');
+      
+      console.error('Missing required fields:', missingFields);
+      return NextResponse.json(
+        { 
+          success: false,
+          message: `Missing required fields: ${missingFields.join(', ')}`,
+          missingFields 
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Validate image if present
+    if (image && !image.startsWith('data:image/')) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid image format. Must be a base64 encoded image.'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check for existing template with same title (case insensitive)
+    const existingTemplate = await SocialMediaTemplate.findOne({ 
+      title: { $regex: new RegExp(`^${title.trim()}$`, 'i') } 
+    });
+    
+    if (existingTemplate) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "A template with this title already exists" 
+        },
+        { status: 400 }
+      );
+    }
+
+
+    // Create new template with base64 image
+    const templateData = {
+      title: title.toString().trim(),
+      category: category.toString().trim(),
+      availableFor: availableFor.toString().trim(),
+      description: description ? description.toString().trim() : '',
+      status: status || 'Draft',
+      createdBy: user._id,
+      updatedBy: user._id,
+      isActive: body.isActive !== undefined ? Boolean(body.isActive) : true
+    };
+
+    // Only add imageUrl if image is provided
+    if (image) {
+      templateData.imageUrl = image.toString();
+    }
+    
+    console.log('Creating template with data:', { 
+      ...templateData, 
+      createdBy: user._id,
+      imageUrl: templateData.imageUrl ? '[BASE64_IMAGE]' : null 
+    });
+    
+    console.log('Creating template with data:', {
+      ...templateData,
+      imageUrl: templateData.imageUrl ? '[BASE64_IMAGE]' : null
+    });
+    
+    const newTemplate = await SocialMediaTemplate.create(templateData);
+
+    return NextResponse.json(
+      { 
+        success: true,
+        message: "Social Media template created successfully", 
+        data: newTemplate 
+      },
+      { status: 201 }
+    );
+    
+  } catch (error) {
+    console.error("Error in POST /api/admin/social-media-templates:", {
+      message: error.message,
+      name: error.name,
+      ...(error.code && { code: error.code }),
+      ...(error.keyPattern && { keyPattern: error.keyPattern }),
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+    
+    return NextResponse.json(
+      { 
+        success: false,
+        message: "Failed to create social media template",
+        error: error.message,
+        ...(process.env.NODE_ENV === 'development' && { 
+          details: {
+            name: error.name,
+            ...(error.code && { code: error.code }),
+            ...(error.keyPattern && { keyPattern: error.keyPattern })
+          }
+        })
+      },
+      { status: 500 }
+    );
+  }
+});
