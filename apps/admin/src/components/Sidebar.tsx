@@ -9,7 +9,9 @@ import { FaSignOutAlt, FaBars, FaTimes } from "react-icons/fa";
 import { sidebarNavItems } from "@/lib/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppDispatch } from "@repo/store/hooks";
-import { clearAdminAuth } from "@repo/store/slices/auth";
+import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
+import Cookies from "js-cookie";
+
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
@@ -18,13 +20,15 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   const { admin, isLoading } = useAuth();
 
   const handleLogout = async () => {
-    // This is a client-side logout.
-    // The API route for logout clears the httpOnly cookie if you were using it.
-    // Here we clear the client-side state and token.
+    // Clear client-side state
     dispatch(clearAdminAuth());
-    // Also clear from localStorage
-    localStorage.removeItem('adminAuthState');
+    
+    // Remove the cookie
+    Cookies.remove('admin_access_token');
+    
+    // Redirect to login page
     router.push('/login');
+    router.refresh(); // Important to ensure middleware re-validates
   };
   
   if (isLoading) {
@@ -140,5 +144,3 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
     </div>
   );
 }
-
-    

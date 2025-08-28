@@ -1,0 +1,236 @@
+import mongoose from "mongoose";
+
+const serviceSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100, // Limit name length for storage efficiency
+    },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true,
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    discountedPrice: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+    duration: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 500, // Limit description length for storage efficiency
+    },
+    image: {
+      type: String,
+      trim: true,
+      default: null,
+      maxlength: 200, // Limit URL/path length
+    },
+    gender: {
+      type: String,
+      enum: ["men", "women", "unisex"],
+      required: true,
+    },
+    staff: [
+      {
+        type: String,
+        trim: true,
+        maxlength: 50, // Limit staff name length
+      },
+    ],
+    commission: {
+      type: Boolean,
+      default: false,
+    },
+    homeService: {
+      available: {
+        type: Boolean,
+        default: false,
+      },
+      charges: {
+        type: Number,
+        min: 0,
+        default: null,
+      },
+    },
+    weddingService: {
+      available: {
+        type: Boolean,
+        default: false,
+      },
+      charges: {
+        type: Number,
+        min: 0,
+        default: null,
+      },
+    },
+    bookingInterval: {
+      type: Number,
+      default: 15,
+      min: 1,
+    },
+    tax: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      type: {
+        type: String,
+        enum: ["percentage", "fixed"],
+        default: "percentage",
+      },
+      value: {
+        type: Number,
+        min: 0,
+        default: null,
+      },
+    },
+    onlineBooking: {
+      type: Boolean,
+      default: true,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "disapproved"],
+      default: "pending",
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true }
+);
+
+const vendorServicesSchema = new mongoose.Schema({
+  vendor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Vendor",
+    required: true,
+    unique: true, // One document per vendor
+    index: true, // Optimize vendor lookups
+  },
+  services: {
+    type: [serviceSchema],
+    default: [],
+    validate: {
+      validator: (services) => services.length <= 1000, // Limit number of services per vendor
+      message: "Services array cannot exceed 1000 entries to prevent document size issues.",
+    },
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// Indexes for optimized querying
+vendorServicesSchema.index({ vendor: 1, "services.status": 1 }); // For vendor and status filtering
+vendorServicesSchema.index({ "services.category": 1 }); // For category-based filtering
+vendorServicesSchema.index(
+  { "services.name": "text", "services.description": "text" },
+  { weights: { "services.name": 10, "services.description": 5 } } // Prioritize name in text search
+);
+vendorServicesSchema.index({ createdAt: -1 }); // For sorting by creation date
+vendorServicesSchema.index({ updatedAt: -1 }); // For sorting by update date
+
+// Pre-save hook to update `updatedAt` timestamp
+vendorServicesSchema.pre("save", function (next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+// Pre-save hook to enforce document size limit
+vendorServicesSchema.pre("save", function (next) {
+  const docSize = Buffer.byteLength(JSON.stringify(this), "utf8");
+  if (docSize > 16 * 1024 * 1024) {
+    return next(new Error("Document size exceeds MongoDB's 16MB limit."));
+  }
+  next();
+});
+
+// Static method for paginated service retrieval
+vendorServicesSchema.statics.getServicesByVendor = async function (
+  vendorId,
+  page = 1,
+  limit = 100,
+  status = null,
+  category = null
+) {
+  const skip = (page - 1) * limit;
+
+  const pipeline = [
+    { $match: { vendor: new mongoose.Types.ObjectId(vendorId) } },
+    { $unwind: "$services" },
+  ];
+
+  if (status) {
+    pipeline.push({ $match: { "services.status": status } });
+  }
+  if (category) {
+    pipeline.push({ $match: { "services.category": new mongoose.Types.ObjectId(category) } });
+  }
+
+  // ✅ Populate category via lookup
+  pipeline.push(
+    {
+      $lookup: {
+        from: "categories", // collection name in MongoDB
+        localField: "services.category",
+        foreignField: "_id",
+        as: "categoryDetails",
+      },
+    },
+    { $unwind: { path: "$categoryDetails", preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        "services.categoryName": "$categoryDetails.name", // add category name
+      },
+    },
+    { $project: { categoryDetails: 0 } }, // remove raw categoryDetails
+    { $skip: skip },
+    { $limit: limit },
+    {
+      $group: {
+        _id: "$_id",
+        vendor: { $first: "$vendor" },
+        services: { $push: "$services" },
+        createdAt: { $first: "$createdAt" },
+        updatedAt: { $first: "$updatedAt" },
+      },
+    },
+    { $project: { vendor: 1, services: 1, createdAt: 1, updatedAt: 1 } }
+  );
+
+  return this.aggregate(pipeline).exec();
+};
+
+
+
+const VendorServicesModel =
+  mongoose.models.VendorServices ||
+  mongoose.model("VendorServices", vendorServicesSchema);
+
+export default VendorServicesModel;

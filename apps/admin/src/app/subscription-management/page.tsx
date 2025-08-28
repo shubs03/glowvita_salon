@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation } from '@repo/store/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
@@ -13,7 +14,7 @@ import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Switch } from '@repo/ui/switch';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 type Plan = {
   _id: string;
@@ -37,7 +38,7 @@ type Subscription = {
 };
 
 export default function SubscriptionManagementPage() {
-  const { data: plans = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery();
+  const { data: plans = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery(undefined);
   const [createNewPlan] = useCreateSubscriptionPlanMutation();
   const [updateExistingPlan] = useUpdateSubscriptionPlanMutation();
   const [deletePlan] = useDeleteSubscriptionPlanMutation();
@@ -94,13 +95,6 @@ export default function SubscriptionManagementPage() {
   const [planItemsPerPage, setPlanItemsPerPage] = useState<number>(5); // Explicit number type
   const [subItemsPerPage, setSubItemsPerPage] = useState<number>(5); // Explicit number type
 
-  const durationOptions = [
-    { value: '1', label: '1' },
-    { value: '3', label: '3' },
-    { value: '6', label: '6' },
-    { value: '12', label: '12' },
-  ];
-
   const durationTypeOptions = [
     { value: 'days', label: 'Days' },
     { value: 'weeks', label: 'Weeks' },
@@ -109,6 +103,10 @@ export default function SubscriptionManagementPage() {
   ];
 
   const handleInputChange = (field: string, value: string | boolean) => {
+    if (field === 'duration') {
+        const numValue = Number(value);
+        if (numValue > 99) return;
+    }
     setPlanForm((prev) => ({
       ...prev,
       [field]: field === 'isAvailableForPurchase' ? value === 'true' : value,
@@ -160,15 +158,10 @@ export default function SubscriptionManagementPage() {
         toast.success('Plan deleted successfully!');
         setIsDeleteModalOpen(false);
         setSelectedPlan(null);
-        
-        // Reset to valid page if necessary
-        const newTotalPlanPages = Math.max(1, Math.ceil((plans.length - 1) / planItemsPerPage));
-        if (currentPlanPage > newTotalPlanPages) {
-          setCurrentPlanPage(newTotalPlanPages);
-        }
+        refetch();
       } catch (error) {
         console.error('Error deleting plan:', error);
-        toast.error(`Error deleting plan: ${error.message || 'Unknown error'}`);
+        toast.error(`Error deleting plan: ${(error as any).data?.message || 'Unknown error'}`);
       } finally {
         setIsDeleteModalOpen(false);
       }
@@ -187,7 +180,7 @@ export default function SubscriptionManagementPage() {
         discountedPrice: planForm.discountedPrice ? parseFloat(planForm.discountedPrice) : undefined,
         isAvailableForPurchase: planForm.isAvailableForPurchase,
         status: 'Active',
-        features: planForm.features || [],
+        features: (planForm as any).features || [],
       };
 
       if (modalType === 'add') {
@@ -205,15 +198,13 @@ export default function SubscriptionManagementPage() {
         price: '',
         discountedPrice: '',
         isAvailableForPurchase: true,
-        features: [],
       });
 
       setIsPlanModalOpen(false);
-      // Reset to first page to show new plan
-      setCurrentPlanPage(1);
+      refetch();
     } catch (error) {
       console.error('Error saving plan:', error);
-      toast.error(`Error saving plan: ${error.message || 'Unknown error'}`);
+      toast.error(`Error saving plan: ${(error as any).data?.message || 'Unknown error'}`);
     }
   };
 
@@ -263,7 +254,7 @@ export default function SubscriptionManagementPage() {
       <h1 className="text-2xl font-bold font-headline mb-6">Subscription Management</h1>
 
       {isLoading && <p>Loading plans...</p>}
-      {error && <p>Error: {error.status || 'An error occurred'}</p>}
+      {error && <p>Error: {(error as any).status || 'An error occurred'}</p>}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -489,21 +480,16 @@ export default function SubscriptionManagementPage() {
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Duration</Label>
                 <div className="col-span-3 flex gap-2">
-                  <Select
+                  <Input
+                    id="duration"
+                    type="number"
                     value={planForm.duration}
-                    onValueChange={(value) => handleInputChange('duration', value)}
-                  >
-                    <SelectTrigger className="w-[100px]">
-                      <SelectValue placeholder="Duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {durationOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(e) => handleInputChange('duration', e.target.value)}
+                    className="w-[100px]"
+                    placeholder="e.g., 30"
+                    min="1"
+                    max="99"
+                  />
                   <Select
                     value={planForm.durationType}
                     onValueChange={(value) => handleInputChange('durationType', value)}

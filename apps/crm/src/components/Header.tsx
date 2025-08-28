@@ -1,30 +1,34 @@
 
 "use client";
 
-import { useRouter } from 'next/navigation';
-import { Button } from '@repo/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@repo/ui/dropdown-menu';
-import { FaBell, FaSearch, FaBars, FaSignOutAlt } from 'react-icons/fa';
-import { Input } from '@repo/ui/input';
-import { ThemeToggle } from './ThemeToggle';
+import { FaBell, FaBars, FaUserCircle } from "react-icons/fa";
+import { Button } from "@repo/ui/button";
+import Link from 'next/link';
+import { useRouter } from "next/navigation";
+import { ThemeToggle } from "./ThemeToggle";
+import { useAppDispatch } from "@repo/store/hooks";
+import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import Cookies from 'js-cookie';
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
-  
+  const dispatch = useAppDispatch();
+
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    // Clear client-side state from Redux and localStorage
+    dispatch(clearCrmAuth());
+    
+    // Remove the cookie
+    Cookies.remove('crm_access_token', { path: '/' });
+    
+    // Redirect to login page and refresh to ensure middleware runs
     router.push('/login');
+    router.refresh();
   };
 
   return (
     <header className="flex-shrink-0 sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between lg:justify-end overflow-hidden">
+      {/* Mobile menu button - only visible on mobile */}
       <Button
         variant="ghost"
         size="icon"
@@ -35,46 +39,57 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
         <span className="sr-only">Toggle navigation menu</span>
       </Button>
 
-      <div className="w-full flex-1">
-        <form>
-          <div className="relative">
-            <FaSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search clients, bookings..."
-              className="w-full appearance-none bg-secondary pl-8 shadow-none md:w-2/3 lg:w-1/3"
-            />
-          </div>
-        </form>
-      </div>
-      
+      {/* Right side controls */}
       <div className="flex items-center gap-2 md:gap-4 min-w-0">
+        {/* Theme toggle */}
         <ThemeToggle />
-        <Button variant="ghost" size="icon" className="rounded-full">
-            <FaBell className="h-5 w-5" />
-            <span className="sr-only">Toggle notifications</span>
+
+        {/* Notifications button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex-shrink-0 rounded-full"
+        >
+          <FaBell className="h-5 w-5" />
+          <span className="sr-only">Toggle notifications</span>
         </Button>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
-                    <span className="font-semibold">V</span>
-                </div>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem>Support</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2">
-                <FaSignOutAlt/>
-                Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Profile Link */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="flex-shrink-0 rounded-full"
+          asChild
+        >
+          <Link href="/salon-profile">
+            <FaUserCircle className="h-5 w-5" />
+            <span className="sr-only">Salon Profile</span>
+          </Link>
+        </Button>
+
+        {/* Logout button */}
+        <Button
+          variant="ghost"
+          onClick={handleLogout}
+          className="flex-shrink-0 min-w-0"
+        >
+          <span className="hidden sm:inline">Logout</span>
+          <span className="sm:hidden">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+          </span>
+        </Button>
       </div>
     </header>
   );

@@ -410,10 +410,11 @@ export default function PushNotificationsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Target Audience</Label>
-                <RadioGroup value={targetType} onValueChange={setTargetType} className="grid grid-cols-2 gap-2" disabled={modalType === 'view'}>
+                <RadioGroup value={targetType} onValueChange={setTargetType} className="grid grid-cols-2 lg:grid-cols-3 gap-2" disabled={modalType === 'view'}>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="all_users" id="all_users" /><Label htmlFor="all_users">All Users</Label></div>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="all_vendors" id="all_vendors" /><Label htmlFor="all_vendors">All Vendors</Label></div>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="all_staff" id="all_staff" /><Label htmlFor="all_staff">All Staff</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="all_admins" id="all_admins" /><Label htmlFor="all_admins">All Admins</Label></div>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="specific_users" id="specific_users" /><Label htmlFor="specific_users">Specific Users</Label></div>
                   <div className="flex items-center space-x-2"><RadioGroupItem value="specific_vendors" id="specific_vendors" /><Label htmlFor="specific_vendors">Specific Vendors</Label></div>
                 </RadioGroup>

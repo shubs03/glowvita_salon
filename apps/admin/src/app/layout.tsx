@@ -6,6 +6,7 @@ import StoreProvider from '@repo/store/provider';
 import './globals.css';
 import { AdminLayout } from '@/components/AdminLayout';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { AuthInitializer } from '@/components/AuthInitializer';
 import { usePathname } from 'next/navigation';
 import { Toaster } from 'sonner';
 
@@ -26,6 +27,7 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
+          <AuthInitializer>
             <ThemeProvider
                 attribute="class"
                 defaultTheme="system"
@@ -35,6 +37,7 @@ export default function RootLayout({
                 {showLayout ? <AdminLayout>{children}</AdminLayout> : children}
                 <Toaster position="bottom-right" richColors />
             </ThemeProvider>
+          </AuthInitializer>
         </StoreProvider>
       </body>
     </html>

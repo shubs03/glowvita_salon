@@ -1,6 +1,7 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, getDefaultMiddleware } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
-import authReducer from './slices/auth-slice';
+import adminAuthReducer from '@repo/store/slices/adminAuthSlice';
+import crmAuthReducer from '@repo/store/slices/crmAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
@@ -11,13 +12,21 @@ import subscriptionReducer from './slices/subscriptionSlice';
 import notificationReducer from './slices/notificationSlice';
 import geoFencingReducer from './slices/geoFencingSlice';
 import refferalReducer from './slices/Admin/refferalSlice.js';
+import faqReducer from './slices/faqSlice';
+import shippingReducer from './slices/shippingSlice';
+import productReducer from './slices/productSlice';
+import serviceReducer from "./slices/CRM/serviceSlice.js";
+import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
 
 
 export const makeStore = () => {
   return configureStore({
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware().concat(glowvitaApi.middleware),
     reducer: {
       [glowvitaApi.reducerPath]: glowvitaApi.reducer,
-      auth: authReducer,
+      adminAuth: adminAuthReducer,
+      crmAuth: crmAuthReducer,
       modal: modalReducer,
       customer: customerReducer,
       salon: salonReducer,
@@ -27,11 +36,13 @@ export const makeStore = () => {
       subscription: subscriptionReducer,
       notification: notificationReducer,
       geoFencing: geoFencingReducer,
-      refferal: refferalReducer
-     
+      refferal: refferalReducer,
+      faq: faqReducer,
+      shipping: shippingReducer,
+      products: productReducer,
+      service: serviceReducer,
+      staff: staffReducer, // Add staff reducer
     },
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(glowvitaApi.middleware),
   });
 };
 

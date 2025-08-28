@@ -59,7 +59,7 @@ import {
   useCreateGeoFenceMutation,
   useUpdateGeoFenceMutation,
   useDeleteGeoFenceMutation,
-} from "../../../../../packages/store/src/services/api";
+} from "@repo/store/api";
 import { NEXT_PUBLIC_MAPBOX_API_KEY } from "../../../../../packages/config/config";
 
 // Set the Mapbox access token

@@ -16,6 +16,10 @@ const serviceSchema = new mongoose.Schema({
     ref: 'Category',
     required: true,
   },
+  serviceImage: {
+    type: String,
+    trim: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -43,14 +43,14 @@ export default function CrmPage() {
                     value="12"
                     change="-2.1%"
                     icon={FaCalendarAlt}
-                    iconColor="text-purple-500"
+                    iconColor="text-blue-500"
                 />
                 <StatCard
                     title="Pending Tasks"
                     value="3"
                     change="2 new"
                     icon={FaClipboardList}
-                    iconColor="text-yellow-500"
+                    iconColor="text-blue-500"
                 />
             </div>
 

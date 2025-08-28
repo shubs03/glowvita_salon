@@ -67,6 +67,10 @@ const vendorSchema = new mongoose.Schema({
     enum: ["unisex", "men", "women"],
     required: true,
   },
+  shippingCharge: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "ShippingConfig",
+  },
   subCategories: [
     {
       type: String,
@@ -180,6 +184,12 @@ const vendorSchema = new mongoose.Schema({
         default: null,
       },
     ],
+  },
+  referralCode: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true, // Allows multiple documents to have a null value for this field
   },
   createdAt: {
     type: Date,

@@ -1,89 +1,59 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
+import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 
-const baseQuery = fetchBaseQuery({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || "/api",
-  prepareHeaders: (headers, { getState }) => {
-    const accessToken = localStorage.getItem("accessToken");
-    const adminAuthState = localStorage.getItem("adminAuthState");
-    const vendorAccessToken = localStorage.getItem("vendor_access_token");
+const API_BASE_URLS = {
+  admin: "http://localhost:3002/api",
+  crm: "http://localhost:3001/api",
+  web: "http://localhost:3000/api",
+};
 
-    console.log('Admin Auth State from localStorage:', adminAuthState);
-    const adminAccessToken = adminAuthState && JSON.parse(adminAuthState).token;
-    console.log('Admin Access Token:', adminAccessToken ? 'Token exists' : 'No token found');
+// Base query function that determines the API URL and sets headers.
+const baseQuery = async (args, api, extraOptions) => {
+  let requestUrl = typeof args === "string" ? args : args.url;
 
-    if (accessToken) {
-      headers.set("Authorization", `Bearer ${accessToken}`);
-    }
-    if (adminAccessToken) {
-      // Use lowercase header name to match server expectation
-      headers.set("admin-authorization", `Bearer ${adminAccessToken}`);
-    }
-    if (vendorAccessToken) {
-      headers.set("Student-Authorization", `Bearer ${vendorAccessToken}`);
-    }
+  if (typeof requestUrl !== "string") {
+    console.error("Request URL is not a string:", requestUrl);
+    return { error: { status: "CUSTOM_ERROR", error: "Invalid URL provided" } };
+  }
 
-    return headers;
-  },
-  credentials: "include",
-});
+  let targetService = "web"; // Default
+  let token = null;
+  const state = api.getState();
 
-const baseQueryWithReauth = async (args, api, extraOptions) => {
-  let result = await baseQuery(args, api, extraOptions);
-  const { userAuth, auth } = api.getState();
-  const { refreshToken, tokenRefreshing } = userAuth;
+  if (requestUrl.startsWith("/admin")) {
+    targetService = "admin";
+    token = state.adminAuth.token;
+  } else if (requestUrl.startsWith("/crm")) {
+    targetService = "crm";
+    token = state.crmAuth.token;
+  } else {
+    // For web routes, it might use either, but let's assume a default or check both
+    token = state.crmAuth.token || state.adminAuth.token;
+  }
 
-  if (result.error?.status === 401) {
-    const isAdminRequest =
-      (typeof args.url === "string" && args.url.startsWith("/admin")) ||
-      result.error?.data?.error?.includes("admin");
+  const baseUrl = API_BASE_URLS[targetService];
 
-    const refreshTokenToUse = isAdminRequest ? adminRefreshToken : refreshToken;
-    const refreshEndpoint = isAdminRequest
-      ? "/admin/refreshtoken"
-      : "/user/refreshtoken";
-    const updateTokensAction = isAdminRequest
-      ? updateAdminTokens
-      : updateTokens;
-    const logoutAction = isAdminRequest ? logoutAdmin : logout;
-
-    if (tokenRefreshing) {
-      return new Promise((resolve) => {
-        const checkRefresh = setInterval(async () => {
-          if (!api.getState().userAuth.tokenRefreshing) {
-            clearInterval(checkRefresh);
-            resolve(await baseQuery(args, api, extraOptions));
-          }
-        }, 100);
-      });
-    }
-
-    api.dispatch(setTokenRefreshing(true));
-    try {
-      const refreshResult = await baseQuery(
-        {
-          url: refreshEndpoint,
-          method: "POST",
-          body: { refreshToken: refreshTokenToUse },
-        },
-        api,
-        extraOptions
-      );
-
-      if (refreshResult.data?.success) {
-        const { accessToken, refreshToken: newRefreshToken } =
-          refreshResult.data.data;
-        api.dispatch(
-          updateTokensAction({ accessToken, refreshToken: newRefreshToken })
-        );
-        result = await baseQuery(args, api, extraOptions);
-      } else {
-        api.dispatch(logoutAction());
+  const dynamicFetch = fetchBaseQuery({
+    baseUrl,
+    prepareHeaders: (headers) => {
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
       }
-    } catch (error) {
-      console.error("Token refresh error:", error);
-      api.dispatch(logoutAction());
-    } finally {
-      api.dispatch(setTokenRefreshing(false));
+      return headers;
+    },
+  });
+
+  let result = await dynamicFetch(args, api, extraOptions);
+
+  if (result.error && result.error.status === 401) {
+    console.warn(
+      `Received 401 Unauthorized for ${targetService}. Logging out.`
+    );
+    if (targetService === "admin") {
+      api.dispatch(clearAdminAuth());
+    } else if (targetService === "crm") {
+      api.dispatch(clearCrmAuth());
     }
   }
 
@@ -93,7 +63,50 @@ const baseQueryWithReauth = async (args, api, extraOptions) => {
 export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
   baseQuery: baseQuery,
-  tagTypes: ["admin", "offers", "Referrals", "Settings", "SuperData", "Supplier", "Subscription", "Marketing", "SmsPackage", "SmsTemplate", "SocialMediaTemplate"],
+  tagTypes: [
+    "admin",
+    "offers",
+    "Referrals",
+    "Settings",
+    "SuperData",
+    "Supplier",
+    "SubscriptionPlan",
+    "Vendor",
+    "doctors",
+    "GeoFence",
+    "Category",
+    "Service",
+    "Staff",
+    "Offers",
+    "Notification",
+    "TaxFeeSettings",
+    "User",
+    "PendingServices",
+    "AdminProductCategory",
+    "ProductCategory",
+    "SmsTemplate",
+    "SmsPackage",
+    "SocialMediaTemplate",
+    "Marketing",
+    "SubscriptionPlan",
+    "Vendor",
+    "doctors",
+    "GeoFence",
+    "Category",
+    "Service",
+    "Staff",
+    "Offers",
+    "Notification",
+    "TaxFeeSettings",
+    "User",
+    "PendingServices",
+    "AdminProductCategory",
+    "ProductCategory",
+    "SmsTemplate",
+    "SmsPackage",
+    "SocialMediaTemplate",
+  ],
+
   endpoints: (builder) => ({
     // SMS Templates Endpoints
     getSmsTemplates: builder.query({
@@ -214,19 +227,38 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ['SmsPackage']
     }),
+    // Web App Endpoints
+    getMe: builder.query({
+      query: () => ({ url: "/auth/me", method: "GET" }),
+      providesTags: ["User"],
+    }),
 
+    // Admin Panel Endpoints
     getUsers: builder.query({
       query: () => ({
-        url: "/users",
+        url: "/admin/users", // Assumes an endpoint exists at /api/admin/users
         method: "GET",
       }),
       providesTags: ["admin"],
+    }),
+    // Service Approval Endpoints
+    getPendingServices: builder.query({
+      query: () => ({ url: "/admin/services/service-approval", method: "GET" }),
+      providesTags: ["PendingServices"],
+    }),
+    updateServiceStatus: builder.mutation({
+      query: ({ serviceId, status }) => ({
+        url: "/admin/services/service-approval",
+        method: "PATCH",
+        body: { serviceId, status },
+      }),
+      invalidatesTags: ["PendingServices", "VendorServices"],
     }),
 
     // Admin
     registerAdmin: builder.mutation({
       query: (admin) => ({
-        url: "/admin/register",
+        url: "/admin/auth/register",
         method: "POST",
         body: admin,
       }),
@@ -243,7 +275,7 @@ export const glowvitaApi = createApi({
     }),
 
     getAdmins: builder.query({
-      query: () => "/admin",
+      query: () => ({ url: "/admin", method: "GET" }),
       providesTags: ["admin"],
     }),
 
@@ -257,10 +289,10 @@ export const glowvitaApi = createApi({
     }),
 
     updateAdmin: builder.mutation({
-      query: (admin) => ({
+      query: ({ id, ...data }) => ({
         url: `/admin`,
         method: "PUT",
-        body: admin,
+        body: { _id: id, ...data },
       }),
       invalidatesTags: ["admin"],
     }),
@@ -269,15 +301,14 @@ export const glowvitaApi = createApi({
       query: (id) => ({
         url: `/admin`,
         method: "DELETE",
-        body: { id },
+        body: { _id: id },
       }),
       invalidatesTags: ["admin"],
     }),
 
     // offfers
-
     getAdminOffers: builder.query({
-      query: () => "/admin/offers",
+      query: () => ({ url: "/admin/offers", method: "GET" }),
       providesTags: ["offers"],
     }),
 
@@ -309,10 +340,10 @@ export const glowvitaApi = createApi({
     }),
 
     // refferal endpoints
-
     getReferrals: builder.query({
       query: (referralType) => ({
         url: "/admin/referrals",
+        method: "GET",
         params: { referralType },
       }),
       providesTags: ["Referrals"],
@@ -349,9 +380,11 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Settings"],
     }),
+
     getSettings: builder.query({
       query: (referralType) => ({
         url: "/admin/referrals",
+        method: "GET",
         params: { settings: true, referralType },
       }),
       providesTags: ["Settings"],
@@ -359,28 +392,31 @@ export const glowvitaApi = createApi({
 
     // SuperData (Dropdowns) Endpoints
     getSuperData: builder.query({
-      query: () => "/super-data",
+      query: () => ({ url: "/admin/super-data", method: "GET" }),
       providesTags: ["SuperData"],
     }),
+
     createSuperDataItem: builder.mutation({
       query: (item) => ({
-        url: "/super-data",
+        url: "/admin/super-data",
         method: "POST",
         body: item,
       }),
       invalidatesTags: ["SuperData"],
     }),
+
     updateSuperDataItem: builder.mutation({
       query: (item) => ({
-        url: "/super-data",
+        url: "/admin/super-data",
         method: "PUT",
         body: item,
       }),
       invalidatesTags: ["SuperData"],
     }),
+
     deleteSuperDataItem: builder.mutation({
       query: ({ id }) => ({
-        url: "/super-data",
+        url: "/admin/super-data",
         method: "DELETE",
         body: { id },
       }),
@@ -435,7 +471,6 @@ export const glowvitaApi = createApi({
     }),
 
     // Vendor Endpoints
-
     createVendor: builder.mutation({
       query: (vendorData) => ({
         url: "/admin/vendor",
@@ -446,13 +481,13 @@ export const glowvitaApi = createApi({
     }),
 
     getVendors: builder.query({
-      query: () => "/admin/vendor",
+      query: () => ({ url: "/admin/vendor", method: "GET" }),
       providesTags: ["Vendor"],
       transformResponse: (response) => response,
     }),
 
     getVendorById: builder.query({
-      query: (id) => `/admin/vendor?id=${id}`,
+      query: (id) => ({ url: `/admin/vendor?id=${id}` }),
       providesTags: (result, error, id) => [{ type: "Vendor", id }],
     }),
 
@@ -490,9 +525,8 @@ export const glowvitaApi = createApi({
     }),
 
     // Doctor Endpoints
-
     getDoctors: builder.query({
-      query: () => "/admin/doctors",
+      query: () => ({ url: "/admin/doctors", method: "GET" }),
       providesTags: ["doctors"],
     }),
 
@@ -522,45 +556,48 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["doctors"],
     }),
-    
+
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
-      query: () => '/admin/subscription-plans',
-      providesTags: ['Subscription']
+      query: () => ({ url: "/admin/subscription-plans", method: "GET" }),
+      providesTags: ["SubscriptionPlan"],
     }),
-    
+
     createSubscriptionPlan: builder.mutation({
       query: (plan) => ({
-        url: '/admin/subscription-plans',
-        method: 'POST',
-        body: plan
+        url: "/admin/subscription-plans",
+        method: "POST",
+        body: plan,
       }),
-      invalidatesTags: ['Subscription']
+      invalidatesTags: ["SubscriptionPlan"],
     }),
 
     updateSubscriptionPlan: builder.mutation({
-      query: (plan) => ({
-        url: '/admin/subscription-plans',
-        method: 'PUT',
-        body: plan
+      query: ({ _id, ...planData }) => ({
+        url: `/admin/subscription-plans?id=${_id}`,
+        method: "PATCH",
+        body: planData,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Subscription', id }]
+      invalidatesTags: (result, error, { _id }) => [
+        { type: "SubscriptionPlan", id: _id },
+        "SubscriptionPlan",
+      ],
     }),
 
     deleteSubscriptionPlan: builder.mutation({
       query: (id) => ({
-        url: '/admin/subscription-plans',
-        method: 'DELETE',
-        body: { id }
+        url: `/admin/subscription-plans?id=${id}`,
+        method: "DELETE",
       }),
-      invalidatesTags: ['Subscription']
+      invalidatesTags: ["SubscriptionPlan"],
     }),
 
     // Supplier Endpoints
     getSuppliers: builder.query({
-      query: () => "/admin/suppliers",
+      query: () => ({ url: "/admin/suppliers", method: "GET" }),
       providesTags: ["Supplier"],
     }),
+
     createSupplier: builder.mutation({
       query: (supplierData) => ({
         url: "/admin/suppliers",
@@ -569,6 +606,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
+
     updateSupplier: builder.mutation({
       query: ({ id, ...supplierData }) => ({
         url: `/admin/suppliers`,
@@ -577,6 +615,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
+
     deleteSupplier: builder.mutation({
       query: (id) => ({
         url: `/admin/suppliers`,
@@ -585,13 +624,475 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
+
+    // Geo Fence
+    getGeoFences: builder.query({
+      query: () => ({ url: "/admin/geofence", method: "GET" }),
+      providesTags: ["GeoFence"],
+    }),
+
+    createGeoFence: builder.mutation({
+      query: (geoFence) => ({
+        url: "/admin/geofence",
+        method: "POST",
+        body: geoFence,
+      }),
+      invalidatesTags: ["GeoFence"],
+    }),
+
+    updateGeoFence: builder.mutation({
+      query: ({ _id, ...geoFence }) => ({
+        url: "/admin/geofence",
+        method: "PUT",
+        body: { _id, ...geoFence },
+      }),
+      invalidatesTags: ["GeoFence"],
+    }),
+
+    deleteGeoFence: builder.mutation({
+      query: (_id) => ({
+        url: "/admin/geofence",
+        method: "DELETE",
+        body: { _id },
+      }),
+      invalidatesTags: ["GeoFence"],
+    }),
+    // Categories
+    getCategories: builder.query({
+      query: () => ({ url: "/admin/categories", method: "GET" }),
+      providesTags: ["Category"],
+    }),
+
+    createCategory: builder.mutation({
+      query: (category) => ({
+        url: "/admin/categories",
+        method: "POST",
+        body: category,
+      }),
+      invalidatesTags: ["Category"],
+    }),
+
+    updateCategory: builder.mutation({
+      query: (category) => ({
+        url: `/admin/categories`,
+        method: "PUT",
+        body: category,
+      }),
+      invalidatesTags: ["Category"],
+    }),
+
+    deleteCategory: builder.mutation({
+      query: ({ id }) => ({
+        url: `/admin/categories`,
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Category"],
+    }),
+
+    // Services
+    getServices: builder.query({
+      query: () => ({ url: "/admin/services", method: "GET" }),
+      providesTags: ["Service"],
+    }),
+
+    createService: builder.mutation({
+      query: (service) => ({
+        url: "/admin/services",
+        method: "POST",
+        body: service,
+      }),
+      invalidatesTags: ["Service"],
+    }),
+
+    updateService: builder.mutation({
+      query: (service) => ({
+        url: `/admin/services`,
+        method: "PUT",
+        body: service,
+      }),
+      invalidatesTags: ["Service"],
+    }),
+
+    deleteService: builder.mutation({
+      query: ({ id }) => ({
+        url: `/admin/services`,
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Service"],
+    }),
+
+    // Notifications
+    getNotifications: builder.query({
+      query: () => ({ url: "/admin/custompushnotification", method: "GET" }),
+      providesTags: ["Notification"],
+    }),
+
+    createNotification: builder.mutation({
+      query: (notification) => ({
+        url: "/admin/custompushnotification",
+        method: "POST",
+        body: notification,
+      }),
+      invalidatesTags: ["Notification"],
+    }),
+
+    updateNotification: builder.mutation({
+      query: (notification) => ({
+        url: `/admin/custompushnotification`,
+        method: "PUT",
+        body: notification,
+      }),
+      invalidatesTags: ["Notification"],
+    }),
+
+    deleteNotification: builder.mutation({
+      query: ({ _id }) => ({
+        url: `/admin/custompushnotification`,
+        method: "DELETE",
+        body: { _id },
+      }),
+      invalidatesTags: ["Notification"],
+    }),
+
+    // Tax Fee Settings Endpoints
+    getTaxFeeSettings: builder.query({
+      query: () => ({ url: "/admin/tax-fees", method: "GET" }),
+      providesTags: ["TaxFeeSettings"],
+    }),
+
+    updateTaxFeeSettings: builder.mutation({
+      query: (settings) => ({
+        url: "/admin/tax-fees",
+        method: "PATCH",
+        body: settings,
+      }),
+      invalidatesTags: ["TaxFeeSettings"],
+    }),
+
+    // FAQ Endpoints
+    getFaqs: builder.query({
+      query: () => "/admin/faqs",
+      providesTags: ["Faq"],
+    }),
+
+    createFaq: builder.mutation({
+      query: (faq) => ({
+        url: "/admin/faqs",
+        method: "POST",
+        body: faq,
+      }),
+      invalidatesTags: ["Faq"],
+    }),
+
+    updateFaq: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: "/admin/faqs",
+        method: "PATCH",
+        body: { id, ...updates },
+      }),
+      invalidatesTags: ["Faq"],
+    }),
+    
+
+    deleteFaq: builder.mutation({
+      query: (id) => ({
+        url: "/admin/faqs",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Faq"],
+    }),
+
+    // Admin Product Categories Endpoints
+    getAdminProductCategories: builder.query({
+      query: () => ({
+        url: "/admin/product-categories",
+        method: "GET",
+      }),
+      providesTags: ["AdminProductCategory"],
+      transformResponse: (response) => {
+        // Ensure we always return an array
+        if (Array.isArray(response)) {
+          return response;
+        }
+        if (response && Array.isArray(response.data)) {
+          return response.data;
+        }
+        if (response && response.productCategories && Array.isArray(response.productCategories)) {
+          return response.productCategories;
+        }
+        return [];
+      },
+    }),
+
+    createAdminProductCategory: builder.mutation({
+      query: (category) => ({
+        url: "/admin/product-categories",
+        method: "POST",
+        body: category,
+      }),
+      invalidatesTags: ["AdminProductCategory"],
+    }),
+
+    updateAdminProductCategory: builder.mutation({
+      query: (category) => ({
+        url: "/admin/product-categories",
+        method: "PUT",
+        body: category,
+      }),
+      invalidatesTags: ["AdminProductCategory"],
+    }),
+
+    deleteAdminProductCategory: builder.mutation({
+      query: ({ id }) => ({
+        url: "/admin/product-categories",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["AdminProductCategory"],
+    }),
+
+    // Crm Endpoints
+    vendorLogin: builder.mutation({
+      query: (credentials) => ({
+        url: "/crm/auth/login",
+        method: "POST",
+        body: credentials,
+      }),
+    }),
+
+    vendorRegister: builder.mutation({
+      query: (vendorData) => ({
+        url: "/crm/auth/register",
+        method: "POST",
+        body: vendorData,
+      }),
+    }),
+
+    getVendorServices: builder.query({
+      query: ({
+        vendorId,
+        page = 1,
+        limit = 100,
+        status = null,
+        category = null,
+      }) => ({
+        url: `/crm/services?vendorId=${vendorId}&page=${page}&limit=${limit}${status ? `&status=${status}` : ""}${category ? `&category=${category}` : ""}`,
+        method: "GET",
+      }),
+      providesTags: ["VendorServices"],
+    }),
+
+    createVendorServices: builder.mutation({
+      query: ({ vendor, services }) => ({
+        url: "/crm/services",
+        method: "POST",
+        body: { vendor, services },
+      }),
+      invalidatesTags: ["VendorServices"],
+    }),
+
+    updateVendorServices: builder.mutation({
+      query: ({ vendor, services }) => ({
+        url: "/crm/services",
+        method: "PUT",
+        body: { vendor, services },
+      }),
+      invalidatesTags: ["VendorServices"],
+    }),
+
+    deleteVendorServices: builder.mutation({
+      query: ({ vendor, serviceId }) => ({
+        url: "/crm/services",
+        method: "DELETE",
+        body: { vendor, serviceId },
+      }),
+      invalidatesTags: ["VendorServices"],
+    }),
+
+    getOffers: builder.query({
+      query: () => "/crm/offers",
+      providesTags: ["Offer"],
+    }),
+
+    createOffer: builder.mutation({
+      query: (body) => ({
+        url: "/crm/offers",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Offer"],
+    }),
+
+    updateOffer: builder.mutation({
+      query: (body) => ({
+        url: "/crm/offers",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Offer"],
+    }),
+
+    deleteOffer: builder.mutation({
+      query: (id) => ({
+        url: "/crm/offers",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Offer"],
+    }),
+
+    getVendorNotifications: builder.query({
+      query: ({ vendorId }) => ({
+        url: `/crm/notifications?vendorId=${vendorId}`,
+        method: "GET",
+      }),
+      providesTags: ["VendorNotifications"],
+    }),
+
+    createVendorNotification: builder.mutation({
+      query: (notification) => ({
+        url: "/crm/notifications",
+        method: "POST",
+        body: notification,
+      }),
+      invalidatesTags: ["VendorNotifications"],
+    }),
+
+    deleteVendorNotification: builder.mutation({
+      query: ({ notificationId }) => ({
+        url: "/crm/notifications",
+        method: "DELETE",
+        body: { notificationId },
+      }),
+      invalidatesTags: ["VendorNotifications"],
+    }),
+
+    // Products endpoints
+    getCrmProducts: builder.query({
+      query: () => ({
+        url: "/crm/products",
+        method: "GET",
+      }),
+      providesTags: ["Product"],
+      transformResponse: (response) => {
+        // Handle both direct array and wrapped response formats
+        if (Array.isArray(response)) {
+          return response;
+        }
+        if (response && response.success && Array.isArray(response.data)) {
+          return response.data;
+        }
+        // Fallback for unexpected response structure
+        console.warn('Unexpected API response structure for products:', response);
+        return [];
+      },
+    }),
+
+    createCrmProduct: builder.mutation({
+      query: (product) => ({
+        url: "/crm/products",
+        method: "POST",
+        body: product,
+      }),
+      invalidatesTags: ["Product"],
+    }),
+
+    updateCrmProduct: builder.mutation({
+      query: (product) => ({
+        url: "/crm/products",
+        method: "PUT",
+        body: product,
+      }),
+      invalidatesTags: ["Product"],
+    }),
+
+    deleteCrmProduct: builder.mutation({
+      query: (id) => ({
+        url: `/crm/products?id=${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Product"],
+    }),
+
+    // shipping charge endpoints
+    getShippingConfig: builder.query({
+      query: () => ({
+        url: "/crm/shipping",
+        method: "GET",
+      }),
+      providesTags: ["ShippingCharge"],
+      transformResponse: (response) => response.data || response,
+    }),
+
+    updateShippingConfig: builder.mutation({
+      query: (charge) => ({
+        url: "/crm/shipping",
+        method: "PUT",
+        body: charge,
+      }),
+      invalidatesTags: ["ShippingCharge"],
+      transformResponse: (response) => response.data || response,
+    }),
+
+    // product categories endpoints
+    getProductCategories: builder.query({
+      query: () => ({
+        url: "/crm/productcategories",
+        method: "GET",
+      }),
+      providesTags: ["ProductCategory"],
+    }),
+    createProductCategory: builder.mutation({
+      query: (category) => ({
+        url: "/crm/productcategories",
+        method: "POST",
+        body: category,
+      }),
+      invalidatesTags: ["ProductCategory"],
+    }),
+
+    // Vendor Staff Endpoints
+    getStaff: builder.query({
+      query: () => ({
+        url: "/crm/staff",
+        method: "GET",
+      }),
+      providesTags: ["Staff"],
+    }),
+    createStaff: builder.mutation({
+      query: (staff) => ({
+        url: "/crm/staff",
+        method: "POST",
+        body: staff,
+      }),
+      invalidatesTags: ["Staff"],
+    }), 
+    updateStaff: builder.mutation({
+      query: (staff) => ({
+        url: "/crm/staff",
+        method: "PUT",
+        body: staff,
+      }),
+      invalidatesTags: ["Staff"],
+    }),
+    deleteStaff: builder.mutation({
+      query: (id) => ({
+        url: "/crm/staff",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Staff"],
+    }),
   }),
 });
 
 export const {
-  // AdminPanel Endpoints
-
-  // adminUsers
+  // Web App
+  useGetMeQuery,
+  // Admin Panel
   useAdminLoginMutation,
   useRegisterAdminMutation,
   useCreateAdminMutation,
@@ -599,6 +1100,10 @@ export const {
   useDeleteAdminMutation,
   useGetAdminsQuery,
   useGetUsersQuery,
+
+  // Service Approval
+  useGetPendingServicesQuery,
+  useUpdateServiceStatusMutation,
 
   // offers
   useGetAdminOffersQuery,
@@ -620,9 +1125,11 @@ export const {
   useUpdateSuperDataItemMutation,
   useDeleteSuperDataItemMutation,
 
-  // Tax Fee Settings Endpoints
-  useGetTaxFeeSettingsQuery,
-  useUpdateTaxFeeSettingsMutation,
+  // Admin Product Categories
+  useGetAdminProductCategoriesQuery,
+  useCreateAdminProductCategoryMutation,
+  useUpdateAdminProductCategoryMutation,
+  useDeleteAdminProductCategoryMutation,
 
   // Vendor Endpoints
   useCreateVendorMutation,
@@ -634,7 +1141,6 @@ export const {
 
   // Doctor Endpoints
   useGetDoctorsQuery,
-  useGetDoctorByIdQuery,
   useCreateDoctorMutation,
   useUpdateDoctorMutation,
   useDeleteDoctorMutation,
@@ -645,7 +1151,7 @@ export const {
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
 
-  // Subscription Endpoints
+  // Subscription Plans
   useGetSubscriptionPlansQuery,
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
@@ -671,4 +1177,80 @@ export const {
   useCreateSocialMediaTemplateMutation,
   useUpdateSocialMediaTemplateMutation,
   useDeleteSocialMediaTemplateMutation,
+
+  // Geo Fence Endpoints
+  useGetGeoFencesQuery,
+  useCreateGeoFenceMutation,
+  useUpdateGeoFenceMutation,
+  useDeleteGeoFenceMutation,
+
+  // Category and Service Endpoints
+  useGetCategoriesQuery,
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
+  useGetServicesQuery,
+  useCreateServiceMutation,
+  useUpdateServiceMutation,
+  useDeleteServiceMutation,
+
+  // Admin Custom Push Notification Endpoints
+  useGetNotificationsQuery,
+  useCreateNotificationMutation,
+  useUpdateNotificationMutation,
+  useDeleteNotificationMutation,
+
+  // Tax Fee Settings Endpoints
+  useGetTaxFeeSettingsQuery,
+  useUpdateTaxFeeSettingsMutation,
+
+  // FAQ Endpoints
+  useGetFaqsQuery,
+  useCreateFaqMutation,
+  useUpdateFaqMutation,
+  useDeleteFaqMutation,
+
+  //======================================================== CRM Endpoints ====================================================//
+
+  // CRM Endpoints
+
+  // Vendor Endpoints
+  useVendorLoginMutation,
+  useVendorRegisterMutation,
+
+  // Services Endpoints
+  useGetVendorServicesQuery,
+  useCreateVendorServicesMutation,
+  useUpdateVendorServicesMutation,
+  useDeleteVendorServicesMutation,
+
+  // Offer Endpoints
+  useGetOffersQuery,
+  useCreateOfferMutation,
+  useUpdateOfferMutation,
+  useDeleteOfferMutation,
+
+  // Vendor Notification Endpoints
+  useGetVendorNotificationsQuery,
+  useCreateVendorNotificationMutation,
+  useDeleteVendorNotificationMutation,
+
+  // Products endpoints
+  useGetCrmProductsQuery,
+  useCreateCrmProductMutation,
+  useUpdateCrmProductMutation,
+  useDeleteCrmProductMutation,
+
+  // shipping charge endpoints
+  useGetShippingConfigQuery,
+  useUpdateShippingConfigMutation,
+
+  // product categories endpoints
+  useGetProductCategoriesQuery,
+  useCreateProductCategoryMutation,
+  // Staff Endpoints
+  useGetStaffQuery,
+  useCreateStaffMutation,
+  useUpdateStaffMutation,
+  useDeleteStaffMutation,
 } = glowvitaApi;

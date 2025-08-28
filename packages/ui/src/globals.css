@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -69,4 +70,24 @@
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
   }
+}
+
+@keyframes slide {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes slide-rtl {
+    from { transform: translateX(-50%); }
+    to { transform: translateX(0); }
+}
+
+.animate-slide {
+  animation: slide 90s linear infinite;
+  flex-shrink: 0;
+}
+
+.animate-slide-rtl {
+  animation: slide-rtl 90s linear infinite;
+  flex-shrink: 0;
 }

@@ -1,9 +1,10 @@
+
 import jwt from "jsonwebtoken";
 
 import { JWT_ACCESS_TOKEN_EXPIRY, JWT_REFRESH_SECRET_ADMIN, JWT_REFRESH_SECRET_USER, JWT_REFRESH_SECRET_VENDOR, JWT_REFRESH_TOKEN_EXPIRY, JWT_SECRET_ADMIN, JWT_SECRET_USER, JWT_SECRET_VENDOR } from "../../config/config.js";
 
 
-function generateTokens(_id, role = "user") {
+function generateTokens(_id, role = "user", permissions = []) {
   let secretKey;
   let refreshSecret;
 
@@ -12,8 +13,11 @@ function generateTokens(_id, role = "user") {
       secretKey = JWT_SECRET_ADMIN;
       refreshSecret = JWT_REFRESH_SECRET_ADMIN;
       break;
-    case "Vendor":
-      secretKey = JWT_SECRET_VENDOR;
+    case "vendor":
+    case "staff": // Staff use the vendor secret
+    case "doctor":
+    case "supplier":
+      secretKey = JWT_SECRET_VENDOR; // Using a single secret for all CRM roles for simplicity
       refreshSecret = JWT_REFRESH_SECRET_VENDOR;
       break;
     default:
@@ -23,12 +27,13 @@ function generateTokens(_id, role = "user") {
   }
 
   if (!secretKey || !refreshSecret) {
-    throw new Error("JWT secrets are missing");
+    throw new Error("JWT secrets are missing for role: " + role);
   }
 
   const payload = {
      userId: _id,
      role,
+     permissions,
      };
 
   const accessToken = jwt.sign(payload, secretKey, {
