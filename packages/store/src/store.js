@@ -18,6 +18,7 @@ import productReducer from './slices/productSlice';
 import serviceReducer from "./slices/CRM/serviceSlice.js";
 import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
 
+
 export const makeStore = () => {
   return configureStore({
     middleware: (getDefaultMiddleware) =>
