@@ -50,7 +50,7 @@ interface Document {
 type SalonCategory = 'unisex' | 'men' | 'women';
 type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
 
-interface Vendor {
+export interface Vendor {
   _id?: string;
   id?: string;
   firstName: string;
@@ -402,7 +402,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               <div className="space-y-2">
                 <Label>Sub Categories <span className="text-red-500">*</span></Label>
                 <div className={`space-y-2 p-3 rounded-md ${errors.subCategories ? 'border border-red-200 bg-red-50' : ''}`}>
-                  {subCategories.map((subCat) => (
+                  {subCategories.map((subCat: any) => (
                     <div key={subCat.id} className="flex items-center space-x-2">
                       <Checkbox 
                         id={subCat.id}
@@ -628,15 +628,13 @@ interface VendorEditFormProps {
   onSubmit: (vendor: Vendor) => void;
 }
 
-const initialFormData = {
-    _id: '',
-    id: '',
+const getInitialFormData = (): Vendor => ({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     businessName: '',
-    category: 'unisex' as SalonCategory,
+    category: 'unisex',
     subCategories: [],
     description: '',
     profileImage: '',
@@ -649,15 +647,16 @@ const initialFormData = {
     gallery: [],
     documents: [],
     location: null
-};
+});
 
 export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEditFormProps) {
-  const [formData, setFormData] = useState<Vendor>(initialFormData);
-  const [errors, setErrors] = useState<Partial<Vendor>>({});
+  const [formData, setFormData] = useState<Vendor>(getInitialFormData());
+  const [errors, setErrors] = useState<Partial<Record<keyof Vendor, string>>>({});
 
   useEffect(() => {
     if (isOpen) {
-        setFormData(vendor || initialFormData);
+        setFormData(vendor || getInitialFormData());
+        setErrors({});
     }
   }, [vendor, isOpen]);
 
@@ -676,14 +675,30 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
   };
 
   const validateForm = () => {
-    // Validation logic...
-    return true;
+    // A more robust validation would go here
+    const requiredFields: (keyof Vendor)[] = ['firstName', 'lastName', 'email', 'phone', 'businessName', 'category', 'state', 'city', 'pincode', 'address'];
+    const newErrors: Partial<Record<keyof Vendor, string>> = {};
+    let isValid = true;
+    for (const field of requiredFields) {
+        if (!formData[field]) {
+            newErrors[field] = 'This field is required';
+            isValid = false;
+        }
+    }
+    setErrors(newErrors);
+    return isValid;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm() && formData) {
-      onSubmit(formData);
+      // Remove empty id/ _id fields before submitting for a new vendor
+      const submissionData = { ...formData };
+      if (!vendor) { // Only for new vendors
+        delete submissionData._id;
+        delete submissionData.id;
+      }
+      onSubmit(submissionData);
     }
   };
 
@@ -716,6 +731,11 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
               />
             </TabsContent>
             {/* Other Tabs would be here */}
+             <TabsContent value="subscription"><SubscriptionTab vendor={vendor} formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="gallery"><GalleryTab vendor={vendor} formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="bank"><BankDetailsTab vendor={vendor} formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="documents"><DocumentsTab vendor={vendor} formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="clients"><ClientsTab vendor={vendor} /></TabsContent>
           </Tabs>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
