@@ -1,6 +1,9 @@
+
 import _db from "../../../../../../../packages/lib/src/db.js";
 import { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import jwt from "jsonwebtoken";
+import { JWT_SECRET_VENDOR } from "../../../../../../../packages/config/config.js";
 
 await _db();
 
@@ -99,13 +102,36 @@ export const POST = authMiddlewareAdmin(
 );
 
 // Get Referrals or Settings
-export const GET = authMiddlewareAdmin(
-  async (req) => {
+export const GET = async (req) => {
+  const token = req.headers.get("authorization")?.split(" ")[1];
+  if (!token) {
+    return Response.json({ message: "Unauthorized: No token provided" }, { status: 401 });
+  }
+
+  try {
+    // This endpoint can be accessed by both admin and vendors, so we need to determine the role
+    // This is a simplified check; a more robust solution might use different secrets or a public key system.
+    let decoded;
+    try {
+      // Try verifying with admin secret first
+      decoded = jwt.verify(token, process.env.JWT_SECRET_ADMIN);
+    } catch (adminError) {
+      // If admin verification fails, try with vendor secret
+      try {
+        decoded = jwt.verify(token, JWT_SECRET_VENDOR);
+      } catch (vendorError) {
+        throw new Error("Invalid token");
+      }
+    }
+
     const url = new URL(req.url);
     const referralType = url.searchParams.get('referralType');
     const isSettings = url.searchParams.get('settings') === 'true';
 
     if (isSettings) {
+      if (decoded.role !== 'admin' && decoded.role !== 'superadmin') {
+         return Response.json({ message: "Forbidden: You do not have permission to access settings" }, { status: 403 });
+      }
       if (!referralType) {
         return Response.json({ message: "Referral type required for settings" }, { status: 400 });
       }
@@ -119,7 +145,7 @@ export const GET = authMiddlewareAdmin(
       const settings = await Model.findOne({});
       return Response.json(settings || {
         referrerBonus: { bonusType: 'amount', bonusValue: 0, creditTime: '7 days' },
-        refereeBonus: { enabled: false }, // Simplified default
+        refereeBonus: { enabled: false },
         usageLimit: 'unlimited',
         usageCount: null,
         minOrders: null,
@@ -127,13 +153,19 @@ export const GET = authMiddlewareAdmin(
         minPayoutCycle: null,
       });
     } else {
-      const query = referralType ? { referralType } : {};
+      const query = {};
+      if (referralType) {
+        query.referralType = referralType;
+      }
       const referrals = await ReferralModel.find(query);
       return Response.json(referrals);
     }
-  },
-  ["superadmin", "admin"]
-);
+  } catch (error) {
+    console.error("Referral GET error:", error);
+    return Response.json({ message: "An error occurred", error: error.message }, { status: 500 });
+  }
+};
+
 
 // Update Referral
 export const PUT = authMiddlewareAdmin(
