@@ -120,7 +120,7 @@ export const GET = async (req) => {
       try {
         decoded = jwt.verify(token, JWT_SECRET_VENDOR);
       } catch (vendorError) {
-        throw new Error("Invalid token");
+        throw new Error("Invalid token for any role");
       }
     }
 

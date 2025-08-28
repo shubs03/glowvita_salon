@@ -23,7 +23,8 @@ const baseQuery = async (args, api, extraOptions) => {
 
   if (requestUrl.startsWith("/admin")) {
     targetService = "admin";
-    token = state.adminAuth.token;
+    // If the CRM user is authenticated and making a request to an admin endpoint, use the CRM token.
+    token = state.adminAuth.token || state.crmAuth.token;
   } else if (requestUrl.startsWith("/crm")) {
     targetService = "crm";
     token = state.crmAuth.token;
@@ -625,7 +626,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Supplier"],
     }),
 
-    // Geo Fence
+    // Geo Fence Endpoints
     getGeoFences: builder.query({
       query: () => ({ url: "/admin/geofence", method: "GET" }),
       providesTags: ["GeoFence"],
@@ -1054,7 +1055,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["ProductCategory"],
     }),
 
-    // Vendor Staff Endpoints
+    // Staff Endpoints
     getStaff: builder.query({
       query: () => ({
         url: "/crm/staff",
