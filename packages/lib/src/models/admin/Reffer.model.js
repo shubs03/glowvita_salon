@@ -93,6 +93,7 @@ const referralSchema = new mongoose.Schema({
     type: String,
     unique: true,
     trim: true,
+    required: true,
   },
   referrer: {
     type: String,
@@ -130,10 +131,12 @@ const referralSchema = new mongoose.Schema({
 });
 
 // Pre-save middleware to generate referral ID
-referralSchema.pre('save', async function(next) {
-  if (this.isNew) {
+referralSchema.pre('validate', async function(next) {
+  // Only generate if it's a new document and referralId is not set
+  if (this.isNew && !this.referralId) {
     const prefix = this.referralType;
-    const count = await this.constructor.countDocuments({ referralType: this.referralType });
+    // Ensure we count documents from the correct model instance
+    const count = await mongoose.model('Referral').countDocuments({ referralType: this.referralType });
     this.referralId = `${prefix}-${String(count + 1).padStart(3, '0')}`;
   }
   next();
