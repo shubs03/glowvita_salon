@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@repo/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { Trash2, UploadCloud, CheckCircle2, Users, Eye, EyeOff, Map } from 'lucide-react';
-import { updateVendor } from '@repo/store/slices/vendorSlice';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../packages/config/config';
@@ -535,7 +534,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 flex flex-col h-[60vh]">
-            {/* Search Input */}
             <div className="relative">
               <Input
                 placeholder="Search for a location (e.g., Mumbai, Delhi, Bangalore)"
@@ -561,14 +559,12 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               )}
             </div>
             
-            {/* Current Location Display */}
             {formData.location && (
               <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
                 <strong>Selected Location:</strong> {formData.location.lat.toFixed(6)}, {formData.location.lng.toFixed(6)}
               </div>
             )}
             
-            {/* Map Container */}
             <div className="flex-1 relative border rounded-lg overflow-hidden" style={{ minHeight: '400px' }}>
               <div 
                 ref={mapContainer} 
@@ -576,7 +572,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                 style={{ minHeight: '400px' }}
               />
               
-              {/* Loading overlay */}
               {!MAPBOX_TOKEN && (
                 <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
                   <div className="text-center">
@@ -587,7 +582,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               )}
             </div>
             
-            {/* Instructions */}
             <div className="text-xs text-gray-500 space-y-1">
               <p>• Click anywhere on the map to place the marker</p>
               <p>• Drag the marker to adjust the location</p>
@@ -620,8 +614,12 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
     </>
   );
 };
-// Other tab components are not included for brevity but would exist in the full file.
-// ... SubscriptionTab, GalleryTab, BankDetailsTab, DocumentsTab, ClientsTab ...
+// Stub components for other tabs
+const SubscriptionTab = ({ vendor, formData, handleInputChange, errors }) => <div>Subscription Info</div>;
+const GalleryTab = ({ vendor, formData, handleInputChange, errors }) => <div>Gallery</div>;
+const BankDetailsTab = ({ vendor, formData, handleInputChange, errors }) => <div>Bank Details</div>;
+const DocumentsTab = ({ vendor, formData, handleInputChange, errors }) => <div>Documents</div>;
+const ClientsTab = ({ vendor }) => <div>Clients</div>;
 
 interface VendorEditFormProps {
   isOpen: boolean;
@@ -630,9 +628,7 @@ interface VendorEditFormProps {
   onSubmit: (vendor: Vendor) => void;
 }
 
-export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEditFormProps) {
-  const dispatch = useDispatch();
-  const [formData, setFormData] = useState<Vendor>({
+const initialFormData = {
     _id: '',
     id: '',
     firstName: '',
@@ -640,7 +636,7 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
     email: '',
     phone: '',
     businessName: '',
-    category: 'unisex',
+    category: 'unisex' as SalonCategory,
     subCategories: [],
     description: '',
     profileImage: '',
@@ -649,75 +645,21 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
     city: '',
     pincode: '',
     address: '',
-    subscription: {
-      startDate: '',
-      endDate: '',
-      package: '',
-      isActive: false
-    },
+    subscription: { startDate: '', endDate: '', package: '', isActive: false },
     gallery: [],
     documents: [],
     location: null
-  });
+};
+
+export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEditFormProps) {
+  const [formData, setFormData] = useState<Vendor>(initialFormData);
   const [errors, setErrors] = useState<Partial<Vendor>>({});
 
   useEffect(() => {
-    if (vendor) {
-      setFormData({
-        _id: vendor._id || '',
-        firstName: vendor.firstName || '',
-        lastName: vendor.lastName || '',
-        email: vendor.email || '',
-        phone: vendor.phone || '',
-        businessName: vendor.businessName || '',
-        category: vendor.category || 'unisex',
-        subCategories: vendor.subCategories || [],
-        description: vendor.description || '',
-        profileImage: vendor.profileImage || '',
-        website: vendor.website || '',
-        state: vendor.state || '',
-        city: vendor.city || '',
-        pincode: vendor.pincode || '',
-        address: vendor.address || '',
-        subscription: vendor.subscription || {
-          startDate: '',
-          endDate: '',
-          package: '',
-          isActive: false
-        },
-        gallery: vendor.gallery || [],
-        documents: vendor.documents || [],
-        location: vendor.location || null
-      });
-    } else {
-      // Reset form data if no vendor is provided
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        businessName: '',
-        category: 'unisex',
-        subCategories: [],
-        description: '',
-        profileImage: '',
-        website: '',
-        state: '',
-        city: '',
-        pincode: '',
-        address: '',
-        subscription: {
-          startDate: '',
-          endDate: '',
-          package: '',
-          isActive: false
-        },
-        gallery: [],
-        documents: [],
-        location: null
-      });
+    if (isOpen) {
+        setFormData(vendor || initialFormData);
     }
-  }, [vendor]);
+  }, [vendor, isOpen]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -728,8 +670,8 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
     setFormData(prev => ({
       ...prev,
       [field]: checked
-        ? Array.from(new Set([...prev[field], id]))
-        : prev[field].filter((item: SubCategory) => item !== id)
+        ? Array.from(new Set([...(prev[field] || []), id]))
+        : (prev[field] || []).filter((item: SubCategory) => item !== id)
     }));
   };
 
@@ -741,24 +683,18 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm() && formData) {
-      dispatch(updateVendor(formData));
-      if (onSubmit) {
-        onSubmit(formData);
-      }
-      onClose();
+      onSubmit(formData);
     }
   };
-
-  if (!vendor || !formData) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Edit Vendor: {vendor.businessName}</DialogTitle>
+            <DialogTitle>{vendor ? `Edit Vendor: ${vendor.businessName}` : 'Add New Vendor'}</DialogTitle>
             <DialogDescription>
-              Update vendor details across the various sections below.
+              {vendor ? 'Update vendor details below.' : 'Fill in the details for the new vendor.'}
             </DialogDescription>
           </DialogHeader>
           <Tabs defaultValue="personal" className="w-full py-4">
@@ -783,17 +719,10 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
           </Tabs>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit">{vendor ? 'Save Changes' : 'Create Vendor'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
-
-// Stub components for other tabs
-const SubscriptionTab = ({ vendor, formData, handleInputChange, errors }) => <div>Subscription Info</div>;
-const GalleryTab = ({ vendor, formData, handleInputChange, errors }) => <div>Gallery</div>;
-const BankDetailsTab = ({ vendor, formData, handleInputChange, errors }) => <div>Bank Details</div>;
-const DocumentsTab = ({ vendor, formData, handleInputChange, errors }) => <div>Documents</div>;
-const ClientsTab = ({ vendor }) => <div>Clients</div>;
