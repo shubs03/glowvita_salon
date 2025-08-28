@@ -15,6 +15,7 @@ export * from "./slices/supplierSlice";
 export * from "./slices/subscriptionSlice";
 export * from "./slices/notificationSlice";
 export * from "./slices/geoFencingSlice";
+export * from "./slices/smsTemplateSlice";
 export * from "./slices/faqSlice";
 export * from "./slices/shippingSlice";
 
