@@ -797,7 +797,7 @@ export default function DropdownManagementPage() {
                 <CardContent className="border rounded-md max-h-[500px] overflow-y-auto">
                     {topLevelItems.map(item => renderItem(item, 0))}
                      {isLoading && <div className="text-center p-4">Loading...</div>}
-                     {!isLoading && topLevelItems.length === 0 && <div className="text-center p-8 text-muted-foreground">No {topLevelType}s found.</div>}
+                     {!isLoading && topLevelItems.length === 0 && <div className="text-center p-8 text-muted-foreground">No {topLevelType.replace(/([A-Z])/g, ' $1').trim()}s found.</div>}
                 </CardContent>
 
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -1174,3 +1174,6 @@ const ProductCategoryManager = () => {
     );
 };
 
+
+
+    

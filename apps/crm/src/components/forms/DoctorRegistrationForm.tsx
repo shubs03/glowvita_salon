@@ -10,6 +10,7 @@ import { useCreateDoctorMutation, useGetSuperDataQuery } from '@repo/store/api';
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Checkbox } from '@repo/ui/checkbox';
+import { Skeleton } from '@repo/ui/skeleton';
 
 export function DoctorRegistrationForm({ onSuccess }) {
   const { data: dropdownData = [], isLoading: isLoadingDropdowns } = useGetSuperDataQuery(undefined);
@@ -65,7 +66,6 @@ export function DoctorRegistrationForm({ onSuccess }) {
             ? [...currentSpecialties, specialtyId]
             : currentSpecialties.filter(id => id !== specialtyId);
         
-        // Remove diseases that are no longer relevant
         const relevantDiseases = prev.diseases.filter(diseaseId => {
             const disease = allDiseases.find(d => d._id === diseaseId);
             return newSpecialties.includes(disease?.parentId);
@@ -91,7 +91,6 @@ export function DoctorRegistrationForm({ onSuccess }) {
       return;
     }
     
-    // Prepare data for submission, converting IDs to names
     const specialtyNames = formData.specialties.map(id => allSpecialties.find(s => s._id === id)?.name).filter(Boolean);
     const diseaseNames = formData.diseases.map(id => allDiseases.find(d => d._id === id)?.name).filter(Boolean);
     const doctorTypeName = doctorTypes.find(dt => dt._id === formData.doctorType)?.name;
@@ -112,6 +111,13 @@ export function DoctorRegistrationForm({ onSuccess }) {
     }
   };
 
+  const renderDropdownSkeletons = () => (
+    <>
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-10 w-full" />
+    </>
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -120,59 +126,71 @@ export function DoctorRegistrationForm({ onSuccess }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input name="name" placeholder="Full Name" onChange={handleChange} required />
-          <Input name="email" type="email" placeholder="Email Address" onChange={handleChange} required />
-          <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} required />
-          <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input name="name" placeholder="Full Name" onChange={handleChange} required />
+            <Input name="email" type="email" placeholder="Email Address" onChange={handleChange} required />
+          </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} required />
+            <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
+          </div>
           <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required />
           
-          <div className="space-y-2">
-            <Label>What describes you best?</Label>
-            <Select onValueChange={handleDoctorTypeChange} value={formData.doctorType}>
-                <SelectTrigger>
-                    <SelectValue placeholder="Select your primary role" />
-                </SelectTrigger>
-                <SelectContent>
-                {doctorTypes.map(type => (
-                    <SelectItem key={type._id} value={type._id}>{type.name}</SelectItem>
-                ))}
-                </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>What describes you best?</Label>
+              {isLoadingDropdowns ? <Skeleton className="h-10 w-full" /> : (
+                <Select onValueChange={handleDoctorTypeChange} value={formData.doctorType}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select your primary role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {doctorTypes.map(type => (
+                        <SelectItem key={type._id} value={type._id}>{type.name}</SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           {formData.doctorType && (
             <div className="space-y-2">
-                <Label>Specialties</Label>
-                <div className="p-4 border rounded-md max-h-40 overflow-y-auto space-y-2">
-                    {filteredSpecialties.length > 0 ? filteredSpecialties.map(spec => (
-                        <div key={spec._id} className="flex items-center space-x-2">
-                            <Checkbox 
-                                id={spec._id} 
-                                checked={formData.specialties.includes(spec._id)}
-                                onCheckedChange={(checked) => handleSpecialtyChange(spec._id, !!checked)}
-                            />
-                            <Label htmlFor={spec._id}>{spec.name}</Label>
-                        </div>
-                    )) : <p className="text-sm text-muted-foreground">No specialties found for this type.</p>}
-                </div>
+                <Label>Specialties (Select all that apply)</Label>
+                {isLoadingDropdowns ? <Skeleton className="h-24 w-full" /> : (
+                  <div className="p-4 border rounded-md max-h-40 overflow-y-auto space-y-2">
+                      {filteredSpecialties.length > 0 ? filteredSpecialties.map(spec => (
+                          <div key={spec._id} className="flex items-center space-x-2">
+                              <Checkbox 
+                                  id={spec._id} 
+                                  checked={formData.specialties.includes(spec._id)}
+                                  onCheckedChange={(checked) => handleSpecialtyChange(spec._id, !!checked)}
+                              />
+                              <Label htmlFor={spec._id}>{spec.name}</Label>
+                          </div>
+                      )) : <p className="text-sm text-muted-foreground">No specialties found for this type.</p>}
+                  </div>
+                )}
             </div>
           )}
 
           {formData.specialties.length > 0 && (
              <div className="space-y-2">
                 <Label>Diseases Treated (Select all that apply)</Label>
-                 <div className="p-4 border rounded-md max-h-40 overflow-y-auto space-y-2">
-                    {filteredDiseases.length > 0 ? filteredDiseases.map(disease => (
-                         <div key={disease._id} className="flex items-center space-x-2">
-                            <Checkbox 
-                                id={disease._id} 
-                                checked={formData.diseases.includes(disease._id)}
-                                onCheckedChange={(checked) => handleDiseaseChange(disease._id, !!checked)}
-                            />
-                            <Label htmlFor={disease._id}>{disease.name}</Label>
-                        </div>
-                    )) : <p className="text-sm text-muted-foreground">No diseases found for selected specialties.</p>}
-                </div>
+                 {isLoadingDropdowns ? <Skeleton className="h-24 w-full" /> : (
+                   <div className="p-4 border rounded-md max-h-40 overflow-y-auto space-y-2">
+                      {filteredDiseases.length > 0 ? filteredDiseases.map(disease => (
+                           <div key={disease._id} className="flex items-center space-x-2">
+                              <Checkbox 
+                                  id={disease._id} 
+                                  checked={formData.diseases.includes(disease._id)}
+                                  onCheckedChange={(checked) => handleDiseaseChange(disease._id, !!checked)}
+                              />
+                              <Label htmlFor={disease._id}>{disease.name}</Label>
+                          </div>
+                      )) : <p className="text-sm text-muted-foreground">No diseases found for selected specialties.</p>}
+                  </div>
+                 )}
             </div>
           )}
 
@@ -184,3 +202,6 @@ export function DoctorRegistrationForm({ onSuccess }) {
     </Card>
   );
 }
+
+
+    

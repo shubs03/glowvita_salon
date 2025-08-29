@@ -1,4 +1,5 @@
 
+
 import _db from "../../../../../../../packages/lib/src/db.js";
 import DoctorModel from "../../../../../../../packages/lib/src/models/Vendor/Docters.model.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
@@ -171,3 +172,6 @@ export const DELETE = authMiddlewareAdmin(
   },
   ["superadmin"]
 );
+
+
+    

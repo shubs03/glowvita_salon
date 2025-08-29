@@ -1,4 +1,5 @@
 
+
 import mongoose from "mongoose";
 
 const doctorSchema = new mongoose.Schema({
@@ -154,3 +155,6 @@ doctorSchema.virtual('specialization').get(function() {
 const DoctorModel = mongoose.models.Doctor || mongoose.model("Doctor", doctorSchema);
 
 export default DoctorModel;
+
+
+    
