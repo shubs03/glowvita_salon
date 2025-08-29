@@ -1217,7 +1217,3 @@ const ProductCategoryManager = () => {
         </Card>
     );
 };
-```,
-  </change>
-  <change>
-    <file>/packages/lib/src/models
