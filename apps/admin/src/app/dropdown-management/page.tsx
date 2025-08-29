@@ -39,6 +39,7 @@ interface DropdownItem {
   description?: string;
   type: string;
   parentId?: string;
+  doctorType?: 'Physician' | 'Surgeon';
 }
 
 interface LocationItem extends DropdownItem {
@@ -685,7 +686,7 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
     const getChildren = (parentId: string, childType: string) => {
         return data.filter(item => item.type === childType && item.parentId === parentId);
     }
-
+    
     const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
         setCurrentItem(item || null);
         setModalConfig({ type, parentId, parentName, action });
@@ -698,21 +699,18 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
         const name = (form.elements.namedItem('name') as HTMLInputElement).value;
         const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
 
-        const parentId = modalConfig.type === 'specialization'
-            ? (form.elements.namedItem('parentId') as HTMLSelectElement).value
-            : modalConfig.parentId;
-
-        const doctorType = modalConfig.type === 'specialization'
-            ? (form.elements.namedItem('doctorType') as HTMLSelectElement).value
-            : undefined;
+        let doctorType;
+        if (modalConfig.type === 'specialization') {
+            doctorType = (form.elements.namedItem('doctorType') as HTMLSelectElement).value as DropdownItem['doctorType'];
+        }
         
-        const itemData: any = {
+        const itemData: Partial<DropdownItem> = {
             _id: currentItem?._id,
             name,
             description,
             type: modalConfig.type,
-            parentId: parentId,
-            doctorType: doctorType
+            parentId: modalConfig.parentId,
+            ...(doctorType && { doctorType }), // Add doctorType if it exists
         };
 
         await onUpdate(itemData, modalConfig.action);
@@ -812,10 +810,10 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
                                     </Select>
                                 </div>
                             )}
-                            {modalConfig.type === 'disease' && (
+                            {(modalConfig.type === 'specialization' || modalConfig.type === 'disease') && modalConfig.parentId && (
                                  <div className="space-y-2">
-                                    <Label>Parent Specialization</Label>
-                                    <Input value={modalConfig.parentName} readOnly />
+                                    <Label>Parent</Label>
+                                    <Input value={modalConfig.parentName} readOnly disabled />
                                  </div>
                             )}
                             <div className="space-y-2">
@@ -1219,3 +1217,7 @@ const ProductCategoryManager = () => {
         </Card>
     );
 };
+```,
+  </change>
+  <change>
+    <file>/packages/lib/src/models
