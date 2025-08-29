@@ -69,16 +69,16 @@ export const POST = async (req) => {
     );
   }
 
-  // 2️⃣ Check if email, phone, or registration number already exists (Temporarily disabled for debugging)
-  // const existingDoctor = await DoctorModel.findOne({
-  //   $or: [{ email }, { phone }, { registrationNumber }],
-  // });
-  // if (existingDoctor) {
-  //   return Response.json(
-  //     { message: "Email, phone number, or registration number already in use" },
-  //     { status: 400 }
-  //   );
-  // }
+  // 2️⃣ Check if email, phone, or registration number already exists
+  const existingDoctor = await DoctorModel.findOne({
+    $or: [{ email }, { phone }, { registrationNumber }],
+  });
+  if (existingDoctor) {
+    return Response.json(
+      { message: "Email, phone number, or registration number already in use" },
+      { status: 400 }
+    );
+  }
 
   // 3️⃣ Hash password
   const hashedPassword = await bcrypt.hash(password, 10);

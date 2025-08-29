@@ -10,7 +10,7 @@ import { useCreateDoctorMutation, useGetSuperDataQuery } from '@repo/store/api';
 import { Label } from '@repo/ui/label';
 import { Checkbox } from '@repo/ui/checkbox';
 import { Skeleton } from '@repo/ui/skeleton';
-import { CheckCircle, Stethoscope, User, HeartPulse, Brain, Bone, Baby, ArrowRight, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Stethoscope, User, HeartPulse, Bone, ArrowRight, ArrowLeft } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 
 const StepIndicator = ({ currentStep, setStep }) => {
@@ -80,7 +80,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
     state: 'N/A',
     city: 'N/A',
     pincode: '000000',
-    registrationNumber: 'TEMP-REG-12345',
+    registrationNumber: '',
     physicalConsultationStartTime: '00:00',
     physicalConsultationEndTime: '00:00',
     assistantName: 'N/A',
@@ -288,6 +288,10 @@ export function DoctorRegistrationForm({ onSuccess }) {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} required />
                 <Input name="experience" type="number" placeholder="Years of Experience" onChange={handleChange} required />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input name="registrationNumber" placeholder="Registration Number" onChange={handleChange} required />
+                  <Input name="gender" placeholder="Gender" onChange={handleChange} required />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
