@@ -31,12 +31,20 @@ const doctorSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
-  specialization: {
+  doctorType: { // Added
     type: String,
     required: true,
-    // enum: ["Dermatologist", "Cosmetologist", "Trichologist", "Aesthetic Physician", "Plastic Surgeon"],
-    trim: true,
+    enum: ["Physician", "Surgeon"],
   },
+  specialties: [{ // Changed from String to Array of Strings
+    type: String,
+    required: true,
+    trim: true,
+  }],
+  diseases: [{ // Added
+    type: String,
+    trim: true,
+  }],
   experience: {
     type: String,
     required: true,
@@ -138,6 +146,12 @@ const doctorSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+});
+
+// Rename 'specialization' to 'specialties' for clarity if needed, but the request implies keeping it.
+// The model now supports multiple specialties and diseases.
+doctorSchema.virtual('specialization').get(function() {
+    return this.specialties?.[0] || '';
 });
 
 const DoctorModel = mongoose.models.Doctor || mongoose.model("Doctor", doctorSchema);

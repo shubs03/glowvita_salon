@@ -24,7 +24,9 @@ const superDataSchema = new mongoose.Schema({
       'documentType',
       'country',
       'state',
-      'city'
+      'city',
+      'doctorType', // Added
+      'disease'     // Added
     ],
   },
   parentId: {

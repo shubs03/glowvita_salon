@@ -1,14 +1,20 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
-import { useCreateDoctorMutation } from '@repo/store/api';
+import { useCreateDoctorMutation, useGetSuperDataQuery } from '@repo/store/api';
+import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
+import { Label } from '@repo/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Checkbox } from '@repo/ui/checkbox';
 
 export function DoctorRegistrationForm({ onSuccess }) {
+  const { data: dropdownData = [], isLoading: isLoadingDropdowns } = useGetSuperDataQuery(undefined);
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -16,14 +22,16 @@ export function DoctorRegistrationForm({ onSuccess }) {
     password: '',
     confirmPassword: '',
     gender: 'male',
-    registrationNumber: 'TEMP-REG-12345',
-    specialization: 'General',
+    doctorType: '',
+    specialties: [],
+    diseases: [],
     experience: '0',
     clinicName: 'N/A',
     clinicAddress: 'N/A',
     state: 'N/A',
     city: 'N/A',
     pincode: '000000',
+    registrationNumber: 'TEMP-REG-12345',
     physicalConsultationStartTime: '00:00',
     physicalConsultationEndTime: '00:00',
     assistantName: 'N/A',
@@ -35,10 +43,47 @@ export function DoctorRegistrationForm({ onSuccess }) {
   
   const [createDoctor, { isLoading }] = useCreateDoctorMutation();
 
+  const doctorTypes = dropdownData.filter(d => d.type === 'doctorType');
+  const allSpecialties = dropdownData.filter(d => d.type === 'specialization');
+  const allDiseases = dropdownData.filter(d => d.type === 'disease');
+
+  const filteredSpecialties = allSpecialties.filter(s => s.parentId === formData.doctorType);
+  const filteredDiseases = allDiseases.filter(d => formData.specialties.includes(d.parentId));
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  }
+  };
+
+  const handleDoctorTypeChange = (value: string) => {
+    setFormData(prev => ({ ...prev, doctorType: value, specialties: [], diseases: [] }));
+  };
+  
+  const handleSpecialtyChange = (specialtyId: string, checked: boolean) => {
+    setFormData(prev => {
+        const currentSpecialties = prev.specialties || [];
+        const newSpecialties = checked 
+            ? [...currentSpecialties, specialtyId]
+            : currentSpecialties.filter(id => id !== specialtyId);
+        
+        // Remove diseases that are no longer relevant
+        const relevantDiseases = prev.diseases.filter(diseaseId => {
+            const disease = allDiseases.find(d => d._id === diseaseId);
+            return newSpecialties.includes(disease?.parentId);
+        });
+
+        return { ...prev, specialties: newSpecialties, diseases: relevantDiseases };
+    });
+  };
+  
+  const handleDiseaseChange = (diseaseId: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      diseases: checked
+        ? [...prev.diseases, diseaseId]
+        : prev.diseases.filter(id => id !== diseaseId),
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,8 +92,20 @@ export function DoctorRegistrationForm({ onSuccess }) {
       return;
     }
     
+    // Prepare data for submission, converting specialty IDs to names
+    const specialtyNames = formData.specialties.map(id => allSpecialties.find(s => s._id === id)?.name).filter(Boolean);
+    const diseaseNames = formData.diseases.map(id => allDiseases.find(d => d._id === id)?.name).filter(Boolean);
+    const doctorTypeName = doctorTypes.find(dt => dt._id === formData.doctorType)?.name;
+
+    const submissionData = {
+      ...formData,
+      doctorType: doctorTypeName,
+      specialties: specialtyNames, // Send names instead of IDs
+      diseases: diseaseNames,
+    };
+    
     try {
-      await createDoctor(formData).unwrap();
+      await createDoctor(submissionData).unwrap();
       toast.success("Doctor registration submitted successfully!");
       onSuccess();
     } catch (err) {
@@ -69,7 +126,56 @@ export function DoctorRegistrationForm({ onSuccess }) {
           <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} required />
           <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
           <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required />
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          
+          <div className="space-y-2">
+            <Label>What describes you best?</Label>
+            <RadioGroup onValueChange={handleDoctorTypeChange} value={formData.doctorType}>
+                {doctorTypes.map(type => (
+                    <div key={type._id} className="flex items-center space-x-2">
+                        <RadioGroupItem value={type._id} id={type._id} />
+                        <Label htmlFor={type._id}>{type.name}</Label>
+                    </div>
+                ))}
+            </RadioGroup>
+          </div>
+
+          {formData.doctorType && (
+            <div className="space-y-2">
+                <Label>Specialties</Label>
+                <div className="p-4 border rounded-md max-h-40 overflow-y-auto space-y-2">
+                    {filteredSpecialties.map(spec => (
+                        <div key={spec._id} className="flex items-center space-x-2">
+                            <Checkbox 
+                                id={spec._id} 
+                                checked={formData.specialties.includes(spec._id)}
+                                onCheckedChange={(checked) => handleSpecialtyChange(spec._id, !!checked)}
+                            />
+                            <Label htmlFor={spec._id}>{spec.name}</Label>
+                        </div>
+                    ))}
+                </div>
+            </div>
+          )}
+
+          {formData.specialties.length > 0 && (
+             <div className="space-y-2">
+                <Label>Diseases Treated</Label>
+                 <div className="p-4 border rounded-md max-h-40 overflow-y-auto space-y-2">
+                    {filteredDiseases.map(disease => (
+                         <div key={disease._id} className="flex items-center space-x-2">
+                            <Checkbox 
+                                id={disease._id} 
+                                checked={formData.diseases.includes(disease._id)}
+                                onCheckedChange={(checked) => handleDiseaseChange(disease._id, !!checked)}
+                            />
+                            <Label htmlFor={disease._id}>{disease.name}</Label>
+                        </div>
+                    ))}
+                </div>
+            </div>
+          )}
+
+          <Button type="submit" className="w-full" disabled={isLoading || isLoadingDropdowns}>
             {isLoading ? "Submitting..." : "Submit Application"}
           </Button>
         </form>
