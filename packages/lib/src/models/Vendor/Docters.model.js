@@ -1,8 +1,13 @@
 
-
 import mongoose from "mongoose";
 
 const doctorSchema = new mongoose.Schema({
+  vendorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Vendor',
+    required: true,
+    index: true
+  },
   name: {
     type: String,
     required: true,
@@ -11,14 +16,12 @@ const doctorSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
     lowercase: true,
     trim: true,
   },
   phone: {
     type: String,
     required: true,
-    unique: true,
     trim: true,
   },
   gender: {
@@ -29,7 +32,6 @@ const doctorSchema = new mongoose.Schema({
   registrationNumber: {
     type: String,
     required: true,
-    unique: true,
     trim: true,
   },
   doctorType: { 
@@ -148,6 +150,12 @@ const doctorSchema = new mongoose.Schema({
   },
 });
 
+// Compound index to ensure uniqueness per vendor
+doctorSchema.index({ vendorId: 1, email: 1 }, { unique: true });
+doctorSchema.index({ vendorId: 1, phone: 1 }, { unique: true });
+doctorSchema.index({ vendorId: 1, registrationNumber: 1 }, { unique: true });
+
+
 doctorSchema.virtual('specialization').get(function() {
     return this.specialties?.[0] || '';
 });
@@ -155,4 +163,3 @@ doctorSchema.virtual('specialization').get(function() {
 const DoctorModel = mongoose.models.Doctor || mongoose.model("Doctor", doctorSchema);
 
 export default DoctorModel;
-    
