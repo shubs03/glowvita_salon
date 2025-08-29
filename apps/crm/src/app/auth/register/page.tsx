@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, Suspense } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
@@ -80,20 +80,6 @@ export default function RegisterPage() {
         return null;
     }
   };
-
-  if (selectedRole === 'vendor') {
-    return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-             <div className="container mx-auto px-4 py-8">
-                 <Button variant="ghost" onClick={() => setSelectedRole(null)} className="mb-4">
-                    <ArrowLeft className="mr-2 h-4 w-4"/> Back to role selection
-                </Button>
-                {renderForm()}
-            </div>
-            <SuccessModal isOpen={showSuccessModal} onClose={() => setShowSuccessModal(false)} />
-        </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950 flex items-center justify-center p-4">

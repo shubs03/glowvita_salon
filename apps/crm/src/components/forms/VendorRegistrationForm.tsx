@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Image as ImageIcon, Upload, Map, CheckCircle2, Building, MapPin, User, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Image as ImageIcon, Upload, Map, CheckCircle2, Building, MapPin, User, ChevronRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -24,6 +24,11 @@ const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
 type SalonCategory = 'unisex' | 'men' | 'women';
 type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
 
+interface State {
+  state: string;
+  districts: string[];
+}
+
 interface MapboxFeature {
   id: string;
   place_name: string;
@@ -42,37 +47,34 @@ const StepIndicator = ({ currentStep, setStep }) => {
         { id: 2, name: 'Location', icon: MapPin },
         { id: 3, name: 'Salon Details', icon: Building },
     ];
-    const progressPercentage = ((currentStep - 1) / (steps.length - 1)) * 100;
 
     return (
-        <div className="w-full px-4 sm:px-0">
-            <div className="relative mb-2">
-                <div className="absolute left-0 top-1/2 -mt-px h-0.5 w-full bg-gray-200" aria-hidden="true" />
-                <div className="absolute left-0 top-1/2 -mt-px h-0.5 bg-primary transition-all duration-500" style={{ width: `${progressPercentage}%` }} />
-            </div>
-            <ol role="list" className="flex items-center justify-between">
-                {steps.map((step, stepIdx) => (
-                    <li key={step.name} className="relative">
-                        <button 
+        <nav aria-label="Progress">
+            <ol role="list" className="space-y-4 md:flex md:space-x-8 md:space-y-0">
+                {steps.map((step, index) => (
+                    <li key={step.name} className="md:flex-1">
+                        <div
                             onClick={() => (step.id < currentStep ? setStep(step.id) : {})}
                             className={cn(
-                                "flex h-8 w-8 items-center justify-center rounded-full transition-all duration-300",
-                                step.id < currentStep ? "cursor-pointer bg-primary hover:bg-primary/90" :
-                                currentStep === step.id ? "border-2 border-primary bg-background" :
-                                "border-2 border-gray-300 bg-background"
+                                "group flex flex-col border-l-4 py-2 pl-4 transition-colors md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4",
+                                step.id < currentStep && "cursor-pointer",
+                                step.id === currentStep
+                                ? "border-primary"
+                                : "border-gray-200 dark:border-gray-700 group-hover:border-gray-300 dark:group-hover:border-gray-600"
                             )}
                         >
-                            <step.icon className={cn(
-                                "h-5 w-5",
-                                step.id < currentStep ? "text-white" :
-                                currentStep === step.id ? "text-primary" : "text-muted-foreground"
-                            )} />
-                        </button>
-                        <p className="text-center text-sm font-medium mt-2 w-28 absolute left-1/2 -translate-x-1/2">{step.name}</p>
+                            <span className={cn(
+                                "text-sm font-medium transition-colors",
+                                step.id === currentStep ? "text-primary" : "text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-400"
+                            )}>
+                                Step {step.id}
+                            </span>
+                            <span className="text-sm font-medium">{step.name}</span>
+                        </div>
                     </li>
                 ))}
             </ol>
-        </div>
+        </nav>
     );
 };
 
@@ -103,6 +105,7 @@ const VendorRegistrationFormContent = ({ onSuccess }) => {
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
@@ -147,6 +150,7 @@ const VendorRegistrationFormContent = ({ onSuccess }) => {
     const newErrors = {};
     if (!formData.firstName) newErrors.firstName = 'First name is required';
     if (!formData.lastName) newErrors.lastName = 'Last name is required';
+    if (!formData.businessName) newErrors.businessName = 'Business name is required';
     if (!formData.email) newErrors.email = 'Email is required';
     if (!formData.phone) newErrors.phone = 'Phone is required';
     if (!formData.password) newErrors.password = 'Password is required';
@@ -161,7 +165,7 @@ const VendorRegistrationFormContent = ({ onSuccess }) => {
     if (!formData.state) newErrors.state = 'State is required';
     if (!formData.city) newErrors.city = 'City is required';
     if (!formData.pincode) newErrors.pincode = 'Pincode is required';
-    if (!formData.location) newErrors.location = 'Location from map is required';
+    if (!formData.location) newErrors.location = 'Location is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -270,85 +274,89 @@ const VendorRegistrationFormContent = ({ onSuccess }) => {
   };
 
   return (
-    <Card className="w-full border-0 shadow-none sm:border sm:shadow-lg">
-        <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">Become a Vendor</CardTitle>
-            <CardDescription>Follow the steps to get your salon listed on our platform.</CardDescription>
-            <div className="pt-8">
-                <StepIndicator currentStep={step} setStep={setStep} />
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="text-2xl">Vendor Registration</CardTitle>
+        <CardDescription>Complete the steps to create your vendor account.</CardDescription>
+        <div className="pt-4">
+            <StepIndicator currentStep={step} setStep={setStep} />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit}>
+          {step === 1 && (
+            <div className="space-y-4 animate-in fade-in-50 duration-500">
+              <h3 className="font-semibold text-lg border-b pb-2">Business & Owner Details</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Input name="firstName" placeholder="First Name" onChange={handleInputChange} value={formData.firstName} required />
+                <Input name="lastName" placeholder="Last Name" onChange={handleInputChange} value={formData.lastName} required />
+              </div>
+              <Input name="businessName" placeholder="Business Name" onChange={handleInputChange} value={formData.businessName} required />
+              <Input name="email" type="email" placeholder="Email Address" onChange={handleInputChange} value={formData.email} required />
+              <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleInputChange} value={formData.phone} required />
+              <div className="relative">
+                <Input name="password" type={showPassword ? 'text' : 'password'} placeholder="Password" onChange={handleInputChange} value={formData.password} required />
+                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+               <div className="relative">
+                <Input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" onChange={handleInputChange} value={formData.confirmPassword} required />
+                <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
-        </CardHeader>
-        <CardContent>
-            <form onSubmit={handleSubmit} className="min-h-[350px]">
-              {step === 1 && (
-                <div className="space-y-4 animate-in fade-in-50 duration-500 max-w-lg mx-auto">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <Input name="firstName" placeholder="First Name" onChange={handleInputChange} value={formData.firstName} required />
-                    <Input name="lastName" placeholder="Last Name" onChange={handleInputChange} value={formData.lastName} required />
-                  </div>
-                  <Input name="email" type="email" placeholder="Email Address" onChange={handleInputChange} value={formData.email} required />
-                  <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleInputChange} value={formData.phone} required />
-                  <div className="relative">
-                    <Input name="password" type={showPassword ? 'text' : 'password'} placeholder="Password" onChange={handleInputChange} value={formData.password} required />
-                    <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                   <div className="relative">
-                    <Input name="confirmPassword" type={showPassword ? 'text' : 'password'} placeholder="Confirm Password" onChange={handleInputChange} value={formData.confirmPassword} required />
-                  </div>
-                </div>
-              )}
-              {step === 2 && (
-                <div className="space-y-4 animate-in fade-in-50 duration-500 max-w-2xl mx-auto">
-                   <div className="flex items-center gap-2">
-                    <Input value={formData.location ? `${formData.location.lat.toFixed(4)}, ${formData.location.lng.toFixed(4)}` : ''} placeholder="Select location from map" readOnly />
-                    <Button type="button" variant="outline" onClick={() => setIsMapOpen(true)}><Map className="mr-2 h-4 w-4" /> Choose from Map</Button>
-                  </div>
-                  <Input name="address" placeholder="Full Address" onChange={handleInputChange} value={formData.address} required />
-                   <div className="grid md:grid-cols-3 gap-4">
-                    <Input name="state" placeholder="State" onChange={handleInputChange} value={formData.state} required />
-                    <Input name="city" placeholder="City" onChange={handleInputChange} value={formData.city} required />
-                    <Input name="pincode" placeholder="Pincode" onChange={handleInputChange} value={formData.pincode} required />
-                  </div>
-                </div>
-              )}
-              {step === 3 && (
-                <div className="space-y-6 animate-in fade-in-50 duration-500 max-w-2xl mx-auto">
-                  <Input name="businessName" placeholder="Business Name" onChange={handleInputChange} value={formData.businessName} required />
-                  <Select name="category" onValueChange={(value) => setFormData(prev => ({...prev, category: value as SalonCategory}))} value={formData.category}>
-                    <SelectTrigger><SelectValue placeholder="Salon Category" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unisex">Unisex</SelectItem>
-                      <SelectItem value="men">Men</SelectItem>
-                      <SelectItem value="women">Women</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <div className="space-y-2">
-                    <Label>Sub Categories</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['shop', 'shop-at-home', 'onsite'] as SubCategory[]).map(sc => (
-                        <div key={sc} className="flex items-center space-x-2 p-2 border rounded-md">
-                          <Checkbox id={sc} checked={formData.subCategories.includes(sc)} onCheckedChange={(checked) => handleCheckboxChange(sc, checked as boolean)} />
-                          <Label htmlFor={sc} className="capitalize">{sc.replace('-', ' ')}</Label>
-                        </div>
-                      ))}
+          )}
+          {step === 2 && (
+            <div className="space-y-4 animate-in fade-in-50 duration-500">
+              <h3 className="font-semibold text-lg border-b pb-2">Location Details</h3>
+               <div className="flex items-center gap-2">
+                <Input value={formData.location ? `${formData.location.lat.toFixed(4)}, ${formData.location.lng.toFixed(4)}` : ''} placeholder="Select location from map" readOnly />
+                <Button type="button" variant="outline" onClick={() => setIsMapOpen(true)}><Map className="mr-2 h-4 w-4" /> Choose from Map</Button>
+              </div>
+              <Input name="address" placeholder="Full Address" onChange={handleInputChange} value={formData.address} required />
+               <div className="grid md:grid-cols-3 gap-4">
+                <Input name="state" placeholder="State" onChange={handleInputChange} value={formData.state} required />
+                <Input name="city" placeholder="City" onChange={handleInputChange} value={formData.city} required />
+                <Input name="pincode" placeholder="Pincode" onChange={handleInputChange} value={formData.pincode} required />
+              </div>
+            </div>
+          )}
+          {step === 3 && (
+            <div className="space-y-4 animate-in fade-in-50 duration-500">
+              <h3 className="font-semibold text-lg border-b pb-2">Salon Details</h3>
+              <Select name="category" onValueChange={(value) => setFormData(prev => ({...prev, category: value as SalonCategory}))} value={formData.category}>
+                <SelectTrigger><SelectValue placeholder="Salon Category" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unisex">Unisex</SelectItem>
+                  <SelectItem value="men">Men</SelectItem>
+                  <SelectItem value="women">Women</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="space-y-2">
+                <Label>Sub Categories</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['shop', 'shop-at-home', 'onsite'] as SubCategory[]).map(sc => (
+                    <div key={sc} className="flex items-center space-x-2 p-2 border rounded-md">
+                      <Checkbox id={sc} checked={formData.subCategories.includes(sc)} onCheckedChange={(checked) => handleCheckboxChange(sc, checked as boolean)} />
+                      <Label htmlFor={sc} className="capitalize">{sc.replace('-', ' ')}</Label>
                     </div>
-                  </div>
-                  <Textarea name="description" placeholder="Business Description (Optional)" onChange={handleInputChange} value={formData.description} />
-                  <Input name="website" placeholder="Website URL (Optional)" onChange={handleInputChange} value={formData.website} />
-                  <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleInputChange} value={formData.referredByCode} />
+                  ))}
                 </div>
-              )}
-            </form>
-        </CardContent>
-        <CardFooter>
-            <div className="w-full flex justify-between">
-                {step > 1 ? <Button type="button" variant="outline" onClick={prevStep}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button> : <div />}
-                {step < 3 && <Button type="button" onClick={nextStep} className="ml-auto">Next <ChevronRight className="h-4 w-4 ml-2" /></Button>}
-                {step === 3 && <Button type="submit" disabled={isLoading} className="ml-auto" onClick={handleSubmit}>{isLoading ? "Registering..." : "Complete Registration"}</Button>}
+              </div>
+              <Textarea name="description" placeholder="Business Description (Optional)" onChange={handleInputChange} value={formData.description} />
+              <Input name="website" placeholder="Website URL (Optional)" onChange={handleInputChange} value={formData.website} />
+              <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleInputChange} value={formData.referredByCode} />
             </div>
-        </CardFooter>
+          )}
+          <div className="flex justify-between mt-6">
+            {step > 1 ? <Button type="button" variant="outline" onClick={prevStep}>Back</Button> : <div />}
+            {step < 3 && <Button type="button" onClick={nextStep} className="ml-auto">Next <ChevronRight className="h-4 w-4 ml-1" /></Button>}
+            {step === 3 && <Button type="submit" disabled={isLoading} className="ml-auto">{isLoading ? "Registering..." : "Complete Registration"}</Button>}
+          </div>
+        </form>
+      </CardContent>
 
       <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[80vh]">
