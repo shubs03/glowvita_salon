@@ -20,7 +20,9 @@
     "./slices/notificationSlice": "./src/slices/notificationSlice.js",
     "./slices/geoFencingSlice": "./src/slices/geoFencingSlice.js",
     "./slices/marketingSlice": "./src/slices/marketingSlice.js",
-    "./slices/faqSlice": "./src/slices/faqSlice.js"
+    "./slices/blockTimeSlice": "./src/slices/blockTimeSlice.js",
+    "./slices/faqSlice": "./src/slices/faqSlice.js",
+    "./slices/appointmentSlice": "./src/slices/appointmentSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
