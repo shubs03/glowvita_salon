@@ -172,6 +172,3 @@ export const DELETE = authMiddlewareAdmin(
   },
   ["superadmin"]
 );
-
-
-    
