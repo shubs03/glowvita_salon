@@ -681,9 +681,8 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; parentName?: string; action: 'add' | 'edit' }>({ type: 'specialization', action: 'add' });
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
     
-    // This state will hold the value of the doctorType select dropdown in the modal.
+    // State to manage the selected doctor type in the modal
     const [selectedDoctorType, setSelectedDoctorType] = useState<'Physician' | 'Surgeon' | ''>('');
-
 
     const specializations = useMemo(() => data.filter(item => item.type === 'specialization'), [data]);
     
@@ -693,7 +692,12 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     
     const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
         setCurrentItem(item || null);
-        setSelectedDoctorType((item as DropdownItem)?.doctorType || '');
+        // Set the doctor type for the modal
+        if (type === 'specialization') {
+            setSelectedDoctorType(item?.doctorType || '');
+        } else {
+            setSelectedDoctorType('');
+        }
         setModalConfig({ type, parentId, parentName, action });
         setIsModalOpen(true);
     };
@@ -704,11 +708,8 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
         const name = (form.elements.namedItem('name') as HTMLInputElement).value;
         const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
 
-        // Correctly get doctorType from the state, not the form elements directly.
-        const doctorType = modalConfig.type === 'specialization' ? selectedDoctorType : undefined;
-        
-        // Validation check for specialization
-        if (modalConfig.type === 'specialization' && !doctorType) {
+        // Validation for specialization
+        if (modalConfig.type === 'specialization' && !selectedDoctorType) {
             toast.error("Doctor Type is required for a specialization.");
             return;
         }
@@ -719,7 +720,8 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
             description,
             type: modalConfig.type,
             parentId: modalConfig.parentId,
-            ...(doctorType && { doctorType }),
+            // Include doctorType only for specializations
+            doctorType: modalConfig.type === 'specialization' ? selectedDoctorType : undefined,
         };
 
         await onUpdate(itemData, modalConfig.action);
@@ -812,7 +814,6 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                                     <Select 
                                       value={selectedDoctorType} 
                                       onValueChange={(value) => setSelectedDoctorType(value as any)}
-                                      required
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a Doctor Type" />
@@ -1218,4 +1219,3 @@ const ProductCategoryManager = () => {
         </Card>
     );
 };
-
