@@ -177,37 +177,37 @@ export default function ReferralsPage() {
                 </CardContent>
             </Card>
 
-            <Card className="mb-6">
+            <Card className="mb-6 bg-secondary/50 border border-border/50">
                 <CardHeader>
-                    <CardTitle>How It Works</CardTitle>
-                    <CardDescription>Earn rewards in 3 simple steps.</CardDescription>
+                    <CardTitle className="text-center text-xl font-semibold">How It Works</CardTitle>
+                    <CardDescription className="text-center">Earn rewards in 3 simple steps.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-3 gap-6 text-center">
-                    <div className="flex flex-col items-center p-4">
-                        <div className="mb-4 bg-primary/10 text-primary p-4 rounded-full">
+                    <div className="flex flex-col items-center p-4 transform transition-transform duration-300 hover:scale-105">
+                        <div className="mb-4 bg-primary/10 text-primary p-5 rounded-full ring-4 ring-primary/20">
                             <Share2 className="h-8 w-8" />
                         </div>
-                        <h3 className="font-semibold mb-1">1. Share Your Link</h3>
-                        <p className="text-sm text-muted-foreground">
-                            Copy your personal referral link and share it with other salon owners.
+                        <h3 className="font-semibold text-lg mb-1">1. Share Your Link</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            Copy your personal referral link and share it with other salon owners and beauty professionals you know.
                         </p>
                     </div>
-                    <div className="flex flex-col items-center p-4">
-                        <div className="mb-4 bg-primary/10 text-primary p-4 rounded-full">
+                    <div className="flex flex-col items-center p-4 transform transition-transform duration-300 hover:scale-105">
+                        <div className="mb-4 bg-primary/10 text-primary p-5 rounded-full ring-4 ring-primary/20">
                             <UserPlus className="h-8 w-8" />
                         </div>
-                        <h3 className="font-semibold mb-1">2. They Sign Up</h3>
-                        <p className="text-sm text-muted-foreground">
-                            Your friend uses your link to register their salon on our platform.
+                        <h3 className="font-semibold text-lg mb-1">2. They Sign Up</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            Your friend uses your unique link to register their salon or professional profile on our platform.
                         </p>
                     </div>
-                    <div className="flex flex-col items-center p-4">
-                        <div className="mb-4 bg-primary/10 text-primary p-4 rounded-full">
+                    <div className="flex flex-col items-center p-4 transform transition-transform duration-300 hover:scale-105">
+                        <div className="mb-4 bg-primary/10 text-primary p-5 rounded-full ring-4 ring-primary/20">
                             <Gift className="h-8 w-8" />
                         </div>
-                        <h3 className="font-semibold mb-1">3. Get Rewarded</h3>
-                        <p className="text-sm text-muted-foreground">
-                           Once their registration is complete, you receive a bonus in your account.
+                        <h3 className="font-semibold text-lg mb-1">3. Get Rewarded</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                           Once their registration is complete and verified, you receive a bonus in your account as a thank you!
                         </p>
                     </div>
                 </CardContent>

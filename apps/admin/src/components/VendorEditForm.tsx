@@ -58,7 +58,7 @@ export interface Vendor {
   email: string;
   phone: string;
   businessName: string;
-  category: SalonCategory;
+  category: SalonCategory | '';
   subCategories: SubCategory[];
   description: string;
   profileImage?: string;
@@ -72,7 +72,14 @@ export interface Vendor {
   gallery?: string[];
   documents?: Document[];
   bankDetails?: BankDetails;
-  location?: { lat: number; lng: number };
+  location?: { lat: number; lng: number } | null;
+  confirmPassword?: string;
+  businessType?: string;
+  businessCategory?: string;
+  businessEmail?: string;
+  businessDescription?: string;
+  serviceCategories?: string[];
+  status?: 'Active' | 'Disabled' | 'Pending' | 'Approved' | 'Disapproved';
 }
 
 interface Client {
@@ -99,7 +106,17 @@ interface MapboxFeature {
   }>;
 }
 
-const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxChange, errors, setFormData, isEditMode }) => {
+// Define props for the tab components
+interface TabProps {
+  formData: Vendor;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  handleCheckboxChange: (field: 'subCategories', id: SubCategory, checked: boolean) => void;
+  errors: Partial<Record<keyof Vendor, string>>;
+  setFormData: React.Dispatch<React.SetStateAction<Vendor>>;
+  isEditMode: boolean;
+}
+
+const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxChange, errors, setFormData, isEditMode }: TabProps) => {
   const [isMapOpen, setIsMapOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
@@ -184,7 +201,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
         marker.current = null;
       }
     };
-  }, [isMapOpen]);
+  }, [isMapOpen, formData.location, setFormData]);
 
   // Resize map when modal is fully opened
   useEffect(() => {
@@ -443,24 +460,24 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
-              <Input id="firstName" name="firstName" value={formData.firstName} onChange={handleInputChange} className={errors.firstName ? 'border-red-500' : ''} />
+              <Input id="firstName" name="firstName" value={formData.firstName || ''} onChange={handleInputChange} className={errors.firstName ? 'border-red-500' : ''} />
               {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
-              <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleInputChange} className={errors.lastName ? 'border-red-500' : ''} />
+              <Input id="lastName" name="lastName" value={formData.lastName || ''} onChange={handleInputChange} className={errors.lastName ? 'border-red-500' : ''} />
               {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName}</p>}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
-              <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} className={errors.email ? 'border-red-500' : ''} />
+              <Input id="email" name="email" type="email" value={formData.email || ''} onChange={handleInputChange} className={errors.email ? 'border-red-500' : ''} />
               {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Mobile Number <span className="text-red-500">*</span></Label>
-              <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} className={errors.phone ? 'border-red-500' : ''} />
+              <Input id="phone" name="phone" type="tel" value={formData.phone || ''} onChange={handleInputChange} className={errors.phone ? 'border-red-500' : ''} />
               {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
             </div>
           </div>
@@ -470,7 +487,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                  <div className="space-y-2">
                     <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
                     <div className="relative">
-                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleInputChange} required className={errors.password ? 'border-red-500' : ''} />
+                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password || ''} onChange={handleInputChange} required className={errors.password ? 'border-red-500' : ''} />
                         <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
@@ -479,7 +496,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
-                    <Input id="confirmPassword" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} required className={errors.confirmPassword ? 'border-red-500' : ''} />
+                    <Input id="confirmPassword" name="confirmPassword" type="password" value={formData.confirmPassword || ''} onChange={handleInputChange} required className={errors.confirmPassword ? 'border-red-500' : ''} />
                      {errors.confirmPassword && <p className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>}
                 </div>
             </div>
@@ -512,23 +529,23 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
                 <Label htmlFor="state">State <span className="text-red-500">*</span></Label>
-                <Input id="state" name="state" value={formData.state} onChange={handleInputChange} className={errors.state ? 'border-red-500' : ''} />
+                <Input id="state" name="state" value={formData.state || ''} onChange={handleInputChange} className={errors.state ? 'border-red-500' : ''} />
                 {errors.state && <p className="text-sm text-red-500 mt-1">{errors.state}</p>}
             </div>
             <div className="space-y-2">
                 <Label htmlFor="city">City <span className="text-red-500">*</span></Label>
-                <Input id="city" name="city" value={formData.city} onChange={handleInputChange} className={errors.city ? 'border-red-500' : ''} />
+                <Input id="city" name="city" value={formData.city || ''} onChange={handleInputChange} className={errors.city ? 'border-red-500' : ''} />
                 {errors.city && <p className="text-sm text-red-500 mt-1">{errors.city}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="pincode">Pincode <span className="text-red-500">*</span></Label>
-              <Input id="pincode" name="pincode" value={formData.pincode} onChange={handleInputChange} className={errors.pincode ? 'border-red-500' : ''} />
+              <Input id="pincode" name="pincode" value={formData.pincode || ''} onChange={handleInputChange} className={errors.pincode ? 'border-red-500' : ''} />
               {errors.pincode && <p className="text-sm text-red-500 mt-1">{errors.pincode}</p>}
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="address">Complete Address <span className="text-red-500">*</span></Label>
-            <Textarea id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Enter complete salon address" className={errors.address ? 'border-red-500' : ''} />
+            <Textarea id="address" name="address" value={formData.address || ''} onChange={handleInputChange} placeholder="Enter complete salon address" className={errors.address ? 'border-red-500' : ''} />
             {errors.address && <p className="text-sm text-red-500 mt-1">{errors.address}</p>}
           </div>
         </CardContent>
@@ -625,11 +642,11 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
   );
 };
 // Stub components for other tabs
-const SubscriptionTab = ({ vendor, formData, handleInputChange, errors }) => <div>Subscription Info</div>;
-const GalleryTab = ({ vendor, formData, handleInputChange, errors }) => <div>Gallery</div>;
-const BankDetailsTab = ({ vendor, formData, handleInputChange, errors }) => <div>Bank Details</div>;
-const DocumentsTab = ({ vendor, formData, handleInputChange, errors }) => <div>Documents</div>;
-const ClientsTab = ({ vendor }) => <div>Clients</div>;
+const SubscriptionTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Subscription Info</div>;
+const GalleryTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Gallery</div>;
+const BankDetailsTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Bank Details</div>;
+const DocumentsTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Documents</div>;
+const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => <div>Clients</div>;
 
 interface VendorEditFormProps {
   isOpen: boolean;
@@ -644,7 +661,7 @@ const getInitialFormData = (): Vendor => ({
     email: '',
     phone: '',
     businessName: '',
-    category: 'unisex',
+    category: '',
     subCategories: [],
     description: '',
     profileImage: '',
@@ -654,6 +671,7 @@ const getInitialFormData = (): Vendor => ({
     pincode: '',
     address: '',
     password: '',
+    confirmPassword: '',
     subscription: { startDate: '', endDate: '', package: '', isActive: false },
     gallery: [],
     documents: [],
@@ -667,7 +685,7 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
 
   useEffect(() => {
     if (isOpen) {
-        setFormData(vendor || getInitialFormData());
+        setFormData(vendor ? { ...getInitialFormData(), ...vendor } : getInitialFormData());
         setErrors({});
     }
   }, [vendor, isOpen]);
@@ -750,10 +768,10 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
               />
             </TabsContent>
             {/* Other Tabs would be here */}
-             <TabsContent value="subscription"><SubscriptionTab vendor={vendor} formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
-            <TabsContent value="gallery"><GalleryTab vendor={vendor} formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
-            <TabsContent value="bank"><BankDetailsTab vendor={vendor} formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
-            <TabsContent value="documents"><DocumentsTab vendor={vendor} formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+             <TabsContent value="subscription"><SubscriptionTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="gallery"><GalleryTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="bank"><BankDetailsTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="documents"><DocumentsTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
             <TabsContent value="clients"><ClientsTab vendor={vendor} /></TabsContent>
           </Tabs>
           <DialogFooter>
