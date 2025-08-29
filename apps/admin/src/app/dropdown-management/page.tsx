@@ -740,23 +740,27 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
         const isExpanded = expandedItems[item._id];
 
         return (
-            <div key={item._id} className="border-l-2 border-gray-200">
+            <div key={item._id} className={level === 0 ? "border-t" : "border-t border-dashed"}>
                 <div className="flex items-center gap-2 py-2 pr-2" style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}>
-                    <button onClick={() => toggleExpand(item._id)} className="p-1">
-                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </button>
-                    <span className="flex-grow font-medium">{item.name} <Badge variant="outline">{item.doctorType}</Badge></span>
-                    <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', 'disease', undefined, item._id, item.name)}>
-                        <Plus className="mr-1 h-3 w-3" /> Add Disease
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type, item)}>
+                     {item.type === 'specialization' && (
+                        <button onClick={() => toggleExpand(item._id)} className="p-1 hover:bg-secondary rounded-full">
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </button>
+                    )}
+                    <span className="flex-grow font-medium">{item.name} {item.doctorType && <Badge variant="outline">{item.doctorType}</Badge>}</span>
+                    {item.type === 'specialization' && (
+                        <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', 'disease', undefined, item._id, item.name)}>
+                            <Plus className="mr-1 h-3 w-3" /> Add Disease
+                        </Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type, item, item.parentId)}>
                         <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteClick(item)}>
                         <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                 </div>
-                {isExpanded && (
+                {isExpanded && item.type === 'specialization' && (
                     <div className="ml-4 pl-2">
                          {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-8 text-sm text-muted-foreground py-1">No diseases added yet.</div>}
                     </div>
@@ -778,7 +782,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                     </Button>
                 </div>
             </CardHeader>
-            <CardContent className="border rounded-md max-h-[500px] overflow-y-auto">
+            <CardContent className="border rounded-md">
                 {isLoading ? <div className="text-center p-4">Loading...</div> :
                  specializations.length === 0 ? <div className="text-center p-8 text-muted-foreground">No specializations found.</div> :
                  specializations.map(item => renderItem(item, 0))}
