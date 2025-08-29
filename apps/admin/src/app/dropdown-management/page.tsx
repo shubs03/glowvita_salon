@@ -680,6 +680,10 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
     const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; parentName?: string; action: 'add' | 'edit' }>({ type: 'specialization', action: 'add' });
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+    
+    // This state will hold the value of the doctorType select dropdown in the modal.
+    const [selectedDoctorType, setSelectedDoctorType] = useState<'Physician' | 'Surgeon' | ''>('');
+
 
     const specializations = useMemo(() => data.filter(item => item.type === 'specialization'), [data]);
     
@@ -689,6 +693,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     
     const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
         setCurrentItem(item || null);
+        setSelectedDoctorType((item as DropdownItem)?.doctorType || '');
         setModalConfig({ type, parentId, parentName, action });
         setIsModalOpen(true);
     };
@@ -699,11 +704,15 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
         const name = (form.elements.namedItem('name') as HTMLInputElement).value;
         const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
 
-        let doctorType;
-        if (modalConfig.type === 'specialization') {
-            doctorType = (form.elements.namedItem('doctorType') as HTMLSelectElement).value as DropdownItem['doctorType'];
-        }
+        // Correctly get doctorType from the state, not the form elements directly.
+        const doctorType = modalConfig.type === 'specialization' ? selectedDoctorType : undefined;
         
+        // Validation check for specialization
+        if (modalConfig.type === 'specialization' && !doctorType) {
+            toast.error("Doctor Type is required for a specialization.");
+            return;
+        }
+
         const itemData: Partial<DropdownItem> = {
             _id: currentItem?._id,
             name,
@@ -799,8 +808,12 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                         <div className="py-4 space-y-4">
                            {modalConfig.type === 'specialization' && (
                                 <div className="space-y-2">
-                                    <Label htmlFor="doctorType">Doctor Type</Label>
-                                    <Select name="doctorType" defaultValue={(currentItem as any)?.doctorType || ''} required>
+                                    <Label htmlFor="doctorType">Doctor Type *</Label>
+                                    <Select 
+                                      value={selectedDoctorType} 
+                                      onValueChange={(value) => setSelectedDoctorType(value as any)}
+                                      required
+                                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a Doctor Type" />
                                         </SelectTrigger>
@@ -870,8 +883,9 @@ export default function DropdownManagementPage() {
                 await deleteItem({ id: item._id }).unwrap();
                 toast.success('Success', { description: 'Item deleted successfully.' });
             }
-        } catch (error) {
-            toast.error('Error', { description: `Failed to ${action} item.` });
+        } catch (error: any) {
+            const errorMessage = error?.data?.message || `Failed to ${action} item.`;
+            toast.error('Error', { description: errorMessage });
             console.error(`API call failed for ${action}:`, error);
         }
     };
@@ -1204,3 +1218,4 @@ const ProductCategoryManager = () => {
         </Card>
     );
 };
+
