@@ -14,9 +14,9 @@ export const POST = async (req) => {
     phone,
     gender,
     registrationNumber,
-    doctorType, // Added
-    specialties, // Changed from specialization
-    diseases, // Added
+    doctorType, 
+    specialties,
+    diseases, 
     experience,
     clinicName,
     clinicAddress,
@@ -45,8 +45,8 @@ export const POST = async (req) => {
     !phone ||
     !gender ||
     !registrationNumber ||
-    !doctorType || // Added validation
-    !specialties || !Array.isArray(specialties) || specialties.length === 0 || // Changed validation
+    !doctorType || 
+    !specialties || !Array.isArray(specialties) || specialties.length === 0 || 
     !experience ||
     !clinicName ||
     !clinicAddress ||
@@ -89,9 +89,9 @@ export const POST = async (req) => {
     phone,
     gender,
     registrationNumber,
-    doctorType, // Added
-    specialties, // Changed from specialization
-    diseases: diseases || [], // Added
+    doctorType,
+    specialties,
+    diseases: diseases || [],
     experience,
     clinicName,
     clinicAddress,

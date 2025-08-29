@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
 import { useCreateDoctorMutation, useGetSuperDataQuery } from '@repo/store/api';
-import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Checkbox } from '@repo/ui/checkbox';
@@ -92,7 +91,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
       return;
     }
     
-    // Prepare data for submission, converting specialty IDs to names
+    // Prepare data for submission, converting IDs to names
     const specialtyNames = formData.specialties.map(id => allSpecialties.find(s => s._id === id)?.name).filter(Boolean);
     const diseaseNames = formData.diseases.map(id => allDiseases.find(d => d._id === id)?.name).filter(Boolean);
     const doctorTypeName = doctorTypes.find(dt => dt._id === formData.doctorType)?.name;
@@ -100,7 +99,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
     const submissionData = {
       ...formData,
       doctorType: doctorTypeName,
-      specialties: specialtyNames, // Send names instead of IDs
+      specialties: specialtyNames,
       diseases: diseaseNames,
     };
     
@@ -129,21 +128,23 @@ export function DoctorRegistrationForm({ onSuccess }) {
           
           <div className="space-y-2">
             <Label>What describes you best?</Label>
-            <RadioGroup onValueChange={handleDoctorTypeChange} value={formData.doctorType}>
+            <Select onValueChange={handleDoctorTypeChange} value={formData.doctorType}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Select your primary role" />
+                </SelectTrigger>
+                <SelectContent>
                 {doctorTypes.map(type => (
-                    <div key={type._id} className="flex items-center space-x-2">
-                        <RadioGroupItem value={type._id} id={type._id} />
-                        <Label htmlFor={type._id}>{type.name}</Label>
-                    </div>
+                    <SelectItem key={type._id} value={type._id}>{type.name}</SelectItem>
                 ))}
-            </RadioGroup>
+                </SelectContent>
+            </Select>
           </div>
 
           {formData.doctorType && (
             <div className="space-y-2">
                 <Label>Specialties</Label>
                 <div className="p-4 border rounded-md max-h-40 overflow-y-auto space-y-2">
-                    {filteredSpecialties.map(spec => (
+                    {filteredSpecialties.length > 0 ? filteredSpecialties.map(spec => (
                         <div key={spec._id} className="flex items-center space-x-2">
                             <Checkbox 
                                 id={spec._id} 
@@ -152,16 +153,16 @@ export function DoctorRegistrationForm({ onSuccess }) {
                             />
                             <Label htmlFor={spec._id}>{spec.name}</Label>
                         </div>
-                    ))}
+                    )) : <p className="text-sm text-muted-foreground">No specialties found for this type.</p>}
                 </div>
             </div>
           )}
 
           {formData.specialties.length > 0 && (
              <div className="space-y-2">
-                <Label>Diseases Treated</Label>
+                <Label>Diseases Treated (Select all that apply)</Label>
                  <div className="p-4 border rounded-md max-h-40 overflow-y-auto space-y-2">
-                    {filteredDiseases.map(disease => (
+                    {filteredDiseases.length > 0 ? filteredDiseases.map(disease => (
                          <div key={disease._id} className="flex items-center space-x-2">
                             <Checkbox 
                                 id={disease._id} 
@@ -170,7 +171,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
                             />
                             <Label htmlFor={disease._id}>{disease.name}</Label>
                         </div>
-                    ))}
+                    )) : <p className="text-sm text-muted-foreground">No diseases found for selected specialties.</p>}
                 </div>
             </div>
           )}

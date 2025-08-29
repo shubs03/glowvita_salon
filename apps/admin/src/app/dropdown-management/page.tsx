@@ -756,10 +756,10 @@ export default function DropdownManagementPage() {
             return (
                 <div key={item._id}>
                     <div className="flex items-center gap-2 py-2 pr-2" style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}>
-                        <button onClick={() => toggleExpand(item._id)} className="p-1" disabled={children.length === 0 && level < childTypes.length - 1}>
-                            {(children.length > 0 || level < childTypes.length - 1) ? (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />) : <div className="w-4 h-4"></div>}
+                        <button onClick={() => toggleExpand(item._id)} className="p-1" disabled={!childConfig}>
+                           {childConfig ? (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />) : <div className="w-4 h-4"></div>}
                         </button>
-                        <span className="flex-grow">{item.name}</span>
+                        <span className="flex-grow font-medium">{item.name}</span>
                         {childConfig && (
                             <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', childConfig.type, undefined, item._id)}>
                                 <Plus className="mr-1 h-3 w-3" /> Add {childConfig.name}
@@ -772,9 +772,9 @@ export default function DropdownManagementPage() {
                             <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                     </div>
-                    {isExpanded && (
+                    {isExpanded && childConfig && (
                         <div className="border-l-2 ml-4 pl-2">
-                             {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-4 text-sm text-muted-foreground py-1">No {childConfig?.name || 'items'} added yet.</div>}
+                             {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-4 text-sm text-muted-foreground py-1">No {childConfig.name}s added yet.</div>}
                         </div>
                     )}
                 </div>
@@ -794,8 +794,10 @@ export default function DropdownManagementPage() {
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent className="border rounded-md max-h-96 overflow-y-auto">
+                <CardContent className="border rounded-md max-h-[500px] overflow-y-auto">
                     {topLevelItems.map(item => renderItem(item, 0))}
+                     {isLoading && <div className="text-center p-4">Loading...</div>}
+                     {!isLoading && topLevelItems.length === 0 && <div className="text-center p-8 text-muted-foreground">No {topLevelType}s found.</div>}
                 </CardContent>
 
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -837,7 +839,6 @@ export default function DropdownManagementPage() {
             </Card>
         );
     };
-
 
     if (isError) {
         return <div className="p-8 text-center text-destructive">Error fetching data. Please try again.</div>;
@@ -1172,3 +1173,4 @@ const ProductCategoryManager = () => {
         </Card>
     );
 };
+
