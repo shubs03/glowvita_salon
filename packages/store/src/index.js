@@ -17,6 +17,11 @@ export * from "./slices/notificationSlice";
 export * from "./slices/geoFencingSlice";
 export * from "./slices/smsTemplateSlice";
 export * from "./slices/faqSlice";
+export * from "./slices/appointmentSlice";
+export * from "./slices/blockTimeSlice";
+
+
+
 export * from "./slices/shippingSlice";
 
 export * from "./slices/productSlice";
