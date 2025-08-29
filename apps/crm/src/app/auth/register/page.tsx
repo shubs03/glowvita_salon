@@ -69,11 +69,7 @@ export default function RegisterPage() {
       case 'vendor':
         return <VendorRegistrationForm onSuccess={handleRegistrationSuccess} />;
       case 'doctor':
-        return (
-            <div className="max-w-md mx-auto">
-                <DoctorRegistrationForm onSuccess={handleRegistrationSuccess} />
-            </div>
-        );
+        return <DoctorRegistrationForm onSuccess={handleRegistrationSuccess} />;
       case 'supplier':
         return (
             <div className="max-w-md mx-auto">

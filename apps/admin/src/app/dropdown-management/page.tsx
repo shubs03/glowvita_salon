@@ -677,7 +677,7 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
-    const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; action: 'add' | 'edit' }>({ type: topLevelType, action: 'add' });
+    const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; parentName?: string; action: 'add' | 'edit' }>({ type: topLevelType, action: 'add' });
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
     const topLevelItems = useMemo(() => data.filter(item => item.type === topLevelType), [data, topLevelType]);
@@ -686,9 +686,9 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
         return data.filter(item => item.type === childType && item.parentId === parentId);
     }
 
-    const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string) => {
+    const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
         setCurrentItem(item || null);
-        setModalConfig({ type, parentId, action });
+        setModalConfig({ type, parentId, parentName, action });
         setIsModalOpen(true);
     };
 
@@ -700,17 +700,21 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
 
         const parentId = modalConfig.type === 'specialization'
             ? (form.elements.namedItem('parentId') as HTMLSelectElement).value
-            : modalConfig.type === 'disease'
-            ? (form.elements.namedItem('parentId') as HTMLSelectElement).value
             : modalConfig.parentId;
+
+        const doctorType = modalConfig.type === 'specialization'
+            ? (form.elements.namedItem('doctorType') as HTMLSelectElement).value
+            : undefined;
         
-        const itemData: Partial<DropdownItem> = {
+        const itemData: any = {
             _id: currentItem?._id,
             name,
             description,
             type: modalConfig.type,
             parentId: parentId,
+            doctorType: doctorType
         };
+
         await onUpdate(itemData, modalConfig.action);
         setIsModalOpen(false);
         setCurrentItem(null);
@@ -733,8 +737,8 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
         setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
     };
     
-    const renderItem = (item: DropdownItem, level: number) => {
-        const childConfig = childTypes[level];
+    const renderItem = (item: DropdownItem, level: number, parentName?: string) => {
+        const childConfig = childTypes.find(c => c.parentType === item.type);
         const children = childConfig ? getChildren(item._id, childConfig.type) : [];
         const isExpanded = expandedItems[item._id];
 
@@ -746,11 +750,11 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
                     </button>
                     <span className="flex-grow font-medium">{item.name}</span>
                     {childConfig && (
-                        <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', childConfig.type, undefined, item._id)}>
+                        <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', childConfig.type, undefined, item._id, item.name)}>
                             <Plus className="mr-1 h-3 w-3" /> Add {childConfig.name}
                         </Button>
                     )}
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type, item, item.parentId)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type, item, item.parentId, parentName)}>
                         <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteClick(item)}>
@@ -759,22 +763,12 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
                 </div>
                 {isExpanded && childConfig && (
                     <div className="border-l-2 ml-4 pl-2">
-                         {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-4 text-sm text-muted-foreground py-1">No {childConfig.name}s added yet.</div>}
+                         {children.length > 0 ? children.map(child => renderItem(child, level + 1, item.name)) : <div className="pl-4 text-sm text-muted-foreground py-1">No {childConfig.name}s added yet.</div>}
                     </div>
                 )}
             </div>
         );
     };
-
-    const parentOptions = {
-        specialization: data.filter(item => item.type === 'doctorType'),
-        disease: data.filter(item => item.type === 'specialization'),
-    };
-
-    const getParentTypeLabel = (type: string) => {
-        const config = childTypes.find(ct => ct.type === type);
-        return config ? config.parentType.replace(/([A-Z])/g, ' $1').trim() : 'Parent';
-    }
 
     return (
         <Card>
@@ -804,22 +798,25 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
                             </DialogTitle>
                         </DialogHeader>
                         <div className="py-4 space-y-4">
-                            { (modalConfig.type === 'specialization' || modalConfig.type === 'disease') && (
+                           {modalConfig.type === 'specialization' && (
                                 <div className="space-y-2">
-                                    <Label htmlFor="parentId">
-                                        Parent {getParentTypeLabel(modalConfig.type)}
-                                    </Label>
-                                    <Select name="parentId" defaultValue={currentItem?.parentId || ''} required>
+                                    <Label htmlFor="doctorType">Doctor Type</Label>
+                                    <Select name="doctorType" defaultValue={(currentItem as any)?.doctorType || ''} required>
                                         <SelectTrigger>
-                                            <SelectValue placeholder={`Select a ${getParentTypeLabel(modalConfig.type)}`} />
+                                            <SelectValue placeholder="Select a Doctor Type" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {parentOptions[modalConfig.type].map(parent => (
-                                                <SelectItem key={parent._id} value={parent._id}>{parent.name}</SelectItem>
-                                            ))}
+                                            <SelectItem value="Physician">Physician</SelectItem>
+                                            <SelectItem value="Surgeon">Surgeon</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
+                            )}
+                            {modalConfig.type === 'disease' && (
+                                 <div className="space-y-2">
+                                    <Label>Parent Specialization</Label>
+                                    <Input value={modalConfig.parentName} readOnly />
+                                 </div>
                             )}
                             <div className="space-y-2">
                                 <Label htmlFor="name">{modalConfig.type.replace(/([A-Z])/g, ' $1').trim()} Name</Label>
@@ -843,7 +840,7 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
                     <DialogHeader>
                         <DialogTitle>Delete Item?</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? Deleting a parent will also delete all its children. This action cannot be undone.
+                            Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? Deleting a parent may affect its children. This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -932,7 +929,10 @@ export default function DropdownManagementPage() {
                         title="Location Management"
                         description="Manage countries, states, and cities."
                         topLevelType="country"
-                        childTypes={[{type: 'state', name: 'State', parentType: 'country'}, {type: 'city', name: 'City', parentType: 'state'}]}
+                        childTypes={[
+                            {type: 'state', name: 'State', parentType: 'country'}, 
+                            {type: 'city', name: 'City', parentType: 'state'}
+                        ]}
                         data={data}
                         onUpdate={handleUpdate}
                         isLoading={isLoading}
