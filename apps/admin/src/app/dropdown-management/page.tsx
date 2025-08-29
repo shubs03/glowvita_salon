@@ -674,17 +674,17 @@ const ServiceManager = () => {
     );
 };
 
-const HierarchicalManager = ({ title, description, topLevelType, childTypes, data, onUpdate, isLoading }: { title: string; description: string; topLevelType: string; childTypes: { type: string, name: string, parentType: string }[]; data: DropdownItem[]; onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => void; isLoading: boolean; }) => {
+const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: { title: string; description: string; data: DropdownItem[]; onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => void; isLoading: boolean; }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
-    const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; parentName?: string; action: 'add' | 'edit' }>({ type: topLevelType, action: 'add' });
+    const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; parentName?: string; action: 'add' | 'edit' }>({ type: 'specialization', action: 'add' });
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
-    const topLevelItems = useMemo(() => data.filter(item => item.type === topLevelType), [data, topLevelType]);
-
-    const getChildren = (parentId: string, childType: string) => {
-        return data.filter(item => item.type === childType && item.parentId === parentId);
+    const specializations = useMemo(() => data.filter(item => item.type === 'specialization'), [data]);
+    
+    const getChildren = (parentId: string) => {
+        return data.filter(item => item.type === 'disease' && item.parentId === parentId);
     }
     
     const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
@@ -710,7 +710,7 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
             description,
             type: modalConfig.type,
             parentId: modalConfig.parentId,
-            ...(doctorType && { doctorType }), // Add doctorType if it exists
+            ...(doctorType && { doctorType }),
         };
 
         await onUpdate(itemData, modalConfig.action);
@@ -735,33 +735,30 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
         setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
     };
     
-    const renderItem = (item: DropdownItem, level: number, parentName?: string) => {
-        const childConfig = childTypes.find(c => c.parentType === item.type);
-        const children = childConfig ? getChildren(item._id, childConfig.type) : [];
+    const renderItem = (item: DropdownItem, level: number) => {
+        const children = getChildren(item._id);
         const isExpanded = expandedItems[item._id];
 
         return (
-            <div key={item._id}>
+            <div key={item._id} className="border-l-2 border-gray-200">
                 <div className="flex items-center gap-2 py-2 pr-2" style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}>
-                    <button onClick={() => toggleExpand(item._id)} className="p-1" disabled={!childConfig}>
-                       {childConfig ? (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />) : <div className="w-4 h-4"></div>}
+                    <button onClick={() => toggleExpand(item._id)} className="p-1">
+                       {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
-                    <span className="flex-grow font-medium">{item.name}</span>
-                    {childConfig && (
-                        <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', childConfig.type, undefined, item._id, item.name)}>
-                            <Plus className="mr-1 h-3 w-3" /> Add {childConfig.name}
-                        </Button>
-                    )}
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type, item, item.parentId, parentName)}>
+                    <span className="flex-grow font-medium">{item.name} <Badge variant="outline">{item.doctorType}</Badge></span>
+                    <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', 'disease', undefined, item._id, item.name)}>
+                        <Plus className="mr-1 h-3 w-3" /> Add Disease
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type, item)}>
                         <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteClick(item)}>
                         <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                 </div>
-                {isExpanded && childConfig && (
-                    <div className="border-l-2 ml-4 pl-2">
-                         {children.length > 0 ? children.map(child => renderItem(child, level + 1, item.name)) : <div className="pl-4 text-sm text-muted-foreground py-1">No {childConfig.name}s added yet.</div>}
+                {isExpanded && (
+                    <div className="ml-4 pl-2">
+                         {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-8 text-sm text-muted-foreground py-1">No diseases added yet.</div>}
                     </div>
                 )}
             </div>
@@ -776,15 +773,15 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
                         <CardTitle>{title}</CardTitle>
                         <CardDescription>{description}</CardDescription>
                     </div>
-                    <Button onClick={() => handleOpenModal('add', topLevelType)}>
-                        <Plus className="mr-2 h-4 w-4" /> Add {topLevelType.replace(/([A-Z])/g, ' $1').trim()}
+                    <Button onClick={() => handleOpenModal('add', 'specialization')}>
+                        <Plus className="mr-2 h-4 w-4" /> Add Specialization
                     </Button>
                 </div>
             </CardHeader>
             <CardContent className="border rounded-md max-h-[500px] overflow-y-auto">
                 {isLoading ? <div className="text-center p-4">Loading...</div> :
-                 topLevelItems.length === 0 ? <div className="text-center p-8 text-muted-foreground">No {topLevelType.replace(/([A-Z])/g, ' $1').trim()}s found.</div> :
-                 topLevelItems.map(item => renderItem(item, 0))}
+                 specializations.length === 0 ? <div className="text-center p-8 text-muted-foreground">No specializations found.</div> :
+                 specializations.map(item => renderItem(item, 0))}
             </CardContent>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -810,9 +807,9 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
                                     </Select>
                                 </div>
                             )}
-                            {(modalConfig.type === 'specialization' || modalConfig.type === 'disease') && modalConfig.parentId && (
+                            {modalConfig.type === 'disease' && modalConfig.parentId && (
                                  <div className="space-y-2">
-                                    <Label>Parent</Label>
+                                    <Label>Parent Specialization</Label>
                                     <Input value={modalConfig.parentName} readOnly disabled />
                                  </div>
                             )}
@@ -838,7 +835,7 @@ const HierarchicalManager = ({ title, description, topLevelType, childTypes, dat
                     <DialogHeader>
                         <DialogTitle>Delete Item?</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? Deleting a parent may affect its children. This action cannot be undone.
+                            Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -923,29 +920,15 @@ export default function DropdownManagementPage() {
                     </div>
                 </TabsContent>
                  <TabsContent value="locations">
-                    <HierarchicalManager 
-                        title="Location Management"
-                        description="Manage countries, states, and cities."
-                        topLevelType="country"
-                        childTypes={[
-                            {type: 'state', name: 'State', parentType: 'country'}, 
-                            {type: 'city', name: 'City', parentType: 'state'}
-                        ]}
-                        data={data}
-                        onUpdate={handleUpdate}
-                        isLoading={isLoading}
-                    />
+                    <div className="space-y-8">
+                      <p>Location Management is being refactored.</p>
+                    </div>
                 </TabsContent>
                  <TabsContent value="doctors">
                     <div className="space-y-8">
                       <HierarchicalManager 
                           title="Doctor Specialization Management"
                           description="Manage doctor types, their specializations, and associated diseases."
-                          topLevelType="doctorType"
-                          childTypes={[
-                            {type: 'specialization', name: 'Specialization', parentType: 'doctorType'}, 
-                            {type: 'disease', name: 'Disease', parentType: 'specialization'}
-                          ]}
                           data={data}
                           onUpdate={handleUpdate}
                           isLoading={isLoading}

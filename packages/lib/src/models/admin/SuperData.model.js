@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const superDataSchema = new mongoose.Schema({
