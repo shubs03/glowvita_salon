@@ -69,9 +69,17 @@ export default function RegisterPage() {
       case 'vendor':
         return <VendorRegistrationForm onSuccess={handleRegistrationSuccess} />;
       case 'doctor':
-        return <DoctorRegistrationForm onSuccess={handleRegistrationSuccess} />;
+        return (
+            <div className="max-w-md mx-auto">
+                <DoctorRegistrationForm onSuccess={handleRegistrationSuccess} />
+            </div>
+        );
       case 'supplier':
-        return <SupplierRegistrationForm onSuccess={handleRegistrationSuccess} />;
+        return (
+            <div className="max-w-md mx-auto">
+                <SupplierRegistrationForm onSuccess={handleRegistrationSuccess} />
+            </div>
+        );
       default:
         return null;
     }
