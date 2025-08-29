@@ -18,7 +18,7 @@ const adminNotificationSchema = new mongoose.Schema({
   targetType: {
     type: String,
     required: true,
-    enum: ['all_users', 'all_vendors', 'all_staff', 'specific_users', 'specific_vendors'],
+    enum: ['all_users', 'all_vendors', 'all_staff', 'all_admins', 'specific_users', 'specific_vendors'],
   },
   specificIds: [{
     type: String,

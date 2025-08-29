@@ -8,7 +8,7 @@ export function authMiddlewareAdmin(handler, allowedRoles = []) {
   return async (req, ctx) => {
     await _db();
 
-    const token = req.headers.get("admin-authorization")?.split(" ")[1];
+    const token = req.headers.get("authorization")?.split(" ")[1];
     if (!token) {
       return Response.json({ message: "Unauthorized: No token provided" }, { status: 401 });
     }
@@ -25,10 +25,10 @@ export function authMiddlewareAdmin(handler, allowedRoles = []) {
         return Response.json({ message: "Unauthorized: Admin not found" }, { status: 401 });
       }
 
-      // Role check (currently commented out, can be enabled if needed)
-      // if (allowedRoles.length && !allowedRoles.includes(admin.roleName)) {
-      //   return Response.json({ message: "Forbidden" }, { status: 403 });
-      // }
+      // Role check for admin panel (superadmin, admin, etc.)
+      if (allowedRoles.length && !allowedRoles.includes(admin.roleName)) {
+        return Response.json({ message: "Forbidden: You do not have permission to access this resource" }, { status: 403 });
+      }
 
       req.user = admin;
       return handler(req, ctx);

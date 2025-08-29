@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { useVendorLoginMutation } from '@repo/store/api';
 import { Eye, EyeOff, ShoppingBag, Shield, Users, TrendingUp } from 'lucide-react';
 import { useAppDispatch } from '@repo/store/hooks';
-import { setAdminAuth } from '@repo/store/slices/adminAuthSlice';
+import { setCrmAuth } from '@repo/store/slices/crmAuthSlice';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -29,8 +29,8 @@ export default function LoginPage() {
       const response = await vendorLogin({ email, password }).unwrap();
 
       if(response.success) {
-        // Dispatch to Redux store instead of localStorage
-        dispatch(setAdminAuth({ user: response.user, token: response.access_token }));
+        // Dispatch to Redux store and localStorage using the new CRM-specific action
+        dispatch(setCrmAuth({ user: response.user, token: response.access_token, role: response.role, permissions: response.permissions }));
         
         toast.success('Login successful!', {
           description: 'Welcome back to your dashboard.',
@@ -49,7 +49,7 @@ export default function LoginPage() {
   return (
     <div className="h-screen flex overflow-hidden">
       {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 relative overflow-hidden">
         {/* Background Elements */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-16 left-16 w-24 h-24 bg-white rounded-full blur-xl"></div>
@@ -128,7 +128,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Mobile Header */}
           <div className="lg:hidden text-center mb-6">
-            <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl mb-3">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-600 rounded-xl mb-3">
               <ShoppingBag className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Vendor Hub</h1>
@@ -207,7 +207,7 @@ export default function LoginPage() {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-10 font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-md"
+                  className="w-full h-10 font-semibold bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 transition-all duration-200 shadow-md"
                   disabled={isLoading}
                 >
                   {isLoading ? (

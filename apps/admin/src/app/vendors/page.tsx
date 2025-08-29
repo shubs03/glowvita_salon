@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -5,13 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
-import { Input } from '@repo/ui/input';
 import { Skeleton } from '@repo/ui/skeleton';
+import { Input } from '@repo/ui/input';
 import { Eye, ToggleRight, ToggleLeft, FileDown, X, Trash2, Plus, FilePenIcon, Users, UserCheck, BarChart, UserX, CheckCircle, XCircle } from 'lucide-react';
-import { VendorForm } from "../../components/VendorForm";
 import { VendorEditForm } from "../../components/VendorEditForm";
 import { useCreateVendorMutation, useGetVendorsQuery, useUpdateVendorMutation, useDeleteVendorMutation, useUpdateVendorStatusMutation } from '../../../../../packages/store/src/services/api';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 
 export interface Vendor {
   _id?: string;
@@ -46,12 +46,10 @@ export default function VendorManagementPage() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [actionType, setActionType] = useState<ActionType | null>(null);
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
-    const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-    const [isEditModalOpen, setEditModalOpen] = useState(false);
+    const [isFormModalOpen, setFormModalOpen] = useState(false);
     const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
 
     const { data: vendors = [], isLoading, error } = useGetVendorsQuery(undefined);
-    console.log(vendors);
     const [createVendor] = useCreateVendorMutation();
     const [updateVendor] = useUpdateVendorMutation();
     const [deleteVendor] = useDeleteVendorMutation();
@@ -63,32 +61,22 @@ export default function VendorManagementPage() {
 
     const totalPages = Math.ceil((Array.isArray(vendors) ? vendors.length : 0) / itemsPerPage);
 
-    const handleOpenCreateModal = () => {
-        setSelectedVendor(null);
-        setCreateModalOpen(true);
-    };
-
-    const handleOpenEditModal = (vendor: Vendor) => {
+    const handleOpenFormModal = (vendor: Vendor | null = null) => {
         setSelectedVendor(vendor);
-        setEditModalOpen(true);
+        setFormModalOpen(true);
     };
 
-    const handleCreateVendor = async (vendorData: Vendor) => {
+    const handleFormSubmit = async (vendorData: Vendor) => {
         try {
-            await createVendor(vendorData).unwrap();
-            setCreateModalOpen(false);
-        } catch (err) {
-            console.error('Failed to create vendor:', err);
-        }
-    };
-
-    const handleUpdateVendor = async (vendorData: Vendor) => {
-        try {
-            await updateVendor({ id: vendorData._id, ...vendorData }).unwrap();
-            setEditModalOpen(false);
+            if (selectedVendor) { // Edit mode
+                await updateVendor({ id: selectedVendor._id, ...vendorData }).unwrap();
+            } else { // Create mode
+                await createVendor(vendorData).unwrap();
+            }
+            setFormModalOpen(false);
             setSelectedVendor(null);
         } catch (err) {
-            console.error('Failed to update vendor:', err);
+            console.error('Failed to save vendor:', err);
         }
     };
 
@@ -127,8 +115,7 @@ export default function VendorManagementPage() {
     };
 
     const handleCloseModal = () => {
-        setCreateModalOpen(false);
-        setEditModalOpen(false);
+        setFormModalOpen(false);
         setSelectedVendor(null);
     };
 
@@ -162,7 +149,7 @@ export default function VendorManagementPage() {
             case 'delete':
                 return {
                     title: 'Delete Vendor?',
-                    description: `Are you sure you want to permanently delete the vendor "${selectedVendor.firstName} ${selectedVendor.firstName} ${selectedVendor.lastName}"? This action is irreversible.`,
+                    description: `Are you sure you want to permanently delete the vendor "${selectedVendor.firstName} ${selectedVendor.lastName}"? This action is irreversible.`,
                     buttonText: 'Delete'
                 };
             default:
@@ -256,7 +243,7 @@ export default function VendorManagementPage() {
                                 <FileDown className="mr-2 h-4 w-4" />
                                 Export List
                             </Button>
-                            <Button onClick={handleOpenCreateModal} disabled={isLoading}>Add Vendor</Button>
+                            <Button onClick={() => handleOpenFormModal(null)} disabled={isLoading}>Add Vendor</Button>
                         </div>
                     </div>
                 </CardHeader>
@@ -308,7 +295,7 @@ export default function VendorManagementPage() {
                                     ))
                                 ) : currentItems.length > 0 ? (
                                     currentItems.map((vendor: Vendor) => (
-                                        <TableRow key={vendor.id}>
+                                        <TableRow key={vendor._id}>
                                             <TableCell className="font-medium">{vendor.businessName}</TableCell>
                                             <TableCell>{`${vendor.firstName} ${vendor.lastName}`}</TableCell>
                                             <TableCell>{vendor.phone}</TableCell>
@@ -323,7 +310,7 @@ export default function VendorManagementPage() {
                                                 </span>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(vendor)}>
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenFormModal(vendor)}>
                                                     <FilePenIcon className="h-4 w-4" />
                                                 </Button>
                                                 <Button
@@ -395,21 +382,12 @@ export default function VendorManagementPage() {
                 </CardContent>
             </Card>
 
-            <VendorForm
-                isOpen={isCreateModalOpen}
+            <VendorEditForm
+                isOpen={isFormModalOpen}
                 onClose={handleCloseModal}
-                vendor={null}
-                isEditMode={false}
-                onSubmit={handleCreateVendor}
+                vendor={selectedVendor}
+                onSubmit={handleFormSubmit}
             />
-            {selectedVendor && (
-                <VendorEditForm
-                    isOpen={isEditModalOpen}
-                    onClose={handleCloseModal}
-                    vendor={selectedVendor}
-                    onSubmit={handleUpdateVendor}
-                />
-            )}
 
             <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
                 <DialogContent>

@@ -8,70 +8,46 @@ import { Button } from "@repo/ui/button";
 import { 
   FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, 
   FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
-  FaBell, FaGift, FaUserFriends, FaUserCircle, FaTruck, FaUserMd 
+  FaBell, FaGift, FaUserFriends, FaUserCircle
 } from 'react-icons/fa';
-import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
-import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
-
-const vendorNavItems = [
-  { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
-  { title: "Calendar", href: "/calendar", Icon: FaCalendarAlt, permission: 'calendar_view' },
-  { title: "Appointments", href: "/appointments", Icon: FaClipboardList, permission: 'appointments_view' },
-  { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
-  { title: "Services", href: "/services", Icon: FaCut, permission: 'services_view' },
-  { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
-  { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift, permission: 'offers_view' },
-  { title: "Referrals", href: "/referrals", Icon: FaUserFriends, permission: 'referrals_view' },
-  { title: "Marketing", href: "/marketing", Icon: FaBullhorn, permission: 'marketing_view' },
-  { title: "Notifications", href: "/push-notifications", Icon: FaBell, permission: 'notifications_view' },
-  { title: "Reports", href: "/reports", Icon: FaFileAlt, permission: 'reports_view' },
-];
-
-const doctorNavItems = [
-  { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
-  { title: "Appointments", href: "/appointments", Icon: FaClipboardList, permission: 'appointments_view' },
-  { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
-];
-
-const supplierNavItems = [
-  { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
-  { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
-];
+import { useAppDispatch } from "@repo/store/hooks";
+import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { useCrmAuth } from "@/hooks/useCrmAuth";
+import Cookies from "js-cookie";
+import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { admin: user } = useAppSelector((state) => state.auth);
+  const { user, permissions, role, isLoading } = useCrmAuth();
 
   const handleLogout = async () => {
-    dispatch(clearAdminAuth());
+    dispatch(clearCrmAuth());
+    Cookies.remove('crm_access_token', { path: '/' });
     router.push('/login');
+    router.refresh();
   };
+  
+  if (isLoading) {
+    return null; // Or a loading skeleton
+  }
 
   const getNavItemsForRole = () => {
-    const role = user?.role;
-    const permissions = user?.permissions || [];
-
-    if (role === 'vendor') {
-      // If the user is a vendor owner (not staff with limited perms), show all.
-      // A more robust check might be `user.isOwner` or similar. For now, we assume
-      // a vendor user has all permissions if they aren't staff.
-      if (permissions.length === 0 && !user.vendorId) { 
+    const userPermissions = permissions || [];
+    
+    switch (role) {
+      case 'vendor':
         return vendorNavItems;
-      }
-      return vendorNavItems.filter(item => permissions.includes(item.permission));
+      case 'staff':
+        return vendorNavItems.filter(item => userPermissions.includes(item.permission));
+      case 'doctor':
+        return doctorNavItems;
+      case 'supplier':
+        return supplierNavItems;
+      default:
+        return [];
     }
-    if (role === 'staff') {
-      return vendorNavItems.filter(item => permissions.includes(item.permission));
-    }
-    if (role === 'doctor') {
-      return doctorNavItems;
-    }
-    if (role === 'supplier') {
-      return supplierNavItems;
-    }
-    return [];
   };
 
   const visibleNavItems = getNavItemsForRole();

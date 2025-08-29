@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 // Schema for bonus details
@@ -90,9 +91,9 @@ const referralSchema = new mongoose.Schema({
   },
   referralId: {
     type: String,
-    required: true,
     unique: true,
     trim: true,
+    required: true,
   },
   referrer: {
     type: String,
@@ -111,7 +112,7 @@ const referralSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Completed', 'Approved', 'Paid'],
+    enum: ['Pending', 'Completed', 'Bonus Paid'],
     required: true,
   },
   bonus: {
@@ -127,16 +128,6 @@ const referralSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-});
-
-// Pre-save middleware to generate referral ID
-referralSchema.pre('save', async function(next) {
-  if (this.isNew) {
-    const prefix = this.referralType;
-    const count = await this.constructor.countDocuments({ referralType: this.referralType });
-    this.referralId = `${prefix}-${String(count + 1).padStart(3, '0')}`;
-  }
-  next();
 });
 
 const ReferralModel = mongoose.models.Referral || mongoose.model("Referral", referralSchema);

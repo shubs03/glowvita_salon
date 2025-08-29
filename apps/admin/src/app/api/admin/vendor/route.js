@@ -248,10 +248,10 @@ export const POST = authMiddlewareAdmin(
 );
 
 // Get All Vendors
-export const GET = authMiddlewareAdmin(async () => {
+export const GET = (async () => {
   const vendors = await VendorModel.find().select("-password");
   return Response.json(vendors);
-}, ["superadmin", "admin"]);
+});
 
 // Update Vendor
 export const PUT = authMiddlewareAdmin(

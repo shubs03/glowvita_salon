@@ -98,7 +98,7 @@ const BenefitItem = ({
           key={index}
           className="flex items-center gap-3 text-muted-foreground group-hover:text-foreground transition-colors duration-300"
         >
-          <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+          <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />
           <span>{feature}</span>
         </li>
       ))}
@@ -253,7 +253,7 @@ const PlatformForCard = ({
         </div>
         <Button
           size="icon"
-          className="bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 rounded-full opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 hover:scale-110 h-8 w-8 md:h-auto md:w-auto"
+          className="bg-white/20 p-1 backdrop-blur-sm text-white hover:bg-white/30 rounded-full opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 hover:scale-110 h-8 w-8 md:h-auto md:w-auto"
           aria-label={title}
         >
           <ArrowRight className="h-4 w-4" />
@@ -500,7 +500,7 @@ export default function CrmHomePage() {
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <CardHeader className="relative z-10 pb-4">
                     <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
-                      <div className="bg-green-100 text-green-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                      <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                         <TrendingUp className="h-5 w-5" />
                       </div>
                       Grow
@@ -518,7 +518,7 @@ export default function CrmHomePage() {
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <CardHeader className="relative z-10 pb-4">
                     <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
-                      <div className="bg-purple-100 text-purple-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                      <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                         <CreditCard className="h-5 w-5" />
                       </div>
                       Get Paid
@@ -711,7 +711,7 @@ export default function CrmHomePage() {
               <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
-                    <div className="bg-green-100 text-green-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                    <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                       <Settings className="h-5 w-5" />
                     </div>
                     Can I use this on multiple devices?
@@ -730,7 +730,7 @@ export default function CrmHomePage() {
               <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
-                    <div className="bg-purple-100 text-purple-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                    <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
                       <Clock className="h-5 w-5" />
                     </div>
                     How quickly can I get started?
@@ -788,7 +788,7 @@ export default function CrmHomePage() {
 
               <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <CheckCircle className="h-4 w-4 text-blue-500" />
                   <span>Free 7-day trial</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -796,7 +796,7 @@ export default function CrmHomePage() {
                   <span>No setup fees</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-purple-500" />
+                  <Clock className="h-4 w-4 text-blue-500" />
                   <span>Cancel anytime</span>
                 </div>
               </div>

@@ -9,8 +9,9 @@
     "./api": "./src/services/api.js",
     "./apis/example": "./src/apis/example-api.js",
     "./slices/adminAuthSlice": "./src/slices/Admin/adminAuthSlice.js",
+    "./slices/crmAuthSlice": "./src/slices/crmAuthSlice.js",
     "./slices/serviceSlice": "./src/slices/CRM/serviceSlice.js",
-
+    "./slices/staffSlice": "./src/slices/CRM/staffSlice.js",
     "./slices/modal": "./src/slices/modalSlice.js",
     "./slices/customerSlice": "./src/slices/customerSlice.js",
     "./slices/salonSlice": "./src/slices/salonSlice.js",
@@ -22,7 +23,9 @@
     "./slices/marketingSlice": "./src/slices/marketingSlice.js",
     "./slices/blockTimeSlice": "./src/slices/blockTimeSlice.js",
     "./slices/faqSlice": "./src/slices/faqSlice.js",
-    "./slices/appointmentSlice": "./src/slices/appointmentSlice.js"
+    "./slices/appointmentSlice": "./src/slices/appointmentSlice.js",
+    "./slices/shippingSlice": "./src/slices/shippingSlice.js",
+    "./slices/productSlice": "./src/slices/productSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -30,6 +33,7 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.2.5",
+    "jwt-decode": "^4.0.0",
     "react-redux": "^9.1.2"
   },
   "peerDependencies": {
