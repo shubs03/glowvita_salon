@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -23,8 +24,8 @@ export function DoctorRegistrationForm({ onSuccess }) {
     confirmPassword: '',
     gender: 'male',
     doctorType: '',
-    specialties: [],
-    diseases: [],
+    specialty: '', // Single selection for specialization
+    diseases: [], // Multiple diseases
     experience: '0',
     clinicName: 'N/A',
     clinicAddress: 'N/A',
@@ -48,7 +49,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
   const allDiseases = dropdownData.filter(d => d.type === 'disease');
 
   const filteredSpecialties = allSpecialties.filter(s => s.parentId === formData.doctorType);
-  const filteredDiseases = allDiseases.filter(d => formData.specialties.includes(d.parentId));
+  const filteredDiseases = allDiseases.filter(d => d.parentId === formData.specialty);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,23 +57,11 @@ export function DoctorRegistrationForm({ onSuccess }) {
   };
 
   const handleDoctorTypeChange = (value: string) => {
-    setFormData(prev => ({ ...prev, doctorType: value, specialties: [], diseases: [] }));
+    setFormData(prev => ({ ...prev, doctorType: value, specialty: '', diseases: [] }));
   };
   
-  const handleSpecialtyChange = (specialtyId: string, checked: boolean) => {
-    setFormData(prev => {
-        const currentSpecialties = prev.specialties || [];
-        const newSpecialties = checked 
-            ? [...currentSpecialties, specialtyId]
-            : currentSpecialties.filter(id => id !== specialtyId);
-        
-        const relevantDiseases = prev.diseases.filter(diseaseId => {
-            const disease = allDiseases.find(d => d._id === diseaseId);
-            return newSpecialties.includes(disease?.parentId);
-        });
-
-        return { ...prev, specialties: newSpecialties, diseases: relevantDiseases };
-    });
+  const handleSpecialtyChange = (value: string) => {
+    setFormData(prev => ({ ...prev, specialty: value, diseases: [] }));
   };
   
   const handleDiseaseChange = (diseaseId: string, checked: boolean) => {
@@ -91,14 +80,14 @@ export function DoctorRegistrationForm({ onSuccess }) {
       return;
     }
     
-    const specialtyNames = formData.specialties.map(id => allSpecialties.find(s => s._id === id)?.name).filter(Boolean);
+    const specialtyName = allSpecialties.find(s => s._id === formData.specialty)?.name;
     const diseaseNames = formData.diseases.map(id => allDiseases.find(d => d._id === id)?.name).filter(Boolean);
     const doctorTypeName = doctorTypes.find(dt => dt._id === formData.doctorType)?.name;
 
     const submissionData = {
       ...formData,
       doctorType: doctorTypeName,
-      specialties: specialtyNames,
+      specialties: specialtyName ? [specialtyName] : [], // API expects an array
       diseases: diseaseNames,
     };
     
@@ -138,9 +127,9 @@ export function DoctorRegistrationForm({ onSuccess }) {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>What describes you best?</Label>
+              <Label>What describes you best?*</Label>
               {isLoadingDropdowns ? <Skeleton className="h-10 w-full" /> : (
-                <Select onValueChange={handleDoctorTypeChange} value={formData.doctorType}>
+                <Select onValueChange={handleDoctorTypeChange} value={formData.doctorType} required>
                     <SelectTrigger>
                         <SelectValue placeholder="Select your primary role" />
                     </SelectTrigger>
@@ -152,33 +141,33 @@ export function DoctorRegistrationForm({ onSuccess }) {
                 </Select>
               )}
             </div>
-          </div>
-
-          {formData.doctorType && (
             <div className="space-y-2">
-                <Label>Specialties (Select all that apply)</Label>
-                {isLoadingDropdowns ? <Skeleton className="h-24 w-full" /> : (
-                  <div className="p-4 border rounded-md max-h-40 overflow-y-auto space-y-2">
-                      {filteredSpecialties.length > 0 ? filteredSpecialties.map(spec => (
-                          <div key={spec._id} className="flex items-center space-x-2">
-                              <Checkbox 
-                                  id={spec._id} 
-                                  checked={formData.specialties.includes(spec._id)}
-                                  onCheckedChange={(checked) => handleSpecialtyChange(spec._id, !!checked)}
-                              />
-                              <Label htmlFor={spec._id}>{spec.name}</Label>
-                          </div>
-                      )) : <p className="text-sm text-muted-foreground">No specialties found for this type.</p>}
-                  </div>
+                <Label>Specialty*</Label>
+                {isLoadingDropdowns ? <Skeleton className="h-10 w-full" /> : (
+                <Select 
+                    onValueChange={handleSpecialtyChange} 
+                    value={formData.specialty} 
+                    disabled={!formData.doctorType}
+                    required
+                >
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select specialty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {filteredSpecialties.map(spec => (
+                            <SelectItem key={spec._id} value={spec._id}>{spec.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
                 )}
             </div>
-          )}
+          </div>
 
-          {formData.specialties.length > 0 && (
+          {formData.specialty && (
              <div className="space-y-2">
-                <Label>Diseases Treated (Select all that apply)</Label>
+                <Label>Diseases you specialize in (Select all that apply)</Label>
                  {isLoadingDropdowns ? <Skeleton className="h-24 w-full" /> : (
-                   <div className="p-4 border rounded-md max-h-40 overflow-y-auto space-y-2">
+                   <div className="p-4 border rounded-md max-h-40 overflow-y-auto grid grid-cols-2 md:grid-cols-3 gap-2">
                       {filteredDiseases.length > 0 ? filteredDiseases.map(disease => (
                            <div key={disease._id} className="flex items-center space-x-2">
                               <Checkbox 
@@ -186,9 +175,9 @@ export function DoctorRegistrationForm({ onSuccess }) {
                                   checked={formData.diseases.includes(disease._id)}
                                   onCheckedChange={(checked) => handleDiseaseChange(disease._id, !!checked)}
                               />
-                              <Label htmlFor={disease._id}>{disease.name}</Label>
+                              <Label htmlFor={disease._id} className="text-sm font-normal">{disease.name}</Label>
                           </div>
-                      )) : <p className="text-sm text-muted-foreground">No diseases found for selected specialties.</p>}
+                      )) : <p className="text-sm text-muted-foreground col-span-full">No diseases found for this specialty.</p>}
                   </div>
                  )}
             </div>
@@ -202,6 +191,3 @@ export function DoctorRegistrationForm({ onSuccess }) {
     </Card>
   );
 }
-
-
-    

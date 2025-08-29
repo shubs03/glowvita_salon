@@ -673,6 +673,189 @@ const ServiceManager = () => {
     );
 };
 
+const HierarchicalManager = ({ title, description, topLevelType, childTypes, data, onUpdate, isLoading }: { title: string; description: string; topLevelType: string; childTypes: { type: string, name: string, parentType: string }[]; data: DropdownItem[]; onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => void; isLoading: boolean; }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
+    const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; action: 'add' | 'edit' }>({ type: topLevelType, action: 'add' });
+    const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+
+    const topLevelItems = useMemo(() => data.filter(item => item.type === topLevelType), [data, topLevelType]);
+
+    const getChildren = (parentId: string, childType: string) => {
+        return data.filter(item => item.type === childType && item.parentId === parentId);
+    }
+
+    const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string) => {
+        setCurrentItem(item || null);
+        setModalConfig({ type, parentId, action });
+        setIsModalOpen(true);
+    };
+
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+        const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
+
+        const parentId = modalConfig.type === 'specialization'
+            ? (form.elements.namedItem('parentId') as HTMLSelectElement).value
+            : modalConfig.type === 'disease'
+            ? (form.elements.namedItem('parentId') as HTMLSelectElement).value
+            : modalConfig.parentId;
+        
+        const itemData: Partial<DropdownItem> = {
+            _id: currentItem?._id,
+            name,
+            description,
+            type: modalConfig.type,
+            parentId: parentId,
+        };
+        await onUpdate(itemData, modalConfig.action);
+        setIsModalOpen(false);
+        setCurrentItem(null);
+    };
+
+    const handleDeleteClick = (item: DropdownItem) => {
+        setCurrentItem(item);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (currentItem?._id) {
+            onUpdate({ _id: currentItem._id }, 'delete');
+        }
+        setIsDeleteModalOpen(false);
+        setCurrentItem(null);
+    };
+
+    const toggleExpand = (id: string) => {
+        setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+    
+    const renderItem = (item: DropdownItem, level: number) => {
+        const childConfig = childTypes[level];
+        const children = childConfig ? getChildren(item._id, childConfig.type) : [];
+        const isExpanded = expandedItems[item._id];
+
+        return (
+            <div key={item._id}>
+                <div className="flex items-center gap-2 py-2 pr-2" style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}>
+                    <button onClick={() => toggleExpand(item._id)} className="p-1" disabled={!childConfig}>
+                       {childConfig ? (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />) : <div className="w-4 h-4"></div>}
+                    </button>
+                    <span className="flex-grow font-medium">{item.name}</span>
+                    {childConfig && (
+                        <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', childConfig.type, undefined, item._id)}>
+                            <Plus className="mr-1 h-3 w-3" /> Add {childConfig.name}
+                        </Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type, item, item.parentId)}>
+                        <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteClick(item)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                </div>
+                {isExpanded && childConfig && (
+                    <div className="border-l-2 ml-4 pl-2">
+                         {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-4 text-sm text-muted-foreground py-1">No {childConfig.name}s added yet.</div>}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const parentOptions = {
+        specialization: data.filter(item => item.type === 'doctorType'),
+        disease: data.filter(item => item.type === 'specialization'),
+    };
+
+    const getParentTypeLabel = (type: string) => {
+        const config = childTypes.find(ct => ct.type === type);
+        return config ? config.parentType.replace(/([A-Z])/g, ' $1').trim() : 'Parent';
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>{title}</CardTitle>
+                        <CardDescription>{description}</CardDescription>
+                    </div>
+                    <Button onClick={() => handleOpenModal('add', topLevelType)}>
+                        <Plus className="mr-2 h-4 w-4" /> Add {topLevelType.replace(/([A-Z])/g, ' $1').trim()}
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent className="border rounded-md max-h-[500px] overflow-y-auto">
+                {isLoading ? <div className="text-center p-4">Loading...</div> :
+                 topLevelItems.length === 0 ? <div className="text-center p-8 text-muted-foreground">No {topLevelType.replace(/([A-Z])/g, ' $1').trim()}s found.</div> :
+                 topLevelItems.map(item => renderItem(item, 0))}
+            </CardContent>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <form onSubmit={handleSave}>
+                        <DialogHeader>
+                            <DialogTitle>
+                                {modalConfig.action === 'add' ? 'Add New' : 'Edit'} {modalConfig.type.replace(/([A-Z])/g, ' $1').trim()}
+                            </DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4">
+                            { (modalConfig.type === 'specialization' || modalConfig.type === 'disease') && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="parentId">
+                                        Parent {getParentTypeLabel(modalConfig.type)}
+                                    </Label>
+                                    <Select name="parentId" defaultValue={currentItem?.parentId || ''} required>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={`Select a ${getParentTypeLabel(modalConfig.type)}`} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {parentOptions[modalConfig.type].map(parent => (
+                                                <SelectItem key={parent._id} value={parent._id}>{parent.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                            <div className="space-y-2">
+                                <Label htmlFor="name">{modalConfig.type.replace(/([A-Z])/g, ' $1').trim()} Name</Label>
+                                <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="description">Description</Label>
+                                <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                            <Button type="submit">Save</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Item?</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? Deleting a parent will also delete all its children. This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </Card>
+    );
+};
+
 export default function DropdownManagementPage() {
     const { data = [], isLoading, isError } = useGetSuperDataQuery(undefined);
     const [createItem] = useCreateSuperDataItemMutation();
@@ -695,149 +878,6 @@ export default function DropdownManagementPage() {
             toast.error('Error', { description: `Failed to ${action} item.` });
             console.error(`API call failed for ${action}:`, error);
         }
-    };
-
-    const HierarchicalManager = ({ title, description, topLevelType, childTypes }: { title: string; description: string; topLevelType: string; childTypes: { type: string, name: string }[] }) => {
-        const [isModalOpen, setIsModalOpen] = useState(false);
-        const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-        const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
-        const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; action: 'add' | 'edit' }>({ type: topLevelType, action: 'add' });
-        const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
-
-        const topLevelItems = useMemo(() => data.filter(item => item.type === topLevelType), [data, topLevelType]);
-
-        const getChildren = (parentId: string, childType: string) => {
-            return data.filter(item => item.type === childType && item.parentId === parentId);
-        }
-
-        const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string) => {
-            setCurrentItem(item || null);
-            setModalConfig({ type, parentId, action });
-            setIsModalOpen(true);
-        };
-
-        const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-            e.preventDefault();
-            const form = e.currentTarget;
-            const name = (form.elements.namedItem('name') as HTMLInputElement).value;
-            const itemData: Partial<DropdownItem> = {
-                _id: currentItem?._id,
-                name,
-                type: modalConfig.type,
-                parentId: modalConfig.parentId,
-            };
-            await handleUpdate(itemData, modalConfig.action);
-            setIsModalOpen(false);
-            setCurrentItem(null);
-        };
-
-        const handleDeleteClick = (item: DropdownItem) => {
-            setCurrentItem(item);
-            setIsDeleteModalOpen(true);
-        };
-
-        const handleConfirmDelete = () => {
-            if (currentItem?._id) {
-                handleUpdate({ _id: currentItem._id }, 'delete');
-            }
-            setIsDeleteModalOpen(false);
-            setCurrentItem(null);
-        };
-
-        const toggleExpand = (id: string) => {
-            setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
-        };
-
-        const renderItem = (item: DropdownItem, level: number) => {
-            const childConfig = childTypes[level];
-            const children = childConfig ? getChildren(item._id, childConfig.type) : [];
-            const isExpanded = expandedItems[item._id];
-
-            return (
-                <div key={item._id}>
-                    <div className="flex items-center gap-2 py-2 pr-2" style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}>
-                        <button onClick={() => toggleExpand(item._id)} className="p-1" disabled={!childConfig}>
-                           {childConfig ? (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />) : <div className="w-4 h-4"></div>}
-                        </button>
-                        <span className="flex-grow font-medium">{item.name}</span>
-                        {childConfig && (
-                            <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', childConfig.type, undefined, item._id)}>
-                                <Plus className="mr-1 h-3 w-3" /> Add {childConfig.name}
-                            </Button>
-                        )}
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type, item, item.parentId)}>
-                            <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteClick(item)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                    </div>
-                    {isExpanded && childConfig && (
-                        <div className="border-l-2 ml-4 pl-2">
-                             {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-4 text-sm text-muted-foreground py-1">No {childConfig.name}s added yet.</div>}
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        return (
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle>{title}</CardTitle>
-                            <CardDescription>{description}</CardDescription>
-                        </div>
-                        <Button onClick={() => handleOpenModal('add', topLevelType)}>
-                            <Plus className="mr-2 h-4 w-4" /> Add {topLevelType.replace(/([A-Z])/g, ' $1').trim()}
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent className="border rounded-md max-h-[500px] overflow-y-auto">
-                    {topLevelItems.map(item => renderItem(item, 0))}
-                     {isLoading && <div className="text-center p-4">Loading...</div>}
-                     {!isLoading && topLevelItems.length === 0 && <div className="text-center p-8 text-muted-foreground">No {topLevelType.replace(/([A-Z])/g, ' $1').trim()}s found.</div>}
-                </CardContent>
-
-                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <form onSubmit={handleSave}>
-                            <DialogHeader>
-                                <DialogTitle>
-                                    {modalConfig.action === 'add' ? 'Add New' : 'Edit'} {modalConfig.type.replace(/([A-Z])/g, ' $1').trim()}
-                                </DialogTitle>
-                            </DialogHeader>
-                            <div className="py-4 space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">{modalConfig.type.replace(/([A-Z])/g, ' $1').trim()} Name</Label>
-                                    <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                                <Button type="submit">Save</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-
-                <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Delete Item?</DialogTitle>
-                            <DialogDescription>
-                                Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? Deleting a parent will also delete all its children. This action cannot be undone.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter>
-                            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-                            <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-            </Card>
-        );
     };
 
     if (isError) {
@@ -892,7 +932,10 @@ export default function DropdownManagementPage() {
                         title="Location Management"
                         description="Manage countries, states, and cities."
                         topLevelType="country"
-                        childTypes={[{type: 'state', name: 'State'}, {type: 'city', name: 'City'}]}
+                        childTypes={[{type: 'state', name: 'State', parentType: 'country'}, {type: 'city', name: 'City', parentType: 'state'}]}
+                        data={data}
+                        onUpdate={handleUpdate}
+                        isLoading={isLoading}
                     />
                 </TabsContent>
                  <TabsContent value="doctors">
@@ -901,7 +944,13 @@ export default function DropdownManagementPage() {
                           title="Doctor Specialization Management"
                           description="Manage doctor types, their specializations, and associated diseases."
                           topLevelType="doctorType"
-                          childTypes={[{type: 'specialization', name: 'Specialization'}, {type: 'disease', name: 'Disease'}]}
+                          childTypes={[
+                            {type: 'specialization', name: 'Specialization', parentType: 'doctorType'}, 
+                            {type: 'disease', name: 'Disease', parentType: 'specialization'}
+                          ]}
+                          data={data}
+                          onUpdate={handleUpdate}
+                          isLoading={isLoading}
                       />
                     </div>
                 </TabsContent>
@@ -944,14 +993,13 @@ export default function DropdownManagementPage() {
         </div>
     );
 }
-// Product Category Manager Component
+
 const ProductCategoryManager = () => {
     const { data: productCategoriesData = [], isLoading, refetch } = useGetAdminProductCategoriesQuery();
     const [createCategory] = useCreateAdminProductCategoryMutation();
     const [updateCategory] = useUpdateAdminProductCategoryMutation();
     const [deleteCategory] = useDeleteAdminProductCategoryMutation();
     
-    // Ensure productCategories is always an array
     const productCategories = useMemo(() => {
         if (Array.isArray(productCategoriesData)) {
             return productCategoriesData;
@@ -991,7 +1039,6 @@ const ProductCategoryManager = () => {
 
         try {
             if (currentCategory) {
-                // Update existing category
                 await updateCategory({
                     id: currentCategory._id,
                     name: formData.name.trim(),
@@ -999,7 +1046,6 @@ const ProductCategoryManager = () => {
                 }).unwrap();
                 toast.success('Category updated successfully');
             } else {
-                // Create new category
                 await createCategory({
                     name: formData.name.trim(),
                     description: formData.description.trim()
@@ -1173,7 +1219,3 @@ const ProductCategoryManager = () => {
         </Card>
     );
 };
-
-
-
-    
