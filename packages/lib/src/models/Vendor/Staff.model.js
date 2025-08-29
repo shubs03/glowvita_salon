@@ -65,7 +65,6 @@ const staffSchema = new mongoose.Schema(
       required: true,
       trim: true,
       index: true, // For contact searches
-      unique: true,
     },
     emailAddress: {
       type: String,
