@@ -6,24 +6,46 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent } from "@repo/ui/card";
 import { Button } from '@repo/ui/button';
-import { User, Building, Stethoscope, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { User, Building, Stethoscope, ArrowRight, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { VendorRegistrationForm } from '@/components/forms/VendorRegistrationForm';
 import { DoctorRegistrationForm } from '@/components/forms/DoctorRegistrationForm';
 import { SupplierRegistrationForm } from '@/components/forms/SupplierRegistrationForm';
+import { cn } from '@repo/ui/cn';
 
 type Role = 'vendor' | 'doctor' | 'supplier' | null;
 
 const RoleCard = ({ icon: Icon, title, description, onClick, isSelected }) => (
-  <Card 
-    className={`p-6 text-center cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${isSelected ? 'border-primary ring-2 ring-primary' : 'hover:border-gray-300'}`}
-    onClick={onClick}
-  >
-    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-all duration-300 ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'}`}>
-      <Icon className="w-8 h-8" />
+    <div
+      onClick={onClick}
+      className={cn(
+        "relative cursor-pointer rounded-xl border-2 bg-background p-6 text-left shadow-lg transition-all duration-300 ease-in-out hover:shadow-2xl hover:-translate-y-2",
+        isSelected
+          ? "border-primary ring-4 ring-primary/20"
+          : "border-border hover:border-primary/50"
+      )}
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className={cn(
+            "flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg transition-all duration-300",
+            isSelected
+              ? "bg-primary text-primary-foreground scale-110"
+              : "bg-secondary text-secondary-foreground"
+          )}
+        >
+          <Icon className="h-7 w-7" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold">{title}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      {isSelected && (
+        <div className="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground border-2 border-background">
+          <CheckCircle2 className="h-5 w-5" />
+        </div>
+      )}
     </div>
-    <h3 className="text-lg font-semibold">{title}</h3>
-    <p className="text-sm text-muted-foreground mt-1">{description}</p>
-  </Card>
 );
 
 const SuccessModal = ({ isOpen, onClose }) => {
@@ -68,48 +90,58 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-secondary flex items-center justify-center p-4">
-      <main className="w-full max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/50 to-background flex items-center justify-center p-4">
+      <main className="w-full max-w-4xl transition-all duration-500">
         {!selectedRole ? (
-          <Card>
-            <CardContent className="p-8">
-              <h1 className="text-3xl font-bold text-center mb-2">Join Our Platform</h1>
-              <p className="text-muted-foreground text-center mb-8">Choose your role to get started.</p>
-              <div className="grid md:grid-cols-3 gap-6">
+          <Card className="w-full shadow-2xl border-border/50">
+            <CardContent className="p-8 md:p-12">
+              <div className="text-center">
+                <h1 className="text-3xl md:text-4xl font-bold font-headline tracking-tight mb-3">
+                  Join Our Professional Network
+                </h1>
+                <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+                  Select the role that best describes you to begin your journey with us.
+                </p>
+              </div>
+              
+              <div className="mt-10 grid grid-cols-1 gap-6">
                 <RoleCard 
                   icon={Building} 
-                  title="Salon/Vendor" 
-                  description="Register your salon or spa to manage bookings and clients."
+                  title="Salon or Spa Owner" 
+                  description="Register your business to manage bookings, staff, and clients all in one place."
                   onClick={() => setSelectedRole('vendor')}
                   isSelected={selectedRole === 'vendor'}
                 />
                 <RoleCard 
                   icon={Stethoscope} 
-                  title="Doctor/Dermatologist" 
-                  description="Join as a professional to offer consultations and services."
+                  title="Doctor or Dermatologist" 
+                  description="Offer your professional services and consultations to a wider audience."
                   onClick={() => setSelectedRole('doctor')}
                   isSelected={selectedRole === 'doctor'}
                 />
                 <RoleCard 
                   icon={User} 
-                  title="Supplier" 
-                  description="Register as a supplier to provide products to our vendors."
+                  title="Product Supplier" 
+                  description="Partner with us to provide quality products to our network of salons and professionals."
                   onClick={() => setSelectedRole('supplier')}
                   isSelected={selectedRole === 'supplier'}
                 />
               </div>
-               <p className="text-center text-sm text-muted-foreground mt-8">
+
+              <div className="mt-10 text-center text-sm text-muted-foreground">
+                <p>
                   Already have an account?{" "}
-                  <Link href="/login" className="font-medium text-primary hover:underline">
-                    Sign in
+                  <Link href="/login" className="font-semibold text-primary hover:underline underline-offset-4">
+                    Sign in here
                   </Link>
                 </p>
+              </div>
             </CardContent>
           </Card>
         ) : (
           <div>
-            <Button variant="ghost" onClick={() => setSelectedRole(null)} className="mb-4">
-              &larr; Back to role selection
+            <Button variant="ghost" onClick={() => setSelectedRole(null)} className="mb-4 text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to role selection
             </Button>
             {renderForm()}
           </div>
