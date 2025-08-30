@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import stateCityData from '@/lib/state-city.json';
+import stateCityData from '@repo/lib/stateCity';
 
 export interface Doctor {
   _id?: string;
