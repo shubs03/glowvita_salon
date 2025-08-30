@@ -30,14 +30,14 @@ export async function POST(request) {
 
     // Define search order and corresponding models/roles
     const userRoles = [
-      { model: VendorModel, type: 'vendor' },
-      { model: DoctorModel, type: 'doctor' },
-      { model: SupplierModel, type: 'supplier' },
-      { model: StaffModel, type: 'staff' },
+      { model: VendorModel, type: 'vendor', selectFields: '+password' },
+      { model: DoctorModel, type: 'doctor', selectFields: '+password referralCode' }, // Correctly select password and referralCode
+      { model: SupplierModel, type: 'supplier', selectFields: '+password' },
+      { model: StaffModel, type: 'staff', selectFields: '+password' },
     ];
 
     for (const roleInfo of userRoles) {
-      const foundUser = await roleInfo.model.findOne({ email }).select('+password');
+      const foundUser = await roleInfo.model.findOne({ email }).select(roleInfo.selectFields);
       if (foundUser) {
         user = foundUser;
         userType = roleInfo.type;
@@ -49,6 +49,11 @@ export async function POST(request) {
     
     if (!user) {
       return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
+    }
+
+    // This check prevents the bcrypt error if a user is found but has no password field
+    if (!user.password) {
+      return NextResponse.json({ success: false, error: "Authentication failed for this user." }, { status: 401 });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -71,7 +76,7 @@ export async function POST(request) {
       access_token: accessToken,
       refresh_token: refreshToken,
       role: userType,
-      permissions: permissions, // Include permissions in the response
+      permissions: permissions,
     });
 
     response.cookies.set('crm_access_token', accessToken, {

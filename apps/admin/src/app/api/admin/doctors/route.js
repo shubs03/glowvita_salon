@@ -2,10 +2,30 @@
 
 import _db from "../../../../../../../packages/lib/src/db.js";
 import DoctorModel from "../../../../../../../packages/lib/src/models/Vendor/Docters.model.js";
+import { ReferralModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import bcrypt from "bcryptjs";
 
 await _db();
+
+// Function to generate a unique referral code for a doctor
+const generateDoctorReferralCode = async (name) => {
+  let referralCode;
+  let isUnique = false;
+  const namePrefix = name.replace(/[^a-zA-Z]/g, '').toUpperCase().substring(0, 3);
+  
+  while (!isUnique) {
+    const randomNumbers = Math.floor(100 + Math.random() * 900); // Generates 3-digit number
+    referralCode = `DR${namePrefix}${randomNumbers}`;
+    
+    const existingDoctor = await DoctorModel.findOne({ referralCode });
+    if (!existingDoctor) {
+      isUnique = true;
+    }
+  }
+  return referralCode;
+};
+
 
 export const POST = async (req) => {
   const body = await req.json();
@@ -37,6 +57,7 @@ export const POST = async (req) => {
     landline,
     workingWithHospital,
     videoConsultation,
+    referredByCode,
   } = body;
 
   // 1️⃣ Validate required fields
@@ -82,8 +103,11 @@ export const POST = async (req) => {
 
   // 3️⃣ Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
+  
+  // 4️⃣ Generate unique referral code
+  const referralCode = await generateDoctorReferralCode(name);
 
-  // 4️⃣ Create doctor
+  // 5️⃣ Create doctor
   const newDoctor = await DoctorModel.create({
     name,
     email,
@@ -112,9 +136,33 @@ export const POST = async (req) => {
     landline: landline || null,
     workingWithHospital,
     videoConsultation,
+    referralCode,
   });
+  
+  // 6️⃣ Handle referral if a code was provided
+  if (referredByCode) {
+    const referringDoctor = await DoctorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
+    if (referringDoctor) {
+      const v2vSettings = await V2VSettingsModel.findOne({});
+      const bonusValue = v2vSettings?.referrerBonus?.bonusValue || 0;
 
-  // 5️⃣ Remove password before returning
+      const referralType = 'V2V';
+      const count = await ReferralModel.countDocuments({ referralType });
+      const referralId = `${referralType}-${String(count + 1).padStart(3, '0')}`;
+
+      await ReferralModel.create({
+        referralId,
+        referralType,
+        referrer: referringDoctor.name,
+        referee: newDoctor.name,
+        date: new Date(),
+        status: 'Completed',
+        bonus: String(bonusValue),
+      });
+    }
+  }
+
+  // 7️⃣ Remove password before returning
   const doctorData = newDoctor.toObject();
   delete doctorData.password;
 
