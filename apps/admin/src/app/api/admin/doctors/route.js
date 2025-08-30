@@ -1,3 +1,5 @@
+
+
 import _db from "../../../../../../../packages/lib/src/db.js";
 import DoctorModel from "../../../../../../../packages/lib/src/models/Vendor/Docters.model.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
@@ -13,7 +15,9 @@ export const POST = async (req) => {
     phone,
     gender,
     registrationNumber,
-    specialization,
+    doctorType, 
+    specialties,
+    diseases, 
     experience,
     clinicName,
     clinicAddress,
@@ -42,7 +46,8 @@ export const POST = async (req) => {
     !phone ||
     !gender ||
     !registrationNumber ||
-    !specialization ||
+    !doctorType || 
+    !specialties || !Array.isArray(specialties) || specialties.length === 0 || 
     !experience ||
     !clinicName ||
     !clinicAddress ||
@@ -85,7 +90,9 @@ export const POST = async (req) => {
     phone,
     gender,
     registrationNumber,
-    specialization,
+    doctorType,
+    specialties,
+    diseases: diseases || [],
     experience,
     clinicName,
     clinicAddress,
@@ -129,6 +136,12 @@ export const PUT = authMiddlewareAdmin(
     // If password is provided, hash it
     if (password) {
       body.password = await bcrypt.hash(password, 10);
+    }
+    
+    // Legacy support for single specialization
+    if (body.specialization && !body.specialties) {
+      body.specialties = [body.specialization];
+      delete body.specialization;
     }
 
     const updatedDoctor = await DoctorModel.findByIdAndUpdate(

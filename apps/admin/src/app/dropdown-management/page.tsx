@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -38,6 +39,7 @@ interface DropdownItem {
   description?: string;
   type: string;
   parentId?: string;
+  doctorType?: 'Physician' | 'Surgeon';
 }
 
 interface LocationItem extends DropdownItem {
@@ -672,6 +674,198 @@ const ServiceManager = () => {
     );
 };
 
+const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: { title: string; description: string; data: DropdownItem[]; onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => void; isLoading: boolean; }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
+    const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; parentName?: string; action: 'add' | 'edit' }>({ type: 'specialization', action: 'add' });
+    const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
+    
+    // State to manage the selected doctor type in the modal
+    const [selectedDoctorType, setSelectedDoctorType] = useState<'Physician' | 'Surgeon' | ''>('');
+
+    const specializations = useMemo(() => data.filter(item => item.type === 'specialization'), [data]);
+    
+    const getChildren = (parentId: string) => {
+        return data.filter(item => item.type === 'disease' && item.parentId === parentId);
+    }
+    
+    const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
+        setCurrentItem(item || null);
+        // Set the doctor type for the modal
+        if (type === 'specialization') {
+            setSelectedDoctorType(item?.doctorType || '');
+        } else {
+            setSelectedDoctorType('');
+        }
+        setModalConfig({ type, parentId, parentName, action });
+        setIsModalOpen(true);
+    };
+
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+        const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
+
+        // Validation for specialization
+        if (modalConfig.type === 'specialization' && !selectedDoctorType) {
+            toast.error("Doctor Type is required for a specialization.");
+            return;
+        }
+
+        const itemData: Partial<DropdownItem> = {
+            _id: currentItem?._id,
+            name,
+            description,
+            type: modalConfig.type,
+            parentId: modalConfig.parentId,
+            // Include doctorType only for specializations
+            doctorType: modalConfig.type === 'specialization' ? selectedDoctorType : undefined,
+        };
+
+        await onUpdate(itemData, modalConfig.action);
+        setIsModalOpen(false);
+        setCurrentItem(null);
+    };
+
+    const handleDeleteClick = (item: DropdownItem) => {
+        setCurrentItem(item);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (currentItem?._id) {
+            onUpdate({ _id: currentItem._id }, 'delete');
+        }
+        setIsDeleteModalOpen(false);
+        setCurrentItem(null);
+    };
+
+    const toggleExpand = (id: string) => {
+        setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+    
+    const renderItem = (item: DropdownItem, level: number) => {
+        const children = getChildren(item._id);
+        const isExpanded = expandedItems[item._id];
+
+        return (
+            <div key={item._id} className={level === 0 ? "border-t" : "border-t border-dashed"}>
+                <div className="flex items-center gap-2 py-2 pr-2" style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}>
+                     {item.type === 'specialization' && (
+                        <button onClick={() => toggleExpand(item._id)} className="p-1 hover:bg-secondary rounded-full">
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                        </button>
+                    )}
+                    <span className="flex-grow font-medium">{item.name} {item.doctorType && <Badge variant="outline">{item.doctorType}</Badge>}</span>
+                    {item.type === 'specialization' && (
+                        <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', 'disease', undefined, item._id, item.name)}>
+                            <Plus className="mr-1 h-3 w-3" /> Add Disease
+                        </Button>
+                    )}
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type, item, item.parentId)}>
+                        <Edit className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteClick(item)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                </div>
+                {isExpanded && item.type === 'specialization' && (
+                    <div className="ml-4 pl-2">
+                         {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-8 text-sm text-muted-foreground py-1">No diseases added yet.</div>}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>{title}</CardTitle>
+                        <CardDescription>{description}</CardDescription>
+                    </div>
+                    <Button onClick={() => handleOpenModal('add', 'specialization')}>
+                        <Plus className="mr-2 h-4 w-4" /> Add Specialization
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent className="border rounded-md">
+                {isLoading ? <div className="text-center p-4">Loading...</div> :
+                 specializations.length === 0 ? <div className="text-center p-8 text-muted-foreground">No specializations found.</div> :
+                 specializations.map(item => renderItem(item, 0))}
+            </CardContent>
+
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <form onSubmit={handleSave}>
+                        <DialogHeader>
+                            <DialogTitle>
+                                {modalConfig.action === 'add' ? 'Add New' : 'Edit'} {modalConfig.type.replace(/([A-Z])/g, ' $1').trim()}
+                            </DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4">
+                           {modalConfig.type === 'specialization' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="doctorType">Doctor Type *</Label>
+                                    <Select 
+                                      value={selectedDoctorType} 
+                                      onValueChange={(value) => setSelectedDoctorType(value as any)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a Doctor Type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Physician">Physician</SelectItem>
+                                            <SelectItem value="Surgeon">Surgeon</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                            {modalConfig.type === 'disease' && modalConfig.parentId && (
+                                 <div className="space-y-2">
+                                    <Label>Parent Specialization</Label>
+                                    <Input value={modalConfig.parentName} readOnly disabled />
+                                 </div>
+                            )}
+                            <div className="space-y-2">
+                                <Label htmlFor="name">{modalConfig.type.replace(/([A-Z])/g, ' $1').trim()} Name</Label>
+                                <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
+                            </div>
+                             <div className="space-y-2">
+                                <Label htmlFor="description">Description</Label>
+                                <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                            <Button type="submit">Save</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Item?</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                        <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </Card>
+    );
+};
+
 export default function DropdownManagementPage() {
     const { data = [], isLoading, isError } = useGetSuperDataQuery(undefined);
     const [createItem] = useCreateSuperDataItemMutation();
@@ -690,171 +884,11 @@ export default function DropdownManagementPage() {
                 await deleteItem({ id: item._id }).unwrap();
                 toast.success('Success', { description: 'Item deleted successfully.' });
             }
-        } catch (error) {
-            toast.error('Error', { description: `Failed to ${action} item.` });
+        } catch (error: any) {
+            const errorMessage = error?.data?.message || `Failed to ${action} item.`;
+            toast.error('Error', { description: errorMessage });
             console.error(`API call failed for ${action}:`, error);
         }
-    };
-
-    const LocationManager = () => {
-        const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-        const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-        const [currentItem, setCurrentItem] = useState<Partial<LocationItem> | null>(null);
-        const [modalConfig, setModalConfig] = useState<{ type: 'country' | 'state' | 'city', parentId?: string, action: 'add' | 'edit'}>({ type: 'country', action: 'add' });
-        const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
-
-        const locationsByType = useMemo(() => {
-            const countries = data.filter(item => item.type === 'country') as LocationItem[];
-            const states = data.filter(item => item.type === 'state') as LocationItem[];
-            const cities = data.filter(item => item.type === 'city') as LocationItem[];
-            return { countries, states, cities };
-        }, [data]);
-    
-        const handleOpenModal = (action: 'add' | 'edit', type: 'country' | 'state' | 'city', item?: Partial<LocationItem>, parentId?: string) => {
-            setCurrentItem(item || null);
-            setModalConfig({ type, parentId, action });
-            setIsLocationModalOpen(true);
-        };
-    
-        const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-            e.preventDefault();
-            const form = e.currentTarget;
-            const name = (form.elements.namedItem('name') as HTMLInputElement).value;
-            const itemData: Partial<LocationItem> = {
-                ...currentItem,
-                name,
-                type: modalConfig.type,
-                parentId: modalConfig.parentId,
-            };
-            
-            await handleUpdate(itemData, modalConfig.action);
-            setIsLocationModalOpen(false);
-            setCurrentItem(null);
-        };
-    
-        const handleDeleteClick = (item: LocationItem) => {
-            setCurrentItem(item);
-            setIsDeleteModalOpen(true);
-        };
-    
-        const handleConfirmDelete = () => {
-            if (currentItem?._id) {
-                handleUpdate({ _id: currentItem._id }, 'delete');
-            }
-            setIsDeleteModalOpen(false);
-            setCurrentItem(null);
-        };
-
-        const toggleExpand = (id: string) => {
-            setExpandedItems(prev => ({...prev, [id]: !prev[id]}));
-        }
-
-        const renderLocationItem = (item: LocationItem, indentLevel: number) => {
-            const children = item.type === 'country' 
-                ? locationsByType.states.filter(s => s.parentId === item._id) 
-                : locationsByType.cities.filter(c => c.parentId === item._id);
-            const isExpanded = expandedItems[item._id];
-            
-            return (
-                <div key={item._id}>
-                    <div className={`flex items-center gap-2 py-2 pr-2`} style={{ paddingLeft: `${indentLevel * 1.5 + 0.5}rem` }}>
-                        <button onClick={() => toggleExpand(item._id)} className="p-1" disabled={children.length === 0}>
-                            {children.length > 0 ? (
-                                isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
-                            ) : <div className="w-4 h-4"></div>}
-                        </button>
-                        <span className="flex-grow">{item.name}</span>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenModal('edit', item.type as any, item)}>
-                            <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteClick(item)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                    </div>
-                    {isExpanded && children.map(child => renderLocationItem(child, indentLevel + 1))}
-                </div>
-            );
-        }
-    
-        return (
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle>Location Management</CardTitle>
-                            <CardDescription>Manage countries, states, and cities.</CardDescription>
-                        </div>
-                        <div className="flex gap-2">
-                             <Button onClick={() => handleOpenModal('add', 'country')}>
-                                <Plus className="mr-2 h-4 w-4" /> Country
-                            </Button>
-                             <Button onClick={() => handleOpenModal('add', 'state')}>
-                                <Plus className="mr-2 h-4 w-4" /> State
-                            </Button>
-                             <Button onClick={() => handleOpenModal('add', 'city')}>
-                                <Plus className="mr-2 h-4 w-4" /> City
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="border rounded-md max-h-96 overflow-y-auto">
-                   {locationsByType.countries.map(country => renderLocationItem(country, 0))}
-                </CardContent>
-                
-                <Dialog open={isLocationModalOpen} onOpenChange={setIsLocationModalOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <form onSubmit={handleSave}>
-                            <DialogHeader>
-                                <DialogTitle>
-                                    {modalConfig.action === 'add' ? 'Add New' : 'Edit'} {modalConfig.type.charAt(0).toUpperCase() + modalConfig.type.slice(1)}
-                                </DialogTitle>
-                            </DialogHeader>
-                            <div className="py-4 space-y-4">
-                                {(modalConfig.type === 'state' || modalConfig.type === 'city') && (
-                                     <div className="space-y-2">
-                                        <Label>Parent {modalConfig.type === 'state' ? 'Country' : 'State'}</Label>
-                                         <Select
-                                            value={modalConfig.parentId}
-                                            onValueChange={(value) => setModalConfig(prev => ({...prev, parentId: value}))}
-                                            required
-                                        >
-                                            <SelectTrigger><SelectValue placeholder="Select a parent" /></SelectTrigger>
-                                            <SelectContent>
-                                                {modalConfig.type === 'state' && locationsByType.countries.map(c => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
-                                                {modalConfig.type === 'city' && locationsByType.states.map(s => <SelectItem key={s._id} value={s._id}>{s.name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">{modalConfig.type.charAt(0).toUpperCase() + modalConfig.type.slice(1)} Name</Label>
-                                    <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <Button type="button" variant="secondary" onClick={() => setIsLocationModalOpen(false)}>Cancel</Button>
-                                <Button type="submit">Save</Button>
-                            </DialogFooter>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-
-                <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Delete Item?</DialogTitle>
-                      <DialogDescription>
-                        Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? Deleting a country or state will also delete all its children. This action cannot be undone.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-                      <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-            </Card>
-        );
     };
 
     if (isError) {
@@ -862,7 +896,6 @@ export default function DropdownManagementPage() {
     }
 
     const dropdownTypes = [
-        { key: 'specialization', title: 'Doctor Specializations', description: 'Manage the list of specializations for doctors.', tab: 'general' },
         { key: 'faqCategory', title: 'FAQ Categories', description: 'Manage categories for organizing FAQs.', tab: 'general' },
         { key: 'bank', title: 'Bank Names', description: 'Manage a list of supported banks.', tab: 'general' },
         { key: 'documentType', title: 'Document Types', description: 'Manage types of documents required for verification.', tab: 'general' },
@@ -879,6 +912,7 @@ export default function DropdownManagementPage() {
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="services">Services</TabsTrigger>
                     <TabsTrigger value="locations">Locations</TabsTrigger>
+                    <TabsTrigger value="doctors">Doctors</TabsTrigger>
                     <TabsTrigger value="admin">Admin</TabsTrigger>
                     <TabsTrigger value="marketing">Marketing</TabsTrigger>
                     <TabsTrigger value="products">Products</TabsTrigger>
@@ -904,8 +938,21 @@ export default function DropdownManagementPage() {
                        <ServiceManager />
                     </div>
                 </TabsContent>
-                <TabsContent value="locations">
-                    <LocationManager />
+                 <TabsContent value="locations">
+                    <div className="space-y-8">
+                      <p>Location Management is being refactored.</p>
+                    </div>
+                </TabsContent>
+                 <TabsContent value="doctors">
+                    <div className="space-y-8">
+                      <HierarchicalManager 
+                          title="Doctor Specialization Management"
+                          description="Manage doctor types, their specializations, and associated diseases."
+                          data={data}
+                          onUpdate={handleUpdate}
+                          isLoading={isLoading}
+                      />
+                    </div>
                 </TabsContent>
                 <TabsContent value="admin">
                     <div className="space-y-8">
@@ -946,14 +993,13 @@ export default function DropdownManagementPage() {
         </div>
     );
 }
-// Product Category Manager Component
+
 const ProductCategoryManager = () => {
     const { data: productCategoriesData = [], isLoading, refetch } = useGetAdminProductCategoriesQuery();
     const [createCategory] = useCreateAdminProductCategoryMutation();
     const [updateCategory] = useUpdateAdminProductCategoryMutation();
     const [deleteCategory] = useDeleteAdminProductCategoryMutation();
     
-    // Ensure productCategories is always an array
     const productCategories = useMemo(() => {
         if (Array.isArray(productCategoriesData)) {
             return productCategoriesData;
@@ -993,7 +1039,6 @@ const ProductCategoryManager = () => {
 
         try {
             if (currentCategory) {
-                // Update existing category
                 await updateCategory({
                     id: currentCategory._id,
                     name: formData.name.trim(),
@@ -1001,7 +1046,6 @@ const ProductCategoryManager = () => {
                 }).unwrap();
                 toast.success('Category updated successfully');
             } else {
-                // Create new category
                 await createCategory({
                     name: formData.name.trim(),
                     description: formData.description.trim()

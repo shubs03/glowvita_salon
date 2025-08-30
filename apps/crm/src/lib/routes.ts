@@ -2,7 +2,7 @@
 import { 
     FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, 
     FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
-    FaBell, FaGift, FaUserFriends, FaUserCircle
+    FaBell, FaGift, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock
 } from 'react-icons/fa';
 import { IconType } from "react-icons";
 
@@ -31,7 +31,13 @@ export const vendorNavItems: NavItem[] = [
 export const doctorNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
   { title: "Appointments", href: "/appointments", Icon: FaClipboardList, permission: 'appointments_view' },
-  { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
+  { title: "Patients", href: "/patients", Icon: FaUserCircle, permission: 'patients_view' },
+  { title: "Consultations", href: "/consultations", Icon: FaStethoscope, permission: 'consultations_view' },
+  { title: "Timetable", href: "/timetable", Icon: FaClock, permission: 'timetable_view' },
+  { title: "Staff", href: "/doctor-staff", Icon: FaUsers, permission: 'doctor_staff_view' },
+  { title: "Earnings", href: "/earnings", Icon: FaDollarSign, permission: 'earnings_view' },
+  { title: "Referrals", href: "/doctor-referrals", Icon: FaUserFriends, permission: 'doctor_referrals_view' },
+  { title: "Reports", href: "/doctor-reports", Icon: FaFileAlt, permission: 'doctor_reports_view' },
 ];
 
 export const supplierNavItems: NavItem[] = [

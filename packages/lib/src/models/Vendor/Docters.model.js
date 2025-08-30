@@ -1,4 +1,5 @@
 
+
 import mongoose from "mongoose";
 
 const doctorSchema = new mongoose.Schema({
@@ -31,12 +32,19 @@ const doctorSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
-  specialization: {
+  doctorType: { 
     type: String,
     required: true,
-    // enum: ["Dermatologist", "Cosmetologist", "Trichologist", "Aesthetic Physician", "Plastic Surgeon"],
-    trim: true,
   },
+  specialties: [{ 
+    type: String,
+    required: true,
+    trim: true,
+  }],
+  diseases: [{
+    type: String,
+    trim: true,
+  }],
   experience: {
     type: String,
     required: true,
@@ -140,6 +148,11 @@ const doctorSchema = new mongoose.Schema({
   },
 });
 
+doctorSchema.virtual('specialization').get(function() {
+    return this.specialties?.[0] || '';
+});
+
 const DoctorModel = mongoose.models.Doctor || mongoose.model("Doctor", doctorSchema);
 
 export default DoctorModel;
+    

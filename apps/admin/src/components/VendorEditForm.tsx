@@ -50,7 +50,7 @@ interface Document {
 type SalonCategory = 'unisex' | 'men' | 'women';
 type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
 
-interface Vendor {
+export interface Vendor {
   _id?: string;
   id?: string;
   firstName: string;
@@ -58,7 +58,7 @@ interface Vendor {
   email: string;
   phone: string;
   businessName: string;
-  category: SalonCategory;
+  category: SalonCategory | '';
   subCategories: SubCategory[];
   description: string;
   profileImage?: string;
@@ -67,11 +67,19 @@ interface Vendor {
   city: string;
   pincode: string;
   address: string;
+  password?: string;
   subscription?: Subscription;
   gallery?: string[];
   documents?: Document[];
   bankDetails?: BankDetails;
-  location?: { lat: number; lng: number };
+  location?: { lat: number; lng: number } | null;
+  confirmPassword?: string;
+  businessType?: string;
+  businessCategory?: string;
+  businessEmail?: string;
+  businessDescription?: string;
+  serviceCategories?: string[];
+  status?: 'Active' | 'Disabled' | 'Pending' | 'Approved' | 'Disapproved';
 }
 
 interface Client {
@@ -98,13 +106,25 @@ interface MapboxFeature {
   }>;
 }
 
-const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxChange, errors, setFormData }) => {
+// Define props for the tab components
+interface TabProps {
+  formData: Vendor;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  handleCheckboxChange: (field: 'subCategories', id: SubCategory, checked: boolean) => void;
+  errors: Partial<Record<keyof Vendor, string>>;
+  setFormData: React.Dispatch<React.SetStateAction<Vendor>>;
+  isEditMode: boolean;
+}
+
+const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxChange, errors, setFormData, isEditMode }: TabProps) => {
   const [isMapOpen, setIsMapOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
 
   // Initialize Mapbox when modal opens
   useEffect(() => {
@@ -164,7 +184,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
         });
       } catch (error) {
         console.error('Error initializing Mapbox:', error);
-        setErrors(prev => ({ ...prev, location: 'Failed to load map. Please check Mapbox configuration.' }));
+        setFormData(prev => ({ ...prev, errors: { ...prev.errors, location: 'Failed to load map.' } }));
       }
     };
 
@@ -181,7 +201,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
         marker.current = null;
       }
     };
-  }, [isMapOpen]);
+  }, [isMapOpen, formData.location, setFormData]);
 
   // Resize map when modal is fully opened
   useEffect(() => {
@@ -289,18 +309,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
         setFormData((prev: Vendor) => ({
           ...prev,
           profileImage: reader.result as string,
-          firstName: prev.firstName || '',
-          lastName: prev.lastName || '',
-          email: prev.email || '',
-          phone: prev.phone || '',
-          businessName: prev.businessName || '',
-          category: prev.category || 'unisex',
-          subCategories: prev.subCategories || [],
-          description: prev.description || '',
-          state: prev.state || '',
-          city: prev.city || '',
-          pincode: prev.pincode || '',
-          address: prev.address || ''
         }));
       };
       reader.readAsDataURL(file);
@@ -324,7 +332,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
       <Card>
         <CardHeader><CardTitle>Personal & Business Information</CardTitle></CardHeader>
         <CardContent className="space-y-6">
-          {/* Profile Photo Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-6">
               <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200">
@@ -363,7 +370,6 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
             </div>
           </div>
           
-          {/* Business Information Section */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Business Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -402,7 +408,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               <div className="space-y-2">
                 <Label>Sub Categories <span className="text-red-500">*</span></Label>
                 <div className={`space-y-2 p-3 rounded-md ${errors.subCategories ? 'border border-red-200 bg-red-50' : ''}`}>
-                  {subCategories.map((subCat) => (
+                  {subCategories.map((subCat: any) => (
                     <div key={subCat.id} className="flex items-center space-x-2">
                       <Checkbox 
                         id={subCat.id}
@@ -454,27 +460,48 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
-              <Input id="firstName" name="firstName" value={formData.firstName} onChange={handleInputChange} className={errors.firstName ? 'border-red-500' : ''} />
+              <Input id="firstName" name="firstName" value={formData.firstName || ''} onChange={handleInputChange} className={errors.firstName ? 'border-red-500' : ''} />
               {errors.firstName && <p className="text-sm text-red-500 mt-1">{errors.firstName}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
-              <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleInputChange} className={errors.lastName ? 'border-red-500' : ''} />
+              <Input id="lastName" name="lastName" value={formData.lastName || ''} onChange={handleInputChange} className={errors.lastName ? 'border-red-500' : ''} />
               {errors.lastName && <p className="text-sm text-red-500 mt-1">{errors.lastName}</p>}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
-              <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} className={errors.email ? 'border-red-500' : ''} />
+              <Input id="email" name="email" type="email" value={formData.email || ''} onChange={handleInputChange} className={errors.email ? 'border-red-500' : ''} />
               {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Mobile Number <span className="text-red-500">*</span></Label>
-              <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} className={errors.phone ? 'border-red-500' : ''} />
+              <Input id="phone" name="phone" type="tel" value={formData.phone || ''} onChange={handleInputChange} className={errors.phone ? 'border-red-500' : ''} />
               {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
             </div>
           </div>
+          
+          {!isEditMode && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                    <div className="relative">
+                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password || ''} onChange={handleInputChange} required className={errors.password ? 'border-red-500' : ''} />
+                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                     {errors.password && <p className="text-sm text-red-500 mt-1">{errors.password}</p>}
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
+                    <Input id="confirmPassword" name="confirmPassword" type="password" value={formData.confirmPassword || ''} onChange={handleInputChange} required className={errors.confirmPassword ? 'border-red-500' : ''} />
+                     {errors.confirmPassword && <p className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>}
+                </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="location">Location <span className="text-red-500">*</span></Label>
             <div className="flex items-center gap-2">
@@ -502,23 +529,23 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
                 <Label htmlFor="state">State <span className="text-red-500">*</span></Label>
-                <Input id="state" name="state" value={formData.state} onChange={handleInputChange} className={errors.state ? 'border-red-500' : ''} />
+                <Input id="state" name="state" value={formData.state || ''} onChange={handleInputChange} className={errors.state ? 'border-red-500' : ''} />
                 {errors.state && <p className="text-sm text-red-500 mt-1">{errors.state}</p>}
             </div>
             <div className="space-y-2">
                 <Label htmlFor="city">City <span className="text-red-500">*</span></Label>
-                <Input id="city" name="city" value={formData.city} onChange={handleInputChange} className={errors.city ? 'border-red-500' : ''} />
+                <Input id="city" name="city" value={formData.city || ''} onChange={handleInputChange} className={errors.city ? 'border-red-500' : ''} />
                 {errors.city && <p className="text-sm text-red-500 mt-1">{errors.city}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="pincode">Pincode <span className="text-red-500">*</span></Label>
-              <Input id="pincode" name="pincode" value={formData.pincode} onChange={handleInputChange} className={errors.pincode ? 'border-red-500' : ''} />
+              <Input id="pincode" name="pincode" value={formData.pincode || ''} onChange={handleInputChange} className={errors.pincode ? 'border-red-500' : ''} />
               {errors.pincode && <p className="text-sm text-red-500 mt-1">{errors.pincode}</p>}
             </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="address">Complete Address <span className="text-red-500">*</span></Label>
-            <Textarea id="address" name="address" value={formData.address} onChange={handleInputChange} placeholder="Enter complete salon address" className={errors.address ? 'border-red-500' : ''} />
+            <Textarea id="address" name="address" value={formData.address || ''} onChange={handleInputChange} placeholder="Enter complete salon address" className={errors.address ? 'border-red-500' : ''} />
             {errors.address && <p className="text-sm text-red-500 mt-1">{errors.address}</p>}
           </div>
         </CardContent>
@@ -615,11 +642,11 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
   );
 };
 // Stub components for other tabs
-const SubscriptionTab = ({ vendor, formData, handleInputChange, errors }) => <div>Subscription Info</div>;
-const GalleryTab = ({ vendor, formData, handleInputChange, errors }) => <div>Gallery</div>;
-const BankDetailsTab = ({ vendor, formData, handleInputChange, errors }) => <div>Bank Details</div>;
-const DocumentsTab = ({ vendor, formData, handleInputChange, errors }) => <div>Documents</div>;
-const ClientsTab = ({ vendor }) => <div>Clients</div>;
+const SubscriptionTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Subscription Info</div>;
+const GalleryTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Gallery</div>;
+const BankDetailsTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Bank Details</div>;
+const DocumentsTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Documents</div>;
+const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => <div>Clients</div>;
 
 interface VendorEditFormProps {
   isOpen: boolean;
@@ -628,15 +655,13 @@ interface VendorEditFormProps {
   onSubmit: (vendor: Vendor) => void;
 }
 
-const initialFormData = {
-    _id: '',
-    id: '',
+const getInitialFormData = (): Vendor => ({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     businessName: '',
-    category: 'unisex' as SalonCategory,
+    category: '',
     subCategories: [],
     description: '',
     profileImage: '',
@@ -645,19 +670,23 @@ const initialFormData = {
     city: '',
     pincode: '',
     address: '',
+    password: '',
+    confirmPassword: '',
     subscription: { startDate: '', endDate: '', package: '', isActive: false },
     gallery: [],
     documents: [],
     location: null
-};
+});
 
 export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEditFormProps) {
-  const [formData, setFormData] = useState<Vendor>(initialFormData);
-  const [errors, setErrors] = useState<Partial<Vendor>>({});
+  const [formData, setFormData] = useState<Vendor>(getInitialFormData());
+  const [errors, setErrors] = useState<Partial<Record<keyof Vendor, string>>>({});
+  const isEditMode = !!vendor;
 
   useEffect(() => {
     if (isOpen) {
-        setFormData(vendor || initialFormData);
+        setFormData(vendor ? { ...getInitialFormData(), ...vendor } : getInitialFormData());
+        setErrors({});
     }
   }, [vendor, isOpen]);
 
@@ -676,14 +705,36 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
   };
 
   const validateForm = () => {
-    // Validation logic...
-    return true;
+    // A more robust validation would go here
+    const requiredFields: (keyof Vendor)[] = ['firstName', 'lastName', 'email', 'phone', 'businessName', 'category', 'state', 'city', 'pincode', 'address'];
+    const newErrors: Partial<Record<keyof Vendor, string>> = {};
+    let isValid = true;
+    for (const field of requiredFields) {
+        if (!formData[field]) {
+            newErrors[field] = 'This field is required';
+            isValid = false;
+        }
+    }
+    if (!isEditMode && !formData.password) {
+        newErrors.password = "Password is required for new vendors";
+        isValid = false;
+    }
+    setErrors(newErrors);
+    return isValid;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm() && formData) {
-      onSubmit(formData);
+      const submissionData = { ...formData };
+      
+      // When creating a new vendor, don't send up _id or id fields.
+      if (!isEditMode) {
+        delete submissionData._id;
+        delete submissionData.id;
+      }
+      
+      onSubmit(submissionData);
     }
   };
 
@@ -713,9 +764,15 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
                 handleCheckboxChange={handleCheckboxChange}
                 errors={errors}
                 setFormData={setFormData}
+                isEditMode={isEditMode}
               />
             </TabsContent>
             {/* Other Tabs would be here */}
+             <TabsContent value="subscription"><SubscriptionTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="gallery"><GalleryTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="bank"><BankDetailsTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="documents"><DocumentsTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
+            <TabsContent value="clients"><ClientsTab vendor={vendor} /></TabsContent>
           </Tabs>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

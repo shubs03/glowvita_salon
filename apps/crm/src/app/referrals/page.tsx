@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Share2, Users, Gift, CheckCircle, Copy } from 'lucide-react';
+import { Share2, Users, Gift, CheckCircle, Copy, UserPlus, ArrowRight, TrendingUp } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
@@ -126,10 +126,47 @@ export default function ReferralsPage() {
     const successfulReferrals = referrals.filter(r => r.status !== 'Pending').length;
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8">
-            <h1 className="text-2xl font-bold font-headline mb-6">Refer a Vendor</h1>
+        <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+            <div>
+                <h1 className="text-2xl font-bold font-headline">Refer a Vendor</h1>
+                <p className="text-muted-foreground mt-1">Earn rewards by inviting other vendors to join our platform.</p>
+            </div>
 
-             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+             <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground overflow-hidden">
+                <div className="grid md:grid-cols-2 items-center">
+                    <div className="p-8">
+                        <h2 className="text-3xl font-bold mb-2">Grow Together, Earn Together</h2>
+                        <p className="mb-6 opacity-90 max-w-md">
+                            Invite fellow salon owners to our platform. When they join, you both get rewarded. It's our way of saying thank you for helping our community grow.
+                        </p>
+                        <div className="space-y-3 text-sm">
+                            <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Earn cash rewards for every successful referral.</span></div>
+                            <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Help your friends and colleagues succeed.</span></div>
+                            <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Strengthen your professional network.</span></div>
+                        </div>
+                    </div>
+                    <div className="hidden md:flex items-center justify-center p-8">
+                         <Gift className="w-48 h-48 text-primary-foreground opacity-20" />
+                    </div>
+                </div>
+            </Card>
+
+            <Card className="mb-6">
+                <CardHeader>
+                    <CardTitle>Your Unique Referral Link</CardTitle>
+                    <CardDescription>Share this link with other vendors. When they sign up using this link, you'll be credited for the referral.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <Input value={referralLink} readOnly className="bg-secondary text-base" />
+                        <Button onClick={handleCopyLink} className="w-full sm:w-auto" disabled={!user?.referralCode}>
+                            <Copy className="mr-2 h-4 w-4" /> Copy Link
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
@@ -143,7 +180,7 @@ export default function ReferralsPage() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Successful Referrals</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-600">{successfulReferrals}</div>
@@ -162,17 +199,38 @@ export default function ReferralsPage() {
                 </Card>
             </div>
 
-            <Card className="mb-6">
+            <Card className="mb-6 bg-secondary/50 border border-border/50">
                 <CardHeader>
-                    <CardTitle>Your Referral Link</CardTitle>
-                    <CardDescription>Share this link with other vendors. When they sign up, you'll get a bonus!</CardDescription>
+                    <CardTitle className="text-center text-xl font-semibold">How It Works</CardTitle>
+                    <CardDescription className="text-center">Earn rewards in 3 simple steps.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <Input value={referralLink} readOnly />
-                        <Button onClick={handleCopyLink} className="w-full sm:w-auto" disabled={!user?.referralCode}>
-                            <Copy className="mr-2 h-4 w-4" /> Copy Link
-                        </Button>
+                <CardContent className="grid md:grid-cols-3 gap-6 text-center">
+                    <div className="flex flex-col items-center p-4 transform transition-transform duration-300 hover:scale-105">
+                        <div className="mb-4 bg-primary/10 text-primary p-5 rounded-full ring-4 ring-primary/20">
+                            <Share2 className="h-8 w-8" />
+                        </div>
+                        <h3 className="font-semibold text-lg mb-1">1. Share Your Link</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            Copy your personal referral link and share it with other salon owners and beauty professionals you know.
+                        </p>
+                    </div>
+                    <div className="flex flex-col items-center p-4 transform transition-transform duration-300 hover:scale-105">
+                        <div className="mb-4 bg-primary/10 text-primary p-5 rounded-full ring-4 ring-primary/20">
+                            <UserPlus className="h-8 w-8" />
+                        </div>
+                        <h3 className="font-semibold text-lg mb-1">2. They Sign Up</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            Your friend uses your unique link to register their salon or professional profile on our platform.
+                        </p>
+                    </div>
+                    <div className="flex flex-col items-center p-4 transform transition-transform duration-300 hover:scale-105">
+                        <div className="mb-4 bg-primary/10 text-primary p-5 rounded-full ring-4 ring-primary/20">
+                            <Gift className="h-8 w-8" />
+                        </div>
+                        <h3 className="font-semibold text-lg mb-1">3. Get Rewarded</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                           Once their registration is complete and verified, you receive a bonus in your account as a thank you!
+                        </p>
                     </div>
                 </CardContent>
             </Card>

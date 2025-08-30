@@ -6,9 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
 import { 
-  FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, 
-  FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
-  FaBell, FaGift, FaUserFriends, FaUserCircle
+  FaSignOutAlt, 
+  FaBars, FaTimes
 } from 'react-icons/fa';
 import { useAppDispatch } from "@repo/store/hooks";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";

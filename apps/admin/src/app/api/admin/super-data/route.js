@@ -1,28 +1,23 @@
 
 import _db from "@repo/lib/db";
 import SuperDataModel from "../../../../../../../packages/lib/src/models/admin/SuperData.model.js";
-import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();
 
 // GET all items
-export const GET = authMiddlewareAdmin(
-  async (req) => {
+export const GET = async (req) => {
     try {
       const items = await SuperDataModel.find({});
       return Response.json(items, { status: 200 });
     } catch (error) {
       return Response.json({ message: "Error fetching data", error }, { status: 500 });
     }
-  },
-  ["superadmin", "admin"] 
-);
+};
 
 // POST a new item
-export const POST = authMiddlewareAdmin(
-  async (req) => {
+export const POST = async (req) => {
     const body = await req.json();
-    const { name, description, type, parentId, countryId, stateId } = body;
+    const { name, description, type, parentId, countryId, stateId, doctorType } = body;
 
     if (!name || !type) {
       return Response.json({ message: "Name and type are required" }, { status: 400 });
@@ -35,19 +30,18 @@ export const POST = authMiddlewareAdmin(
         type,
         parentId,
         countryId,
-        stateId
+        stateId,
+        doctorType // This will be undefined for non-specialization types and that's okay
       });
       return Response.json(newItem, { status: 201 });
     } catch (error) {
+       console.error("Error creating SuperData item:", error);
       return Response.json({ message: "Error creating item", error }, { status: 500 });
     }
-  },
-  ["superadmin"]
-);
+  };
 
 // PUT (update) an item by ID
-export const PUT = authMiddlewareAdmin(
-  async (req) => {
+export const PUT = async (req) => {
     const { id, ...updateData } = await req.json();
 
     if (!id) {
@@ -63,13 +57,10 @@ export const PUT = authMiddlewareAdmin(
     } catch (error) {
       return Response.json({ message: "Error updating item", error }, { status: 500 });
     }
-  },
-  ["superadmin"]
-);
+  };
 
 // DELETE an item by ID
-export const DELETE = authMiddlewareAdmin(
-  async (req) => {
+export const DELETE = async (req) => {
     const { id } = await req.json();
 
     if (!id) {
@@ -85,6 +76,4 @@ export const DELETE = authMiddlewareAdmin(
     } catch (error) {
       return Response.json({ message: "Error deleting item", error }, { status: 500 });
     }
-  },
-  ["superadmin"]
-);
+  };

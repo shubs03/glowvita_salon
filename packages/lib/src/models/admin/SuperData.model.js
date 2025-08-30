@@ -24,7 +24,8 @@ const superDataSchema = new mongoose.Schema({
       'documentType',
       'country',
       'state',
-      'city'
+      'city',
+      'disease' // Removed 'doctorType' since it's handled differently
     ],
   },
   parentId: {
@@ -42,6 +43,11 @@ const superDataSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'SuperData',
     default: null,
+  },
+   doctorType: { // For 'specialization' type
+    type: String,
+    enum: ['Physician', 'Surgeon'],
+    required: function() { return this.type === 'specialization'; }
   },
   createdAt: {
     type: Date,

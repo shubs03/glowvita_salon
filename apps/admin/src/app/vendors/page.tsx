@@ -7,6 +7,7 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Skeleton } from '@repo/ui/skeleton';
+import { Input } from '@repo/ui/input';
 import { Eye, ToggleRight, ToggleLeft, FileDown, X, Trash2, Plus, FilePenIcon, Users, UserCheck, BarChart, UserX, CheckCircle, XCircle } from 'lucide-react';
 import { VendorEditForm } from "../../components/VendorEditForm";
 import { useCreateVendorMutation, useGetVendorsQuery, useUpdateVendorMutation, useDeleteVendorMutation, useUpdateVendorStatusMutation } from '../../../../../packages/store/src/services/api';

@@ -17,8 +17,9 @@ import shippingReducer from './slices/shippingSlice';
 import productReducer from './slices/productSlice';
 import serviceReducer from "./slices/CRM/serviceSlice.js";
 import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
-
-
+import appointmentReducer from './slices/appointmentSlice';
+import blockTimeReducer from './slices/blockTimeSlice';
+  
 export const makeStore = () => {
   return configureStore({
     middleware: (getDefaultMiddleware) =>
@@ -37,12 +38,35 @@ export const makeStore = () => {
       notification: notificationReducer,
       geoFencing: geoFencingReducer,
       refferal: refferalReducer,
-      faq: faqReducer,
       shipping: shippingReducer,
       products: productReducer,
+      staff: staffReducer, 
+      faqs: faqReducer,
       service: serviceReducer,
-      staff: staffReducer, // Add staff reducer
+      appointments: appointmentReducer,  
+      blockTime: blockTimeReducer
     },
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({
+        serializableCheck: {
+          // Ignore these action types
+          ignoredActions: [
+            'blockTime/saveBlockTime/pending', 
+            'blockTime/saveBlockTime/fulfilled', 
+            'blockTime/saveBlockTime/rejected',
+            'blockTime/setDate',
+            'blockTime/setStaffMember',
+            'blockTime/setStartTime',
+            'blockTime/setEndTime',
+            'blockTime/setDescription',
+            'blockTime/reset'
+          ],
+          // Ignore these field paths in all actions
+          ignoredActionPaths: ['meta.arg', 'payload.timestamp', 'payload'],
+          // Ignore these paths in the state
+          ignoredPaths: ['blockTime.date', 'blockTime']
+        }
+      }).concat(glowvitaApi.middleware),
   });
 };
 
