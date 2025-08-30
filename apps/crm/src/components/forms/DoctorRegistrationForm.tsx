@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -88,12 +89,12 @@ export function DoctorRegistrationForm({ onSuccess }) {
     doctorAvailability: 'Online',
     workingWithHospital: false,
     videoConsultation: false,
+    referredByCode: '',
   });
 
   const [step, setStep] = useState(1);
   const [createDoctor, { isLoading }] = useCreateDoctorMutation();
   
-  // Use a static array for the doctor types
   const doctorTypes = [
     { name: "Physician", description: "Specializes in non-surgical medical care." },
     { name: "Surgeon", description: "Specializes in surgical procedures." }
@@ -265,7 +266,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
                         <Checkbox 
                           id={disease._id}
                           checked={formData.diseases.includes(disease._id)}
-                          onCheckedChange={(checked) => handleDiseaseChange(disease._id, !!checked)}
+                          onCheckedChange={(checked) => handleDiseaseChange(disease._id)}
                         />
                         <Label htmlFor={disease._id} className="text-sm font-normal">{disease.name}</Label>
                       </div>
@@ -297,6 +298,10 @@ export function DoctorRegistrationForm({ onSuccess }) {
                 <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
                 <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required />
               </div>
+               <div className="space-y-2">
+                    <Label htmlFor="referredByCode">Referral Code (Optional)</Label>
+                    <Input id="referredByCode" name="referredByCode" value={formData.referredByCode} onChange={handleChange} placeholder="Enter referral code if you have one" />
+                </div>
             </div>
           )}
 
