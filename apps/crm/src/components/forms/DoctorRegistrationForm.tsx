@@ -1,7 +1,7 @@
-
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Input } from '@repo/ui/input';
@@ -13,7 +13,7 @@ import { Skeleton } from '@repo/ui/skeleton';
 import { CheckCircle, Stethoscope, User, HeartPulse, Bone, ArrowRight, ArrowLeft } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 
-const StepIndicator = ({ currentStep, setStep }) => {
+const StepIndicator = ({ currentStep }) => {
     const steps = [
         { id: 1, name: 'Create Account', icon: User },
         { id: 2, name: 'Role & Specialty', icon: Stethoscope },
@@ -26,33 +26,26 @@ const StepIndicator = ({ currentStep, setStep }) => {
                 {steps.map((step, stepIdx) => (
                     <li key={step.name} className={cn("relative", stepIdx !== steps.length - 1 ? "flex-1" : "")}>
                         <div className="flex items-center">
-                            <button 
-                                onClick={() => step.id < currentStep && setStep(step.id)}
+                            <span 
                                 className={cn(
-                                    "flex items-center text-sm font-medium",
-                                    step.id < currentStep ? "cursor-pointer" : "cursor-default"
-                                )}
-                                disabled={step.id >= currentStep}
-                            >
-                                <span className={cn(
                                     "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                                    currentStep > step.id ? "bg-primary hover:bg-primary/90 text-white" :
+                                    currentStep > step.id ? "bg-primary text-white" :
                                     currentStep === step.id ? "border-2 border-primary bg-primary/10 text-primary" :
                                     "border-2 border-gray-300 bg-background text-muted-foreground"
-                                )}>
-                                    {currentStep > step.id ? <CheckCircle className="h-5 w-5" /> : <step.icon className="h-5 w-5" />}
-                                </span>
-                                <span className={cn(
-                                    "ml-3 hidden font-medium text-muted-foreground md:inline",
-                                    currentStep >= step.id && "text-foreground"
-                                )}>
-                                    {step.name}
-                                </span>
-                            </button>
-                            {stepIdx !== steps.length - 1 && (
-                                <div className="absolute right-0 top-4 -z-10 hidden h-0.5 w-full bg-gray-200 md:block" aria-hidden="true" />
-                            )}
+                                )}
+                            >
+                                {currentStep > step.id ? <CheckCircle className="h-5 w-5" /> : <step.icon className="h-5 w-5" />}
+                            </span>
+                            <span className={cn(
+                                "ml-3 hidden font-medium text-muted-foreground md:inline",
+                                currentStep >= step.id && "text-foreground"
+                            )}>
+                                {step.name}
+                            </span>
                         </div>
+                        {stepIdx !== steps.length - 1 && (
+                            <div className="absolute right-0 top-4 -z-10 hidden h-0.5 w-full bg-gray-200 md:block" aria-hidden="true" />
+                        )}
                     </li>
                 ))}
             </ol>
@@ -75,7 +68,6 @@ export function DoctorRegistrationForm({ onSuccess }) {
     diseases: [],
     experience: '0',
     registrationNumber: '',
-    // Set safe defaults for fields not collected in this initial phase
     clinicName: 'N/A',
     clinicAddress: 'N/A',
     state: 'N/A',
@@ -87,7 +79,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
     assistantContact: '0000000000',
     doctorAvailability: 'Online',
     workingWithHospital: false,
-    videoConsultation: true, // Assuming default is true for doctors
+    videoConsultation: true,
     referredByCode: '',
   });
 
@@ -131,11 +123,11 @@ export function DoctorRegistrationForm({ onSuccess }) {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDoctorTypeChange = (typeName: string) => {
+  const handleDoctorTypeChange = (typeName) => {
     setFormData(prev => ({ ...prev, doctorType: typeName, specialties: [], diseases: [] }));
   };
 
-  const handleSpecialtyChange = (specId: string) => {
+  const handleSpecialtyChange = (specId) => {
     setFormData(prev => {
       const newSpecialties = prev.specialties.includes(specId)
         ? prev.specialties.filter(id => id !== specId)
@@ -150,7 +142,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
     });
   };
 
-  const handleDiseaseChange = (diseaseId: string) => {
+  const handleDiseaseChange = (diseaseId) => {
     setFormData(prev => ({
       ...prev,
       diseases: prev.diseases.includes(diseaseId)
@@ -169,11 +161,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
     const specialtyNames = formData.specialties.map(id => allSpecialties.find(s => s._id === id)?.name).filter(Boolean);
     const diseaseNames = formData.diseases.map(id => allDiseases.find(d => d._id === id)?.name).filter(Boolean);
     
-    const submissionData = {
-      ...formData,
-      specialties: specialtyNames,
-      diseases: diseaseNames,
-    };
+    const submissionData = { ...formData, specialties: specialtyNames, diseases: diseaseNames };
     
     try {
       await createDoctor(submissionData).unwrap();
@@ -187,14 +175,14 @@ export function DoctorRegistrationForm({ onSuccess }) {
   const nextStep = () => {
     if (step === 1 && (!formData.name || !formData.email || !formData.phone || !formData.password)) return toast.error("Please fill all required fields.");
     if(step === 2 && !formData.doctorType) return toast.error("Please select a role.");
-    if(step === 3 && formData.specialties.length === 0) return toast.error("Please select at least one specialty.");
     setStep(s => s + 1);
   };
+
   const prevStep = () => setStep(s => s - 1);
 
   const renderStepContent = () => {
     switch(step) {
-      case 1: // Account Creation
+      case 1:
         return (
           <div className="space-y-4 animate-in fade-in-50 duration-500 max-w-lg mx-auto">
             <h3 className="font-semibold text-lg text-center">Create Your Doctor Account</h3>
@@ -203,30 +191,19 @@ export function DoctorRegistrationForm({ onSuccess }) {
             <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} required />
             <Input name="registrationNumber" placeholder="Registration Number" onChange={handleChange} required />
             <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
-            <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required />
+            <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} />
             <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} />
           </div>
         );
-      case 2: // Role & Specialty
+      case 2:
         return (
           <div className="space-y-6 animate-in fade-in-50 duration-500">
             <div>
               <h3 className="font-semibold text-lg text-center mb-4">What describes you best?</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                 {doctorTypes.map(type => (
-                  <Card
-                    key={type.name}
-                    onClick={() => handleDoctorTypeChange(type.name)}
-                    className={cn(
-                      "cursor-pointer transition-all duration-200 text-center p-6",
-                      formData.doctorType === type.name 
-                        ? "border-primary ring-2 ring-primary bg-primary/5" 
-                        : "hover:border-primary/50 hover:bg-secondary/50"
-                    )}
-                  >
-                    <div className="text-primary mb-3">
-                      {type.name === 'Physician' ? <HeartPulse className="h-10 w-10 mx-auto" /> : <Stethoscope className="h-10 w-10 mx-auto" />}
-                    </div>
+                  <Card key={type.name} onClick={() => handleDoctorTypeChange(type.name)} className={cn("cursor-pointer transition-all duration-200 text-center p-6", formData.doctorType === type.name ? "border-primary ring-2 ring-primary bg-primary/5" : "hover:border-primary/50 hover:bg-secondary/50")}>
+                    <div className="text-primary mb-3">{type.name === 'Physician' ? <HeartPulse className="h-10 w-10 mx-auto" /> : <Stethoscope className="h-10 w-10 mx-auto" />}</div>
                     <h4 className="font-bold text-lg">{type.name}</h4>
                     <p className="text-sm text-muted-foreground">{type.description}</p>
                   </Card>
@@ -239,16 +216,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {isLoadingDropdowns ? [...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />) : (
                     filteredSpecialties.map(spec => (
-                      <div
-                        key={spec._id}
-                        onClick={() => handleSpecialtyChange(spec._id)}
-                        className={cn(
-                          "p-4 border rounded-lg cursor-pointer flex flex-col items-center justify-center text-center transition-all duration-200",
-                          formData.specialties.includes(spec._id)
-                            ? "border-primary ring-2 ring-primary bg-primary/5"
-                            : "hover:border-primary/50 hover:bg-secondary/50"
-                        )}
-                      >
+                      <div key={spec._id} onClick={() => handleSpecialtyChange(spec._id)} className={cn("p-4 border rounded-lg cursor-pointer flex flex-col items-center justify-center text-center transition-all duration-200", formData.specialties.includes(spec._id) ? "border-primary ring-2 ring-primary bg-primary/5" : "hover:border-primary/50 hover:bg-secondary/50")}>
                         <Bone className="h-8 w-8 text-primary mb-2" />
                         <span className="font-medium text-sm">{spec.name}</span>
                       </div>
@@ -259,7 +227,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
             )}
           </div>
         );
-      case 3: // Disease Focus
+      case 3:
         return (
           <div className="space-y-6 animate-in fade-in-50 duration-500">
             <h3 className="font-semibold text-lg text-center">Which diseases do you specialize in?</h3>
@@ -269,11 +237,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 border p-4 rounded-md">
                   {diseases.map(disease => (
                     <div key={disease._id} className="flex items-center space-x-2">
-                      <Checkbox 
-                        id={disease._id}
-                        checked={formData.diseases.includes(disease._id)}
-                        onCheckedChange={() => handleDiseaseChange(disease._id)}
-                      />
+                      <Checkbox id={disease._id} checked={formData.diseases.includes(disease._id)} onCheckedChange={() => handleDiseaseChange(disease._id)} />
                       <Label htmlFor={disease._id} className="text-sm font-normal">{disease.name}</Label>
                     </div>
                   ))}
@@ -292,22 +256,16 @@ export function DoctorRegistrationForm({ onSuccess }) {
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-background/70 backdrop-blur-sm border-white/20 shadow-2xl shadow-blue-500/10 p-8 rounded-lg">
         <div className="mb-8">
-          <StepIndicator currentStep={step} setStep={setStep} />
+          <StepIndicator currentStep={step} />
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
           {renderStepContent()}
           <div className="flex justify-between pt-6 border-t mt-8">
-            <Button type="button" variant="outline" onClick={prevStep} disabled={step === 1}>
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back
-            </Button>
+            <Button type="button" variant="outline" onClick={prevStep} disabled={step === 1}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>
             {step < 3 ? (
-              <Button type="button" onClick={nextStep}>
-                Next <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+              <Button type="button" onClick={nextStep}>Next <ArrowRight className="h-4 w-4 ml-2" /></Button>
             ) : (
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Submitting..." : "Submit Application"}
-              </Button>
+              <Button type="submit" disabled={isLoading}>{isLoading ? "Submitting..." : "Submit Application"}</Button>
             )}
           </div>
         </form>
@@ -315,3 +273,9 @@ export function DoctorRegistrationForm({ onSuccess }) {
     </div>
   );
 }
+
+export const DoctorRegistrationFormWithSuspense = (props) => (
+    <Suspense fallback={<div>Loading...</div>}>
+        <DoctorRegistrationForm {...props} />
+    </Suspense>
+)
