@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -16,10 +15,9 @@ import { cn } from '@repo/ui/cn';
 
 const StepIndicator = ({ currentStep, setStep }) => {
     const steps = [
-        { id: 1, name: 'Role', icon: User },
-        { id: 2, name: 'Specialty', icon: Stethoscope },
+        { id: 1, name: 'Create Account', icon: User },
+        { id: 2, name: 'Role & Specialty', icon: Stethoscope },
         { id: 3, name: 'Disease Focus', icon: HeartPulse },
-        { id: 4, name: 'Basic Details', icon: User },
     ];
     
     return (
@@ -76,19 +74,20 @@ export function DoctorRegistrationForm({ onSuccess }) {
     specialties: [],
     diseases: [],
     experience: '0',
+    registrationNumber: '',
+    // Set safe defaults for fields not collected in this initial phase
     clinicName: 'N/A',
     clinicAddress: 'N/A',
     state: 'N/A',
     city: 'N/A',
     pincode: '000000',
-    registrationNumber: '',
     physicalConsultationStartTime: '00:00',
     physicalConsultationEndTime: '00:00',
     assistantName: 'N/A',
     assistantContact: '0000000000',
     doctorAvailability: 'Online',
     workingWithHospital: false,
-    videoConsultation: false,
+    videoConsultation: true, // Assuming default is true for doctors
     referredByCode: '',
   });
 
@@ -186,26 +185,33 @@ export function DoctorRegistrationForm({ onSuccess }) {
   };
 
   const nextStep = () => {
-    if(step === 1 && !formData.doctorType) return toast.error("Please select a role.");
-    if(step === 2 && formData.specialties.length === 0) return toast.error("Please select at least one specialty.");
+    if (step === 1 && (!formData.name || !formData.email || !formData.phone || !formData.password)) return toast.error("Please fill all required fields.");
+    if(step === 2 && !formData.doctorType) return toast.error("Please select a role.");
+    if(step === 3 && formData.specialties.length === 0) return toast.error("Please select at least one specialty.");
     setStep(s => s + 1);
   };
   const prevStep = () => setStep(s => s - 1);
 
-  return (
-    <Card className="w-full max-w-4xl mx-auto">
-      <CardHeader>
-        <CardTitle>Doctor Registration</CardTitle>
-        <CardDescription>Join our platform as a healthcare professional.</CardDescription>
-        <div className="pt-4">
-          <StepIndicator currentStep={step} setStep={setStep} />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {step === 1 && (
-            <div className="space-y-4 animate-in fade-in-50 duration-500">
-              <h3 className="font-semibold text-lg text-center">What describes you best?</h3>
+  const renderStepContent = () => {
+    switch(step) {
+      case 1: // Account Creation
+        return (
+          <div className="space-y-4 animate-in fade-in-50 duration-500 max-w-lg mx-auto">
+            <h3 className="font-semibold text-lg text-center">Create Your Doctor Account</h3>
+            <Input name="name" placeholder="Full Name" onChange={handleChange} required />
+            <Input name="email" type="email" placeholder="Email Address" onChange={handleChange} required />
+            <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} required />
+            <Input name="registrationNumber" placeholder="Registration Number" onChange={handleChange} required />
+            <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
+            <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required />
+            <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} />
+          </div>
+        );
+      case 2: // Role & Specialty
+        return (
+          <div className="space-y-6 animate-in fade-in-50 duration-500">
+            <div>
+              <h3 className="font-semibold text-lg text-center mb-4">What describes you best?</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
                 {doctorTypes.map(type => (
                   <Card
@@ -227,101 +233,85 @@ export function DoctorRegistrationForm({ onSuccess }) {
                 ))}
               </div>
             </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-4 animate-in fade-in-50 duration-500">
-              <h3 className="font-semibold text-lg text-center">Select your specialty/specialties</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                 {isLoadingDropdowns ? [...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />) : (
-                  filteredSpecialties.map(spec => (
-                    <div
-                      key={spec._id}
-                      onClick={() => handleSpecialtyChange(spec._id)}
-                      className={cn(
-                        "p-4 border rounded-lg cursor-pointer flex flex-col items-center justify-center text-center transition-all duration-200",
-                        formData.specialties.includes(spec._id)
-                          ? "border-primary ring-2 ring-primary bg-primary/5"
-                          : "hover:border-primary/50 hover:bg-secondary/50"
-                      )}
-                    >
-                      <Bone className="h-8 w-8 text-primary mb-2" />
-                      <span className="font-medium text-sm">{spec.name}</span>
-                    </div>
-                  ))
-                 )}
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-6 animate-in fade-in-50 duration-500">
-              <h3 className="font-semibold text-lg text-center">Which diseases do you specialize in?</h3>
-              {filteredDiseases.length > 0 ? filteredDiseases.map(([specialtyName, diseases]) => (
-                <div key={specialtyName}>
-                  <h4 className="font-semibold mb-2">{specialtyName}</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 border p-4 rounded-md">
-                    {diseases.map(disease => (
-                      <div key={disease._id} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={disease._id}
-                          checked={formData.diseases.includes(disease._id)}
-                          onCheckedChange={(checked) => handleDiseaseChange(disease._id)}
-                        />
-                        <Label htmlFor={disease._id} className="text-sm font-normal">{disease.name}</Label>
+            {formData.doctorType && (
+              <div className="animate-in fade-in-50 duration-500">
+                <h3 className="font-semibold text-lg text-center mb-4">Select your specialty/specialties</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {isLoadingDropdowns ? [...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />) : (
+                    filteredSpecialties.map(spec => (
+                      <div
+                        key={spec._id}
+                        onClick={() => handleSpecialtyChange(spec._id)}
+                        className={cn(
+                          "p-4 border rounded-lg cursor-pointer flex flex-col items-center justify-center text-center transition-all duration-200",
+                          formData.specialties.includes(spec._id)
+                            ? "border-primary ring-2 ring-primary bg-primary/5"
+                            : "hover:border-primary/50 hover:bg-secondary/50"
+                        )}
+                      >
+                        <Bone className="h-8 w-8 text-primary mb-2" />
+                        <span className="font-medium text-sm">{spec.name}</span>
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  )}
                 </div>
-              )) : (
-                <p className="text-center text-muted-foreground">No diseases found for selected specialties. You can add them later.</p>
-              )}
-            </div>
-          )}
-
-          {step === 4 && (
-             <div className="space-y-4 animate-in fade-in-50 duration-500 max-w-2xl mx-auto">
-              <h3 className="font-semibold text-lg text-center">Finally, a few basic details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input name="name" placeholder="Full Name" onChange={handleChange} required />
-                <Input name="email" type="email" placeholder="Email Address" onChange={handleChange} required />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} required />
-                <Input name="experience" type="number" placeholder="Years of Experience" onChange={handleChange} required />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input name="registrationNumber" placeholder="Registration Number" onChange={handleChange} required />
-                  <Input name="gender" placeholder="Gender" onChange={handleChange} required />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
-                <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required />
-              </div>
-               <div className="space-y-2">
-                    <Label htmlFor="referredByCode">Referral Code (Optional)</Label>
-                    <Input id="referredByCode" name="referredByCode" value={formData.referredByCode} onChange={handleChange} placeholder="Enter referral code if you have one" />
+            )}
+          </div>
+        );
+      case 3: // Disease Focus
+        return (
+          <div className="space-y-6 animate-in fade-in-50 duration-500">
+            <h3 className="font-semibold text-lg text-center">Which diseases do you specialize in?</h3>
+            {filteredDiseases.length > 0 ? filteredDiseases.map(([specialtyName, diseases]) => (
+              <div key={specialtyName}>
+                <h4 className="font-semibold mb-2">{specialtyName}</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 border p-4 rounded-md">
+                  {diseases.map(disease => (
+                    <div key={disease._id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={disease._id}
+                        checked={formData.diseases.includes(disease._id)}
+                        onCheckedChange={() => handleDiseaseChange(disease._id)}
+                      />
+                      <Label htmlFor={disease._id} className="text-sm font-normal">{disease.name}</Label>
+                    </div>
+                  ))}
                 </div>
-            </div>
-          )}
+              </div>
+            )) : (
+              <p className="text-center text-muted-foreground">No diseases found for selected specialties. You can add them later.</p>
+            )}
+          </div>
+        );
+      default: return null;
+    }
+  };
 
+  return (
+    <div className="w-full max-w-4xl mx-auto">
+      <div className="bg-background/70 backdrop-blur-sm border-white/20 shadow-2xl shadow-blue-500/10 p-8 rounded-lg">
+        <div className="mb-8">
+          <StepIndicator currentStep={step} setStep={setStep} />
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {renderStepContent()}
           <div className="flex justify-between pt-6 border-t mt-8">
             <Button type="button" variant="outline" onClick={prevStep} disabled={step === 1}>
               <ArrowLeft className="h-4 w-4 mr-2" /> Back
             </Button>
-            {step < 4 && (
+            {step < 3 ? (
               <Button type="button" onClick={nextStep}>
                 Next <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
-            )}
-            {step === 4 && (
+            ) : (
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? "Submitting..." : "Submit Application"}
               </Button>
             )}
           </div>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
