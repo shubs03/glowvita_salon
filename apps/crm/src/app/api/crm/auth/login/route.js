@@ -31,7 +31,7 @@ export async function POST(request) {
     // Define search order and corresponding models/roles
     const userRoles = [
       { model: VendorModel, type: 'vendor', selectFields: '+password' },
-      { model: DoctorModel, type: 'doctor', selectFields: '+password referralCode' }, // <<< Ensure referralCode is selected
+      { model: DoctorModel, type: 'doctor', selectFields: '+password referralCode' }, // Correctly select password and referralCode
       { model: SupplierModel, type: 'supplier', selectFields: '+password' },
       { model: StaffModel, type: 'staff', selectFields: '+password' },
     ];
@@ -49,6 +49,11 @@ export async function POST(request) {
     
     if (!user) {
       return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
+    }
+
+    // This check prevents the bcrypt error if a user is found but has no password field
+    if (!user.password) {
+      return NextResponse.json({ success: false, error: "Authentication failed for this user." }, { status: 401 });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
