@@ -8,4 +8,13 @@
   body {
     @apply bg-secondary text-foreground;
   }
+  
+  /* Fix for dark mode borders */
+  .dark .border-border, .dark .border-b, .dark .border-r, .dark .border-t, .dark .border-l {
+      @apply border-white/10;
+  }
+
+  .dark .bg-secondary {
+    @apply bg-slate-900;
+  }
 }
