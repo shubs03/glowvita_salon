@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Copy, Gift, UserPlus, Users, Share2, CheckCircle, TrendingUp, Send, UserCheck, BarChart } from 'lucide-react';
+import { Copy, Gift, UserPlus, Users, Share2, CheckCircle, TrendingUp, Send } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
@@ -159,6 +159,10 @@ export default function ReferralsPage() {
 
     const totalBonusEarned = referrals.filter((r: Referral) => r.status === 'Bonus Paid').reduce((acc, r) => acc + (Number(r.bonus) || 0), 0);
     const successfulReferrals = referrals.filter(r => r.status !== 'Pending').length;
+    
+    const referrerBonus = settingsData?.referrerBonus?.bonusValue || 0;
+    const refereeBonusEnabled = settingsData?.refereeBonus?.enabled;
+    const refereeBonus = settingsData?.refereeBonus?.bonusValue || 0;
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -176,10 +180,10 @@ export default function ReferralsPage() {
                         </p>
                         <div className="space-y-3 text-sm">
                            {settingsData?.referrerBonus && (
-                                <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Earn ₹{settingsData.referrerBonus.bonusValue} for every successful referral.</span></div>
+                                <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Earn ₹{referrerBonus} for every successful referral.</span></div>
                            )}
-                           {settingsData?.refereeBonus?.enabled && (
-                               <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Your friend gets ₹{settingsData.refereeBonus.bonusValue} too!</span></div>
+                           {refereeBonusEnabled && (
+                               <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Your friend gets ₹{refereeBonus} too!</span></div>
                            )}
                            <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Strengthen your professional network.</span></div>
                         </div>
@@ -200,7 +204,7 @@ export default function ReferralsPage() {
                          <HowItWorksStep 
                             icon={<Send className="w-6 h-6" />}
                             title="1. Share Your Link"
-                            description="Copy your unique referral link below and share it with your professional network via email, social media, or messaging apps."
+                            description={`Copy your unique referral link and share it with your network. ${refereeBonusEnabled ? `They'll get a ₹${refereeBonus} bonus when they sign up!` : ''}`}
                          />
                          <HowItWorksStep 
                             icon={<UserPlus className="w-6 h-6" />}
@@ -210,7 +214,7 @@ export default function ReferralsPage() {
                          <HowItWorksStep 
                             icon={<Gift className="w-6 h-6" />}
                             title="3. Earn Your Bonus"
-                            description={`Once their account is approved and they meet the criteria, you'll receive a ₹${settingsData?.referrerBonus?.bonusValue || '0'} bonus. It's that simple!`}
+                            description={`Once their account is approved and they meet the criteria, you'll receive a ₹${referrerBonus} bonus. It's that simple!`}
                          />
                     </div>
                 </CardContent>
