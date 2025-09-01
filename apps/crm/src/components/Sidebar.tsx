@@ -6,14 +6,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
 import { 
-  FaSignOutAlt, 
-  FaBars, FaTimes
-} from 'react-icons/fa';
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { useAppDispatch } from "@repo/store/hooks";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import Cookies from "js-cookie";
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
+import { FaTachometerAlt } from "react-icons/fa";
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
@@ -60,6 +62,9 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
       <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
         <div className="flex-shrink-0 p-4 h-16 border-b flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
+            <div className="bg-primary text-primary-foreground p-2 rounded-lg">
+                <FaTachometerAlt className="h-5 w-5" />
+            </div>
             <h1 className={cn(
               "text-xl font-bold font-headline text-primary truncate", 
               !isOpen && !isMobile && "lg:hidden"
@@ -67,15 +72,6 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
               Vendor CRM
             </h1>
           </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="flex-shrink-0"
-            onClick={toggleSidebar}
-          >
-            {isMobile ? <FaTimes className="h-5 w-5" /> : <FaBars className="h-5 w-5" />}
-            <span className="sr-only">Toggle navigation menu</span>
-          </Button>
         </div>
 
         <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden min-h-0 no-scrollbar">
@@ -90,7 +86,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
                 !isOpen && !isMobile && "justify-center"
               )}
             >
-              <item.Icon className="h-4 w-4 flex-shrink-0" />
+              <item.Icon className="h-5 w-5 flex-shrink-0" />
               <span className={cn(
                 "truncate",
                 !isOpen && !isMobile && "lg:hidden"
@@ -110,7 +106,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
             )} 
             onClick={handleLogout}
           >
-            <FaSignOutAlt className="h-4 w-4 flex-shrink-0" />
+            <LogOut className="h-5 w-5 flex-shrink-0" />
             <span className={cn(
               "truncate",
               !isOpen && !isMobile && "lg:hidden"

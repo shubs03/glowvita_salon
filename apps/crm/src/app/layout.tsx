@@ -24,6 +24,8 @@ export default function RootLayout({
     '/clients',
     '/services',
     '/products',
+    '/sales',
+    '/orders',
     '/salon-profile',
     '/offers-coupons',
     '/referrals',

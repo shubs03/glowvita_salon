@@ -1,7 +1,6 @@
 
 "use client";
 
-import { FaBell, FaBars, FaUserCircle } from "react-icons/fa";
 import { Button } from "@repo/ui/button";
 import Link from 'next/link';
 import { useRouter } from "next/navigation";
@@ -9,86 +8,55 @@ import { ThemeToggle } from "./ThemeToggle";
 import { useAppDispatch } from "@repo/store/hooks";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import Cookies from 'js-cookie';
+import { useCrmAuth } from "@/hooks/useCrmAuth";
+import { LogOut, User, Bell, ChevronLeft, ChevronRight } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 
-export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
+export function Header({ toggleSidebar, isSidebarOpen }: { toggleSidebar: () => void, isSidebarOpen: boolean }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { user, role } = useCrmAuth();
 
   const handleLogout = async () => {
-    // Clear client-side state from Redux and localStorage
     dispatch(clearCrmAuth());
-    
-    // Remove the cookie
     Cookies.remove('crm_access_token', { path: '/' });
-    
-    // Redirect to login page and refresh to ensure middleware runs
     router.push('/login');
     router.refresh();
   };
 
   return (
-    <header className="flex-shrink-0 sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between lg:justify-end overflow-hidden">
-      {/* Mobile menu button - only visible on mobile */}
+    <header className="flex-shrink-0 sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between overflow-hidden">
       <Button
         variant="ghost"
         size="icon"
-        className="flex-shrink-0 lg:hidden"
+        className="flex-shrink-0"
         onClick={toggleSidebar}
       >
-        <FaBars className="h-5 w-5" />
+        {isSidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
         <span className="sr-only">Toggle navigation menu</span>
       </Button>
 
-      {/* Right side controls */}
       <div className="flex items-center gap-2 md:gap-4 min-w-0">
-        {/* Theme toggle */}
         <ThemeToggle />
-
-        {/* Notifications button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0 rounded-full"
-        >
-          <FaBell className="h-5 w-5" />
+        <Button variant="ghost" size="icon" className="flex-shrink-0 rounded-full">
+          <Bell className="h-5 w-5" />
           <span className="sr-only">Toggle notifications</span>
         </Button>
+        
+        <div className="flex items-center gap-3">
+            <Avatar>
+              <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name} />
+              <AvatarFallback>{(user?.businessName || user?.name || 'U').charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="hidden md:flex flex-col text-left">
+                <span className="text-sm font-semibold">{user?.businessName || user?.name}</span>
+                <span className="text-xs text-muted-foreground capitalize">{role}</span>
+            </div>
+        </div>
 
-        {/* Profile Link */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0 rounded-full"
-          asChild
-        >
-          <Link href="/salon-profile">
-            <FaUserCircle className="h-5 w-5" />
-            <span className="sr-only">Salon Profile</span>
-          </Link>
-        </Button>
-
-        {/* Logout button */}
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          className="flex-shrink-0 min-w-0"
-        >
-          <span className="hidden sm:inline">Logout</span>
-          <span className="sm:hidden">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-          </span>
+        <Button variant="ghost" onClick={handleLogout} className="flex-shrink-0 min-w-0" size="icon">
+           <LogOut className="h-5 w-5" />
+           <span className="sr-only">Logout</span>
         </Button>
       </div>
     </header>
