@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Share2, Users, Gift, CheckCircle, Copy, UserPlus, ArrowRight, TrendingUp } from 'lucide-react';
+import { Copy, Gift, Users, CheckCircle, TrendingUp } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
@@ -73,12 +73,15 @@ const SkeletonLoader = () => (
 
 
 export default function ReferralsPage() {
-    const { user, isLoading: isAuthLoading } = useCrmAuth();
-    const { data: referralsData, isLoading: isReferralsLoading, isError } = useGetReferralsQuery('V2V', {
+    const { user, role, isLoading: isAuthLoading } = useCrmAuth();
+    
+    // For now, we assume a single referral program type (e.g., 'V2V'). This can be made dynamic.
+    const referralType = 'V2V'; 
+    
+    const { data: referralsData, isLoading: isReferralsLoading, isError } = useGetReferralsQuery(referralType, {
         skip: !user
     });
-    const { data: settingsData, isLoading: isSettingsLoading } = useGetSettingsQuery('V2V');
-
+    const { data: settingsData, isLoading: isSettingsLoading } = useGetSettingsQuery(referralType);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -87,10 +90,15 @@ export default function ReferralsPage() {
         ? `${window.location.origin}/auth/register?ref=${user.referralCode}`
         : "Loading your referral link...";
 
+    const referrerName = useMemo(() => {
+        if (!user) return '';
+        return user.businessName || user.name || user.shopName || 'Your Business';
+    }, [user]);
+
     const referrals = useMemo(() => {
-        if (!Array.isArray(referralsData) || !user) return [];
-        return referralsData.filter((r: any) => r.referrer === user.businessName);
-    }, [referralsData, user]);
+        if (!Array.isArray(referralsData) || !referrerName) return [];
+        return referralsData.filter((r: any) => r.referrer === referrerName);
+    }, [referralsData, referrerName]);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -114,6 +122,20 @@ export default function ReferralsPage() {
           default: return 'bg-gray-100 text-gray-800';
         }
     };
+
+    const getRoleContent = () => {
+        switch(role) {
+            case 'doctor':
+                return { title: 'Refer a Colleague', description: 'Earn rewards by inviting other doctors and professionals to join.' };
+            case 'supplier':
+                return { title: 'Refer a Supplier', description: 'Earn rewards by inviting other suppliers to join.' };
+            case 'vendor':
+            default:
+                return { title: 'Refer a Vendor', description: 'Earn rewards by inviting other salon owners to join.' };
+        }
+    }
+
+    const { title, description } = getRoleContent();
     
     if (isAuthLoading || isReferralsLoading || isSettingsLoading) {
         return <SkeletonLoader />;
@@ -129,18 +151,18 @@ export default function ReferralsPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
             <div>
-                <h1 className="text-2xl font-bold font-headline">Refer a Vendor</h1>
-                <p className="text-muted-foreground mt-1">Earn rewards by inviting other salon owners to join our platform.</p>
+                <h1 className="text-2xl font-bold font-headline">{title}</h1>
+                <p className="text-muted-foreground mt-1">{description}</p>
             </div>
 
-             <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground overflow-hidden">
+            <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground overflow-hidden">
                 <div className="grid md:grid-cols-2 items-center">
                     <div className="p-8">
                         <h2 className="text-3xl font-bold mb-2">Grow Together, Earn Together</h2>
                         <p className="mb-6 opacity-90 max-w-md">
-                            Invite fellow salon owners to our platform. When they join and get verified, you both get rewarded. It's our way of saying thank you for helping our community grow.
+                            Invite fellow professionals to our platform. When they join, you both get rewarded. It's our way of saying thank you for helping our community grow.
                         </p>
-                         <div className="space-y-3 text-sm">
+                        <div className="space-y-3 text-sm">
                            {settingsData?.referrerBonus && (
                                 <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Earn ₹{settingsData.referrerBonus.bonusValue} for every successful referral.</span></div>
                            )}
@@ -159,7 +181,7 @@ export default function ReferralsPage() {
             <Card className="mb-6">
                 <CardHeader>
                     <CardTitle>Your Unique Referral Link</CardTitle>
-                    <CardDescription>Share this link with other vendors. When they sign up using this link, you'll be credited for the referral.</CardDescription>
+                    <CardDescription>Share this link with other professionals. When they sign up using this link, you'll be credited for the referral.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-col sm:flex-row gap-2">
@@ -179,7 +201,7 @@ export default function ReferralsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{referrals.length}</div>
-                        <p className="text-xs text-muted-foreground">Vendors you've referred</p>
+                        <p className="text-xs text-muted-foreground">Professionals you've referred</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -189,7 +211,7 @@ export default function ReferralsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-600">{successfulReferrals}</div>
-                        <p className="text-xs text-muted-foreground">Vendors who successfully signed up</p>
+                        <p className="text-xs text-muted-foreground">Professionals who successfully joined</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -207,14 +229,14 @@ export default function ReferralsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Referral History</CardTitle>
-                    <CardDescription>Track the status of your referred vendors.</CardDescription>
+                    <CardDescription>Track the status of your referred professionals.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <div className="overflow-x-auto no-scrollbar rounded-md border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Referred Vendor</TableHead>
+                                    <TableHead>Referred Professional</TableHead>
                                     <TableHead>Date</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Bonus</TableHead>
@@ -235,7 +257,7 @@ export default function ReferralsPage() {
                                 )) : (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                            You haven't referred any vendors yet.
+                                            You haven't referred anyone yet.
                                         </TableCell>
                                     </TableRow>
                                 )}
