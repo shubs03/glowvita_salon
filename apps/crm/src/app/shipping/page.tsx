@@ -1,113 +1,157 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, Form, Input, Button, Switch, Radio, message } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@repo/ui/card';
+import { Button } from '@repo/ui/button';
+import { Input } from '@repo/ui/input';
+import { Label } from '@repo/ui/label';
+import { Switch } from '@repo/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { useGetShippingConfigQuery, useUpdateShippingConfigMutation } from '../../../../packages/store/src/services/api';
+import { toast } from 'sonner';
+import { Skeleton } from '@repo/ui/skeleton';
+
+const ShippingPageSkeleton = () => (
+  <div className="p-4 sm:p-6 lg:p-8">
+    <Skeleton className="h-8 w-64 mb-6" />
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-48 mb-2" />
+        <Skeleton className="h-4 w-80" />
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-6 w-12" />
+        </div>
+        <div className="space-y-4 pt-4 border-t">
+          <Skeleton className="h-4 w-24 mb-2" />
+          <div className="flex gap-4">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-5 w-32" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-end">
+        <Skeleton className="h-10 w-32" />
+      </CardFooter>
+    </Card>
+  </div>
+);
 
 const ShippingPage = () => {
-  const [form] = Form.useForm();
-  const { data: shippingConfig, isLoading, isError } = useGetShippingConfigQuery();
+  const { data: shippingConfig, isLoading, isError, refetch } = useGetShippingConfigQuery();
   const [updateShipping, { isLoading: isUpdating }] = useUpdateShippingConfigMutation();
+  
   const [isEnabled, setIsEnabled] = useState(false);
+  const [chargeType, setChargeType] = useState('fixed');
+  const [amount, setAmount] = useState(0);
 
   useEffect(() => {
     if (shippingConfig) {
-      form.setFieldsValue({
-        chargeType: shippingConfig.chargeType || 'fixed',
-        amount: shippingConfig.amount || 0,
-      });
-      setIsEnabled(shippingConfig.isEnabled || false);
+      setIsEnabled(shippingConfig.isEnabled ?? false);
+      setChargeType(shippingConfig.chargeType ?? 'fixed');
+      setAmount(shippingConfig.amount ?? 0);
     }
-  }, [shippingConfig, form]);
+  }, [shippingConfig]);
 
-  const handleSubmit = async (values) => {
+  const handleSave = async () => {
     try {
       await updateShipping({
-        ...values,
         isEnabled,
+        chargeType,
+        amount: Number(amount) || 0,
       }).unwrap();
-      message.success('Shipping settings saved successfully');
+      toast.success('Shipping settings saved successfully');
+      refetch();
     } catch (error) {
       console.error('Failed to save shipping settings:', error);
-      message.error('Failed to save shipping settings');
+      toast.error('Failed to save shipping settings');
     }
   };
+  
+  if (isLoading) {
+    return <ShippingPageSkeleton />;
+  }
 
-  const handleToggle = (checked) => {
-    setIsEnabled(checked);
-  };
+  if (isError) {
+    return <div className="p-8 text-center text-destructive">Failed to load shipping configuration.</div>
+  }
 
   return (
-    <div className="p-4">
-      <Card 
-        title="Shipping Charges Configuration"
-        extra={
-          <div className="flex items-center">
-            <span className="mr-2">Enable Shipping</span>
-            <Switch 
-              checked={isEnabled} 
-              onChange={handleToggle}
-              loading={isLoading}
+    <div className="p-4 sm:p-6 lg:p-8">
+      <h1 className="text-2xl font-bold font-headline mb-6">Shipping Configuration</h1>
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle>Shipping Charges</CardTitle>
+          <CardDescription>
+            Set up how you want to charge for shipping on product orders.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-secondary/50">
+            <Label htmlFor="enable-shipping" className="text-base font-medium">
+              Enable Shipping Charges
+            </Label>
+            <Switch
+              id="enable-shipping"
+              checked={isEnabled}
+              onCheckedChange={setIsEnabled}
             />
           </div>
-        }
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          initialValues={{
-            chargeType: 'fixed',
-            amount: 0,
-          }}
-        >
-          <Form.Item name="chargeType" label="Charge Type">
-            <Radio.Group>
-              <Radio value="fixed">Fixed Amount (₹)</Radio>
-              <Radio value="percentage">Percentage (%)</Radio>
-            </Radio.Group>
-          </Form.Item>
 
-          <Form.Item
-            name="amount"
-            label="Amount"
-            rules={[
-              { required: true, message: 'Please enter the amount' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (getFieldValue('chargeType') === 'percentage' && value > 100) {
-                    return Promise.reject('Percentage cannot be more than 100');
-                  }
-                  if (value < 0) {
-                    return Promise.reject('Amount cannot be negative');
-                  }
-                  return Promise.resolve();
-                },
-              }),
-            ]}
-          >
-            <Input 
-              type="number" 
-              min={0}
-              max={form.getFieldValue('chargeType') === 'percentage' ? 100 : undefined}
-              addonAfter={form.getFieldValue('chargeType') === 'percentage' ? '%' : '₹'}
-              disabled={!isEnabled}
-            />
-          </Form.Item>
+          {isEnabled && (
+            <div className="space-y-6 pt-6 border-t animate-in fade-in-50 duration-300">
+              <div className="space-y-2">
+                <Label>Charge Type</Label>
+                <RadioGroup 
+                  value={chargeType} 
+                  onValueChange={(value) => setChargeType(value)}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="fixed" id="fixed" />
+                    <Label htmlFor="fixed">Fixed Amount (₹)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="percentage" id="percentage" />
+                    <Label htmlFor="percentage">Percentage (%)</Label>
+                  </div>
+                </RadioGroup>
+              </div>
 
-          <Form.Item>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
-              icon={<SaveOutlined />}
-              loading={isUpdating}
-              disabled={!isEnabled}
-            >
-              Save Changes
-            </Button>
-          </Form.Item>
-        </Form>
+              <div className="space-y-2">
+                <Label htmlFor="shipping-amount">
+                  {chargeType === 'percentage' ? 'Percentage' : 'Amount'}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="shipping-amount"
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(Number(e.target.value))}
+                    min={0}
+                    max={chargeType === 'percentage' ? 100 : undefined}
+                    className="pl-8"
+                  />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    {chargeType === 'percentage' ? '%' : '₹'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-end border-t pt-6">
+          <Button onClick={handleSave} loading={isUpdating}>
+            Save Changes
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );

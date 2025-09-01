@@ -8,21 +8,19 @@ import { Button } from "@repo/ui/button";
 import { 
   LogOut,
   ChevronLeft,
-  Settings,
+  LayoutGrid
 } from 'lucide-react';
 import { useAppDispatch } from "@repo/store/hooks";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import Cookies from "js-cookie";
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
-import { FaTachometerAlt } from "react-icons/fa";
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  const dispatch = useAppAppDispatch();
-  const { user, permissions, role, isLoading } = useCrmAuth();
+  const dispatch = useAppDispatch();
+  const { permissions, role, isLoading } = useCrmAuth();
 
   const handleLogout = async () => {
     dispatch(clearCrmAuth());
@@ -58,30 +56,25 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
     <div className={cn(
         "bg-background border-r flex flex-col transition-all duration-300 ease-in-out h-full overflow-hidden",
         isOpen ? "w-64" : "w-20",
-        isMobile && "w-64"
     )}>
       <div className="flex flex-col flex-grow min-h-0">
-        <div className={cn("flex-shrink-0 p-4 h-16 border-b flex items-center", isOpen ? "justify-between" : "justify-center")}>
-          <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
-            <div className="bg-primary text-primary-foreground p-2 rounded-lg">
-                <FaTachometerAlt className="h-5 w-5" />
-            </div>
-            <h1 className={cn(
-              "text-xl font-bold font-headline text-primary truncate", 
-              !isOpen && !isMobile && "hidden"
-            )}>
-              Vendor CRM
-            </h1>
-          </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn("flex-shrink-0 hidden lg:flex", !isOpen && "rotate-180")}
-            onClick={toggleSidebar}
-          >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="sr-only">Toggle navigation menu</span>
-          </Button>
+        <div className={cn("flex-shrink-0 p-4 h-16 border-b flex items-center gap-3", isOpen ? "justify-between" : "justify-center")}>
+            <Link href="/dashboard" className="flex items-center gap-3 font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                <div className="bg-primary text-primary-foreground p-2 rounded-lg">
+                    <LayoutGrid className="h-5 w-5" />
+                </div>
+                <span className={cn(!isOpen && "hidden")}>GlowVita</span>
+            </Link>
+          
+            <Button
+                variant="ghost"
+                size="icon"
+                className={cn("hidden lg:flex flex-shrink-0 text-muted-foreground", !isOpen && "rotate-180")}
+                onClick={toggleSidebar}
+            >
+                <ChevronLeft className="h-5 w-5" />
+                <span className="sr-only">Toggle navigation menu</span>
+            </Button>
         </div>
 
         <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden min-h-0 no-scrollbar">
@@ -90,20 +83,18 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
               key={item.href}
               href={item.href}
               onClick={isMobile ? toggleSidebar : undefined}
+              title={item.title}
               className={cn(
-                "flex items-center text-sm gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-secondary hover:text-primary min-w-0 relative",
-                pathname.startsWith(item.href) && item.href !== '/' && "bg-secondary text-primary",
-                pathname === '/' && item.href === '/' && "bg-secondary text-primary",
-                !isOpen && !isMobile && "justify-center"
+                "flex items-center text-sm gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:bg-secondary hover:text-primary min-w-0 relative",
+                pathname.startsWith(item.href) && item.href !== '/' && "bg-primary/10 text-primary font-semibold",
+                pathname === '/' && item.href === '/' && "bg-primary/10 text-primary font-semibold",
+                !isOpen && "justify-center"
               )}
             >
-              {pathname.startsWith(item.href) && item.href !== '/' && <div className="absolute left-0 top-1 bottom-1 w-1 bg-primary rounded-r-full"></div>}
-              {pathname === '/' && item.href === '/' && <div className="absolute left-0 top-1 bottom-1 w-1 bg-primary rounded-r-full"></div>}
-
               <item.Icon className="h-5 w-5 flex-shrink-0" />
               <span className={cn(
                 "truncate",
-                !isOpen && !isMobile && "hidden"
+                !isOpen && "hidden"
               )}>
                 {item.title}
               </span>
@@ -112,21 +103,23 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
         </nav>
         
         <div className="flex-shrink-0 p-3 border-t">
-            <div className={cn("p-2 rounded-lg transition-colors", isOpen || isMobile ? "hover:bg-secondary" : "")}>
-                <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name} />
-                      <AvatarFallback>{(user?.businessName || user?.name || 'U').charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className={cn("flex-1 min-w-0", !isOpen && !isMobile && "hidden")}>
-                        <p className="text-sm font-semibold truncate">{user?.businessName || user?.name}</p>
-                        <p className="text-xs text-muted-foreground capitalize truncate">{role}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className={cn("h-8 w-8", !isOpen && !isMobile && "hidden")} onClick={handleLogout}>
-                        <LogOut className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                </div>
-            </div>
+          <Button 
+            variant="ghost" 
+            className={cn(
+              "w-full gap-3 min-w-0 text-muted-foreground hover:text-destructive", 
+              isOpen || isMobile ? "justify-start" : "justify-center"
+            )} 
+            onClick={handleLogout}
+            title="Logout"
+          >
+            <LogOut className="h-5 w-5 flex-shrink-0" />
+            <span className={cn(
+              "truncate",
+              !isOpen && "hidden"
+            )}>
+              Logout
+            </span>
+          </Button>
         </div>
       </div>
     </div>
@@ -152,7 +145,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   }
 
   return (
-    <div className="hidden lg:block h-full flex-shrink-0 overflow-hidden">
+    <div className="hidden lg:block h-full flex-shrink-0 fixed top-0 left-0 z-40">
       <SidebarContent />
     </div>
   );
