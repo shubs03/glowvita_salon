@@ -21,7 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  const dispatch = useAppAppDispatch();
+  const dispatch = useAppDispatch();
   const { user, permissions, role, isLoading } = useCrmAuth();
 
   const handleLogout = async () => {
