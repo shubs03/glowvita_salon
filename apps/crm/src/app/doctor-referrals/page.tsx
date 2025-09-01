@@ -10,7 +10,7 @@ import { Copy, Gift, UserPlus, Users, Share2, CheckCircle, TrendingUp } from 'lu
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
-import { useGetReferralsQuery } from '@repo/store/api';
+import { useGetReferralsQuery, useGetSettingsQuery } from '@repo/store/api';
 import { Skeleton } from '@repo/ui/skeleton';
 
 type Referral = {
@@ -74,11 +74,10 @@ const SkeletonLoader = () => (
 
 export default function DoctorReferralsPage() {
     const { user, isLoading: isAuthLoading } = useCrmAuth();
-    // Assuming 'V2V' is the correct type for Doctor-to-Doctor referrals for now.
-    // This could be changed to a new type like 'D2D' if the backend supports it.
     const { data: referralsData, isLoading: isReferralsLoading, isError } = useGetReferralsQuery('V2V', {
         skip: !user
     });
+    const { data: settingsData, isLoading: isSettingsLoading } = useGetSettingsQuery('V2V');
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -89,8 +88,6 @@ export default function DoctorReferralsPage() {
 
     const referrals = useMemo(() => {
         if (!Array.isArray(referralsData) || !user) return [];
-        // Filter referrals where the current doctor's name is the referrer.
-        // This might need adjustment based on how referrers are stored (by ID vs. by name).
         return referralsData.filter((r: any) => r.referrer === user.name);
     }, [referralsData, user]);
 
@@ -117,7 +114,7 @@ export default function DoctorReferralsPage() {
         }
     };
     
-    if (isAuthLoading || isReferralsLoading) {
+    if (isAuthLoading || isReferralsLoading || isSettingsLoading) {
         return <SkeletonLoader />;
     }
     
@@ -143,9 +140,13 @@ export default function DoctorReferralsPage() {
                             Invite fellow professionals to our platform. When they join, you both get rewarded. It's our way of saying thank you for helping our community grow.
                         </p>
                         <div className="space-y-3 text-sm">
-                            <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Earn cash rewards for every successful referral.</span></div>
-                            <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Help your colleagues succeed.</span></div>
-                            <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Strengthen your professional network.</span></div>
+                            {settingsData?.referrerBonus && (
+                                <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Earn ₹{settingsData.referrerBonus.bonusValue} for every successful referral.</span></div>
+                           )}
+                           {settingsData?.refereeBonus?.enabled && (
+                               <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Your friend gets ₹{settingsData.refereeBonus.bonusValue} too!</span></div>
+                           )}
+                           <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Strengthen your professional network.</span></div>
                         </div>
                     </div>
                     <div className="hidden md:flex items-center justify-center p-8">
