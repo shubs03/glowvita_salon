@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import ProductModel from "../../../../../../../packages/lib/src/models/Vendor/Product.model.js";
@@ -35,7 +36,7 @@ const getProducts = async (req) => {
   }
 };
 
-export const GET = authMiddlewareCrm(getProducts, ["vendor"]);
+export const GET = authMiddlewareCrm(getProducts, ["vendor", "supplier"]);
 
 // POST - Create new product
 const createProduct = async (req) => {
@@ -118,7 +119,7 @@ const createProduct = async (req) => {
     }
 };
 
-export const POST = authMiddlewareCrm(createProduct, ["vendor"]);
+export const POST = authMiddlewareCrm(createProduct, ["vendor", "supplier"]);
 
 // PUT (update) a product
 export const PUT = authMiddlewareCrm(async (req) => {
@@ -206,7 +207,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
       error: error.message 
     }, { status: 500 });
   }
-}, ["vendor"]);
+}, ["vendor", "supplier"]);
 
 // DELETE a product
 export const DELETE = authMiddlewareCrm(async (req) => {
@@ -248,4 +249,4 @@ export const DELETE = authMiddlewareCrm(async (req) => {
       error: error.message 
     }, { status: 500 });
   }
-}, ["vendor"]);
+}, ["vendor", "supplier"]);

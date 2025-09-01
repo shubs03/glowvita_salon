@@ -5,6 +5,9 @@ import DoctorModel from "../../../packages/lib/src/models/Vendor/Docters.model.j
 import SupplierModel from "../../../packages/lib/src/models/Vendor/Supplier.model.js";
 import StaffModel from "../../../packages/lib/src/models/Vendor/Staff.model.js";
 import _db from "../../../packages/lib/src/db.js";
+import { 
+  JWT_SECRET_VENDOR
+} from "../../../packages/config/config.js";
 
 const roleToModelMap = {
   vendor: VendorModel,
@@ -71,6 +74,7 @@ export function authMiddlewareCrm(handler, allowedRoles = []) {
       return handler(req, ctx);
     } catch (err) {
       console.error("Auth Middleware Error:", err.message);
+      console.error("Error details:", err);
       return Response.json({ message: `Invalid token: ${err.message}` }, { status: 401 });
     }
   };

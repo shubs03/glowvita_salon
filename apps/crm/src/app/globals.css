@@ -1,1 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import "@repo/ui/globals.css";
+
+@layer base {
+  body {
+    @apply bg-secondary text-foreground;
+  }
+  
+  /* Fix for dark mode borders */
+  .dark .border-border, .dark .border-b, .dark .border-r, .dark .border-t, .dark .border-l {
+      @apply border-white/10;
+  }
+
+  .dark .bg-secondary {
+    @apply bg-slate-900;
+  }
+  
+  /* Utility to hide scrollbars */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}

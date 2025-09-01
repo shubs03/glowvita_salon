@@ -1,4 +1,3 @@
-
 import { 
     FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, 
     FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
@@ -38,7 +37,6 @@ export const doctorNavItems: NavItem[] = [
   { title: "Timetable", href: "/timetable", Icon: FaClock, permission: 'timetable_view' },
   { title: "Staff", href: "/doctor-staff", Icon: FaUsers, permission: 'doctor_staff_view' },
   { title: "Earnings", href: "/earnings", Icon: FaDollarSign, permission: 'earnings_view' },
-  { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift, permission: 'doctor_offers_view' },
   { title: "Referrals", href: "/referrals", Icon: FaUserFriends, permission: 'doctor_referrals_view' },
   { title: "Reports", href: "/doctor-reports", Icon: FaFileAlt, permission: 'doctor_reports_view' },
 ];

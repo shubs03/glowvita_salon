@@ -1,95 +1,154 @@
 
 "use client";
 
-import { FaBell, FaBars, FaUserCircle } from "react-icons/fa";
 import { Button } from "@repo/ui/button";
 import Link from 'next/link';
-import { useRouter } from "next/navigation";
 import { ThemeToggle } from "./ThemeToggle";
+import { Bell, Menu, LogOut, User, Settings, CheckCircle, XCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@repo/store/hooks";
+import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
-import Cookies from 'js-cookie';
+import Cookies from "js-cookie";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@repo/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
+import { usePathname } from 'next/navigation';
+import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { user, role } = useCrmAuth();
+  const pathname = usePathname();
 
+  const getNavItemsForRole = () => {
+    switch (role) {
+      case 'vendor':
+      case 'staff':
+        return vendorNavItems;
+      case 'doctor':
+        return doctorNavItems;
+      case 'supplier':
+        return supplierNavItems;
+      default:
+        return [];
+    }
+  };
+
+  const navItems = getNavItemsForRole();
+  const currentPage = navItems.find(item => pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/'))?.title || 'Dashboard';
+  
   const handleLogout = async () => {
-    // Clear client-side state from Redux and localStorage
     dispatch(clearCrmAuth());
-    
-    // Remove the cookie
     Cookies.remove('crm_access_token', { path: '/' });
-    
-    // Redirect to login page and refresh to ensure middleware runs
     router.push('/login');
     router.refresh();
   };
 
   return (
-    <header className="flex-shrink-0 sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between lg:justify-end overflow-hidden">
-      {/* Mobile menu button - only visible on mobile */}
+    <header className="flex-shrink-0 sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between">
+      {/* Mobile Menu Button - shows on the left */}
       <Button
         variant="ghost"
         size="icon"
         className="flex-shrink-0 lg:hidden"
         onClick={toggleSidebar}
       >
-        <FaBars className="h-5 w-5" />
+        <Menu className="h-5 w-5" />
         <span className="sr-only">Toggle navigation menu</span>
       </Button>
 
-      {/* Right side controls */}
-      <div className="flex items-center gap-2 md:gap-4 min-w-0">
-        {/* Theme toggle */}
+      <h1 className="text-xl font-semibold text-foreground hidden lg:block">
+        {currentPage}
+      </h1>
+
+      <div className="flex items-center gap-2 md:gap-4 ml-auto">
         <ThemeToggle />
-
-        {/* Notifications button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0 rounded-full"
-        >
-          <FaBell className="h-5 w-5" />
-          <span className="sr-only">Toggle notifications</span>
-        </Button>
-
-        {/* Profile Link */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0 rounded-full"
-          asChild
-        >
-          <Link href="/salon-profile">
-            <FaUserCircle className="h-5 w-5" />
-            <span className="sr-only">Salon Profile</span>
-          </Link>
-        </Button>
-
-        {/* Logout button */}
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          className="flex-shrink-0 min-w-0"
-        >
-          <span className="hidden sm:inline">Logout</span>
-          <span className="sm:hidden">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        
+        {/* Notification Bell with Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex-shrink-0 rounded-full relative"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-          </span>
-        </Button>
+              <Bell className="h-5 w-5" />
+              <span className="sr-only">Toggle notifications</span>
+              <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <div className="flex items-start gap-3">
+                <div className="bg-green-100 text-green-600 p-2 rounded-full"><CheckCircle className="h-4 w-4"/></div>
+                <div>
+                    <p className="text-sm font-medium">New Appointment</p>
+                    <p className="text-xs text-muted-foreground">Booking with John Doe at 2:00 PM.</p>
+                </div>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <div className="flex items-start gap-3">
+                <div className="bg-red-100 text-red-600 p-2 rounded-full"><XCircle className="h-4 w-4"/></div>
+                <div>
+                    <p className="text-sm font-medium">Cancellation</p>
+                    <p className="text-xs text-muted-foreground">Appointment with Jane Smith cancelled.</p>
+                </div>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="justify-center text-sm text-muted-foreground hover:text-primary">
+              View all notifications
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* User Profile with Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name || "User"} />
+                <AvatarFallback>{(user?.businessName || user?.name || "U").charAt(0)}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+                <p className="font-medium truncate">{user?.businessName || user?.name}</p>
+                <p className="text-xs text-muted-foreground font-normal">{user?.email}</p>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+                <Link href="/salon-profile">
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

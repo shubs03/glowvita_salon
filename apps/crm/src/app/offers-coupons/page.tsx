@@ -1,3 +1,4 @@
+
 // crm/offers/page.tsx (modified to include advanced features like the admin panel)
 
 "use client";
