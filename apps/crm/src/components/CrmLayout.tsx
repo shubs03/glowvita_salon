@@ -47,7 +47,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   }
      
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden bg-secondary">
       <Sidebar 
         isOpen={isSidebarOpen} 
         toggleSidebar={toggleSidebar} 
@@ -60,7 +60,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
       )}>
         <Header toggleSidebar={toggleSidebar} />
                  
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary/50">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-background no-scrollbar">
           <div className="w-full max-w-none overflow-hidden">
             {children}
           </div>

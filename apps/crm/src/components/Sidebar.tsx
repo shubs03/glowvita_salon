@@ -8,6 +8,7 @@ import { Button } from "@repo/ui/button";
 import { 
   LogOut,
   ChevronLeft,
+  ChevronRight,
   LayoutGrid
 } from 'lucide-react';
 import { useAppDispatch } from "@repo/store/hooks";
@@ -15,16 +16,17 @@ import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import Cookies from "js-cookie";
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { permissions, role, isLoading } = useCrmAuth();
+  const { user, permissions, role, isLoading } = useCrmAuth();
 
   const handleLogout = async () => {
     dispatch(clearCrmAuth());
-    Cookies.remove('crm_access_token', { path: '/' });
+    Cookies.remove('crm_access_token');
     router.push('/login');
     router.refresh();
   };
@@ -66,13 +68,17 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
                 <span className={cn(!isOpen && "hidden")}>GlowVita</span>
             </Link>
           
+            {/* The toggle button is now only for desktop and positioned within the sidebar */}
             <Button
                 variant="ghost"
                 size="icon"
-                className={cn("hidden lg:flex flex-shrink-0 text-muted-foreground", !isOpen && "rotate-180")}
+                className={cn(
+                    "hidden lg:flex flex-shrink-0 text-muted-foreground transition-all duration-300", 
+                    !isOpen && "absolute -right-5 top-8 bg-background border rounded-full h-10 w-10 shadow-md hover:bg-muted"
+                )}
                 onClick={toggleSidebar}
             >
-                <ChevronLeft className="h-5 w-5" />
+                {isOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                 <span className="sr-only">Toggle navigation menu</span>
             </Button>
         </div>

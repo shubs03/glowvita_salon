@@ -5,7 +5,7 @@ import { Button } from "@repo/ui/button";
 import Link from 'next/link';
 import { ThemeToggle } from "./ThemeToggle";
 import { Bell, Menu, LogOut, User, Settings, CheckCircle, XCircle } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAppDispatch } from "@repo/store/hooks";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -19,12 +19,32 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
+import { usePathname } from 'next/navigation';
+import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { user } = useCrmAuth();
+  const { user, role } = useCrmAuth();
+  const pathname = usePathname();
 
+  const getNavItemsForRole = () => {
+    switch (role) {
+      case 'vendor':
+      case 'staff':
+        return vendorNavItems;
+      case 'doctor':
+        return doctorNavItems;
+      case 'supplier':
+        return supplierNavItems;
+      default:
+        return [];
+    }
+  };
+
+  const navItems = getNavItemsForRole();
+  const currentPage = navItems.find(item => pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/'))?.title || 'Dashboard';
+  
   const handleLogout = async () => {
     dispatch(clearCrmAuth());
     Cookies.remove('crm_access_token', { path: '/' });
@@ -33,7 +53,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   };
 
   return (
-    <header className="flex-shrink-0 sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between lg:justify-end">
+    <header className="flex-shrink-0 sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6 justify-between">
       {/* Mobile Menu Button - shows on the left */}
       <Button
         variant="ghost"
@@ -44,6 +64,10 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
         <Menu className="h-5 w-5" />
         <span className="sr-only">Toggle navigation menu</span>
       </Button>
+
+      <h1 className="text-xl font-semibold text-foreground hidden lg:block">
+        {currentPage}
+      </h1>
 
       <div className="flex items-center gap-2 md:gap-4 ml-auto">
         <ThemeToggle />
@@ -103,7 +127,10 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuLabel>
+                <p className="font-medium truncate">{user?.businessName || user?.name}</p>
+                <p className="text-xs text-muted-foreground font-normal">{user?.email}</p>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
                 <Link href="/salon-profile">
