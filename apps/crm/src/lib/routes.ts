@@ -1,6 +1,6 @@
 
 import { 
-    FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, 
+    FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, SignOutAlt, 
     FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
     FaBell, FaGift, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock
 } from 'react-icons/fa';

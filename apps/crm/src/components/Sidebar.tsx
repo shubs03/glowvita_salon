@@ -18,7 +18,7 @@ import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  const dispatch = useAppDispatch();
+  const dispatch = useAppAppDispatch();
   const { user, permissions, role, isLoading } = useCrmAuth();
 
   const handleLogout = async () => {

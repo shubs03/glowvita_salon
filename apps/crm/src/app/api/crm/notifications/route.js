@@ -1,4 +1,3 @@
-
 // crm/api/notifications/route.js
 
 import _db from "../../../../../../../packages/lib/src/db.js";
@@ -37,7 +36,7 @@ export const POST = authMiddlewareCrm(async (req) => {
     channels, 
     content, 
     targetType, 
-    targets: targetType === 'specific_clients' ? targets : undefined,
+    targets: targetType === 'specific_clients' ? targets : [],
     date: new Date(),
     status: 'Sent', 
     createdAt: new Date(), 
@@ -71,7 +70,6 @@ const targetDisplayMap = {
 // GET: Retrieve VendorNotifications by vendor ID or paginated notifications
 export const GET = authMiddlewareCrm(async (req) => {
   const vendorId = req.user._id.toString();
-  console.log("Vendor ID from auth:", vendorId);
 
   if (!vendorId) {
     return Response.json(
@@ -93,7 +91,7 @@ export const GET = authMiddlewareCrm(async (req) => {
     );
   }
 
-  const allNotifications = vendorNotificationsDoc.notifications;
+  const allNotifications = vendorNotificationsDoc.notifications.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   // Compute stats
   const total = allNotifications.length;
@@ -104,8 +102,9 @@ export const GET = authMiddlewareCrm(async (req) => {
     acc[n.targetType] = (acc[n.targetType] || 0) + 1;
     return acc;
   }, {});
-  const mostTargetedType = Object.keys(targetCounts).reduce((a, b) => targetCounts[a] > targetCounts[b] ? a : b, '');
-  const mostTargeted = targetDisplayMap[mostTargetedType] || 'Unknown';
+
+  const mostTargetedType = total > 0 ? Object.keys(targetCounts).reduce((a, b) => targetCounts[a] > targetCounts[b] ? a : b) : 'None';
+  const mostTargeted = targetDisplayMap[mostTargetedType] || mostTargetedType;
 
   const response = {
     _id: vendorNotificationsDoc._id,
@@ -122,7 +121,7 @@ export const GET = authMiddlewareCrm(async (req) => {
   };
 
   return Response.json(response);
-}, ["vendor"]);
+}, ["vendor", "doctor", "supplier"]);
 
 // DELETE: Remove specific notifications from the VendorNotifications document
 export const DELETE = authMiddlewareCrm(async (req) => {
