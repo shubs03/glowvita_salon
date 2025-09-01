@@ -36,6 +36,7 @@ export const doctorNavItems: NavItem[] = [
   { title: "Timetable", href: "/timetable", Icon: FaClock, permission: 'timetable_view' },
   { title: "Staff", href: "/doctor-staff", Icon: FaUsers, permission: 'doctor_staff_view' },
   { title: "Earnings", href: "/earnings", Icon: FaDollarSign, permission: 'earnings_view' },
+  { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift, permission: 'doctor_offers_view' },
   { title: "Referrals", href: "/doctor-referrals", Icon: FaUserFriends, permission: 'doctor_referrals_view' },
   { title: "Reports", href: "/doctor-reports", Icon: FaFileAlt, permission: 'doctor_reports_view' },
 ];
@@ -43,4 +44,5 @@ export const doctorNavItems: NavItem[] = [
 export const supplierNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
   { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
+  { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift, permission: 'supplier_offers_view' },
 ];

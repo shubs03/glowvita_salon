@@ -38,7 +38,7 @@ const isValidBase64Image = (str) => {
 };
 
 // Create Offer
-export const POST =
+export const POST = authMiddlewareCrm(
   async (req) => {
     const body = await req.json();
     const {
@@ -50,9 +50,14 @@ export const POST =
       expires,
       applicableSpecialties,
       applicableCategories,
+      applicableDiseases,
+      minOrderAmount,
       offerImage,
       isCustomCode,
     } = body;
+
+    const user = req.user;
+    const userRole = req.user.role; // Get user role from middleware (this is set in middleware)
 
     // Validate required fields
     if (!type || value == null || !startDate) {
@@ -94,37 +99,47 @@ export const POST =
       } while (await CRMOfferModel.findOne({ code: finalCode }));
     }
 
-    // Validate applicableSpecialties - now supports multiple selections
+    // Validate applicable fields based on user role
     let specialties = [];
-    if (
-      Array.isArray(applicableSpecialties) &&
-      applicableSpecialties.length > 0
-    ) {
-      specialties = applicableSpecialties;
-      if (!specialties.every((s) => validSpecialties.includes(s))) {
-        return Response.json(
-          {
-            message: `Invalid specialties. Must be one of: ${validSpecialties.join(", ")}`,
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate applicableCategories - now supports multiple selections
     let categories = [];
-    if (
-      Array.isArray(applicableCategories) &&
-      applicableCategories.length > 0
-    ) {
-      categories = applicableCategories;
-      if (!categories.every((c) => validCategories.includes(c))) {
-        return Response.json(
-          {
-            message: `Invalid categories. Must be one of: ${validCategories.join(", ")}`,
-          },
-          { status: 400 }
-        );
+    let diseases = [];
+    let orderAmount = null;
+
+    if (userRole === 'vendor') {
+      // Validate applicableSpecialties for vendors
+      if (Array.isArray(applicableSpecialties) && applicableSpecialties.length > 0) {
+        specialties = applicableSpecialties;
+        if (!specialties.every((s) => validSpecialties.includes(s))) {
+          return Response.json(
+            {
+              message: `Invalid specialties. Must be one of: ${validSpecialties.join(", ")}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Validate applicableCategories for vendors
+      if (Array.isArray(applicableCategories) && applicableCategories.length > 0) {
+        categories = applicableCategories;
+        if (!categories.every((c) => validCategories.includes(c))) {
+          return Response.json(
+            {
+              message: `Invalid categories. Must be one of: ${validCategories.join(", ")}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+    } else if (userRole === 'doctor') {
+      // For doctors, validate diseases
+      if (Array.isArray(applicableDiseases) && applicableDiseases.length > 0) {
+        diseases = applicableDiseases;
+      }
+    } else if (userRole === 'supplier') {
+      // For suppliers, validate minimum order amount
+      if (minOrderAmount && minOrderAmount > 0) {
+        orderAmount = minOrderAmount;
       }
     }
 
@@ -146,19 +161,28 @@ export const POST =
       expires: expires || null,
       applicableSpecialties: specialties,
       applicableCategories: categories,
+      applicableDiseases: diseases,
+      minOrderAmount: orderAmount,
       offerImage: offerImage || null,
       isCustomCode: isCustom,
+      createdBy: user._id,
+      createdByRole: userRole,
     });
 
     return Response.json(
       { message: "Offer created successfully", offer: newOffer },
       { status: 201 }
     );
-  };
+  },
+  ['vendor', 'doctor', 'supplier'] // Allow all three roles
+);
 
 // Get All Offers
-export const GET = async () => {
-  const offers = await CRMOfferModel.find();
+export const GET = authMiddlewareCrm(async (req) => {
+  const user = req.user;
+  
+  // Filter offers by the logged-in user
+  const offers = await CRMOfferModel.find({ createdBy: user._id });
   const currentDate = new Date();
 
   // Update status for each offer based on current date
@@ -177,7 +201,7 @@ export const GET = async () => {
     }
   }
 
-  // Ensure applicableSpecialties and applicableCategories are arrays
+  // Ensure all arrays are properly initialized
   const sanitizedOffers = offers.map((offer) => ({
     ...offer.toObject(),
     applicableSpecialties: Array.isArray(offer.applicableSpecialties)
@@ -186,47 +210,72 @@ export const GET = async () => {
     applicableCategories: Array.isArray(offer.applicableCategories)
       ? offer.applicableCategories
       : [],
+    applicableDiseases: Array.isArray(offer.applicableDiseases)
+      ? offer.applicableDiseases
+      : [],
   }));
 
   return Response.json(sanitizedOffers);
-};
+}, ['vendor', 'doctor', 'supplier']);
 
 // Update Offer
-export const PUT =
+export const PUT = authMiddlewareCrm(
   async (req) => {
     const { id, ...body } = await req.json();
+    const user = req.user;
+    const userRole = req.user.role; // Get user role from middleware
 
-    // Validate applicableSpecialties - now supports multiple selections
-    let specialties = [];
-    if (
-      Array.isArray(body.applicableSpecialties) &&
-      body.applicableSpecialties.length > 0
-    ) {
-      specialties = body.applicableSpecialties;
-      if (!specialties.every((s) => validSpecialties.includes(s))) {
-        return Response.json(
-          {
-            message: `Invalid specialties. Must be one of: ${validSpecialties.join(", ")}`,
-          },
-          { status: 400 }
-        );
-      }
+    // Check if the offer belongs to the current user
+    const existingOffer = await CRMOfferModel.findOne({ 
+      _id: id, 
+      createdBy: user._id 
+    });
+    
+    if (!existingOffer) {
+      return Response.json({ message: "Offer not found or unauthorized" }, { status: 404 });
     }
 
-    // Validate applicableCategories - now supports multiple selections
+    // Validate fields based on user role
+    let specialties = [];
     let categories = [];
-    if (
-      Array.isArray(body.applicableCategories) &&
-      body.applicableCategories.length > 0
-    ) {
-      categories = body.applicableCategories;
-      if (!categories.every((c) => validCategories.includes(c))) {
-        return Response.json(
-          {
-            message: `Invalid categories. Must be one of: ${validCategories.join(", ")}`,
-          },
-          { status: 400 }
-        );
+    let diseases = [];
+    let orderAmount = existingOffer.minOrderAmount;
+
+    if (userRole === 'vendor') {
+      // Validate applicableSpecialties for vendors
+      if (Array.isArray(body.applicableSpecialties) && body.applicableSpecialties.length > 0) {
+        specialties = body.applicableSpecialties;
+        if (!specialties.every((s) => validSpecialties.includes(s))) {
+          return Response.json(
+            {
+              message: `Invalid specialties. Must be one of: ${validSpecialties.join(", ")}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Validate applicableCategories for vendors
+      if (Array.isArray(body.applicableCategories) && body.applicableCategories.length > 0) {
+        categories = body.applicableCategories;
+        if (!categories.every((c) => validCategories.includes(c))) {
+          return Response.json(
+            {
+              message: `Invalid categories. Must be one of: ${validCategories.join(", ")}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+    } else if (userRole === 'doctor') {
+      // For doctors, handle diseases
+      if (Array.isArray(body.applicableDiseases)) {
+        diseases = body.applicableDiseases;
+      }
+    } else if (userRole === 'supplier') {
+      // For suppliers, handle minimum order amount
+      if (body.minOrderAmount !== undefined) {
+        orderAmount = body.minOrderAmount;
       }
     }
 
@@ -238,26 +287,31 @@ export const PUT =
       );
     }
 
+    // Exclude code and other sensitive fields from body spread
+    const { code, isCustomCode, ...bodyWithoutCode } = body;
+
     const updateData = {
-      ...body,
+      ...bodyWithoutCode,
       applicableSpecialties: specialties,
       applicableCategories: categories,
+      applicableDiseases: diseases,
+      minOrderAmount: orderAmount,
       updatedAt: Date.now(),
     };
 
-    // Handle code update if provided
-    if (body.code && body.code.trim()) {
-      const existingOffer = await CRMOfferModel.findOne({
-        code: body.code.toUpperCase().trim(),
+    // Handle code update if provided and not empty
+    if (code && code.trim()) {
+      const existingOfferWithCode = await CRMOfferModel.findOne({
+        code: code.toUpperCase().trim(),
         _id: { $ne: id },
       });
-      if (existingOffer) {
+      if (existingOfferWithCode) {
         return Response.json(
           { message: "Offer code already exists" },
           { status: 400 }
         );
       }
-      updateData.code = body.code.toUpperCase().trim();
+      updateData.code = code.toUpperCase().trim();
       updateData.isCustomCode = true;
     }
 
@@ -265,22 +319,28 @@ export const PUT =
       new: true,
     });
 
-    if (!updatedOffer) {
-      return Response.json({ message: "Offer not found" }, { status: 404 });
-    }
-
     return Response.json(updatedOffer);
-  };
+  },
+  ['vendor', 'doctor', 'supplier']
+);
 
 // Delete Offer
-export const DELETE =
+export const DELETE = authMiddlewareCrm(
   async (req) => {
     const { id } = await req.json();
+    const user = req.user;
 
-    const deletedOffer = await CRMOfferModel.findByIdAndDelete(id);
+    // Check if the offer belongs to the current user
+    const deletedOffer = await CRMOfferModel.findOneAndDelete({ 
+      _id: id, 
+      createdBy: user._id 
+    });
+    
     if (!deletedOffer) {
-      return Response.json({ message: "Offer not found" }, { status: 404 });
+      return Response.json({ message: "Offer not found or unauthorized" }, { status: 404 });
     }
 
     return Response.json({ message: "Offer deleted successfully" });
-  };
+  },
+  ['vendor', 'doctor', 'supplier']
+);

@@ -1127,6 +1127,25 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Staff"],
     }),
+
+    // =============================================== Doctor Working Hours ================================================= //
+
+    getDoctorWorkingHours: builder.query({
+      query: (doctorId) => ({
+        url: `/api/doctor/working-hours?doctorId=${doctorId}`,
+        method: 'GET',
+      }),
+      providesTags: ['DoctorWorkingHours'], // For caching/invalidation
+    }),
+    updateDoctorWorkingHours: builder.mutation({
+      query: ({ doctorId, hours }) => ({
+        url: `/api/doctor/working-hours`,
+        method: 'PUT',
+        body: { doctorId, hours },
+      }),
+      invalidatesTags: ['DoctorWorkingHours'], // Invalidate cache after update
+    }),
+
   }),
 });
 
@@ -1298,4 +1317,9 @@ export const {
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
+
+  // Doctor Working Hours Endpoints
+  useGetDoctorWorkingHoursQuery,
+  useUpdateDoctorWorkingHoursMutation,
+
 } = glowvitaApi;

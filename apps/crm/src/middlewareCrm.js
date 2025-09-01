@@ -5,11 +5,6 @@ import DoctorModel from "../../../packages/lib/src/models/Vendor/Docters.model.j
 import SupplierModel from "../../../packages/lib/src/models/Vendor/Supplier.model.js";
 import StaffModel from "../../../packages/lib/src/models/Vendor/Staff.model.js";
 import _db from "../../../packages/lib/src/db.js";
-import { 
-  JWT_SECRET_VENDOR, 
-  JWT_SECRET_DOCTOR,
-  JWT_SECRET_SUPPLIER 
-} from "../../../packages/config/config.js";
 
 const roleToModelMap = {
   vendor: VendorModel,
@@ -18,11 +13,14 @@ const roleToModelMap = {
   staff: StaffModel,
 };
 
-const roleToSecretMap = {
-  vendor: JWT_SECRET_VENDOR,
-  doctor: JWT_SECRET_DOCTOR,
-  supplier: JWT_SECRET_SUPPLIER,
-  staff: JWT_SECRET_VENDOR, // Staff uses the same secret as vendors
+// Load secrets dynamically at runtime to ensure environment variables are loaded
+const getRoleSecrets = () => {
+  return {
+    vendor: process.env.JWT_SECRET_VENDOR,
+    doctor: process.env.JWT_SECRET_DOCTOR,
+    supplier: process.env.JWT_SECRET_SUPPLIER,
+    staff: process.env.JWT_SECRET_VENDOR, // Staff uses the same secret as vendors
+  };
 };
 
 
@@ -44,7 +42,8 @@ export function authMiddlewareCrm(handler, allowedRoles = []) {
       }
 
       const { role } = decodedPayload;
-      const secret = roleToSecretMap[role];
+      const roleSecrets = getRoleSecrets();
+      const secret = roleSecrets[role];
       const Model = roleToModelMap[role];
 
       if (!secret || !Model) {
