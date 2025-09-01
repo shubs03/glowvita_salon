@@ -8,7 +8,7 @@ import { Button } from "@repo/ui/button";
 import { 
   LogOut,
   ChevronLeft,
-  ChevronRight,
+  Settings,
 } from 'lucide-react';
 import { useAppDispatch } from "@repo/store/hooks";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -16,11 +16,12 @@ import { useCrmAuth } from "@/hooks/useCrmAuth";
 import Cookies from "js-cookie";
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 import { FaTachometerAlt } from "react-icons/fa";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  const dispatch = useAppDispatch();
+  const dispatch = useAppAppDispatch();
   const { user, permissions, role, isLoading } = useCrmAuth();
 
   const handleLogout = async () => {
@@ -59,19 +60,28 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
         isOpen ? "w-64" : "w-20",
         isMobile && "w-64"
     )}>
-      <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
-        <div className="flex-shrink-0 p-4 h-16 border-b flex items-center justify-between">
+      <div className="flex flex-col flex-grow min-h-0">
+        <div className={cn("flex-shrink-0 p-4 h-16 border-b flex items-center", isOpen ? "justify-between" : "justify-center")}>
           <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
             <div className="bg-primary text-primary-foreground p-2 rounded-lg">
                 <FaTachometerAlt className="h-5 w-5" />
             </div>
             <h1 className={cn(
               "text-xl font-bold font-headline text-primary truncate", 
-              !isOpen && !isMobile && "lg:hidden"
+              !isOpen && !isMobile && "hidden"
             )}>
               Vendor CRM
             </h1>
           </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("flex-shrink-0 hidden lg:flex", !isOpen && "rotate-180")}
+            onClick={toggleSidebar}
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span className="sr-only">Toggle navigation menu</span>
+          </Button>
         </div>
 
         <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden min-h-0 no-scrollbar">
@@ -81,39 +91,42 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
               href={item.href}
               onClick={isMobile ? toggleSidebar : undefined}
               className={cn(
-                "flex items-center text-sm gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-secondary hover:text-primary min-w-0",
-                pathname === item.href && "bg-secondary text-primary",
+                "flex items-center text-sm gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-secondary hover:text-primary min-w-0 relative",
+                pathname.startsWith(item.href) && item.href !== '/' && "bg-secondary text-primary",
+                pathname === '/' && item.href === '/' && "bg-secondary text-primary",
                 !isOpen && !isMobile && "justify-center"
               )}
             >
+              {pathname.startsWith(item.href) && item.href !== '/' && <div className="absolute left-0 top-1 bottom-1 w-1 bg-primary rounded-r-full"></div>}
+              {pathname === '/' && item.href === '/' && <div className="absolute left-0 top-1 bottom-1 w-1 bg-primary rounded-r-full"></div>}
+
               <item.Icon className="h-5 w-5 flex-shrink-0" />
               <span className={cn(
                 "truncate",
-                !isOpen && !isMobile && "lg:hidden"
+                !isOpen && !isMobile && "hidden"
               )}>
                 {item.title}
               </span>
             </Link>
           ))}
         </nav>
-
-        <div className="flex-shrink-0 p-4 border-t">
-          <Button 
-            variant="ghost" 
-            className={cn(
-              "w-full gap-3 min-w-0", 
-              isOpen || isMobile ? "justify-start" : "justify-center"
-            )} 
-            onClick={handleLogout}
-          >
-            <LogOut className="h-5 w-5 flex-shrink-0" />
-            <span className={cn(
-              "truncate",
-              !isOpen && !isMobile && "lg:hidden"
-            )}>
-              Logout
-            </span>
-          </Button>
+        
+        <div className="flex-shrink-0 p-3 border-t">
+            <div className={cn("p-2 rounded-lg transition-colors", isOpen || isMobile ? "hover:bg-secondary" : "")}>
+                <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name} />
+                      <AvatarFallback>{(user?.businessName || user?.name || 'U').charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className={cn("flex-1 min-w-0", !isOpen && !isMobile && "hidden")}>
+                        <p className="text-sm font-semibold truncate">{user?.businessName || user?.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize truncate">{role}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" className={cn("h-8 w-8", !isOpen && !isMobile && "hidden")} onClick={handleLogout}>
+                        <LogOut className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                </div>
+            </div>
         </div>
       </div>
     </div>

@@ -40,7 +40,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-background">
+      <div className="flex items-center justify-center h-screen bg-secondary">
         <div className="flex flex-col items-center">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             <p className="mt-4 text-muted-foreground">Authenticating...</p>
@@ -50,7 +50,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   }
 
   if (!isCrmAuthenticated) {
-    return null;
+    return null; // or a login redirect, handled by the effect
   }
      
   return (
@@ -64,7 +64,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
       <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
         <Header toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
                  
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-background">
           <div className="w-full max-w-none overflow-hidden">
             {children}
           </div>

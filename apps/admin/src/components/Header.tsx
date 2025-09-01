@@ -8,6 +8,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { useAppDispatch } from '@repo/store/hooks';
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import Cookies from 'js-cookie';
+import { LogOut } from "lucide-react";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
@@ -59,22 +60,8 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
           onClick={handleLogout}
           className="flex-shrink-0 min-w-0"
         >
+          <LogOut className="h-5 w-5 sm:mr-2" />
           <span className="hidden sm:inline">Logout</span>
-          <span className="sm:hidden">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-          </span>
         </Button>
       </div>
     </header>
