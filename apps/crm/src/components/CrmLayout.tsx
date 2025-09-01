@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
+import { cn } from '@repo/ui/cn';
 
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -17,11 +18,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     const checkMobile = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
-      if(mobile) {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
+      setSidebarOpen(!mobile);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -38,7 +35,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     setSidebarOpen(!isSidebarOpen);
   };
 
-  if (isLoading) {
+  if (isLoading || !isCrmAuthenticated) {
     return (
       <div className="flex items-center justify-center h-screen bg-secondary">
         <div className="flex flex-col items-center">
@@ -48,23 +45,22 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
       </div>
     );
   }
-
-  if (!isCrmAuthenticated) {
-    return null; // or a login redirect, handled by the effect
-  }
      
   return (
-    <div className="flex h-screen overflow-hidden bg-secondary">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar 
         isOpen={isSidebarOpen} 
         toggleSidebar={toggleSidebar} 
         isMobile={isMobile}
       />
              
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
-        <Header toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
+      <div className={cn(
+        "flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden transition-all duration-300 ease-in-out",
+        !isMobile && (isSidebarOpen ? "lg:ml-64" : "lg:ml-20")
+      )}>
+        <Header toggleSidebar={toggleSidebar} />
                  
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-background">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary/50">
           <div className="w-full max-w-none overflow-hidden">
             {children}
           </div>

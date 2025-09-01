@@ -39,7 +39,8 @@ export default function RootLayout({
     '/doctor-staff',
     '/timetable',
     '/consultations',
-    '/patients'
+    '/patients',
+    '/shipping'
   ].some(path => pathname.startsWith(path));
   
   const showMarketingLayout = ['/', '/apps', '/pricing', '/support'].includes(pathname);

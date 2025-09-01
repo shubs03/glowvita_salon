@@ -6,9 +6,7 @@ import SupplierModel from "../../../packages/lib/src/models/Vendor/Supplier.mode
 import StaffModel from "../../../packages/lib/src/models/Vendor/Staff.model.js";
 import _db from "../../../packages/lib/src/db.js";
 import { 
-  JWT_SECRET_VENDOR, 
-  JWT_SECRET_DOCTOR,
-  JWT_SECRET_SUPPLIER 
+  JWT_SECRET_VENDOR
 } from "../../../packages/config/config.js";
 
 const roleToModelMap = {
@@ -17,14 +15,6 @@ const roleToModelMap = {
   supplier: SupplierModel,
   staff: StaffModel,
 };
-
-const roleToSecretMap = {
-  vendor: JWT_SECRET_VENDOR,
-  doctor: JWT_SECRET_DOCTOR,
-  supplier: JWT_SECRET_SUPPLIER,
-  staff: JWT_SECRET_VENDOR, // Staff uses the same secret as vendors
-};
-
 
 export function authMiddlewareCrm(handler, allowedRoles = []) {
   return async (req, ctx) => {
@@ -38,23 +28,19 @@ export function authMiddlewareCrm(handler, allowedRoles = []) {
     const token = authHeader.split(" ")[1];
 
     try {
-      const decodedPayload = jwt.decode(token);
-      if (!decodedPayload || !decodedPayload.role) {
-        return Response.json({ message: "Invalid token: Role missing" }, { status: 401 });
+      if (!JWT_SECRET_VENDOR) {
+        throw new Error("JWT_SECRET_VENDOR is not defined on the server.");
+      }
+      
+      const decoded = jwt.verify(token, JWT_SECRET_VENDOR);
+      const { userId, role } = decoded;
+
+      if (!role || !roleToModelMap[role]) {
+        return Response.json({ message: "Invalid token: Role missing or invalid" }, { status: 401 });
       }
 
-      const { role } = decodedPayload;
-      const secret = roleToSecretMap[role];
       const Model = roleToModelMap[role];
-
-      if (!secret || !Model) {
-        return Response.json({ message: "Unauthorized: Invalid role specified in token" }, { status: 401 });
-      }
-      
-      // Verify token with the correct secret
-      const decoded = jwt.verify(token, secret);
-      
-      const user = await Model.findById(decoded.userId).select("-password");
+      const user = await Model.findById(userId).select("-password");
 
       if (!user) {
         return Response.json({ message: `Unauthorized: ${role} not found` }, { status: 401 });
