@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Copy, Gift, Users, CheckCircle, TrendingUp } from 'lucide-react';
+import { Copy, Gift, UserPlus, Users, Share2, CheckCircle, TrendingUp, Send, UserCheck, BarChart } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
@@ -68,6 +68,18 @@ const SkeletonLoader = () => (
                 </div>
             </CardContent>
         </Card>
+    </div>
+);
+
+const HowItWorksStep = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
+    <div className="relative flex items-start gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            {icon}
+        </div>
+        <div>
+            <h4 className="text-lg font-semibold">{title}</h4>
+            <p className="text-muted-foreground">{description}</p>
+        </div>
     </div>
 );
 
@@ -176,6 +188,32 @@ export default function ReferralsPage() {
                          <Gift className="w-48 h-48 text-primary-foreground opacity-20" />
                     </div>
                 </div>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>How It Works</CardTitle>
+                    <CardDescription>Follow these simple steps to start earning rewards.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid md:grid-cols-3 gap-8">
+                         <HowItWorksStep 
+                            icon={<Send className="w-6 h-6" />}
+                            title="1. Share Your Link"
+                            description="Copy your unique referral link below and share it with your professional network via email, social media, or messaging apps."
+                         />
+                         <HowItWorksStep 
+                            icon={<UserPlus className="w-6 h-6" />}
+                            title="2. They Sign Up"
+                            description="Your colleague signs up on our platform using your referral link. We'll track the referral automatically."
+                         />
+                         <HowItWorksStep 
+                            icon={<Gift className="w-6 h-6" />}
+                            title="3. Earn Your Bonus"
+                            description={`Once their account is approved and they meet the criteria, you'll receive a ₹${settingsData?.referrerBonus?.bonusValue || '0'} bonus. It's that simple!`}
+                         />
+                    </div>
+                </CardContent>
             </Card>
 
             <Card className="mb-6">
