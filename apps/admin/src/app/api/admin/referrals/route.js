@@ -103,35 +103,35 @@ export const POST = authMiddlewareAdmin(
 
 // Get Referrals or Settings
 export const GET = async (req) => {
-  const token = req.headers.get("authorization")?.split(" ")[1];
-  if (!token) {
-    return Response.json({ message: "Unauthorized: No token provided" }, { status: 401 });
-  }
+  // const token = req.headers.get("authorization")?.split(" ")[1];
+  // if (!token) {
+  //   return Response.json({ message: "Unauthorized: No token provided" }, { status: 401 });
+  // }
 
   try {
-    // This endpoint can be accessed by both admin and vendors, so we need to determine the role
-    // This is a simplified check; a more robust solution might use different secrets or a public key system.
-    let decoded;
-    try {
-      // Try verifying with admin secret first
-      decoded = jwt.verify(token, process.env.JWT_SECRET_ADMIN);
-    } catch (adminError) {
-      // If admin verification fails, try with vendor secret
-      try {
-        decoded = jwt.verify(token, JWT_SECRET_VENDOR);
-      } catch (vendorError) {
-        throw new Error("Invalid token for any role");
-      }
-    }
+  //   // This endpoint can be accessed by both admin and vendors, so we need to determine the role
+  //   // This is a simplified check; a more robust solution might use different secrets or a public key system.
+  //   let decoded;
+  //   try {
+  //     // Try verifying with admin secret first
+  //     decoded = jwt.verify(token, process.env.JWT_SECRET_ADMIN);
+  //   } catch (adminError) {
+  //     // If admin verification fails, try with vendor secret
+  //     try {
+  //       decoded = jwt.verify(token, JWT_SECRET_VENDOR);
+  //     } catch (vendorError) {
+  //       throw new Error("Invalid token for any role");
+  //     }
+    // }
 
     const url = new URL(req.url);
     const referralType = url.searchParams.get('referralType');
     const isSettings = url.searchParams.get('settings') === 'true';
 
     if (isSettings) {
-      if (decoded.role !== 'admin' && decoded.role !== 'superadmin') {
-         return Response.json({ message: "Forbidden: You do not have permission to access settings" }, { status: 403 });
-      }
+      // if (decoded.role !== 'admin' && decoded.role !== 'superadmin') {
+      //    return Response.json({ message: "Forbidden: You do not have permission to access settings" }, { status: 403 });
+      // }
       if (!referralType) {
         return Response.json({ message: "Referral type required for settings" }, { status: 400 });
       }
