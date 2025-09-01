@@ -56,7 +56,7 @@ export default function AdminRolesPage() {
   const [selectedRole, setSelectedRole] = useState<AdminUser | null>(null);
   
   const dispatch = useAppDispatch();
-  const { isOpen, modalType, data } = useAppSelector((state) => state.modal);
+  const { isOpen, modalType, data } = useAppSelector((state : any) => state.modal);
   const { data: admins, isLoading, isError } = useGetAdminsQuery(undefined);
 
   useEffect(() => {

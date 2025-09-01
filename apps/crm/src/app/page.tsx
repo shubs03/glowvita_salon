@@ -78,7 +78,7 @@ const BenefitItem = ({
   children: React.ReactNode;
   features: string[];
 }) => (
-  <div className="group relative p-6 md:p-8 bg-gradient-to-br from-background via-background to-primary/5 rounded-md shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden text-left border border-border/50 hover:border-primary/20">
+  <div className="group relative p-6 md:p-8 bg-gradient-to-br from-background via-background to-primary/5 rounded-lg shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden text-left border border-border/50 hover:border-primary/20">
     <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-out"></div>
     <div className="flex items-start gap-4 mb-4 relative z-10">
@@ -117,7 +117,7 @@ const AdvantageCard = ({
   description: string;
   icon: React.ReactNode;
 }) => (
-  <div className="flex-shrink-0 w-64 md:w-80 h-80 md:h-96 bg-gradient-to-br from-background via-background to-primary/5 rounded-md shadow-xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all duration-500 border border-border/50">
+  <div className="flex-shrink-0 w-64 md:w-80 h-80 md:h-96 bg-gradient-to-br from-background via-background to-primary/5 rounded-lg shadow-xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all duration-500 border border-border/50">
     <div className="absolute -top-10 -right-10 text-primary/5 text-9xl md:text-[120px] group-hover:text-primary/10 transition-colors duration-500">
       {icon}
     </div>
@@ -151,7 +151,7 @@ const TestimonialCard = ({
     className="shrink-0 snap-center overflow-hidden group"
     style={{ width: "300px" }}
   >
-    <div className="flex h-[480px] flex-col items-start gap-3 overflow-hidden rounded-md bg-gradient-to-br from-muted to-muted/80 p-8 text-muted-foreground shadow-lg group-hover:shadow-xl transition-all duration-300 border border-border/50">
+    <div className="flex h-[480px] flex-col items-start gap-3 overflow-hidden rounded-lg bg-gradient-to-br from-muted to-muted/80 p-8 text-muted-foreground shadow-lg group-hover:shadow-xl transition-all duration-300 border border-border/50">
       <div className="flex h-5 gap-2 text-yellow-400">
         {[...Array(rating)].map((_, i) => (
           <Star
@@ -187,7 +187,7 @@ const TestimonialCard = ({
 
 const VideoTestimonialCard = () => (
   <div className="h-[480px] w-[80vw] shrink-0 snap-center overflow-hidden laptop:w-[853px] group">
-    <div className="relative size-full overflow-hidden rounded-md shadow-xl group-hover:shadow-2xl transition-shadow duration-300">
+    <div className="relative size-full overflow-hidden rounded-lg shadow-xl group-hover:shadow-2xl transition-shadow duration-300">
       <Image
         src="https://placehold.co/853x480.png"
         alt="Testimonial video poster"
@@ -235,7 +235,7 @@ const PlatformForCard = ({
   hint: string;
 }) => (
   <a
-    className="relative inline-block h-40 w-64 md:h-[194px] md:w-[309px] shrink-0 overflow-hidden rounded-md transition-all duration-300 hover:shadow-2xl group border border-border/50"
+    className="relative inline-block h-40 w-64 md:h-[194px] md:w-[309px] shrink-0 overflow-hidden rounded-lg transition-all duration-300 hover:shadow-2xl group border border-border/50"
     href="#"
   >
     <Image
@@ -346,7 +346,7 @@ export default function CrmHomePage() {
               <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-headline tracking-tighter mb-6 bg-gradient-to-r from-foreground via-foreground to-foreground/80 bg-clip-text text-transparent">
                 Elevate Your Salon Business
               </h1>
-              <p className="text-lg md:text-2xl text-muted-foreground max-w-4xl mx-auto mb-10 leading-relaxed">
+              <p className="text-lg md:text-xl text-muted-foreground max-w-4xl mx-auto mb-10 leading-relaxed">
                 The all-in-one CRM designed for modern salons and stylists.
                 Manage your clients, bookings, and payments seamlessly to unlock
                 your salon's full potential.
@@ -357,8 +357,8 @@ export default function CrmHomePage() {
                   className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
                   asChild
                 >
-                  <Link href="/dashboard">
-                    Go to Dashboard{" "}
+                  <Link href="/auth/register">
+                    Get Started Free{" "}
                     <Rocket className="ml-2 h-5 w-5 md:h-6 md:w-6 group-hover:scale-110 transition-transform duration-200" />
                   </Link>
                 </Button>
@@ -478,11 +478,11 @@ export default function CrmHomePage() {
                 </p>
               </div>
               <div className="space-y-6 md:space-y-8">
-                <Card className="bg-gradient-to-br from-background to-primary/5 border-l-4 border-primary shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group overflow-hidden">
+                <Card className="bg-gradient-to-br from-background to-primary/5 border-l-4 border-primary shadow-lg hover:shadow-xl transition-all duration-300 rounded-lg group overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <CardHeader className="relative z-10 pb-4">
                     <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
-                      <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                      <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:scale-110 transition-transform duration-200">
                         <Settings className="h-5 w-5" />
                       </div>
                       Manage
@@ -496,11 +496,11 @@ export default function CrmHomePage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-background to-primary/5 border-l-4 border-primary shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group overflow-hidden">
+                <Card className="bg-gradient-to-br from-background to-primary/5 border-l-4 border-primary shadow-lg hover:shadow-xl transition-all duration-300 rounded-lg group overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <CardHeader className="relative z-10 pb-4">
                     <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
-                      <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                      <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:scale-110 transition-transform duration-200">
                         <TrendingUp className="h-5 w-5" />
                       </div>
                       Grow
@@ -514,11 +514,11 @@ export default function CrmHomePage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-gradient-to-br from-background to-primary/5 border-l-4 border-primary shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group overflow-hidden">
+                <Card className="bg-gradient-to-br from-background to-primary/5 border-l-4 border-primary shadow-lg hover:shadow-xl transition-all duration-300 rounded-lg group overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <CardHeader className="relative z-10 pb-4">
                     <CardTitle className="flex items-center gap-3 text-lg md:text-xl">
-                      <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                      <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:scale-110 transition-transform duration-200">
                         <CreditCard className="h-5 w-5" />
                       </div>
                       Get Paid
@@ -689,10 +689,10 @@ export default function CrmHomePage() {
               </p>
             </div>
             <div className="space-y-4 md:space-y-6">
-              <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
+              <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-lg group border border-border/50">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
-                    <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:scale-110 transition-transform duration-200">
                       <Shield className="h-5 w-5" />
                     </div>
                     Is my data secure?
@@ -708,10 +708,10 @@ export default function CrmHomePage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
+              <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-lg group border border-border/50">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
-                    <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:scale-110 transition-transform duration-200">
                       <Settings className="h-5 w-5" />
                     </div>
                     Can I use this on multiple devices?
@@ -727,10 +727,10 @@ export default function CrmHomePage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-md group border border-border/50">
+              <Card className="bg-gradient-to-br from-background to-primary/5 shadow-lg hover:shadow-xl transition-all duration-300 rounded-lg group border border-border/50">
                 <CardHeader className="pb-4">
                   <CardTitle className="flex items-center gap-4 text-lg md:text-xl group-hover:text-primary transition-colors duration-300">
-                    <div className="bg-blue-100 text-blue-600 p-2 rounded group-hover:scale-110 transition-transform duration-200">
+                    <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:scale-110 transition-transform duration-200">
                       <Clock className="h-5 w-5" />
                     </div>
                     How quickly can I get started?

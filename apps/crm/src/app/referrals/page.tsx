@@ -6,11 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
-import { Share2, Users, Gift, CheckCircle, Copy, UserPlus, ArrowRight, TrendingUp } from 'lucide-react';
+import { Copy, Gift, UserPlus, Users, Share2, CheckCircle, TrendingUp, Send } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
-import { useGetReferralsQuery } from '@repo/store/api';
+import { useGetReferralsQuery, useGetSettingsQuery } from '@repo/store/api';
 import { Skeleton } from '@repo/ui/skeleton';
 
 type Referral = {
@@ -71,12 +71,29 @@ const SkeletonLoader = () => (
     </div>
 );
 
+const HowItWorksStep = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
+    <div className="relative flex items-start gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            {icon}
+        </div>
+        <div>
+            <h4 className="text-lg font-semibold">{title}</h4>
+            <p className="text-muted-foreground">{description}</p>
+        </div>
+    </div>
+);
+
 
 export default function ReferralsPage() {
-    const { user, isLoading: isAuthLoading } = useCrmAuth();
-    const { data: referralsData, isLoading: isReferralsLoading, isError } = useGetReferralsQuery('V2V', {
+    const { user, role, isLoading: isAuthLoading } = useCrmAuth();
+    
+    // For now, we assume a single referral program type (e.g., 'V2V'). This can be made dynamic.
+    const referralType = 'V2V'; 
+    
+    const { data: referralsData, isLoading: isReferralsLoading, isError } = useGetReferralsQuery(referralType, {
         skip: !user
     });
+    const { data: settingsData, isLoading: isSettingsLoading } = useGetSettingsQuery(referralType);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -85,11 +102,15 @@ export default function ReferralsPage() {
         ? `${window.location.origin}/auth/register?ref=${user.referralCode}`
         : "Loading your referral link...";
 
+    const referrerName = useMemo(() => {
+        if (!user) return '';
+        return user.businessName || user.name || user.shopName || 'Your Business';
+    }, [user]);
+
     const referrals = useMemo(() => {
-        if (!Array.isArray(referralsData) || !user) return [];
-        // Filter referrals where the current user is the referrer
-        return referralsData.filter((r: any) => r.referrer === user.businessName);
-    }, [referralsData, user]);
+        if (!Array.isArray(referralsData) || !referrerName) return [];
+        return referralsData.filter((r: any) => r.referrer === referrerName);
+    }, [referralsData, referrerName]);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -113,8 +134,22 @@ export default function ReferralsPage() {
           default: return 'bg-gray-100 text-gray-800';
         }
     };
+
+    const getRoleContent = () => {
+        switch(role) {
+            case 'doctor':
+                return { title: 'Refer a Colleague', description: 'Earn rewards by inviting other doctors and professionals to join.' };
+            case 'supplier':
+                return { title: 'Refer a Supplier', description: 'Earn rewards by inviting other suppliers to join.' };
+            case 'vendor':
+            default:
+                return { title: 'Refer a Vendor', description: 'Earn rewards by inviting other salon owners to join.' };
+        }
+    }
+
+    const { title, description } = getRoleContent();
     
-    if (isAuthLoading || isReferralsLoading) {
+    if (isAuthLoading || isReferralsLoading || isSettingsLoading) {
         return <SkeletonLoader />;
     }
     
@@ -124,25 +159,33 @@ export default function ReferralsPage() {
 
     const totalBonusEarned = referrals.filter((r: Referral) => r.status === 'Bonus Paid').reduce((acc, r) => acc + (Number(r.bonus) || 0), 0);
     const successfulReferrals = referrals.filter(r => r.status !== 'Pending').length;
+    
+    const referrerBonus = settingsData?.referrerBonus?.bonusValue || 0;
+    const refereeBonusEnabled = settingsData?.refereeBonus?.enabled;
+    const refereeBonus = settingsData?.refereeBonus?.bonusValue || 0;
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
             <div>
-                <h1 className="text-2xl font-bold font-headline">Refer a Vendor</h1>
-                <p className="text-muted-foreground mt-1">Earn rewards by inviting other vendors to join our platform.</p>
+                <h1 className="text-2xl font-bold font-headline">{title}</h1>
+                <p className="text-muted-foreground mt-1">{description}</p>
             </div>
 
-             <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground overflow-hidden">
+            <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground overflow-hidden">
                 <div className="grid md:grid-cols-2 items-center">
                     <div className="p-8">
                         <h2 className="text-3xl font-bold mb-2">Grow Together, Earn Together</h2>
                         <p className="mb-6 opacity-90 max-w-md">
-                            Invite fellow salon owners to our platform. When they join, you both get rewarded. It's our way of saying thank you for helping our community grow.
+                            Invite fellow professionals to our platform. When they join, you both get rewarded. It's our way of saying thank you for helping our community grow.
                         </p>
                         <div className="space-y-3 text-sm">
-                            <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Earn cash rewards for every successful referral.</span></div>
-                            <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Help your friends and colleagues succeed.</span></div>
-                            <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Strengthen your professional network.</span></div>
+                           {settingsData?.referrerBonus && (
+                                <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Earn ₹{referrerBonus} for every successful referral.</span></div>
+                           )}
+                           {refereeBonusEnabled && (
+                               <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Your friend gets ₹{refereeBonus} too!</span></div>
+                           )}
+                           <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Strengthen your professional network.</span></div>
                         </div>
                     </div>
                     <div className="hidden md:flex items-center justify-center p-8">
@@ -150,11 +193,37 @@ export default function ReferralsPage() {
                     </div>
                 </div>
             </Card>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>How It Works</CardTitle>
+                    <CardDescription>Follow these simple steps to start earning rewards.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid md:grid-cols-3 gap-8">
+                         <HowItWorksStep 
+                            icon={<Send className="w-6 h-6" />}
+                            title="1. Share Your Link"
+                            description={`Copy your unique referral link and share it with your network. ${refereeBonusEnabled ? `They'll get a ₹${refereeBonus} bonus when they sign up!` : ''}`}
+                         />
+                         <HowItWorksStep 
+                            icon={<UserPlus className="w-6 h-6" />}
+                            title="2. They Sign Up"
+                            description="Your colleague signs up on our platform using your referral link. We'll track the referral automatically."
+                         />
+                         <HowItWorksStep 
+                            icon={<Gift className="w-6 h-6" />}
+                            title="3. Earn Your Bonus"
+                            description={`Once their account is approved and they meet the criteria, you'll receive a ₹${referrerBonus} bonus. It's that simple!`}
+                         />
+                    </div>
+                </CardContent>
+            </Card>
 
             <Card className="mb-6">
                 <CardHeader>
                     <CardTitle>Your Unique Referral Link</CardTitle>
-                    <CardDescription>Share this link with other vendors. When they sign up using this link, you'll be credited for the referral.</CardDescription>
+                    <CardDescription>Share this link with other professionals. When they sign up using this link, you'll be credited for the referral.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="flex flex-col sm:flex-row gap-2">
@@ -174,7 +243,7 @@ export default function ReferralsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{referrals.length}</div>
-                        <p className="text-xs text-muted-foreground">Vendors you've referred</p>
+                        <p className="text-xs text-muted-foreground">Professionals you've referred</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -184,7 +253,7 @@ export default function ReferralsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-600">{successfulReferrals}</div>
-                        <p className="text-xs text-muted-foreground">Vendors who successfully signed up</p>
+                        <p className="text-xs text-muted-foreground">Professionals who successfully joined</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -198,57 +267,21 @@ export default function ReferralsPage() {
                     </CardContent>
                 </Card>
             </div>
-
-            <Card className="mb-6 bg-secondary/50 border border-border/50">
-                <CardHeader>
-                    <CardTitle className="text-center text-xl font-semibold">How It Works</CardTitle>
-                    <CardDescription className="text-center">Earn rewards in 3 simple steps.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid md:grid-cols-3 gap-6 text-center">
-                    <div className="flex flex-col items-center p-4 transform transition-transform duration-300 hover:scale-105">
-                        <div className="mb-4 bg-primary/10 text-primary p-5 rounded-full ring-4 ring-primary/20">
-                            <Share2 className="h-8 w-8" />
-                        </div>
-                        <h3 className="font-semibold text-lg mb-1">1. Share Your Link</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                            Copy your personal referral link and share it with other salon owners and beauty professionals you know.
-                        </p>
-                    </div>
-                    <div className="flex flex-col items-center p-4 transform transition-transform duration-300 hover:scale-105">
-                        <div className="mb-4 bg-primary/10 text-primary p-5 rounded-full ring-4 ring-primary/20">
-                            <UserPlus className="h-8 w-8" />
-                        </div>
-                        <h3 className="font-semibold text-lg mb-1">2. They Sign Up</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                            Your friend uses your unique link to register their salon or professional profile on our platform.
-                        </p>
-                    </div>
-                    <div className="flex flex-col items-center p-4 transform transition-transform duration-300 hover:scale-105">
-                        <div className="mb-4 bg-primary/10 text-primary p-5 rounded-full ring-4 ring-primary/20">
-                            <Gift className="h-8 w-8" />
-                        </div>
-                        <h3 className="font-semibold text-lg mb-1">3. Get Rewarded</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                           Once their registration is complete and verified, you receive a bonus in your account as a thank you!
-                        </p>
-                    </div>
-                </CardContent>
-            </Card>
-
+            
             <Card>
                 <CardHeader>
                     <CardTitle>Referral History</CardTitle>
-                    <CardDescription>Track the status of your referred vendors.</CardDescription>
+                    <CardDescription>Track the status of your referred professionals.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <div className="overflow-x-auto no-scrollbar rounded-md border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Referred Vendor</TableHead>
+                                    <TableHead>Referred Professional</TableHead>
                                     <TableHead>Date</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Bonus</TableHead>
+                                    <TableHead className="text-right">Bonus</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -261,12 +294,12 @@ export default function ReferralsPage() {
                                                 {referral.status}
                                             </span>
                                         </TableCell>
-                                        <TableCell>₹{referral.bonus}</TableCell>
+                                        <TableCell className="text-right">₹{referral.bonus}</TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                            You haven't referred any vendors yet.
+                                            You haven't referred anyone yet.
                                         </TableCell>
                                     </TableRow>
                                 )}

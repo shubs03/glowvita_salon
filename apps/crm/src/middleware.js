@@ -3,17 +3,41 @@ import { NextResponse } from 'next/server';
 import * as jose from 'jose';
 
 const JWT_SECRET_VENDOR = process.env.JWT_SECRET_VENDOR;
+const JWT_SECRET_DOCTOR = process.env.JWT_SECRET_DOCTOR;
+const JWT_SECRET_SUPPLIER = process.env.JWT_SECRET_SUPPLIER;
 
 async function verifyJwt(token) {
-  if (!token || !JWT_SECRET_VENDOR) return null;
+  if (!token) return null;
   
-  // We cannot dynamically select the secret in the middleware as we don't know the role
-  // before decoding. For page protection, we will use the vendor secret as the primary
-  // one. The API middleware will handle more granular role checks.
-  const secret = new TextEncoder().encode(JWT_SECRET_VENDOR);
-  
+  // Try to decode the token first to get the role
   try {
-    const { payload } = await jose.jwtVerify(token, secret);
+    const decoded = jose.decodeJwt(token);
+    const role = decoded.role;
+    
+    // Select the appropriate secret based on role
+    let secret;
+    switch (role) {
+      case 'vendor':
+      case 'staff':
+        secret = JWT_SECRET_VENDOR;
+        break;
+      case 'doctor':
+        secret = JWT_SECRET_DOCTOR;
+        break;
+      case 'supplier':
+        secret = JWT_SECRET_SUPPLIER;
+        break;
+      default:
+        secret = JWT_SECRET_VENDOR; // fallback
+    }
+    
+    if (!secret) {
+      console.log("CRM JWT Verification Error in Middleware: No secret for role", role);
+      return null;
+    }
+    
+    const secretKey = new TextEncoder().encode(secret);
+    const { payload } = await jose.jwtVerify(token, secretKey);
     return payload;
   } catch (error) {
     // Catches expired tokens, invalid signatures etc.

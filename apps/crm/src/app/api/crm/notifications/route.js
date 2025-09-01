@@ -1,3 +1,4 @@
+
 // crm/api/notifications/route.js
 
 import _db from "../../../../../../../packages/lib/src/db.js";
@@ -8,12 +9,11 @@ await _db();
 
 // POST: Create or update a VendorNotifications document, adding notifications to the array
 export const POST = authMiddlewareCrm(async (req) => {
-
-  const vendor  = req.user;
+  const vendor = req.user;
   const body = await req.json();
   const { title, channels, content, targetType, targets } = body;
 
-  const vendorId  =  vendor._id.toString();
+  const vendorId = vendor._id.toString();
 
   // 1️⃣ Validate required fields
   if (!vendorId || !title || !channels || !Array.isArray(channels) || !content || !targetType) {
@@ -36,7 +36,7 @@ export const POST = authMiddlewareCrm(async (req) => {
     channels, 
     content, 
     targetType, 
-    targets: targetType === 'specific_clients' ? targets : undefined,
+    targets: targetType === 'specific_clients' ? targets : [],
     date: new Date(),
     status: 'Sent', 
     createdAt: new Date(), 
@@ -57,7 +57,7 @@ export const POST = authMiddlewareCrm(async (req) => {
     { message: "Notification created successfully", vendorNotifications },
     { status: 201 }
   );
-}, ["vendor"]);
+}, ["vendor", "doctor", "supplier"]);
 
 
 const targetDisplayMap = {
@@ -70,7 +70,6 @@ const targetDisplayMap = {
 // GET: Retrieve VendorNotifications by vendor ID or paginated notifications
 export const GET = authMiddlewareCrm(async (req) => {
   const vendorId = req.user._id.toString();
-  console.log("Vendor ID from auth:", vendorId);
 
   if (!vendorId) {
     return Response.json(
@@ -92,7 +91,7 @@ export const GET = authMiddlewareCrm(async (req) => {
     );
   }
 
-  const allNotifications = vendorNotificationsDoc.notifications;
+  const allNotifications = vendorNotificationsDoc.notifications.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   // Compute stats
   const total = allNotifications.length;
@@ -103,8 +102,9 @@ export const GET = authMiddlewareCrm(async (req) => {
     acc[n.targetType] = (acc[n.targetType] || 0) + 1;
     return acc;
   }, {});
-  const mostTargetedType = Object.keys(targetCounts).reduce((a, b) => targetCounts[a] > targetCounts[b] ? a : b, '');
-  const mostTargeted = targetDisplayMap[mostTargetedType] || 'Unknown';
+
+  const mostTargetedType = total > 0 ? Object.keys(targetCounts).reduce((a, b) => targetCounts[a] > targetCounts[b] ? a : b) : 'None';
+  const mostTargeted = targetDisplayMap[mostTargetedType] || mostTargetedType;
 
   const response = {
     _id: vendorNotificationsDoc._id,
@@ -121,11 +121,10 @@ export const GET = authMiddlewareCrm(async (req) => {
   };
 
   return Response.json(response);
-}, ["vendor"]);
+}, ["vendor", "doctor", "supplier"]);
 
 // DELETE: Remove specific notifications from the VendorNotifications document
 export const DELETE = authMiddlewareCrm(async (req) => {
-
   const vendor = req.user._id.toString();
 
   const body = await req.json();
@@ -166,4 +165,4 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     { message: "Notification deleted successfully", vendorNotifications: result },
     { status: 200 }
   );
-}, ["vendor"]);
+}, ["vendor", "doctor", "supplier"]);

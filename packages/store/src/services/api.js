@@ -113,122 +113,124 @@ export const glowvitaApi = createApi({
   endpoints: (builder) => ({
     // SMS Templates Endpoints
     getSmsTemplates: builder.query({
-      query: () => '/admin/sms-template',
-      providesTags: ['SmsTemplate']
+      query: () => "/admin/sms-template",
+      providesTags: ["SmsTemplate"],
     }),
-    
+
     getSmsTemplateById: builder.query({
       query: (id) => `/admin/sms-template/${id}`,
-      providesTags: (result, error, id) => [{ type: 'SmsTemplate', id }]
+      providesTags: (result, error, id) => [{ type: "SmsTemplate", id }],
     }),
-    
+
     createSmsTemplate: builder.mutation({
       query: (templateData) => ({
-        url: '/admin/sms-template',
-        method: 'POST',
-        body: templateData
+        url: "/admin/sms-template",
+        method: "POST",
+        body: templateData,
       }),
-      invalidatesTags: ['SmsTemplate']
+      invalidatesTags: ["SmsTemplate"],
     }),
-    
+
     updateSmsTemplate: builder.mutation({
       query: ({ id, ...updates }) => ({
         url: `/admin/sms-template?id=${id}`,
-        method: 'PUT',
-        body: updates
+        method: "PUT",
+        body: updates,
       }),
       invalidatesTags: (result, error, { id }) => [
-        'SmsTemplate',
-        { type: 'SmsTemplate', id }
-      ]
+        "SmsTemplate",
+        { type: "SmsTemplate", id },
+      ],
     }),
-    
+
     deleteSmsTemplate: builder.mutation({
       query: (id) => ({
         url: `/admin/sms-template?id=${id}`,
-        method: 'DELETE'
+        method: "DELETE",
       }),
-      invalidatesTags: ['SmsTemplate']
+      invalidatesTags: ["SmsTemplate"],
     }),
 
     // Social Media Template Endpoints
     getSocialMediaTemplates: builder.query({
-      query: () => '/admin/social-media-templates',
-      providesTags: ['SocialMediaTemplate']
+      query: () => "/admin/social-media-templates",
+      providesTags: ["SocialMediaTemplate"],
     }),
-    
+
     getSocialMediaTemplateById: builder.query({
       query: (id) => `/admin/social-media-templates/${id}`,
-      providesTags: (result, error, id) => [{ type: 'SocialMediaTemplate', id }]
+      providesTags: (result, error, id) => [
+        { type: "SocialMediaTemplate", id },
+      ],
     }),
-    
+
     createSocialMediaTemplate: builder.mutation({
       query: (templateData) => ({
-        url: '/admin/social-media-templates',
-        method: 'POST',
-        body: templateData
+        url: "/admin/social-media-templates",
+        method: "POST",
+        body: templateData,
       }),
-      invalidatesTags: ['SocialMediaTemplate']
+      invalidatesTags: ["SocialMediaTemplate"],
     }),
-    
+
     updateSocialMediaTemplate: builder.mutation({
       query: ({ id, ...updates }) => ({
         url: `/admin/social-media-templates?id=${id}`,
-        method: 'PUT',
-        body: updates
+        method: "PUT",
+        body: updates,
       }),
       invalidatesTags: (result, error, { id }) => [
-        'SocialMediaTemplate',
-        { type: 'SocialMediaTemplate', id }
-      ]
+        "SocialMediaTemplate",
+        { type: "SocialMediaTemplate", id },
+      ],
     }),
-    
+
     deleteSocialMediaTemplate: builder.mutation({
       query: (id) => ({
         url: `/admin/social-media-templates?id=${id}`,
-        method: 'DELETE'
+        method: "DELETE",
       }),
-      invalidatesTags: ['SocialMediaTemplate']
+      invalidatesTags: ["SocialMediaTemplate"],
     }),
 
     // SMS Packages Endpoints
     getSmsPackages: builder.query({
-      query: () => '/admin/sms-packages',
-      providesTags: ['SmsPackage']
+      query: () => "/admin/sms-packages",
+      providesTags: ["SmsPackage"],
     }),
-    
+
     getSmsPackageById: builder.query({
       query: (id) => `/admin/sms-packages/${id}`,
-      providesTags: (result, error, id) => [{ type: 'SmsPackage', id }]
+      providesTags: (result, error, id) => [{ type: "SmsPackage", id }],
     }),
-    
+
     createSmsPackage: builder.mutation({
       query: (packageData) => ({
-        url: '/admin/sms-packages',
-        method: 'POST',
-        body: packageData
+        url: "/admin/sms-packages",
+        method: "POST",
+        body: packageData,
       }),
-      invalidatesTags: ['SmsPackage']
+      invalidatesTags: ["SmsPackage"],
     }),
-    
+
     updateSmsPackage: builder.mutation({
       query: ({ id, ...updates }) => ({
         url: `/admin/sms-packages?id=${id}`,
-        method: 'PUT',
-        body: updates
+        method: "PUT",
+        body: updates,
       }),
       invalidatesTags: (result, error, { id }) => [
-        'SmsPackage',
-        { type: 'SmsPackage', id }
-      ]
+        "SmsPackage",
+        { type: "SmsPackage", id },
+      ],
     }),
-    
+
     deleteSmsPackage: builder.mutation({
       query: (id) => ({
         url: `/admin/sms-packages?id=${id}`,
-        method: 'DELETE'
+        method: "DELETE",
       }),
-      invalidatesTags: ['SmsPackage']
+      invalidatesTags: ["SmsPackage"],
     }),
     // Web App Endpoints
     getMe: builder.query({
@@ -428,49 +430,49 @@ export const glowvitaApi = createApi({
 
     // Tax Fee Settings Endpoints
     getTaxFeeSettings: builder.query({
-      query: () => '/admin/tax-fees',
-      providesTags: ['TaxFeeSettings']
+      query: () => "/admin/tax-fees",
+      providesTags: ["TaxFeeSettings"],
     }),
     updateTaxFeeSettings: builder.mutation({
       query: (settings) => ({
-        url: '/admin/tax-fees',
-        method: 'PATCH',
-        body: settings
+        url: "/admin/tax-fees",
+        method: "PATCH",
+        body: settings,
       }),
-      invalidatesTags: ['TaxFeeSettings']
+      invalidatesTags: ["TaxFeeSettings"],
     }),
 
     // Marketing Endpoints
     // Other marketing-related endpoints can go here
-    
+
     createSmsTemplate: builder.mutation({
       query: (template) => ({
-        url: '/admin/sms-template',
-        method: 'POST',
-        body: template
+        url: "/admin/sms-template",
+        method: "POST",
+        body: template,
       }),
-      invalidatesTags: ['SmsTemplate']
+      invalidatesTags: ["SmsTemplate"],
     }),
-    
+
     updateSmsTemplate: builder.mutation({
       query: ({ _id, ...updates }) => ({
         url: `/admin/sms-template?id=${_id}`,
-        method: 'PUT',
-        body: updates
+        method: "PUT",
+        body: updates,
       }),
       invalidatesTags: (result, error, { _id }) => [
-        'SmsTemplate',
-        { type: 'SmsTemplate', id: _id }
-      ]
+        "SmsTemplate",
+        { type: "SmsTemplate", id: _id },
+      ],
     }),
-    
+
     deleteSmsTemplate: builder.mutation({
       query: (id) => ({
         url: `/admin/sms-template?id=${id}`,
-        method: 'DELETE',
-        body: { _id: id }
+        method: "DELETE",
+        body: { _id: id },
       }),
-      invalidatesTags: ['Marketing']
+      invalidatesTags: ["Marketing"],
     }),
 
     // Vendor Endpoints
@@ -797,7 +799,6 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Faq"],
     }),
-    
 
     deleteFaq: builder.mutation({
       query: (id) => ({
@@ -823,7 +824,11 @@ export const glowvitaApi = createApi({
         if (response && Array.isArray(response.data)) {
           return response.data;
         }
-        if (response && response.productCategories && Array.isArray(response.productCategories)) {
+        if (
+          response &&
+          response.productCategories &&
+          Array.isArray(response.productCategories)
+        ) {
           return response.productCategories;
         }
         return [];
@@ -856,6 +861,38 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["AdminProductCategory"],
     }),
+
+    // Product Approval
+
+    getVendorProducts: builder.query({
+      query: () => ({ url: "/admin/product-approval", method: "GET" }),
+      providesTags: ["Product"],
+    }),
+
+    updateProductStatus: builder.mutation({
+      query: ({ productId, status }) => ({
+        url: "/admin/product-approval", 
+        method: "PATCH",
+        body: { productId, status },
+      }),
+      invalidatesTags: ["Product", "CrmProducts"],
+    }),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // Crm Endpoints
     vendorLogin: builder.mutation({
@@ -989,7 +1026,10 @@ export const glowvitaApi = createApi({
           return response.data;
         }
         // Fallback for unexpected response structure
-        console.warn('Unexpected API response structure for products:', response);
+        console.warn(
+          "Unexpected API response structure for products:",
+          response
+        );
         return [];
       },
     }),
@@ -1056,6 +1096,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["ProductCategory"],
     }),
+    
     // Staff Endpoints
     getStaff: builder.query({
       query: () => ({
@@ -1071,7 +1112,7 @@ export const glowvitaApi = createApi({
         body: staff,
       }),
       invalidatesTags: ["Staff"],
-    }), 
+    }),
     updateStaff: builder.mutation({
       query: (staff) => ({
         url: "/crm/staff",
@@ -1153,6 +1194,25 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Vendor"],
     }),
+
+    // =============================================== Doctor Working Hours ================================================= //
+
+    getDoctorWorkingHours: builder.query({
+      query: (doctorId) => ({
+        url: `/api/doctor/working-hours?doctorId=${doctorId}`,
+        method: 'GET',
+      }),
+      providesTags: ['DoctorWorkingHours'], // For caching/invalidation
+    }),
+    updateDoctorWorkingHours: builder.mutation({
+      query: ({ doctorId, hours }) => ({
+        url: `/api/doctor/working-hours`,
+        method: 'PUT',
+        body: { doctorId, hours },
+      }),
+      invalidatesTags: ['DoctorWorkingHours'], // Invalidate cache after update
+    }),
+
   }),
 });
 
@@ -1277,6 +1337,10 @@ export const {
   useUpdateFaqMutation,
   useDeleteFaqMutation,
 
+  // Product Approval
+  useGetVendorProductsQuery,
+  useUpdateProductStatusMutation,
+
   //======================================================== CRM Endpoints ====================================================//
 
   // CRM Endpoints
@@ -1329,4 +1393,9 @@ export const {
   // Vendor Profile Endpoints
   useGetVendorProfileQuery,
   useUpdateVendorProfileMutation,
+
+  // Doctor Working Hours Endpoints
+  useGetDoctorWorkingHoursQuery,
+  useUpdateDoctorWorkingHoursMutation,
+
 } = glowvitaApi;

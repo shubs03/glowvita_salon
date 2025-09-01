@@ -6,15 +6,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
 import { 
-  FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, FaSignOutAlt, 
-  FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
-  FaBell, FaGift, FaUserFriends, FaUserCircle
-} from 'react-icons/fa';
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid
+} from 'lucide-react';
 import { useAppDispatch } from "@repo/store/hooks";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import Cookies from "js-cookie";
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
@@ -24,7 +26,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
 
   const handleLogout = async () => {
     dispatch(clearCrmAuth());
-    Cookies.remove('crm_access_token', { path: '/' });
+    Cookies.remove('crm_access_token');
     router.push('/login');
     router.refresh();
   };
@@ -56,27 +58,29 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
     <div className={cn(
         "bg-background border-r flex flex-col transition-all duration-300 ease-in-out h-full overflow-hidden",
         isOpen ? "w-64" : "w-20",
-        isMobile && "w-64"
     )}>
-      <div className="flex flex-col flex-grow min-h-0 overflow-hidden">
-        <div className="flex-shrink-0 p-4 h-16 border-b flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2 min-w-0">
-            <h1 className={cn(
-              "text-xl font-bold font-headline text-primary truncate", 
-              !isOpen && !isMobile && "lg:hidden"
-            )}>
-              Vendor CRM
-            </h1>
-          </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="flex-shrink-0"
-            onClick={toggleSidebar}
-          >
-            {isMobile ? <FaTimes className="h-5 w-5" /> : <FaBars className="h-5 w-5" />}
-            <span className="sr-only">Toggle navigation menu</span>
-          </Button>
+      <div className="flex flex-col flex-grow min-h-0">
+        <div className={cn("flex-shrink-0 p-4 h-16 border-b flex items-center gap-3", isOpen ? "justify-between" : "justify-center")}>
+            <Link href="/dashboard" className="flex items-center gap-3 font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                <div className="bg-primary text-primary-foreground p-2 rounded-lg">
+                    <LayoutGrid className="h-5 w-5" />
+                </div>
+                <span className={cn(!isOpen && "hidden")}>GlowVita</span>
+            </Link>
+          
+            {/* The toggle button is now only for desktop and positioned within the sidebar */}
+            <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                    "hidden lg:flex flex-shrink-0 text-muted-foreground transition-all duration-300", 
+                    !isOpen && "absolute -right-5 top-8 bg-background border rounded-full h-10 w-10 shadow-md hover:bg-muted"
+                )}
+                onClick={toggleSidebar}
+            >
+                {isOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                <span className="sr-only">Toggle navigation menu</span>
+            </Button>
         </div>
 
         <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden min-h-0 no-scrollbar">
@@ -85,36 +89,39 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
               key={item.href}
               href={item.href}
               onClick={isMobile ? toggleSidebar : undefined}
+              title={item.title}
               className={cn(
-                "flex items-center text-sm gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:bg-secondary hover:text-primary min-w-0",
-                pathname === item.href && "bg-secondary text-primary",
-                !isOpen && !isMobile && "justify-center"
+                "flex items-center text-sm gap-3 rounded-lg px-3 py-2.5 text-muted-foreground transition-all hover:bg-secondary hover:text-primary min-w-0 relative",
+                pathname.startsWith(item.href) && item.href !== '/' && "bg-primary/10 text-primary font-semibold",
+                pathname === '/' && item.href === '/' && "bg-primary/10 text-primary font-semibold",
+                !isOpen && "justify-center"
               )}
             >
-              <item.Icon className="h-4 w-4 flex-shrink-0" />
+              <item.Icon className="h-5 w-5 flex-shrink-0" />
               <span className={cn(
                 "truncate",
-                !isOpen && !isMobile && "lg:hidden"
+                !isOpen && "hidden"
               )}>
                 {item.title}
               </span>
             </Link>
           ))}
         </nav>
-
-        <div className="flex-shrink-0 p-4 border-t">
+        
+        <div className="flex-shrink-0 p-3 border-t">
           <Button 
             variant="ghost" 
             className={cn(
-              "w-full gap-3 min-w-0", 
+              "w-full gap-3 min-w-0 text-muted-foreground hover:text-destructive", 
               isOpen || isMobile ? "justify-start" : "justify-center"
             )} 
             onClick={handleLogout}
+            title="Logout"
           >
-            <FaSignOutAlt className="h-4 w-4 flex-shrink-0" />
+            <LogOut className="h-5 w-5 flex-shrink-0" />
             <span className={cn(
               "truncate",
-              !isOpen && !isMobile && "lg:hidden"
+              !isOpen && "hidden"
             )}>
               Logout
             </span>
@@ -144,7 +151,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   }
 
   return (
-    <div className="hidden lg:block h-full flex-shrink-0 overflow-hidden">
+    <div className="hidden lg:block h-full flex-shrink-0 fixed top-0 left-0 z-40">
       <SidebarContent />
     </div>
   );

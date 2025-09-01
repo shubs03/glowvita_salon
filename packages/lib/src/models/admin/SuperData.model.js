@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const superDataSchema = new mongoose.Schema({
@@ -24,8 +25,7 @@ const superDataSchema = new mongoose.Schema({
       'country',
       'state',
       'city',
-      'doctorType',
-      'disease'
+      'disease' // Removed 'doctorType' since it's handled differently
     ],
   },
   parentId: {

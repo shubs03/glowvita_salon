@@ -28,27 +28,30 @@ export async function POST(request) {
     let Model = null;
     let permissions = [];
 
-    // Define search order and corresponding models/roles
     const userRoles = [
-      { model: VendorModel, type: 'vendor' },
-      { model: DoctorModel, type: 'doctor' },
-      { model: SupplierModel, type: 'supplier' },
-      { model: StaffModel, type: 'staff' },
+      { model: VendorModel, type: 'vendor', selectFields: '+password' },
+      { model: DoctorModel, type: 'doctor', selectFields: '+password' },
+      { model: SupplierModel, type: 'supplier', selectFields: '+password' },
+      { model: StaffModel, type: 'staff', selectFields: '+password' },
     ];
 
     for (const roleInfo of userRoles) {
-      const foundUser = await roleInfo.model.findOne({ email }).select('+password');
+      const foundUser = await roleInfo.model.findOne({ email }).select(roleInfo.selectFields);
       if (foundUser) {
         user = foundUser;
         userType = roleInfo.type;
         Model = roleInfo.model;
         permissions = foundUser.permissions || [];
-        break; // Stop searching once a user is found
+        break;
       }
     }
     
     if (!user) {
-      return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 401 });
+    }
+    
+    if (!user.password) {
+      return NextResponse.json({ success: false, error: "Authentication failed for this user." }, { status: 401 });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -71,7 +74,7 @@ export async function POST(request) {
       access_token: accessToken,
       refresh_token: refreshToken,
       role: userType,
-      permissions: permissions, // Include permissions in the response
+      permissions: permissions,
     });
 
     response.cookies.set('crm_access_token', accessToken, {

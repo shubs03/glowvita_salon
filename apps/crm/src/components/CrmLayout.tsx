@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
+import { cn } from '@repo/ui/cn';
 
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -17,11 +18,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     const checkMobile = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
-      if(mobile) {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
+      setSidebarOpen(!mobile);
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
@@ -29,7 +26,6 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   }, []);
 
   useEffect(() => {
-    // This logic now runs only after the initial loading is complete.
     if (!isLoading && !isCrmAuthenticated) {
       router.push('/login');
     }
@@ -39,25 +35,15 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     setSidebarOpen(!isSidebarOpen);
   };
 
-  // While the auth state is being determined, show a full-page loader.
-  // This prevents the flicker and the premature redirect.
-  if (isLoading) {
+  if (isLoading || !isCrmAuthenticated) {
     return (
-      <div className="flex items-center justify-center h-screen bg-background">
+      <div className="flex items-center justify-center h-screen bg-secondary">
         <div className="flex flex-col items-center">
             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             <p className="mt-4 text-muted-foreground">Authenticating...</p>
         </div>
       </div>
     );
-  }
-
-  // Once loading is done, if the user is not authenticated, they will be redirected.
-  // If they are authenticated, render the layout. This check prevents rendering
-  // the layout for a split second before the redirect happens.
-  if (!isCrmAuthenticated) {
-    // Return null or a minimal loader while the redirect initiated in the useEffect occurs.
-    return null;
   }
      
   return (
@@ -68,10 +54,13 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
         isMobile={isMobile}
       />
              
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+      <div className={cn(
+        "flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden transition-all duration-300 ease-in-out",
+        !isMobile && (isSidebarOpen ? "lg:ml-64" : "lg:ml-20")
+      )}>
         <Header toggleSidebar={toggleSidebar} />
                  
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-background no-scrollbar">
           <div className="w-full max-w-none overflow-hidden">
             {children}
           </div>

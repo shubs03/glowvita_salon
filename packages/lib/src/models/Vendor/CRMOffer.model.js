@@ -1,3 +1,4 @@
+
 // crm/models/CRMOffer.model.js
 
 import mongoose from "mongoose";
@@ -57,6 +58,27 @@ const crmOfferSchema = new mongoose.Schema({
   isCustomCode: {
     type: Boolean,
     default: false,
+  },
+  // Fields for doctor-specific offers
+  applicableDiseases: {
+    type: [String],
+    default: [],
+  },
+  // Fields for supplier-specific offers
+  minOrderAmount: {
+    type: Number,
+    min: 0,
+    default: null,
+  },
+  // Field to track which user created this offer
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
+  createdByRole: {
+    type: String,
+    enum: ['vendor', 'doctor', 'supplier', 'staff'],
+    required: true,
   },
   createdAt: {
     type: Date,

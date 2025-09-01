@@ -12,10 +12,11 @@ await _db();
 const generateReferralCode = async (businessName) => {
   let referralCode;
   let isUnique = false;
-  const namePrefix = businessName.replace(/[^a-zA-Z]/g, '').toUpperCase().substring(0, 3);
+  // Use a more robust prefix generation
+  const namePrefix = (businessName || "VENDOR").replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 4);
   
   while (!isUnique) {
-    const randomNumbers = Math.floor(100 + Math.random() * 900); // Generates 3-digit number
+    const randomNumbers = Math.floor(1000 + Math.random() * 9000); // Generates 4-digit number
     referralCode = `${namePrefix}${randomNumbers}`;
     
     // Check if code already exists
@@ -51,24 +52,20 @@ export async function POST(req) {
       referredByCode,
     } = body;
 
-    // 1️⃣ Validate required fields
-    if (
-      !firstName || !lastName || !businessName || !email || !phone || !state ||
-      !city || !pincode || !category || !subCategories || !address || !password || !location
-    ) {
-      return NextResponse.json({ error: "All required fields must be provided" }, { status: 400 });
+    // 1️⃣ Validate required fields for initial account creation
+    if (!firstName || !lastName || !email || !phone || !password) {
+      return NextResponse.json({ error: "Name, email, phone, and password are required" }, { status: 400 });
     }
 
     // Validation checks...
     if (!validator.isEmail(email)) return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
     if (!validator.isMobilePhone(phone, "any")) return NextResponse.json({ error: "Invalid phone number" }, { status: 400 });
-    if (!validator.isPostalCode(pincode, "IN")) return NextResponse.json({ error: "Invalid pincode" }, { status: 400 });
     if (password.length < 8) return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
 
     // 2️⃣ Check if email or phone already exists
     const existingVendor = await VendorModel.findOne({ $or: [{ email }, { phone }] });
     if (existingVendor) {
-      return NextResponse.json({ error: "Email or Phone number already in use" }, { status: 400 });
+      return NextResponse.json({ error: "An account with this email or phone number already exists." }, { status: 409 });
     }
 
     // 3️⃣ Hash password
@@ -77,12 +74,26 @@ export async function POST(req) {
     // 4️⃣ Generate unique referral code
     const referralCode = await generateReferralCode(businessName);
 
-    // 5️⃣ Create vendor
+    // 5️⃣ Create vendor with minimal required data + any other data provided
     const newVendor = await VendorModel.create({
-      firstName, lastName, businessName, email, phone, state, city, pincode,
-      category, subCategories, address, description: description || null,
-      profileImage: profileImage || null, website: website || null,
-      password: hashedPassword, location, referralCode
+      firstName, 
+      lastName, 
+      businessName: businessName || `${firstName}'s Salon`,
+      email, 
+      phone, 
+      password: hashedPassword, 
+      referralCode,
+      // Include other fields if they are passed, with defaults
+      state: state || 'N/A',
+      city: city || 'N/A',
+      pincode: pincode || '000000',
+      address: address || 'N/A',
+      category: category || 'unisex',
+      subCategories: subCategories && subCategories.length > 0 ? subCategories : ['shop'],
+      location: location || { lat: 0, lng: 0 },
+      description: description || null,
+      profileImage: profileImage || null, 
+      website: website || null,
     });
 
     // 6️⃣ Handle referral if a code was provided
@@ -115,7 +126,8 @@ export async function POST(req) {
     const vendorData = newVendor.toObject();
     delete vendorData.password;
 
-    return NextResponse.json({ message: "Vendor created successfully", vendor: vendorData }, { status: 201 });
+    // The user is now registered. They will be logged in and then can proceed with onboarding.
+    return NextResponse.json({ message: "Account created successfully. Proceed to onboarding.", vendor: vendorData }, { status: 201 });
   } catch (err) {
     console.error("Vendor Registration Error:", err);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

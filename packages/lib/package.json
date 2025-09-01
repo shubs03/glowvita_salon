@@ -8,7 +8,8 @@
 
     "./models/user": "./src/models/user.js",
     "./models/staffModel":"./src/models/vendor/Staff.model.js",
-    "./models": "./src/models"
+    "./models": "./src/models",
+    "./stateCity": "./src/state-city.json"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
