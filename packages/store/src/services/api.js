@@ -78,6 +78,7 @@ export const glowvitaApi = createApi({
     "Category",
     "Service",
     "Staff",
+    "Client",
     "Offers",
     "Notification",
     "TaxFeeSettings",
@@ -96,6 +97,7 @@ export const glowvitaApi = createApi({
     "Category",
     "Service",
     "Staff",
+    "Client",
     "Offers",
     "Notification",
     "TaxFeeSettings",
@@ -1086,6 +1088,71 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Staff"],
     }),
+    
+    // Client Endpoints
+    getClients: builder.query({
+      query: ({ search, status, page = 1, limit = 100 } = {}) => {
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (status) params.append('status', status);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+        
+        return {
+          url: `/crm/clients?${params.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["Client"],
+      transformResponse: (response) => {
+        if (response && response.success) {
+          return response.data || [];
+        }
+        return [];
+      },
+    }),
+    createClient: builder.mutation({
+      query: (client) => ({
+        url: "/crm/clients",
+        method: "POST",
+        body: client,
+      }),
+      invalidatesTags: ["Client"],
+    }),
+    updateClient: builder.mutation({
+      query: (client) => ({
+        url: "/crm/clients",
+        method: "PUT",
+        body: client,
+      }),
+      invalidatesTags: ["Client"],
+    }),
+    deleteClient: builder.mutation({
+      query: (id) => ({
+        url: "/crm/clients",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Client"],
+    }),
+    
+    // Vendor Profile Endpoints
+    getVendorProfile: builder.query({
+      query: () => ({
+        url: "/crm/vendor",
+        method: "GET",
+      }),
+      providesTags: ["Vendor"],
+    }),
+    
+    updateVendorProfile: builder.mutation({
+      query: (vendorData) => ({
+        url: "/crm/vendor",
+        method: "PUT",
+        body: vendorData,
+      }),
+      invalidatesTags: ["Vendor"],
+    }),
   }),
 });
 
@@ -1253,4 +1320,13 @@ export const {
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
+  
+  // Client Endpoints
+  useGetClientsQuery,
+  useCreateClientMutation,
+  useUpdateClientMutation,
+  useDeleteClientMutation,
+  // Vendor Profile Endpoints
+  useGetVendorProfileQuery,
+  useUpdateVendorProfileMutation,
 } = glowvitaApi;

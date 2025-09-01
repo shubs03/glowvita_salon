@@ -12,6 +12,7 @@
     "./slices/crmAuthSlice": "./src/slices/crmAuthSlice.js",
     "./slices/serviceSlice": "./src/slices/CRM/serviceSlice.js",
     "./slices/staffSlice": "./src/slices/CRM/staffSlice.js",
+    "./slices/clientSlice": "./src/slices/CRM/clientSlice.js",
     "./slices/modal": "./src/slices/modalSlice.js",
     "./slices/customerSlice": "./src/slices/customerSlice.js",
     "./slices/salonSlice": "./src/slices/salonSlice.js",
@@ -25,7 +26,8 @@
     "./slices/faqSlice": "./src/slices/faqSlice.js",
     "./slices/appointmentSlice": "./src/slices/appointmentSlice.js",
     "./slices/shippingSlice": "./src/slices/shippingSlice.js",
-    "./slices/productSlice": "./src/slices/productSlice.js"
+    "./slices/productSlice": "./src/slices/productSlice.js",
+    "./slices/vendorSlice": "./src/slices/vendorSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

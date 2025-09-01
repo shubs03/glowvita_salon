@@ -1,61 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit';
-
-const initialVendors = [
-  {
-    id: '1',
-    firstName: 'John',
-    lastName: 'Doe',
-    salonName: 'Glamour Salon',
-    businessName: 'Glamour Salon',
-    email: 'john.doe@example.com',
-    phone: '1234567890',
-    state: 'California',
-    city: 'Los Angeles',
-    pincode: '90001',
-    address: '123 Glamour St',
-    category: 'Hair Salon',
-    subCategories: ['Haircut', 'Coloring'],
-    serviceCategories: ['Styling'],
-    profileImage: '',
-    status: 'Active',
-    subscription: {
-      plan: 'basic',
-      startDate: '2023-01-01',
-      endDate: '2024-01-01',
-      status: 'active',
-    },
-    gallery: [],
-    bankDetails: {
-      accountHolderName: 'John Doe',
-      accountNumber: '123456789012',
-      bankName: 'Example Bank',
-      ifscCode: 'EXAM0001234',
-    },
-    documents: [],
-    clients: [],
-  },
-  {
-    id: '2',
-    firstName: 'Jane',
-    lastName: 'Smith',
-    salonName: 'Beauty Spot',
-    businessName: 'Beauty Spot',
-    email: 'jane.smith@example.com',
-    phone: '0987654321',
-    state: 'New York',
-    city: 'New York City',
-    pincode: '10001',
-    address: '456 Beauty Ave',
-    category: 'Nail Salon',
-    subCategories: ['Manicure', 'Pedicure'],
-    serviceCategories: ['Nail Art'],
-    profileImage: '',
-    status: 'Disabled',
-  },
-];
+import { glowvitaApi } from '../services/api';
 
 const initialState = {
-  vendors: initialVendors,
+  vendor: null,
   loading: false, 
   error: null,
   message: '',
@@ -65,34 +12,83 @@ const vendorSlice = createSlice({
   name: 'vendors',
   initialState,
   reducers: {
-    addVendor(state, action) {
-      const newVendor = { ...action.payload, id: new Date().toISOString() };
-      state.vendors.push(newVendor);
-      state.message = 'Vendor added successfully!';
-    },
-    updateVendor(state, action) {
-      const index = state.vendors.findIndex(v => v.id === action.payload.id);
-      if (index !== -1) {
-        state.vendors[index] = action.payload;
-        state.message = 'Vendor updated successfully!';
-      }
+    setVendor(state, action) {
+      state.vendor = action.payload;
     },
     clearVendorMessage(state) {
       state.message = '';
     },
+    clearVendorError(state) {
+      state.error = null;
+    },
+  },
+  extraReducers: (builder) => {
+    // Handle get vendor profile
+    builder
+      .addMatcher(
+        glowvitaApi.endpoints.getVendorProfile.matchPending,
+        (state) => {
+          state.loading = true;
+          state.error = null;
+        }
+      )
+      .addMatcher(
+        glowvitaApi.endpoints.getVendorProfile.matchFulfilled,
+        (state, { payload }) => {
+          state.loading = false;
+          if (payload.success) {
+            state.vendor = payload.data;
+          } else {
+            state.error = payload.message;
+          }
+        }
+      )
+      .addMatcher(
+        glowvitaApi.endpoints.getVendorProfile.matchRejected,
+        (state, { error }) => {
+          state.loading = false;
+          state.error = error.message || 'Failed to fetch vendor profile';
+        }
+      )
+      // Handle update vendor profile
+      .addMatcher(
+        glowvitaApi.endpoints.updateVendorProfile.matchPending,
+        (state) => {
+          state.loading = true;
+          state.error = null;
+          state.message = '';
+        }
+      )
+      .addMatcher(
+        glowvitaApi.endpoints.updateVendorProfile.matchFulfilled,
+        (state, { payload }) => {
+          state.loading = false;
+          if (payload.success) {
+            state.vendor = payload.data;
+            state.message = payload.message;
+          } else {
+            state.error = payload.message;
+          }
+        }
+      )
+      .addMatcher(
+        glowvitaApi.endpoints.updateVendorProfile.matchRejected,
+        (state, { error }) => {
+          state.loading = false;
+          state.error = error.message || 'Failed to update vendor profile';
+        }
+      );
   },
 });
 
 export const {
-  addVendor,
-  updateVendor,
-  clearVendorMessage
+  setVendor,
+  clearVendorMessage,
+  clearVendorError
 } = vendorSlice.actions;
 
 // Selectors
-export const selectAllVendors = (state) => state.vendors.vendors;
-export const selectVendorById = (state, vendorId) =>
-  state.vendors.vendors.find(vendor => vendor.id === vendorId);
+export const selectVendor = (state) => state.vendors.vendor;
 export const selectVendorLoading = (state) => state.vendors.loading;
 export const selectVendorError = (state) => state.vendors.error;
 export const selectVendorMessage = (state) => state.vendors.message;
