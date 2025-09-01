@@ -1,3 +1,4 @@
+
 // crm/api/notifications/route.js
 
 import _db from "../../../../../../../packages/lib/src/db.js";
@@ -8,12 +9,11 @@ await _db();
 
 // POST: Create or update a VendorNotifications document, adding notifications to the array
 export const POST = authMiddlewareCrm(async (req) => {
-
-  const vendor  = req.user;
+  const vendor = req.user;
   const body = await req.json();
   const { title, channels, content, targetType, targets } = body;
 
-  const vendorId  =  vendor._id.toString();
+  const vendorId = vendor._id.toString();
 
   // 1️⃣ Validate required fields
   if (!vendorId || !title || !channels || !Array.isArray(channels) || !content || !targetType) {
@@ -57,7 +57,7 @@ export const POST = authMiddlewareCrm(async (req) => {
     { message: "Notification created successfully", vendorNotifications },
     { status: 201 }
   );
-}, ["vendor"]);
+}, ["vendor", "doctor", "supplier"]);
 
 
 const targetDisplayMap = {
@@ -125,7 +125,6 @@ export const GET = authMiddlewareCrm(async (req) => {
 
 // DELETE: Remove specific notifications from the VendorNotifications document
 export const DELETE = authMiddlewareCrm(async (req) => {
-
   const vendor = req.user._id.toString();
 
   const body = await req.json();
@@ -166,4 +165,4 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     { message: "Notification deleted successfully", vendorNotifications: result },
     { status: 200 }
   );
-}, ["vendor"]);
+}, ["vendor", "doctor", "supplier"]);

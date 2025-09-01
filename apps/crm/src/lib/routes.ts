@@ -1,8 +1,8 @@
 
 import { 
-    FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, SignOutAlt, 
-    FaTimes, FaBars, FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
-    FaBell, FaGift, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock
+    FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, 
+    FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
+    FaBell, FaGift, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock, FaTruck, FaShoppingCart
 } from 'react-icons/fa';
 import { IconType } from "react-icons";
 
@@ -21,6 +21,8 @@ export const vendorNavItems: NavItem[] = [
   { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
   { title: "Services", href: "/services", Icon: FaCut, permission: 'services_view' },
   { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
+  { title: "Sales", href: "/sales", Icon: FaDollarSign, permission: 'sales_view' },
+  { title: "Orders", href: "/orders", Icon: FaShoppingCart, permission: 'orders_view' },
   { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift, permission: 'offers_view' },
   { title: "Referrals", href: "/referrals", Icon: FaUserFriends, permission: 'referrals_view' },
   { title: "Marketing", href: "/marketing", Icon: FaBullhorn, permission: 'marketing_view' },
@@ -43,4 +45,7 @@ export const doctorNavItems: NavItem[] = [
 export const supplierNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
   { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
+  { title: "Orders", href: "/orders", Icon: FaShoppingCart, permission: 'orders_view' },
+  { title: "Sales", href: "/sales", Icon: FaDollarSign, permission: 'sales_view' },
+  { title: "Reports", href: "/reports", Icon: FaFileAlt, permission: 'reports_view' },
 ];
