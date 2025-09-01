@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Building, MapPin, User, ChevronRight, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Building, MapPin, User, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
