@@ -125,7 +125,7 @@ export const POST = authMiddlewareAdmin(
 export const GET = authMiddlewareAdmin(
   async () => {
     const offers = await OfferModel.find();
-    const currentDate = new Date();
+    const currentDate = new Date("2025-08-14");
 
     // Update status for each offer based on current date
     for (let offer of offers) {
@@ -182,32 +182,25 @@ export const PUT = authMiddlewareAdmin(
         { status: 400 }
       );
     }
-    
-    // Don't spread code into updateData initially
-    const { code, ...restOfBody } = body;
 
     const updateData = {
-      ...restOfBody,
+      ...body,
       applicableSpecialties: specialties,
       applicableCategories: categories,
       updatedAt: Date.now(),
     };
 
-    // Handle code update only if a new code is provided
-    if (code && code.trim()) {
+    // Handle code update if provided
+    if (body.code && body.code.trim()) {
       const existingOffer = await OfferModel.findOne({ 
-        code: code.toUpperCase().trim(),
+        code: body.code.toUpperCase().trim(),
         _id: { $ne: id }
       });
       if (existingOffer) {
         return Response.json({ message: "Offer code already exists" }, { status: 400 });
       }
-      updateData.code = code.toUpperCase().trim();
+      updateData.code = body.code.toUpperCase().trim();
       updateData.isCustomCode = true;
-    } else {
-      // If code is empty or null, ensure we don't try to set it.
-      // This prevents overwriting an existing auto-generated code with an empty string.
-      delete updateData.code;
     }
 
     const updatedOffer = await OfferModel.findByIdAndUpdate(
