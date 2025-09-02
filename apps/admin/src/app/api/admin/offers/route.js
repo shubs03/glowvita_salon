@@ -1,9 +1,9 @@
+
 import _db from "../../../../../../../packages/lib/src/db.js";
 import OfferModel from "../../../../../../../packages/lib/src/models/admin/AdminOffers.model.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 // Predefined options for validation
-const validSpecialties = ['Hair Cut', 'Spa', 'Massage', 'Facial', 'Manicure', 'Pedicure'];
 const validCategories = ['Men', 'Women', 'Unisex'];
 
 await _db();
@@ -76,18 +76,9 @@ export const POST = authMiddlewareAdmin(
       } while (await OfferModel.findOne({ code: finalCode }));
     }
 
-    // Validate applicableSpecialties - now supports multiple selections
-    let specialties = [];
-    if (Array.isArray(applicableSpecialties) && applicableSpecialties.length > 0) {
-      specialties = applicableSpecialties;
-      if (!specialties.every(s => validSpecialties.includes(s))) {
-        return Response.json(
-          { message: `Invalid specialties. Must be one of: ${validSpecialties.join(', ')}` },
-          { status: 400 }
-        );
-      }
-    }
-
+    // applicableSpecialties are now dynamic, no server-side validation against a static list.
+    const specialties = Array.isArray(applicableSpecialties) ? applicableSpecialties : [];
+    
     // Validate applicableCategories - now supports multiple selections
     let categories = [];
     if (Array.isArray(applicableCategories) && applicableCategories.length > 0) {
@@ -169,17 +160,8 @@ export const PUT = authMiddlewareAdmin(
   async (req) => {
     const { id, ...body } = await req.json();
 
-    // Validate applicableSpecialties - now supports multiple selections
-    let specialties = [];
-    if (Array.isArray(body.applicableSpecialties) && body.applicableSpecialties.length > 0) {
-      specialties = body.applicableSpecialties;
-      if (!specialties.every(s => validSpecialties.includes(s))) {
-        return Response.json(
-          { message: `Invalid specialties. Must be one of: ${validSpecialties.join(', ')}` },
-          { status: 400 }
-        );
-      }
-    }
+    // applicableSpecialties are now dynamic, no server-side validation against a static list.
+    const specialties = Array.isArray(body.applicableSpecialties) ? body.applicableSpecialties : [];
 
     // Validate applicableCategories - now supports multiple selections
     let categories = [];
