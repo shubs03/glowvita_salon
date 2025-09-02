@@ -259,6 +259,8 @@ export default function PlatformMarketingPage() {
   const [isSocialMediaTemplateFormOpen, setIsSocialMediaTemplateFormOpen] = useState(false);
   const [isEditSocialMediaTemplateMode, setIsEditSocialMediaTemplateMode] = useState(false);
   const [selectedSocialMediaTemplate, setSelectedSocialMediaTemplate] = useState<any>(null);
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
+
 
   // Social media templates are automatically fetched by the useGetSocialMediaTemplatesQuery hook
 
@@ -384,129 +386,48 @@ export default function PlatformMarketingPage() {
     }
   }, []);
 
-  // Custom function to delete a social media template
-  const deleteTemplate = useCallback(async (id: string) => {
-    try {
-      const authState = localStorage.getItem('adminAuthState');
-      if (!authState) {
-        throw new Error('Not authenticated');
-      }
-      
-      const { token } = JSON.parse(authState);
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-      
-      const response = await fetch(`/api/admin/social-media-templates?id=${id}`, {
-        method: 'DELETE',
-        headers: {
-          'admin-authorization': `Bearer ${token}`
-        },
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to delete template');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error deleting template:', error);
-      throw error;
-    }
-  }, []);
-
   const handleSocialMediaTemplateSubmit = useCallback(async (formData: any) => {
     try {
-      const authState = localStorage.getItem('adminAuthState');
-      if (!authState) {
-        throw new Error('Not authenticated');
-      }
-      
-      const { token } = JSON.parse(authState);
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
       const isEdit = isEditSocialMediaTemplateMode && (selectedSocialMediaTemplate?.id || selectedSocialMediaTemplate?._id);
-      const id = isEdit ? (selectedSocialMediaTemplate.id || selectedSocialMediaTemplate._id) : null;
       
-      let formDataToSend: FormData;
-      
-      // If formData is already a FormData object, use it directly
-      if (formData instanceof FormData) {
-        formDataToSend = formData;
-        // If editing, append the ID
-        if (id) {
-          formDataToSend.append('id', id);
-        }
+      if (isEdit) {
+        await updateSocialMediaTemplate({ id: selectedSocialMediaTemplate._id, ...formData }).unwrap();
       } else {
-        // If it's a plain object, create a new FormData and populate it
-        formDataToSend = new FormData();
-        Object.entries(formData).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            formDataToSend.append(key, value as string | Blob);
-          }
-        });
-        if (id) {
-          formDataToSend.append('id', id);
-        }
+        await createSocialMediaTemplate(formData).unwrap();
       }
 
-      // Make the appropriate API call
-      const response = await fetch(
-        `/api/admin/social-media-templates${id ? `?id=${id}` : ''}`, 
-        {
-          method: isEdit ? 'PUT' : 'POST',
-          headers: {
-            'admin-authorization': `Bearer ${token}`
-          },
-          body: formDataToSend
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Failed to ${isEdit ? 'update' : 'create'} template`);
-      }
-
-      const result = await response.json();
-      
       toast.success(`Template ${isEdit ? 'updated' : 'created'} successfully`);
       setIsSocialMediaTemplateFormOpen(false);
       setSelectedSocialMediaTemplate(null);
       refetchSocialMediaTemplates();
-      
-      return result;
     } catch (error) {
       console.error('Failed to save social media template:', error);
       toast.error(error?.message || error?.data?.message || 'Failed to save social media template');
-      throw error;
     }
-  }, [isEditSocialMediaTemplateMode, selectedSocialMediaTemplate, createTemplate, updateTemplate, refetchSocialMediaTemplates]);
-
-  const handleDeleteSocialMediaTemplate = useCallback(async (id: string) => {
-    if (!id) return;
+  }, [
+    isEditSocialMediaTemplateMode, 
+    selectedSocialMediaTemplate, 
+    createSocialMediaTemplate, 
+    updateSocialMediaTemplate, 
+    refetchSocialMediaTemplates
+  ]);
+  
+  const handleDeleteSocialMediaTemplate = useCallback(async () => {
+    if (!itemToDelete || !itemToDelete.id) return;
     
     try {
-      const authState = localStorage.getItem('adminAuthState');
-      if (!authState) throw new Error('Not authenticated');
-      const { token } = JSON.parse(authState);
-      if (!token) throw new Error('Authentication token not found');
-
-      await deleteSocialMediaTemplate({
-        id,
-        headers: { 'admin-authorization': `Bearer ${token}` },
-      }).unwrap();
-      
+      await deleteSocialMediaTemplate(itemToDelete.id).unwrap();
       toast.success('Template deleted successfully');
       refetchSocialMediaTemplates();
     } catch (error) {
       console.error('Failed to delete social media template:', error);
       toast.error(error?.data?.message || error.message || 'Failed to delete template');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setItemToDelete(null);
     }
-  }, [deleteSocialMediaTemplate, refetchSocialMediaTemplates]);
+  }, [deleteSocialMediaTemplate, refetchSocialMediaTemplates, itemToDelete]);
+
 
   const handleDeleteTemplateClick = (template: SmsTemplate) => {
     setSelectedTemplate(template);
@@ -530,24 +451,6 @@ export default function PlatformMarketingPage() {
     } finally {
       setIsDeleteTemplateModalOpen(false);
       setSelectedTemplate(null);
-    }
-  };
-
-  const handleDelete = async (type: 'sms_package' | 'sms_template' | 'social_post', id: string) => {
-    try {
-      if (type === 'sms_package') {
-        await deleteSmsPackage(id).unwrap();
-        toast.success('Package deleted successfully');
-      } else if (type === 'sms_template') {
-        await deleteSmsTemplate(id).unwrap();
-        toast.success('Template deleted successfully');
-        refetchTemplates();
-      } else if (type === 'social_post') {
-        await handleDeleteSocialMediaTemplate(id);
-      }
-    } catch (error) {
-      console.error('Failed to delete:', error);
-      toast.error(error?.data?.message || 'Failed to delete item');
     }
   };
 
@@ -861,7 +764,10 @@ export default function PlatformMarketingPage() {
                                                         variant="ghost" 
                                                         size="icon" 
                                                         className="text-destructive hover:text-destructive/80"
-                                                        onClick={() => handleDelete('social_post', template.id || template._id)}
+                                                        onClick={() => {
+                                                            setItemToDelete({ id: template._id, name: template.title });
+                                                            setIsDeleteModalOpen(true);
+                                                        }}
                                                         disabled={isDeletingSocialTemplate}
                                                         title="Delete template"
                                                     >
@@ -1143,7 +1049,7 @@ export default function PlatformMarketingPage() {
 
       {/* Social Media Template Form Dialog */}
       <Dialog open={isSocialMediaTemplateFormOpen} onOpenChange={setIsSocialMediaTemplateFormOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {isEditSocialMediaTemplateMode ? 'Edit Social Media Template' : 'Create New Social Media Template'}
@@ -1165,7 +1071,7 @@ export default function PlatformMarketingPage() {
       </Dialog>
 
       {/* Delete Package Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <Dialog open={isDeleteModalOpen && !!selectedPackage} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Package?</DialogTitle>
@@ -1181,7 +1087,7 @@ export default function PlatformMarketingPage() {
       </Dialog>
 
       {/* Delete Template Confirmation Modal */}
-      <Dialog open={isDeleteTemplateModalOpen} onOpenChange={setIsDeleteTemplateModalOpen}>
+      <Dialog open={isDeleteTemplateModalOpen && !!selectedTemplate} onOpenChange={setIsDeleteTemplateModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Template?</DialogTitle>
@@ -1192,6 +1098,24 @@ export default function PlatformMarketingPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteTemplateModalOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleConfirmDeleteTemplate}>Delete Template</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+       {/* Delete Social Media Template Confirmation Modal */}
+      <Dialog open={isDeleteModalOpen && !!itemToDelete} onOpenChange={() => setIsDeleteModalOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Template?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the template "{itemToDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteSocialMediaTemplate} disabled={isDeletingSocialTemplate}>
+                {isDeletingSocialTemplate ? 'Deleting...' : 'Delete'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

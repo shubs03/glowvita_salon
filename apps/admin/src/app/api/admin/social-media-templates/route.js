@@ -277,68 +277,34 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
 // DELETE a Social Media template
 export const DELETE = authMiddlewareAdmin(async (req) => {
   try {
-    // Connect to database
     await _db();
-    
-    // Get or create the model using the already imported model
-    const SocialMediaTemplate = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
-    
-    // Get the template ID from URL params
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
-    
-    if (!id) {
-      return NextResponse.json(
-        { success: false, message: 'Template ID is required' },
-        { status: 400 }
-      );
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ success: false, message: 'Invalid Template ID format' }, { status: 400 });
     }
-    
-    // Check if template exists
-    const template = await SocialMediaTemplate.findById(id);
-    
+
+    const template = await SocialMediaTemplateModel.findById(id);
     if (!template) {
-      return NextResponse.json(
-        { success: false, message: 'Template not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, message: 'Template not found' }, { status: 404 });
+    }
+
+    await SocialMediaTemplateModel.findByIdAndDelete(id);
+
+    return NextResponse.json({ success: true, message: 'Template deleted successfully' }, { status: 200 });
+
+  } catch (error) {
+    console.error('Error in DELETE /api/admin/social-media-templates:', error);
+    
+    if (error.name === 'CastError') {
+      return NextResponse.json({ success: false, message: 'Invalid ID format' }, { status: 400 });
     }
     
-    // Delete the template
-    await SocialMediaTemplate.findByIdAndDelete(id);
-    
-    return NextResponse.json(
-      { 
-        success: true,
-        message: 'Template deleted successfully' 
-      },
-      { status: 200 }
-    );
-    
-  } catch (error) {
-    console.error('Error in DELETE /api/admin/social-media-templates:', {
-      message: error.message,
-      name: error.name,
-      ...(error.code && { code: error.code }),
-      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
-    });
-    
-    return NextResponse.json(
-      { 
-        success: false,
-        message: 'Failed to delete template',
-        error: error.message,
-        ...(process.env.NODE_ENV === 'development' && { 
-          details: {
-            name: error.name,
-            ...(error.code && { code: error.code })
-          }
-        })
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: 'Failed to delete template', error: error.message }, { status: 500 });
   }
 });
+
 
 export const POST = authMiddlewareAdmin(async (req) => {
   console.log('POST /api/admin/social-media-templates - Starting request');
@@ -350,40 +316,9 @@ export const POST = authMiddlewareAdmin(async (req) => {
     // Get or create the model using the already imported model
     const SocialMediaTemplate = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
     
-    // Check content type to handle both JSON and FormData
-    const contentType = req.headers.get('content-type') || '';
-    let body;
-    
-    if (contentType.includes('multipart/form-data')) {
-      // Handle FormData
-      const formData = await req.formData();
-      body = Object.fromEntries(formData.entries());
-      
-      // Convert File to base64 if present
-      const imageFile = formData.get('image');
-      if (imageFile && imageFile instanceof File) {
-        const arrayBuffer = await imageFile.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64Image = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
-        body.image = base64Image;
-      }
-    } else {
-      // Handle JSON
-      body = await req.json().catch(err => {
-        console.error('Error parsing JSON:', err);
-        return NextResponse.json(
-          { success: false, message: 'Invalid request body' },
-          { status: 400 }
-        );
-      });
-    }
+    const body = await req.json();
     
     console.log('Parsed request body:', { ...body, image: body.image ? '[BASE64_IMAGE]' : null });
-    
-    console.log('Received request body:', {
-      ...body,
-      image: body.image ? '[BASE64_IMAGE_DATA]' : null
-    });
     
     // Get the authenticated user from the request (set by authMiddlewareAdmin)
     const user = req.user;
@@ -467,11 +402,6 @@ export const POST = authMiddlewareAdmin(async (req) => {
       ...templateData, 
       createdBy: user._id,
       imageUrl: templateData.imageUrl ? '[BASE64_IMAGE]' : null 
-    });
-    
-    console.log('Creating template with data:', {
-      ...templateData,
-      imageUrl: templateData.imageUrl ? '[BASE64_IMAGE]' : null
     });
     
     const newTemplate = await SocialMediaTemplate.create(templateData);

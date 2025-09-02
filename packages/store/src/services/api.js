@@ -896,23 +896,11 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Product", "CrmProducts"],
     }),
 
+    //======================================================== CRM Endpoints ====================================================//
 
+    // CRM Endpoints
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // Crm Endpoints
+    // Vendor Endpoints
     vendorLogin: builder.mutation({
       query: (credentials) => ({
         url: "/crm/auth/login",
