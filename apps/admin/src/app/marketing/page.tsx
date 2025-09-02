@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -489,14 +490,23 @@ export default function PlatformMarketingPage() {
     if (!id) return;
     
     try {
-      await deleteTemplate(id);
+      const authState = localStorage.getItem('adminAuthState');
+      if (!authState) throw new Error('Not authenticated');
+      const { token } = JSON.parse(authState);
+      if (!token) throw new Error('Authentication token not found');
+
+      await deleteSocialMediaTemplate({
+        id,
+        headers: { 'admin-authorization': `Bearer ${token}` },
+      }).unwrap();
+      
       toast.success('Template deleted successfully');
       refetchSocialMediaTemplates();
     } catch (error) {
       console.error('Failed to delete social media template:', error);
-      toast.error(error?.message || error?.data?.message || 'Failed to delete template');
+      toast.error(error?.data?.message || error.message || 'Failed to delete template');
     }
-  }, [deleteTemplate, refetchSocialMediaTemplates]);
+  }, [deleteSocialMediaTemplate, refetchSocialMediaTemplates]);
 
   const handleDeleteTemplateClick = (template: SmsTemplate) => {
     setSelectedTemplate(template);
@@ -533,9 +543,7 @@ export default function PlatformMarketingPage() {
         toast.success('Template deleted successfully');
         refetchTemplates();
       } else if (type === 'social_post') {
-        await deleteSocialMediaTemplate(id).unwrap();
-        toast.success('Social media template deleted successfully');
-        refetchSocialMediaTemplates();
+        await handleDeleteSocialMediaTemplate(id);
       }
     } catch (error) {
       console.error('Failed to delete:', error);
@@ -740,9 +748,6 @@ export default function PlatformMarketingPage() {
                                         <TableCell>{pkg.validityDays} days</TableCell>
                                         <TableCell>
                                             <div className="flex space-x-2">
-                                                <Button variant="ghost" size="icon" onClick={() => openModal('View Package', 'view', 'sms_package', pkg as any)}>
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
                                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -818,19 +823,11 @@ export default function PlatformMarketingPage() {
                                         </TableCell>
                                         <TableCell>
                                             {(() => {
-                                                // Use imageUrl from the template
                                                 const imageSrc = template.imageUrl;
                                                 
                                                 if (imageSrc) {
-                                                    // Check if it's a base64 string
                                                     const isBase64 = imageSrc.startsWith('data:image');
-                                                    
-                                                    // If it's not base64, construct the full URL
-                                                    const src = isBase64 
-                                                        ? imageSrc 
-                                                        : imageSrc.startsWith('http') || imageSrc.startsWith('/')
-                                                            ? imageSrc
-                                                            : `${process.env.NEXT_PUBLIC_API_URL || ''}/uploads/${imageSrc}`;
+                                                    const src = isBase64 ? imageSrc : imageSrc.startsWith('http') || imageSrc.startsWith('/') ? imageSrc : `${process.env.NEXT_PUBLIC_API_URL || ''}/uploads/${imageSrc}`;
                                                         
                                                     return (
                                                         <div className="h-20 w-20 rounded-md overflow-hidden border">
@@ -838,19 +835,6 @@ export default function PlatformMarketingPage() {
                                                                 src={src}
                                                                 alt={template.title || 'Post image'} 
                                                                 className="h-full w-full object-cover"
-                                                                onError={(e) => {
-                                                                    console.error('Error loading image:', {
-                                                                        src: src.substring(0, 50) + '...',
-                                                                        isBase64,
-                                                                        templateId: template._id || template.id
-                                                                    });
-                                                                    e.currentTarget.style.display = 'none';
-                                                                    e.currentTarget.parentElement.innerHTML = (
-                                                                        '<div class="h-20 w-20 rounded-md bg-red-50 flex items-center justify-center">' +
-                                                                        '<span class="text-red-400 text-xs text-center">Image Error</span>' +
-                                                                        '</div>'
-                                                                    );
-                                                                }}
                                                             />
                                                         </div>
                                                     );
@@ -877,7 +861,7 @@ export default function PlatformMarketingPage() {
                                                         variant="ghost" 
                                                         size="icon" 
                                                         className="text-destructive hover:text-destructive/80"
-                                                        onClick={() => handleDeleteSocialMediaTemplate(template.id || template._id)}
+                                                        onClick={() => handleDelete('social_post', template.id || template._id)}
                                                         disabled={isDeletingSocialTemplate}
                                                         title="Delete template"
                                                     >
@@ -962,7 +946,6 @@ export default function PlatformMarketingPage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    onClick={() => openModal('View Ticket', 'view', undefined, ticket)}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
@@ -1031,7 +1014,6 @@ export default function PlatformMarketingPage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    onClick={() => openModal('Purchase Details', 'view', undefined, purchase)}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
@@ -1115,7 +1097,6 @@ export default function PlatformMarketingPage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    onClick={() => openModal('Campaign Details', 'view', undefined, campaign)}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
@@ -1162,7 +1143,7 @@ export default function PlatformMarketingPage() {
 
       {/* Social Media Template Form Dialog */}
       <Dialog open={isSocialMediaTemplateFormOpen} onOpenChange={setIsSocialMediaTemplateFormOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {isEditSocialMediaTemplateMode ? 'Edit Social Media Template' : 'Create New Social Media Template'}
