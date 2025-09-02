@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -18,7 +19,8 @@ import {
   useGetAdminOffersQuery, 
   useCreateAdminOfferMutation, 
   useUpdateAdminOfferMutation, 
-  useDeleteAdminOfferMutation 
+  useDeleteAdminOfferMutation,
+  useGetSuperDataQuery
 } from '@repo/store/api';
 import { toast } from 'sonner';
 import { selectRootState } from '@repo/store/store';
@@ -51,8 +53,7 @@ type CouponForm = {
   isCustomCode: boolean;
 };
 
-// Predefined options for specialties and categories
-const specialtyOptions = ['Hair Cut', 'Spa', 'Massage', 'Facial', 'Manicure', 'Pedicure'];
+// Predefined options for categories
 const categoryOptions = ['Men', 'Women', 'Unisex'];
 
 export default function OffersCouponsPage() {
@@ -93,9 +94,15 @@ export default function OffersCouponsPage() {
     refetch 
   } = useGetAdminOffersQuery(undefined);
   
+  const { data: superData = [] } = useGetSuperDataQuery(undefined);
+
   const [createOffer, { isLoading: isCreating }] = useCreateAdminOfferMutation();
   const [updateOffer, { isLoading: isUpdating }] = useUpdateAdminOfferMutation();
   const [deleteOffer, { isLoading: isDeleting }] = useDeleteAdminOfferMutation();
+
+  const specialtyOptions = useMemo(() => {
+    return superData.filter(item => item.type === 'service').map(item => item.name);
+  }, [superData]);
 
   // Convert file to base64
   const convertToBase64 = (file: File): Promise<string> => {
@@ -111,18 +118,14 @@ export default function OffersCouponsPage() {
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         toast.error('Please select a valid image file');
         return;
       }
-      
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('Image size should be less than 5MB');
         return;
       }
-
       try {
         const base64 = await convertToBase64(file);
         setValue('offerImage', base64);
@@ -360,7 +363,7 @@ export default function OffersCouponsPage() {
               </TableHeader>
               <TableBody>
                 {currentItems.map((coupon) => (
-                  <TableRow key={coupon.id}>
+                  <TableRow key={coupon._id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {coupon.code}
@@ -505,7 +508,6 @@ export default function OffersCouponsPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
-              {/* Custom Code Toggle */}
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="useCustomCode" 
@@ -521,7 +523,6 @@ export default function OffersCouponsPage() {
                 <Label htmlFor="useCustomCode">Use custom coupon code</Label>
               </div>
 
-              {/* Coupon Code Field */}
               {useCustomCode && (
                 <div className="space-y-2">
                   <Label htmlFor="code">Custom Coupon Code</Label>
@@ -543,7 +544,6 @@ export default function OffersCouponsPage() {
                 </div>
               )}
 
-              {/* Discount Type */}
               <div className="space-y-2">
                 <Label htmlFor="type">Discount Type</Label>
                 <Select 
@@ -560,7 +560,6 @@ export default function OffersCouponsPage() {
                 </Select>
               </div>
 
-              {/* Discount Value */}
               <div className="space-y-2">
                 <Label htmlFor="value">Discount Value</Label>
                 <Input 
@@ -574,7 +573,6 @@ export default function OffersCouponsPage() {
                 {errors.value && <p className="text-red-500 text-sm">{errors.value.message}</p>}
               </div>
 
-              {/* Date Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Starts On</Label>
@@ -595,10 +593,9 @@ export default function OffersCouponsPage() {
                 </div>
               </div>
 
-              {/* Multiple Specialties Selection */}
               <div className="space-y-2">
-                <Label>Applicable Specialties (Select multiple or none for all)</Label>
-                <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
+                <Label>Applicable Services (Select multiple or none for all)</Label>
+                <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
                   {specialtyOptions.map((specialty) => (
                     <div key={specialty} className="flex items-center space-x-2">
                       <Checkbox
@@ -613,11 +610,10 @@ export default function OffersCouponsPage() {
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {selectedSpecialties.length === 0 ? 'Will apply to all specialties' : `Selected: ${selectedSpecialties.length}`}
+                  {selectedSpecialties.length === 0 ? 'Will apply to all services' : `Selected: ${selectedSpecialties.length}`}
                 </p>
               </div>
 
-              {/* Multiple Categories Selection */}
               <div className="space-y-2">
                 <Label>Applicable Categories (Select multiple or none for all)</Label>
                 <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
@@ -639,7 +635,6 @@ export default function OffersCouponsPage() {
                 </p>
               </div>
 
-              {/* Image Upload */}
               <div className="space-y-2">
                 <Label>Offer Image (Optional)</Label>
                 <div className="space-y-2">

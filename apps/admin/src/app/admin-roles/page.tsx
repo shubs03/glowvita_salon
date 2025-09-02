@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Plus, Edit } from 'lucide-react';
 import { sidebarNavItems } from '@/lib/routes';
 import AddAdminForm, { AdminUser } from '@/components/AddAdminForm';
-import { useGetAdminsQuery } from '../../../../../packages/store/src/services/api.js';
+import { useGetAdminsQuery, useGetSuperDataQuery } from '../../../../../packages/store/src/services/api.js';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { closeModal, openModal } from '@repo/store/slices/modal';
  
@@ -58,6 +58,11 @@ export default function AdminRolesPage() {
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector((state : any) => state.modal);
   const { data: admins, isLoading, isError } = useGetAdminsQuery(undefined);
+  const { data: superData = [] } = useGetSuperDataQuery(undefined);
+
+  const designations = useMemo(() => {
+    return superData.filter((item: any) => item.type === 'designation').map((item: any) => ({ roleName: item.name }));
+  }, [superData]);
 
   useEffect(() => {
     if (admins) {
@@ -202,7 +207,7 @@ export default function AdminRolesPage() {
           onClose={handleCloseModal}
           onSave={handleSaveAdmin}
           initialData={data as AdminUser}
-          roles={rolesData}
+          roles={designations}
           onDelete={handleDeleteAdmin}
           isEditMode={modalType === 'editAdmin'}
         />
