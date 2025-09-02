@@ -124,11 +124,10 @@ export const POST = authMiddlewareAdmin(
 // Get All Offers
 export const GET = authMiddlewareAdmin(
   async () => {
-    const offers = await OfferModel.find();
-    const currentDate = new Date("2025-08-14");
+    const offers = await OfferModel.find().lean(); // Use .lean() for read-only operations
+    const currentDate = new Date();
 
-    // Update status for each offer based on current date
-    for (let offer of offers) {
+    const sanitizedOffers = offers.map(offer => {
       let newStatus = "Scheduled";
       if (offer.startDate <= currentDate) {
         if (!offer.expires || offer.expires >= currentDate) {
@@ -137,18 +136,14 @@ export const GET = authMiddlewareAdmin(
           newStatus = "Expired";
         }
       }
-      if (offer.status !== newStatus) {
-        offer.status = newStatus;
-        await offer.save();
-      }
-    }
 
-    // Ensure applicableSpecialties and applicableCategories are arrays
-    const sanitizedOffers = offers.map(offer => ({
-      ...offer.toObject(),
-      applicableSpecialties: Array.isArray(offer.applicableSpecialties) ? offer.applicableSpecialties : [],
-      applicableCategories: Array.isArray(offer.applicableCategories) ? offer.applicableCategories : [],
-    }));
+      return {
+        ...offer,
+        status: newStatus,
+        applicableSpecialties: Array.isArray(offer.applicableSpecialties) ? offer.applicableSpecialties : [],
+        applicableCategories: Array.isArray(offer.applicableCategories) ? offer.applicableCategories : [],
+      };
+    });
 
     return Response.json(sanitizedOffers);
   },
@@ -190,7 +185,8 @@ export const PUT = authMiddlewareAdmin(
       updatedAt: Date.now(),
     };
 
-    // Handle code update if provided
+    // Handle code update only if a new, non-empty code is provided.
+    // This prevents overwriting existing codes with empty strings.
     if (body.code && body.code.trim()) {
       const existingOffer = await OfferModel.findOne({ 
         code: body.code.toUpperCase().trim(),
@@ -201,6 +197,10 @@ export const PUT = authMiddlewareAdmin(
       }
       updateData.code = body.code.toUpperCase().trim();
       updateData.isCustomCode = true;
+    } else {
+        // If code is not provided or empty in the body, remove it from the updateData
+        // to prevent it from overwriting the existing code in the database.
+        delete updateData.code;
     }
 
     const updatedOffer = await OfferModel.findByIdAndUpdate(
@@ -217,6 +217,7 @@ export const PUT = authMiddlewareAdmin(
   },
   ["superadmin"]
 );
+
 
 // Delete Offer
 export const DELETE = authMiddlewareAdmin(
