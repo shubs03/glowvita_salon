@@ -17,6 +17,7 @@ import shippingReducer from './slices/shippingSlice';
 import productReducer from './slices/productSlice';
 import serviceReducer from "./slices/CRM/serviceSlice.js";
 import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
+import clientReducer from "./slices/CRM/clientSlice.js"; // Import client slice
 import appointmentReducer from './slices/appointmentSlice';
 import blockTimeReducer from './slices/blockTimeSlice';
   
@@ -41,6 +42,7 @@ export const makeStore = () => {
       shipping: shippingReducer,
       products: productReducer,
       staff: staffReducer, 
+      client: clientReducer,
       faqs: faqReducer,
       service: serviceReducer,
       appointments: appointmentReducer,  
