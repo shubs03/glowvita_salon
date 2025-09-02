@@ -29,6 +29,12 @@ const supplierSchema = new mongoose.Schema({
     enum: ["Approved", "Pending", "Rejected"],
     default: "Pending",
   },
+  referralCode: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true,
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

@@ -2,10 +2,29 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import SupplierModel from "../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js";
+import { ReferralModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
 import { uploadBase64, deleteFile } from "../../../../../../../packages/utils/uploads.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();
+
+// Helper to generate unique referral code for suppliers
+const generateReferralCode = async (shopName) => {
+  let referralCode;
+  let isUnique = false;
+  
+  while (!isUnique) {
+    const namePrefix = shopName.substring(0, 3).toUpperCase();
+    const randomNumbers = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    referralCode = `${namePrefix}${randomNumbers}`;
+    
+    // Check if this code already exists for any supplier
+    const existingSupplier = await SupplierModel.findOne({ referralCode });
+    isUnique = !existingSupplier;
+  }
+  
+  return referralCode;
+};
 
 // Helper to validate supplier data
 const validateSupplierData = (data) => {
@@ -38,7 +57,7 @@ export const GET = async (req) => {
 export const POST = async (req) => {
   try {
     const body = await req.json();
-    const { licenseFile, password, ...supplierData } = body;
+    const { licenseFile, password, referredByCode, ...supplierData } = body;
 
     const validationError = validateSupplierData({ password, ...supplierData });
     if (validationError) {
@@ -60,11 +79,52 @@ export const POST = async (req) => {
     // 🔑 Hash the password before saving
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 🔗 Generate unique referral code
+    const referralCode = await generateReferralCode(supplierData.shopName);
+
     const newSupplier = await SupplierModel.create({
       ...supplierData,
       password: hashedPassword, // save hashed password
       licenseFile: licenseFileUrl,
+      referralCode,
     });
+
+    // 🎁 Handle referral if a code was provided
+    if (referredByCode) {
+      // Check if referral code belongs to any user (vendor, doctor, or supplier)
+      const VendorModel = (await import("../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js")).default;
+      const DoctorModel = (await import("../../../../../../../packages/lib/src/models/Vendor/Docters.model.js")).default;
+      
+      const referringVendor = await VendorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
+      const referringDoctor = await DoctorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
+      const referringSupplier = await SupplierModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
+      
+      const referringUser = referringVendor || referringDoctor || referringSupplier;
+      
+      if (referringUser) {
+        // Fetch V2V referral settings to get dynamic bonus
+        const v2vSettings = await V2VSettingsModel.findOne({});
+        const bonusValue = v2vSettings?.referrerBonus?.bonusValue || 0;
+
+        // Generate referral record
+        const referralType = 'V2V';
+        const count = await ReferralModel.countDocuments({ referralType });
+        const referralId = `${referralType}${String(count + 1).padStart(4, '0')}`;
+
+        const referrerName = referringUser.businessName || referringUser.name || referringUser.shopName;
+        const refereeName = `${newSupplier.firstName} ${newSupplier.lastName}`;
+
+        await ReferralModel.create({
+          referralId,
+          referralType,
+          referrer: referrerName,
+          referee: refereeName,
+          date: new Date(),
+          status: 'Pending',
+          bonus: `₹${bonusValue}`,
+        });
+      }
+    }
 
     return NextResponse.json(newSupplier, { status: 201 });
   } catch (error) {

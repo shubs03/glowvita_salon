@@ -393,6 +393,24 @@ export const glowvitaApi = createApi({
       providesTags: ["Settings"],
     }),
 
+    // CRM-specific referral endpoints
+    getCrmReferrals: builder.query({
+      query: (referralType) => ({
+        url: "/crm/referrals",
+        method: "GET",
+        params: { referralType },
+      }),
+      providesTags: ["CrmReferrals"],
+    }),
+    getCrmReferralSettings: builder.query({
+      query: (referralType) => ({
+        url: "/crm/referrals",
+        method: "POST",
+        body: { action: 'getSettings', referralType },
+      }),
+      providesTags: ["CrmSettings"],
+    }),
+
     // SuperData (Dropdowns) Endpoints
     getSuperData: builder.query({
       query: () => ({ url: "/admin/super-data", method: "GET" }),
@@ -1321,5 +1339,9 @@ export const {
   // Doctor Working Hours Endpoints
   useGetDoctorWorkingHoursQuery,
   useUpdateDoctorWorkingHoursMutation,
+
+  // CRM Referral Endpoints
+  useGetCrmReferralsQuery,
+  useGetCrmReferralSettingsQuery,
 
 } = glowvitaApi;
