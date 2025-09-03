@@ -99,6 +99,8 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number, setStep:
 export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
   const searchParams = useSearchParams();
   const refCode = searchParams.get('ref');
+  const [currentStep, setCurrentStep] = useState(1);
+
 
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
@@ -152,6 +154,11 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
         : prev.subCategories.filter(item => item !== id)
     }));
   };
+
+  
+const handleSetStep = (step: number) => {
+  setCurrentStep(step);
+};
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -365,7 +372,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     <div className="w-full max-w-xl mx-auto">
       <div className="bg-background/70 backdrop-blur-sm border-white/20 shadow-2xl shadow-blue-500/10 p-8 rounded-lg">
         <div className="mb-8">
-            <StepIndicator currentStep={step} />
+            <StepIndicator currentStep={step} setStep={setStep} />
         </div>
         <form onSubmit={handleSubmit} className="mt-8">
           {step === 1 && (
