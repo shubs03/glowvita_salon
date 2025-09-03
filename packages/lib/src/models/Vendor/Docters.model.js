@@ -35,6 +35,7 @@ const doctorSchema = new mongoose.Schema({
   doctorType: { 
     type: String,
     required: true,
+    enum: ['Physician', 'Surgeon'],
   },
   specialties: [{ 
     type: String,

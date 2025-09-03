@@ -1,12 +1,13 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff } from 'lucide-react';
+import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown } from 'lucide-react';
+import { Checkbox } from "@repo/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,24 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import stateCityData from '@repo/lib/stateCity';
+import stateCityData from '@repo/lib/state-city';
+import { useGetSuperDataQuery } from "@repo/store/api";
+import { toast } from "sonner";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList
+} from "@repo/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@repo/ui/popover";
+import { cn } from "@repo/ui/cn";
+
 
 export interface Doctor {
   _id?: string;
@@ -25,7 +43,9 @@ export interface Doctor {
   phone: string;
   gender: string;
   registrationNumber: string;
-  specialization: string;
+  doctorType: string;
+  specialties: string[];
+  diseases: string[];
   experience: string;
   clinicName: string;
   clinicAddress: string;
@@ -55,13 +75,6 @@ interface State {
 }
 
 const states: State[] = stateCityData.states;
-const specializations = [
-  'Dermatologist',
-  'Cosmetologist',
-  'Trichologist',
-  'Aesthetic Physician',
-  'Plastic Surgeon'
-];
 
 interface DoctorFormProps {
   isOpen: boolean;
@@ -80,7 +93,9 @@ const initialFormData: Doctor & { password: string; confirmPassword: string } = 
   password: '',
   confirmPassword: '',
   registrationNumber: '',
-  specialization: '',
+  doctorType: '',
+  specialties: [],
+  diseases: [],
   experience: '',
   physicalConsultationStartTime: '09:00',
   physicalConsultationEndTime: '17:00',
@@ -128,39 +143,66 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     doctor?.profileImage || null
   );
 
+  const { data: superData = [], isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
+  
+  const doctorTypes = useMemo(() => ['Physician', 'Surgeon'], []);
+  const allSpecialties = useMemo(() => superData.filter(d => d.type === 'specialization'), [superData]);
+  const allDiseases = useMemo(() => superData.filter(d => d.type === 'disease'), [superData]);
+  
+  const filteredSpecialties = useMemo(() => {
+    return formData.doctorType ? allSpecialties.filter(s => s.doctorType === formData.doctorType) : [];
+  }, [allSpecialties, formData.doctorType]);
+
+  const filteredDiseases = useMemo(() => {
+    const diseaseMap = new Map();
+    if (formData.specialties.length > 0) {
+      allDiseases.forEach(disease => {
+        if (formData.specialties.includes(disease.parentId)) {
+          const specialty = allSpecialties.find(s => s._id === disease.parentId);
+          if (specialty) {
+            if (!diseaseMap.has(specialty.name)) {
+              diseaseMap.set(specialty.name, []);
+            }
+            diseaseMap.get(specialty.name).push(disease);
+          }
+        }
+      });
+    }
+    return Array.from(diseaseMap.entries());
+  }, [allDiseases, allSpecialties, formData.specialties]);
+
   // Update formData and profileImagePreview when doctor prop changes in edit mode
   useEffect(() => {
-    if (isOpen && isEditMode && doctor) {
-      setFormData({
-        ...initialFormData,
-        ...doctor,
-        password: '',
-        confirmPassword: '',
-        profileImage: doctor.profileImage || '',
-        qualification: doctor.qualification || '',
-        registrationYear: doctor.registrationYear || '',
-        faculty: doctor.faculty || '',
-        landline: doctor.landline || '',
-        assistantName: doctor.assistantName || '',
-        assistantContact: doctor.assistantContact || '',
-        workingWithHospital: doctor.workingWithHospital || false,
-        videoConsultation: doctor.videoConsultation || false,
-      });
-      setSelectedState(doctor.state || '');
-      setProfileImagePreview(doctor.profileImage || null);
-      setActiveTab('personal');
-      setPasswordError('');
-    } else if (isOpen && !isEditMode) {
-      // Reset form for new doctor
-      setFormData(initialFormData);
-      setSelectedState('');
-      setProfileImagePreview(null);
-      setActiveTab('personal');
-      setPasswordError('');
-      const fileInput = document.getElementById('profileImage') as HTMLInputElement;
-      if (fileInput) {
-        fileInput.value = '';
+    if (isOpen) {
+      if (isEditMode && doctor) {
+        setFormData({
+          ...initialFormData,
+          ...doctor,
+          password: '',
+          confirmPassword: '',
+          profileImage: doctor.profileImage || '',
+          qualification: doctor.qualification || '',
+          registrationYear: doctor.registrationYear || '',
+          faculty: doctor.faculty || '',
+          landline: doctor.landline || '',
+          assistantName: doctor.assistantName || '',
+          assistantContact: doctor.assistantContact || '',
+          workingWithHospital: doctor.workingWithHospital || false,
+          videoConsultation: doctor.videoConsultation || false,
+        });
+        setSelectedState(doctor.state || '');
+        setProfileImagePreview(doctor.profileImage || null);
+      } else {
+        setFormData(initialFormData);
+        setSelectedState('');
+        setProfileImagePreview(null);
+        const fileInput = document.getElementById('profileImage') as HTMLInputElement;
+        if (fileInput) {
+          fileInput.value = '';
+        }
       }
+      setActiveTab('personal');
+      setPasswordError('');
     }
   }, [isOpen, isEditMode, doctor]);
 
@@ -218,6 +260,29 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
       [name]: value
     }));
   };
+  
+  const handleSpecialtyChange = (specId: string) => {
+    setFormData(prev => {
+      const newSpecialties = prev.specialties.includes(specId)
+        ? prev.specialties.filter(id => id !== specId)
+        : [...prev.specialties, specId];
+      
+      const validDiseases = prev.diseases.filter(diseaseId => {
+        const disease = allDiseases.find(d => d._id === diseaseId);
+        return newSpecialties.includes(disease?.parentId);
+      });
+      return { ...prev, specialties: newSpecialties, diseases: validDiseases };
+    });
+  };
+
+  const handleDiseaseChange = (diseaseId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      diseases: prev.diseases.includes(diseaseId)
+        ? prev.diseases.filter(id => id !== diseaseId)
+        : [...prev.diseases, diseaseId],
+    }));
+  };
 
   const handleRadioChange = (name: string, value: boolean) => {
     setFormData(prev => ({
@@ -234,6 +299,9 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     if (name === 'state') {
       setSelectedState(value);
     }
+     if (name === 'doctorType') {
+      setFormData(prev => ({ ...prev, specialties: [], diseases: [] }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -243,8 +311,21 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
         return;
       }
     }
+
     const { confirmPassword, ...submitData } = formData;
-    onSubmit(submitData);
+    
+    // Map specialty and disease IDs to names before submission
+    const specialtyNames = submitData.specialties.map(id => {
+      const spec = allSpecialties.find(s => s._id === id);
+      return spec ? spec.name : id;
+    });
+
+    const diseaseNames = submitData.diseases.map(id => {
+      const disease = allDiseases.find(d => d._id === id);
+      return disease ? disease.name : id;
+    });
+
+    onSubmit({ ...submitData, specialties: specialtyNames, diseases: diseaseNames });
   };
 
   const renderFormContent = () => (
@@ -270,7 +351,7 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
             <TabsTrigger
               value="clinic"
               className={`flex items-center gap-2 ${activeTab === 'clinic' ? 'text-primary' : 'text-muted-foreground'}`}
-              disabled={!formData.registrationNumber || !formData.specialization || !formData.experience}
+              disabled={!formData.registrationNumber || formData.specialties.length === 0 || !formData.experience}
             >
               <MapPin className="h-4 w-4" />
               <span>3. Clinic</span>
@@ -280,7 +361,7 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
 
         <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
           <TabsContent value="personal" className="m-0">
-            <div className="space-y-6 pb-8">
+             <div className="space-y-6 pb-8">
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                   <h3 className="text-base font-medium text-gray-900">Personal Information</h3>
@@ -452,16 +533,66 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
             </div>
           </TabsContent>
           <TabsContent value="professional" className="m-0">
-            <div className="space-y-6 pb-8">
+             <div className="space-y-6 pb-8">
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                   <h3 className="text-base font-medium text-gray-900">Professional Information</h3>
                   <p className="mt-1 text-sm text-gray-500">Update doctor's professional details</p>
                 </div>
                 <div className="p-6">
-                  <div className="flex flex-col md:flex-row gap-8">
-                    <div className="flex-1 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                     <div className="space-y-2">
+                        <Label>Doctor Type <span className="text-red-500">*</span></Label>
+                        <Select onValueChange={(value) => handleSelectChange('doctorType', value)} value={formData.doctorType}>
+                            <SelectTrigger><SelectValue placeholder="Select doctor type" /></SelectTrigger>
+                            <SelectContent>
+                                {doctorTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {formData.doctorType && (
+                    <div className="space-y-2">
+                      <Label>Specialties <span className="text-red-500">*</span></Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border p-3 rounded-md max-h-48 overflow-y-auto">
+                        {isSuperDataLoading ? <p>Loading...</p> : (
+                          filteredSpecialties.map(spec => (
+                            <div key={spec._id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={spec._id}
+                                checked={formData.specialties.includes(spec._id)}
+                                onCheckedChange={() => handleSpecialtyChange(spec._id)}
+                              />
+                              <Label htmlFor={spec._id} className="text-sm font-normal">{spec.name}</Label>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    )}
+                    
+                    {filteredDiseases.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Diseases/Conditions</Label>
+                        <div className="space-y-3">
+                          {filteredDiseases.map(([specialtyName, diseases]) => (
+                            <div key={specialtyName}>
+                              <h4 className="font-semibold text-sm mb-2">{specialtyName}</h4>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border p-3 rounded-md">
+                                {diseases.map(disease => (
+                                  <div key={disease._id} className="flex items-center space-x-2">
+                                    <Checkbox id={disease._id} checked={formData.diseases.includes(disease._id)} onCheckedChange={() => handleDiseaseChange(disease._id)} />
+                                    <Label htmlFor={disease._id} className="text-sm font-normal">{disease.name}</Label>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                           <Label htmlFor="registrationNumber" className="text-sm font-medium text-gray-700">
                             Registration Number <span className="text-red-500">*</span>
@@ -475,26 +606,6 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                             className="h-10 bg-white"
                             required
                           />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="specialization" className="text-sm font-medium text-gray-700">
-                            Specialization <span className="text-red-500">*</span>
-                          </Label>
-                          <Select
-                            value={formData.specialization}
-                            onValueChange={(value) => handleSelectChange('specialization', value)}
-                          >
-                            <SelectTrigger className="h-10 bg-white">
-                              <SelectValue placeholder="Select specialization" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {specializations.map(specialization => (
-                                <SelectItem key={specialization} value={specialization}>
-                                  {specialization}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="experience" className="text-sm font-medium text-gray-700">
@@ -618,14 +729,13 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                             </div>
                         </div>
                       </div>
-                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </TabsContent>
           <TabsContent value="clinic" className="m-0">
-            <div className="space-y-6 pb-8">
+             <div className="space-y-6 pb-8">
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
                   <h3 className="text-base font-medium text-gray-900">Clinic Information</h3>
@@ -827,7 +937,7 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                       setActiveTab('professional');
                     }
                   } else if (activeTab === 'professional') {
-                    if (formData.registrationNumber && formData.specialization && formData.experience) {
+                    if (formData.registrationNumber && formData.specialties.length > 0 && formData.experience) {
                       setActiveTab('clinic');
                     }
                   }

@@ -186,7 +186,7 @@ export const PUT = authMiddlewareAdmin(
       body.password = await bcrypt.hash(password, 10);
     }
     
-    // Legacy support for single specialization
+    // Legacy support for single specialization (can be removed if no longer needed)
     if (body.specialization && !body.specialties) {
       body.specialties = [body.specialization];
       delete body.specialization;
