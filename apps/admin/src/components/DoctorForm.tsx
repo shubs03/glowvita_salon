@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import stateCityData from '@repo/lib/state-city';
 import { useGetSuperDataQuery } from "@repo/store/api";
 import { toast } from "sonner";
 import {
@@ -69,13 +68,6 @@ export interface Doctor {
   videoConsultation?: boolean;
 }
 
-interface State {
-  state: string;
-  districts: string[];
-}
-
-const states: State[] = stateCityData.states;
-
 interface DoctorFormProps {
   isOpen: boolean;
   onClose: () => void;
@@ -115,8 +107,6 @@ const initialFormData: Doctor & { password: string; confirmPassword: string } = 
 
 export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: DoctorFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
-  const [selectedState, setSelectedState] = useState(doctor?.state || "");
-  const [cities, setCities] = useState<string[]>([]);
   const [formData, setFormData] = useState<Doctor & { password: string; confirmPassword: string }>(
     isEditMode && doctor
       ? {
@@ -190,11 +180,9 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
           workingWithHospital: doctor.workingWithHospital || false,
           videoConsultation: doctor.videoConsultation || false,
         });
-        setSelectedState(doctor.state || '');
         setProfileImagePreview(doctor.profileImage || null);
       } else {
         setFormData(initialFormData);
-        setSelectedState('');
         setProfileImagePreview(null);
         const fileInput = document.getElementById('profileImage') as HTMLInputElement;
         if (fileInput) {
@@ -205,20 +193,6 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
       setPasswordError('');
     }
   }, [isOpen, isEditMode, doctor]);
-
-  // Update cities when selectedState changes
-  useEffect(() => {
-    if (selectedState) {
-      const stateData = states.find(s => s.state === selectedState);
-      setCities(stateData ? stateData.districts : []);
-      if (!stateData || !stateData.districts.includes(formData.city)) {
-        setFormData(prev => ({ ...prev, city: '' }));
-      }
-    } else {
-      setCities([]);
-      setFormData(prev => ({ ...prev, city: '' }));
-    }
-  }, [selectedState]);
 
   const validatePassword = (password: string, confirmPassword: string) => {
     if (password !== confirmPassword) {
@@ -296,9 +270,6 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
       ...prev,
       [name]: value
     }));
-    if (name === 'state') {
-      setSelectedState(value);
-    }
      if (name === 'doctorType') {
       setFormData(prev => ({ ...prev, specialties: [], diseases: [] }));
     }
@@ -777,42 +748,29 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                           <Label htmlFor="state" className="text-sm font-medium text-gray-700">
                             State <span className="text-red-500">*</span>
                           </Label>
-                          <Select
+                          <Input
+                            id="state"
+                            name="state"
                             value={formData.state}
-                            onValueChange={(value) => handleSelectChange('state', value)}
-                          >
-                            <SelectTrigger className="h-10 bg-white">
-                              <SelectValue placeholder="Select state" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[300px] overflow-y-auto">
-                              {states.map((state) => (
-                                <SelectItem key={state.state} value={state.state}>
-                                  {state.state}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            onChange={handleInputChange}
+                            placeholder="State"
+                            className="h-10 bg-white"
+                            required
+                          />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="city" className="text-sm font-medium text-gray-700">
                             City <span className="text-red-500">*</span>
                           </Label>
-                          <Select
+                          <Input
+                            id="city"
+                            name="city"
                             value={formData.city}
-                            onValueChange={(value) => handleSelectChange('city', value)}
-                            disabled={!formData.state}
-                          >
-                            <SelectTrigger className="h-10 bg-white">
-                              <SelectValue placeholder="Select city" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[300px] overflow-y-auto">
-                              {cities.map((city) => (
-                                <SelectItem key={city} value={city}>
-                                  {city}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            onChange={handleInputChange}
+                            placeholder="City"
+                            className="h-10 bg-white"
+                            required
+                          />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="pincode" className="text-sm font-medium text-gray-700">
