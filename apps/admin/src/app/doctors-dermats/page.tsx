@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -25,12 +26,9 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger,
 } from "@repo/ui/dialog";
 import {
-  CheckCircle,
   Eye,
-  XCircle,
   Trash2,
   User,
   ThumbsUp,
@@ -40,19 +38,12 @@ import {
   FileDown,
   X,
   Stethoscope,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { Badge } from "@repo/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
-import { Label } from "@repo/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/select";
-import { Textarea } from "@repo/ui/textarea";
 import { DoctorForm } from "@/components/DoctorForm";
 import {
   useGetDoctorsQuery,
@@ -70,7 +61,9 @@ type Doctor = {
   phone: string;
   gender: string;
   registrationNumber: string;
-  specialization: string;
+  doctorType: string;
+  specialties: string[];
+  diseases: string[];
   experience: string;
   clinicName: string;
   clinicAddress: string;
@@ -100,8 +93,6 @@ export default function DoctorsDermatsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isNewDoctorModalOpen, setIsNewDoctorModalOpen] = useState(false);
-  const [isSpecializationModalOpen, setIsSpecializationModalOpen] =
-    useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [actionType, setActionType] = useState<ActionType | null>(null);
 
@@ -170,7 +161,6 @@ export default function DoctorsDermatsPage() {
         } else {
           await updateDoctor({
             id: selectedDoctor._id,
-
             status: actionType === "approve" ? "Approved" : "Rejected",
           }).unwrap();
         }
@@ -376,7 +366,7 @@ export default function DoctorsDermatsPage() {
                               : doctor.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{doctor.specialization}</TableCell>
+                        <TableCell>{(doctor.specialties || []).join(', ')}</TableCell>
                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -515,7 +505,7 @@ export default function DoctorsDermatsPage() {
                   Category
                 </span>
                 <span className="col-span-2">
-                  {selectedDoctor.specialization}
+                  {(selectedDoctor.specialties || []).join(', ')}
                 </span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
@@ -572,13 +562,13 @@ export default function DoctorsDermatsPage() {
               ...data,
               _id: selectedDoctor._id,
               createdAt: selectedDoctor.createdAt,
-              updatedAt: selectedDoctor.updatedAt,
+              updatedAt: new Date().toISOString(),
             };
-            handleUpdateDoctor(updatedDoctor);
+            handleUpdateDoctor(updatedDoctor as Doctor);
           } else {
             // For add mode, remove the fields that shouldn't be in new doctor data
-            const { _id, createdAt, updatedAt, ...newDoctorData } = data;
-            handleAddDoctor(newDoctorData);
+            const { _id, id, createdAt, updatedAt, ...newDoctorData } = data;
+            handleAddDoctor(newDoctorData as any);
           }
         }}
       />
