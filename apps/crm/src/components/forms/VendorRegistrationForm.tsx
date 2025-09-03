@@ -202,44 +202,101 @@ export function VendorRegistrationForm({ onSuccess }) {
   // Map functionality
   useEffect(() => {
     if (!isMapOpen || !MAPBOX_TOKEN) return;
+    
     const initMap = () => {
       if (!mapContainer.current) return;
+      
       mapboxgl.accessToken = MAPBOX_TOKEN;
-      if (map.current) map.current.remove();
+      
+      // Clean up existing map safely
+      if (map.current && map.current.getCanvas()) {
+        try {
+          map.current.remove();
+        } catch (error) {
+          console.warn('Error removing existing map:', error);
+        }
+      }
+      
+      // Clean up existing marker safely
+      if (marker.current) {
+        try {
+          marker.current.remove();
+        } catch (error) {
+          console.warn('Error removing existing marker:', error);
+        }
+      }
+      
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v11',
         center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
         zoom: formData.location ? 15 : 5
       });
-      if (marker.current) marker.current.remove();
+      
       marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
         .setLngLat(formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599])
         .addTo(map.current);
+        
       marker.current.on('dragend', () => {
-        const lngLat = marker.current!.getLngLat();
-        setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
-        fetchAddress([lngLat.lng, lngLat.lat]);
+        if (marker.current) {
+          const lngLat = marker.current.getLngLat();
+          setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
+          fetchAddress([lngLat.lng, lngLat.lat]);
+        }
       });
+      
       map.current.on('click', (e) => {
         const { lng, lat } = e.lngLat;
         setFormData(prev => ({ ...prev, location: { lat, lng } }));
-        marker.current!.setLngLat([lng, lat]);
+        if (marker.current) {
+          marker.current.setLngLat([lng, lat]);
+        }
         fetchAddress([lng, lat]);
       });
-      map.current.on('load', () => setTimeout(() => map.current!.resize(), 100));
+      
+      map.current.on('load', () => {
+        setTimeout(() => {
+          if (map.current && map.current.getCanvas()) {
+            map.current.resize();
+          }
+        }, 100);
+      });
     };
+    
     const timeoutId = setTimeout(initMap, 100);
+    
     return () => {
       clearTimeout(timeoutId);
-      if (map.current) map.current.remove();
-      if (marker.current) marker.current.remove();
+      
+      // Clean up marker safely
+      if (marker.current) {
+        try {
+          marker.current.remove();
+          marker.current = null;
+        } catch (error) {
+          console.warn('Error cleaning up marker:', error);
+        }
+      }
+      
+      // Clean up map safely
+      if (map.current && map.current.getCanvas()) {
+        try {
+          map.current.remove();
+          map.current = null;
+        } catch (error) {
+          console.warn('Error cleaning up map:', error);
+        }
+      }
     };
   }, [isMapOpen]);
 
   useEffect(() => {
-    if (isMapOpen && map.current) {
-      setTimeout(() => map.current!.resize(), 300);
+    if (isMapOpen && map.current && map.current.getCanvas()) {
+      setTimeout(() => {
+        if (map.current && map.current.getCanvas()) {
+          map.current.resize();
+        }
+      }, 300);
     }
   }, [isMapOpen]);
 
@@ -260,8 +317,8 @@ export function VendorRegistrationForm({ onSuccess }) {
       if (data.features && data.features.length > 0) {
         const address = data.features[0].place_name;
         const context = data.features[0].context || [];
-        const state = context.find(c => c.id.includes('region'))?.text || '';
-        const city = context.find(c => c.id.includes('place'))?.text || '';
+        const state = context.find((c: any) => c.id.includes('region'))?.text || '';
+        const city = context.find((c: any) => c.id.includes('place'))?.text || '';
         setFormData(prev => ({ ...prev, address, state: state || prev.state, city: city || prev.city }));
       }
     } catch (error) { console.error('Error fetching address:', error); }
@@ -274,11 +331,15 @@ export function VendorRegistrationForm({ onSuccess }) {
       ...prev,
       location: newLocation,
       address: result.place_name,
-      state: result.context?.find(c => c.id.includes('region'))?.text || prev.state,
-      city: result.context?.find(c => c.id.includes('place'))?.text || prev.city,
+      state: result.context?.find((c: any) => c.id.includes('region'))?.text || prev.state,
+      city: result.context?.find((c: any) => c.id.includes('place'))?.text || prev.city,
     }));
-    if (map.current) map.current.setCenter(coordinates);
-    if (marker.current) marker.current.setLngLat(coordinates);
+    if (map.current && map.current.getCanvas()) {
+      map.current.setCenter(coordinates);
+    }
+    if (marker.current) {
+      marker.current.setLngLat(coordinates);
+    }
     setSearchResults([]);
     setSearchQuery('');
   };
