@@ -83,6 +83,14 @@ interface MapboxFeature {
   }>;
 }
 
+interface SuperDataItem {
+  _id: string;
+  name: string;
+  type: string;
+  doctorType?: string;
+  parentId?: string;
+}
+
 
 // Initial form data template
 const initialFormData: Doctor & { password: string; confirmPassword: string } = {
@@ -133,26 +141,26 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
   const { data: superData = [], isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
   
   const doctorTypes = useMemo(() => ['Physician', 'Surgeon'], []);
-  const allSpecialties = useMemo(() => superData.filter(d => d.type === 'specialization'), [superData]);
-  const allDiseases = useMemo(() => superData.filter(d => d.type === 'disease'), [superData]);
+  const allSpecialties: SuperDataItem[] = useMemo(() => superData.filter((d: SuperDataItem) => d.type === 'specialization'), [superData]);
+  const allDiseases: SuperDataItem[] = useMemo(() => superData.filter((d: SuperDataItem) => d.type === 'disease'), [superData]);
   
   const filteredSpecialties = useMemo(() => {
-    return formData.doctorType ? allSpecialties.filter(s => s.doctorType === formData.doctorType) : [];
+    return formData.doctorType ? allSpecialties.filter((s: SuperDataItem) => s.doctorType === formData.doctorType) : [];
   }, [allSpecialties, formData.doctorType]);
 
   const filteredDiseases = useMemo(() => {
-    const diseaseMap = new Map();
+    const diseaseMap = new Map<string, SuperDataItem[]>();
     if (formData.specialties.length > 0) {
       const selectedSpecialtyIds = formData.specialties;
       
-      allDiseases.forEach(disease => {
-        if (selectedSpecialtyIds.includes(disease.parentId)) {
-          const specialty = allSpecialties.find(s => s._id === disease.parentId);
+      allDiseases.forEach((disease: SuperDataItem) => {
+        if (disease.parentId && selectedSpecialtyIds.includes(disease.parentId)) {
+          const specialty = allSpecialties.find((s: SuperDataItem) => s._id === disease.parentId);
           if (specialty) {
             if (!diseaseMap.has(specialty.name)) {
               diseaseMap.set(specialty.name, []);
             }
-            diseaseMap.get(specialty.name).push(disease);
+            diseaseMap.get(specialty.name)?.push(disease);
           }
         }
       });
@@ -166,11 +174,11 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
       if (isEditMode && doctor) {
         // When editing, map names back to IDs for specialties and diseases
         const specialtyIds = doctor.specialties
-          .map(name => allSpecialties.find(s => s.name === name)?._id)
+          .map(name => allSpecialties.find((s: SuperDataItem) => s.name === name)?._id)
           .filter(Boolean) as string[];
 
         const diseaseIds = doctor.diseases
-          .map(name => allDiseases.find(d => d.name === name)?._id)
+          .map(name => allDiseases.find((d: SuperDataItem) => d.name === name)?._id)
           .filter(Boolean) as string[];
 
         setFormData({
@@ -249,8 +257,8 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
         : [...prev.specialties, specId];
       
       const validDiseases = prev.diseases.filter(diseaseId => {
-        const disease = allDiseases.find(d => d._id === diseaseId);
-        return newSpecialties.includes(disease?.parentId);
+        const disease = allDiseases.find((d: SuperDataItem) => d._id === diseaseId);
+        return disease?.parentId && newSpecialties.includes(disease.parentId);
       });
       return { ...prev, specialties: newSpecialties, diseases: validDiseases };
     });
@@ -294,12 +302,12 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     
     // Map specialty and disease IDs to names before submission
     const specialtyNames = submitData.specialties.map(id => {
-      const spec = allSpecialties.find(s => s._id === id);
+      const spec = allSpecialties.find((s: SuperDataItem) => s._id === id);
       return spec ? spec.name : id;
     });
 
     const diseaseNames = submitData.diseases.map(id => {
-      const disease = allDiseases.find(d => d._id === id);
+      const disease = allDiseases.find((d: SuperDataItem) => d._id === id);
       return disease ? disease.name : id;
     });
 
@@ -344,6 +352,17 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     return () => clearTimeout(timer);
   }, [isMapOpen]);
 
+  // Resize map when modal is fully opened
+  useEffect(() => {
+    if (isMapOpen && map.current) {
+      setTimeout(() => {
+        if(map.current) {
+            map.current.resize();
+        }
+      }, 300);
+    }
+  }, [isMapOpen]);
+
   const handleSearch = async (query: string) => {
     if (!query.trim() || !NEXT_PUBLIC_MAPBOX_API_KEY) return;
     try {
@@ -364,9 +383,9 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
         setFormData(prev => ({
           ...prev,
           clinicAddress: feature.place_name,
-          city: feature.context?.find(c => c.id.startsWith('place'))?.text || '',
-          state: feature.context?.find(c => c.id.startsWith('region'))?.text || '',
-          pincode: feature.context?.find(c => c.id.startsWith('postcode'))?.text || '',
+          city: feature.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('place'))?.text || '',
+          state: feature.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('region'))?.text || '',
+          pincode: feature.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('postcode'))?.text || '',
         }));
       }
     } catch (error) {
@@ -380,9 +399,9 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
       ...prev,
       location: { lat: coordinates[1], lng: coordinates[0] },
       clinicAddress: result.place_name,
-      city: result.context?.find(c => c.id.startsWith('place'))?.text || '',
-      state: result.context?.find(c => c.id.startsWith('region'))?.text || '',
-      pincode: result.context?.find(c => c.id.startsWith('postcode'))?.text || '',
+      city: result.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('place'))?.text || '',
+      state: result.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('region'))?.text || '',
+      pincode: result.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('postcode'))?.text || '',
     }));
     map.current?.flyTo({ center: coordinates, zoom: 14 });
     marker.current?.setLngLat(coordinates);
@@ -618,7 +637,7 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                       <Label>Specialties <span className="text-red-500">*</span></Label>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border p-3 rounded-md max-h-48 overflow-y-auto">
                         {isSuperDataLoading ? <p>Loading...</p> : (
-                          filteredSpecialties.map(spec => (
+                          filteredSpecialties.map((spec: SuperDataItem) => (
                             <div key={spec._id} className="flex items-center space-x-2">
                               <Checkbox
                                 id={spec._id}
@@ -641,7 +660,7 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                             <div key={specialtyName}>
                               <h4 className="font-semibold text-sm mb-2">{specialtyName}</h4>
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border p-3 rounded-md">
-                                {diseases.map(disease => (
+                                {diseases.map((disease: SuperDataItem) => (
                                   <div key={disease._id} className="flex items-center space-x-2">
                                     <Checkbox id={disease._id} checked={formData.diseases.includes(disease._id)} onCheckedChange={() => handleDiseaseChange(disease._id)} />
                                     <Label htmlFor={disease._id} className="text-sm font-normal">{disease.name}</Label>
@@ -1027,7 +1046,7 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                       />
                       {searchResults.length > 0 && (
                           <div className="absolute z-10 w-full bg-background border rounded-md mt-1 max-h-48 overflow-y-auto">
-                              {searchResults.map(result => (
+                              {searchResults.map((result: MapboxFeature) => (
                                   <div key={result.id} onClick={() => handleSearchResultSelect(result)} className="p-2 hover:bg-secondary cursor-pointer text-sm">
                                       {result.place_name}
                                   </div>
@@ -1084,3 +1103,4 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     </Dialog.Root>
   );
 }
+
