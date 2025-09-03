@@ -43,8 +43,8 @@ type Coupon = {
   minOrderAmount?: number;
   offerImage?: string;
   isCustomCode?: boolean;
-  createdBy: string;
-  createdByRole: string;
+  businessType: string;
+  businessId: string;
 };
 
 type CouponForm = {
@@ -77,10 +77,13 @@ export default function OffersCouponsPage() {
   const [useCustomCode, setUseCustomCode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Get user role from authentication
-  const { role } = useCrmAuth();
-  const userRole = role || 'vendor';
-
+  // Get user and business info from auth context
+  const auth = useCrmAuth();
+  const userRole = auth?.role || auth?.type || 'vendor'; // Fallback for different auth structures
+  const businessId = auth?.businessId || auth?.id; // Fallback for different auth structures
+  
+  console.log('Auth Debug:', { auth, userRole, businessId }); // Debug auth values
+  
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector(
     (state) => selectRootState(state).modal
@@ -101,13 +104,33 @@ export default function OffersCouponsPage() {
       isCustomCode: false,
     }
   });
+  
+  // Prepare query parameters
+  const queryParams = {
+    businessId: businessId || '',
+    businessType: userRole,
+    ...(auth?.vendorId && { vendorId: auth.vendorId }), // Include vendorId if available
+    ...(auth?.doctorId && { doctorId: auth.doctorId }), // Include doctorId if available
+    ...(auth?.supplierId && { supplierId: auth.supplierId }) // Include supplierId if available
+  };
 
-  // RTK Query hooks
+  // RTK Query hooks with proper query parameters
   const { 
     data: couponsData = [], 
     isLoading, 
-    isError 
-  } = useGetOffersQuery(undefined);
+    isError,
+    refetch 
+  } = useGetOffersQuery(queryParams, {
+    skip: !auth, // Skip query if not authenticated
+    refetchOnMountOrArgChange: true, // Always refetch when component mounts or auth changes
+  });
+
+  // Refetch data when auth changes
+  useEffect(() => {
+    if (auth) {
+      refetch();
+    }
+  }, [auth, refetch]);
   
   const { data: superData = [], isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
   
@@ -266,6 +289,12 @@ export default function OffersCouponsPage() {
   };
 
   const onSubmit = async (formData: CouponForm) => {
+    // Validate required data
+    if (!businessId || !userRole) {
+      toast.error('Session expired. Please login again.');
+      return;
+    }
+
     const processedData = {
       ...formData,
       code: useCustomCode ? formData.code : '', // Send empty if auto-generate
@@ -274,6 +303,8 @@ export default function OffersCouponsPage() {
       applicableDiseases: userRole === 'doctor' ? selectedDiseases : [],
       minOrderAmount: userRole === 'supplier' ? formData.minOrderAmount : undefined,
       isCustomCode: useCustomCode,
+      businessType: userRole,
+      businessId: businessId,
     };
 
     try {
@@ -337,8 +368,43 @@ export default function OffersCouponsPage() {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
-  if (isError) return <div>Error loading coupons. Please try again.</div>;
+  // Handle authentication state
+  if (!auth) {
+    return (
+      <div className="p-4 text-center">
+        <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
+        <p className="text-muted-foreground">Please log in to view your offers.</p>
+      </div>
+    );
+  }
+
+  // Show loading state while waiting for businessId resolution
+  if (isLoading) {
+    return (
+      <div className="p-4 text-center">
+        <div className="animate-pulse">
+          <div className="h-8 w-48 bg-gray-200 rounded mx-auto mb-4"></div>
+          <div className="h-4 w-32 bg-gray-200 rounded mx-auto"></div>
+        </div>
+        <p className="mt-4 text-muted-foreground">Loading offers...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-4 text-center">
+        <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Offers</h2>
+        <p className="text-muted-foreground mb-4">There was a problem loading your offers.</p>
+        <Button onClick={() => refetch()} variant="outline">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  // Check if we have any offers
+  const hasOffers = Array.isArray(couponsData) && couponsData.length > 0;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
