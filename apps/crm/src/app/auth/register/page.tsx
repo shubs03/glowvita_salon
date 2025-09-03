@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@repo/ui/button';
 import { User, Building, Stethoscope, ArrowLeft } from 'lucide-react';
 import { VendorRegistrationForm } from '@/components/forms/VendorRegistrationForm';
-import { DoctorRegistrationForm } from '@/components/forms/DoctorRegistrationForm';
+import { DoctorRegistrationForm } from '@/components/forms/Doct orRegistrationForm';
 import { SupplierRegistrationForm } from '@/components/forms/SupplierRegistrationForm';
 import { cn } from '@repo/ui/cn';
 

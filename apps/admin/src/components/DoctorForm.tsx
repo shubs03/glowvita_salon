@@ -6,7 +6,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown, Map } from 'lucide-react';
+import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown, Map as MapIcon } from 'lucide-react';
 import { Checkbox } from "@repo/ui/checkbox";
 import {
   Select,
@@ -18,19 +18,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { useGetSuperDataQuery } from "@repo/store/api";
 import { toast } from "sonner";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from "@repo/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@repo/ui/popover";
 import { cn } from "@repo/ui/cn";
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -1022,37 +1009,48 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
           </div>
         </div>
       </Tabs>
-      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
-        <Dialog.Content className="sm:max-w-4xl max-h-[80vh]">
-            <Dialog.Header>
-                <Dialog.Title>Select Clinic Location</Dialog.Title>
-                <Dialog.Description>Search, pan, or click on the map to set the exact location.</Dialog.Description>
-            </Dialog.Header>
-            <div className="space-y-4 h-[60vh] flex flex-col">
-                <div className="relative">
-                    <Input
-                        placeholder="Search for a location..."
-                        value={searchQuery}
-                        onChange={(e) => { setSearchQuery(e.target.value); handleSearch(e.target.value); }}
-                    />
-                    {searchResults.length > 0 && (
-                        <div className="absolute z-10 w-full bg-background border rounded-md mt-1 max-h-48 overflow-y-auto">
-                            {searchResults.map(result => (
-                                <div key={result.id} onClick={() => handleSearchResultSelect(result)} className="p-2 hover:bg-secondary cursor-pointer text-sm">
-                                    {result.place_name}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                <div ref={mapContainer} className="flex-grow w-full rounded-md border" />
+      <Dialog.Root open={isMapOpen} onOpenChange={setIsMapOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-4xl max-h-[80vh] translate-x-[-50%] translate-y-[-50%] bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg border">
+            <div className="flex flex-col space-y-4">
+              <div className="flex flex-col space-y-1.5 text-center sm:text-left">
+                <Dialog.Title className="text-lg font-semibold leading-none tracking-tight">Select Clinic Location</Dialog.Title>
+                <Dialog.Description className="text-sm text-muted-foreground">Search, pan, or click on the map to set the exact location.</Dialog.Description>
+              </div>
+              <div className="space-y-4 h-[60vh] flex flex-col">
+                  <div className="relative">
+                      <Input
+                          placeholder="Search for a location..."
+                          value={searchQuery}
+                          onChange={(e) => { setSearchQuery(e.target.value); handleSearch(e.target.value); }}
+                      />
+                      {searchResults.length > 0 && (
+                          <div className="absolute z-10 w-full bg-background border rounded-md mt-1 max-h-48 overflow-y-auto">
+                              {searchResults.map(result => (
+                                  <div key={result.id} onClick={() => handleSearchResultSelect(result)} className="p-2 hover:bg-secondary cursor-pointer text-sm">
+                                      {result.place_name}
+                                  </div>
+                              ))}
+                          </div>
+                      )}
+                  </div>
+                  <div ref={mapContainer} className="flex-grow w-full rounded-md border" />
+              </div>
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+                  <Button variant="outline" onClick={() => setIsMapOpen(false)}>Cancel</Button>
+                  <Button onClick={() => setIsMapOpen(false)}>Confirm Location</Button>
+              </div>
             </div>
-            <Dialog.Footer>
-                <Button variant="outline" onClick={() => setIsMapOpen(false)}>Cancel</Button>
-                <Button onClick={() => setIsMapOpen(false)}>Confirm Location</Button>
-            </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog>
+            <Dialog.Close asChild>
+              <Button variant="outline" size="icon" className="absolute right-4 top-4">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </Dialog.Close>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </form>
   );
 
