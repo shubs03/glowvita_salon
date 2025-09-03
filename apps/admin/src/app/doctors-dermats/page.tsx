@@ -44,7 +44,7 @@ import {
 import { Badge } from "@repo/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
-import { DoctorForm } from "@/components/DoctorForm";
+import { DoctorForm, Doctor } from "@/components/DoctorForm";
 import {
   useGetDoctorsQuery,
   useCreateDoctorMutation,
@@ -52,40 +52,6 @@ import {
   useDeleteDoctorMutation,
 } from "../../../../../packages/store/src/services/api";
 
-// Doctor type aligned with MongoDB schema
-type Doctor = {
-  _id: string;
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  gender: string;
-  registrationNumber: string;
-  doctorType: string;
-  specialties: string[];
-  diseases: string[];
-  experience: string;
-  clinicName: string;
-  clinicAddress: string;
-  state: string;
-  city: string;
-  pincode: string;
-  status: "Approved" | "Pending" | "Rejected";
-  profileImage?: string;
-  qualification?: string;
-  registrationYear?: string;
-  physicalConsultationStartTime: string;
-  physicalConsultationEndTime: string;
-  faculty?: string;
-  assistantName: string;
-  assistantContact: string;
-  doctorAvailability: "Online" | "Offline";
-  landline?: string;
-  createdAt: string;
-  updatedAt: string;
-  workingWithHospital?: boolean;
-  videoConsultation?: boolean;
-};
 
 type ActionType = "approve" | "reject" | "delete";
 
@@ -162,11 +128,12 @@ export default function DoctorsDermatsPage() {
         if (actionType === "delete") {
           await deleteDoctor(selectedDoctor._id).unwrap();
         } else {
-          const { _id, ...updateData } = selectedDoctor;
-          await updateDoctor({
-            id: _id,
+          // This creates a new object with only the needed properties for the update
+          const updatePayload = {
+            id: selectedDoctor._id,
             status: actionType === "approve" ? "Approved" : "Rejected",
-          }).unwrap();
+          };
+          await updateDoctor(updatePayload).unwrap();
         }
       } catch (err: any) {
         console.error(`Failed to ${actionType} doctor:`, err);
