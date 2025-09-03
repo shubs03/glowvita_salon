@@ -162,12 +162,13 @@ export default function DoctorsDermatsPage() {
         if (actionType === "delete") {
           await deleteDoctor(selectedDoctor._id).unwrap();
         } else {
+          const { _id, ...updateData } = selectedDoctor;
           await updateDoctor({
-            id: selectedDoctor._id,
+            id: _id,
             status: actionType === "approve" ? "Approved" : "Rejected",
           }).unwrap();
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(`Failed to ${actionType} doctor:`, err);
       }
       setIsModalOpen(false);

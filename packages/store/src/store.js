@@ -1,4 +1,5 @@
-import { configureStore, getDefaultMiddleware } from '@reduxjs/toolkit';
+
+import { configureStore } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from '@repo/store/slices/adminAuthSlice';
 import crmAuthReducer from '@repo/store/slices/crmAuthSlice';
@@ -23,8 +24,6 @@ import blockTimeReducer from './slices/blockTimeSlice';
   
 export const makeStore = () => {
   return configureStore({
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(glowvitaApi.middleware),
     reducer: {
       [glowvitaApi.reducerPath]: glowvitaApi.reducer,
       adminAuth: adminAuthReducer,
@@ -61,15 +60,21 @@ export const makeStore = () => {
             'blockTime/setStartTime',
             'blockTime/setEndTime',
             'blockTime/setDescription',
-            'blockTime/reset'
+            'blockTime/reset',
+            'modal/openModal'
           ],
           // Ignore these field paths in all actions
           ignoredActionPaths: ['meta.arg', 'payload.timestamp', 'payload'],
           // Ignore these paths in the state
-          ignoredPaths: ['blockTime.date', 'blockTime']
+          ignoredPaths: ['blockTime.date', 'blockTime', 'modal.data']
         }
       }).concat(glowvitaApi.middleware),
   });
 };
+
+const store = makeStore();
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
 
 export const selectRootState = (state) => state;

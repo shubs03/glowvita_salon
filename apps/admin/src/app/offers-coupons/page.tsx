@@ -23,7 +23,7 @@ import {
   useGetSuperDataQuery
 } from '@repo/store/api';
 import { toast } from 'sonner';
-import { selectRootState } from '@repo/store/store';
+import { RootState } from '@repo/store/store';
 
 type Coupon = {
   _id: string;
@@ -69,7 +69,7 @@ export default function OffersCouponsPage() {
 
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector(
-    (state) => selectRootState(state).modal
+    (state: RootState) => state.modal
   );
    
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<CouponForm>({
@@ -101,7 +101,7 @@ export default function OffersCouponsPage() {
   const [deleteOffer, { isLoading: isDeleting }] = useDeleteAdminOfferMutation();
 
   const specialtyOptions = useMemo(() => {
-    return superData.filter(item => item.type === 'service').map(item => item.name);
+    return superData.filter((item: any) => item.type === 'service').map((item: any) => item.name);
   }, [superData]);
 
   // Convert file to base64
@@ -596,7 +596,7 @@ export default function OffersCouponsPage() {
               <div className="space-y-2">
                 <Label>Applicable Services (Select multiple or none for all)</Label>
                 <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
-                  {specialtyOptions.map((specialty) => (
+                  {specialtyOptions.map((specialty: any) => (
                     <div key={specialty} className="flex items-center space-x-2">
                       <Checkbox
                         id={`specialty-${specialty}`}

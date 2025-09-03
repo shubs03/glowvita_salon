@@ -303,8 +303,8 @@ const ServiceCategoryManager = () => {
             setIsModalOpen(false);
             setCurrentItem(null);
             setImageBase64(null);
-        } catch (error) {
-            toast.error('Error', { description: `Failed to ${action} category.` });
+        } catch (error: any) {
+            toast.error('Error', { description: error?.data?.message || `Failed to ${action} category.` });
         }
     };
 
@@ -320,8 +320,8 @@ const ServiceCategoryManager = () => {
                 toast.success('Success', { description: 'Category deleted successfully.' });
                 setIsDeleteModalOpen(false);
                 setCurrentItem(null);
-            } catch (error) {
-                toast.error('Error', { description: 'Failed to delete category.' });
+            } catch (error: any) {
+                toast.error('Error', { description: error?.data?.message || 'Failed to delete category.' });
             }
         }
     };
@@ -507,8 +507,8 @@ const ServiceManager = () => {
             setIsModalOpen(false);
             setCurrentItem(null);
             setImageBase64(null);
-        } catch (error) {
-            toast.error('Error', { description: `Failed to ${action} service.` });
+        } catch (error: any) {
+            toast.error('Error', { description: error?.data?.message || `Failed to ${action} service.` });
         }
     };
 
@@ -524,8 +524,8 @@ const ServiceManager = () => {
                 toast.success('Success', { description: 'Service deleted successfully.' });
                 setIsDeleteModalOpen(false);
                 setCurrentItem(null);
-            } catch (error) {
-                toast.error('Error', { description: 'Failed to delete service.' });
+            } catch (error: any) {
+                toast.error('Error', { description: error?.data?.message || 'Failed to delete service.' });
             }
         }
     };
@@ -691,8 +691,8 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     
     const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
         setCurrentItem(item || null);
-        if (type === 'specialization') {
-            setSelectedDoctorType(item?.doctorType);
+        if (type === 'specialization' && item?.doctorType) {
+            setSelectedDoctorType(item.doctorType);
         } else {
             setSelectedDoctorType(undefined);
         }

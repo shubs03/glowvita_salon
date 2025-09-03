@@ -9,7 +9,7 @@ import { Pagination } from "@repo/ui/pagination";
 import { Eye, CheckCircle, RefreshCw, AlertCircle, X, Plus, DollarSign, Users, Hourglass } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@repo/ui/dialog";
 import { Input } from "@repo/ui/input";
-import { Label } from "@repo/ui/label";
+import { Label } from '@repo/ui/label';
 
 interface Transaction {
   type: 'receive' | 'pay';
@@ -114,11 +114,19 @@ const payoutData: PayoutData[] = [
   }
 ];
 
-function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount }) {
+interface ReceiveAmountDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onReceive: (amount: number) => void;
+  pendingAmount: number;
+}
+
+
+function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount }: ReceiveAmountDialogProps) {
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const numAmount = parseFloat(amount);
     
@@ -188,7 +196,7 @@ export default function PayoutPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
-  const [selectedPayout, setSelectedPayout] = useState(null);
+  const [selectedPayout, setSelectedPayout] = useState<PayoutData | null>(null);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -196,7 +204,7 @@ export default function PayoutPage() {
 
   const totalPages = Math.ceil(payoutData.length / itemsPerPage);
 
-  const handleReceiveAmount = (payoutId, amount) => {
+  const handleReceiveAmount = (payoutId: string, amount: number) => {
     // TODO: Implement the actual receive amount logic here
     console.log(`Received ₹${amount} for payout ${payoutId}`);
     // Update the UI accordingly

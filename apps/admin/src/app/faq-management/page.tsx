@@ -1,18 +1,15 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useGetSuperDataQuery } from '@repo/store/api';
+import { useGetSuperDataQuery, useCreateFaqMutation, useUpdateFaqMutation, useDeleteFaqMutation, useGetFaqsQuery } from '@repo/store/api';
 import { 
   selectAllFaqs, 
   selectFaqsStatus, 
   selectFaqsError,
-  fetchFaqs,
-  addNewFaq,
-  updateFaqItem,
-  deleteFaqItem,
-  resetError,
-  toggleFaqVisibility
+  setFaqs,
+  resetError
 } from '../../../../../packages/store/src/slices/faqSlice';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
@@ -25,32 +22,17 @@ import { Textarea } from '@repo/ui/textarea';
 import { Eye, Edit, Trash2, ToggleLeft, ToggleRight, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { toast } from "sonner";
+import { ThunkAction, UnknownAction } from '@reduxjs/toolkit';
+import { RootState } from '@repo/store/store';
 
-const faqData = [
-  {
-    id: 1,
-    question: "What is Monorepo Maestro?",
-    answer: "Monorepo Maestro is a powerful, scalable, and unified structure for your Next.js projects, designed to streamline development across multiple applications and shared packages.",
-    category: "Booking",
-    visible: true,
-  },
-  {
-    id: 2,
-    question: "How do I get started?",
-    answer: "You can get started by cloning the repository, installing dependencies with `npm install`, and running the development server with `npm run dev`. Make sure to set up your `.env` file first.",
-    category: "Booking",
-    visible: true,
-  },
-  {
-    id: 3,
-    question: "Can I use a different database?",
-    answer: "Yes, while the project is set up with MongoDB, you can adapt the database connection logic in `@repo/lib/db` to connect to any database of your choice.",
-    category: "Booking",
-    visible: false,
-  },
-];
-
-type FAQ = typeof faqData[0];
+type FAQ = {
+  _id: string;
+  id?: string;
+  question: string;
+  answer: string;
+  category: string;
+  visible: boolean;
+};
 
 export default function FaqManagementPage() {
   const dispatch = useDispatch();
@@ -60,12 +42,17 @@ export default function FaqManagementPage() {
   const faqs = useSelector(selectAllFaqs);
   const status = useSelector(selectFaqsStatus);
   const error = useSelector(selectFaqsError);
-  
+
+  const { data: fetchedFaqs, refetch } = useGetFaqsQuery(undefined);
+  const [addNewFaq] = useCreateFaqMutation();
+  const [updateFaqItem] = useUpdateFaqMutation();
+  const [deleteFaqItem] = useDeleteFaqMutation();
+
   useEffect(() => {
-    if (process.browser) {
-      dispatch(fetchFaqs());
+    if (fetchedFaqs) {
+      dispatch(setFaqs(fetchedFaqs));
     }
-  }, [dispatch]);
+  }, [fetchedFaqs, dispatch]);
   
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -87,9 +74,7 @@ export default function FaqManagementPage() {
     visible: true 
   });
   
-  const { data: superDataResponse, isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined, {
-    skip: !process.browser
-  });
+  const { data: superDataResponse, isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
   
   const faqCategories = useMemo(() => {
     if (!Array.isArray(superDataResponse)) return [];
@@ -131,48 +116,37 @@ export default function FaqManagementPage() {
   const handleConfirmDelete = async () => {
     if (faqToDelete) {
       try {
-        await dispatch(deleteFaqItem(faqToDelete._id)).unwrap();
-        toast.success("FAQ deleted successfully!", {
-          duration: 5000,
-          style: { background: '#22c55e', color: '#ffffff' },
-        });
+        await deleteFaqItem(faqToDelete._id).unwrap();
+        toast.success("FAQ deleted successfully!");
+        refetch();
         setIsDeleteModalOpen(false);
         setFaqToDelete(null);
-      } catch (err) {
+      } catch (err: any) {
         toast.error("Failed to delete FAQ. Please try again.", {
-          description: err.payload?.message || err.message || 'Unknown error',
+          description: err.data?.message || err.message || 'Unknown error',
           duration: 5000,
         });
       }
     }
   };
 
-  const handleToggleClick = (id: string, currentVisibility: boolean) => {
-    setFaqToToggle({ id, visible: !currentVisibility });
-  };
-
-  const handleConfirmToggle = async () => {
-    if (!faqToToggle) return;
-    
-    try {
-      await dispatch(updateFaqItem({
-        id: faqToToggle.id,
-        visible: faqToToggle.visible
-      })).unwrap();
+  const handleToggleClick = async (id: string, currentVisibility: boolean) => {
+     try {
+      await updateFaqItem({
+        id: id,
+        visible: !currentVisibility
+      }).unwrap();
       
-      toast.success(`FAQ ${faqToToggle.visible ? 'made visible' : 'hidden'} successfully!`, {
-        duration: 5000,
-        style: { background: '#22c55e', color: '#ffffff' },
-      });
-    } catch (err) {
+      toast.success(`FAQ ${!currentVisibility ? 'made visible' : 'hidden'} successfully!`);
+      refetch();
+    } catch (err: any) {
       toast.error("Failed to toggle FAQ visibility. Please try again.", {
-        description: err.payload?.message || err.message || 'Unknown error',
+        description: err.data?.message || err.message || 'Unknown error',
         duration: 5000,
       });
-    } finally {
-      setFaqToToggle(null);
     }
   };
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -223,11 +197,11 @@ export default function FaqManagementPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  currentItems.map((faq) => {
+                  currentItems.map((faq: FAQ) => {
                     const selectedCategory = faqCategories.find((cat: any) => cat.name === faq.category);
                     const categoryDescription = selectedCategory?.description || '';
                     return (
-                      <TableRow key={faq.id}>
+                      <TableRow key={faq._id}>
                         <TableCell className="font-medium max-w-sm">
                           <div className="font-semibold">{faq.question || 'No question'}</div>
                         </TableCell>
@@ -345,7 +319,7 @@ export default function FaqManagementPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {faqCategories.length > 0 ? (
-                    faqCategories.map((category) => (
+                    faqCategories.map((category: any) => (
                       <SelectItem key={category._id} value={category.name}>
                         <div className="flex flex-col">
                           <span>{category.name}</span>
@@ -393,16 +367,14 @@ export default function FaqManagementPage() {
                       visible: true
                     };
                     
-                    await dispatch(addNewFaq(newFaqData)).unwrap();
-                    toast.success("FAQ added successfully!", {
-                      duration: 5000,
-                      style: { background: '#22c55e', color: '#ffffff' },
-                    });
+                    await addNewFaq(newFaqData).unwrap();
+                    toast.success("FAQ added successfully!");
+                    refetch();
                     setIsNewModalOpen(false);
                     setNewFaq({ question: '', answer: '', category: '', visible: true });
-                  } catch (err) {
+                  } catch (err: any) {
                     toast.error("Failed to save FAQ. Please try again.", {
-                      description: err.payload?.message || err.message || 'Unknown error',
+                      description: err.data?.message || err.message || 'Unknown error',
                       duration: 5000,
                     });
                   }
@@ -523,46 +495,24 @@ export default function FaqManagementPage() {
               onClick={async () => {
                 if (selectedFaq) {
                   try {
-                    const updatedFields: Partial<FAQ> = {};
                     const originalFaq = faqs.find(f => f._id === selectedFaq._id);
-                    if (originalFaq) {
-                      if (selectedFaq.question !== originalFaq.question) {
-                        updatedFields.question = selectedFaq.question;
-                      }
-                      if (selectedFaq.answer !== originalFaq.answer) {
-                        updatedFields.answer = selectedFaq.answer;
-                      }
-                      if (selectedFaq.category !== originalFaq.category) {
-                        updatedFields.category = selectedFaq.category;
-                      }
-                      if (selectedFaq.visible !== originalFaq.visible) {
-                        updatedFields.visible = selectedFaq.visible;
-                      }
-                    }
-
-                    if (Object.keys(updatedFields).length > 0) {
-                      await dispatch(
-                        updateFaqItem({
+                    if (originalFaq && (selectedFaq.question !== originalFaq.question || selectedFaq.answer !== originalFaq.answer || selectedFaq.category !== originalFaq.category)) {
+                      await updateFaqItem({
                           id: selectedFaq._id,
-                          ...updatedFields,
-                        })
-                      ).unwrap();
-                      toast.success("FAQ updated successfully!", {
-                        duration: 5000,
-                        style: { background: '#22c55e', color: '#ffffff' },
-                      });
-                      setIsEditModalOpen(false);
-                      setSelectedFaq(null);
-                      dispatch(resetError());
+                          question: selectedFaq.question,
+                          answer: selectedFaq.answer,
+                          category: selectedFaq.category
+                      }).unwrap();
+                      toast.success("FAQ updated successfully!");
+                      refetch();
                     } else {
-                      toast.info("No changes detected.", {
-                        duration: 5000,
-                      });
-                      setIsEditModalOpen(false);
-                      setSelectedFaq(null);
+                      toast.info("No changes detected.");
                     }
-                  } catch (err) {
-                    toast.error(`Failed to update FAQ: ${err.payload?.message || err.message || 'Unknown error'}`, {
+                    setIsEditModalOpen(false);
+                    setSelectedFaq(null);
+                    dispatch(resetError());
+                  } catch (err: any) {
+                    toast.error(`Failed to update FAQ: ${err.data?.message || err.message || 'Unknown error'}`, {
                       duration: 5000,
                     });
                   }
@@ -615,33 +565,7 @@ export default function FaqManagementPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Toggle Confirmation Modal */}
-      <Dialog open={!!faqToToggle} onOpenChange={(open) => !open && setFaqToToggle(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm {faqToToggle?.visible ? 'Show' : 'Hide'} FAQ</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to {faqToToggle?.visible ? 'show' : 'hide'} this FAQ? 
-              {faqToToggle?.visible ? ' It will be visible to users.' : ' It will be hidden from users.'}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setFaqToToggle(null)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant={faqToToggle?.visible ? 'default' : 'secondary'}
-              onClick={handleConfirmToggle}
-            >
-              {faqToToggle?.visible ? 'Make Visible' : 'Keep Hidden'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent>
           <DialogHeader>
