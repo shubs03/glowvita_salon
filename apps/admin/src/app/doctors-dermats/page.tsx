@@ -83,6 +83,8 @@ type Doctor = {
   landline?: string;
   createdAt: string;
   updatedAt: string;
+  workingWithHospital?: boolean;
+  videoConsultation?: boolean;
 };
 
 type ActionType = "approve" | "reject" | "delete";
@@ -125,7 +127,7 @@ export default function DoctorsDermatsPage() {
   const handleAddDoctor = async (
     newDoctor: Omit<
       Doctor,
-      "_id" | "createdAt" | "updatedAt" | "confirmPassword"
+      "_id" | "createdAt" | "updatedAt"
     >
   ) => {
     try {
@@ -137,7 +139,7 @@ export default function DoctorsDermatsPage() {
   };
 
   const handleUpdateDoctor = async (
-    updatedDoctor: Omit<Doctor, "confirmPassword">
+    updatedDoctor: Omit<Doctor, "createdAt" | "updatedAt">
   ) => {
     try {
       // Ensure we have the _id for the update
@@ -145,7 +147,8 @@ export default function DoctorsDermatsPage() {
         console.error("Doctor ID is required for update");
         return;
       }
-      await updateDoctor({ id: updatedDoctor._id, ...updatedDoctor }).unwrap();
+      const { _id, ...updateData } = updatedDoctor;
+      await updateDoctor({ id: _id, ...updateData }).unwrap();
       setIsNewDoctorModalOpen(false);
       setSelectedDoctor(null);
     } catch (err) {
@@ -555,20 +558,11 @@ export default function DoctorsDermatsPage() {
         }}
         doctor={selectedDoctor}
         isEditMode={!!selectedDoctor}
-        onSubmit={(data: Omit<Doctor, "confirmPassword">) => {
+        onSubmit={(data) => {
           if (selectedDoctor) {
-            // For edit mode, ensure we have the required fields from selectedDoctor
-            const updatedDoctor = {
-              ...data,
-              _id: selectedDoctor._id,
-              createdAt: selectedDoctor.createdAt,
-              updatedAt: new Date().toISOString(),
-            };
-            handleUpdateDoctor(updatedDoctor as Doctor);
+            handleUpdateDoctor(data as Doctor);
           } else {
-            // For add mode, remove the fields that shouldn't be in new doctor data
-            const { _id, id, createdAt, updatedAt, ...newDoctorData } = data;
-            handleAddDoctor(newDoctorData as any);
+            handleAddDoctor(data as Omit<Doctor, '_id' | 'createdAt' | 'updatedAt'>);
           }
         }}
       />

@@ -155,7 +155,7 @@ const DropdownManager = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {items.map((item: DropdownItem) => (
                 <TableRow key={item._id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -352,7 +352,7 @@ const ServiceCategoryManager = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {categories.map((item) => (
+                            {categories.map((item: ServiceCategory) => (
                                 <TableRow key={item._id}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell className="text-muted-foreground">{item.description}</TableCell>
@@ -558,12 +558,12 @@ const ServiceManager = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {services.map((item) => (
+                            {services.map((item: Service) => (
                                 <TableRow key={item._id}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell>
                                         <Badge variant="secondary">
-                                            {typeof item.category === 'object' ? item.category.name : 'N/A'}
+                                            {typeof item.category === 'object' ? (item.category as ServiceCategory).name : 'N/A'}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">{item.description}</TableCell>
@@ -608,7 +608,7 @@ const ServiceManager = () => {
                             <DialogHeader>
                                 <DialogTitle>{currentItem?._id ? 'Edit' : 'Add'} Service</DialogTitle>
                                 <DialogDescription>
-                                    {currentItem?._id ? `Editing "${currentItem.name}".` : 'Add a new service.'}
+                                    {currentItem?._id ? `Editing "${(currentItem as Service).name}".` : 'Add a new service.'}
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
@@ -618,12 +618,12 @@ const ServiceManager = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="category">Category</Label>
-                                    <Select name="category" defaultValue={typeof currentItem?.category === 'object' ? currentItem?.category?._id : currentItem?.category} required>
+                                    <Select name="category" defaultValue={typeof currentItem?.category === 'object' ? (currentItem?.category as ServiceCategory)?._id : currentItem?.category as string} required>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a category" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {categories.map((cat) => (
+                                            {categories.map((cat: ServiceCategory) => (
                                                 <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
                                             ))}
                                         </SelectContent>
@@ -660,7 +660,7 @@ const ServiceManager = () => {
                         <DialogHeader>
                             <DialogTitle>Delete Service?</DialogTitle>
                             <DialogDescription>
-                                Are you sure you want to delete "{currentItem?.name}"? This action cannot be undone.
+                                Are you sure you want to delete "{(currentItem as Service)?.name}"? This action cannot be undone.
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
@@ -681,8 +681,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; parentName?: string; action: 'add' | 'edit' }>({ type: 'specialization', action: 'add' });
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
     
-    // State to manage the selected doctor type in the modal
-    const [selectedDoctorType, setSelectedDoctorType] = useState<'Physician' | 'Surgeon' | ''>('');
+    const [selectedDoctorType, setSelectedDoctorType] = useState<'Physician' | 'Surgeon'>();
 
     const specializations = useMemo(() => data.filter(item => item.type === 'specialization'), [data]);
     
@@ -692,11 +691,10 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     
     const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
         setCurrentItem(item || null);
-        // Set the doctor type for the modal
         if (type === 'specialization') {
-            setSelectedDoctorType(item?.doctorType || '');
+            setSelectedDoctorType(item?.doctorType);
         } else {
-            setSelectedDoctorType('');
+            setSelectedDoctorType(undefined);
         }
         setModalConfig({ type, parentId, parentName, action });
         setIsModalOpen(true);
@@ -708,7 +706,6 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
         const name = (form.elements.namedItem('name') as HTMLInputElement).value;
         const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
 
-        // Validation for specialization
         if (modalConfig.type === 'specialization' && !selectedDoctorType) {
             toast.error("Doctor Type is required for a specialization.");
             return;
@@ -720,7 +717,6 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
             description,
             type: modalConfig.type,
             parentId: modalConfig.parentId,
-            // Include doctorType only for specializations
             doctorType: modalConfig.type === 'specialization' ? selectedDoctorType : undefined,
         };
 
@@ -924,7 +920,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter(item => item.type === d.key)}
+                                items={data.filter((item: DropdownItem) => item.type === d.key)}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
@@ -961,7 +957,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter(item => item.type === d.key)}
+                                items={data.filter((item: DropdownItem) => item.type === d.key)}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
@@ -976,7 +972,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter(item => item.type === d.key)}
+                                items={data.filter((item: DropdownItem) => item.type === d.key)}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
@@ -995,23 +991,17 @@ export default function DropdownManagementPage() {
 }
 
 const ProductCategoryManager = () => {
-    const { data: productCategoriesData = [], isLoading, refetch } = useGetAdminProductCategoriesQuery();
+    const { data: productCategoriesResponse, isLoading, refetch } = useGetAdminProductCategoriesQuery(undefined);
     const [createCategory] = useCreateAdminProductCategoryMutation();
     const [updateCategory] = useUpdateAdminProductCategoryMutation();
     const [deleteCategory] = useDeleteAdminProductCategoryMutation();
     
     const productCategories = useMemo(() => {
-        if (Array.isArray(productCategoriesData)) {
-            return productCategoriesData;
-        }
-        if (productCategoriesData && Array.isArray(productCategoriesData.data)) {
-            return productCategoriesData.data;
-        }
-        if (productCategoriesData && Array.isArray(productCategoriesData.productCategories)) {
-            return productCategoriesData.productCategories;
+        if (productCategoriesResponse && Array.isArray(productCategoriesResponse.data)) {
+            return productCategoriesResponse.data;
         }
         return [];
-    }, [productCategoriesData]);
+    }, [productCategoriesResponse]);
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
