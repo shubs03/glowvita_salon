@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown } from 'lucide-react';
+import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown, Map } from 'lucide-react';
 import { Checkbox } from "@repo/ui/checkbox";
 import {
   Select,
@@ -32,7 +32,14 @@ import {
   PopoverTrigger,
 } from "@repo/ui/popover";
 import { cn } from "@repo/ui/cn";
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../packages/config/config';
 
+// Mapbox Access Token
+if (NEXT_PUBLIC_MAPBOX_API_KEY) {
+  mapboxgl.accessToken = NEXT_PUBLIC_MAPBOX_API_KEY;
+}
 
 export interface Doctor {
   _id?: string;
@@ -51,6 +58,7 @@ export interface Doctor {
   state: string;
   city: string;
   pincode: string;
+  location?: { lat: number, lng: number } | null;
   status?: 'Approved' | 'Pending' | 'Rejected';
   profileImage?: string;
   qualification?: string;
@@ -75,6 +83,19 @@ interface DoctorFormProps {
   isEditMode: boolean;
   onSubmit: (data: Omit<Doctor, 'confirmPassword'>) => void;
 }
+
+interface MapboxFeature {
+  id: string;
+  place_name: string;
+  geometry: {
+    coordinates: [number, number];
+  };
+  context?: Array<{
+    id: string;
+    text: string;
+  }>;
+}
+
 
 // Initial form data template
 const initialFormData: Doctor & { password: string; confirmPassword: string } = {
@@ -101,37 +122,26 @@ const initialFormData: Doctor & { password: string; confirmPassword: string } = 
   state: '',
   city: '',
   pincode: '',
+  location: null,
   workingWithHospital: false,
   videoConsultation: false,
 };
 
 export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: DoctorFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
-  const [formData, setFormData] = useState<Doctor & { password: string; confirmPassword: string }>(
-    isEditMode && doctor
-      ? {
-          ...initialFormData,
-          ...doctor,
-          password: '', // Do not prefill password in edit mode
-          confirmPassword: '',
-          profileImage: doctor.profileImage || '',
-          qualification: doctor.qualification || '',
-          registrationYear: doctor.registrationYear || '',
-          faculty: doctor.faculty || '',
-          landline: doctor.landline || '',
-          assistantName: doctor.assistantName || '',
-          assistantContact: doctor.assistantContact || '',
-          workingWithHospital: doctor.workingWithHospital || false,
-          videoConsultation: doctor.videoConsultation || false,
-        }
-      : initialFormData
-  );
+  const [formData, setFormData] = useState<Doctor & { password: string; confirmPassword: string }>(initialFormData);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
-    doctor?.profileImage || null
-  );
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
+  const mapContainer = useRef<HTMLDivElement | null>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const marker = useRef<mapboxgl.Marker | null>(null);
+
 
   const { data: superData = [], isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
   
@@ -146,8 +156,10 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
   const filteredDiseases = useMemo(() => {
     const diseaseMap = new Map();
     if (formData.specialties.length > 0) {
+      const selectedSpecialtyIds = formData.specialties;
+      
       allDiseases.forEach(disease => {
-        if (formData.specialties.includes(disease.parentId)) {
+        if (selectedSpecialtyIds.includes(disease.parentId)) {
           const specialty = allSpecialties.find(s => s._id === disease.parentId);
           if (specialty) {
             if (!diseaseMap.has(specialty.name)) {
@@ -165,9 +177,20 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && doctor) {
+        // When editing, map names back to IDs for specialties and diseases
+        const specialtyIds = doctor.specialties
+          .map(name => allSpecialties.find(s => s.name === name)?._id)
+          .filter(Boolean) as string[];
+
+        const diseaseIds = doctor.diseases
+          .map(name => allDiseases.find(d => d.name === name)?._id)
+          .filter(Boolean) as string[];
+
         setFormData({
           ...initialFormData,
           ...doctor,
+          specialties: specialtyIds,
+          diseases: diseaseIds,
           password: '',
           confirmPassword: '',
           profileImage: doctor.profileImage || '',
@@ -184,15 +207,12 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
       } else {
         setFormData(initialFormData);
         setProfileImagePreview(null);
-        const fileInput = document.getElementById('profileImage') as HTMLInputElement;
-        if (fileInput) {
-          fileInput.value = '';
-        }
       }
       setActiveTab('personal');
       setPasswordError('');
     }
-  }, [isOpen, isEditMode, doctor]);
+  }, [isOpen, isEditMode, doctor, allSpecialties, allDiseases]);
+
 
   const validatePassword = (password: string, confirmPassword: string) => {
     if (password !== confirmPassword) {
@@ -297,6 +317,90 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     });
 
     onSubmit({ ...submitData, specialties: specialtyNames, diseases: diseaseNames });
+  };
+
+  // Map functionality
+  useEffect(() => {
+    if (!isMapOpen || !NEXT_PUBLIC_MAPBOX_API_KEY) return;
+    const initMap = () => {
+      if (!mapContainer.current) return;
+      if (map.current) map.current.remove();
+
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
+        zoom: formData.location ? 14 : 4,
+      });
+
+      if (marker.current) marker.current.remove();
+      
+      marker.current = new mapboxgl.Marker({ draggable: true })
+        .setLngLat(formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599])
+        .addTo(map.current);
+
+      marker.current.on('dragend', () => {
+        const lngLat = marker.current!.getLngLat();
+        setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
+        fetchAddress([lngLat.lng, lngLat.lat]);
+      });
+
+      map.current.on('click', (e) => {
+        const { lng, lat } = e.lngLat;
+        setFormData(prev => ({ ...prev, location: { lat, lng } }));
+        marker.current!.setLngLat([lng, lat]);
+        fetchAddress([lng, lat]);
+      });
+    };
+    
+    const timer = setTimeout(initMap, 100);
+    return () => clearTimeout(timer);
+  }, [isMapOpen]);
+
+  const handleSearch = async (query: string) => {
+    if (!query.trim() || !NEXT_PUBLIC_MAPBOX_API_KEY) return;
+    try {
+      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${NEXT_PUBLIC_MAPBOX_API_KEY}&country=IN`);
+      const data = await response.json();
+      setSearchResults(data.features || []);
+    } catch (error) {
+      toast.error("Failed to search location.");
+    }
+  };
+
+  const fetchAddress = async (coordinates: [number, number]) => {
+    try {
+      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${NEXT_PUBLIC_MAPBOX_API_KEY}`);
+      const data = await response.json();
+      if (data.features.length > 0) {
+        const feature = data.features[0];
+        setFormData(prev => ({
+          ...prev,
+          clinicAddress: feature.place_name,
+          city: feature.context?.find(c => c.id.startsWith('place'))?.text || '',
+          state: feature.context?.find(c => c.id.startsWith('region'))?.text || '',
+          pincode: feature.context?.find(c => c.id.startsWith('postcode'))?.text || '',
+        }));
+      }
+    } catch (error) {
+      toast.error("Failed to fetch address.");
+    }
+  };
+
+  const handleSearchResultSelect = (result: MapboxFeature) => {
+    const coordinates: [number, number] = result.geometry.coordinates;
+    setFormData(prev => ({
+      ...prev,
+      location: { lat: coordinates[1], lng: coordinates[0] },
+      clinicAddress: result.place_name,
+      city: result.context?.find(c => c.id.startsWith('place'))?.text || '',
+      state: result.context?.find(c => c.id.startsWith('region'))?.text || '',
+      pincode: result.context?.find(c => c.id.startsWith('postcode'))?.text || '',
+    }));
+    map.current?.flyTo({ center: coordinates, zoom: 14 });
+    marker.current?.setLngLat(coordinates);
+    setSearchResults([]);
+    setSearchQuery('');
   };
 
   const renderFormContent = () => (
@@ -731,10 +835,17 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="clinicAddress" className="text-sm font-medium text-gray-700">
+                          <Label htmlFor="location" className="text-sm font-medium text-gray-700">Location</Label>
+                          <Button type="button" variant="outline" onClick={() => setIsMapOpen(true)} className="w-full h-10 justify-start text-left font-normal">
+                              <MapPin className="mr-2 h-4 w-4" />
+                              {formData.location ? `${formData.location.lat.toFixed(4)}, ${formData.location.lng.toFixed(4)}` : "Choose on Map"}
+                          </Button>
+                        </div>
+                        <div className="space-y-1.5 md:col-span-2">
+                            <Label htmlFor="clinicAddress" className="text-sm font-medium text-gray-700">
                             Clinic Address <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
+                            </Label>
+                            <Input
                             id="clinicAddress"
                             name="clinicAddress"
                             value={formData.clinicAddress}
@@ -742,7 +853,7 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                             placeholder="Clinic Address"
                             className="h-10 bg-white"
                             required
-                          />
+                            />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="state" className="text-sm font-medium text-gray-700">
@@ -911,6 +1022,37 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
           </div>
         </div>
       </Tabs>
+      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+        <Dialog.Content className="sm:max-w-4xl max-h-[80vh]">
+            <Dialog.Header>
+                <Dialog.Title>Select Clinic Location</Dialog.Title>
+                <Dialog.Description>Search, pan, or click on the map to set the exact location.</Dialog.Description>
+            </Dialog.Header>
+            <div className="space-y-4 h-[60vh] flex flex-col">
+                <div className="relative">
+                    <Input
+                        placeholder="Search for a location..."
+                        value={searchQuery}
+                        onChange={(e) => { setSearchQuery(e.target.value); handleSearch(e.target.value); }}
+                    />
+                    {searchResults.length > 0 && (
+                        <div className="absolute z-10 w-full bg-background border rounded-md mt-1 max-h-48 overflow-y-auto">
+                            {searchResults.map(result => (
+                                <div key={result.id} onClick={() => handleSearchResultSelect(result)} className="p-2 hover:bg-secondary cursor-pointer text-sm">
+                                    {result.place_name}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <div ref={mapContainer} className="flex-grow w-full rounded-md border" />
+            </div>
+            <Dialog.Footer>
+                <Button variant="outline" onClick={() => setIsMapOpen(false)}>Cancel</Button>
+                <Button onClick={() => setIsMapOpen(false)}>Confirm Location</Button>
+            </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog>
     </form>
   );
 
@@ -927,9 +1069,11 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
               <Dialog.Title className="text-xl font-semibold leading-none tracking-tight">
                 {isEditMode ? `Edit Doctor: ${doctor?.name}` : 'Add New Doctor'}
               </Dialog.Title>
-              <Dialog.Close className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-                <X className="h-5 w-5" />
-                <span className="sr-only">Close</span>
+              <Dialog.Close asChild>
+                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8" onClick={onClose}>
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Close</span>
+                </Button>
               </Dialog.Close>
             </div>
             <Dialog.Description className="text-sm text-muted-foreground">
