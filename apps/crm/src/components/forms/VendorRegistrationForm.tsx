@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
@@ -23,6 +22,27 @@ const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
 type SalonCategory = 'unisex' | 'men' | 'women';
 type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
 
+interface FormData {
+  firstName: string;
+  lastName: string;
+  businessName: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+  category: SalonCategory | '';
+  subCategories: SubCategory[];
+  description: string;
+  website: string;
+  profileImage: string;
+  address: string;
+  state: string;
+  city: string;
+  pincode: string;
+  location: { lat: number; lng: number } | null;
+  referredByCode: string;
+}
+
 interface MapboxFeature {
   id: string;
   place_name: string;
@@ -35,19 +55,22 @@ interface MapboxFeature {
   }>;
 }
 
-const StepIndicator = ({ currentStep }) => {
+const StepIndicator = ({ currentStep, setStep }: { currentStep: number, setStep: (step: number) => void }) => {
     const steps = [
         { id: 1, name: 'Create Account', icon: User },
         { id: 2, name: 'Business Details', icon: Building },
         { id: 3, name: 'Location', icon: MapPin },
     ];
-    
+
     return (
         <nav aria-label="Progress">
             <ol role="list" className="flex items-center">
                 {steps.map((step, stepIdx) => (
                     <li key={step.name} className={cn("relative", stepIdx !== steps.length - 1 ? "flex-1" : "")}>
-                         <div className="flex items-center text-sm font-medium">
+                         <div onClick={() => (step.id < currentStep ? setStep(step.id) : {})} className={cn(
+                             "flex items-center text-sm font-medium",
+                             step.id < currentStep && "cursor-pointer"
+                             )}>
                             <span className={cn(
                                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
                                 currentStep > step.id ? "bg-primary text-white" :
@@ -73,21 +96,21 @@ const StepIndicator = ({ currentStep }) => {
     );
 };
 
-export function VendorRegistrationForm({ onSuccess }) {
+export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
   const searchParams = useSearchParams();
   const refCode = searchParams.get('ref');
 
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
+    businessName: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
-    businessName: '',
-    category: '' as SalonCategory | '',
-    subCategories: [] as SubCategory[],
+    category: '',
+    subCategories: [],
     description: '',
     website: '',
     profileImage: '',
@@ -99,7 +122,7 @@ export function VendorRegistrationForm({ onSuccess }) {
     referredByCode: refCode || '',
   });
 
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [registerVendor, { isLoading }] = useVendorRegisterMutation();
 
@@ -116,12 +139,12 @@ export function VendorRegistrationForm({ onSuccess }) {
     }
   }, [refCode]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleCheckboxChange = (id, checked) => {
+  const handleCheckboxChange = (id: SubCategory, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
       subCategories: checked
@@ -130,7 +153,7 @@ export function VendorRegistrationForm({ onSuccess }) {
     }));
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -142,7 +165,7 @@ export function VendorRegistrationForm({ onSuccess }) {
   };
 
   const validateStep1 = () => {
-    const newErrors = {};
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.firstName) newErrors.firstName = 'First name is required';
     if (!formData.lastName) newErrors.lastName = 'Last name is required';
     if (!formData.email) newErrors.email = 'Email is required';
@@ -155,7 +178,7 @@ export function VendorRegistrationForm({ onSuccess }) {
   };
   
   const validateStep2 = () => {
-    const newErrors = {};
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.businessName) newErrors.businessName = 'Business name is required';
     if (!formData.category) newErrors.category = 'Salon category is required';
     if (formData.subCategories.length === 0) newErrors.subCategories = 'At least one sub-category is required';
@@ -164,7 +187,7 @@ export function VendorRegistrationForm({ onSuccess }) {
   }
 
   const validateStep3 = () => {
-    const newErrors = {};
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.address) newErrors.address = 'Address is required';
     if (!formData.state) newErrors.state = 'State is required';
     if (!formData.city) newErrors.city = 'City is required';
@@ -174,7 +197,7 @@ export function VendorRegistrationForm({ onSuccess }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep1() || !validateStep2() || !validateStep3()) {
         toast.error("Please ensure all required fields are filled correctly.");
@@ -184,7 +207,7 @@ export function VendorRegistrationForm({ onSuccess }) {
     try {
       await registerVendor(formData).unwrap();
       onSuccess();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err.data?.error || 'Registration failed');
     }
   };
@@ -208,7 +231,6 @@ export function VendorRegistrationForm({ onSuccess }) {
       
       mapboxgl.accessToken = MAPBOX_TOKEN;
       
-      // Clean up existing map safely
       if (map.current && map.current.getCanvas()) {
         try {
           map.current.remove();
@@ -217,7 +239,6 @@ export function VendorRegistrationForm({ onSuccess }) {
         }
       }
       
-      // Clean up existing marker safely
       if (marker.current) {
         try {
           marker.current.remove();
@@ -245,7 +266,7 @@ export function VendorRegistrationForm({ onSuccess }) {
         }
       });
       
-      map.current.on('click', (e) => {
+      map.current.on('click', (e: mapboxgl.MapLayerMouseEvent) => {
         const { lng, lat } = e.lngLat;
         setFormData(prev => ({ ...prev, location: { lat, lng } }));
         if (marker.current) {
@@ -267,8 +288,6 @@ export function VendorRegistrationForm({ onSuccess }) {
     
     return () => {
       clearTimeout(timeoutId);
-      
-      // Clean up marker safely
       if (marker.current) {
         try {
           marker.current.remove();
@@ -277,8 +296,6 @@ export function VendorRegistrationForm({ onSuccess }) {
           console.warn('Error cleaning up marker:', error);
         }
       }
-      
-      // Clean up map safely
       if (map.current && map.current.getCanvas()) {
         try {
           map.current.remove();
@@ -324,15 +341,15 @@ export function VendorRegistrationForm({ onSuccess }) {
     } catch (error) { console.error('Error fetching address:', error); }
   };
 
-  const handleSearchResultSelect = (result) => {
+  const handleSearchResultSelect = (result: MapboxFeature) => {
     const coordinates = result.geometry.coordinates;
     const newLocation = { lat: coordinates[1], lng: coordinates[0] };
     setFormData(prev => ({
       ...prev,
       location: newLocation,
       address: result.place_name,
-      state: result.context?.find((c: any) => c.id.includes('region'))?.text || prev.state,
-      city: result.context?.find((c: any) => c.id.includes('place'))?.text || prev.city,
+      state: result.context?.find(c => c.id.includes('region'))?.text || prev.state,
+      city: result.context?.find(c => c.id.includes('place'))?.text || prev.city,
     }));
     if (map.current && map.current.getCanvas()) {
       map.current.setCenter(coordinates);
@@ -389,7 +406,7 @@ export function VendorRegistrationForm({ onSuccess }) {
                     <div className="grid grid-cols-3 gap-2">
                       {(['shop', 'shop-at-home', 'onsite'] as SubCategory[]).map(sc => (
                         <div key={sc} className="flex items-center space-x-2 p-2 border rounded-md">
-                          <Checkbox id={sc} checked={formData.subCategories.includes(sc)} onCheckedChange={(checked) => handleCheckboxChange(sc, checked)} />
+                          <Checkbox id={sc} checked={formData.subCategories.includes(sc)} onCheckedChange={(checked) => handleCheckboxChange(sc, checked as boolean)} />
                           <Label htmlFor={sc} className="capitalize">{sc.replace('-', ' ')}</Label>
                         </div>
                       ))}
@@ -420,7 +437,7 @@ export function VendorRegistrationForm({ onSuccess }) {
                             onClick={() => setIsMapOpen(true)}
                         >
                             <MapIcon className="mr-2 h-4 w-4" />
-                            Choose Map
+                            Map
                         </Button>
                     </div>
                 </div>
@@ -530,10 +547,8 @@ export function VendorRegistrationForm({ onSuccess }) {
   );
 };
 
-export const VendorRegistrationFormWithSuspense = (props) => (
+export const VendorRegistrationFormWithSuspense = (props: { onSuccess: () => void }) => (
   <Suspense fallback={<div>Loading form...</div>}>
     <VendorRegistrationForm {...props} />
   </Suspense>
 );
-
-    
