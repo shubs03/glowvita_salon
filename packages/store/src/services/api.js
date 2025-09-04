@@ -1,4 +1,5 @@
 
+
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -1018,9 +1019,10 @@ export const glowvitaApi = createApi({
 
     // Products endpoints
     getCrmProducts: builder.query({
-      query: () => ({
-        url: "/crm/products",
+      query: (vendorId) => ({ // Accept vendorId
+        url: "/crm/products", // The API route will get vendorId from auth
         method: "GET",
+        // No need to pass vendorId as a query param if middleware handles it
       }),
       providesTags: ["CrmProducts", "Product"],
       transformResponse: (response) => {

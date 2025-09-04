@@ -90,7 +90,7 @@ export default function ProductsPage() {
     const { user } = useCrmAuth();
     
     // RTK Query Hooks
-    const { data: productsData = [], isLoading: isProductsLoading, refetch: refetchProducts } = useGetCrmProductsQuery({}, { skip: !user });
+    const { data: productsData = [], isLoading: isProductsLoading, refetch: refetchProducts } = useGetCrmProductsQuery(user?._id, { skip: !user });
     const [createProduct, { isLoading: isCreatingProduct }] = useCreateCrmProductMutation();
     const [updateProduct, { isLoading: isUpdatingProduct }] = useUpdateCrmProductMutation();
     const [deleteProduct, { isLoading: isDeletingProduct }] = useDeleteCrmProductMutation();
