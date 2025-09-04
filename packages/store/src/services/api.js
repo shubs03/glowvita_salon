@@ -1,5 +1,3 @@
-
-
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -88,6 +86,7 @@ export const glowvitaApi = createApi({
     "AdminProductCategory",
     "ProductCategory",
     "SmsTemplate",
+    "SmsPackage",
     "CrmSmsTemplate",
     "TestSmsTemplate",
     "SmsPackage",
@@ -170,19 +169,19 @@ export const glowvitaApi = createApi({
     }),
 
     createSocialMediaTemplate: builder.mutation({
-      query: (templateData) => ({
+      query: (formData) => ({
         url: "/admin/social-media-templates",
         method: "POST",
-        body: templateData,
+        body: formData,
       }),
       invalidatesTags: ["SocialMediaTemplate"],
     }),
 
     updateSocialMediaTemplate: builder.mutation({
-      query: ({ id, ...updates }) => ({
+      query: ({ id, ...formData }) => ({
         url: `/admin/social-media-templates?id=${id}`,
         method: "PUT",
-        body: updates,
+        body: formData,
       }),
       invalidatesTags: (result, error, { id }) => [
         "SocialMediaTemplate",
