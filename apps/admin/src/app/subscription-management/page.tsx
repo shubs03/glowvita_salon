@@ -25,6 +25,9 @@ type Plan = {
   discountedPrice?: number;
   isAvailableForPurchase: boolean;
   status?: boolean;
+  features: string[];
+  userType: ('vendor' | 'supplier' | 'doctor')[];
+  isFeatured?: boolean;
 };
 
 type Subscription = {
@@ -87,6 +90,11 @@ export default function SubscriptionManagementPage() {
     price: '',
     discountedPrice: '',
     isAvailableForPurchase: true,
+    features: [],
+    userTypes: [],
+    isFeatured: false,
+    planType: 'regular',
+    status: 'Active'
   });
 
   // Pagination state
@@ -176,11 +184,14 @@ export default function SubscriptionManagementPage() {
         name: planForm.name,
         duration: parseInt(planForm.duration) || 1,
         durationType: planForm.durationType,
-        price: planForm.price ? parseFloat(planForm.price) : 0,
-        discountedPrice: planForm.discountedPrice ? parseFloat(planForm.discountedPrice) : undefined,
+        price: planForm.planType === 'trial' ? 0 : (planForm.price ? parseFloat(planForm.price) : 0),
+        discountedPrice: planForm.planType === 'trial' ? 0 : (planForm.discountedPrice ? parseFloat(planForm.discountedPrice) : undefined),
         isAvailableForPurchase: planForm.isAvailableForPurchase,
-        status: 'Active',
-        features: (planForm as any).features || [],
+        status: planForm.status,
+        features: planForm.features || [],
+        userTypes: planForm.userTypes,
+        planType: planForm.planType,
+        isFeatured: planForm.isFeatured
       };
 
       if (modalType === 'add') {

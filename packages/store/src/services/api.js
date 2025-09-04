@@ -1219,6 +1219,26 @@ export const glowvitaApi = createApi({
       invalidatesTags: ['DoctorWorkingHours'], // Invalidate cache after update
     }),
 
+    //subscription renewal
+
+      changePlan: builder.mutation({
+      query: (data) => ({
+        url: `/crm/subscription/change-plan`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["SubscriptionPlan"],
+    }),
+
+    renewPlan: builder.mutation({
+      query: (data) => ({
+        url: `/crm/subscription/renew`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["SubscriptionPlan"],
+    }),
+
   }),
 });
 
@@ -1407,5 +1427,9 @@ export const {
   // CRM Referral Endpoints
   useGetCrmReferralsQuery,
   useGetCrmReferralSettingsQuery,
+
+  //subscription renewal
+    useChangePlanMutation,
+  useRenewPlanMutation,
 
 } = glowvitaApi;

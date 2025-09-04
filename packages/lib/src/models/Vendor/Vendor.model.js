@@ -114,19 +114,41 @@ const vendorSchema = new mongoose.Schema({
     plan: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SubscriptionPlan",
-      // type: String,
-      // enum: ["Basic", "Pro Monthly", "Pro Yearly"],
-      // default: "Basic",
+      required: true
     },
     status: {
       type: String,
-      enum: ["Active", "Expired", "Pending"],
-      default: "Pending",
+      enum: ["Active", "Expired"],
+      default: "Active",
     },
-    expires: {
+    startDate: {
       type: Date,
-      default: null,
+      default: Date.now,
     },
+    endDate: {
+      type: Date,
+      required: true
+    },
+    history: [{
+      plan: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "SubscriptionPlan",
+        required: true
+      },
+      startDate: {
+        type: Date,
+        required: true
+      },
+      endDate: {
+        type: Date,
+        required: true
+      },
+      status: {
+        type: String,
+        enum: ["Active", "Expired"],
+        required: true
+      }
+    }]
   },
   gallery: [
     {
