@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { glowvitaApi } from '../services/api';
 
 const initialState = {
   templates: [],
@@ -93,3 +94,84 @@ export const selectError = (state) => state.smsTemplates.error;
 export const selectPagination = (state) => state.smsTemplates.pagination;
 
 export default smsTemplateSlice.reducer;
+
+// Extend the API with SMS Template endpoints
+const extendedApiSlice = glowvitaApi.injectEndpoints({
+  endpoints: (builder) => ({
+    // CRM SMS Templates
+    getCrmSmsTemplates: builder.query({
+      query: () => ({
+        url: '/crm/sms-template',
+        method: 'GET'
+      }),
+      providesTags: ['CrmSmsTemplate'],
+      transformResponse: (response) => {
+        console.log('SMS Template Slice - Raw API response:', response);
+        // Transform the response to match the expected format
+        const result = {
+          templates: response.success ? response.data : [],
+          total: response.success ? response.data.length : 0
+        };
+        console.log('SMS Template Slice - Transformed response:', result);
+        return result;
+      }
+    }),
+    // Test endpoint without auth
+    getTestSmsTemplates: builder.query({
+      query: () => ({
+        url: '/crm/test-sms-templates',
+        method: 'GET'
+      }),
+      providesTags: ['TestSmsTemplate'],
+      transformResponse: (response) => {
+        console.log('Test SMS Template Slice - Raw API response:', response);
+        const result = {
+          templates: response.success ? response.data : [],
+          total: response.success ? response.data.length : 0
+        };
+        console.log('Test SMS Template Slice - Transformed response:', result);
+        return result;
+      }
+    }),
+    getCrmSmsTemplateById: builder.query({
+      query: (id) => `/crm/sms-template/${id}`,
+      providesTags: (result, error, id) => [{ type: 'CrmSmsTemplate', id }]
+    }),
+    createCrmSmsTemplate: builder.mutation({
+      query: (templateData) => ({
+        url: '/crm/sms-template',
+        method: 'POST',
+        body: templateData
+      }),
+      invalidatesTags: ['CrmSmsTemplate']
+    }),
+    updateCrmSmsTemplate: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/crm/sms-template/${id}`,
+        method: 'PUT',
+        body: updates
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        'CrmSmsTemplate',
+        { type: 'CrmSmsTemplate', id }
+      ]
+    }),
+    deleteCrmSmsTemplate: builder.mutation({
+      query: (id) => ({
+        url: `/crm/sms-template/${id}`,
+        method: 'DELETE'
+      }),
+      invalidatesTags: ['CrmSmsTemplate']
+    })
+  })
+});
+
+// Export the auto-generated hooks
+export const {
+  useGetCrmSmsTemplatesQuery,
+  useGetTestSmsTemplatesQuery,
+  useGetCrmSmsTemplateByIdQuery,
+  useCreateCrmSmsTemplateMutation,
+  useUpdateCrmSmsTemplateMutation,
+  useDeleteCrmSmsTemplateMutation
+} = extendedApiSlice;

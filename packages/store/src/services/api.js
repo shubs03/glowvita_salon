@@ -88,7 +88,11 @@ export const glowvitaApi = createApi({
     "AdminProductCategory",
     "ProductCategory",
     "SmsTemplate",
+    "CrmSmsTemplate",
+    "TestSmsTemplate",
     "SmsPackage",
+    "CrmSmsPackage",
+    "CrmCampaign",
     "SocialMediaTemplate",
     "Marketing",
     "SubscriptionPlan",
@@ -1241,6 +1245,56 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["SubscriptionPlan"],
     }),
 
+
+    // CRM SMS Packages Endpoints
+    getCrmSmsPackages: builder.query({
+      query: () => ({
+        url: "/crm/sms-packages",
+        method: "GET",
+      }),
+      providesTags: ["CrmSmsPackage"],
+    }),
+
+    // CRM Campaigns Endpoints
+    getCrmCampaigns: builder.query({
+      query: () => ({
+        url: "/crm/campaigns",
+        method: "GET",
+      }),
+      providesTags: ["CrmCampaign"],
+    }),
+
+    createCrmCampaign: builder.mutation({
+      query: (campaign) => ({
+        url: "/crm/campaigns",
+        method: "POST",
+        body: campaign,
+      }),
+      invalidatesTags: ["CrmCampaign"],
+    }),
+
+    // CRM Social Media Templates Endpoints
+    getCrmSocialMediaTemplates: builder.query({
+      query: () => ({
+        url: "/crm/social-media-templates",
+        method: "GET",
+      }),
+      providesTags: ["CrmSocialMediaTemplate"],
+      transformResponse: (response) => {
+        console.log('CRM Social Media Template API - Raw response:', response);
+        console.log('Response success:', response?.success);
+        console.log('Response data:', response?.data);
+        console.log('Response total:', response?.total);
+        
+        // Transform the response to match the expected format
+        const result = {
+          templates: response.success ? response.data : [],
+          total: response.success ? response.total : 0
+        };
+        console.log('CRM Social Media Template API - Transformed response:', result);
+        return result;
+      }
+    }),
   }),
 });
 
@@ -1434,4 +1488,14 @@ export const {
     useChangePlanMutation,
   useRenewPlanMutation,
 
+
+  // CRM SMS Packages Endpoints
+  useGetCrmSmsPackagesQuery,
+
+  // CRM Campaigns Endpoints
+  useGetCrmCampaignsQuery,
+  useCreateCrmCampaignMutation,
+
+  // CRM Social Media Templates Endpoints
+  useGetCrmSocialMediaTemplatesQuery,
 } = glowvitaApi;
