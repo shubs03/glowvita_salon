@@ -1,8 +1,9 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useGetVendorProfileQuery, useUpdateVendorProfileMutation } from '@repo/store/api';
+import { useGetSubscriptionPlansQuery, useGetVendorProfileQuery, useUpdateVendorProfileMutation, useChangePlanMutation, useRenewPlanMutation } from '@repo/store/api';
 import { selectVendor, selectVendorLoading, selectVendorError, selectVendorMessage, clearVendorMessage, clearVendorError } from '@repo/store/slices/vendorSlice';
 import { toast } from 'sonner';
 import {
@@ -41,19 +42,57 @@ import {
   UploadCloud,
   CheckCircle2,
   Eye,
-  X
+  X,
+  Check,
+  Zap,
+  RefreshCw,
+  History,
+  Star
 } from "lucide-react";
 import Image from "next/image";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/dialog";
+import { useMemo } from 'react';
+import { SubscriptionPlansDialog } from "@/components/SubscriptionPlansDialog";
 
 // TYPES
 type SalonCategory = "unisex" | "men" | "women";
 type SubCategory = "shop" | "shop-at-home" | "onsite";
+type UserType = 'vendor' | 'supplier' | 'doctor';
+
+interface VendorProfile {
+  _id: string;
+  businessName: string;
+  description?: string;
+  category: SalonCategory;
+  subCategories: SubCategory[];
+  website?: string;
+  address?: string;
+  profileImage?: string;
+  gallery?: string[];
+  documents?: Record<string, string>;
+  bankDetails?: BankDetails;
+  subscription?: Subscription;
+  openingHours?: OpeningHour[];
+  type?: UserType;
+}
 
 interface Subscription {
-  plan: string;
-  status: "Active" | "Expired" | "Pending";
+  plan: {
+    _id: string;
+    name: string;
+  };
+  status: "Active" | "Expired";
+  startDate: string;
   endDate: string;
-  expires?: string;
+  history: Array<{
+    plan: {
+      _id: string;
+      name: string;
+    };
+    startDate: string;
+    endDate: string;
+    status: "Active" | "Expired";
+  }>;
 }
 
 interface BankDetails {
@@ -178,47 +217,136 @@ const ProfileTab = ({ vendor, setVendor }: any) => {
   );
 };
 
-const SubscriptionTab = ({ subscription }: { subscription: Subscription }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>My Subscription</CardTitle>
-      <CardDescription>
-        Details about your current plan and billing.
-      </CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      <div className="flex justify-between items-center p-4 border rounded-lg">
-        <div>
-          <p className="font-semibold text-lg">{subscription?.plan || 'No Plan'}</p>
-          <p className="text-sm text-muted-foreground">
-            Status:{" "}
-            <span
-              className={
-                subscription?.status === "Active"
-                  ? "text-green-600"
-                  : subscription?.status === "Expired"
-                  ? "text-red-600"
-                  : "text-yellow-600"
-              }
-            >
-              {subscription?.status || 'Pending'}
-            </span>
-          </p>
-        </div>
-        {subscription?.expires && (
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Expires on</p>
-            <p className="font-semibold">{new Date(subscription.expires).toLocaleDateString()}</p>
+const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: Subscription; userType?: UserType }) => {
+  const [showPlansModal, setShowPlansModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  const isExpired = subscription?.endDate ? new Date(subscription.endDate) < new Date() : true;
+  const daysLeft = !isExpired ? Math.ceil((new Date(subscription?.endDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0;
+  
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'expired':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>My Subscription</CardTitle>
+          <CardDescription>
+            Details about your current plan and billing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6">
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold">{subscription?.plan?.name || 'No Active Plan'}</h3>
+              <p className="text-muted-foreground">
+                {isExpired ? 'Expired' : `Expires on ${new Date(subscription?.endDate).toLocaleDateString()}`}
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-3 gap-6">
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <div className="mt-1 flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${isExpired ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                    <p className="font-semibold">{isExpired ? 'Expired' : 'Active'}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Start Date</p>
+                <p className="mt-1 font-semibold">
+                  {new Date(subscription?.startDate).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">End Date</p>
+                <p className="mt-1 font-semibold">
+                  {new Date(subscription?.endDate).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+             {daysLeft > 0 && (
+                <div className="mt-6">
+                  <p className="text-sm text-muted-foreground">Days Remaining</p>
+                  <div className="w-full bg-secondary rounded-full h-2.5 mt-1">
+                    <div 
+                        className={`h-2.5 rounded-full ${daysLeft <= 7 ? 'bg-red-500' : 'bg-green-500'}`} 
+                        style={{ width: `${(daysLeft/30) * 100}%`}}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-right mt-1">{daysLeft} days left</p>
+                </div>
+            )}
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button onClick={() => setShowPlansModal(true)}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                {isExpired ? 'Renew Subscription' : 'Change Plan'}
+              </Button>
+              <Button variant="outline" onClick={() => setShowHistoryModal(true)}>
+                <History className="mr-2 h-4 w-4" />
+                View History
+              </Button>
+            </div>
           </div>
-        )}
-      </div>
-    </CardContent>
-    <CardFooter className="flex justify-end gap-2">
-      <Button variant="outline">Change Plan</Button>
-      <Button>View Billing History</Button>
-    </CardFooter>
-  </Card>
-);
+        </CardContent>
+      </Card>
+
+      <SubscriptionPlansDialog
+        open={showPlansModal}
+        onOpenChange={setShowPlansModal}
+        subscription={subscription}
+        userType={userType}
+      />
+      
+      <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Subscription History</DialogTitle>
+            <DialogDescription>
+              Your complete subscription history
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {subscription?.history && subscription.history.length > 0 ? (
+              <div className="space-y-4">
+                {subscription.history.map((entry, index) => (
+                  <div key={index} className="flex flex-col p-4 border rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium">{entry.plan.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(entry.startDate).toLocaleDateString()} - {new Date(entry.endDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge className={getStatusColor(entry.status)}>
+                        {entry.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                No subscription history available
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowHistoryModal(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
 
 const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any }) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
@@ -719,7 +847,12 @@ export default function SalonProfilePage() {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
   const { data: vendorData, isLoading, isError } = useGetVendorProfileQuery(void 0);
   
-  const [localVendor, setLocalVendor] = useState<any>({});
+  const [localVendor, setLocalVendor] = useState<VendorProfile>({
+    _id: '',
+    businessName: '',
+    category: 'unisex',
+    subCategories: []
+  });
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>(
     Array.from({ length: 7 }, (_, i) => {
       const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -770,11 +903,11 @@ export default function SalonProfilePage() {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
+        reader.onerror = (error) => reject(error);
       });
 
       // Update vendor profile with new profile image
-      const result: any = await updateVendorProfile({
+      const result = await updateVendorProfile({
         profileImage: base64
       }).unwrap();
 
@@ -956,7 +1089,10 @@ export default function SalonProfilePage() {
           />
         </TabsContent>
         <TabsContent value="subscription" className="mt-4">
-          <SubscriptionTab subscription={localVendor.subscription} />
+          <SubscriptionTab 
+            subscription={localVendor.subscription} 
+            userType={localVendor.type || 'vendor'}
+          />
         </TabsContent>
         <TabsContent value="gallery" className="mt-4">
           <GalleryTab 

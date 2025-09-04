@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -25,12 +26,9 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger,
 } from "@repo/ui/dialog";
 import {
-  CheckCircle,
   Eye,
-  XCircle,
   Trash2,
   User,
   ThumbsUp,
@@ -40,20 +38,13 @@ import {
   FileDown,
   X,
   Stethoscope,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { Badge } from "@repo/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
-import { Label } from "@repo/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/select";
-import { Textarea } from "@repo/ui/textarea";
-import { DoctorForm } from "@/components/DoctorForm";
+import { DoctorForm, Doctor } from "@/components/DoctorForm";
 import {
   useGetDoctorsQuery,
   useCreateDoctorMutation,
@@ -61,36 +52,6 @@ import {
   useDeleteDoctorMutation,
 } from "../../../../../packages/store/src/services/api";
 
-// Doctor type aligned with MongoDB schema
-type Doctor = {
-  _id: string;
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  gender: string;
-  registrationNumber: string;
-  specialization: string;
-  experience: string;
-  clinicName: string;
-  clinicAddress: string;
-  state: string;
-  city: string;
-  pincode: string;
-  status: "Approved" | "Pending" | "Rejected";
-  profileImage?: string;
-  qualification?: string;
-  registrationYear?: string;
-  physicalConsultationStartTime: string;
-  physicalConsultationEndTime: string;
-  faculty?: string;
-  assistantName: string;
-  assistantContact: string;
-  doctorAvailability: "Online" | "Offline";
-  landline?: string;
-  createdAt: string;
-  updatedAt: string;
-};
 
 type ActionType = "approve" | "reject" | "delete";
 
@@ -100,8 +61,6 @@ export default function DoctorsDermatsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isNewDoctorModalOpen, setIsNewDoctorModalOpen] = useState(false);
-  const [isSpecializationModalOpen, setIsSpecializationModalOpen] =
-    useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [actionType, setActionType] = useState<ActionType | null>(null);
 
@@ -134,7 +93,7 @@ export default function DoctorsDermatsPage() {
   const handleAddDoctor = async (
     newDoctor: Omit<
       Doctor,
-      "_id" | "createdAt" | "updatedAt" | "confirmPassword"
+      "_id" | "createdAt" | "updatedAt"
     >
   ) => {
     try {
@@ -146,7 +105,7 @@ export default function DoctorsDermatsPage() {
   };
 
   const handleUpdateDoctor = async (
-    updatedDoctor: Omit<Doctor, "confirmPassword">
+    updatedDoctor: Omit<Doctor, "createdAt" | "updatedAt">
   ) => {
     try {
       // Ensure we have the _id for the update
@@ -154,7 +113,8 @@ export default function DoctorsDermatsPage() {
         console.error("Doctor ID is required for update");
         return;
       }
-      await updateDoctor({ id: updatedDoctor._id, ...updatedDoctor }).unwrap();
+      const { _id, ...updateData } = updatedDoctor;
+      await updateDoctor({ id: _id, ...updateData }).unwrap();
       setIsNewDoctorModalOpen(false);
       setSelectedDoctor(null);
     } catch (err) {
@@ -168,13 +128,14 @@ export default function DoctorsDermatsPage() {
         if (actionType === "delete") {
           await deleteDoctor(selectedDoctor._id).unwrap();
         } else {
-          await updateDoctor({
+          // This creates a new object with only the needed properties for the update
+          const updatePayload = {
             id: selectedDoctor._id,
-
             status: actionType === "approve" ? "Approved" : "Rejected",
-          }).unwrap();
+          };
+          await updateDoctor(updatePayload).unwrap();
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(`Failed to ${actionType} doctor:`, err);
       }
       setIsModalOpen(false);
@@ -376,7 +337,7 @@ export default function DoctorsDermatsPage() {
                               : doctor.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{doctor.specialization}</TableCell>
+                        <TableCell>{(doctor.specialties || []).join(', ')}</TableCell>
                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -515,7 +476,7 @@ export default function DoctorsDermatsPage() {
                   Category
                 </span>
                 <span className="col-span-2">
-                  {selectedDoctor.specialization}
+                  {(selectedDoctor.specialties || []).join(', ')}
                 </span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">
@@ -565,20 +526,11 @@ export default function DoctorsDermatsPage() {
         }}
         doctor={selectedDoctor}
         isEditMode={!!selectedDoctor}
-        onSubmit={(data: Omit<Doctor, "confirmPassword">) => {
+        onSubmit={(data) => {
           if (selectedDoctor) {
-            // For edit mode, ensure we have the required fields from selectedDoctor
-            const updatedDoctor = {
-              ...data,
-              _id: selectedDoctor._id,
-              createdAt: selectedDoctor.createdAt,
-              updatedAt: selectedDoctor.updatedAt,
-            };
-            handleUpdateDoctor(updatedDoctor);
+            handleUpdateDoctor(data as Doctor);
           } else {
-            // For add mode, remove the fields that shouldn't be in new doctor data
-            const { _id, createdAt, updatedAt, ...newDoctorData } = data;
-            handleAddDoctor(newDoctorData);
+            handleAddDoctor(data as Omit<Doctor, '_id' | 'createdAt' | 'updatedAt'>);
           }
         }}
       />

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -54,6 +55,7 @@ interface SmsPackage extends BaseEntity {
 }
 
 interface SmsTemplate extends BaseEntity {
+  id: string;
   name: string;
   content: string;
   type: string;
@@ -152,8 +154,8 @@ type ModalDataType = SmsTemplate | SmsPackage | SocialMediaPost | MarketingTicke
 
 export default function PlatformMarketingPage() {
   // Fetch SMS packages and templates
-  const { data: smsPackagesData = [], isLoading: isLoadingPackages } = useGetSmsPackagesQuery();
-  const { data: smsTemplatesData = [], isLoading: isLoadingTemplates, refetch: refetchTemplates } = useGetSmsTemplatesQuery();
+  const { data: smsPackagesData = [], isLoading: isLoadingPackages } = useGetSmsPackagesQuery(undefined);
+  const { data: smsTemplatesData = [], isLoading: isLoadingTemplates, refetch: refetchTemplates } = useGetSmsTemplatesQuery(undefined);
   
   const [createSmsPackage] = useCreateSmsPackageMutation();
   const [updateSmsPackage] = useUpdateSmsPackageMutation();
@@ -162,56 +164,9 @@ export default function PlatformMarketingPage() {
   const [createSmsTemplate] = useCreateSmsTemplateMutation();
   const [updateSmsTemplate] = useUpdateSmsTemplateMutation();
   const [deleteSmsTemplate] = useDeleteSmsTemplateMutation();
-  
-  // Create a custom hook for the mutation to handle JSON headers
+
   const [createSocialMediaTemplate, { isLoading: isCreatingSocialTemplate }] = 
     useCreateSocialMediaTemplateMutation();
-    
-  // Wrap the mutation to ensure JSON content type and auth
-  const createTemplate = useCallback(async (data: any) => {
-    // Get the auth state from localStorage
-    const authState = localStorage.getItem('adminAuthState');
-    if (!authState) {
-      throw new Error('Not authenticated');
-    }
-    
-    const { token } = JSON.parse(authState);
-    
-    if (!token) {
-      console.error('No auth token found');
-      throw new Error('Authentication token not found');
-    }
-    
-    console.log('Sending request with token:', token ? 'Token exists' : 'No token');
-    
-    const response = await fetch('/api/admin/social-media-templates', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'admin-authorization': `Bearer ${token}` // Updated header name to match middleware
-      },
-      credentials: 'include', // Include cookies for auth
-      body: JSON.stringify(data)
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response:', errorText);
-      let errorMessage = 'Failed to create template';
-      
-      try {
-        const errorData = JSON.parse(errorText);
-        errorMessage = errorData.message || errorMessage;
-      } catch (e) {
-        // If we can't parse the error as JSON, use the raw text
-        errorMessage = errorText || errorMessage;
-      }
-      
-      throw new Error(errorMessage);
-    }
-    
-    return response.json();
-  }, []);
   
   const [
     updateSocialMediaTemplate,
@@ -227,7 +182,7 @@ export default function PlatformMarketingPage() {
     data: socialMediaTemplatesResponse, 
     isLoading: isLoadingSocialTemplates,
     refetch: refetchSocialMediaTemplates 
-  } = useGetSocialMediaTemplatesQuery();
+  } = useGetSocialMediaTemplatesQuery(undefined);
   
   // Cast the data to proper types since we know the shape from the API
   const smsPackages = Array.isArray(smsPackagesData) ? smsPackagesData as SmsPackage[] : [];
@@ -258,6 +213,8 @@ export default function PlatformMarketingPage() {
   const [isSocialMediaTemplateFormOpen, setIsSocialMediaTemplateFormOpen] = useState(false);
   const [isEditSocialMediaTemplateMode, setIsEditSocialMediaTemplateMode] = useState(false);
   const [selectedSocialMediaTemplate, setSelectedSocialMediaTemplate] = useState<any>(null);
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
+
 
   // Social media templates are automatically fetched by the useGetSocialMediaTemplatesQuery hook
 
@@ -305,9 +262,9 @@ export default function PlatformMarketingPage() {
       }
       setIsPackageFormOpen(false);
       setSelectedPackage(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save package:', error);
-      toast.error('Failed to save package');
+      toast.error(error?.data?.message || 'Failed to save package');
     }
   }, [isEditMode, selectedPackage, createSmsPackage, updateSmsPackage]);
 
@@ -331,172 +288,73 @@ export default function PlatformMarketingPage() {
       setSelectedTemplate(null);
       // Force refetch templates
       refetchTemplates();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save template:', error);
       toast.error(error?.data?.message || 'Failed to save template');
     }
   };
 
-  const handleOpenSocialMediaTemplateForm = useCallback((template: any = null) => {
+  const handleOpenSocialMediaTemplateForm = (template: any = null) => {
     setSelectedSocialMediaTemplate(template);
     setIsEditSocialMediaTemplateMode(!!template);
     setIsSocialMediaTemplateFormOpen(true);
-  }, []);
+  };
 
-  // Custom function to update a social media template
-  const updateTemplate = useCallback(async (data: any) => {
+  const handleUpdateSocialMediaTemplate = async (updatedTemplate: any) => {
     try {
-      const authState = localStorage.getItem('adminAuthState');
-      if (!authState) {
-        throw new Error('Not authenticated');
-      }
-      
-      const { token } = JSON.parse(authState);
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-      
-      const id = data.id || data._id;
+      const id = updatedTemplate.id || updatedTemplate._id;
       if (!id) {
-        throw new Error('Template ID is required for update');
+        console.error('Template ID is required for update');
+        return;
       }
-      
-      const response = await fetch(`/api/admin/social-media-templates?id=${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'admin-authorization': `Bearer ${token}`
-        },
-        credentials: 'include',
-        body: JSON.stringify(data)
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to update template');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error updating template:', error);
-      throw error;
+      await updateSocialMediaTemplate({ id, ...updatedTemplate }).unwrap();
+      refetchSocialMediaTemplates();
+    } catch (err) {
+      console.error('Failed to update template:', err);
     }
-  }, []);
+  };
 
-  // Custom function to delete a social media template
-  const deleteTemplate = useCallback(async (id: string) => {
+  const handleSocialMediaTemplateSubmit = async (formData: FormData) => {
     try {
-      const authState = localStorage.getItem('adminAuthState');
-      if (!authState) {
-        throw new Error('Not authenticated');
-      }
-      
-      const { token } = JSON.parse(authState);
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-      
-      const response = await fetch(`/api/admin/social-media-templates?id=${id}`, {
-        method: 'DELETE',
-        headers: {
-          'admin-authorization': `Bearer ${token}`
-        },
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to delete template');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error deleting template:', error);
-      throw error;
-    }
-  }, []);
-
-  const handleSocialMediaTemplateSubmit = useCallback(async (formData: any) => {
-    try {
-      const authState = localStorage.getItem('adminAuthState');
-      if (!authState) {
-        throw new Error('Not authenticated');
-      }
-      
-      const { token } = JSON.parse(authState);
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
       const isEdit = isEditSocialMediaTemplateMode && (selectedSocialMediaTemplate?.id || selectedSocialMediaTemplate?._id);
-      const id = isEdit ? (selectedSocialMediaTemplate.id || selectedSocialMediaTemplate._id) : null;
       
-      let formDataToSend: FormData;
-      
-      // If formData is already a FormData object, use it directly
-      if (formData instanceof FormData) {
-        formDataToSend = formData;
-        // If editing, append the ID
-        if (id) {
-          formDataToSend.append('id', id);
-        }
+      if (isEdit) {
+        // For updates, we need to send the ID in the query params and the data in the body
+        await updateSocialMediaTemplate({ 
+          id: selectedSocialMediaTemplate._id || selectedSocialMediaTemplate.id, 
+          ...Object.fromEntries(formData.entries()) 
+        }).unwrap();
       } else {
-        // If it's a plain object, create a new FormData and populate it
-        formDataToSend = new FormData();
-        Object.entries(formData).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            formDataToSend.append(key, value as string | Blob);
-          }
-        });
-        if (id) {
-          formDataToSend.append('id', id);
-        }
+        // For creates, send the FormData directly
+        await createSocialMediaTemplate(formData).unwrap();
       }
 
-      // Make the appropriate API call
-      const response = await fetch(
-        `/api/admin/social-media-templates${id ? `?id=${id}` : ''}`, 
-        {
-          method: isEdit ? 'PUT' : 'POST',
-          headers: {
-            'admin-authorization': `Bearer ${token}`
-          },
-          body: formDataToSend
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Failed to ${isEdit ? 'update' : 'create'} template`);
-      }
-
-      const result = await response.json();
-      
       toast.success(`Template ${isEdit ? 'updated' : 'created'} successfully`);
       setIsSocialMediaTemplateFormOpen(false);
       setSelectedSocialMediaTemplate(null);
       refetchSocialMediaTemplates();
-      
-      return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save social media template:', error);
       toast.error(error?.message || error?.data?.message || 'Failed to save social media template');
-      throw error;
     }
-  }, [isEditSocialMediaTemplateMode, selectedSocialMediaTemplate, createTemplate, updateTemplate, refetchSocialMediaTemplates]);
-
-  const handleDeleteSocialMediaTemplate = useCallback(async (id: string) => {
-    if (!id) return;
+  };
+  
+  const handleDeleteSocialMediaTemplate = async () => {
+    if (!itemToDelete || !itemToDelete.id) return;
     
     try {
-      await deleteTemplate(id);
+      await deleteSocialMediaTemplate(itemToDelete.id).unwrap();
       toast.success('Template deleted successfully');
       refetchSocialMediaTemplates();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete social media template:', error);
-      toast.error(error?.message || error?.data?.message || 'Failed to delete template');
+      toast.error(error?.data?.message || error.message || 'Failed to delete template');
+    } finally {
+      setIsDeleteModalOpen(false);
+      setItemToDelete(null);
     }
-  }, [deleteTemplate, refetchSocialMediaTemplates]);
+  };
+
 
   const handleDeleteTemplateClick = (template: SmsTemplate) => {
     setSelectedTemplate(template);
@@ -514,32 +372,12 @@ export default function PlatformMarketingPage() {
       await deleteSmsTemplate(id).unwrap();
       toast.success('Template deleted successfully');
       refetchTemplates();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete template:', error);
       toast.error(error?.data?.message || 'Failed to delete template');
     } finally {
       setIsDeleteTemplateModalOpen(false);
       setSelectedTemplate(null);
-    }
-  };
-
-  const handleDelete = async (type: 'sms_package' | 'sms_template' | 'social_post', id: string) => {
-    try {
-      if (type === 'sms_package') {
-        await deleteSmsPackage(id).unwrap();
-        toast.success('Package deleted successfully');
-      } else if (type === 'sms_template') {
-        await deleteSmsTemplate(id).unwrap();
-        toast.success('Template deleted successfully');
-        refetchTemplates();
-      } else if (type === 'social_post') {
-        await deleteSocialMediaTemplate(id).unwrap();
-        toast.success('Social media template deleted successfully');
-        refetchSocialMediaTemplates();
-      }
-    } catch (error) {
-      console.error('Failed to delete:', error);
-      toast.error(error?.data?.message || 'Failed to delete item');
     }
   };
 
@@ -740,9 +578,6 @@ export default function PlatformMarketingPage() {
                                         <TableCell>{pkg.validityDays} days</TableCell>
                                         <TableCell>
                                             <div className="flex space-x-2">
-                                                <Button variant="ghost" size="icon" onClick={() => openModal('View Package', 'view', 'sms_package', pkg as any)}>
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
                                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -818,19 +653,11 @@ export default function PlatformMarketingPage() {
                                         </TableCell>
                                         <TableCell>
                                             {(() => {
-                                                // Use imageUrl from the template
                                                 const imageSrc = template.imageUrl;
                                                 
                                                 if (imageSrc) {
-                                                    // Check if it's a base64 string
                                                     const isBase64 = imageSrc.startsWith('data:image');
-                                                    
-                                                    // If it's not base64, construct the full URL
-                                                    const src = isBase64 
-                                                        ? imageSrc 
-                                                        : imageSrc.startsWith('http') || imageSrc.startsWith('/')
-                                                            ? imageSrc
-                                                            : `${process.env.NEXT_PUBLIC_API_URL || ''}/uploads/${imageSrc}`;
+                                                    const src = isBase64 ? imageSrc : imageSrc.startsWith('http') || imageSrc.startsWith('/') ? imageSrc : `${process.env.NEXT_PUBLIC_API_URL || ''}/uploads/${imageSrc}`;
                                                         
                                                     return (
                                                         <div className="h-20 w-20 rounded-md overflow-hidden border">
@@ -838,19 +665,6 @@ export default function PlatformMarketingPage() {
                                                                 src={src}
                                                                 alt={template.title || 'Post image'} 
                                                                 className="h-full w-full object-cover"
-                                                                onError={(e) => {
-                                                                    console.error('Error loading image:', {
-                                                                        src: src.substring(0, 50) + '...',
-                                                                        isBase64,
-                                                                        templateId: template._id || template.id
-                                                                    });
-                                                                    e.currentTarget.style.display = 'none';
-                                                                    e.currentTarget.parentElement.innerHTML = (
-                                                                        '<div class="h-20 w-20 rounded-md bg-red-50 flex items-center justify-center">' +
-                                                                        '<span class="text-red-400 text-xs text-center">Image Error</span>' +
-                                                                        '</div>'
-                                                                    );
-                                                                }}
                                                             />
                                                         </div>
                                                     );
@@ -877,7 +691,10 @@ export default function PlatformMarketingPage() {
                                                         variant="ghost" 
                                                         size="icon" 
                                                         className="text-destructive hover:text-destructive/80"
-                                                        onClick={() => handleDeleteSocialMediaTemplate(template.id || template._id)}
+                                                        onClick={() => {
+                                                            setItemToDelete({ id: template._id, name: template.title });
+                                                            setIsDeleteModalOpen(true);
+                                                        }}
                                                         disabled={isDeletingSocialTemplate}
                                                         title="Delete template"
                                                     >
@@ -962,7 +779,6 @@ export default function PlatformMarketingPage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    onClick={() => openModal('View Ticket', 'view', undefined, ticket)}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
@@ -1031,7 +847,6 @@ export default function PlatformMarketingPage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    onClick={() => openModal('Purchase Details', 'view', undefined, purchase)}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
@@ -1115,7 +930,6 @@ export default function PlatformMarketingPage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    onClick={() => openModal('Campaign Details', 'view', undefined, campaign)}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
@@ -1162,7 +976,7 @@ export default function PlatformMarketingPage() {
 
       {/* Social Media Template Form Dialog */}
       <Dialog open={isSocialMediaTemplateFormOpen} onOpenChange={setIsSocialMediaTemplateFormOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {isEditSocialMediaTemplateMode ? 'Edit Social Media Template' : 'Create New Social Media Template'}
@@ -1171,20 +985,23 @@ export default function PlatformMarketingPage() {
               {isEditSocialMediaTemplateMode ? 'Update the social media template details.' : 'Fill in the details to create a new social media template.'}
             </DialogDescription>
           </DialogHeader>
-          <SocialMediaTemplateForm
-            initialData={selectedSocialMediaTemplate}
-            onSubmit={handleSocialMediaTemplateSubmit}
-            onCancel={() => {
-              setIsSocialMediaTemplateFormOpen(false);
-              setSelectedSocialMediaTemplate(null);
-            }}
-            isSubmitting={isCreatingSocialTemplate || isUpdatingSocialTemplate}
-          />
+          
+          <div className="flex-1 overflow-hidden min-h-0">
+            <SocialMediaTemplateForm
+              initialData={selectedSocialMediaTemplate}
+              onSubmit={handleSocialMediaTemplateSubmit}
+              onCancel={() => {
+                setIsSocialMediaTemplateFormOpen(false);
+                setSelectedSocialMediaTemplate(null);
+              }}
+              isSubmitting={isCreatingSocialTemplate || isUpdatingSocialTemplate}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Delete Package Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      <Dialog open={isDeleteModalOpen && !!selectedPackage} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Package?</DialogTitle>
@@ -1200,7 +1017,7 @@ export default function PlatformMarketingPage() {
       </Dialog>
 
       {/* Delete Template Confirmation Modal */}
-      <Dialog open={isDeleteTemplateModalOpen} onOpenChange={setIsDeleteTemplateModalOpen}>
+      <Dialog open={isDeleteTemplateModalOpen && !!selectedTemplate} onOpenChange={setIsDeleteTemplateModalOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Template?</DialogTitle>
@@ -1211,6 +1028,24 @@ export default function PlatformMarketingPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteTemplateModalOpen(false)}>Cancel</Button>
             <Button variant="destructive" onClick={handleConfirmDeleteTemplate}>Delete Template</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+       {/* Delete Social Media Template Confirmation Modal */}
+      <Dialog open={isDeleteModalOpen && !!itemToDelete} onOpenChange={() => setIsDeleteModalOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Template?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the template "{itemToDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteSocialMediaTemplate} disabled={isDeletingSocialTemplate}>
+                {isDeletingSocialTemplate ? 'Deleting...' : 'Delete'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,12 +1,12 @@
-import { configureStore, getDefaultMiddleware } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
-import adminAuthReducer from '@repo/store/slices/adminAuthSlice';
+import adminAuthReducer from './slices/Admin/adminAuthSlice';
 import crmAuthReducer from '@repo/store/slices/crmAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
 import vendorReducer from './slices/vendorSlice';
-import marketingReducer from './slices/marketingSlice';
+import marketingReducer from './slices/marketingslice';
 import supplierReducer from './slices/supplierSlice';
 import subscriptionReducer from './slices/subscriptionSlice';
 import notificationReducer from './slices/notificationSlice';
@@ -72,4 +72,5 @@ export const makeStore = () => {
   });
 };
 
+// Export the root reducer state type for manual type checking
 export const selectRootState = (state) => state;

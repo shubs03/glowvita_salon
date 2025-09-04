@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, Suspense } from 'react';
@@ -12,7 +13,15 @@ import { cn } from '@repo/ui/cn';
 
 type Role = 'vendor' | 'doctor' | 'supplier' | null;
 
-const RoleCard = ({ icon: Icon, title, description, onClick, isSelected }) => (
+interface RoleCardProps {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  onClick: () => void;
+  isSelected: boolean;
+}
+
+const RoleCard = ({ icon: Icon, title, description, onClick, isSelected }: RoleCardProps) => (
   <button 
     className={cn(
         "p-6 text-center cursor-pointer transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:shadow-2xl w-full rounded-lg",
@@ -34,7 +43,11 @@ const RoleCard = ({ icon: Icon, title, description, onClick, isSelected }) => (
   </button>
 );
 
-const RoleSelectionScreen = ({ onSelectRole }) => (
+interface RoleSelectionScreenProps {
+  onSelectRole: (role: Role) => void;
+}
+
+const RoleSelectionScreen = ({ onSelectRole }: RoleSelectionScreenProps) => (
     <div className="w-full max-w-4xl mx-auto bg-background/70 backdrop-blur-sm border border-white/20 shadow-2xl shadow-blue-500/10 p-8 md:p-12 rounded-lg animate-in fade-in-50 duration-500">
         <h1 className="text-3xl font-bold text-center mb-2">Join Our Platform</h1>
         <p className="text-muted-foreground text-center mb-8">Choose your role to get started.</p>

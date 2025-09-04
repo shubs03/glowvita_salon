@@ -27,6 +27,7 @@ import {
   setSalonItemsPerPage,
   clearSalonFilters
 } from '@repo/store/slices/salonSlice';
+import { RootState } from '@repo/store/store';
 
 type Salon = {
   id: number;
@@ -37,6 +38,25 @@ type Salon = {
   adminPay: number;
   settlementAmount: number;
 };
+
+type Order = {
+    id: number;
+    orderId: string;
+    customerId: string;
+    vendorName: string;
+    customerName: string;
+    orderType: string;
+    appointmentDate: string;
+    fees: number;
+    subTotal: number;
+    discount: number;
+    taxes: number;
+    couponApplied: string;
+    paymentMode: string;
+    platformFees: number;
+    serviceTax: number;
+    orderStatus: string;
+}
 
 const salonCustomers = [
     { id: 'CUST-01', name: 'Ravi Kumar', type: 'Online', contact: '9876543210', email: 'ravi@example.com' },
@@ -49,7 +69,7 @@ export default function CustomerManagementPage() {
     const dispatch = useAppDispatch();
     
     // State for the "Add New Customer" modal
-    const { isOpen, modalType } = useAppSelector(state => state.modal);
+    const { isOpen, modalType } = useAppSelector((state: RootState) => state.modal);
     const isNewCustomerModalOpen = isOpen && modalType === 'newCustomer';
     
     // State for viewing salon customers
@@ -63,18 +83,18 @@ export default function CustomerManagementPage() {
         orders,
         filters: customerFilters,
         pagination: customerPagination
-    } = useAppSelector(state => state.customer);
+    } = useAppSelector((state: RootState) => state.customer);
     
     // Salon List State from Redux
     const {
         salons,
         filters: salonFilters,
         pagination: salonPagination
-    } = useAppSelector(state => state.salon);
+    } = useAppSelector((state: RootState) => state.salon);
 
     // Memoized filtering and pagination logic
     const filteredOrders = useMemo(() => {
-        return orders.filter(order => {
+        return orders.filter((order: Order) => {
             return (
                 (customerFilters.orderType ? order.orderType === customerFilters.orderType : true) &&
                 (customerFilters.paymentMode ? order.paymentMode === customerFilters.paymentMode : true) &&
@@ -91,7 +111,7 @@ export default function CustomerManagementPage() {
     }, [filteredOrders, customerPagination]);
     
     const filteredSalons = useMemo(() => {
-        return salons.filter(salon => {
+        return salons.filter((salon: Salon) => {
              return (
                 (salonFilters.salonName ? salon.salonName.toLowerCase().includes(salonFilters.salonName.toLowerCase()) : true) &&
                 (salonFilters.vendorOwner ? salon.vendorOwner.toLowerCase().includes(salonFilters.vendorOwner.toLowerCase()) : true)
@@ -268,7 +288,7 @@ export default function CustomerManagementPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {currentOrders.map((order) => (
+                                    {currentOrders.map((order: Order) => (
                                         <TableRow key={order.id}>
                                             <TableCell>{order.id}</TableCell>
                                             <TableCell>{order.orderId}</TableCell>
@@ -365,7 +385,7 @@ export default function CustomerManagementPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {currentSalons.map((salon) => (
+                                    {currentSalons.map((salon: Salon) => (
                                         <TableRow key={salon.id}>
                                             <TableCell>{salon.id}</TableCell>
                                             <TableCell>{salon.salonName}</TableCell>

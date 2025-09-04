@@ -70,15 +70,16 @@ const crmOfferSchema = new mongoose.Schema({
     min: 0,
     default: null,
   },
-  // Field to track which user created this offer
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
+  // Field to track which business (vendor/doctor/supplier) owns this offer
+  businessType: {
+    type: String,
+    enum: ['vendor', 'doctor', 'supplier'],
     required: true,
   },
-  createdByRole: {
-    type: String,
-    enum: ['vendor', 'doctor', 'supplier', 'staff'],
+  businessId: {
+    type: mongoose.Schema.Types.ObjectId,
     required: true,
+    refPath: 'businessType' // Dynamic reference to Vendor/Doctor/Supplier model based on businessType
   },
   createdAt: {
     type: Date,

@@ -6,7 +6,7 @@ import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 await _db();
 
 // GET all subscription plans
-export const GET = authMiddlewareAdmin(async (req) => {
+export const GET = async (req) => {
   try {
     const plans = await SubscriptionPlan.find({}).sort({ createdAt: -1 });
     return NextResponse.json(plans, { status: 200 });
@@ -17,7 +17,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["superadmin", "admin"]);
+};
 
 // POST a new subscription plan
 export const POST = authMiddlewareAdmin(async (req) => {

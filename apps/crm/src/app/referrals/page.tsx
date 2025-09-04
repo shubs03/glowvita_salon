@@ -10,7 +10,7 @@ import { Copy, Gift, UserPlus, Users, Share2, CheckCircle, TrendingUp, Send } fr
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
-import { useGetReferralsQuery, useGetSettingsQuery } from '@repo/store/api';
+import { useGetCrmReferralsQuery, useGetCrmReferralSettingsQuery } from '@repo/store/api';
 import { Skeleton } from '@repo/ui/skeleton';
 
 type Referral = {
@@ -87,13 +87,18 @@ const HowItWorksStep = ({ icon, title, description }: { icon: React.ReactNode; t
 export default function ReferralsPage() {
     const { user, role, isLoading: isAuthLoading } = useCrmAuth();
     
-    // For now, we assume a single referral program type (e.g., 'V2V'). This can be made dynamic.
-    const referralType = 'V2V'; 
+    // Always use V2V referral type for all roles (unified settings)
+    const getReferralType = (userRole: string) => {
+        // Always return V2V regardless of role - using unified settings
+        return 'V2V';
+    };
     
-    const { data: referralsData, isLoading: isReferralsLoading, isError } = useGetReferralsQuery(referralType, {
+    const referralType = getReferralType(role || 'vendor'); 
+    
+    const { data: referralsData, isLoading: isReferralsLoading, isError } = useGetCrmReferralsQuery(referralType, {
         skip: !user
     });
-    const { data: settingsData, isLoading: isSettingsLoading } = useGetSettingsQuery(referralType);
+    const { data: settingsData, isLoading: isSettingsLoading } = useGetCrmReferralSettingsQuery(referralType);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -108,9 +113,10 @@ export default function ReferralsPage() {
     }, [user]);
 
     const referrals = useMemo(() => {
-        if (!Array.isArray(referralsData) || !referrerName) return [];
-        return referralsData.filter((r: any) => r.referrer === referrerName);
-    }, [referralsData, referrerName]);
+        if (!Array.isArray(referralsData)) return [];
+        // CRM API already filters by user, so we just return the data
+        return referralsData;
+    }, [referralsData]);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -138,16 +144,40 @@ export default function ReferralsPage() {
     const getRoleContent = () => {
         switch(role) {
             case 'doctor':
-                return { title: 'Refer a Colleague', description: 'Earn rewards by inviting other doctors and professionals to join.' };
+                return { 
+                    title: 'Refer a Doctor', 
+                    description: 'Earn rewards by inviting other doctors and medical professionals to join our platform.',
+                    networkText: 'Strengthen your medical network.',
+                    shareTip: 'Share your link with doctors and medical professionals.',
+                    signupText: 'Your colleague signs up on our platform using your referral link.',
+                    professionalsText: 'Doctors you\'ve referred',
+                    successText: 'Doctors who successfully joined'
+                };
             case 'supplier':
-                return { title: 'Refer a Supplier', description: 'Earn rewards by inviting other suppliers to join.' };
+                return { 
+                    title: 'Refer a Supplier', 
+                    description: 'Earn rewards by inviting other suppliers and vendors to join our marketplace.',
+                    networkText: 'Expand your supplier network.',
+                    shareTip: 'Share your link with suppliers and vendors.',
+                    signupText: 'Your partner signs up on our platform using your referral link.',
+                    professionalsText: 'Suppliers you\'ve referred',
+                    successText: 'Suppliers who successfully joined'
+                };
             case 'vendor':
             default:
-                return { title: 'Refer a Vendor', description: 'Earn rewards by inviting other salon owners to join.' };
+                return { 
+                    title: 'Refer a Vendor', 
+                    description: 'Earn rewards by inviting other salon owners and beauty professionals to join.',
+                    networkText: 'Strengthen your professional network.',
+                    shareTip: 'Share your link with salon owners and beauty professionals.',
+                    signupText: 'Your colleague signs up on our platform using your referral link.',
+                    professionalsText: 'Professionals you\'ve referred',
+                    successText: 'Professionals who successfully joined'
+                };
         }
     }
 
-    const { title, description } = getRoleContent();
+    const roleContent = getRoleContent();
     
     if (isAuthLoading || isReferralsLoading || isSettingsLoading) {
         return <SkeletonLoader />;
@@ -167,8 +197,8 @@ export default function ReferralsPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
             <div>
-                <h1 className="text-2xl font-bold font-headline">{title}</h1>
-                <p className="text-muted-foreground mt-1">{description}</p>
+                <h1 className="text-2xl font-bold font-headline">{roleContent.title}</h1>
+                <p className="text-muted-foreground mt-1">{roleContent.description}</p>
             </div>
 
             <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground overflow-hidden">
@@ -185,7 +215,7 @@ export default function ReferralsPage() {
                            {refereeBonusEnabled && (
                                <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Your friend gets ₹{refereeBonus} too!</span></div>
                            )}
-                           <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Strengthen your professional network.</span></div>
+                           <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>{roleContent.networkText}</span></div>
                         </div>
                     </div>
                     <div className="hidden md:flex items-center justify-center p-8">
@@ -204,12 +234,12 @@ export default function ReferralsPage() {
                          <HowItWorksStep 
                             icon={<Send className="w-6 h-6" />}
                             title="1. Share Your Link"
-                            description={`Copy your unique referral link and share it with your network. ${refereeBonusEnabled ? `They'll get a ₹${refereeBonus} bonus when they sign up!` : ''}`}
+                            description={`${roleContent.shareTip} ${refereeBonusEnabled ? `They'll get a ₹${refereeBonus} bonus when they sign up!` : ''}`}
                          />
                          <HowItWorksStep 
                             icon={<UserPlus className="w-6 h-6" />}
                             title="2. They Sign Up"
-                            description="Your colleague signs up on our platform using your referral link. We'll track the referral automatically."
+                            description={`${roleContent.signupText} We'll track the referral automatically.`}
                          />
                          <HowItWorksStep 
                             icon={<Gift className="w-6 h-6" />}
@@ -243,7 +273,7 @@ export default function ReferralsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{referrals.length}</div>
-                        <p className="text-xs text-muted-foreground">Professionals you've referred</p>
+                        <p className="text-xs text-muted-foreground">{roleContent.professionalsText}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -253,7 +283,7 @@ export default function ReferralsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-600">{successfulReferrals}</div>
-                        <p className="text-xs text-muted-foreground">Professionals who successfully joined</p>
+                        <p className="text-xs text-muted-foreground">{roleContent.successText}</p>
                     </CardContent>
                 </Card>
                 <Card>

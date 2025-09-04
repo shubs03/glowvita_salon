@@ -74,7 +74,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
                 size="icon"
                 className={cn(
                     "hidden lg:flex flex-shrink-0 text-muted-foreground transition-all duration-300", 
-                    !isOpen && "absolute -right-5 top-8 bg-background border rounded-full h-10 w-10 shadow-md hover:bg-muted"
+                    !isOpen && "absolute -right-5 top-11 bg-background border rounded-full h-10 w-10 shadow-md hover:bg-muted"
                 )}
                 onClick={toggleSidebar}
             >

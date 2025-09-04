@@ -19,6 +19,8 @@ import {
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Switch } from '@repo/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import {
   Plus,
   Search,
@@ -88,7 +90,7 @@ export default function ProductsPage() {
     const { user } = useCrmAuth();
     
     // RTK Query Hooks
-    const { data: productsData = [], isLoading: isProductsLoading, refetch: refetchProducts } = useGetCrmProductsQuery({});
+    const { data: productsData = [], isLoading: isProductsLoading, refetch: refetchProducts } = useGetCrmProductsQuery(user?._id, { skip: !user });
     const [createProduct, { isLoading: isCreatingProduct }] = useCreateCrmProductMutation();
     const [updateProduct, { isLoading: isUpdatingProduct }] = useUpdateCrmProductMutation();
     const [deleteProduct, { isLoading: isDeletingProduct }] = useDeleteCrmProductMutation();
@@ -139,6 +141,9 @@ export default function ProductsPage() {
         const firstItemIndex = (currentPage - 1) * itemsPerPage;
         return filteredProducts.slice(firstItemIndex, firstItemIndex + itemsPerPage);
     }, [filteredProducts, currentPage, itemsPerPage]);
+
+    // Calculate total pages for pagination
+    const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
 
     // Handlers
     const handleOpenProductModal = (product: Product | null = null) => {
@@ -212,8 +217,8 @@ export default function ProductsPage() {
     };
     
     // Other UI logic...
-    const getStatusBadge = (status) => {
-        const statusMap = {
+    const getStatusBadge = (status: string) => {
+        const statusMap: Record<string, string> = {
             pending: 'bg-yellow-100 text-yellow-800',
             approved: 'bg-green-100 text-green-800',
             disapproved: 'bg-red-100 text-red-800'
@@ -317,7 +322,7 @@ export default function ProductsPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="productName">Product Name</Label>
-                                <Input id="productName" value={formData.productName} onChange={(e) => setFormData(prev => ({...prev, productName: e.target.value}))} />
+                                <Input placeholder='Product Name' id="productName" value={formData.productName} onChange={(e) => setFormData(prev => ({...prev, productName: e.target.value}))} />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="category">Category</Label>
@@ -325,7 +330,7 @@ export default function ProductsPage() {
                                     <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({...prev, category: value}))}>
                                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                                         <SelectContent>
-                                            {categoriesData?.map(cat => <SelectItem key={cat._id} value={cat.name}>{cat.name}</SelectItem>)}
+                                            {categoriesData?.map((cat: Category) => <SelectItem key={cat._id} value={cat.name}>{cat.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                     <Button variant="outline" size="icon" onClick={() => setIsCategoryModalOpen(true)}><Plus className="h-4 w-4"/></Button>
@@ -334,20 +339,49 @@ export default function ProductsPage() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="description">Description</Label>
-                            <Textarea id="description" value={formData.description} onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))} />
+                            <Textarea placeholder='Description' id="description" value={formData.description} onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="productImage">Product Image</Label>
+                            <Input 
+                                id="productImage" 
+                                type="file" 
+                                accept="image/*"
+                                placeholder='Upload Image'
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        const reader = new FileReader();
+                                        reader.onload = (event) => {
+                                            const base64String = event.target?.result as string;
+                                            setFormData(prev => ({...prev, productImage: base64String}));
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                }}
+                            />
+                            {formData.productImage && (
+                                <div className="mt-2">
+                                    <img 
+                                        src={formData.productImage} 
+                                        alt="Product preview" 
+                                        className="w-20 h-20 object-cover rounded border"
+                                    />
+                                </div>
+                            )}
                         </div>
                         <div className="grid grid-cols-3 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="price">Price</Label>
-                                <Input id="price" type="number" value={formData.price} onChange={(e) => setFormData(prev => ({...prev, price: Number(e.target.value)}))}/>
+                                <Input placeholder='Price' id="price" type="number" value={formData.price} onChange={(e) => setFormData(prev => ({...prev, price: Number(e.target.value)}))}/>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="salePrice">Sale Price</Label>
-                                <Input id="salePrice" type="number" value={formData.salePrice} onChange={(e) => setFormData(prev => ({...prev, salePrice: Number(e.target.value)}))}/>
+                                <Input placeholder='Sale Price' id="salePrice" type="number" value={formData.salePrice} onChange={(e) => setFormData(prev => ({...prev, salePrice: Number(e.target.value)}))}/>
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="stock">Stock</Label>
-                                <Input id="stock" type="number" value={formData.stock} onChange={(e) => setFormData(prev => ({...prev, stock: Number(e.target.value)}))}/>
+                                <Input placeholder='Stock' id="stock" type="number" value={formData.stock} onChange={(e) => setFormData(prev => ({...prev, stock: Number(e.target.value)}))}/>
                             </div>
                         </div>
                      </div>
@@ -396,7 +430,7 @@ export default function ProductsPage() {
                         </div>
                          {shippingEnabled && (
                              <div className="space-y-4 pt-4 border-t">
-                                <RadioGroup value={shippingType} onValueChange={(value) => setShippingType(value as any)}>
+                                <RadioGroup value={shippingType} onValueChange={(value: string) => setShippingType(value as 'fixed' | 'percentage')}>
                                     <div className="flex items-center space-x-2"><RadioGroupItem value="fixed" id="fixed" /><Label htmlFor="fixed">Fixed Rate</Label></div>
                                     <div className="flex items-center space-x-2"><RadioGroupItem value="percentage" id="percentage" /><Label htmlFor="percentage">Percentage</Label></div>
                                 </RadioGroup>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Building, MapPin, User, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Building, MapPin, User, ChevronRight, ArrowLeft, ArrowRight, Map as MapIcon } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -12,20 +12,65 @@ import { cn } from '@repo/ui/cn';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Checkbox } from '@repo/ui/checkbox';
 import { Textarea } from '@repo/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../../packages/config/config';
 
-const StepIndicator = ({ currentStep }) => {
+const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
+
+type SalonCategory = 'unisex' | 'men' | 'women';
+type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
+
+interface FormData {
+  firstName: string;
+  lastName: string;
+  businessName: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+  category: SalonCategory | '';
+  subCategories: SubCategory[];
+  description: string;
+  website: string;
+  profileImage: string;
+  address: string;
+  state: string;
+  city: string;
+  pincode: string;
+  location: { lat: number; lng: number } | null;
+  referredByCode: string;
+}
+
+interface MapboxFeature {
+  id: string;
+  place_name: string;
+  geometry: {
+    coordinates: [number, number];
+  };
+  context?: Array<{
+    id: string;
+    text: string;
+  }>;
+}
+
+const StepIndicator = ({ currentStep, setStep }: { currentStep: number, setStep: (step: number) => void }) => {
     const steps = [
         { id: 1, name: 'Create Account', icon: User },
         { id: 2, name: 'Business Details', icon: Building },
         { id: 3, name: 'Location', icon: MapPin },
     ];
-    
+
     return (
-        <nav aria-label="Progress" className="w-full">
+        <nav aria-label="Progress">
             <ol role="list" className="flex items-center">
                 {steps.map((step, stepIdx) => (
                     <li key={step.name} className={cn("relative", stepIdx !== steps.length - 1 ? "flex-1" : "")}>
-                         <div className="flex items-center text-sm font-medium">
+                         <div onClick={() => (step.id < currentStep ? setStep(step.id) : {})} className={cn(
+                             "flex items-center text-sm font-medium",
+                             step.id < currentStep && "cursor-pointer"
+                             )}>
                             <span className={cn(
                                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
                                 currentStep > step.id ? "bg-primary text-white" :
@@ -51,41 +96,57 @@ const StepIndicator = ({ currentStep }) => {
     );
 };
 
-export function VendorRegistrationForm({ onSuccess }) {
+export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
   const searchParams = useSearchParams();
   const refCode = searchParams.get('ref');
+  const [currentStep, setCurrentStep] = useState(1);
+
 
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
+    businessName: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
-    businessName: '',
     category: '',
     subCategories: [],
+    description: '',
+    website: '',
+    profileImage: '',
     address: '',
-    city: '',
     state: '',
+    city: '',
     pincode: '',
     location: null,
     referredByCode: refCode || '',
-    description: '',
-    website: ''
   });
 
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [registerVendor, { isLoading }] = useVendorRegisterMutation();
 
-  const handleChange = (e) => {
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
+  const mapContainer = useRef<HTMLDivElement | null>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const marker = useRef<mapboxgl.Marker | null>(null);
+
+  useEffect(() => {
+    if (refCode) {
+      setFormData(prev => ({...prev, referredByCode: refCode}));
+    }
+  }, [refCode]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleCheckboxChange = (id, checked) => {
+  const handleCheckboxChange = (id: SubCategory, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
       subCategories: checked
@@ -94,8 +155,24 @@ export function VendorRegistrationForm({ onSuccess }) {
     }));
   };
 
+  
+const handleSetStep = (step: number) => {
+  setCurrentStep(step);
+};
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, profileImage: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const validateStep1 = () => {
-    const newErrors = {};
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.firstName) newErrors.firstName = 'First name is required';
     if (!formData.lastName) newErrors.lastName = 'Last name is required';
     if (!formData.email) newErrors.email = 'Email is required';
@@ -108,7 +185,7 @@ export function VendorRegistrationForm({ onSuccess }) {
   };
   
   const validateStep2 = () => {
-    const newErrors = {};
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.businessName) newErrors.businessName = 'Business name is required';
     if (!formData.category) newErrors.category = 'Salon category is required';
     if (formData.subCategories.length === 0) newErrors.subCategories = 'At least one sub-category is required';
@@ -116,9 +193,20 @@ export function VendorRegistrationForm({ onSuccess }) {
     return Object.keys(newErrors).length === 0;
   }
 
-  const handleSubmit = async (e) => {
+  const validateStep3 = () => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
+    if (!formData.address) newErrors.address = 'Address is required';
+    if (!formData.state) newErrors.state = 'State is required';
+    if (!formData.city) newErrors.city = 'City is required';
+    if (!formData.pincode) newErrors.pincode = 'Pincode is required';
+    if (!formData.location) newErrors.location = 'Location is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateStep1() || !validateStep2()) {
+    if (!validateStep1() || !validateStep2() || !validateStep3()) {
         toast.error("Please ensure all required fields are filled correctly.");
         return;
     }
@@ -126,7 +214,7 @@ export function VendorRegistrationForm({ onSuccess }) {
     try {
       await registerVendor(formData).unwrap();
       onSuccess();
-    } catch (err) {
+    } catch (err: any) {
       toast.error(err.data?.error || 'Registration failed');
     }
   };
@@ -141,11 +229,150 @@ export function VendorRegistrationForm({ onSuccess }) {
 
   const prevStep = () => setStep(s => s - 1);
 
+  // Map functionality
+  useEffect(() => {
+    if (!isMapOpen || !MAPBOX_TOKEN) return;
+    
+    const initMap = () => {
+      if (!mapContainer.current) return;
+      
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+      
+      if (map.current && map.current.getCanvas()) {
+        try {
+          map.current.remove();
+        } catch (error) {
+          console.warn('Error removing existing map:', error);
+        }
+      }
+      
+      if (marker.current) {
+        try {
+          marker.current.remove();
+        } catch (error) {
+          console.warn('Error removing existing marker:', error);
+        }
+      }
+      
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
+        zoom: formData.location ? 15 : 5
+      });
+      
+      marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
+        .setLngLat(formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599])
+        .addTo(map.current);
+        
+      marker.current.on('dragend', () => {
+        if (marker.current) {
+          const lngLat = marker.current.getLngLat();
+          setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
+          fetchAddress([lngLat.lng, lngLat.lat]);
+        }
+      });
+      
+      map.current.on('click', (e: mapboxgl.MapLayerMouseEvent) => {
+        const { lng, lat } = e.lngLat;
+        setFormData(prev => ({ ...prev, location: { lat, lng } }));
+        if (marker.current) {
+          marker.current.setLngLat([lng, lat]);
+        }
+        fetchAddress([lng, lat]);
+      });
+      
+      map.current.on('load', () => {
+        setTimeout(() => {
+          if (map.current && map.current.getCanvas()) {
+            map.current.resize();
+          }
+        }, 100);
+      });
+    };
+    
+    const timeoutId = setTimeout(initMap, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      if (marker.current) {
+        try {
+          marker.current.remove();
+          marker.current = null;
+        } catch (error) {
+          console.warn('Error cleaning up marker:', error);
+        }
+      }
+      if (map.current && map.current.getCanvas()) {
+        try {
+          map.current.remove();
+          map.current = null;
+        } catch (error) {
+          console.warn('Error cleaning up map:', error);
+        }
+      }
+    };
+  }, [isMapOpen]);
+
+  useEffect(() => {
+    if (isMapOpen && map.current && map.current.getCanvas()) {
+      setTimeout(() => {
+        if (map.current && map.current.getCanvas()) {
+          map.current.resize();
+        }
+      }, 300);
+    }
+  }, [isMapOpen]);
+
+  const handleSearch = async (query: string) => {
+    if (!query || !MAPBOX_TOKEN) { setSearchResults([]); return; }
+    try {
+      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&country=IN&types=place,locality,neighborhood,address`);
+      const data = await response.json();
+      setSearchResults(data.features || []);
+    } catch (error) { console.error('Error searching locations:', error); }
+  };
+
+  const fetchAddress = async (coordinates: [number, number]) => {
+    if (!MAPBOX_TOKEN) return;
+    try {
+      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,neighborhood,address`);
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        const address = data.features[0].place_name;
+        const context = data.features[0].context || [];
+        const state = context.find((c: any) => c.id.includes('region'))?.text || '';
+        const city = context.find((c: any) => c.id.includes('place'))?.text || '';
+        setFormData(prev => ({ ...prev, address, state: state || prev.state, city: city || prev.city }));
+      }
+    } catch (error) { console.error('Error fetching address:', error); }
+  };
+
+  const handleSearchResultSelect = (result: MapboxFeature) => {
+    const coordinates = result.geometry.coordinates;
+    const newLocation = { lat: coordinates[1], lng: coordinates[0] };
+    setFormData(prev => ({
+      ...prev,
+      location: newLocation,
+      address: result.place_name,
+      state: result.context?.find(c => c.id.includes('region'))?.text || prev.state,
+      city: result.context?.find(c => c.id.includes('place'))?.text || prev.city,
+    }));
+    if (map.current && map.current.getCanvas()) {
+      map.current.setCenter(coordinates);
+    }
+    if (marker.current) {
+      marker.current.setLngLat(coordinates);
+    }
+    setSearchResults([]);
+    setSearchQuery('');
+  };
+
   return (
     <div className="w-full max-w-xl mx-auto">
       <div className="bg-background/70 backdrop-blur-sm border-white/20 shadow-2xl shadow-blue-500/10 p-8 rounded-lg">
         <div className="mb-8">
-            <StepIndicator currentStep={step} />
+            <StepIndicator currentStep={step} setStep={setStep} />
         </div>
         <form onSubmit={handleSubmit} className="mt-8">
           {step === 1 && (
@@ -173,7 +400,7 @@ export function VendorRegistrationForm({ onSuccess }) {
              <div className="space-y-6 animate-in fade-in-50 duration-500">
                 <h2 className="text-xl font-semibold text-center">Tell us about your business</h2>
                 <Input name="businessName" placeholder="Business Name" onChange={handleChange} value={formData.businessName} required />
-                 <Select name="category" onValueChange={(value) => setFormData(prev => ({...prev, category: value }))} value={formData.category}>
+                 <Select name="category" onValueChange={(value) => setFormData(prev => ({...prev, category: value as SalonCategory}))} value={formData.category}>
                     <SelectTrigger><SelectValue placeholder="Salon Category" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unisex">Unisex</SelectItem>
@@ -184,9 +411,9 @@ export function VendorRegistrationForm({ onSuccess }) {
                 <div className="space-y-2">
                     <Label>Sub Categories</Label>
                     <div className="grid grid-cols-3 gap-2">
-                      {(['shop', 'shop-at-home', 'onsite']).map(sc => (
+                      {(['shop', 'shop-at-home', 'onsite'] as SubCategory[]).map(sc => (
                         <div key={sc} className="flex items-center space-x-2 p-2 border rounded-md">
-                          <Checkbox id={sc} checked={formData.subCategories.includes(sc)} onCheckedChange={(checked) => handleCheckboxChange(sc, checked)} />
+                          <Checkbox id={sc} checked={formData.subCategories.includes(sc)} onCheckedChange={(checked) => handleCheckboxChange(sc, checked as boolean)} />
                           <Label htmlFor={sc} className="capitalize">{sc.replace('-', ' ')}</Label>
                         </div>
                       ))}
@@ -201,6 +428,26 @@ export function VendorRegistrationForm({ onSuccess }) {
           {step === 3 && (
              <div className="space-y-6 animate-in fade-in-50 duration-500">
                 <h2 className="text-xl font-semibold text-center">Where is your business located?</h2>
+                <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <div className="flex items-center gap-2">
+                        <Input
+                            id="location"
+                            value={formData.location ? `${formData.location.lat.toFixed(6)}, ${formData.location.lng.toFixed(6)}` : ''}
+                            placeholder="Select location from map"
+                            readOnly
+                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsMapOpen(true)}
+                        >
+                            <MapIcon className="mr-2 h-4 w-4" />
+                            Map
+                        </Button>
+                    </div>
+                </div>
                 <Input name="address" placeholder="Full Address" onChange={handleChange} value={formData.address} required />
                  <div className="grid md:grid-cols-3 gap-4">
                     <Input name="state" placeholder="State" onChange={handleChange} value={formData.state} required />
@@ -225,12 +472,89 @@ export function VendorRegistrationForm({ onSuccess }) {
             )}
           </div>
         </form>
+         <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+                <DialogContent className="sm:max-w-4xl max-h-[80vh]">
+                    <DialogHeader>
+                        <DialogTitle>Select Location</DialogTitle>
+                        <DialogDescription>
+                            Search for a location, click on the map, or drag the marker to select the exact position.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 flex flex-col h-[60vh]">
+                        <div className="relative">
+                            <Input
+                                placeholder="Search for a location (e.g., Mumbai, Delhi, Bangalore)"
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    handleSearch(e.target.value);
+                                }}
+                                className="w-full"
+                            />
+                            {searchResults.length > 0 && (
+                                <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto mt-1">
+                                    {searchResults.map((result) => (
+                                        <div
+                                            key={result.id}
+                                            className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0 text-sm"
+                                            onClick={() => handleSearchResultSelect(result)}
+                                        >
+                                            <div className="font-medium">{result.place_name}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        
+                        {formData.location && (
+                            <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                                <strong>Selected Location:</strong> {formData.location?.lat.toFixed(6)}, {formData.location?.lng.toFixed(6)}
+                            </div>
+                        )}
+                        
+                        <div className="flex-1 relative border rounded-lg overflow-hidden" style={{ minHeight: '400px' }}>
+                            <div 
+                                ref={mapContainer} 
+                                className="w-full h-full"
+                                style={{ minHeight: '400px' }}
+                            />
+                            
+                            {!MAPBOX_TOKEN && (
+                                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                                    <div className="text-center">
+                                        <p className="text-gray-600">Map unavailable</p>
+                                        <p className="text-sm text-gray-500">Mapbox API key not configured</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="text-xs text-gray-500 space-y-1">
+                            <p>• Click anywhere on the map to place the marker</p>
+                            <p>• Drag the marker to adjust the location</p>
+                            <p>• Use the search box to find specific places</p>
+                        </div>
+                    </div>
+                    
+                    <DialogFooter className="mt-4">
+                        <Button type="button" variant="outline" onClick={() => setIsMapOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => setIsMapOpen(false)}
+                        >
+                            Confirm Location
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
       </div>
     </div>
   );
 };
 
-export const VendorRegistrationFormWithSuspense = (props) => (
+export const VendorRegistrationFormWithSuspense = (props: { onSuccess: () => void }) => (
   <Suspense fallback={<div>Loading form...</div>}>
     <VendorRegistrationForm {...props} />
   </Suspense>
