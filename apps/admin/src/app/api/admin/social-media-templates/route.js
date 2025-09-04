@@ -14,18 +14,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
   
   try {
     console.log('Connecting to database...');
-    const db = await _db();
+    await _db();
     
     console.log('Getting model...');
     let TemplateModel;
     try {
       // Try to get existing model first
-      TemplateModel = mongoose.model(modelName);
-      console.log('Using existing model');
+      TemplateModel = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
+      console.log('Using model:', modelName);
     } catch (e) {
-      // If model doesn't exist, create it
-      console.log('Creating new model...');
-      TemplateModel = mongoose.model(modelName, SocialMediaTemplateModel.schema);
+      console.error('Error getting/creating model:', e);
+      throw e;
     }
     
     console.log('Ensuring indexes...');
@@ -90,6 +89,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     } else if (error.name === 'ValidationError') {
       statusCode = 400; // Bad Request
       errorMessage = 'Validation error';
+    } else if (error.name === 'MongooseServerSelectionError') {
+      statusCode = 503; // Service Unavailable
+      errorMessage = 'Unable to connect to database. Please check your connection.';
     }
     
     return NextResponse.json({
@@ -138,13 +140,15 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
       }
     } else {
       // Handle JSON
-      body = await req.json().catch(err => {
+      try {
+        body = await req.json();
+      } catch (err) {
         console.error('Error parsing JSON:', err);
         return NextResponse.json(
           { success: false, message: 'Invalid request body' },
           { status: 400 }
         );
-      });
+      }
     }
     
     // Get the template ID from URL params
@@ -256,6 +260,39 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
       ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });
     
+    // Handle specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Validation error",
+          errors
+        },
+        { status: 400 }
+      );
+    }
+    
+    if (error.name === 'MongoServerError' && error.code === 11000) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Duplicate key error. A template with this title may already exist."
+        },
+        { status: 400 }
+      );
+    }
+    
+    if (error.name === 'CastError') {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Invalid ID format"
+        },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
       { 
         success: false,
@@ -285,12 +322,15 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
       return NextResponse.json({ success: false, message: 'Invalid Template ID format' }, { status: 400 });
     }
 
-    const template = await SocialMediaTemplateModel.findById(id);
+    // Get or create the model using the already imported model
+    const SocialMediaTemplate = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
+
+    const template = await SocialMediaTemplate.findById(id);
     if (!template) {
       return NextResponse.json({ success: false, message: 'Template not found' }, { status: 404 });
     }
 
-    await SocialMediaTemplateModel.findByIdAndDelete(id);
+    await SocialMediaTemplate.findByIdAndDelete(id);
 
     return NextResponse.json({ success: true, message: 'Template deleted successfully' }, { status: 200 });
 
@@ -316,9 +356,43 @@ export const POST = authMiddlewareAdmin(async (req) => {
     // Get or create the model using the already imported model
     const SocialMediaTemplate = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
     
-    const body = await req.json();
+    let body;
     
-    console.log('Parsed request body:', { ...body, image: body.image ? '[BASE64_IMAGE]' : null });
+    // Check content type to handle both JSON and FormData
+    const contentType = req.headers.get('content-type') || '';
+    console.log('Content-Type:', contentType);
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData
+      console.log('Handling FormData');
+      const formData = await req.formData();
+      body = Object.fromEntries(formData.entries());
+      console.log('FormData body:', { ...body, image: body.image ? '[FILE_OR_BASE64_IMAGE]' : null });
+      
+      // Convert File to base64 if present
+      const imageFile = formData.get('image');
+      if (imageFile && imageFile instanceof File) {
+        console.log('Converting File to base64');
+        const arrayBuffer = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Image = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
+        body.image = base64Image;
+        console.log('Converted image to base64, size:', base64Image.length);
+      }
+    } else {
+      // Handle JSON
+      console.log('Handling JSON');
+      try {
+        body = await req.json();
+        console.log('Parsed JSON request body:', { ...body, image: body.image ? '[BASE64_IMAGE]' : null });
+      } catch (parseError) {
+        console.error('Error parsing request body:', parseError);
+        return NextResponse.json(
+          { success: false, message: 'Invalid request body format' },
+          { status: 400 }
+        );
+      }
+    }
     
     // Get the authenticated user from the request (set by authMiddlewareAdmin)
     const user = req.user;
@@ -423,6 +497,29 @@ export const POST = authMiddlewareAdmin(async (req) => {
       ...(error.keyPattern && { keyPattern: error.keyPattern }),
       ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Validation error",
+          errors
+        },
+        { status: 400 }
+      );
+    }
+    
+    if (error.name === 'MongoServerError' && error.code === 11000) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Duplicate key error. A template with this title may already exist."
+        },
+        { status: 400 }
+      );
+    }
     
     return NextResponse.json(
       { 

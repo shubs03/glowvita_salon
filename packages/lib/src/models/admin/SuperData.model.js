@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 const superDataSchema = new mongoose.Schema({
@@ -25,7 +24,8 @@ const superDataSchema = new mongoose.Schema({
       'country',
       'state',
       'city',
-      'disease' // Removed 'doctorType' since it's handled differently
+      'disease',
+      'supplier' // Added supplier type
     ],
   },
   parentId: {
@@ -63,6 +63,9 @@ superDataSchema.pre("save", function (next) {
   this.updatedAt = new Date();
   next();
 });
+
+// Force model update by adding a small change to the schema
+superDataSchema.set('autoIndex', true);
 
 const SuperDataModel = mongoose.models.SuperData || mongoose.model("SuperData", superDataSchema);
 

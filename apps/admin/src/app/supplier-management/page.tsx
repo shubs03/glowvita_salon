@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Card,
@@ -41,6 +41,8 @@ import {
   CheckCircle,
   XCircle,
   Trash2,
+  Edit,
+  Map,
 } from "lucide-react";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
@@ -57,9 +59,15 @@ import {
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
+  useCreateSuperDataItemMutation,
+  useGetSuperDataQuery,
 } from "@repo/store/api";
 import { toast } from "sonner";
 import { Skeleton } from "@repo/ui/skeleton";
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../../packages/config/config';
+
 
 // Sample data for supplier orders
 const supplierOrdersData = [
@@ -126,15 +134,35 @@ type Supplier = {
   state: string;
   city: string;
   pincode: string;
-  location: string;
+  location?: { lat: number; lng: number } | string; // Updated to support both formats
   address: string;
   businessRegistrationNo: string;
   supplierType: string;
   status: string;
   products: number;
   sales: number;
-  licenseFile?: string;
+  licenseFiles?: string[];
 };
+
+type NewSupplier = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  mobile: string;
+  shopName: string;
+  country: string;
+  state: string;
+  city: string;
+  pincode: string;
+  location: { lat: number; lng: number } | null;
+  address: string;
+  businessRegistrationNo: string;
+  supplierType: string;
+  licenseFiles: File[];
+  password: string;
+  confirmPassword: string;
+};
+
 type SupplierOrder = (typeof supplierOrdersData)[0];
 type ActionType = "approve" | "reject" | "delete";
 
@@ -243,6 +271,8 @@ export default function SupplierManagementPage() {
   const [createSupplier] = useCreateSupplierMutation();
   const [updateSupplier] = useUpdateSupplierMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
+  // Add SuperData query to fetch supplier types
+  const { data: superData = [], isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
 
   // State for Suppliers Tab
   const [currentPage, setCurrentPage] = useState(1);
@@ -261,6 +291,10 @@ export default function SupplierManagementPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isOrderViewModalOpen, setIsOrderViewModalOpen] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editLicensePreviews, setEditLicensePreviews] = useState<string[]>([]);
+  const [newLicenseFiles, setNewLicenseFiles] = useState<File[]>([]);
+  const [removedLicenseFiles, setRemovedLicenseFiles] = useState<string[]>([]); // Track removed files
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
     null
@@ -269,12 +303,20 @@ export default function SupplierManagementPage() {
     null
   );
   const [actionType, setActionType] = useState<ActionType | null>(null);
+  
+  // Map states
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const mapContainer = useRef<HTMLDivElement | null>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const marker = useRef<mapboxgl.Marker | null>(null);
 
   // Inventory modal state
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryStatusFilter, setInventoryStatusFilter] = useState("all");
 
-  const initialNewSupplierState = {
+  const initialNewSupplierState: NewSupplier = {
     firstName: "",
     lastName: "",
     email: "",
@@ -284,29 +326,177 @@ export default function SupplierManagementPage() {
     state: "",
     city: "",
     pincode: "",
-    location: "",
+    location: null,
     address: "",
     businessRegistrationNo: "",
     supplierType: "",
-    licenseFile: null as File | null,
+    licenseFiles: [],
     password: "",
     confirmPassword: "",
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [newSupplier, setNewSupplier] = useState(initialNewSupplierState);
+  const [newSupplier, setNewSupplier] = useState<NewSupplier>(initialNewSupplierState);
 
   const [showPassword, setShowPassword] = useState(false);
 
-  const supplierTypes = [
-    "Hair Care",
-    "Skin Care",
-    "Nail Care",
-    "Beauty Tools & Equipment",
-    "Spa & Wellness",
-    "Makeup Products",
-    "Hygiene & Cleaning",
-  ];
+  // Mapbox token
+  const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
+
+  // Get supplier types from SuperData where type is "supplier"
+  const supplierTypes = useMemo(() => {
+    return superData
+      .filter((item: any) => item.type === "supplier")
+      .map((item: any) => ({
+        id: item._id,
+        name: item.name,
+      }));
+  }, [superData]);
+
+  // Initialize map when modal opens
+  useEffect(() => {
+    if (!isMapOpen || !MAPBOX_TOKEN) return;
+    
+    const initMap = () => {
+      if (!mapContainer.current) return;
+      
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+      
+      // Clean up existing map
+      if (map.current) map.current.remove();
+      
+      // Create new map
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: newSupplier.location ? [newSupplier.location.lng, newSupplier.location.lat] : [77.4126, 23.2599],
+        zoom: newSupplier.location ? 15 : 5
+      });
+      
+      // Remove existing marker
+      if (marker.current) marker.current.remove();
+      
+      // Add marker if location exists
+      if (newSupplier.location) {
+        marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
+          .setLngLat([newSupplier.location.lng, newSupplier.location.lat])
+          .addTo(map.current);
+          
+        marker.current.on('dragend', () => {
+          const lngLat = marker.current!.getLngLat();
+          setNewSupplier(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
+          fetchAddress([lngLat.lng, lngLat.lat]);
+        });
+      }
+      
+      // Handle map clicks
+      map.current.on('click', (e) => {
+        const { lng, lat } = e.lngLat;
+        setNewSupplier(prev => ({ ...prev, location: { lat, lng } }));
+        
+        // Remove existing marker and add new one
+        if (marker.current) marker.current.remove();
+        if (map.current) {
+          marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
+            .setLngLat([lng, lat])
+            .addTo(map.current);
+            
+          marker.current.on('dragend', () => {
+            const lngLat = marker.current!.getLngLat();
+            setNewSupplier(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
+            fetchAddress([lngLat.lng, lngLat.lat]);
+          });
+        }
+        
+        fetchAddress([lng, lat]);
+      });
+      
+      // Resize map after load
+      map.current.on('load', () => setTimeout(() => map.current?.resize(), 100));
+    };
+    
+    // Initialize with a small delay to ensure DOM is ready
+    const timeoutId = setTimeout(initMap, 100);
+    
+    // Cleanup function
+    return () => {
+      clearTimeout(timeoutId);
+      if (map.current) map.current.remove();
+      if (marker.current) marker.current.remove();
+    };
+  }, [isMapOpen]);
+  
+  // Search for locations using Mapbox Geocoding API
+  const handleSearch = async (query: string) => {
+    if (!query || !MAPBOX_TOKEN) {
+      setSearchResults([]);
+      return;
+    }
+    
+    try {
+      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&country=IN&types=place,locality,neighborhood,address`);
+      const data = await response.json();
+      setSearchResults(data.features || []);
+    } catch (error) {
+      console.error('Error searching locations:', error);
+      setSearchResults([]);
+    }
+  };
+  
+  // Fetch address details based on coordinates
+  const fetchAddress = async (coordinates: [number, number]) => {
+    if (!MAPBOX_TOKEN) return;
+    
+    try {
+      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,neighborhood,address`);
+      const data = await response.json();
+      
+      if (data.features && data.features.length > 0) {
+        const address = data.features[0].place_name;
+        const context = data.features[0].context || [];
+        const state = context.find((c: any) => c.id.includes('region'))?.text || '';
+        const city = context.find((c: any) => c.id.includes('place'))?.text || '';
+        
+        setNewSupplier(prev => ({
+          ...prev,
+          address,
+          state: state || prev.state,
+          city: city || prev.city
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error);
+    }
+  };
+  
+  // Handle selection of a search result
+  const handleSearchResultSelect = (result: any) => {
+    const coordinates = result.geometry.coordinates;
+    const newLocation = { lat: coordinates[1], lng: coordinates[0] };
+    const state = result.context?.find((c: any) => c.id.includes('region'))?.text;
+    
+    setNewSupplier(prev => ({
+      ...prev,
+      location: newLocation,
+      address: result.place_name,
+      state: state || prev.state,
+      city: result.context?.find((c: any) => c.id.includes('place'))?.text || prev.city,
+    }));
+    
+    // Update map
+    if (map.current) {
+      map.current.setCenter(coordinates);
+      map.current.setZoom(15);
+      setTimeout(() => map.current?.resize(), 100);
+    }
+    
+    // Update marker
+    if (marker.current) marker.current.setLngLat(coordinates);
+    
+    // Clear search
+    setSearchResults([]);
+    setSearchQuery('');
+  };
 
   const handleNewSupplierChange = (
     e: React.ChangeEvent<
@@ -332,22 +522,27 @@ export default function SupplierManagementPage() {
   const handleAddSupplier = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    let licenseFileBase64 = null;
-    if (newSupplier.licenseFile) {
-      licenseFileBase64 = await toBase64(newSupplier.licenseFile);
+    let licenseFilesBase64: string[] = [];
+    if (newSupplier.licenseFiles && newSupplier.licenseFiles.length > 0) {
+      licenseFilesBase64 = await toBase64Multiple(newSupplier.licenseFiles);
     }
 
+    // Remove licenseFiles from newSupplier object to avoid sending File objects to the API
+    const { licenseFiles, ...supplierData } = newSupplier;
+
     try {
-      await createSupplier({
-        ...newSupplier,
-        licenseFile: licenseFileBase64,
+      // Create the supplier first
+      const supplierResult = await createSupplier({
+        ...supplierData,
+        licenseFiles: licenseFilesBase64,
       }).unwrap();
+      
       toast.success("Supplier added successfully!");
       setNewSupplier(initialNewSupplierState);
+      setLicensePreviews([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      setLicensePreview(null);
       setIsNewModalOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to add supplier", error);
       toast.error("Failed to add supplier.");
     }
@@ -361,33 +556,42 @@ export default function SupplierManagementPage() {
       reader.onerror = (error) => reject(error);
     });
 
-  const [licensePreview, setLicensePreview] = useState<string | null>(null);
+  const toBase64Multiple = (files: File[]) =>
+    Promise.all(files.map(file => toBase64(file)));
+
+  const [licensePreviews, setLicensePreviews] = useState<string[]>([]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (!file.type.startsWith("image/")) {
-        alert("Please upload an image file (JPEG, PNG, etc.)");
-        return;
-      }
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      const validFiles: File[] = [];
+      const previewUrls: string[] = [];
+      
+      files.forEach(file => {
+        if (!file.type.startsWith("image/")) {
+          alert("Please upload only image files (JPEG, PNG, etc.)");
+          return;
+        }
+        
+        validFiles.push(file);
+        previewUrls.push(URL.createObjectURL(file));
+      });
 
-      const previewUrl = URL.createObjectURL(file);
-      setLicensePreview(previewUrl);
-
-      setNewSupplier((prev) => ({ ...prev, licenseFile: file }));
+      setLicensePreviews(prev => [...prev, ...previewUrls]);
+      setNewSupplier((prev) => ({ ...prev, licenseFiles: [...prev.licenseFiles, ...validFiles] }));
     }
   };
 
   useEffect(() => {
     return () => {
-      if (licensePreview) {
-        URL.revokeObjectURL(licensePreview);
-      }
+      licensePreviews.forEach(preview => {
+        URL.revokeObjectURL(preview);
+      });
     };
-  }, [licensePreview]);
+  }, [licensePreviews]);
 
   // Filter and paginate suppliers
-  const filteredSuppliers = suppliers.filter((supplier) => {
+  const filteredSuppliers = suppliers.filter((supplier: Supplier) => {
     const fullName = `${supplier.firstName} ${supplier.lastName}`.toLowerCase();
     const matchesSearch =
       fullName.includes(supplierSearch.toLowerCase()) ||
@@ -594,7 +798,7 @@ export default function SupplierManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {suppliers.reduce((acc, s) => acc + s.products, 0)}
+              {suppliers.reduce((acc: number, s: Supplier) => acc + s.products, 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Across all suppliers
@@ -608,7 +812,7 @@ export default function SupplierManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₹{suppliers.reduce((acc, s) => acc + s.sales, 0).toLocaleString()}
+              ₹{suppliers.reduce((acc: number, s: Supplier) => acc + s.sales, 0).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">All-time sales</p>
           </CardContent>
@@ -622,7 +826,7 @@ export default function SupplierManagementPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {suppliers.filter((s) => s.status === "Pending").length}
+              {suppliers.filter((s: Supplier) => s.status === "Pending").length}
             </div>
             <p className="text-xs text-muted-foreground">Awaiting review</p>
           </CardContent>
@@ -704,7 +908,7 @@ export default function SupplierManagementPage() {
                   </TableHeader>
                   <TableBody>
                     {currentItems.length > 0 ? (
-                      currentItems.map((supplier, index) => (
+                      currentItems.map((supplier: Supplier, index: number) => (
                         <TableRow key={supplier._id}>
                           <TableCell className="font-medium">
                             {supplier.firstName}
@@ -729,44 +933,65 @@ export default function SupplierManagementPage() {
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleViewClick(supplier)}
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">View Details</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                handleActionClick(supplier, "approve")
-                              }
-                            >
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                              <span className="sr-only">Approve</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                handleActionClick(supplier, "reject")
-                              }
-                            >
-                              <XCircle className="h-4 w-4 text-red-600" />
-                              <span className="sr-only">Reject</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                handleActionClick(supplier, "delete")
-                              }
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleViewClick(supplier)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  <span className="sr-only">View Details</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setSelectedSupplier(supplier);
+                                    // Reset edit modal states when opening
+                                    setEditLicensePreviews([]);
+                                    setNewLicenseFiles([]);
+                                    setRemovedLicenseFiles([]);
+                                    setIsEditModalOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  <span className="sr-only">Edit</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    handleActionClick(supplier, "approve")
+                                  }
+                                >
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                  <span className="sr-only">Approve</span>
+                                </Button>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    handleActionClick(supplier, "reject")
+                                  }
+                                >
+                                  <XCircle className="h-4 w-4 text-red-600" />
+                                  <span className="sr-only">Reject</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    handleActionClick(supplier, "delete")
+                                  }
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                  <span className="sr-only">Delete</span>
+                                </Button>
+                              </div>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1023,6 +1248,528 @@ export default function SupplierManagementPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Supplier Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={(open) => {
+        setIsEditModalOpen(open);
+        if (!open) {
+          // Reset the selected supplier when closing the modal
+          setSelectedSupplier(null);
+          // Clear license file previews
+          setEditLicensePreviews([]);
+          setNewLicenseFiles([]);
+          setRemovedLicenseFiles([]); // Reset removed files tracking
+        } else {
+          // Reset states when opening the modal to prevent stale data
+          setEditLicensePreviews([]);
+          setNewLicenseFiles([]);
+          setRemovedLicenseFiles([]);
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              Edit Supplier
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Update the supplier details below. All fields marked with{" "}
+              <span className="text-red-500">*</span> are required.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSupplier && (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const firstName = (form.elements.namedItem("firstName") as HTMLInputElement).value;
+                const lastName = (form.elements.namedItem("lastName") as HTMLInputElement).value;
+                const email = (form.elements.namedItem("email") as HTMLInputElement).value;
+                const mobile = (form.elements.namedItem("mobile") as HTMLInputElement).value;
+                const shopName = (form.elements.namedItem("shopName") as HTMLInputElement).value;
+                const businessRegistrationNo = (form.elements.namedItem("businessRegistrationNo") as HTMLInputElement).value;
+                const address = (form.elements.namedItem("address") as HTMLInputElement).value;
+                const country = (form.elements.namedItem("country") as HTMLInputElement).value;
+                const state = (form.elements.namedItem("state") as HTMLInputElement).value;
+                const city = (form.elements.namedItem("city") as HTMLInputElement).value;
+                const pincode = (form.elements.namedItem("pincode") as HTMLInputElement).value;
+                const location = (form.elements.namedItem("location") as HTMLInputElement).value;
+                
+                // Handle license file uploads - FIXED: Only send new files to backend
+                let licenseFilesBase64: string[] = [];
+                
+                // Only send new files to backend - existing files are handled separately
+                if (newLicenseFiles.length > 0) {
+                  licenseFilesBase64 = await toBase64Multiple(newLicenseFiles);
+                }
+
+                console.log('Debug license files:');
+                console.log('- Existing files:', selectedSupplier.licenseFiles?.length || 0);
+                console.log('- Removed files:', removedLicenseFiles.length);
+                console.log('- New files to send:', licenseFilesBase64.length);
+                console.log('- Expected total after update:', (selectedSupplier.licenseFiles?.length || 0) - removedLicenseFiles.length + licenseFilesBase64.length);
+
+                try {
+                  await updateSupplier({
+                    id: selectedSupplier._id,
+                    firstName,
+                    lastName,
+                    email,
+                    mobile,
+                    shopName,
+                    businessRegistrationNo,
+                    address,
+                    country,
+                    state,
+                    city,
+                    pincode,
+                    location,
+                    licenseFiles: licenseFilesBase64,
+                    removedLicenseFiles: removedLicenseFiles, // Include removed files in the request
+                    supplierType: selectedSupplier.supplierType,
+                    status: selectedSupplier.status,
+                  }).unwrap();
+                  toast.success("Supplier updated successfully!");
+                  setIsEditModalOpen(false);
+                  setSelectedSupplier(null);
+                  setNewLicenseFiles([]);
+                  setEditLicensePreviews([]);
+                  setRemovedLicenseFiles([]); // Reset removed files tracking
+                  // Refetch the suppliers to get fresh data
+                  refetch();
+                } catch (error) {
+                  toast.error("Failed to update supplier.");
+                }
+              }}
+              className="space-y-6 py-2"
+            >
+              <div className="space-y-6">
+                <div className="bg-white p-6 rounded-lg border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                    Personal Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="firstName"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        First Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="firstName"
+                        name="firstName"
+                        defaultValue={selectedSupplier.firstName}
+                        className="w-full"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="lastName"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Last Name <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="lastName"
+                        name="lastName"
+                        defaultValue={selectedSupplier.lastName}
+                        className="w-full"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="email"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Email <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        defaultValue={selectedSupplier.email}
+                        className="w-full"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="mobile"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Mobile <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="mobile"
+                        name="mobile"
+                        type="tel"
+                        defaultValue={selectedSupplier.mobile}
+                        className="w-full"
+                        required
+                        placeholder="12345 67890"
+                      />
+                      {selectedSupplier.mobile && selectedSupplier.mobile.length !== 10 && (
+                        <p className="text-sm text-red-500">
+                          Mobile number must be 10 digits
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-lg border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                    Business Information
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="shopName"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Shop Name <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="shopName"
+                          name="shopName"
+                          defaultValue={selectedSupplier.shopName}
+                          className="w-full"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="businessRegistrationNo"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Business Registration No.
+                        </Label>
+                        <Input
+                          id="businessRegistrationNo"
+                          name="businessRegistrationNo"
+                          defaultValue={selectedSupplier.businessRegistrationNo || ""}
+                          className="w-full"
+                          placeholder="Optional"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="address"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Address <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="address"
+                        name="address"
+                        defaultValue={selectedSupplier.address}
+                        className="w-full"
+                        required
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="country"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Country <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="country"
+                          name="country"
+                          defaultValue={selectedSupplier.country}
+                          className="w-full"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="state"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          State <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="state"
+                          name="state"
+                          defaultValue={selectedSupplier.state}
+                          className="w-full"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="city"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          City <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="city"
+                          name="city"
+                          defaultValue={selectedSupplier.city}
+                          className="w-full"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2 md:col-span-1">
+                        <Label
+                          htmlFor="pincode"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Pincode <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="pincode"
+                          name="pincode"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Enter 6-digit pincode"
+                          defaultValue={selectedSupplier.pincode}
+                          className="w-full"
+                          required
+                        />
+                        {selectedSupplier.pincode && selectedSupplier.pincode.length !== 6 && (
+                          <p className="text-sm text-red-500">
+                            Pincode must be 6 digits
+                          </p>
+                        )}
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label
+                          htmlFor="location"
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Location (Optional)
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="location"
+                            name="location"
+                            value={selectedSupplier.location && typeof selectedSupplier.location === 'object' ? `${selectedSupplier.location.lat}, ${selectedSupplier.location.lng}` : ''}
+                            placeholder="Select location from map"
+                            readOnly
+                            className="flex-1"
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => {
+                              // We would need to implement map functionality for edit modal as well
+                              console.log("Map functionality for edit modal not implemented yet");
+                            }}
+                          >
+                            <Map className="mr-2 h-4 w-4" /> Choose from Map
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-6 rounded-lg border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                    Business Documents
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="licenseFile"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        License/Certification (Image, max 5MB){" "}
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="mt-1">
+                      <div className="mb-4">
+                        <label
+                          htmlFor="licenseFile"
+                          className="relative flex flex-col items-center justify-center w-full px-4 py-6 border-2 border-dashed rounded-lg cursor-pointer border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors"
+                        >
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <svg
+                              className="w-8 h-8 mb-4 text-gray-500"
+                              aria-hidden="true"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 20 16"
+                            >
+                              <path
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"
+                              />
+                            </svg>
+                            <p className="mb-2 text-sm text-gray-500">
+                              <span className="font-semibold">
+                                Click to upload
+                              </span>{" "}
+                              or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              PNG, JPG, JPEG (MAX. 5MB)
+                            </p>
+                          </div>
+                          <input
+                            id="licenseFile"
+                            name="licenseFile"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            multiple
+                            onChange={(e) => {
+                              if (e.target.files) {
+                                const files = Array.from(e.target.files);
+                                const validFiles: File[] = [];
+                                const previewUrls: string[] = [];
+                                
+                                files.forEach(file => {
+                                  if (!file.type.startsWith("image/")) {
+                                    alert("Please upload only image files (JPEG, PNG, etc.)");
+                                    return;
+                                  }
+                                  
+                                  validFiles.push(file);
+                                  previewUrls.push(URL.createObjectURL(file));
+                                });
+
+                                setNewLicenseFiles(prev => [...prev, ...validFiles]);
+                                setEditLicensePreviews(prev => [...prev, ...previewUrls]);
+                                
+                                // Clear the file input to allow selecting the same files again if needed
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+
+                      {/* Show existing license previews if available */}
+                      <div className="flex flex-wrap gap-2">
+                        {selectedSupplier.licenseFiles && selectedSupplier.licenseFiles.map((file, index) => (
+                          // Only show files that haven't been marked for removal
+                          !removedLicenseFiles.includes(file) && (
+                            <div key={`existing-${file}-${index}`} className="w-24 h-24 border rounded-lg overflow-hidden relative">
+                              <img
+                                src={file}
+                                alt={`License preview ${index + 1}`}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  // Fallback for different image path types
+                                  const target = e.target as HTMLImageElement;
+                                  console.log("Image failed to load, trying fallbacks", file);
+                                  
+                                  // For base64 data, no fallback needed
+                                  if (file.startsWith("data:image/")) {
+                                    console.log("Image is already base64");
+                                    return;
+                                  }
+                                  
+                                  // Try different URL formats
+                                  if (file.startsWith("http")) {
+                                    // Already a full URL, no fallback needed
+                                    console.log("Image is already a full URL");
+                                  } else {
+                                    // Assume it's a relative path, try with /uploads/
+                                    const fallbackSrc = `/uploads/${file}`;
+                                    console.log("Trying fallback URL", fallbackSrc);
+                                    target.src = fallbackSrc;
+                                  }
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Mark the file for removal
+                                  setRemovedLicenseFiles(prev => [...prev, file]);
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          )
+                        ))}
+                        
+                        {/* Show new license previews */}
+                        {editLicensePreviews.map((preview, index) => (
+                          <div key={`new-${preview}-${index}`} className="w-24 h-24 border rounded-lg overflow-hidden relative">
+                            <img
+                              src={preview}
+                              alt={`New license preview ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Remove the preview
+                                setEditLicensePreviews(prev => prev.filter((_, i) => i !== index));
+                                // Remove the file
+                                setNewLicenseFiles(prev => prev.filter((_, i) => i !== index));
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="supplierType"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Supplier Type <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        name="supplierType"
+                        value={selectedSupplier.supplierType}
+                        onValueChange={(value) => {
+                          setSelectedSupplier(prev => prev ? {...prev, supplierType: value} : null);
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select supplier type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {supplierTypes.map((type: { id: string; name: string }) => (
+                            <SelectItem key={type.id} value={type.name}>
+                              {type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+               
+              </div>
+              <DialogFooter className="bg-gray-50 px-4 py-3 sm:px-6 rounded-b-lg">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Save Changes</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* View Inventory Modal */}
       <Dialog
         open={isInventoryModalOpen}
@@ -1118,7 +1865,15 @@ export default function SupplierManagementPage() {
       </Dialog>
 
       {/* New Supplier Modal */}
-      <Dialog open={isNewModalOpen} onOpenChange={setIsNewModalOpen}>
+      <Dialog open={isNewModalOpen} onOpenChange={(open) => {
+        setIsNewModalOpen(open);
+        if (!open) {
+          // Reset form when closing
+          setNewSupplier(initialNewSupplierState);
+          setLicensePreviews([]);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+      }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-gray-900">
@@ -1315,8 +2070,8 @@ export default function SupplierManagementPage() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2 md:col-span-1">
                       <Label
                         htmlFor="pincode"
                         className="text-sm font-medium text-gray-700"
@@ -1341,21 +2096,28 @@ export default function SupplierManagementPage() {
                           </p>
                         )}
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 md:col-span-2">
                       <Label
                         htmlFor="location"
                         className="text-sm font-medium text-gray-700"
                       >
-                        Location (Optional)
+                        Location
                       </Label>
-                      <Input
-                        id="location"
-                        name="location"
-                        placeholder="Enter location"
-                        value={newSupplier.location}
-                        onChange={handleNewSupplierChange}
-                        className="w-full"
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          value={newSupplier.location ? `${newSupplier.location.lat}, ${newSupplier.location.lng}` : ''} 
+                          placeholder="Select location from map" 
+                          readOnly 
+                          className="flex-1"
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => setIsMapOpen(true)}
+                        >
+                          <Map className="mr-2 h-4 w-4" /> Choose from Map
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1374,8 +2136,8 @@ export default function SupplierManagementPage() {
                       License/Certification (Image, max 5MB){" "}
                       <span className="text-red-500">*</span>
                     </Label>
-                    <div className="mt-1 flex items-center gap-4">
-                      <div className="flex-1">
+                    <div className="mt-1">
+                      <div className="mb-4">
                         <label
                           htmlFor="licenseFile"
                           className="relative flex flex-col items-center justify-center w-full px-4 py-6 border-2 border-dashed rounded-lg cursor-pointer border-gray-300 bg-gray-50 hover:bg-gray-100 transition-colors"
@@ -1411,53 +2173,80 @@ export default function SupplierManagementPage() {
                             name="licenseFile"
                             type="file"
                             accept="image/*"
-                            onChange={handleFileChange}
                             className="hidden"
-                          />
-                        </label>
-                      </div>
-
-                      {licensePreview && (
-                        <div className="w-24 h-24 border rounded-lg overflow-hidden">
-                          <img
-                            src={licensePreview}
-                            alt="License preview"
-                            className="w-full h-full object-cover"
-                          />
+                            multiple
+                            onChange={handleFileChange}
+                            ref={fileInputRef}
+                            />
+                          </label>
                         </div>
+
+                        {/* Show license file previews for new supplier */}
+                        <div className="flex flex-wrap gap-2">
+                          {licensePreviews.map((preview, index) => (
+                            <div key={`license-${preview}-${index}`} className="w-24 h-24 border rounded-lg overflow-hidden relative">
+                              <img
+                                src={preview}
+                                alt={`License preview ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Remove the preview
+                                  setLicensePreviews(prev => prev.filter((_, i) => i !== index));
+                                  // Remove the file from newSupplier
+                                  setNewSupplier(prev => ({
+                                    ...prev,
+                                    licenseFiles: prev.licenseFiles.filter((_, i) => i !== index)
+                                  }));
+                                  // Revoke the object URL
+                                  URL.revokeObjectURL(preview);
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {newSupplier.licenseFiles.length > 0 && (
+                        <p className="mt-1 text-sm text-gray-600">
+                          Selected {newSupplier.licenseFiles.length} file(s)
+                        </p>
                       )}
                     </div>
-                    {newSupplier.licenseFile && (
-                      <p className="mt-1 text-sm text-gray-600">
-                        Selected: {newSupplier.licenseFile.name}
-                      </p>
-                    )}
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="supplierType"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Supplier Type <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={newSupplier.supplierType}
-                      onValueChange={handleSupplierTypeChange}
-                      required
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select supplier type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {supplierTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="supplierType"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Supplier Type <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={newSupplier.supplierType}
+                        onValueChange={handleSupplierTypeChange}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select supplier type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {supplierTypes.map((type: { id: string; name: string; description?: string }) => (
+                            <SelectItem key={type.id} value={type.name}>
+                              {type.name}
+                              {type.description && ` - ${type.description}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {isSuperDataLoading && (
+                        <p className="text-sm text-gray-500">Loading supplier types...</p>
+                      )}
+                    </div>
                 </div>
               </div>
 
@@ -1630,6 +2419,53 @@ export default function SupplierManagementPage() {
             <Button onClick={() => setIsOrderViewModalOpen(false)}>
               Close
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Map Modal */}
+      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Select Location</DialogTitle>
+            <DialogDescription>Search for a location or click on the map.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="relative">
+              <Input 
+                placeholder="Search for a location" 
+                value={searchQuery} 
+                onChange={(e) => { 
+                  setSearchQuery(e.target.value); 
+                  handleSearch(e.target.value); 
+                }} 
+              />
+              {searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-background shadow-lg max-h-48 overflow-y-auto mt-1">
+                  {searchResults.map((result: any) => (
+                    <div 
+                      key={result.id} 
+                      className="p-3 hover:bg-muted cursor-pointer" 
+                      onClick={() => handleSearchResultSelect(result)}
+                    >
+                      {result.place_name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {newSupplier.location && (
+              <div className="text-sm font-medium text-muted-foreground">
+                Selected Location Coordinates: {newSupplier.location.lat}, {newSupplier.location.lng}
+              </div>
+            )}
+            <div className="relative border rounded-lg overflow-hidden" style={{ height: '400px' }}>
+              <div ref={mapContainer} className="w-full h-full" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsMapOpen(false)}>Cancel</Button>
+            <Button type="button" onClick={() => setIsMapOpen(false)}>Confirm Location</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
