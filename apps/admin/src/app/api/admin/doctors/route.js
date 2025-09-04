@@ -109,7 +109,7 @@ export const POST = async (req) => {
   const referralCode = await generateDoctorReferralCode(name);
   
     // 5️⃣ Assign a default trial plan
-  const trialPlan = await SubscriptionPlan.findOne({ planType: 'trial', userTypes: 'doctor' });
+  const trialPlan = await SubscriptionPlan.findOne({ planType: 'trial', userTypes: { $in: ['doctor'] } });
   if (!trialPlan) {
     return Response.json({ message: "Default trial plan for doctors not found." }, { status: 500 });
   }

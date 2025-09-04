@@ -76,7 +76,7 @@ export async function POST(req) {
     const referralCode = await generateReferralCode(businessName);
 
     // 5️⃣ Assign a default trial plan
-    const trialPlan = await SubscriptionPlan.findOne({ planType: 'trial', userTypes: 'vendor' });
+    const trialPlan = await SubscriptionPlan.findOne({ planType: 'trial', userTypes: { $in: ['vendor'] } });
     if (!trialPlan) {
         return NextResponse.json({ message: "Default trial plan for vendors not found." }, { status: 500 });
     }
