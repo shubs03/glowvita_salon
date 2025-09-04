@@ -190,7 +190,7 @@ export default function PlatformMarketingPage() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'admin-authorization': `Bearer ${token}` // Updated header name to match middleware
+        'Authorization': `Bearer ${token}` // Changed from 'admin-authorization' to 'Authorization'
       },
       credentials: 'include', // Include cookies for auth
       body: JSON.stringify(data)
@@ -369,7 +369,7 @@ export default function PlatformMarketingPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'admin-authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}` // Changed from 'admin-authorization' to 'Authorization'
         },
         credentials: 'include',
         body: JSON.stringify(data)
@@ -1059,15 +1059,18 @@ export default function PlatformMarketingPage() {
               {isEditSocialMediaTemplateMode ? 'Update the social media template details.' : 'Fill in the details to create a new social media template.'}
             </DialogDescription>
           </DialogHeader>
-          <SocialMediaTemplateForm
-            initialData={selectedSocialMediaTemplate}
-            onSubmit={handleSocialMediaTemplateSubmit}
-            onCancel={() => {
-              setIsSocialMediaTemplateFormOpen(false);
-              setSelectedSocialMediaTemplate(null);
-            }}
-            isSubmitting={isCreatingSocialTemplate || isUpdatingSocialTemplate}
-          />
+          
+          <div className="flex-1 overflow-hidden min-h-0">
+            <SocialMediaTemplateForm
+              initialData={selectedSocialMediaTemplate}
+              onSubmit={handleSocialMediaTemplateSubmit}
+              onCancel={() => {
+                setIsSocialMediaTemplateFormOpen(false);
+                setSelectedSocialMediaTemplate(null);
+              }}
+              isSubmitting={isCreatingSocialTemplate || isUpdatingSocialTemplate}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
