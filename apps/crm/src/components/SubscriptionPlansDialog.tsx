@@ -58,7 +58,7 @@ export function SubscriptionPlansDialog({
         plan.planType === 'regular' && 
         plan.status === 'Active' &&
         plan.isAvailableForPurchase &&
-        (!plan.userTypes || plan.userTypes.includes(userType)) &&
+        plan.userTypes && plan.userTypes.includes(userType) &&
         plan._id !== subscription?.plan?._id
       )
       .sort((a: SubscriptionPlan, b: SubscriptionPlan) => a.price - b.price);
@@ -131,10 +131,7 @@ export function SubscriptionPlansDialog({
                         <span className="text-lg text-muted-foreground line-through opacity-70">₹{plan.price}</span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">per {plan.durationType.slice(0, -1)}</p>
-                    <div className="mt-2 inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                      {plan.duration} {plan.durationType}
-                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">per {plan.duration} {plan.durationType}</p>
                   </div>
 
                   <ul className="mt-6 space-y-3">

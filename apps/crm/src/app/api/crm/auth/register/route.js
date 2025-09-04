@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import VendorModel from "../../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js";
+import SubscriptionPlan from "../../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js";
 import { ReferralModel, V2VSettingsModel } from "../../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
 import _db from "../../../../../../../../packages/lib/src/db.js";
 import validator from "validator";
@@ -74,7 +75,15 @@ export async function POST(req) {
     // 4️⃣ Generate unique referral code
     const referralCode = await generateReferralCode(businessName);
 
-    // 5️⃣ Create vendor with minimal required data + any other data provided
+    // 5️⃣ Assign a default trial plan
+    const trialPlan = await SubscriptionPlan.findOne({ planType: 'trial', userTypes: 'vendor' });
+    if (!trialPlan) {
+        return NextResponse.json({ message: "Default trial plan for vendors not found." }, { status: 500 });
+    }
+    const subscriptionEndDate = new Date();
+    subscriptionEndDate.setDate(subscriptionEndDate.getDate() + trialPlan.duration);
+
+    // 6️⃣ Create vendor with minimal required data + any other data provided
     const newVendor = await VendorModel.create({
       firstName, 
       lastName, 
@@ -94,9 +103,15 @@ export async function POST(req) {
       description: description || null,
       profileImage: profileImage || null, 
       website: website || null,
+      subscription: {
+        plan: trialPlan._id,
+        status: 'Active',
+        endDate: subscriptionEndDate,
+        history: [],
+      }
     });
 
-    // 6️⃣ Handle referral if a code was provided
+    // 7️⃣ Handle referral if a code was provided
     if (referredByCode) {
       const referringVendor = await VendorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
       if (referringVendor) {
@@ -122,7 +137,7 @@ export async function POST(req) {
       }
     }
 
-    // 7️⃣ Remove password before returning
+    // 8️⃣ Remove password before returning
     const vendorData = newVendor.toObject();
     delete vendorData.password;
 
