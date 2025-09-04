@@ -1,5 +1,6 @@
+
 import { NextResponse } from "next/server";
-import { authMiddlewareCrm } from "@repo/lib/middlewareAdmin";
+import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
 import _db from "@repo/lib/db";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
@@ -9,6 +10,7 @@ import SubscriptionPlanModel from "@repo/lib/models/admin/SubscriptionPlan.model
 const getUserModel = (userType) => {
   switch (userType) {
     case 'vendor':
+    case 'staff':
       return VendorModel;
     case 'supplier':
       return SupplierModel;
@@ -111,4 +113,4 @@ export const POST = authMiddlewareCrm(async (req) => {
       error: error.message 
     }, { status: 500 });
   }
-}, ['vendor', 'supplier', 'doctor']);
+}, ['vendor', 'supplier', 'doctor', 'staff']);
