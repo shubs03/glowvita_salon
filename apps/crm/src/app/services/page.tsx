@@ -60,6 +60,7 @@ import {
   useDeleteVendorServicesMutation,
   useGetServicesQuery,
   useCreateServiceMutation,
+  useGetStaffQuery
 } from "@repo/store/api";
 import Image from "next/image";
 import { Skeleton } from "@repo/ui/skeleton";
@@ -70,8 +71,6 @@ import {
   setDeleteModalOpen,
 } from "@repo/store/slices/serviceSlice";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
-
-const mockStaff = ["Jane Doe", "John Smith", "Emily White"];
 
 const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }) => {
   const [name, setName] = useState("");
@@ -179,6 +178,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
     isLoading: servicesLoading,
     refetch: refetchServices,
   } = useGetServicesQuery(undefined);
+  const { data: staffList = [], isLoading: staffLoading } = useGetStaffQuery(VENDOR_ID, { skip: !VENDOR_ID });
 
   const [createVendorServices, { isLoading: isCreating }] = useCreateVendorServicesMutation();
   const [updateVendorServices, { isLoading: isUpdating }] = useUpdateVendorServicesMutation();
@@ -528,30 +528,34 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
       <div className="space-y-2">
         <Label>Staff</Label>
         <div className="p-4 border rounded-md max-h-48 overflow-y-auto space-y-2">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="staff-all"
-              checked={formData.staff?.length === mockStaff.length}
-              onCheckedChange={(checked) =>
-                handleSelectChange("staff", checked ? mockStaff : [])
-              }
-            />
-            <Label htmlFor="staff-all" className="font-semibold">
-              Select All Staff
-            </Label>
-          </div>
-          {mockStaff.map((staff) => (
-            <div key={staff} className="flex items-center space-x-2">
-              <Checkbox
-                id={`staff-${staff}`}
-                checked={formData.staff?.includes(staff) || false}
-                onCheckedChange={(checked) =>
-                  handleCheckboxChange("staff", staff, checked)
-                }
-              />
-              <Label htmlFor={`staff-${staff}`}>{staff}</Label>
-            </div>
-          ))}
+          {staffLoading ? <p>Loading staff...</p> : staffList.length > 0 ? (
+            <>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="staff-all"
+                  checked={formData.staff?.length === staffList.length}
+                  onCheckedChange={(checked) =>
+                    handleSelectChange("staff", checked ? staffList.map(s => s._id) : [])
+                  }
+                />
+                <Label htmlFor="staff-all" className="font-semibold">
+                  Select All Staff
+                </Label>
+              </div>
+              {staffList.map((staff) => (
+                <div key={staff._id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`staff-${staff._id}`}
+                    checked={formData.staff?.includes(staff._id) || false}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxChange("staff", staff._id, checked)
+                    }
+                  />
+                  <Label htmlFor={`staff-${staff._id}`}>{staff.fullName}</Label>
+                </div>
+              ))}
+            </>
+          ) : <p>No staff found. Please add staff members first.</p>}
         </div>
       </div>
       <div className="flex items-center space-x-2">
@@ -866,6 +870,20 @@ export default function ServicesPage() {
       }
     dispatch(setDeleteModalOpen({ isOpen: false, selectedService: null }));
   };
+  
+  const handleStatusToggle = async (service: any) => {
+    const newStatus = service.status === 'approved' ? 'pending' : 'approved';
+    const [updateVendorServices] = useUpdateVendorServicesMutation();
+    try {
+      await updateVendorServices({
+        vendor: user?._id,
+        services: [{ ...service, status: newStatus }],
+      }).unwrap();
+      refetch();
+    } catch (error) {
+      console.error("Failed to toggle service status", error);
+    }
+  };
 
   const isNoServicesError = isError && error?.data?.message === "No services found for this vendor";
 
@@ -901,7 +919,7 @@ export default function ServicesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {["Service", "Category", "Duration", "Price", "Status", "Actions"].map((_, i) => (
+                  {["Service", "Category", "Duration", "Price", "Status", "Active", "Actions"].map((_, i) => (
                     <TableHead key={i}>
                       <Skeleton className="h-5 w-full" />
                     </TableHead>
@@ -917,7 +935,7 @@ export default function ServicesPage() {
                         <Skeleton className="h-5 w-32" />
                       </div>
                     </TableCell>
-                    {[...Array(5)].map((_, j) => (
+                    {[...Array(6)].map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -1013,6 +1031,7 @@ export default function ServicesPage() {
                   <TableHead>Duration</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Active</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1020,7 +1039,7 @@ export default function ServicesPage() {
                 {isError && !isNoServicesError ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="text-center py-10 text-muted-foreground"
                     >
                       Failed to load services. Please try again later.
@@ -1066,6 +1085,12 @@ export default function ServicesPage() {
                           {service.status}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={service.onlineBooking}
+                          onCheckedChange={() => handleStatusToggle(service)}
+                        />
+                      </TableCell>
                       <TableCell className="text-right">
                          {service.status === 'disapproved' && (
                             <Button variant="ghost" size="icon" onClick={() => handleOpenModal("edit", service)}>
@@ -1087,7 +1112,7 @@ export default function ServicesPage() {
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="text-center py-10 text-muted-foreground"
                     >
                       {isNoServicesError ? "No services found. Add your first service to get started!" : "No matching services found."}
@@ -1150,3 +1175,51 @@ export default function ServicesPage() {
     </div>
   );
 }
+
+```
+- packages/store/src/slices/serviceSlice.js
+    <content><![CDATA[
+import { createSlice } from '@reduxjs/toolkit';
+
+const initialState = {
+  searchTerm: '',
+  isModalOpen: false,
+  isDeleteModalOpen: false,
+  selectedService: null,
+  modalType: 'add',
+};
+
+const serviceSlice = createSlice({
+  name: 'service',
+  initialState,
+  reducers: {
+    setSearchTerm: (state, action) => {
+      state.searchTerm = action.payload;
+    },
+    setModalOpen: (state, action) => {
+      state.isModalOpen = action.payload.isOpen;
+      state.modalType = action.payload.modalType || state.modalType;
+      state.selectedService = action.payload.selectedService || null;
+    },
+    setDeleteModalOpen: (state, action) => {
+      state.isDeleteModalOpen = action.payload.isOpen;
+      state.selectedService = action.payload.selectedService || null;
+    },
+    clearServiceState: (state) => {
+      state.searchTerm = '';
+      state.isModalOpen = false;
+      state.isDeleteModalOpen = false;
+      state.selectedService = null;
+      state.modalType = 'add';
+    },
+  },
+});
+
+export const {
+  setSearchTerm,
+  setModalOpen,
+  setDeleteModalOpen,
+  clearServiceState,
+} = serviceSlice.actions;
+
+export default serviceSlice.reducer;
