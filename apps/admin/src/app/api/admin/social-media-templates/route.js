@@ -112,7 +112,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
 });
 
 // POST a new Social Media template
-// PUT (Update) an existing Social Media template
 export const PUT = authMiddlewareAdmin(async (req, { params }) => {
   try {
     // Connect to database
@@ -233,6 +232,10 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
         );
       }
       updateData.imageUrl = image;
+      updateData.jsonData = {
+        background: image,
+        elements: []
+      };
     }
     
     // Update the template
@@ -470,6 +473,10 @@ export const POST = authMiddlewareAdmin(async (req) => {
     // Only add imageUrl if image is provided
     if (image) {
       templateData.imageUrl = image.toString();
+      templateData.jsonData = {
+        background: image.toString(),
+        elements: []
+      };
     }
     
     console.log('Creating template with data:', { 
