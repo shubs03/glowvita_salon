@@ -3,8 +3,8 @@ import mongoose from 'mongoose';
 const productSchema = new mongoose.Schema({
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Vendor',
-    required: [true, 'Vendor is required'],
+    required: [true, 'Owner is required'],
+    // Can reference either Vendor or Supplier - we'll handle this in the application logic
   },
   productName: {
     type: String,
