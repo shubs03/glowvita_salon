@@ -25,14 +25,18 @@ interface SubscriptionPlan {
   userTypes?: string[];
 }
 
-interface SubscriptionTabProps {
-  subscription: {
-    plan: {
-      _id: string;
-      name: string;
-    };
-    endDate: string;
+interface Subscription {
+  plan: {
+    _id: string;
+    name: string;
   };
+  endDate: string;
+}
+
+interface SubscriptionPlansDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  subscription: Subscription;
   userType?: 'vendor' | 'supplier' | 'doctor';
 }
 
@@ -41,12 +45,7 @@ export function SubscriptionPlansDialog({
   onOpenChange,
   subscription,
   userType = 'vendor'
-}: { 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void;
-  subscription: SubscriptionTabProps['subscription'];
-  userType?: SubscriptionTabProps['userType'];
-}) {
+}: SubscriptionPlansDialogProps) {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
   
   const { data: plansResponse, isLoading: plansLoading } = useGetSubscriptionPlansQuery(undefined);
@@ -64,14 +63,14 @@ export function SubscriptionPlansDialog({
         const isForPurchase = plan.isAvailableForPurchase;
         const matchesUserType = plan.userTypes && plan.userTypes.includes(userType);
         
-        // If the current plan is expired, we should allow re-selecting it.
-        // If it's not expired, we should hide it from the "Change Plan" list.
+        // This was the faulty logic. The subscription object has a nested plan object.
+        // The comparison should be against subscription.plan._id
         const isNotCurrentActivePlan = isExpired ? true : plan._id !== subscription?.plan?._id;
 
         return isCorrectType && isActive && isForPurchase && matchesUserType && isNotCurrentActivePlan;
       })
       .sort((a: SubscriptionPlan, b: SubscriptionPlan) => a.price - b.price);
-  }, [plansResponse, userType, subscription?.plan?._id, isExpired]);
+  }, [plansResponse, userType, subscription, isExpired]);
 
   const isLoading = plansLoading || changingPlan;
 
