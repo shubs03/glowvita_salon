@@ -29,6 +29,46 @@ const supplierSchema = new mongoose.Schema({
     enum: ["Approved", "Pending", "Rejected"],
     default: "Pending",
   },
+  subscription: {
+    plan: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubscriptionPlan",
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ["Active", "Expired"],
+      default: "Active",
+    },
+    startDate: {
+      type: Date,
+      default: Date.now,
+    },
+    endDate: {
+      type: Date,
+      required: true
+    },
+    history: [{
+      plan: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "SubscriptionPlan",
+        required: true
+      },
+      startDate: {
+        type: Date,
+        required: true
+      },
+      endDate: {
+        type: Date,
+        required: true
+      },
+      status: {
+        type: String,
+        enum: ["Active", "Expired"],
+        required: true
+      }
+    }]
+  },
   referralCode: {
     type: String,
     trim: true,
