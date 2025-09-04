@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown } from 'lucide-react';
+import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown, Map as MapIcon } from 'lucide-react';
 import { Checkbox } from "@repo/ui/checkbox";
 import {
   Select,
@@ -16,24 +16,17 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import stateCityData from '@repo/lib/state-city';
 import { useGetSuperDataQuery } from "@repo/store/api";
 import { toast } from "sonner";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from "@repo/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@repo/ui/popover";
 import { cn } from "@repo/ui/cn";
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../packages/config/config';
 
+// Mapbox Access Token
+if (NEXT_PUBLIC_MAPBOX_API_KEY) {
+  mapboxgl.accessToken = NEXT_PUBLIC_MAPBOX_API_KEY;
+}
 
 export interface Doctor {
   _id?: string;
@@ -52,6 +45,7 @@ export interface Doctor {
   state: string;
   city: string;
   pincode: string;
+  location?: { lat: number, lng: number } | null;
   status?: 'Approved' | 'Pending' | 'Rejected';
   profileImage?: string;
   qualification?: string;
@@ -69,13 +63,6 @@ export interface Doctor {
   videoConsultation?: boolean;
 }
 
-interface State {
-  state: string;
-  districts: string[];
-}
-
-const states: State[] = stateCityData.states;
-
 interface DoctorFormProps {
   isOpen: boolean;
   onClose: () => void;
@@ -83,6 +70,27 @@ interface DoctorFormProps {
   isEditMode: boolean;
   onSubmit: (data: Omit<Doctor, 'confirmPassword'>) => void;
 }
+
+interface MapboxFeature {
+  id: string;
+  place_name: string;
+  geometry: {
+    coordinates: [number, number];
+  };
+  context?: Array<{
+    id: string;
+    text: string;
+  }>;
+}
+
+interface SuperDataItem {
+  _id: string;
+  name: string;
+  type: string;
+  doctorType?: string;
+  parentId?: string;
+}
+
 
 // Initial form data template
 const initialFormData: Doctor & { password: string; confirmPassword: string } = {
@@ -109,61 +117,50 @@ const initialFormData: Doctor & { password: string; confirmPassword: string } = 
   state: '',
   city: '',
   pincode: '',
+  location: null,
   workingWithHospital: false,
   videoConsultation: false,
 };
 
 export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: DoctorFormProps) {
   const [activeTab, setActiveTab] = useState("personal");
-  const [selectedState, setSelectedState] = useState(doctor?.state || "");
-  const [cities, setCities] = useState<string[]>([]);
-  const [formData, setFormData] = useState<Doctor & { password: string; confirmPassword: string }>(
-    isEditMode && doctor
-      ? {
-          ...initialFormData,
-          ...doctor,
-          password: '', // Do not prefill password in edit mode
-          confirmPassword: '',
-          profileImage: doctor.profileImage || '',
-          qualification: doctor.qualification || '',
-          registrationYear: doctor.registrationYear || '',
-          faculty: doctor.faculty || '',
-          landline: doctor.landline || '',
-          assistantName: doctor.assistantName || '',
-          assistantContact: doctor.assistantContact || '',
-          workingWithHospital: doctor.workingWithHospital || false,
-          videoConsultation: doctor.videoConsultation || false,
-        }
-      : initialFormData
-  );
+  const [formData, setFormData] = useState<Doctor & { password: string; confirmPassword: string }>(initialFormData);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
-    doctor?.profileImage || null
-  );
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
+  const mapContainer = useRef<HTMLDivElement | null>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const marker = useRef<mapboxgl.Marker | null>(null);
+
 
   const { data: superData = [], isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
   
   const doctorTypes = useMemo(() => ['Physician', 'Surgeon'], []);
-  const allSpecialties = useMemo(() => superData.filter(d => d.type === 'specialization'), [superData]);
-  const allDiseases = useMemo(() => superData.filter(d => d.type === 'disease'), [superData]);
+  const allSpecialties: SuperDataItem[] = useMemo(() => superData.filter((d: SuperDataItem) => d.type === 'specialization'), [superData]);
+  const allDiseases: SuperDataItem[] = useMemo(() => superData.filter((d: SuperDataItem) => d.type === 'disease'), [superData]);
   
   const filteredSpecialties = useMemo(() => {
-    return formData.doctorType ? allSpecialties.filter(s => s.doctorType === formData.doctorType) : [];
+    return formData.doctorType ? allSpecialties.filter((s: SuperDataItem) => s.doctorType === formData.doctorType) : [];
   }, [allSpecialties, formData.doctorType]);
 
   const filteredDiseases = useMemo(() => {
-    const diseaseMap = new Map();
+    const diseaseMap = new Map<string, SuperDataItem[]>();
     if (formData.specialties.length > 0) {
-      allDiseases.forEach(disease => {
-        if (formData.specialties.includes(disease.parentId)) {
-          const specialty = allSpecialties.find(s => s._id === disease.parentId);
+      const selectedSpecialtyIds = formData.specialties;
+      
+      allDiseases.forEach((disease: SuperDataItem) => {
+        if (disease.parentId && selectedSpecialtyIds.includes(disease.parentId)) {
+          const specialty = allSpecialties.find((s: SuperDataItem) => s._id === disease.parentId);
           if (specialty) {
             if (!diseaseMap.has(specialty.name)) {
               diseaseMap.set(specialty.name, []);
             }
-            diseaseMap.get(specialty.name).push(disease);
+            diseaseMap.get(specialty.name)?.push(disease);
           }
         }
       });
@@ -175,9 +172,20 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && doctor) {
+        // When editing, map names back to IDs for specialties and diseases
+        const specialtyIds = doctor.specialties
+          .map(name => allSpecialties.find((s: SuperDataItem) => s.name === name)?._id)
+          .filter(Boolean) as string[];
+
+        const diseaseIds = doctor.diseases
+          .map(name => allDiseases.find((d: SuperDataItem) => d.name === name)?._id)
+          .filter(Boolean) as string[];
+
         setFormData({
           ...initialFormData,
           ...doctor,
+          specialties: specialtyIds,
+          diseases: diseaseIds,
           password: '',
           confirmPassword: '',
           profileImage: doctor.profileImage || '',
@@ -190,35 +198,16 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
           workingWithHospital: doctor.workingWithHospital || false,
           videoConsultation: doctor.videoConsultation || false,
         });
-        setSelectedState(doctor.state || '');
         setProfileImagePreview(doctor.profileImage || null);
       } else {
         setFormData(initialFormData);
-        setSelectedState('');
         setProfileImagePreview(null);
-        const fileInput = document.getElementById('profileImage') as HTMLInputElement;
-        if (fileInput) {
-          fileInput.value = '';
-        }
       }
       setActiveTab('personal');
       setPasswordError('');
     }
-  }, [isOpen, isEditMode, doctor]);
+  }, [isOpen, isEditMode, doctor, allSpecialties, allDiseases]);
 
-  // Update cities when selectedState changes
-  useEffect(() => {
-    if (selectedState) {
-      const stateData = states.find(s => s.state === selectedState);
-      setCities(stateData ? stateData.districts : []);
-      if (!stateData || !stateData.districts.includes(formData.city)) {
-        setFormData(prev => ({ ...prev, city: '' }));
-      }
-    } else {
-      setCities([]);
-      setFormData(prev => ({ ...prev, city: '' }));
-    }
-  }, [selectedState]);
 
   const validatePassword = (password: string, confirmPassword: string) => {
     if (password !== confirmPassword) {
@@ -268,8 +257,8 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
         : [...prev.specialties, specId];
       
       const validDiseases = prev.diseases.filter(diseaseId => {
-        const disease = allDiseases.find(d => d._id === diseaseId);
-        return newSpecialties.includes(disease?.parentId);
+        const disease = allDiseases.find((d: SuperDataItem) => d._id === diseaseId);
+        return disease?.parentId && newSpecialties.includes(disease.parentId);
       });
       return { ...prev, specialties: newSpecialties, diseases: validDiseases };
     });
@@ -296,9 +285,6 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
       ...prev,
       [name]: value
     }));
-    if (name === 'state') {
-      setSelectedState(value);
-    }
      if (name === 'doctorType') {
       setFormData(prev => ({ ...prev, specialties: [], diseases: [] }));
     }
@@ -316,16 +302,111 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     
     // Map specialty and disease IDs to names before submission
     const specialtyNames = submitData.specialties.map(id => {
-      const spec = allSpecialties.find(s => s._id === id);
+      const spec = allSpecialties.find((s: SuperDataItem) => s._id === id);
       return spec ? spec.name : id;
     });
 
     const diseaseNames = submitData.diseases.map(id => {
-      const disease = allDiseases.find(d => d._id === id);
+      const disease = allDiseases.find((d: SuperDataItem) => d._id === id);
       return disease ? disease.name : id;
     });
 
     onSubmit({ ...submitData, specialties: specialtyNames, diseases: diseaseNames });
+  };
+
+  // Map functionality
+  useEffect(() => {
+    if (!isMapOpen || !NEXT_PUBLIC_MAPBOX_API_KEY) return;
+    const initMap = () => {
+      if (!mapContainer.current) return;
+      if (map.current) map.current.remove();
+
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
+        zoom: formData.location ? 14 : 4,
+      });
+
+      if (marker.current) marker.current.remove();
+      
+      marker.current = new mapboxgl.Marker({ draggable: true })
+        .setLngLat(formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599])
+        .addTo(map.current);
+
+      marker.current.on('dragend', () => {
+        const lngLat = marker.current!.getLngLat();
+        setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
+        fetchAddress([lngLat.lng, lngLat.lat]);
+      });
+
+      map.current.on('click', (e) => {
+        const { lng, lat } = e.lngLat;
+        setFormData(prev => ({ ...prev, location: { lat, lng } }));
+        marker.current!.setLngLat([lng, lat]);
+        fetchAddress([lng, lat]);
+      });
+    };
+    
+    const timer = setTimeout(initMap, 100);
+    return () => clearTimeout(timer);
+  }, [isMapOpen]);
+
+  // Resize map when modal is fully opened
+  useEffect(() => {
+    if (isMapOpen && map.current) {
+      setTimeout(() => {
+        if(map.current) {
+            map.current.resize();
+        }
+      }, 300);
+    }
+  }, [isMapOpen]);
+
+  const handleSearch = async (query: string) => {
+    if (!query.trim() || !NEXT_PUBLIC_MAPBOX_API_KEY) return;
+    try {
+      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${NEXT_PUBLIC_MAPBOX_API_KEY}&country=IN`);
+      const data = await response.json();
+      setSearchResults(data.features || []);
+    } catch (error) {
+      toast.error("Failed to search location.");
+    }
+  };
+
+  const fetchAddress = async (coordinates: [number, number]) => {
+    try {
+      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${NEXT_PUBLIC_MAPBOX_API_KEY}`);
+      const data = await response.json();
+      if (data.features.length > 0) {
+        const feature = data.features[0];
+        setFormData(prev => ({
+          ...prev,
+          clinicAddress: feature.place_name,
+          city: feature.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('place'))?.text || '',
+          state: feature.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('region'))?.text || '',
+          pincode: feature.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('postcode'))?.text || '',
+        }));
+      }
+    } catch (error) {
+      toast.error("Failed to fetch address.");
+    }
+  };
+
+  const handleSearchResultSelect = (result: MapboxFeature) => {
+    const coordinates: [number, number] = result.geometry.coordinates;
+    setFormData(prev => ({
+      ...prev,
+      location: { lat: coordinates[1], lng: coordinates[0] },
+      clinicAddress: result.place_name,
+      city: result.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('place'))?.text || '',
+      state: result.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('region'))?.text || '',
+      pincode: result.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('postcode'))?.text || '',
+    }));
+    map.current?.flyTo({ center: coordinates, zoom: 14 });
+    marker.current?.setLngLat(coordinates);
+    setSearchResults([]);
+    setSearchQuery('');
   };
 
   const renderFormContent = () => (
@@ -556,7 +637,7 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                       <Label>Specialties <span className="text-red-500">*</span></Label>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border p-3 rounded-md max-h-48 overflow-y-auto">
                         {isSuperDataLoading ? <p>Loading...</p> : (
-                          filteredSpecialties.map(spec => (
+                          filteredSpecialties.map((spec: SuperDataItem) => (
                             <div key={spec._id} className="flex items-center space-x-2">
                               <Checkbox
                                 id={spec._id}
@@ -579,7 +660,7 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                             <div key={specialtyName}>
                               <h4 className="font-semibold text-sm mb-2">{specialtyName}</h4>
                               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border p-3 rounded-md">
-                                {diseases.map(disease => (
+                                {diseases.map((disease: SuperDataItem) => (
                                   <div key={disease._id} className="flex items-center space-x-2">
                                     <Checkbox id={disease._id} checked={formData.diseases.includes(disease._id)} onCheckedChange={() => handleDiseaseChange(disease._id)} />
                                     <Label htmlFor={disease._id} className="text-sm font-normal">{disease.name}</Label>
@@ -760,10 +841,17 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="clinicAddress" className="text-sm font-medium text-gray-700">
+                          <Label htmlFor="location" className="text-sm font-medium text-gray-700">Location</Label>
+                          <Button type="button" variant="outline" onClick={() => setIsMapOpen(true)} className="w-full h-10 justify-start text-left font-normal">
+                              <MapPin className="mr-2 h-4 w-4" />
+                              {formData.location ? `${formData.location.lat.toFixed(4)}, ${formData.location.lng.toFixed(4)}` : "Choose on Map"}
+                          </Button>
+                        </div>
+                        <div className="space-y-1.5 md:col-span-2">
+                            <Label htmlFor="clinicAddress" className="text-sm font-medium text-gray-700">
                             Clinic Address <span className="text-red-500">*</span>
-                          </Label>
-                          <Input
+                            </Label>
+                            <Input
                             id="clinicAddress"
                             name="clinicAddress"
                             value={formData.clinicAddress}
@@ -771,48 +859,35 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
                             placeholder="Clinic Address"
                             className="h-10 bg-white"
                             required
-                          />
+                            />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="state" className="text-sm font-medium text-gray-700">
                             State <span className="text-red-500">*</span>
                           </Label>
-                          <Select
+                          <Input
+                            id="state"
+                            name="state"
                             value={formData.state}
-                            onValueChange={(value) => handleSelectChange('state', value)}
-                          >
-                            <SelectTrigger className="h-10 bg-white">
-                              <SelectValue placeholder="Select state" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[300px] overflow-y-auto">
-                              {states.map((state) => (
-                                <SelectItem key={state.state} value={state.state}>
-                                  {state.state}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            onChange={handleInputChange}
+                            placeholder="State"
+                            className="h-10 bg-white"
+                            required
+                          />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="city" className="text-sm font-medium text-gray-700">
                             City <span className="text-red-500">*</span>
                           </Label>
-                          <Select
+                          <Input
+                            id="city"
+                            name="city"
                             value={formData.city}
-                            onValueChange={(value) => handleSelectChange('city', value)}
-                            disabled={!formData.state}
-                          >
-                            <SelectTrigger className="h-10 bg-white">
-                              <SelectValue placeholder="Select city" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-[300px] overflow-y-auto">
-                              {cities.map((city) => (
-                                <SelectItem key={city} value={city}>
-                                  {city}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            onChange={handleInputChange}
+                            placeholder="City"
+                            className="h-10 bg-white"
+                            required
+                          />
                         </div>
                         <div className="space-y-1.5">
                           <Label htmlFor="pincode" className="text-sm font-medium text-gray-700">
@@ -953,6 +1028,48 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
           </div>
         </div>
       </Tabs>
+      <Dialog.Root open={isMapOpen} onOpenChange={setIsMapOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-4xl max-h-[80vh] translate-x-[-50%] translate-y-[-50%] bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg border">
+            <div className="flex flex-col space-y-4">
+              <div className="flex flex-col space-y-1.5 text-center sm:text-left">
+                <Dialog.Title className="text-lg font-semibold leading-none tracking-tight">Select Clinic Location</Dialog.Title>
+                <Dialog.Description className="text-sm text-muted-foreground">Search, pan, or click on the map to set the exact location.</Dialog.Description>
+              </div>
+              <div className="space-y-4 h-[60vh] flex flex-col">
+                  <div className="relative">
+                      <Input
+                          placeholder="Search for a location..."
+                          value={searchQuery}
+                          onChange={(e) => { setSearchQuery(e.target.value); handleSearch(e.target.value); }}
+                      />
+                      {searchResults.length > 0 && (
+                          <div className="absolute z-10 w-full bg-background border rounded-md mt-1 max-h-48 overflow-y-auto">
+                              {searchResults.map((result: MapboxFeature) => (
+                                  <div key={result.id} onClick={() => handleSearchResultSelect(result)} className="p-2 hover:bg-secondary cursor-pointer text-sm">
+                                      {result.place_name}
+                                  </div>
+                              ))}
+                          </div>
+                      )}
+                  </div>
+                  <div ref={mapContainer} className="flex-grow w-full rounded-md border" />
+              </div>
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+                  <Button variant="outline" onClick={() => setIsMapOpen(false)}>Cancel</Button>
+                  <Button onClick={() => setIsMapOpen(false)}>Confirm Location</Button>
+              </div>
+            </div>
+            <Dialog.Close asChild>
+              <Button variant="outline" size="icon" className="absolute right-4 top-4">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </Dialog.Close>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </form>
   );
 
@@ -969,9 +1086,11 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
               <Dialog.Title className="text-xl font-semibold leading-none tracking-tight">
                 {isEditMode ? `Edit Doctor: ${doctor?.name}` : 'Add New Doctor'}
               </Dialog.Title>
-              <Dialog.Close className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-                <X className="h-5 w-5" />
-                <span className="sr-only">Close</span>
+              <Dialog.Close asChild>
+                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8" onClick={onClose}>
+                    <X className="h-4 w-4" />
+                    <span className="sr-only">Close</span>
+                </Button>
               </Dialog.Close>
             </div>
             <Dialog.Description className="text-sm text-muted-foreground">
@@ -984,3 +1103,4 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     </Dialog.Root>
   );
 }
+

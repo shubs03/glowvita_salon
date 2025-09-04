@@ -55,6 +55,7 @@ interface SmsPackage extends BaseEntity {
 }
 
 interface SmsTemplate extends BaseEntity {
+  id: string;
   name: string;
   content: string;
   type: string;
@@ -153,8 +154,8 @@ type ModalDataType = SmsTemplate | SmsPackage | SocialMediaPost | MarketingTicke
 
 export default function PlatformMarketingPage() {
   // Fetch SMS packages and templates
-  const { data: smsPackagesData = [], isLoading: isLoadingPackages } = useGetSmsPackagesQuery();
-  const { data: smsTemplatesData = [], isLoading: isLoadingTemplates, refetch: refetchTemplates } = useGetSmsTemplatesQuery();
+  const { data: smsPackagesData = [], isLoading: isLoadingPackages } = useGetSmsPackagesQuery(undefined);
+  const { data: smsTemplatesData = [], isLoading: isLoadingTemplates, refetch: refetchTemplates } = useGetSmsTemplatesQuery(undefined);
   
   const [createSmsPackage] = useCreateSmsPackageMutation();
   const [updateSmsPackage] = useUpdateSmsPackageMutation();
@@ -228,7 +229,7 @@ export default function PlatformMarketingPage() {
     data: socialMediaTemplatesResponse, 
     isLoading: isLoadingSocialTemplates,
     refetch: refetchSocialMediaTemplates 
-  } = useGetSocialMediaTemplatesQuery();
+  } = useGetSocialMediaTemplatesQuery(undefined);
   
   // Cast the data to proper types since we know the shape from the API
   const smsPackages = Array.isArray(smsPackagesData) ? smsPackagesData as SmsPackage[] : [];
@@ -308,9 +309,9 @@ export default function PlatformMarketingPage() {
       }
       setIsPackageFormOpen(false);
       setSelectedPackage(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save package:', error);
-      toast.error('Failed to save package');
+      toast.error(error?.data?.message || 'Failed to save package');
     }
   }, [isEditMode, selectedPackage, createSmsPackage, updateSmsPackage]);
 
@@ -334,7 +335,7 @@ export default function PlatformMarketingPage() {
       setSelectedTemplate(null);
       // Force refetch templates
       refetchTemplates();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save template:', error);
       toast.error(error?.data?.message || 'Failed to save template');
     }
@@ -400,7 +401,7 @@ export default function PlatformMarketingPage() {
       setIsSocialMediaTemplateFormOpen(false);
       setSelectedSocialMediaTemplate(null);
       refetchSocialMediaTemplates();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save social media template:', error);
       toast.error(error?.message || error?.data?.message || 'Failed to save social media template');
     }
@@ -419,7 +420,7 @@ export default function PlatformMarketingPage() {
       await deleteSocialMediaTemplate(itemToDelete.id).unwrap();
       toast.success('Template deleted successfully');
       refetchSocialMediaTemplates();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete social media template:', error);
       toast.error(error?.data?.message || error.message || 'Failed to delete template');
     } finally {
@@ -445,7 +446,7 @@ export default function PlatformMarketingPage() {
       await deleteSmsTemplate(id).unwrap();
       toast.success('Template deleted successfully');
       refetchTemplates();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete template:', error);
       toast.error(error?.data?.message || 'Failed to delete template');
     } finally {
