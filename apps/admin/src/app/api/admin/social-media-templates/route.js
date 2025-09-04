@@ -234,7 +234,40 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
       updateData.imageUrl = image;
       updateData.jsonData = {
         background: image,
-        elements: []
+        elements: [
+          {
+            type: 'textbox',
+            version: '5.3.0',
+            originX: 'left',
+            originY: 'top',
+            left: 50,
+            top: 50,
+            width: 700,
+            height: 90.4,
+            fill: '#000000',
+            text: 'Your Offer Here',
+            fontSize: 80,
+            fontWeight: 'bold',
+            fontFamily: 'Arial',
+            textAlign: 'center'
+          },
+          {
+            type: 'textbox',
+            version: '5.3.0',
+            originX: 'left',
+            originY: 'top',
+            left: 50,
+            top: 200,
+            width: 700,
+            height: 45.2,
+            fill: '#333333',
+            text: 'Contact: 123-456-7890',
+            fontSize: 40,
+            fontWeight: 'normal',
+            fontFamily: 'Arial',
+            textAlign: 'center'
+          }
+        ]
       };
     }
     
@@ -475,7 +508,40 @@ export const POST = authMiddlewareAdmin(async (req) => {
       templateData.imageUrl = image.toString();
       templateData.jsonData = {
         background: image.toString(),
-        elements: []
+        elements: [
+          {
+            type: 'textbox',
+            version: '5.3.0',
+            originX: 'left',
+            originY: 'top',
+            left: 50,
+            top: 50,
+            width: 700,
+            height: 90.4,
+            fill: '#000000',
+            text: 'Your Offer Here',
+            fontSize: 80,
+            fontWeight: 'bold',
+            fontFamily: 'Arial',
+            textAlign: 'center'
+          },
+          {
+            type: 'textbox',
+            version: '5.3.0',
+            originX: 'left',
+            originY: 'top',
+            left: 50,
+            top: 200,
+            width: 700,
+            height: 45.2,
+            fill: '#333333',
+            text: 'Contact: 123-456-7890',
+            fontSize: 40,
+            fontWeight: 'normal',
+            fontFamily: 'Arial',
+            textAlign: 'center'
+          }
+        ]
       };
     }
     

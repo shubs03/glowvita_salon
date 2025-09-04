@@ -51,25 +51,88 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   useEffect(() => {
-    if (isOpen && canvasRef.current) {
-        const canvas = new fabric.Canvas(canvasRef.current);
+    if (isOpen && canvasRef.current && template) {
+        const canvasContainer = canvasRef.current.parentElement;
+        if (!canvasContainer) return;
+
+        const canvas = new fabric.Canvas(canvasRef.current, {
+            width: canvasContainer.clientWidth,
+            height: canvasContainer.clientHeight,
+        });
         setFabricCanvas(canvas);
 
-        if (template?.jsonData) {
-            canvas.loadFromJSON(template.jsonData, () => {
-                canvas.renderAll();
-            });
-        } else if (template?.imageUrl) {
-            fabric.Image.fromURL(template.imageUrl, (img) => {
-                canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-                    scaleX: canvas.width / img.width,
-                    scaleY: canvas.height / img.height,
-                });
-            });
-        }
+        const loadCanvasContent = () => {
+            canvas.clear(); // Clear previous content
+
+            const loadJson = () => {
+                if (template.jsonData) {
+                    canvas.loadFromJSON(template.jsonData, () => {
+                        // Find and set background image from JSON
+                        if (canvas.backgroundImage instanceof fabric.Image) {
+                           const img = canvas.backgroundImage;
+                           const canvasAspect = canvas.width / canvas.height;
+                           const imgAspect = img.width / img.height;
+                           let scaleX = 1, scaleY = 1;
+
+                           if (canvasAspect > imgAspect) {
+                               scaleY = canvas.height / img.height;
+                               scaleX = scaleY;
+                           } else {
+                               scaleX = canvas.width / img.width;
+                               scaleY = scaleX;
+                           }
+                           
+                           img.set({ scaleX, scaleY });
+                        }
+                        canvas.renderAll();
+                    });
+                }
+            };
+
+            if (template.imageUrl) {
+                 fabric.Image.fromURL(template.imageUrl, (img) => {
+                    const canvasAspect = canvas.width / canvas.height;
+                    const imgAspect = img.width / img.height;
+                    let scaleX = 1, scaleY = 1;
+
+                    if(canvasAspect > imgAspect) {
+                        scaleY = canvas.height / img.height;
+                        scaleX = scaleY;
+                    } else {
+                        scaleX = canvas.width / img.width;
+                        scaleY = scaleX;
+                    }
+
+                    canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
+                        scaleX: scaleX,
+                        scaleY: scaleY,
+                        originX: 'left',
+                        originY: 'top'
+                    });
+                    loadJson(); // Load other elements after background
+                }, { crossOrigin: 'anonymous' }); // Added crossOrigin
+            } else {
+                loadJson();
+            }
+        };
+
+        loadCanvasContent();
+
+        const resizeObserver = new ResizeObserver(() => {
+            if (canvasRef.current && canvasRef.current.parentElement) {
+                canvas.setWidth(canvasRef.current.parentElement.clientWidth);
+                canvas.setHeight(canvasRef.current.parentElement.clientHeight);
+                loadCanvasContent();
+            }
+        });
+        
+        resizeObserver.observe(canvasContainer);
 
         return () => {
-            canvas.dispose();
+            resizeObserver.disconnect();
+            if (canvas) {
+                canvas.dispose();
+            }
             setFabricCanvas(null);
         };
     }
@@ -166,8 +229,6 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
             <div className="bg-gray-100 rounded-lg p-4 flex-grow flex items-center justify-center">
               <canvas
                 ref={canvasRef}
-                width={800}
-                height={800}
                 className="border border-gray-300 rounded"
               />
             </div>
