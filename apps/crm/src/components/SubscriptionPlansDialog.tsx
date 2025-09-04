@@ -1,4 +1,6 @@
 
+"use client";
+
 import { useState, useMemo } from 'react';
 import { Star, Check, Zap, RefreshCw } from 'lucide-react';
 import { cn } from "@repo/ui/cn";
@@ -50,21 +52,27 @@ export function SubscriptionPlansDialog({
   const { data: plansResponse, isLoading: plansLoading } = useGetSubscriptionPlansQuery(undefined);
   const [changePlan, { isLoading: changingPlan }] = useChangePlanMutation();
   
+  const isExpired = subscription?.endDate ? new Date(subscription.endDate) < new Date() : true;
+
   const availablePlans = useMemo(() => {
     if (!Array.isArray(plansResponse)) return [];
     
     return plansResponse
-      .filter((plan: SubscriptionPlan) => 
-        plan.planType === 'regular' && 
-        plan.status === 'Active' &&
-        plan.isAvailableForPurchase &&
-        plan.userTypes && plan.userTypes.includes(userType) &&
-        plan._id !== subscription?.plan?._id
-      )
-      .sort((a: SubscriptionPlan, b: SubscriptionPlan) => a.price - b.price);
-  }, [plansResponse, userType, subscription?.plan?._id]);
+      .filter((plan: SubscriptionPlan) => {
+        const isCorrectType = plan.planType === 'regular';
+        const isActive = plan.status === 'Active';
+        const isForPurchase = plan.isAvailableForPurchase;
+        const matchesUserType = plan.userTypes && plan.userTypes.includes(userType);
+        
+        // If the current plan is expired, we should allow re-selecting it.
+        // If it's not expired, we should hide it from the "Change Plan" list.
+        const isNotCurrentActivePlan = isExpired ? true : plan._id !== subscription?.plan?._id;
 
-  const isExpired = subscription?.endDate ? new Date(subscription.endDate) < new Date() : true;
+        return isCorrectType && isActive && isForPurchase && matchesUserType && isNotCurrentActivePlan;
+      })
+      .sort((a: SubscriptionPlan, b: SubscriptionPlan) => a.price - b.price);
+  }, [plansResponse, userType, subscription?.plan?._id, isExpired]);
+
   const isLoading = plansLoading || changingPlan;
 
   const handlePlanChange = async () => {
