@@ -827,6 +827,7 @@ export default function ServicesPage() {
   const services = data.services || [];
 
   const [deleteVendorServices] = useDeleteVendorServicesMutation();
+  const [updateVendorServices] = useUpdateVendorServicesMutation();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -871,17 +872,18 @@ export default function ServicesPage() {
     dispatch(setDeleteModalOpen({ isOpen: false, selectedService: null }));
   };
   
-  const handleStatusToggle = async (service: any) => {
-    const newStatus = service.status === 'approved' ? 'pending' : 'approved';
-    const [updateVendorServices] = useUpdateVendorServicesMutation();
+  const handleVisibilityToggle = async (service: any) => {
     try {
+      const updatedService = { ...service, onlineBooking: !service.onlineBooking };
       await updateVendorServices({
         vendor: user?._id,
-        services: [{ ...service, status: newStatus }],
+        services: [updatedService],
       }).unwrap();
       refetch();
+      toast.success(`Service visibility updated successfully!`);
     } catch (error) {
-      console.error("Failed to toggle service status", error);
+      console.error("Failed to toggle service visibility", error);
+      toast.error("Failed to update service visibility.");
     }
   };
 
@@ -1088,7 +1090,7 @@ export default function ServicesPage() {
                       <TableCell>
                         <Switch
                           checked={service.onlineBooking}
-                          onCheckedChange={() => handleStatusToggle(service)}
+                          onCheckedChange={() => handleVisibilityToggle(service)}
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -1176,50 +1178,3 @@ export default function ServicesPage() {
   );
 }
 
-```
-- packages/store/src/slices/serviceSlice.js
-    <content><![CDATA[
-import { createSlice } from '@reduxjs/toolkit';
-
-const initialState = {
-  searchTerm: '',
-  isModalOpen: false,
-  isDeleteModalOpen: false,
-  selectedService: null,
-  modalType: 'add',
-};
-
-const serviceSlice = createSlice({
-  name: 'service',
-  initialState,
-  reducers: {
-    setSearchTerm: (state, action) => {
-      state.searchTerm = action.payload;
-    },
-    setModalOpen: (state, action) => {
-      state.isModalOpen = action.payload.isOpen;
-      state.modalType = action.payload.modalType || state.modalType;
-      state.selectedService = action.payload.selectedService || null;
-    },
-    setDeleteModalOpen: (state, action) => {
-      state.isDeleteModalOpen = action.payload.isOpen;
-      state.selectedService = action.payload.selectedService || null;
-    },
-    clearServiceState: (state) => {
-      state.searchTerm = '';
-      state.isModalOpen = false;
-      state.isDeleteModalOpen = false;
-      state.selectedService = null;
-      state.modalType = 'add';
-    },
-  },
-});
-
-export const {
-  setSearchTerm,
-  setModalOpen,
-  setDeleteModalOpen,
-  clearServiceState,
-} = serviceSlice.actions;
-
-export default serviceSlice.reducer;
