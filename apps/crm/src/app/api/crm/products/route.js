@@ -11,8 +11,17 @@ await _db();
 // GET - Fetch products for the current user (vendor or supplier)
 const getProducts = async (req) => {
   try {
+    const vendorId = req.user?._id;
+
+    if (!vendorId) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized: Vendor ID not found" },
+        { status: 401 }
+      );
+    }
+    
     // Filter products by the current user's ID (whether vendor or supplier)
-    const products = await ProductModel.find({ vendorId: req.user._id })
+    const products = await ProductModel.find({ vendorId: vendorId })
       .populate('category', 'name description')
       .sort({ createdAt: -1 })
       .lean();

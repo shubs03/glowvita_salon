@@ -1022,7 +1022,7 @@ export const glowvitaApi = createApi({
         url: "/crm/products",
         method: "GET",
       }),
-      providesTags: ["Product"],
+      providesTags: ["CrmProducts", "Product"],
       transformResponse: (response) => {
         // Handle both direct array and wrapped response formats
         if (Array.isArray(response)) {
@@ -1046,7 +1046,7 @@ export const glowvitaApi = createApi({
         method: "POST",
         body: product,
       }),
-      invalidatesTags: ["Product"],
+      invalidatesTags: ["CrmProducts", "Product"],
     }),
 
     updateCrmProduct: builder.mutation({
@@ -1055,7 +1055,7 @@ export const glowvitaApi = createApi({
         method: "PUT",
         body: product,
       }),
-      invalidatesTags: ["Product"],
+      invalidatesTags: ["CrmProducts", "Product"],
     }),
 
     deleteCrmProduct: builder.mutation({
@@ -1063,7 +1063,7 @@ export const glowvitaApi = createApi({
         url: `/crm/products?id=${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Product"],
+      invalidatesTags: ["CrmProducts", "Product"],
     }),
 
     // shipping charge endpoints
