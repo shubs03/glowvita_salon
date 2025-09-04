@@ -16,11 +16,20 @@ const supplierSchema = new mongoose.Schema({
   state: { type: String, required: true, trim: true },
   city: { type: String, required: true, trim: true },
   pincode: { type: String, required: true, trim: true },
-  location: { type: String, trim: true },
+  location: {
+    lat: {
+      type: Number,
+      required: false,
+    },
+    lng: {
+      type: Number,
+      required: false,
+    },
+  },
   address: { type: String, required: true, trim: true },
   businessRegistrationNo: { type: String, trim: true },
   supplierType: { type: String, required: true },
-  licenseFile: { type: String }, // URL to the uploaded file
+  licenseFiles: [{ type: String }], // Changed to array for multiple files
   password: { type: String, required: true, select: false },
   products: { type: Number, default: 0 },
   sales: { type: Number, default: 0 },

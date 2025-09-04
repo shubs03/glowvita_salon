@@ -1,69 +1,79 @@
+// route.js
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import SupplierModel from "../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js";
-import { uploadBase64, deleteFile } from "../../../../../../../packages/utils/uploads.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
-await _db();
+// Initialize database connection (assuming _db is a promise-based connection function)
+const initDb = async () => {
+  try {
+    await _db();
+  } catch (error) {
+    console.error("Database connection error:", error);
+    throw new Error("Failed to connect to database");
+  }
+};
 
 // Helper to validate supplier data
 const validateSupplierData = (data) => {
-    const { firstName, lastName, email, mobile, shopName, country, state, city, pincode, address, supplierType, password } = data;
-    if (!firstName || !lastName || !email || !mobile || !shopName || !country || !state || !city || !pincode || !address || !supplierType || !password) {
-        return "Missing required fields";
-    }
-    if (!/^\d{10}$/.test(mobile)) {
-        return "Mobile number must be 10 digits";
-    }
-    if (!/^\d{6}$/.test(pincode)) {
-        return "Pincode must be 6 digits";
-    }
-    return null;
-}
+  const { firstName, lastName, email, mobile, shopName, country, state, city, pincode, address, supplierType, password } = data;
+  if (!firstName || !lastName || !email || !mobile || !shopName || !country || !state || !city || !pincode || !address || !supplierType || !password) {
+    return "Missing required fields";
+  }
+  if (!/^\d{10}$/.test(mobile)) {
+    return "Mobile number must be 10 digits";
+  }
+  if (!/^\d{6}$/.test(pincode)) {
+    return "Pincode must be 6 digits";
+  }
+  return null;
+};
 
 // GET all suppliers
 export const GET = async (req) => {
   try {
+    await initDb(); // Initialize DB connection
     const suppliers = await SupplierModel.find({});
     return NextResponse.json(suppliers, { status: 200 });
   } catch (error) {
     console.error("Error fetching suppliers:", error);
     return NextResponse.json({ message: "Error fetching suppliers", error: error.message }, { status: 500 });
-  } 
+  }
 };
 
 // POST a new supplier
-
 export const POST = async (req) => {
   try {
+    await initDb(); // Initialize DB connection
     const body = await req.json();
-    const { licenseFile, password, ...supplierData } = body;
+    console.log("Received body:", JSON.stringify(body, null, 2));
+    const { licenseFiles, password, ...supplierData } = body;
 
     const validationError = validateSupplierData({ password, ...supplierData });
     if (validationError) {
       return NextResponse.json({ message: validationError }, { status: 400 });
     }
 
-    let licenseFileUrl = null;
-    if (licenseFile && licenseFile.startsWith("data:")) {
-      const uploadedUrl = await uploadBase64(
-        licenseFile,
-        `supplier-license-${supplierData.firstName}`
-      );
-      if (!uploadedUrl) {
-        throw new Error("Failed to upload license file");
+    // Store base64 data directly instead of uploading to remote server
+    let licenseFileData = [];
+    console.log("Processing license files:", licenseFiles);
+    if (licenseFiles && Array.isArray(licenseFiles)) {
+      for (const file of licenseFiles) {
+        if (file && file.startsWith("data:")) {
+          licenseFileData.push(file);
+        }
       }
-      licenseFileUrl = uploadedUrl;
     }
+    console.log("License file base64 data:", licenseFileData);
 
-    // 🔑 Hash the password before saving
+    // Hash the password before saving
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newSupplier = await SupplierModel.create({
       ...supplierData,
-      password: hashedPassword, // save hashed password
-      licenseFile: licenseFileUrl,
+      password: hashedPassword,
+      licenseFiles: licenseFileData, // Store array of base64 data
     });
 
     return NextResponse.json(newSupplier, { status: 201 });
@@ -76,22 +86,22 @@ export const POST = async (req) => {
   }
 };
 
-
-// PUT (update) a supplier  
+// PUT (update) a supplier
 export const PUT = authMiddlewareAdmin(async (req) => {
   try {
-    const { id, licenseFile, ...updateData } = await req.json();
+    await initDb(); // Initialize DB connection
+    const { id, licenseFiles, removedLicenseFiles, ...updateData } = await req.json();
 
     if (!id) {
       return NextResponse.json({ message: "ID is required for update" }, { status: 400 });
     }
-    
+
     // Server-side validation for updates
     if (updateData.mobile && !/^\d{10}$/.test(updateData.mobile)) {
-        return NextResponse.json({ message: "Mobile number must be 10 digits" }, { status: 400 });
+      return NextResponse.json({ message: "Mobile number must be 10 digits" }, { status: 400 });
     }
     if (updateData.pincode && !/^\d{6}$/.test(updateData.pincode)) {
-        return NextResponse.json({ message: "Pincode must be 6 digits" }, { status: 400 });
+      return NextResponse.json({ message: "Pincode must be 6 digits" }, { status: 400 });
     }
 
     const existingSupplier = await SupplierModel.findById(id);
@@ -99,24 +109,30 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
     }
 
-    let finalLicenseUrl = existingSupplier.licenseFile;
-    // Check if a new license file is being uploaded
-    if (licenseFile && licenseFile.startsWith('data:')) {
-      // Delete the old file if it exists
-      if (existingSupplier.licenseFile) {
-        await deleteFile(existingSupplier.licenseFile);
-      }
-      // Upload the new file
-      const uploadedUrl = await uploadBase64(licenseFile, `supplier-license-${updateData.firstName}`);
-      if (!uploadedUrl) {
-        throw new Error("Failed to upload new license file");
-      }
-      finalLicenseUrl = uploadedUrl;
+    let finalLicenseFiles = existingSupplier.licenseFiles || [];
+    console.log("Debug backend - Initial existing files count:", finalLicenseFiles.length);
+
+    // Remove files that were marked for deletion
+    if (removedLicenseFiles && Array.isArray(removedLicenseFiles)) {
+      console.log("Debug backend - Files to remove:", removedLicenseFiles.length);
+      finalLicenseFiles = finalLicenseFiles.filter((file) => !removedLicenseFiles.includes(file));
+      console.log("Debug backend - Files after removal:", finalLicenseFiles.length);
     }
-    
+
+    // Handle new license files
+    if (licenseFiles && Array.isArray(licenseFiles)) {
+      console.log("Debug backend - New files to add:", licenseFiles.length);
+      for (const file of licenseFiles) {
+        if (file && file.startsWith("data:")) {
+          finalLicenseFiles.push(file);
+        }
+      }
+      console.log("Debug backend - Final files count:", finalLicenseFiles.length);
+    }
+
     const updatedSupplier = await SupplierModel.findByIdAndUpdate(
       id,
-      { ...updateData, licenseFile: finalLicenseUrl },
+      { ...updateData, licenseFiles: finalLicenseFiles },
       { new: true }
     );
 
@@ -130,6 +146,7 @@ export const PUT = authMiddlewareAdmin(async (req) => {
 // DELETE a supplier
 export const DELETE = authMiddlewareAdmin(async (req) => {
   try {
+    await initDb(); // Initialize DB connection
     const { id } = await req.json();
 
     if (!id) {
@@ -140,11 +157,6 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
 
     if (!deletedSupplier) {
       return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
-    }
-    
-    // Delete associated license file
-    if (deletedSupplier.licenseFile) {
-      await deleteFile(deletedSupplier.licenseFile);
     }
 
     return NextResponse.json({ message: "Supplier deleted successfully" }, { status: 200 });

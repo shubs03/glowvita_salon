@@ -150,7 +150,9 @@ const DropdownManager = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>{type === 'socialPlatform' ? 'Profile Link' : 'Description'}</TableHead>
+                {type !== 'supplier' && ( // Changed from 'supplierType' to 'supplier'
+                  <TableHead>{type === 'socialPlatform' ? 'Profile Link' : 'Description'}</TableHead>
+                )}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -158,14 +160,16 @@ const DropdownManager = ({
               {items.map((item) => (
                 <TableRow key={item._id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {type === 'socialPlatform' && item.description ? (
-                        <a href={item.description} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
-                            <LinkIcon className="h-3 w-3" />
-                            {item.description}
-                        </a>
-                    ) : item.description}
-                  </TableCell>
+                  {type !== 'supplier' && ( // Changed from 'supplierType' to 'supplier'
+                    <TableCell className="text-muted-foreground">
+                      {type === 'socialPlatform' && item.description ? (
+                          <a href={item.description} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
+                              <LinkIcon className="h-3 w-3" />
+                              {item.description}
+                          </a>
+                      ) : item.description}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
                       <Edit className="h-4 w-4" />
@@ -352,7 +356,7 @@ const ServiceCategoryManager = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {categories.map((item) => (
+                            {categories.map((item: ServiceCategory) => (
                                 <TableRow key={item._id}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell className="text-muted-foreground">{item.description}</TableCell>
@@ -558,7 +562,7 @@ const ServiceManager = () => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {services.map((item) => (
+                            {services.map((item: Service) => (
                                 <TableRow key={item._id}>
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell>
@@ -623,7 +627,7 @@ const ServiceManager = () => {
                                             <SelectValue placeholder="Select a category" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {categories.map((cat) => (
+                                            {categories.map((cat: ServiceCategory) => (
                                                 <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
                                             ))}
                                         </SelectContent>
@@ -705,6 +709,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const form = e.currentTarget;
+        
         const name = (form.elements.namedItem('name') as HTMLInputElement).value;
         const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
 
@@ -721,7 +726,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
             type: modalConfig.type,
             parentId: modalConfig.parentId,
             // Include doctorType only for specializations
-            doctorType: modalConfig.type === 'specialization' ? selectedDoctorType : undefined,
+            doctorType: modalConfig.type === 'specialization' && selectedDoctorType && (selectedDoctorType === 'Physician' || selectedDoctorType === 'Surgeon') ? selectedDoctorType : undefined,
         };
 
         await onUpdate(itemData, modalConfig.action);
@@ -813,7 +818,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                                     <Label htmlFor="doctorType">Doctor Type *</Label>
                                     <Select 
                                       value={selectedDoctorType} 
-                                      onValueChange={(value) => setSelectedDoctorType(value as any)}
+                                      onValueChange={(value) => setSelectedDoctorType(value as 'Physician' | 'Surgeon')}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a Doctor Type" />
@@ -902,13 +907,14 @@ export default function DropdownManagementPage() {
         { key: 'designation', title: 'Admin Designations', description: 'Manage the list of available staff designations.', tab: 'admin' },
         { key: 'smsType', title: 'SMS Template Types', description: 'Manage types for SMS templates.', tab: 'marketing' },
         { key: 'socialPlatform', title: 'Social Media Platforms', description: 'Manage platforms for social posts.', tab: 'marketing' },
+        { key: 'supplier', title: 'Supplier Types', description: 'Manage types of suppliers.', tab: 'suppliers' }, // Changed from 'supplierType' to 'supplier'
     ];
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl font-bold font-headline mb-6">Dropdowns</h1>
             <Tabs defaultValue="general" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 max-w-5xl mb-6">
+                <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 max-w-5xl mb-6">
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="services">Services</TabsTrigger>
                     <TabsTrigger value="locations">Locations</TabsTrigger>
@@ -916,6 +922,7 @@ export default function DropdownManagementPage() {
                     <TabsTrigger value="admin">Admin</TabsTrigger>
                     <TabsTrigger value="marketing">Marketing</TabsTrigger>
                     <TabsTrigger value="products">Products</TabsTrigger>
+                    <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general">
                     <div className="space-y-8">
@@ -924,7 +931,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter(item => item.type === d.key)}
+                                items={data.filter((item: DropdownItem) => item.type === d.key)}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
@@ -961,7 +968,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter(item => item.type === d.key)}
+                                items={data.filter((item: DropdownItem) => item.type === d.key)}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
@@ -976,7 +983,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter(item => item.type === d.key)}
+                                items={data.filter((item: DropdownItem) => item.type === d.key)}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
@@ -989,13 +996,28 @@ export default function DropdownManagementPage() {
                         <ProductCategoryManager />
                     </div>
                 </TabsContent>
+                <TabsContent value="suppliers">
+                    <div className="space-y-8">
+                        {dropdownTypes.filter((d: any) => d.tab === 'suppliers').map((d: any) => (
+                            <DropdownManager
+                                key={d.key}
+                                listTitle={d.title}
+                                listDescription={d.description}
+                                items={data.filter((item: DropdownItem) => item.type === d.key)}
+                                type={d.key}
+                                onUpdate={handleUpdate}
+                                isLoading={isLoading}
+                            />
+                        ))}
+                    </div>
+                </TabsContent>
             </Tabs>
         </div>
     );
 }
 
 const ProductCategoryManager = () => {
-    const { data: productCategoriesData = [], isLoading, refetch } = useGetAdminProductCategoriesQuery();
+    const { data: productCategoriesData = [], isLoading, refetch } = useGetAdminProductCategoriesQuery(undefined);
     const [createCategory] = useCreateAdminProductCategoryMutation();
     const [updateCategory] = useUpdateAdminProductCategoryMutation();
     const [deleteCategory] = useDeleteAdminProductCategoryMutation();
