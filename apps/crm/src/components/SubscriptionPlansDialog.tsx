@@ -1,7 +1,7 @@
 
 import { useState, useMemo } from 'react';
 import { Star, Check, Zap, RefreshCw } from 'lucide-react';
-import { cn } from "@repo/ui/lib/utils";
+import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
