@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import SupplierModel from "../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js";
 import { ReferralModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
+import SubscriptionPlan from "../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js";
 import { uploadBase64, deleteFile } from "../../../../../../../packages/utils/uploads.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
@@ -53,7 +54,6 @@ export const GET = async (req) => {
 };
 
 // POST a new supplier
-
 export const POST = async (req) => {
   try {
     const body = await req.json();
@@ -82,11 +82,25 @@ export const POST = async (req) => {
     // 🔗 Generate unique referral code
     const referralCode = await generateReferralCode(supplierData.shopName);
 
+    // Assign a default trial plan
+    const trialPlan = await SubscriptionPlan.findOne({ name: 'Trial Plan' });
+    if (!trialPlan) {
+        return NextResponse.json({ message: "Default trial plan for suppliers not found." }, { status: 500 });
+    }
+    const subscriptionEndDate = new Date();
+    subscriptionEndDate.setDate(subscriptionEndDate.getDate() + trialPlan.duration);
+
     const newSupplier = await SupplierModel.create({
       ...supplierData,
       password: hashedPassword, // save hashed password
       licenseFile: licenseFileUrl,
       referralCode,
+      subscription: {
+          plan: trialPlan._id,
+          status: 'Active',
+          endDate: subscriptionEndDate,
+          history: [],
+      }
     });
 
     // 🎁 Handle referral if a code was provided

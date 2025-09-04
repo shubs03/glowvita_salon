@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -51,6 +52,7 @@ import {
 import Image from "next/image";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/dialog";
 import { useMemo } from 'react';
+import { SubscriptionPlansDialog } from "@/components/SubscriptionPlansDialog";
 
 // TYPES
 type SalonCategory = "unisex" | "men" | "women";
@@ -72,21 +74,6 @@ interface VendorProfile {
   subscription?: Subscription;
   openingHours?: OpeningHour[];
   type?: UserType;
-}
-
-interface SubscriptionPlan {
-  _id: string;
-  name: string;
-  duration: number;
-  durationType: string;
-  price: number;
-  discountedPrice?: number;
-  features: string[];
-  isAvailableForPurchase: boolean;
-  planType: 'trial' | 'regular';
-  status: 'Active' | 'Inactive';
-  isFeatured?: boolean;
-  userTypes?: string[];
 }
 
 interface Subscription {
@@ -230,346 +217,136 @@ const ProfileTab = ({ vendor, setVendor }: any) => {
   );
 };
 
-// Update the SubscriptionTab component:
 const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: Subscription; userType?: UserType }) => {
-  const [loading, setLoading] = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
-  
-  // Get subscription plans with userType parameter
-  const { data: plansResponse, isLoading: plansLoading } = useGetSubscriptionPlansQuery(userType);
-  const [changePlan, { isLoading: changingPlan }] = useChangePlanMutation();
-  
-  // Filter available plans
-  const availablePlans = useMemo(() => {
-    if (!Array.isArray(plansResponse)) return [];
-    
-    return plansResponse
-      .filter((plan: SubscriptionPlan) => {
-        if (!plan) return false;
-        
-        // Include only paid plans (price > 0) and regular plans
-        const isPaidPlan = plan.price > 0;
-        const isRegularPlan = plan.planType === 'regular';
-        
-        // Make sure plan is active and available for purchase
-        const isActiveAndAvailable = plan.status === 'Active' && plan.isAvailableForPurchase;
-        
-        // Check if plan is suitable for current user type
-        const isUserTypeCompatible = !plan.userTypes || plan.userTypes.includes(userType);
-        
-        // Don't show current plan in change plan modal
-        const isNotCurrentPlan = plan._id !== subscription?.plan?._id;
-        
-        return isPaidPlan && isRegularPlan && isActiveAndAvailable && isUserTypeCompatible && isNotCurrentPlan;
-      })
-      .sort((a: SubscriptionPlan, b: SubscriptionPlan) => a.price - b.price);
-  }, [plansResponse, userType, subscription?.plan?._id]);
 
-  const isLoading = plansLoading || changingPlan;
   const isExpired = subscription?.endDate ? new Date(subscription.endDate) < new Date() : true;
-  const daysLeft = !isExpired ? 
-    Math.ceil((new Date(subscription?.endDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 
-    0;
+  const daysLeft = !isExpired ? Math.ceil((new Date(subscription?.endDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0;
+  
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'expired':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>My Subscription</span>
-          {daysLeft > 0 && (
-            <Badge variant={daysLeft <= 7 ? "destructive" : "default"} className="text-sm px-3 py-1">
-              {daysLeft} days remaining
-            </Badge>
-          )}
-        </CardTitle>
-        <CardDescription>
-          Details about your current plan and billing.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 via-primary/10 to-background p-6">
-          {/* Current Plan Info */}
-          <div className="mb-6">
-            <h3 className="text-2xl font-bold">{subscription?.plan?.name || 'No Active Plan'}</h3>
-            <p className="text-muted-foreground">
-              {isExpired ? 'Expired' : `Expires on ${new Date(subscription?.endDate).toLocaleDateString()}`}
-            </p>
-          </div>
-
-          {/* Plan Stats */}
-          <div className="grid sm:grid-cols-3 gap-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Status</p>
-              <p className="mt-1 font-semibold">
-                <Badge variant={isExpired ? "destructive" : "success"}>
-                  {isExpired ? 'Expired' : 'Active'}
-                </Badge>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>My Subscription</CardTitle>
+          <CardDescription>
+            Details about your current plan and billing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6">
+            <div className="mb-6">
+              <h3 className="text-2xl font-bold">{subscription?.plan?.name || 'No Active Plan'}</h3>
+              <p className="text-muted-foreground">
+                {isExpired ? 'Expired' : `Expires on ${new Date(subscription?.endDate).toLocaleDateString()}`}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Start Date</p>
-              <p className="mt-1 font-semibold">
-                {new Date(subscription?.startDate).toLocaleDateString()}
-              </p>
+            <div className="grid sm:grid-cols-3 gap-6">
+              <div>
+                <p className="text-sm text-muted-foreground">Status</p>
+                <div className="mt-1 flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${isExpired ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                    <p className="font-semibold">{isExpired ? 'Expired' : 'Active'}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Start Date</p>
+                <p className="mt-1 font-semibold">
+                  {new Date(subscription?.startDate).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">End Date</p>
+                <p className="mt-1 font-semibold">
+                  {new Date(subscription?.endDate).toLocaleDateString()}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">End Date</p>
-              <p className="mt-1 font-semibold">
-                {new Date(subscription?.endDate).toLocaleDateString()}
-              </p>
+             {daysLeft > 0 && (
+                <div className="mt-6">
+                  <p className="text-sm text-muted-foreground">Days Remaining</p>
+                  <div className="w-full bg-secondary rounded-full h-2.5 mt-1">
+                    <div 
+                        className={`h-2.5 rounded-full ${daysLeft <= 7 ? 'bg-red-500' : 'bg-green-500'}`} 
+                        style={{ width: `${(daysLeft/30) * 100}%`}}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-right mt-1">{daysLeft} days left</p>
+                </div>
+            )}
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button onClick={() => setShowPlansModal(true)}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                {isExpired ? 'Renew Subscription' : 'Change Plan'}
+              </Button>
+              <Button variant="outline" onClick={() => setShowHistoryModal(true)}>
+                <History className="mr-2 h-4 w-4" />
+                View History
+              </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Action Buttons */}
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button onClick={() => setShowPlansModal(true)}>
-              {isExpired ? 'Renew Subscription' : 'Change Plan'}
-            </Button>
-            <Button variant="outline" onClick={() => setShowHistoryModal(true)}>
-              View History
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-
-      {/* Plans Modal */}
-      <Dialog open={showPlansModal} onOpenChange={setShowPlansModal}>
+      <SubscriptionPlansDialog
+        open={showPlansModal}
+        onOpenChange={setShowPlansModal}
+        subscription={subscription}
+        userType={userType}
+      />
+      
+      <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>{isExpired ? 'Renew Subscription' : 'Change Plan'}</DialogTitle>
-            <DialogDescription>Choose a plan that best suits your needs</DialogDescription>
+            <DialogTitle>Subscription History</DialogTitle>
+            <DialogDescription>
+              Your complete subscription history
+            </DialogDescription>
           </DialogHeader>
-          
-          <div className="grid md:grid-cols-3 gap-6 py-6">
-            {isLoading ? (
-              <div className="col-span-3 py-8 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-2 text-muted-foreground">Loading plans...</p>
-              </div>
-            ) : availablePlans.length === 0 ? (
-              <div className="col-span-3 py-8 text-center text-muted-foreground">
-                No plans available at the moment
+          <div className="py-4">
+            {subscription?.history && subscription.history.length > 0 ? (
+              <div className="space-y-4">
+                {subscription.history.map((entry, index) => (
+                  <div key={index} className="flex flex-col p-4 border rounded-lg">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium">{entry.plan.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(entry.startDate).toLocaleDateString()} - {new Date(entry.endDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge className={getStatusColor(entry.status)}>
+                        {entry.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
-              availablePlans.map((plan: SubscriptionPlan) => (
-                <div
-                  key={plan._id}
-                  className={cn(
-                    "relative p-6 border-2 rounded-xl cursor-pointer transition-all hover:shadow-lg",
-                    selectedPlan?._id === plan._id 
-                      ? "border-primary ring-2 ring-primary/20 bg-primary/5" 
-                      : "border-border hover:border-primary/50"
-                  )}
-                  onClick={() => setSelectedPlan(plan)}
-                >
-                  <h3 className="font-semibold">{plan.name}</h3>
-                  <p className="text-2xl font-bold mt-2">₹{plan.price}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {plan.duration} {plan.durationType}
-                  </p>
-                  
-                  {plan.features && plan.features.length > 0 && (
-                    <ul className="mt-4 space-y-2">
-                      {plan.features.map((feature, index) => (
-                        <li key={index} className="text-sm flex items-start gap-2">
-                          <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))
+              <p className="text-center text-muted-foreground py-8">
+                No subscription history available
+              </p>
             )}
           </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPlansModal(false)}>Cancel</Button>
-            <Button 
-              onClick={handlePlanChange} 
-              disabled={!selectedPlan || loading}
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  Processing...
-                </span>
-              ) : isExpired ? 'Renew Now' : 'Change Plan'}
-            </Button>
+            <Button onClick={() => setShowHistoryModal(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* History Modal */}
-      <HistoryModal 
-        showHistoryModal={showHistoryModal}
-        setShowHistoryModal={setShowHistoryModal}
-        subscription={subscription}
-        getStatusColor={getStatusColor}
-      />
-    </Card>
+    </>
   );
 };
-
-// Plans Modal
-const PlansModal = ({ showPlansModal, setShowPlansModal, plansLoading, availablePlans, selectedPlan, setSelectedPlan, isExpired, loading, handlePlanChange, cn }: {
-  showPlansModal: boolean;
-  setShowPlansModal: (value: boolean) => void;
-  plansLoading: boolean;
-  availablePlans: SubscriptionPlan[];
-  selectedPlan: SubscriptionPlan | null;
-  setSelectedPlan: (plan: SubscriptionPlan | null) => void;
-  isExpired: boolean;
-  loading: boolean;
-  handlePlanChange: () => Promise<void>;
-  cn: (...classes: (string | false | null | undefined)[]) => string;
-}) => (
-  <Dialog open={showPlansModal} onOpenChange={setShowPlansModal}>
-    <DialogContent className="sm:max-w-[600px]">
-      <DialogHeader>
-        <DialogTitle>{isExpired ? 'Renew Subscription' : 'Change Plan'}</DialogTitle>
-        <DialogDescription>
-          Choose a plan that best suits your needs
-        </DialogDescription>
-      </DialogHeader>
-      
-      <div className="grid md:grid-cols-3 gap-6 py-6">
-        {plansLoading ? (
-          <div className="col-span-3 py-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading available plans...</p>
-          </div>
-        ) : availablePlans.length === 0 ? (
-          <div className="col-span-3 py-8 text-center text-muted-foreground">
-            <p>No plans available for your account type at the moment.</p>
-            <p className="text-sm mt-2">Please contact support for assistance.</p>
-          </div>
-        ) : (
-          availablePlans.map((plan: SubscriptionPlan) => (
-            <div
-              key={plan._id}
-              className={cn(
-                "relative p-6 border-2 rounded-xl cursor-pointer transition-all hover:shadow-lg",
-                selectedPlan?._id === plan._id 
-                  ? "border-primary ring-2 ring-primary/20 bg-primary/5" 
-                  : "border-border hover:border-primary/50"
-              )}
-              onClick={() => setSelectedPlan(plan)}
-            >
-              {plan.isFeatured && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary text-primary-foreground text-xs font-semibold rounded-full">
-                  Most Popular
-                </span>
-              )}
-              
-              <div className="text-center mb-6">
-                <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-3xl font-bold">₹{plan.discountedPrice || plan.price}</span>
-                  {plan.discountedPrice && (
-                    <span className="text-lg text-muted-foreground line-through">₹{plan.price}</span>
-                  )}
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  per {plan.durationType.slice(0, -1)}
-                </p>
-                <div className="mt-2 inline-block px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                  {plan.duration} {plan.durationType}
-                </div>
-              </div>
-              
-              {plan.features && plan.features.length > 0 && (
-                <div className="space-y-3 mt-6 border-t pt-6">
-                  {plan.features.map((feature: string, index: number) => (
-                    <div key={index} className="flex items-start gap-3">
-                      <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {selectedPlan?._id === plan._id && (
-                <div className="absolute inset-0 border-2 border-primary rounded-xl pointer-events-none">
-                  <div className="absolute top-0 right-0 p-2">
-                    <div className="bg-primary text-white p-1 rounded-full">
-                      <Check className="h-4 w-4" />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-
-      <DialogFooter>
-        <Button variant="outline" onClick={() => setShowPlansModal(false)}>
-          Cancel
-        </Button>
-        <Button 
-          onClick={handlePlanChange} 
-          disabled={!selectedPlan || loading}
-        >
-          {loading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-          ) : isExpired ? 'Renew Now' : 'Change Plan'}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
-
-// History Modal
-const HistoryModal = ({ showHistoryModal, setShowHistoryModal, subscription, getStatusColor }: {
-  showHistoryModal: boolean;
-  setShowHistoryModal: (value: boolean) => void;
-  subscription: Subscription;
-  getStatusColor: (status: string) => string;
-}) => (
-  <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-    <DialogContent className="sm:max-w-[600px]">
-      <DialogHeader>
-        <DialogTitle>Subscription History</DialogTitle>
-        <DialogDescription>
-          Your complete subscription history
-        </DialogDescription>
-      </DialogHeader>
-      
-      <div className="py-4">
-        {subscription?.history && subscription.history.length > 0 ? (
-          <div className="space-y-4">
-            {subscription.history.map((entry, index) => (
-              <div key={index} className="flex flex-col p-4 border rounded-lg">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-medium">{entry.plan.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(entry.startDate).toLocaleDateString()} - {new Date(entry.endDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Badge className={getStatusColor(entry.status)}>
-                    {entry.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-8">
-            No subscription history available
-          </p>
-        )}
-      </div>
-
-      <DialogFooter>
-        <Button onClick={() => setShowHistoryModal(false)}>Close</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
 
 const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any }) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();

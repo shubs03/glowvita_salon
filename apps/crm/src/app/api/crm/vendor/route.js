@@ -12,6 +12,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         
         const vendor = await VendorModel.findById(vendorId)
             .select('-password -__v')
+            .populate('subscription.plan')
             .lean();
 
         if (!vendor) {

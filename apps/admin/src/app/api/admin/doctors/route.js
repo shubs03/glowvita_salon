@@ -3,6 +3,7 @@
 import _db from "../../../../../../../packages/lib/src/db.js";
 import DoctorModel from "../../../../../../../packages/lib/src/models/Vendor/Docters.model.js";
 import { ReferralModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
+import SubscriptionPlan from "../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import bcrypt from "bcryptjs";
 
@@ -106,8 +107,17 @@ export const POST = async (req) => {
   
   // 4️⃣ Generate unique referral code
   const referralCode = await generateDoctorReferralCode(name);
+  
+    // 5️⃣ Assign a default trial plan
+  const trialPlan = await SubscriptionPlan.findOne({ name: 'Trial Plan' });
+  if (!trialPlan) {
+    return Response.json({ message: "Default trial plan for doctors not found." }, { status: 500 });
+  }
+  const subscriptionEndDate = new Date();
+  subscriptionEndDate.setDate(subscriptionEndDate.getDate() + trialPlan.duration);
 
-  // 5️⃣ Create doctor
+
+  // 6️⃣ Create doctor
   const newDoctor = await DoctorModel.create({
     name,
     email,
@@ -137,9 +147,15 @@ export const POST = async (req) => {
     workingWithHospital,
     videoConsultation,
     referralCode,
+    subscription: {
+        plan: trialPlan._id,
+        status: 'Active',
+        endDate: subscriptionEndDate,
+        history: [],
+    }
   });
   
-  // 6️⃣ Handle referral if a code was provided
+  // 7️⃣ Handle referral if a code was provided
   if (referredByCode) {
     const referringDoctor = await DoctorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
     if (referringDoctor) {
@@ -162,7 +178,7 @@ export const POST = async (req) => {
     }
   }
 
-  // 7️⃣ Remove password before returning
+  // 8️⃣ Remove password before returning
   const doctorData = newDoctor.toObject();
   delete doctorData.password;
 
