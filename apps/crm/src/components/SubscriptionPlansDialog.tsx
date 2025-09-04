@@ -61,10 +61,12 @@ export function SubscriptionPlansDialog({
         const isCorrectType = plan.planType === 'regular';
         const isActive = plan.status === 'Active';
         const isForPurchase = plan.isAvailableForPurchase;
-        const matchesUserType = plan.userTypes && plan.userTypes.includes(userType);
         
-        // This was the faulty logic. The subscription object has a nested plan object.
-        // The comparison should be against subscription.plan._id
+        // Handle cases where userTypes might be empty or undefined
+        const userTypes = plan.userTypes || [];
+        const matchesUserType = userTypes.length === 0 || userTypes.includes(userType);
+        
+        // Fix: Don't filter out the current plan if it has expired
         const isNotCurrentActivePlan = isExpired ? true : plan._id !== subscription?.plan?._id;
 
         return isCorrectType && isActive && isForPurchase && matchesUserType && isNotCurrentActivePlan;

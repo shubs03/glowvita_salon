@@ -100,26 +100,29 @@ const doctorSchema = new mongoose.Schema({
       type: Date,
       required: true
     },
-    history: [{
-      plan: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "SubscriptionPlan",
-        required: true
-      },
-      startDate: {
-        type: Date,
-        required: true
-      },
-      endDate: {
-        type: Date,
-        required: true
-      },
-      status: {
-        type: String,
-        enum: ["Active", "Expired"],
-        required: true
-      }
-    }]
+    history: {
+      type: [{
+        plan: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "SubscriptionPlan",
+          required: true
+        },
+        startDate: {
+          type: Date,
+          required: true
+        },
+        endDate: {
+          type: Date,
+          required: true
+        },
+        status: {
+          type: String,
+          enum: ["Active", "Expired"],
+          required: true
+        }
+      }],
+      default: [],
+    }
   },
   profileImage: {
     type: String,
