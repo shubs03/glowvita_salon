@@ -8,6 +8,10 @@
 
     "./models/user": "./src/models/user.js",
     "./models/staffModel":"./src/models/vendor/Staff.model.js",
+    "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",
+    "./models/Marketing/SmsPackage.model": "./src/models/Marketing/SmsPackage.model.js",
+    "./models/Marketing/Campaign.model": "./src/models/Marketing/Campaign.model.js",
+    "./models/Marketing/socialMediaTemplate.model": "./src/models/Marketing/socialMediaTemplate.model.js",
     "./models": "./src/models"
   },
   "scripts": {

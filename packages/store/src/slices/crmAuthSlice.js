@@ -70,4 +70,13 @@ const crmAuthSlice = createSlice({
 });
 
 export const { setCrmAuth, clearCrmAuth } = crmAuthSlice.actions;
+
+export const selectCrmAuth = (state) => ({
+  isAuthenticated: state.crmAuth.isCrmAuthenticated,
+  user: state.crmAuth.user,
+  token: state.crmAuth.token,
+  role: state.crmAuth.role,
+  permissions: state.crmAuth.permissions || []
+});
+
 export default crmAuthSlice.reducer;

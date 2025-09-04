@@ -1,7 +1,7 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { configureStore, getDefaultMiddleware, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice';
-import crmAuthReducer from '@repo/store/slices/crmAuthSlice';
+import crmAuthReducer from './slices/crmAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
@@ -16,8 +16,8 @@ import faqReducer from './slices/faqSlice';
 import shippingReducer from './slices/shippingSlice';
 import productReducer from './slices/productSlice';
 import serviceReducer from "./slices/CRM/serviceSlice.js";
-import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
-
+import staffReducer from "./slices/CRM/staffSlice.js";
+import smsTemplateReducer from './slices/smsTemplateSlice';
 
 const rootReducer = combineReducers({
   [glowvitaApi.reducerPath]: glowvitaApi.reducer,
@@ -38,16 +38,18 @@ const rootReducer = combineReducers({
   products: productReducer,
   service: serviceReducer,
   staff: staffReducer,
+  smsTemplates: smsTemplateReducer,
 });
 
 export const makeStore = () => {
   return configureStore({
     reducer: rootReducer,
-    middleware: (getDefault) =>
-      getDefault().concat(glowvitaApi.middleware),
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware().concat(glowvitaApi.middleware),
     devTools: process.env.NODE_ENV !== 'production',
   });
 };
 
-// Export the root reducer state type for manual type checking
-export const selectRootState = (state) => state;
+export type RootState = ReturnType<typeof rootReducer>;
+
+export const selectRootState = (state: RootState) => state;

@@ -7,6 +7,7 @@
     "./hooks": "./src/hooks.js",
     "./provider": "./src/provider.jsx",
     "./api": "./src/services/api.js",
+    "./services/api": "./src/services/api.js",
     "./apis/example": "./src/apis/example-api.js",
     "./slices/adminAuthSlice": "./src/slices/Admin/adminAuthSlice.js",
     "./slices/crmAuthSlice": "./src/slices/crmAuthSlice.js",
@@ -20,10 +21,11 @@
     "./slices/subscriptionSlice": "./src/slices/subscriptionSlice.js",
     "./slices/notificationSlice": "./src/slices/notificationSlice.js",
     "./slices/geoFencingSlice": "./src/slices/geoFencingSlice.js",
-    "./slices/marketingSlice": "./src/slices/marketingSlice.js",
+    "./slices/marketingslice": "./src/slices/marketingslice.js",
     "./slices/faqSlice": "./src/slices/faqSlice.js",
     "./slices/shippingSlice": "./src/slices/shippingSlice.js",
-    "./slices/productSlice": "./src/slices/productSlice.js"
+    "./slices/productSlice": "./src/slices/productSlice.js",
+    "./slices/smsTemplateSlice": "./src/slices/smsTemplateSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

@@ -41,26 +41,46 @@ interface SocialMediaTemplateFormProps {
 }
 
 const defaultCategories = [
-  'Hair Services',
-  'Skin Care',
-  'Nail Art',
-  'Makeup Looks',
-  'Hair Color',
-  'Hair Treatments',
-  'Bridal Packages',
-  'Spa Services',
-  'Special Offers',
-  'New Arrivals',
-  'Staff Highlights',
-  'Client Transformations',
-  'Seasonal Specials',
-  'Gift Cards',
-  'Product Showcase',
-  'Testimonials',
+  'Happy Birthday',
+  'Anniversary Wishes',
+  'Congratulations',
+  'Holiday Greetings',
+  'New Year Wishes',
+  'Valentine\'s Day',
+  'Mother\'s Day',
+  'Father\'s Day',
+  'Christmas',
+  'Thanksgiving',
+  'Easter',
+  'Halloween',
+  'Welcome Messages',
+  'Thank You Posts',
+  'Motivational Quotes',
+  'Inspirational Messages',
+  'Special Announcements',
+  'Product Launch',
+  'Service Promotion',
+  'Seasonal Offers',
+  'Flash Sales',
+  'Grand Opening',
+  'Event Invitations',
+  'Behind the Scenes',
+  'Team Introductions',
+  'Customer Testimonials',
+  'Before & After',
+  'Tips & Tutorials',
+  'Fun Facts',
+  'Trivia Posts',
+  'Quote of the Day',
+  'Wellness Tips',
   'Beauty Tips',
-  'Event Announcements',
-  'Promotions',
-  'Membership Plans'
+  'Lifestyle Posts',
+  'Community Events',
+  'Charity & Causes',
+  'Award & Recognition',
+  'Milestone Celebrations',
+  'Success Stories',
+  'General Greetings'
 ];
 
 const getDefaultFormData = (): Omit<SocialMediaTemplate, 'id' | '_id' | 'createdAt' | 'updatedAt'> & { id?: string; _id?: string } => ({
@@ -116,7 +136,10 @@ function SocialMediaTemplateFormContent({
         const parsedCategories = JSON.parse(savedCategories);
         if (Array.isArray(parsedCategories) && parsedCategories.length > 0) {
           // Merge with default categories and remove duplicates
-          const allCategories = [...new Set([...defaultCategories, ...parsedCategories])];
+          const mergedCategories = [...defaultCategories, ...parsedCategories];
+          const allCategories = mergedCategories.filter((category, index) => 
+            mergedCategories.indexOf(category) === index
+          );
           // Update local storage with merged categories
           localStorage.setItem('socialMediaCategories', JSON.stringify(allCategories));
           setCategories(allCategories);
@@ -201,10 +224,10 @@ function SocialMediaTemplateFormContent({
   }, []);
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleSubmit}>
-        <div className="p-6 space-y-6">
-          <div className="space-y-6">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full overflow-hidden">
+      {/* Scrollable Content */}
+      <div className="p-6 space-y-6 overflow-y-auto flex-1 min-h-0" style={{ maxHeight: 'calc(90vh - 200px)' }}>
+        <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">Post Title <span className="text-red-500">*</span></Label>
               <Input
@@ -315,31 +338,34 @@ function SocialMediaTemplateFormContent({
                 placeholder="Enter post description"
               />
             </div>
-          </div>
-
-          <div className="mt-6 flex justify-end space-x-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {initialData?.id || initialData?._id ? 'Updating...' : 'Saving...'}
-                </>
-              ) : (
-                <>{initialData?.id || initialData?._id ? 'Update Template' : 'Save Template'}</>
-              )}
-            </Button>
-          </div>
+            
+            {/* Debug: Add extra content to force scrolling */}
+            
         </div>
-      </form>
-    </div>
+      </div>
+      
+      {/* Fixed Footer with Buttons */}
+      <div className="border-t bg-white px-6 py-4 flex justify-end space-x-3 flex-shrink-0">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {initialData?.id || initialData?._id ? 'Updating...' : 'Saving...'}
+            </>
+          ) : (
+            <>{initialData?.id || initialData?._id ? 'Update Template' : 'Save Template'}</>
+          )}
+        </Button>
+      </div>
+    </form>
   );
 }
 
