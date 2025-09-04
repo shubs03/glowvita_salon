@@ -239,20 +239,13 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: 
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>My Subscription</span>
-            {daysLeft > 0 && (
-              <Badge variant={daysLeft <= 7 ? "destructive" : "default"} className="text-sm px-3 py-1">
-                {daysLeft} days remaining
-              </Badge>
-            )}
-          </CardTitle>
+          <CardTitle>My Subscription</CardTitle>
           <CardDescription>
             Details about your current plan and billing.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/5 via-primary/10 to-background p-6">
+          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6">
             <div className="mb-6">
               <h3 className="text-2xl font-bold">{subscription?.plan?.name || 'No Active Plan'}</h3>
               <p className="text-muted-foreground">
@@ -262,11 +255,10 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: 
             <div className="grid sm:grid-cols-3 gap-6">
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
-                <p className="mt-1 font-semibold">
-                  <Badge variant={isExpired ? "destructive" : "default"}>
-                    {isExpired ? 'Expired' : 'Active'}
-                  </Badge>
-                </p>
+                <div className="mt-1 flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${isExpired ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                    <p className="font-semibold">{isExpired ? 'Expired' : 'Active'}</p>
+                </div>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Start Date</p>
@@ -281,6 +273,18 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: 
                 </p>
               </div>
             </div>
+             {daysLeft > 0 && (
+                <div className="mt-6">
+                  <p className="text-sm text-muted-foreground">Days Remaining</p>
+                  <div className="w-full bg-secondary rounded-full h-2.5 mt-1">
+                    <div 
+                        className={`h-2.5 rounded-full ${daysLeft <= 7 ? 'bg-red-500' : 'bg-green-500'}`} 
+                        style={{ width: `${(daysLeft/30) * 100}%`}}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-right mt-1">{daysLeft} days left</p>
+                </div>
+            )}
             <div className="mt-8 flex flex-wrap gap-3">
               <Button onClick={() => setShowPlansModal(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
