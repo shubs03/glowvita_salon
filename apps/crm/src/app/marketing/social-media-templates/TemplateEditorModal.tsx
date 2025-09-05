@@ -52,36 +52,36 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setText(newText);
-    if (selectedObject && selectedObject.type === 'textbox') {
+    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
       (selectedObject as fabric.Textbox).set('text', newText);
-      canvas?.requestRenderAll();
+      canvas.requestRenderAll();
     }
   };
 
   const handleFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSize = parseInt(e.target.value, 10);
     setFontSize(newSize);
-    if (selectedObject && selectedObject.type === 'textbox') {
+    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
       (selectedObject as fabric.Textbox).set('fontSize', newSize);
-      canvas?.requestRenderAll();
+      canvas.requestRenderAll();
     }
   };
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
     setFill(newColor);
-    if (selectedObject && selectedObject.type === 'textbox') {
+    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
       (selectedObject as fabric.Textbox).set('fill', newColor);
-      canvas?.requestRenderAll();
+      canvas.requestRenderAll();
     }
   };
   
   const toggleBold = () => {
     const newWeight = !isBold ? 'bold' : 'normal';
     setIsBold(!isBold);
-    if (selectedObject && selectedObject.type === 'textbox') {
+    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
       (selectedObject as fabric.Textbox).set('fontWeight', newWeight);
-      canvas?.requestRenderAll();
+      canvas.requestRenderAll();
     }
   };
 
@@ -147,73 +147,88 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
   );
 };
 
+
 export default function TemplateEditorModal({ template, isOpen, onClose }: TemplateEditorModalProps) {
   const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
   const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  const initCanvas = useCallback((container: HTMLDivElement) => {
-    if (!container || !template || !canvasRef.current) return;
-    
-    fabric.Image.fromURL(template.imageUrl, (img) => {
-        const imgAspectRatio = img.width! / img.height!;
-        const containerAspectRatio = container.clientWidth / container.clientHeight;
-
-        let canvasWidth, canvasHeight;
-        if (imgAspectRatio > containerAspectRatio) {
-            canvasWidth = container.clientWidth;
-            canvasHeight = container.clientWidth / imgAspectRatio;
-        } else {
-            canvasHeight = container.clientHeight;
-            canvasWidth = container.clientHeight * imgAspectRatio;
-        }
-
-        const canvas = new fabric.Canvas(canvasRef.current, {
-            width: canvasWidth,
-            height: canvasHeight,
-        });
-
-        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-            scaleX: canvasWidth / img.width!,
-            scaleY: canvasHeight / img.height!,
-        });
-
-        if (template.jsonData && template.jsonData.objects) {
-            const scaleFactor = canvasWidth / (template.jsonData.width || 800);
-            
-            template.jsonData.objects.forEach((objData: any) => {
-                const fabricObject = new fabric[objData.type as 'Textbox'](objData.text, {
-                    ...objData,
-                    left: objData.left * scaleFactor,
-                    top: objData.top * scaleFactor,
-                    scaleX: objData.scaleX ? objData.scaleX * scaleFactor : scaleFactor,
-                    scaleY: objData.scaleY ? objData.scaleY * scaleFactor : scaleFactor,
-                    fontSize: objData.fontSize * scaleFactor,
-                    width: objData.width * scaleFactor,
-                });
-                canvas.add(fabricObject);
-            });
-        }
-        
-        canvas.on('selection:created', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
-        canvas.on('selection:updated', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
-        canvas.on('selection:cleared', () => setSelectedObject(null));
-
-        setFabricCanvas(canvas);
-        canvas.renderAll();
-    }, { crossOrigin: 'anonymous' });
-
-  }, [template]);
-
-  const containerRef = useCallback((node: HTMLDivElement | null) => {
-    if (node) {
-      if (fabricCanvas) {
-        fabricCanvas.dispose();
-      }
-      initCanvas(node);
-    }
-  }, [initCanvas, fabricCanvas]);
+  const containerRef = useRef<HTMLDivElement>(null);
   
+  const initCanvas = () => {
+    if (!containerRef.current || !template || !canvasRef.current) {
+        console.log("Canvas init aborted: no container or template");
+        return;
+    }
+
+    fabric.Image.fromURL(template.imageUrl, (img) => {
+      const container = containerRef.current!;
+      const imgAspectRatio = img.width! / img.height!;
+      const containerAspectRatio = container.clientWidth / container.clientHeight;
+
+      let canvasWidth, canvasHeight;
+      if (imgAspectRatio > containerAspectRatio) {
+        canvasWidth = container.clientWidth;
+        canvasHeight = container.clientWidth / imgAspectRatio;
+      } else {
+        canvasHeight = container.clientHeight;
+        canvasWidth = container.clientHeight * imgAspectRatio;
+      }
+
+      const canvas = new fabric.Canvas(canvasRef.current, {
+        width: canvasWidth,
+        height: canvasHeight,
+        backgroundColor: '#f0f0f0',
+      });
+      
+      canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
+          scaleX: canvasWidth / img.width!,
+          scaleY: canvasHeight / img.height!,
+      });
+      
+      if (template.jsonData && template.jsonData.objects) {
+          const originalWidth = template.jsonData.width || img.width; // Fallback to image width
+          const scaleFactor = canvasWidth / originalWidth;
+          
+          fabric.util.enlivenObjects(template.jsonData.objects, (objects: fabric.Object[]) => {
+            objects.forEach((obj) => {
+              if (obj instanceof fabric.Textbox) {
+                  obj.set({
+                    left: (obj.left || 0) * scaleFactor,
+                    top: (obj.top || 0) * scaleFactor,
+                    scaleX: (obj.scaleX || 1) * scaleFactor,
+                    scaleY: (obj.scaleY || 1) * scaleFactor,
+                  });
+              }
+              canvas.add(obj);
+            });
+            canvas.renderAll();
+          }, 'fabric');
+      }
+
+      canvas.on('selection:created', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
+      canvas.on('selection:updated', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
+      canvas.on('selection:cleared', () => setSelectedObject(null));
+
+      setFabricCanvas(canvas);
+      
+    }, { crossOrigin: 'anonymous' });
+  };
+  
+  useEffect(() => {
+    if (isOpen && template) {
+      // Delay initialization to ensure the container is rendered and has dimensions
+      const timer = setTimeout(() => initCanvas(), 100);
+      return () => {
+        clearTimeout(timer);
+        if (fabricCanvas) {
+          fabricCanvas.dispose();
+          setFabricCanvas(null);
+        }
+      };
+    }
+  }, [isOpen, template]);
+
+
   const addText = () => {
     if (!fabricCanvas) return;
     const text = new fabric.Textbox('New Text', {
@@ -327,3 +342,4 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
     </Dialog>
   );
 }
+
