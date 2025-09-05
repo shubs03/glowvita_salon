@@ -39,6 +39,7 @@ export const doctorNavItems: NavItem[] = [
   { title: "Staff", href: "/doctor-staff", Icon: FaUsers, permission: 'doctor_staff_view' },
   { title: "Earnings", href: "/earnings", Icon: FaDollarSign, permission: 'earnings_view' },
   { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift, permission: 'doctor_offers_view' },
+  { title: "Notifications", href: "/push-notifications", Icon: FaBell, permission: 'notifications_view' },
   { title: "Referrals", href: "/referrals", Icon: FaUserFriends, permission: 'doctor_referrals_view' },
   { title: "Reports", href: "/doctor-reports", Icon: FaFileAlt, permission: 'doctor_reports_view' },
 ];

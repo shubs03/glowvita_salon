@@ -164,56 +164,9 @@ export default function PlatformMarketingPage() {
   const [createSmsTemplate] = useCreateSmsTemplateMutation();
   const [updateSmsTemplate] = useUpdateSmsTemplateMutation();
   const [deleteSmsTemplate] = useDeleteSmsTemplateMutation();
-  
-  // Create a custom hook for the mutation to handle JSON headers
+
   const [createSocialMediaTemplate, { isLoading: isCreatingSocialTemplate }] = 
     useCreateSocialMediaTemplateMutation();
-    
-  // Wrap the mutation to ensure JSON content type and auth
-  const createTemplate = useCallback(async (data: any) => {
-    // Get the auth state from localStorage
-    const authState = localStorage.getItem('adminAuthState');
-    if (!authState) {
-      throw new Error('Not authenticated');
-    }
-    
-    const { token } = JSON.parse(authState);
-    
-    if (!token) {
-      console.error('No auth token found');
-      throw new Error('Authentication token not found');
-    }
-    
-    console.log('Sending request with token:', token ? 'Token exists' : 'No token');
-    
-    const response = await fetch('/api/admin/social-media-templates', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'admin-authorization': `Bearer ${token}` // Updated header name to match middleware
-      },
-      credentials: 'include', // Include cookies for auth
-      body: JSON.stringify(data)
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response:', errorText);
-      let errorMessage = 'Failed to create template';
-      
-      try {
-        const errorData = JSON.parse(errorText);
-        errorMessage = errorData.message || errorMessage;
-      } catch (e) {
-        // If we can't parse the error as JSON, use the raw text
-        errorMessage = errorText || errorMessage;
-      }
-      
-      throw new Error(errorMessage);
-    }
-    
-    return response.json();
-  }, []);
   
   const [
     updateSocialMediaTemplate,
@@ -341,59 +294,38 @@ export default function PlatformMarketingPage() {
     }
   };
 
-  const handleOpenSocialMediaTemplateForm = useCallback((template: any = null) => {
+  const handleOpenSocialMediaTemplateForm = (template: any = null) => {
     setSelectedSocialMediaTemplate(template);
     setIsEditSocialMediaTemplateMode(!!template);
     setIsSocialMediaTemplateFormOpen(true);
-  }, []);
+  };
 
-  // Custom function to update a social media template
-  const updateTemplate = useCallback(async (data: any) => {
+  const handleUpdateSocialMediaTemplate = async (updatedTemplate: any) => {
     try {
-      const authState = localStorage.getItem('adminAuthState');
-      if (!authState) {
-        throw new Error('Not authenticated');
-      }
-      
-      const { token } = JSON.parse(authState);
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-      
-      const id = data.id || data._id;
+      const id = updatedTemplate.id || updatedTemplate._id;
       if (!id) {
-        throw new Error('Template ID is required for update');
+        console.error('Template ID is required for update');
+        return;
       }
-      
-      const response = await fetch(`/api/admin/social-media-templates?id=${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'admin-authorization': `Bearer ${token}`
-        },
-        credentials: 'include',
-        body: JSON.stringify(data)
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to update template');
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error updating template:', error);
-      throw error;
+      await updateSocialMediaTemplate({ id, ...updatedTemplate }).unwrap();
+      refetchSocialMediaTemplates();
+    } catch (err) {
+      console.error('Failed to update template:', err);
     }
-  }, []);
+  };
 
-  const handleSocialMediaTemplateSubmit = useCallback(async (formData: any) => {
+  const handleSocialMediaTemplateSubmit = async (formData: FormData) => {
     try {
       const isEdit = isEditSocialMediaTemplateMode && (selectedSocialMediaTemplate?.id || selectedSocialMediaTemplate?._id);
       
       if (isEdit) {
-        await updateSocialMediaTemplate({ id: selectedSocialMediaTemplate._id, ...formData }).unwrap();
+        // For updates, we need to send the ID in the query params and the data in the body
+        await updateSocialMediaTemplate({ 
+          id: selectedSocialMediaTemplate._id || selectedSocialMediaTemplate.id, 
+          ...Object.fromEntries(formData.entries()) 
+        }).unwrap();
       } else {
+        // For creates, send the FormData directly
         await createSocialMediaTemplate(formData).unwrap();
       }
 
@@ -405,15 +337,9 @@ export default function PlatformMarketingPage() {
       console.error('Failed to save social media template:', error);
       toast.error(error?.message || error?.data?.message || 'Failed to save social media template');
     }
-  }, [
-    isEditSocialMediaTemplateMode, 
-    selectedSocialMediaTemplate, 
-    createSocialMediaTemplate, 
-    updateSocialMediaTemplate, 
-    refetchSocialMediaTemplates
-  ]);
+  };
   
-  const handleDeleteSocialMediaTemplate = useCallback(async () => {
+  const handleDeleteSocialMediaTemplate = async () => {
     if (!itemToDelete || !itemToDelete.id) return;
     
     try {
@@ -427,7 +353,7 @@ export default function PlatformMarketingPage() {
       setIsDeleteModalOpen(false);
       setItemToDelete(null);
     }
-  }, [deleteSocialMediaTemplate, refetchSocialMediaTemplates, itemToDelete]);
+  };
 
 
   const handleDeleteTemplateClick = (template: SmsTemplate) => {
@@ -1059,15 +985,18 @@ export default function PlatformMarketingPage() {
               {isEditSocialMediaTemplateMode ? 'Update the social media template details.' : 'Fill in the details to create a new social media template.'}
             </DialogDescription>
           </DialogHeader>
-          <SocialMediaTemplateForm
-            initialData={selectedSocialMediaTemplate}
-            onSubmit={handleSocialMediaTemplateSubmit}
-            onCancel={() => {
-              setIsSocialMediaTemplateFormOpen(false);
-              setSelectedSocialMediaTemplate(null);
-            }}
-            isSubmitting={isCreatingSocialTemplate || isUpdatingSocialTemplate}
-          />
+          
+          <div className="flex-1 overflow-hidden min-h-0">
+            <SocialMediaTemplateForm
+              initialData={selectedSocialMediaTemplate}
+              onSubmit={handleSocialMediaTemplateSubmit}
+              onCancel={() => {
+                setIsSocialMediaTemplateFormOpen(false);
+                setSelectedSocialMediaTemplate(null);
+              }}
+              isSubmitting={isCreatingSocialTemplate || isUpdatingSocialTemplate}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 

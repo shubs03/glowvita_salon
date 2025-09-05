@@ -33,6 +33,10 @@ const socialMediaTemplateSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  jsonData: {
+    type: Object,
+    default: null,
+  },
   
   // System fields
   status: {

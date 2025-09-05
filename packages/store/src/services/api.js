@@ -1,4 +1,3 @@
-
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -88,7 +87,13 @@ export const glowvitaApi = createApi({
     "ProductCategory",
     "SmsTemplate",
     "SmsPackage",
+    "CrmSmsTemplate",
+    "TestSmsTemplate",
+    "SmsPackage",
+    "CrmSmsPackage",
+    "CrmCampaign",
     "SocialMediaTemplate",
+    "CrmSocialMediaTemplate",
     "Marketing",
     "SubscriptionPlan",
     "Vendor",
@@ -165,19 +170,19 @@ export const glowvitaApi = createApi({
     }),
 
     createSocialMediaTemplate: builder.mutation({
-      query: (templateData) => ({
+      query: (formData) => ({
         url: "/admin/social-media-templates",
         method: "POST",
-        body: templateData,
+        body: formData,
       }),
       invalidatesTags: ["SocialMediaTemplate"],
     }),
 
     updateSocialMediaTemplate: builder.mutation({
-      query: ({ id, ...updates }) => ({
+      query: ({ id, ...formData }) => ({
         url: `/admin/social-media-templates?id=${id}`,
         method: "PUT",
-        body: updates,
+        body: formData,
       }),
       invalidatesTags: (result, error, { id }) => [
         "SocialMediaTemplate",
@@ -1018,11 +1023,12 @@ export const glowvitaApi = createApi({
 
     // Products endpoints
     getCrmProducts: builder.query({
-      query: () => ({
-        url: "/crm/products",
+      query: (vendorId) => ({ // Accept vendorId
+        url: "/crm/products", // The API route will get vendorId from auth
         method: "GET",
+        // No need to pass vendorId as a query param if middleware handles it
       }),
-      providesTags: ["Product"],
+      providesTags: ["CrmProducts", "Product"],
       transformResponse: (response) => {
         // Handle both direct array and wrapped response formats
         if (Array.isArray(response)) {
@@ -1046,7 +1052,7 @@ export const glowvitaApi = createApi({
         method: "POST",
         body: product,
       }),
-      invalidatesTags: ["Product"],
+      invalidatesTags: ["CrmProducts", "Product"],
     }),
 
     updateCrmProduct: builder.mutation({
@@ -1055,7 +1061,7 @@ export const glowvitaApi = createApi({
         method: "PUT",
         body: product,
       }),
-      invalidatesTags: ["Product"],
+      invalidatesTags: ["CrmProducts", "Product"],
     }),
 
     deleteCrmProduct: builder.mutation({
@@ -1063,7 +1069,7 @@ export const glowvitaApi = createApi({
         url: `/crm/products?id=${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Product"],
+      invalidatesTags: ["CrmProducts", "Product"],
     }),
 
     // shipping charge endpoints
@@ -1239,6 +1245,48 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["SubscriptionPlan"],
     }),
 
+
+    // CRM SMS Packages Endpoints
+    getCrmSmsPackages: builder.query({
+      query: () => ({
+        url: "/crm/sms-packages",
+        method: "GET",
+      }),
+      providesTags: ["CrmSmsPackage"],
+    }),
+
+    // CRM Campaigns Endpoints
+    getCrmCampaigns: builder.query({
+      query: () => ({
+        url: "/crm/campaigns",
+        method: "GET",
+      }),
+      providesTags: ["CrmCampaign"],
+    }),
+
+    createCrmCampaign: builder.mutation({
+      query: (campaign) => ({
+        url: "/crm/campaigns",
+        method: "POST",
+        body: campaign,
+      }),
+      invalidatesTags: ["CrmCampaign"],
+    }),
+
+    // CRM Social Media Templates Endpoints
+    getCrmSocialMediaTemplates: builder.query({
+      query: () => ({
+        url: "/crm/social-media-templates",
+        method: "GET",
+      }),
+      providesTags: ["CrmSocialMediaTemplate"],
+      transformResponse: (response) => {
+        // Ensure the response is always in the { templates: [], total: number } format
+        const templates = response?.data || [];
+        const total = response?.total || templates.length;
+        return { templates, total };
+      }
+    }),
   }),
 });
 
@@ -1432,4 +1480,14 @@ export const {
     useChangePlanMutation,
   useRenewPlanMutation,
 
+
+  // CRM SMS Packages Endpoints
+  useGetCrmSmsPackagesQuery,
+
+  // CRM Campaigns Endpoints
+  useGetCrmCampaignsQuery,
+  useCreateCrmCampaignMutation,
+
+  // CRM Social Media Templates Endpoints
+  useGetCrmSocialMediaTemplatesQuery,
 } = glowvitaApi;

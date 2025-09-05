@@ -42,26 +42,46 @@ interface SocialMediaTemplateFormProps {
 }
 
 const defaultCategories = [
-  'Hair Services',
-  'Skin Care',
-  'Nail Art',
-  'Makeup Looks',
-  'Hair Color',
-  'Hair Treatments',
-  'Bridal Packages',
-  'Spa Services',
-  'Special Offers',
-  'New Arrivals',
-  'Staff Highlights',
-  'Client Transformations',
-  'Seasonal Specials',
-  'Gift Cards',
-  'Product Showcase',
-  'Testimonials',
+  'Happy Birthday',
+  'Anniversary Wishes',
+  'Congratulations',
+  'Holiday Greetings',
+  'New Year Wishes',
+  'Valentine\'s Day',
+  'Mother\'s Day',
+  'Father\'s Day',
+  'Christmas',
+  'Thanksgiving',
+  'Easter',
+  'Halloween',
+  'Welcome Messages',
+  'Thank You Posts',
+  'Motivational Quotes',
+  'Inspirational Messages',
+  'Special Announcements',
+  'Product Launch',
+  'Service Promotion',
+  'Seasonal Offers',
+  'Flash Sales',
+  'Grand Opening',
+  'Event Invitations',
+  'Behind the Scenes',
+  'Team Introductions',
+  'Customer Testimonials',
+  'Before & After',
+  'Tips & Tutorials',
+  'Fun Facts',
+  'Trivia Posts',
+  'Quote of the Day',
+  'Wellness Tips',
   'Beauty Tips',
-  'Event Announcements',
-  'Promotions',
-  'Membership Plans'
+  'Lifestyle Posts',
+  'Community Events',
+  'Charity & Causes',
+  'Award & Recognition',
+  'Milestone Celebrations',
+  'Success Stories',
+  'General Greetings'
 ];
 
 const getDefaultFormData = (): Omit<SocialMediaTemplate, 'id' | '_id' | 'createdAt' | 'updatedAt'> & { id?: string; _id?: string } => ({
@@ -117,7 +137,10 @@ function SocialMediaTemplateFormContent({
         const parsedCategories = JSON.parse(savedCategories);
         if (Array.isArray(parsedCategories) && parsedCategories.length > 0) {
           // Merge with default categories and remove duplicates
-          const allCategories = [...new Set([...defaultCategories, ...parsedCategories])];
+          const mergedCategories = [...defaultCategories, ...parsedCategories];
+          const allCategories = mergedCategories.filter((category, index) => 
+            mergedCategories.indexOf(category) === index
+          );
           // Update local storage with merged categories
           localStorage.setItem('socialMediaCategories', JSON.stringify(allCategories));
           setCategories(allCategories);

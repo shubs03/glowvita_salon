@@ -66,5 +66,9 @@ const adminAuthSlice = createSlice({
   },
 });
 
+// Selectors
+export const selectToken = (state) => state.adminAuth.token;
+export const selectCurrentAdmin = (state) => state.adminAuth.admin;
+
 export const { setAdminAuth, clearAdminAuth } = adminAuthSlice.actions;
 export default adminAuthSlice.reducer;

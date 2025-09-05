@@ -1,3 +1,4 @@
+
 // pages/PushNotificationsPage.tsx
 "use client";
 
@@ -360,7 +361,7 @@ export default function PushNotificationsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  notifications.map((notification) => (
+                  notifications.map((notification: Notification) => (
                     <TableRow key={notification._id}>
                       <TableCell className="font-medium">{notification.title}</TableCell>
                       <TableCell>{notification.channels.join(", ")}</TableCell>
