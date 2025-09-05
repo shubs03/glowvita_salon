@@ -188,34 +188,28 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
             originY: 'top',
             selectable: false,
             evented: false,
+            scaleX: canvasWidth / img.width,
+            scaleY: canvasHeight / img.height,
         });
 
-        // Scale the background image to fit the canvas
-        const scale = Math.min(canvasWidth / img.width, canvasHeight / img.height);
-        fabricImage.scale(scale);
-        
         canvas.setBackgroundImage(fabricImage, canvas.renderAll.bind(canvas));
 
-        if (templateData.jsonData && templateData.jsonData.objects) {
-            canvas.loadFromJSON({ objects: templateData.jsonData.objects }, () => {
-              canvas.renderAll();
-              
-              // Scale objects proportionally to the new canvas size
-              const originalWidth = templateData.jsonData.background?.width || img.width;
-              const scaleFactor = canvasWidth / originalWidth;
+        if (templateData.jsonData && Array.isArray(templateData.jsonData.objects)) {
+            const originalWidth = 800; // The width used when creating the default JSON
+            const scaleFactor = canvasWidth / originalWidth;
 
-              canvas.getObjects().forEach(obj => {
-                obj.set({
-                  left: obj.left! * scaleFactor,
-                  top: obj.top! * scaleFactor,
-                  scaleX: obj.scaleX! * scaleFactor,
-                  scaleY: obj.scaleY! * scaleFactor,
-                });
-                obj.setCoords();
-              });
-
-              canvas.renderAll();
+            templateData.jsonData.objects.forEach((objData: any) => {
+                const options: ITextboxOptions = {
+                    ...objData,
+                    left: objData.left * scaleFactor,
+                    top: objData.top * scaleFactor,
+                    width: objData.width * scaleFactor,
+                    fontSize: (objData.fontSize || 20) * scaleFactor,
+                };
+                const textbox = new Textbox(objData.text || 'Default Text', options);
+                canvas.add(textbox);
             });
+            canvas.renderAll();
         }
         
         const updateSelection = (e: any) => {
