@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import { Skeleton } from "@repo/ui/skeleton";
 import { Plus, Edit } from 'lucide-react';
 import { sidebarNavItems } from '@/lib/routes';
 import AddAdminForm, { AdminUser } from '@/components/AddAdminForm';
@@ -121,6 +122,53 @@ export default function AdminRolesPage() {
   }
 
   const isModalOpen = isOpen && (modalType === 'addAdmin' || modalType === 'editAdmin');
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+        <div>
+          <Skeleton className="h-8 w-64" />
+        </div>
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-80 mt-2" />
+              </div>
+              <Skeleton className="h-10 w-36" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {[...Array(7)].map((_, i) => (
+                      <TableHead key={i}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      {[...Array(7)].map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className="h-5 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
     return (
       <div className="p-4 sm:p-6 lg:p-8">

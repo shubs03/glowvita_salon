@@ -35,7 +35,7 @@ export default function MarketingPage() {
             <div className="bg-blue-100 p-4 rounded-full mb-4">
               <MessageSquare className="h-8 w-8 text-blue-600" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">Social Post Creato</h3>
+            <h3 className="text-lg font-semibold mb-2">Social Post Creator</h3>
             <p className="text-sm text-muted-foreground">Create and schedule social media posts</p>
           </CardContent>
         </Card>

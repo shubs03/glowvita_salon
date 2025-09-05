@@ -152,6 +152,14 @@ export const POST = authMiddlewareCrm(
       );
     }
 
+    // Determine business type and ID for the offer
+    // Staff members belong to vendor business type
+    const businessType = userRole === 'staff' ? 'vendor' : userRole;
+    let businessId = user._id;
+    if (userRole === 'staff' && user.vendorId) {
+      businessId = user.vendorId;
+    }
+
     // Create offer
     const newOffer = await CRMOfferModel.create({
       code: finalCode,
@@ -166,8 +174,8 @@ export const POST = authMiddlewareCrm(
       minOrderAmount: orderAmount,
       offerImage: offerImage || null,
       isCustomCode: isCustom,
-      createdBy: user._id,
-      createdByRole: userRole,
+      businessType: businessType,
+      businessId: businessId,
     });
 
     return Response.json(
@@ -180,43 +188,74 @@ export const POST = authMiddlewareCrm(
 
 // Get All Offers
 export const GET = authMiddlewareCrm(async (req) => {
-  const user = req.user;
-  
-  // Filter offers by the logged-in user
-  const offers = await CRMOfferModel.find({ createdBy: user._id });
-  const currentDate = new Date();
+  try {
+    const user = req.user;
+    
+    // Validate user exists
+    if (!user || !user._id || !user.role) {
+      console.error('GET /api/crm/offers - User not found or missing data:', { user: user ? { _id: user._id, role: user.role } : null });
+      return Response.json({ message: "Unauthorized: User not found" }, { status: 401 });
+    }
 
-  // Update status for each offer based on current date
-  for (let offer of offers) {
-    let newStatus = "Scheduled";
-    if (offer.startDate <= currentDate) {
-      if (!offer.expires || offer.expires >= currentDate) {
-        newStatus = "Active";
-      } else {
-        newStatus = "Expired";
+    console.log('GET /api/crm/offers - User ID:', user._id, 'Role:', user.role);
+    
+    // Determine business type for filtering
+    // Staff members belong to vendor business type
+    const businessType = user.role === 'staff' ? 'vendor' : user.role;
+    
+    // For staff, we need to get the vendor ID they belong to
+    let businessId = user._id;
+    if (user.role === 'staff' && user.vendorId) {
+      businessId = user.vendorId;
+    }
+    
+    // Filter offers by business type and business ID
+    const offers = await CRMOfferModel.find({ 
+      businessType: businessType,
+      businessId: businessId 
+    });
+    console.log('GET /api/crm/offers - Found offers:', offers.length);
+    
+    const currentDate = new Date();
+
+    // Update status for each offer based on current date
+    for (let offer of offers) {
+      let newStatus = "Scheduled";
+      if (offer.startDate <= currentDate) {
+        if (!offer.expires || offer.expires >= currentDate) {
+          newStatus = "Active";
+        } else {
+          newStatus = "Expired";
+        }
+      }
+      if (offer.status !== newStatus) {
+        offer.status = newStatus;
+        await offer.save();
       }
     }
-    if (offer.status !== newStatus) {
-      offer.status = newStatus;
-      await offer.save();
-    }
+
+    // Ensure all arrays are properly initialized
+    const sanitizedOffers = offers.map((offer) => ({
+      ...offer.toObject(),
+      applicableSpecialties: Array.isArray(offer.applicableSpecialties)
+        ? offer.applicableSpecialties
+        : [],
+      applicableCategories: Array.isArray(offer.applicableCategories)
+        ? offer.applicableCategories
+        : [],
+      applicableDiseases: Array.isArray(offer.applicableDiseases)
+        ? offer.applicableDiseases
+        : [],
+    }));
+
+    return Response.json(sanitizedOffers);
+  } catch (error) {
+    console.error('GET /api/crm/offers - Error:', error);
+    return Response.json({ 
+      message: "Internal server error", 
+      error: error.message 
+    }, { status: 500 });
   }
-
-  // Ensure all arrays are properly initialized
-  const sanitizedOffers = offers.map((offer) => ({
-    ...offer.toObject(),
-    applicableSpecialties: Array.isArray(offer.applicableSpecialties)
-      ? offer.applicableSpecialties
-      : [],
-    applicableCategories: Array.isArray(offer.applicableCategories)
-      ? offer.applicableCategories
-      : [],
-    applicableDiseases: Array.isArray(offer.applicableDiseases)
-      ? offer.applicableDiseases
-      : [],
-  }));
-
-  return Response.json(sanitizedOffers);
 }, ['vendor', 'doctor', 'supplier']);
 
 // Update Offer
@@ -226,10 +265,18 @@ export const PUT = authMiddlewareCrm(
     const user = req.user;
     const userRole = req.user.role; // Get user role from middleware
 
-    // Check if the offer belongs to the current user
+    // Determine business type and ID for filtering
+    const businessType = userRole === 'staff' ? 'vendor' : userRole;
+    let businessId = user._id;
+    if (userRole === 'staff' && user.vendorId) {
+      businessId = user.vendorId;
+    }
+
+    // Check if the offer belongs to the current user's business
     const existingOffer = await CRMOfferModel.findOne({ 
       _id: id, 
-      createdBy: user._id 
+      businessType: businessType,
+      businessId: businessId
     });
     
     if (!existingOffer) {
@@ -330,11 +377,20 @@ export const DELETE = authMiddlewareCrm(
   async (req) => {
     const { id } = await req.json();
     const user = req.user;
+    const userRole = req.user.role;
 
-    // Check if the offer belongs to the current user
+    // Determine business type and ID for filtering
+    const businessType = userRole === 'staff' ? 'vendor' : userRole;
+    let businessId = user._id;
+    if (userRole === 'staff' && user.vendorId) {
+      businessId = user.vendorId;
+    }
+
+    // Check if the offer belongs to the current user's business
     const deletedOffer = await CRMOfferModel.findOneAndDelete({ 
       _id: id, 
-      createdBy: user._id 
+      businessType: businessType,
+      businessId: businessId
     });
     
     if (!deletedOffer) {
