@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import mongoose from 'mongoose';
@@ -233,41 +234,64 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
       }
       updateData.imageUrl = image;
       updateData.jsonData = {
-        background: image,
-        elements: [
-          {
-            type: 'textbox',
-            version: '5.3.0',
-            originX: 'left',
-            originY: 'top',
-            left: 50,
-            top: 50,
-            width: 700,
-            height: 90.4,
-            fill: '#000000',
-            text: 'Your Offer Here',
-            fontSize: 80,
-            fontWeight: 'bold',
-            fontFamily: 'Arial',
-            textAlign: 'center'
-          },
-          {
-            type: 'textbox',
-            version: '5.3.0',
-            originX: 'left',
-            originY: 'top',
-            left: 50,
-            top: 200,
-            width: 700,
-            height: 45.2,
-            fill: '#333333',
-            text: 'Contact: 123-456-7890',
-            fontSize: 40,
-            fontWeight: 'normal',
-            fontFamily: 'Arial',
-            textAlign: 'center'
-          }
-        ]
+        "version": "5.3.0",
+        "objects": [
+            {
+                "type": "textbox",
+                "version": "5.3.0",
+                "originX": "center",
+                "originY": "center",
+                "left": 400,
+                "top": 150,
+                "width": 600,
+                "height": 135.6,
+                "fill": "#ffffff",
+                "stroke": "#000000",
+                "strokeWidth": 2,
+                "shadow": "rgba(0,0,0,0.5) 2px 2px 5px",
+                "text": "SUMMER SALE!",
+                "fontSize": 120,
+                "fontWeight": "bold",
+                "fontFamily": "Impact",
+                "textAlign": "center"
+            },
+            {
+                "type": "textbox",
+                "version": "5.3.0",
+                "originX": "center",
+                "originY": "center",
+                "left": 400,
+                "top": 300,
+                "width": 500,
+                "height": 90.4,
+                "fill": "#ffffff",
+                "stroke": "#000000",
+                "strokeWidth": 1,
+                "shadow": "rgba(0,0,0,0.3) 1px 1px 3px",
+                "text": "50% OFF on all services",
+                "fontSize": 80,
+                "fontWeight": "normal",
+                "fontFamily": "Arial",
+                "textAlign": "center"
+            },
+            {
+                "type": "textbox",
+                "version": "5.3.0",
+                "originX": "center",
+                "originY": "center",
+                "left": 400,
+                "top": 500,
+                "width": 400,
+                "height": 45.2,
+                "fill": "#ffffff",
+                "text": "Book now: 123-456-7890",
+                "fontSize": 40,
+                "fontWeight": "normal",
+                "fontFamily": "Arial",
+                "textAlign": "center"
+            }
+        ],
+        "background": image
       };
     }
     
@@ -507,41 +531,64 @@ export const POST = authMiddlewareAdmin(async (req) => {
     if (image) {
       templateData.imageUrl = image.toString();
       templateData.jsonData = {
-        background: image.toString(),
-        elements: [
-          {
-            type: 'textbox',
-            version: '5.3.0',
-            originX: 'left',
-            originY: 'top',
-            left: 50,
-            top: 50,
-            width: 700,
-            height: 90.4,
-            fill: '#000000',
-            text: 'Your Offer Here',
-            fontSize: 80,
-            fontWeight: 'bold',
-            fontFamily: 'Arial',
-            textAlign: 'center'
-          },
-          {
-            type: 'textbox',
-            version: '5.3.0',
-            originX: 'left',
-            originY: 'top',
-            left: 50,
-            top: 200,
-            width: 700,
-            height: 45.2,
-            fill: '#333333',
-            text: 'Contact: 123-456-7890',
-            fontSize: 40,
-            fontWeight: 'normal',
-            fontFamily: 'Arial',
-            textAlign: 'center'
-          }
-        ]
+        "version": "5.3.0",
+        "objects": [
+            {
+                "type": "textbox",
+                "version": "5.3.0",
+                "originX": "center",
+                "originY": "center",
+                "left": 400,
+                "top": 150,
+                "width": 600,
+                "height": 135.6,
+                "fill": "#ffffff",
+                "stroke": "#000000",
+                "strokeWidth": 2,
+                "shadow": "rgba(0,0,0,0.5) 2px 2px 5px",
+                "text": "SUMMER SALE!",
+                "fontSize": 120,
+                "fontWeight": "bold",
+                "fontFamily": "Impact",
+                "textAlign": "center"
+            },
+            {
+                "type": "textbox",
+                "version": "5.3.0",
+                "originX": "center",
+                "originY": "center",
+                "left": 400,
+                "top": 300,
+                "width": 500,
+                "height": 90.4,
+                "fill": "#ffffff",
+                "stroke": "#000000",
+                "strokeWidth": 1,
+                "shadow": "rgba(0,0,0,0.3) 1px 1px 3px",
+                "text": "50% OFF on all services",
+                "fontSize": 80,
+                "fontWeight": "normal",
+                "fontFamily": "Arial",
+                "textAlign": "center"
+            },
+            {
+                "type": "textbox",
+                "version": "5.3.0",
+                "originX": "center",
+                "originY": "center",
+                "left": 400,
+                "top": 500,
+                "width": 400,
+                "height": 45.2,
+                "fill": "#ffffff",
+                "text": "Book now: 123-456-7890",
+                "fontSize": 40,
+                "fontWeight": "normal",
+                "fontFamily": "Arial",
+                "textAlign": "center"
+            }
+        ],
+        "background": image.toString()
       };
     }
     

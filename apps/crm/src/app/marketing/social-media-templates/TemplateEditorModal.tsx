@@ -153,43 +153,71 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  useEffect(() => {
-    if (isOpen && canvasRef.current && template) {
-        const canvasContainer = canvasRef.current.parentElement;
-        if (!canvasContainer) return;
+  const initCanvas = useCallback((templateData: SocialMediaTemplate) => {
+    const canvasContainer = canvasRef.current?.parentElement;
+    if (!canvasRef.current || !canvasContainer) return;
 
-        const canvas = new Canvas(canvasRef.current, {
-            width: canvasContainer.clientWidth,
-            height: canvasContainer.clientHeight,
-            backgroundColor: 'white'
-        });
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = templateData.imageUrl;
+
+    img.onload = () => {
+        const canvas = new Canvas(canvasRef.current);
         setFabricCanvas(canvas);
 
-        const loadCanvasContent = () => {
-            canvas.loadFromJSON(template.jsonData, () => {
-                const bgImage = canvas.backgroundImage as FabricImage;
-                if (bgImage) {
-                    const canvasAspect = canvas.width! / canvas.height!;
-                    const imgAspect = bgImage.width! / bgImage.height!;
+        const containerWidth = canvasContainer.clientWidth;
+        const containerHeight = canvasContainer.clientHeight;
+        const imgAspect = img.width / img.height;
+        
+        let canvasWidth, canvasHeight;
+        if (containerWidth / containerHeight > imgAspect) {
+            canvasHeight = containerHeight;
+            canvasWidth = canvasHeight * imgAspect;
+        } else {
+            canvasWidth = containerWidth;
+            canvasHeight = canvasWidth / imgAspect;
+        }
+        
+        canvas.setWidth(canvasWidth);
+        canvas.setHeight(canvasHeight);
 
-                    if (canvasAspect > imgAspect) {
-                      const scale = canvas.height! / bgImage.height!;
-                      bgImage.scale(scale);
-                      bgImage.left = (canvas.width! - bgImage.getScaledWidth()) / 2;
-                      bgImage.top = 0;
-                    } else {
-                      const scale = canvas.width! / bgImage.width!;
-                      bgImage.scale(scale);
-                      bgImage.top = (canvas.height! - bgImage.getScaledHeight()) / 2;
-                      bgImage.left = 0;
-                    }
-                }
-                canvas.renderAll();
+        const fabricImage = new FabricImage(img, {
+            left: 0,
+            top: 0,
+            originX: 'left',
+            originY: 'top',
+            selectable: false,
+            evented: false,
+        });
+
+        // Scale the background image to fit the canvas
+        const scale = Math.min(canvasWidth / img.width, canvasHeight / img.height);
+        fabricImage.scale(scale);
+        
+        canvas.setBackgroundImage(fabricImage, canvas.renderAll.bind(canvas));
+
+        if (templateData.jsonData && templateData.jsonData.objects) {
+            canvas.loadFromJSON({ objects: templateData.jsonData.objects }, () => {
+              canvas.renderAll();
+              
+              // Scale objects proportionally to the new canvas size
+              const originalWidth = templateData.jsonData.background?.width || img.width;
+              const scaleFactor = canvasWidth / originalWidth;
+
+              canvas.getObjects().forEach(obj => {
+                obj.set({
+                  left: obj.left! * scaleFactor,
+                  top: obj.top! * scaleFactor,
+                  scaleX: obj.scaleX! * scaleFactor,
+                  scaleY: obj.scaleY! * scaleFactor,
+                });
+                obj.setCoords();
+              });
+
+              canvas.renderAll();
             });
-        };
-
-        loadCanvasContent();
-
+        }
+        
         const updateSelection = (e: any) => {
           setSelectedObject(e.target || (e.selected && e.selected[0]) || null);
         };
@@ -197,25 +225,26 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
         canvas.on('selection:created', updateSelection);
         canvas.on('selection:updated', updateSelection);
         canvas.on('selection:cleared', () => setSelectedObject(null));
+    };
 
-        const resizeObserver = new ResizeObserver(() => {
-            if (canvasRef.current && canvasRef.current.parentElement) {
-                canvas.setWidth(canvasRef.current.parentElement.clientWidth);
-                canvas.setHeight(canvasRef.current.parentElement.clientHeight);
-                loadCanvasContent();
-            }
-        });
-        
-        resizeObserver.observe(canvasContainer);
+    img.onerror = () => {
+        toast.error("Could not load template image.");
+    };
 
-        return () => {
-            resizeObserver.disconnect();
-            canvas.dispose();
-            setFabricCanvas(null);
-            setSelectedObject(null);
-        };
+  }, []);
+
+  useEffect(() => {
+    let canvasInstance: Canvas | null = null;
+    if (isOpen && template) {
+        initCanvas(template);
     }
-  }, [isOpen, template]);
+    return () => {
+        if (fabricCanvas) {
+            fabricCanvas.dispose();
+            setFabricCanvas(null);
+        }
+    };
+  }, [isOpen, template, initCanvas]);
 
   const addText = () => {
     if (!fabricCanvas) return;
@@ -229,7 +258,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
       width: 200,
       textAlign: 'center',
       fontFamily: 'Arial',
-      shadow: 'rgba(0,0,0,0.3) 2px 2px 2px',
+      shadow: 'rgba(0,0,0,0.3) 2px 2px 5px',
     });
     fabricCanvas.add(text).setActiveObject(text);
   };
