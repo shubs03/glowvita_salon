@@ -44,6 +44,7 @@ import {
 import { Badge } from "@repo/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
+import { Skeleton } from "@repo/ui/skeleton";
 import { DoctorForm, Doctor } from "@/components/DoctorForm";
 import {
   useGetDoctorsQuery,
@@ -179,6 +180,84 @@ export default function DoctorsDermatsPage() {
 
   if (error) {
     return <div>Error loading doctors: {(error as any).message}</div>;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+        <div>
+          <Skeleton className="h-8 w-64" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+              <div>
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-64 mt-2" />
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-10 w-28" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-6 p-4 rounded-lg bg-secondary">
+              <div className="flex items-center justify-between mb-4">
+                <Skeleton className="h-5 w-16" />
+                <Skeleton className="h-8 w-24" />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {[...Array(9)].map((_, i) => (
+                      <TableHead key={i}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      {[...Array(9)].map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className="h-5 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="mt-4">
+              <Skeleton className="h-8 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -320,7 +399,7 @@ export default function DoctorsDermatsPage() {
                           {doctor.name}
                         </TableCell>
                         <TableCell>
-                          {new Date(doctor.createdAt).toLocaleString()}
+                          {doctor.createdAt ? new Date(doctor.createdAt).toLocaleString() : 'N/A'}
                         </TableCell>
                         <TableCell>{doctor.clinicName || "N/A"}</TableCell>
                         <TableCell>Admin</TableCell>
@@ -484,7 +563,7 @@ export default function DoctorsDermatsPage() {
                   Registered At
                 </span>
                 <span className="col-span-2">
-                  {new Date(selectedDoctor.createdAt).toLocaleString()}
+                  {selectedDoctor.createdAt ? new Date(selectedDoctor.createdAt).toLocaleString() : 'N/A'}
                 </span>
               </div>
               <div className="grid grid-cols-3 items-center gap-4">

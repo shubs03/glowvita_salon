@@ -17,3 +17,4 @@ export * from "./checkbox";
 export * from "./skeleton";
 export * from "./dropdown-menu";
 export * from "./avatar";
+export * from "./logout-confirmation-modal";

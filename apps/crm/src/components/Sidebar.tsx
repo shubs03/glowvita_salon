@@ -17,18 +17,28 @@ import { useCrmAuth } from "@/hooks/useCrmAuth";
 import Cookies from "js-cookie";
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
+import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
+import { useState } from "react";
 
 export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user, permissions, role, isLoading } = useCrmAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    dispatch(clearCrmAuth());
-    Cookies.remove('crm_access_token');
-    router.push('/login');
-    router.refresh();
+    setIsLoggingOut(true);
+    try {
+      dispatch(clearCrmAuth());
+      Cookies.remove('crm_access_token');
+      router.push('/login');
+      router.refresh();
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutModal(false);
+    }
   };
   
   if (isLoading) {
@@ -115,7 +125,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
               "w-full gap-3 min-w-0 text-muted-foreground hover:text-destructive", 
               isOpen || isMobile ? "justify-start" : "justify-center"
             )} 
-            onClick={handleLogout}
+            onClick={() => setShowLogoutModal(true)}
             title="Logout"
           >
             <LogOut className="h-5 w-5 flex-shrink-0" />
@@ -128,6 +138,13 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
           </Button>
         </div>
       </div>
+      
+      <LogoutConfirmationModal
+        open={showLogoutModal}
+        onOpenChange={setShowLogoutModal}
+        onConfirm={handleLogout}
+        isLoading={isLoggingOut}
+      />
     </div>
   );
 

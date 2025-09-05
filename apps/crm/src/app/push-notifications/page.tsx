@@ -224,6 +224,73 @@ export default function PushNotificationsPage() {
     return targetDisplayMap[notification.targetType] || notification.targetType;
   };
 
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+          <div>
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-48 mt-2" />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <Skeleton className="h-6 w-40 mb-2" />
+                <Skeleton className="h-4 w-60" />
+              </div>
+              <Skeleton className="h-10 w-48" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto no-scrollbar rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {["Title", "Channels", "Target", "Date", "Status", "Actions"].map((_, i) => (
+                      <TableHead key={i}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      {[...Array(6)].map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className="h-5 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+        <div className="flex justify-center mt-6">
+          <Skeleton className="h-10 w-80" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">
@@ -244,7 +311,7 @@ export default function PushNotificationsPage() {
               <card.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              {isLoading ? <Skeleton className="h-8 w-12" /> : <div className="text-2xl font-bold">{card.value}</div>}
+              <div className="text-2xl font-bold">{card.value}</div>
               <p className="text-xs text-muted-foreground">{card.desc}</p>
             </CardContent>
           </Card>
@@ -280,17 +347,7 @@ export default function PushNotificationsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
-                  [...Array(5)].map((_, i) => (
-                    <TableRow key={i}>
-                      {[...Array(6)].map((_, j) => (
-                        <TableCell key={j}>
-                          <Skeleton className="h-4 w-[100px]" />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : error ? (
+                {error ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-4 text-destructive">
                       Error loading notifications.

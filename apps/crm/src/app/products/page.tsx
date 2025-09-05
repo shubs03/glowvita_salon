@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo
 import { Button } from '@repo/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
 import { Pagination } from '@repo/ui/pagination';
+import { Skeleton } from '@repo/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -226,7 +227,66 @@ export default function ProductsPage() {
         return <Badge className={statusMap[status] || 'bg-gray-100'}>{status}</Badge>;
     };
 
-    if (isProductsLoading) return <p>Loading products...</p>;
+    if (isProductsLoading) {
+        return (
+            <div className="p-4 sm:p-6 lg:p-8">
+                <Skeleton className="h-8 w-64 mb-6" />
+
+                <div className="mb-4">
+                    <div className="flex space-x-1 mb-6">
+                        <Skeleton className="h-10 w-24" />
+                        <Skeleton className="h-10 w-20" />
+                    </div>
+                    <Card>
+                        <CardHeader>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <Skeleton className="h-6 w-32 mb-2" />
+                                    <Skeleton className="h-4 w-48" />
+                                </div>
+                                <div className="flex gap-2">
+                                    <Skeleton className="h-10 w-32" />
+                                    <Skeleton className="h-10 w-24" />
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                {[...Array(8)].map((_, i) => (
+                                    <Card key={i} className="group">
+                                        <CardContent className="p-0">
+                                            <div className="relative aspect-square">
+                                                <Skeleton className="w-full h-full rounded-t-lg" />
+                                                <div className="absolute top-2 right-2">
+                                                    <Skeleton className="h-6 w-16 rounded-full" />
+                                                </div>
+                                            </div>
+                                            <div className="p-4">
+                                                <Skeleton className="h-5 w-32 mb-2" />
+                                                <Skeleton className="h-4 w-24 mb-2" />
+                                                <div className="flex items-baseline gap-2 mt-2">
+                                                    <Skeleton className="h-6 w-16" />
+                                                    <Skeleton className="h-4 w-12" />
+                                                </div>
+                                                <Skeleton className="h-4 w-20 mt-1" />
+                                                <div className="mt-2 flex justify-end gap-2">
+                                                    <Skeleton className="h-8 w-8 rounded" />
+                                                    <Skeleton className="h-8 w-8 rounded" />
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                            <div className="mt-6">
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">

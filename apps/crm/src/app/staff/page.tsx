@@ -7,6 +7,7 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { Skeleton } from "@repo/ui/skeleton";
 import { Input } from '@repo/ui/input';
 import { Plus, Search, FileDown, Eye, Edit, Trash2, Users, UserPlus } from 'lucide-react';
 import { StaffFormModal } from '@/components/StaffFormModal';
@@ -111,7 +112,94 @@ export default function StaffPage() {
     };
 
     if(isLoading) {
-        return <div>Loading staff...</div>
+        return (
+            <div className="p-4 sm:p-6 lg:p-8">
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+                    <div>
+                        <Skeleton className="h-8 w-64" />
+                    </div>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                    {[...Array(2)].map((_, i) => (
+                        <Card key={i}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-4 w-4" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-8 w-16 mb-2" />
+                                <Skeleton className="h-3 w-32" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+
+                <Card>
+                    <CardHeader>
+                        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                            <div>
+                                <Skeleton className="h-6 w-24 mb-2" />
+                                <Skeleton className="h-4 w-48" />
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                                <div className="relative">
+                                    <Skeleton className="h-10 w-80" />
+                                </div>
+                                <Skeleton className="h-10 w-20" />
+                                <Skeleton className="h-10 w-28" />
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="overflow-x-auto no-scrollbar rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-secondary hover:bg-secondary">
+                                        {["Name", "Contact", "Position", "Status", "Actions"].map((_, i) => (
+                                            <TableHead key={i}>
+                                                <Skeleton className="h-5 w-full" />
+                                            </TableHead>
+                                        ))}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {[...Array(5)].map((_, i) => (
+                                        <TableRow key={i} className="hover:bg-muted/50">
+                                            <TableCell className="font-medium py-3">
+                                                <div className="flex items-center gap-3">
+                                                    <Skeleton className="w-10 h-10 rounded-full" />
+                                                    <Skeleton className="h-5 w-32" />
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Skeleton className="h-5 w-full mb-1" />
+                                                <Skeleton className="h-4 w-24" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Skeleton className="h-5 w-full" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Skeleton className="h-6 w-16 rounded-full" />
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <Skeleton className="h-8 w-8 rounded" />
+                                                    <Skeleton className="h-8 w-8 rounded" />
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <div className="mt-4">
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
 
     if(isError) {

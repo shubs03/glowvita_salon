@@ -23,7 +23,8 @@
     "./tailwind.config": "./tailwind.config.ts",
     "./cn": "./src/cn.ts",
     "./dropdown-menu": "./src/dropdown-menu.tsx",
-    "./avatar": "./src/avatar.tsx"
+    "./avatar": "./src/avatar.tsx",
+    "./logout-confirmation-modal": "./src/logout-confirmation-modal.tsx"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

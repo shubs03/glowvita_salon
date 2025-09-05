@@ -14,6 +14,7 @@ import { Plus, Eye, Edit, Trash2, Ticket, CheckCircle, XCircle, DollarSign, Mess
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Switch } from '@repo/ui/switch';
+import { Skeleton } from "@repo/ui/skeleton";
 
 // Data types for the marketing module
 
@@ -155,6 +156,82 @@ export default function PlatformMarketingPage() {
   const [modalData, setModalData] = useState<ModalDataType>(null);
   const [modalAction, setModalAction] = useState<(() => void) | null>(null);
   const [formData, setFormData] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate loading for 1.5 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+          <div>
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-48 mt-2" />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <Skeleton className="h-6 w-40 mb-2" />
+                  <Skeleton className="h-4 w-60" />
+                </div>
+                <Skeleton className="h-10 w-32" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto no-scrollbar">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {[...Array(6)].map((_, i) => (
+                        <TableHead key={i}>
+                          <Skeleton className="h-5 w-full" />
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[...Array(5)].map((_, i) => (
+                      <TableRow key={i}>
+                        {[...Array(6)].map((_, j) => (
+                          <TableCell key={j}>
+                            <Skeleton className="h-5 w-full" />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
 
   return (

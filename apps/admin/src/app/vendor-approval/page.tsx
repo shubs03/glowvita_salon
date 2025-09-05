@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
+import { Skeleton } from "@repo/ui/skeleton";
 import { useGetSuppliersQuery, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/api';
 import { useGetDoctorsQuery, useUpdateDoctorMutation, useDeleteDoctorMutation } from '../../../../../packages/store/src/services/api';
 import { useGetVendorsQuery, useUpdateVendorStatusMutation } from '@repo/store/api';
@@ -269,6 +270,68 @@ export default function VendorApprovalPage() {
 
   const { title, description, buttonText } = getModalContent();
 
+  // Check if any of the main data is still loading
+  const isMainDataLoading = vendorsLoading || suppliersLoading || doctorsLoading || servicesLoading || productsLoading;
+
+  if (isMainDataLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+        <div>
+          <Skeleton className="h-8 w-64" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {[...Array(8)].map((_, i) => (
+                      <TableHead key={i}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      {[...Array(8)].map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className="h-5 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="mt-4">
+              <Skeleton className="h-8 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Approvals</h1>
@@ -347,9 +410,15 @@ export default function VendorApprovalPage() {
                   </TableHeader>
                   <TableBody>
                     {vendorsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center">Loading...</TableCell>
-                      </TableRow>
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(8)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
                     ) : vendorsError ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center">Error loading vendors.</TableCell>
@@ -359,7 +428,7 @@ export default function VendorApprovalPage() {
                         <TableCell colSpan={8} className="text-center">No pending vendor approvals.</TableCell>
                       </TableRow>
                     ) : (
-                      currentVendors.map((vendor) => (
+                      currentVendors.map((vendor: Vendor) => (
                         <TableRow key={vendor._id}>
                           <TableCell className="font-mono text-xs">{vendor._id}</TableCell>
                           <TableCell className="font-medium">{vendor.businessName || 'N/A'}</TableCell>
@@ -436,15 +505,21 @@ export default function VendorApprovalPage() {
                   </TableHeader>
                   <TableBody>
                     {servicesLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center">Loading...</TableCell>
-                      </TableRow>
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(5)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
                     ) : currentServices.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center">No pending service approvals.</TableCell>
                       </TableRow>
                     ) : (
-                      currentServices.map((service) => (
+                      currentServices.map((service: Service) => (
                         <TableRow key={service._id}>
                           <TableCell className="font-medium">{service.serviceName || 'N/A'}</TableCell>
                           <TableCell>{service.vendorName || 'N/A'}</TableCell>
@@ -506,9 +581,15 @@ export default function VendorApprovalPage() {
                   </TableHeader>
                   <TableBody>
                     {productsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center">Loading...</TableCell>
-                      </TableRow>
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(5)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
                     ) : productsError ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center">Error loading products.</TableCell>
@@ -612,15 +693,28 @@ export default function VendorApprovalPage() {
                   </TableHeader>
                   <TableBody>
                     {doctorsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center">Loading...</TableCell>
-                      </TableRow>
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(4)].map((_, j) => (
+                            <TableCell key={j}>
+                              {j === 0 ? (
+                                <div className="flex items-center gap-3">
+                                  <Skeleton className="h-10 w-10 rounded-full" />
+                                  <Skeleton className="h-5 w-32" />
+                                </div>
+                              ) : (
+                                <Skeleton className="h-5 w-full" />
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
                     ) : currentDoctors.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center">No pending doctor approvals.</TableCell>
                       </TableRow>
                     ) : (
-                      currentDoctors.map((doctor) => (
+                      currentDoctors.map((doctor: Doctor) => (
                         <TableRow key={doctor._id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
@@ -694,15 +788,21 @@ export default function VendorApprovalPage() {
                   </TableHeader>
                   <TableBody>
                     {suppliersLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center">Loading...</TableCell>
-                      </TableRow>
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(6)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
                     ) : currentSuppliers.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center">No pending supplier approvals.</TableCell>
                       </TableRow>
                     ) : (
-                      currentSuppliers.map((supplier) => (
+                      currentSuppliers.map((supplier: Supplier) => (
                         <TableRow key={supplier._id}>
                           <TableCell className="font-medium">{(supplier.firstName + " " + supplier.lastName) || 'N/A'}</TableCell>
                           <TableCell>{supplier.businessRegistrationNo || 'N/A'}</TableCell>
@@ -842,7 +942,7 @@ export default function VendorApprovalPage() {
                   <span className="col-span-2">
                     {(selectedItem as Vendor).website ? (
                       <a
-                        href={(selectedItem as Vendor).website}
+                        href={(selectedItem as Vendor).website || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline"
@@ -991,7 +1091,7 @@ export default function VendorApprovalPage() {
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Supplier Type</span>
-                  <span className="col-span-2"><Badge>{(selectedItem as Supplier).supplieType || 'N/A'}</Badge></span>
+                  <span className="col-span-2"><Badge>{(selectedItem as Supplier).supplierType || 'N/A'}</Badge></span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">License</span>

@@ -21,12 +21,16 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { usePathname } from 'next/navigation';
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
+import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
+import { useState } from "react";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user, role } = useCrmAuth();
   const pathname = usePathname();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const getNavItemsForRole = () => {
     switch (role) {
@@ -46,10 +50,16 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const currentPage = navItems.find(item => pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/'))?.title || 'Dashboard';
   
   const handleLogout = async () => {
-    dispatch(clearCrmAuth());
-    Cookies.remove('crm_access_token', { path: '/' });
-    router.push('/login');
-    router.refresh();
+    setIsLoggingOut(true);
+    try {
+      dispatch(clearCrmAuth());
+      Cookies.remove('crm_access_token', { path: '/' });
+      router.push('/login');
+      router.refresh();
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutModal(false);
+    }
   };
 
   return (
@@ -143,12 +153,19 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={() => setShowLogoutModal(true)}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <LogoutConfirmationModal
+          open={showLogoutModal}
+          onOpenChange={setShowLogoutModal}
+          onConfirm={handleLogout}
+          isLoading={isLoggingOut}
+        />
       </div>
     </header>
   );

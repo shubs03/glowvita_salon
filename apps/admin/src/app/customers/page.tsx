@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -12,6 +12,7 @@ import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Eye, FileDown, X, IndianRupee, Percent, Users, FileText, Plus, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
+import { Skeleton } from "@repo/ui/skeleton";
 
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { openModal, closeModal } from '@repo/store/slices/modal';
@@ -27,7 +28,6 @@ import {
   setSalonItemsPerPage,
   clearSalonFilters
 } from '@repo/store/slices/salonSlice';
-import { RootState } from '@repo/store/store';
 
 type Salon = {
   id: number;
@@ -68,8 +68,17 @@ const salonCustomers = [
 export default function CustomerManagementPage() {
     const dispatch = useAppDispatch();
     
+    // Add a loading state to demonstrate skeleton
+    const [isLoading, setIsLoading] = useState(true);
+    
+    // Simulate loading - in real app this would be from API query
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 1000);
+        return () => clearTimeout(timer);
+    }, []);
+    
     // State for the "Add New Customer" modal
-    const { isOpen, modalType } = useAppSelector((state: RootState) => state.modal);
+    const { isOpen, modalType } = useAppSelector((state: any) => state.modal);
     const isNewCustomerModalOpen = isOpen && modalType === 'newCustomer';
     
     // State for viewing salon customers
@@ -83,14 +92,14 @@ export default function CustomerManagementPage() {
         orders,
         filters: customerFilters,
         pagination: customerPagination
-    } = useAppSelector((state: RootState) => state.customer);
+    } = useAppSelector((state: any) => state.customer);
     
     // Salon List State from Redux
     const {
         salons,
         filters: salonFilters,
         pagination: salonPagination
-    } = useAppSelector((state: RootState) => state.salon);
+    } = useAppSelector((state: any) => state.salon);
 
     // Memoized filtering and pagination logic
     const filteredOrders = useMemo(() => {
@@ -149,6 +158,79 @@ export default function CustomerManagementPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Customer Management</h1>
 
+      {isLoading ? (
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-4" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-16 mb-2" />
+                  <Skeleton className="h-3 w-32" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                <div>
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64 mt-2" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-10 w-32" />
+                  <Skeleton className="h-10 w-28" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-6 p-4 rounded-lg bg-secondary">
+                <div className="flex items-center justify-between mb-4">
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-8 w-24" />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {[...Array(16)].map((_, i) => (
+                        <TableHead key={i}>
+                          <Skeleton className="h-5 w-full" />
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[...Array(5)].map((_, i) => (
+                      <TableRow key={i}>
+                        {[...Array(16)].map((_, j) => (
+                          <TableCell key={j}>
+                            <Skeleton className="h-5 w-full" />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="mt-4">
+                <Skeleton className="h-8 w-full" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <>
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -525,6 +607,8 @@ export default function CustomerManagementPage() {
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        </>
+      )}
     </div>
   );
 }

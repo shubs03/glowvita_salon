@@ -7,7 +7,6 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Bell, Menu, LogOut, User, Settings, CheckCircle, XCircle } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppDispatch } from "@repo/store/hooks";
-import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import Cookies from "js-cookie";
 import {
@@ -21,17 +20,27 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
+import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
+import { useState } from "react";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { admin } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    dispatch(clearAdminAuth());
-    Cookies.remove('admin_access_token', { path: '/' });
-    router.push('/login');
-    router.refresh();
+    setIsLoggingOut(true);
+    try {
+      dispatch(clearAdminAuth());
+      Cookies.remove('admin_access_token', { path: '/' });
+      router.push('/login');
+      router.refresh();
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutModal(false);
+    }
   };
 
   return (
@@ -118,12 +127,19 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
+            <DropdownMenuItem onClick={() => setShowLogoutModal(true)}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <LogoutConfirmationModal
+          open={showLogoutModal}
+          onOpenChange={setShowLogoutModal}
+          onConfirm={handleLogout}
+          isLoading={isLoggingOut}
+        />
       </div>
     </header>
   );
