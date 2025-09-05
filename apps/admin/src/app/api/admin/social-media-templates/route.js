@@ -233,7 +233,7 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
         );
       }
       updateData.imageUrl = image;
-       updateData.jsonData = {
+      updateData.jsonData = {
         "version": "5.3.0",
         "objects": [
             {

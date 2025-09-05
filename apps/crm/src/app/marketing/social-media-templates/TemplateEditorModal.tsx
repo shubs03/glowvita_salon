@@ -153,90 +153,91 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  const initCanvas = useCallback((templateData: SocialMediaTemplate) => {
-    const canvasContainer = canvasRef.current?.parentElement;
-    if (!canvasRef.current || !canvasContainer) return;
-
+  const initCanvas = useCallback(() => {
+    if (!canvasRef.current || !template) return;
+    
+    const canvasContainer = canvasRef.current.parentElement;
+    if (!canvasContainer) return;
+    
     const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = templateData.imageUrl;
+    img.crossOrigin = 'anonymous'; // Important for using images from other domains
+    img.src = template.imageUrl;
 
     img.onload = () => {
-        const canvas = new Canvas(canvasRef.current);
-        setFabricCanvas(canvas);
+      // Calculate aspect ratios
+      const containerWidth = canvasContainer.clientWidth;
+      const containerHeight = canvasContainer.clientHeight;
+      const imgAspectRatio = img.width / img.height;
+      const containerAspectRatio = containerWidth / containerHeight;
 
-        const containerWidth = canvasContainer.clientWidth;
-        const containerHeight = canvasContainer.clientHeight;
-        const imgAspect = img.width / img.height;
-        
-        let canvasWidth, canvasHeight;
-        if (containerWidth / containerHeight > imgAspect) {
-            canvasHeight = containerHeight;
-            canvasWidth = canvasHeight * imgAspect;
-        } else {
-            canvasWidth = containerWidth;
-            canvasHeight = canvasWidth / imgAspect;
-        }
-        
-        canvas.setWidth(canvasWidth);
-        canvas.setHeight(canvasHeight);
+      // Determine canvas dimensions to fit within the container
+      let canvasWidth, canvasHeight;
+      if (imgAspectRatio > containerAspectRatio) {
+        canvasWidth = containerWidth;
+        canvasHeight = containerWidth / imgAspectRatio;
+      } else {
+        canvasHeight = containerHeight;
+        canvasWidth = containerHeight * imgAspectRatio;
+      }
 
-        const fabricImage = new FabricImage(img, {
-            left: 0,
-            top: 0,
-            originX: 'left',
-            originY: 'top',
-            selectable: false,
-            evented: false,
-            scaleX: canvasWidth / img.width,
-            scaleY: canvasHeight / img.height,
+      // Initialize Fabric canvas
+      const canvas = new Canvas(canvasRef.current, {
+        width: canvasWidth,
+        height: canvasHeight,
+      });
+
+      // Set background image
+      canvas.setBackgroundImage(template.imageUrl, canvas.renderAll.bind(canvas), {
+        scaleX: canvasWidth / img.width,
+        scaleY: canvasHeight / img.height,
+      });
+
+      // Load objects from jsonData if available
+      if (template.jsonData && Array.isArray(template.jsonData.objects)) {
+        const originalWidth = 800; // Original width used when creating default elements
+        const scaleFactor = canvasWidth / originalWidth;
+
+        template.jsonData.objects.forEach((objData: any) => {
+          const options: ITextboxOptions = {
+            ...objData,
+            left: objData.left * scaleFactor,
+            top: objData.top * scaleFactor,
+            width: objData.width * scaleFactor,
+            fontSize: (objData.fontSize || 20) * scaleFactor,
+          };
+          const textbox = new Textbox(objData.text || 'Default Text', options);
+          canvas.add(textbox);
         });
+      }
 
-        canvas.setBackgroundImage(fabricImage, canvas.renderAll.bind(canvas));
+      // Selection event handlers
+      const updateSelection = (e: any) => {
+        setSelectedObject(e.target || (e.selected && e.selected[0]) || null);
+      };
+      
+      canvas.on('selection:created', updateSelection);
+      canvas.on('selection:updated', updateSelection);
+      canvas.on('selection:cleared', () => setSelectedObject(null));
 
-        if (templateData.jsonData && Array.isArray(templateData.jsonData.objects)) {
-            const originalWidth = 800; // The width used when creating the default JSON
-            const scaleFactor = canvasWidth / originalWidth;
-
-            templateData.jsonData.objects.forEach((objData: any) => {
-                const options: ITextboxOptions = {
-                    ...objData,
-                    left: objData.left * scaleFactor,
-                    top: objData.top * scaleFactor,
-                    width: objData.width * scaleFactor,
-                    fontSize: (objData.fontSize || 20) * scaleFactor,
-                };
-                const textbox = new Textbox(objData.text || 'Default Text', options);
-                canvas.add(textbox);
-            });
-            canvas.renderAll();
-        }
-        
-        const updateSelection = (e: any) => {
-          setSelectedObject(e.target || (e.selected && e.selected[0]) || null);
-        };
-        
-        canvas.on('selection:created', updateSelection);
-        canvas.on('selection:updated', updateSelection);
-        canvas.on('selection:cleared', () => setSelectedObject(null));
+      setFabricCanvas(canvas);
+      canvas.renderAll();
     };
 
     img.onerror = () => {
-        toast.error("Could not load template image.");
+      toast.error("Could not load template image.");
     };
-
-  }, []);
+  }, [template]);
 
   useEffect(() => {
-    let canvasInstance: Canvas | null = null;
+    let canvas: Canvas | null = null;
     if (isOpen && template) {
-        initCanvas(template);
+      initCanvas();
     }
     return () => {
-        if (fabricCanvas) {
-            fabricCanvas.dispose();
-            setFabricCanvas(null);
-        }
+      if (fabricCanvas) {
+        fabricCanvas.dispose();
+        setFabricCanvas(null);
+      }
     };
   }, [isOpen, template, initCanvas]);
 
