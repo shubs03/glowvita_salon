@@ -113,6 +113,205 @@ export const GET = authMiddlewareAdmin(async (req) => {
 });
 
 // POST a new Social Media template
+export const POST = authMiddlewareAdmin(async (req) => {
+  console.log('POST /api/admin/social-media-templates - Starting request');
+  try {
+    // Connect to database
+    console.log('Connecting to database...');
+    await _db();
+    
+    // Get or create the model using the already imported model
+    const SocialMediaTemplate = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
+    
+    let body;
+    
+    // Check content type to handle both JSON and FormData
+    const contentType = req.headers.get('content-type') || '';
+    console.log('Content-Type:', contentType);
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle FormData
+      console.log('Handling FormData');
+      const formData = await req.formData();
+      body = Object.fromEntries(formData.entries());
+      console.log('FormData body:', { ...body, image: body.image ? '[FILE_OR_BASE64_IMAGE]' : null });
+      
+      // Convert File to base64 if present
+      const imageFile = formData.get('image');
+      if (imageFile && imageFile instanceof File) {
+        console.log('Converting File to base64');
+        const arrayBuffer = await imageFile.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Image = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
+        body.image = base64Image;
+        console.log('Converted image to base64, size:', base64Image.length);
+      }
+    } else {
+      // Handle JSON
+      console.log('Handling JSON');
+      try {
+        body = await req.json();
+        console.log('Parsed JSON request body:', { ...body, image: body.image ? '[BASE64_IMAGE]' : null });
+      } catch (parseError) {
+        console.error('Error parsing request body:', parseError);
+        return NextResponse.json(
+          { success: false, message: 'Invalid request body format' },
+          { status: 400 }
+        );
+      }
+    }
+    
+    // Get the authenticated user from the request (set by authMiddlewareAdmin)
+    const user = req.user;
+    console.log('Authenticated User:', user ? `User ID: ${user._id}` : 'No user');
+    
+    if (!user || !user._id) {
+      console.error('No authenticated user found in request');
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Validate required fields
+    const { title, category, availableFor = 'admin', description = '', image, status = 'Draft' } = body;
+    
+    console.log('Validating fields:', { title, category, availableFor });
+    
+    if (!title || !category || !availableFor) {
+      const missingFields = [];
+      if (!title) missingFields.push('title');
+      if (!category) missingFields.push('category');
+      if (!availableFor) missingFields.push('availableFor');
+      
+      console.error('Missing required fields:', missingFields);
+      return NextResponse.json(
+        { 
+          success: false,
+          message: `Missing required fields: ${missingFields.join(', ')}`,
+          missingFields 
+        },
+        { status: 400 }
+      );
+    }
+    
+    // Validate image if present
+    if (image && !image.startsWith('data:image/')) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid image format. Must be a base64 encoded image.'
+        },
+        { status: 400 }
+      );
+    }
+
+    // Check for existing template with same title (case insensitive)
+    const existingTemplate = await SocialMediaTemplate.findOne({ 
+      title: { $regex: new RegExp(`^${title.trim()}$`, 'i') } 
+    });
+    
+    if (existingTemplate) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "A template with this title already exists" 
+        },
+        { status: 400 }
+      );
+    }
+
+
+    // Create new template with base64 image
+    const templateData = {
+      title: title.toString().trim(),
+      category: category.toString().trim(),
+      availableFor: availableFor.toString().trim(),
+      description: description ? description.toString().trim() : '',
+      status: status || 'Draft',
+      createdBy: user._id,
+      updatedBy: user._id,
+      isActive: body.isActive !== undefined ? Boolean(body.isActive) : true
+    };
+
+    // Only add imageUrl if image is provided
+    if (image) {
+      templateData.imageUrl = image.toString();
+      templateData.jsonData = {
+        "version": "5.3.0",
+        "objects": [],
+        "background": image.toString(),
+      };
+    }
+    
+    console.log('Creating template with data:', { 
+      ...templateData, 
+      createdBy: user._id,
+      imageUrl: templateData.imageUrl ? '[BASE64_IMAGE]' : null 
+    });
+    
+    const newTemplate = await SocialMediaTemplate.create(templateData);
+
+    return NextResponse.json(
+      { 
+        success: true,
+        message: "Social Media template created successfully", 
+        data: newTemplate 
+      },
+      { status: 201 }
+    );
+    
+  } catch (error) {
+    console.error("Error in POST /api/admin/social-media-templates:", {
+      message: error.message,
+      name: error.name,
+      ...(error.code && { code: error.code }),
+      ...(error.keyPattern && { keyPattern: error.keyPattern }),
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(e => e.message);
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Validation error",
+          errors
+        },
+        { status: 400 }
+      );
+    }
+    
+    if (error.name === 'MongoServerError' && error.code === 11000) {
+      return NextResponse.json(
+        { 
+          success: false,
+          message: "Duplicate key error. A template with this title may already exist."
+        },
+        { status: 400 }
+      );
+    }
+    
+    return NextResponse.json(
+      { 
+        success: false,
+        message: "Failed to create social media template",
+        error: error.message,
+        ...(process.env.NODE_ENV === 'development' && { 
+          details: {
+            name: error.name,
+            ...(error.code && { code: error.code }),
+            ...(error.keyPattern && { keyPattern: error.keyPattern })
+          }
+        })
+      },
+      { status: 500 }
+    );
+  }
+});
+
+// PUT a new Social Media template
 export const PUT = authMiddlewareAdmin(async (req, { params }) => {
   try {
     // Connect to database
@@ -428,285 +627,5 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     }
     
     return NextResponse.json({ success: false, message: 'Failed to delete template', error: error.message }, { status: 500 });
-  }
-});
-
-
-export const POST = authMiddlewareAdmin(async (req) => {
-  console.log('POST /api/admin/social-media-templates - Starting request');
-  try {
-    // Connect to database
-    console.log('Connecting to database...');
-    await _db();
-    
-    // Get or create the model using the already imported model
-    const SocialMediaTemplate = mongoose.models[modelName] || mongoose.model(modelName, SocialMediaTemplateModel.schema);
-    
-    let body;
-    
-    // Check content type to handle both JSON and FormData
-    const contentType = req.headers.get('content-type') || '';
-    console.log('Content-Type:', contentType);
-    
-    if (contentType.includes('multipart/form-data')) {
-      // Handle FormData
-      console.log('Handling FormData');
-      const formData = await req.formData();
-      body = Object.fromEntries(formData.entries());
-      console.log('FormData body:', { ...body, image: body.image ? '[FILE_OR_BASE64_IMAGE]' : null });
-      
-      // Convert File to base64 if present
-      const imageFile = formData.get('image');
-      if (imageFile && imageFile instanceof File) {
-        console.log('Converting File to base64');
-        const arrayBuffer = await imageFile.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const base64Image = `data:${imageFile.type};base64,${buffer.toString('base64')}`;
-        body.image = base64Image;
-        console.log('Converted image to base64, size:', base64Image.length);
-      }
-    } else {
-      // Handle JSON
-      console.log('Handling JSON');
-      try {
-        body = await req.json();
-        console.log('Parsed JSON request body:', { ...body, image: body.image ? '[BASE64_IMAGE]' : null });
-      } catch (parseError) {
-        console.error('Error parsing request body:', parseError);
-        return NextResponse.json(
-          { success: false, message: 'Invalid request body format' },
-          { status: 400 }
-        );
-      }
-    }
-    
-    // Get the authenticated user from the request (set by authMiddlewareAdmin)
-    const user = req.user;
-    console.log('Authenticated User:', user ? `User ID: ${user._id}` : 'No user');
-    
-    if (!user || !user._id) {
-      console.error('No authenticated user found in request');
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    // Validate required fields
-    const { title, category, availableFor = 'admin', description = '', image, status = 'Draft' } = body;
-    
-    console.log('Validating fields:', { title, category, availableFor });
-    
-    if (!title || !category || !availableFor) {
-      const missingFields = [];
-      if (!title) missingFields.push('title');
-      if (!category) missingFields.push('category');
-      if (!availableFor) missingFields.push('availableFor');
-      
-      console.error('Missing required fields:', missingFields);
-      return NextResponse.json(
-        { 
-          success: false,
-          message: `Missing required fields: ${missingFields.join(', ')}`,
-          missingFields 
-        },
-        { status: 400 }
-      );
-    }
-    
-    // Validate image if present
-    if (image && !image.startsWith('data:image/')) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Invalid image format. Must be a base64 encoded image.'
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check for existing template with same title (case insensitive)
-    const existingTemplate = await SocialMediaTemplate.findOne({ 
-      title: { $regex: new RegExp(`^${title.trim()}$`, 'i') } 
-    });
-    
-    if (existingTemplate) {
-      return NextResponse.json(
-        { 
-          success: false,
-          message: "A template with this title already exists" 
-        },
-        { status: 400 }
-      );
-    }
-
-
-    // Create new template with base64 image
-    const templateData = {
-      title: title.toString().trim(),
-      category: category.toString().trim(),
-      availableFor: availableFor.toString().trim(),
-      description: description ? description.toString().trim() : '',
-      status: status || 'Draft',
-      createdBy: user._id,
-      updatedBy: user._id,
-      isActive: body.isActive !== undefined ? Boolean(body.isActive) : true
-    };
-
-    // Only add imageUrl if image is provided
-    if (image) {
-      templateData.imageUrl = image.toString();
-      templateData.jsonData = {
-        "version": "5.3.0",
-        "objects": [
-            {
-                "type": "textbox",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": 450,
-                "top": 200,
-                "width": 600,
-                "height": 100,
-                "fill": "#6B240C",
-                "text": "Paarsh Infotech Family",
-                "fontSize": 70,
-                "fontWeight": "bold",
-                "fontFamily": "Times New Roman",
-                "textAlign": "center"
-            },
-            {
-                "type": "textbox",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": 450,
-                "top": 320,
-                "width": 700,
-                "height": 120,
-                "fill": "#000000",
-                "text": "A day of prayers, a moment of gratitude\nPaarsh Infotech family invites you for\nSatyanarayan Katha",
-                "fontSize": 35,
-                "fontWeight": "normal",
-                "fontFamily": "Arial",
-                "textAlign": "center"
-            },
-            {
-                "type": "textbox",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": 450,
-                "top": 550,
-                "width": 400,
-                "height": 50,
-                "fill": "#A45C40",
-                "text": "29-08-2025",
-                "fontSize": 40,
-                "fontWeight": "bold",
-                "fontFamily": "Arial",
-                "textAlign": "center"
-            },
-             {
-                "type": "textbox",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": 450,
-                "top": 620,
-                "width": 600,
-                "height": 80,
-                "fill": "#000000",
-                "text": "Timing For Pooja at 4:00 PM\nAnd for Prasad 5:30 PM",
-                "fontSize": 30,
-                "fontWeight": "normal",
-                "fontFamily": "Arial",
-                "textAlign": "center"
-            },
-            {
-                "type": "textbox",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": 450,
-                "top": 720,
-                "width": 800,
-                "height": 80,
-                "fill": "#000000",
-                "text": "02, Bhakti Apartment, near Hotel Rasoi, Suchita Nagar,\nMumbai Naka, Nashik, Maharashtra 422001",
-                "fontSize": 25,
-                "fontWeight": "normal",
-                "fontFamily": "Arial",
-                "textAlign": "center"
-            }
-        ],
-        "background": image.toString()
-      };
-    }
-    
-    console.log('Creating template with data:', { 
-      ...templateData, 
-      createdBy: user._id,
-      imageUrl: templateData.imageUrl ? '[BASE64_IMAGE]' : null 
-    });
-    
-    const newTemplate = await SocialMediaTemplate.create(templateData);
-
-    return NextResponse.json(
-      { 
-        success: true,
-        message: "Social Media template created successfully", 
-        data: newTemplate 
-      },
-      { status: 201 }
-    );
-    
-  } catch (error) {
-    console.error("Error in POST /api/admin/social-media-templates:", {
-      message: error.message,
-      name: error.name,
-      ...(error.code && { code: error.code }),
-      ...(error.keyPattern && { keyPattern: error.keyPattern }),
-      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
-    });
-    
-    // Handle specific MongoDB errors
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(e => e.message);
-      return NextResponse.json(
-        { 
-          success: false,
-          message: "Validation error",
-          errors
-        },
-        { status: 400 }
-      );
-    }
-    
-    if (error.name === 'MongoServerError' && error.code === 11000) {
-      return NextResponse.json(
-        { 
-          success: false,
-          message: "Duplicate key error. A template with this title may already exist."
-        },
-        { status: 400 }
-      );
-    }
-    
-    return NextResponse.json(
-      { 
-        success: false,
-        message: "Failed to create social media template",
-        error: error.message,
-        ...(process.env.NODE_ENV === 'development' && { 
-          details: {
-            name: error.name,
-            ...(error.code && { code: error.code }),
-            ...(error.keyPattern && { keyPattern: error.keyPattern })
-          }
-        })
-      },
-      { status: 500 }
-    );
   }
 });

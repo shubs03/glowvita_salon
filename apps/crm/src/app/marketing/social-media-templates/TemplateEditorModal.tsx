@@ -153,64 +153,60 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const initCanvas = useCallback((container: HTMLDivElement) => {
-    if (!container || !template) return;
+    if (!container || !template || !template.jsonData || !canvasRef.current) return;
+    
+    // Create canvas
+    const canvas = new fabric.Canvas(canvasRef.current, {
+      width: container.clientWidth,
+      height: container.clientHeight,
+      backgroundColor: '#f0f0f0',
+    });
+    
+    // Load data from JSON
+    canvas.loadFromJSON(template.jsonData, () => {
+      const img = canvas.backgroundImage as fabric.Image;
+      if (!img) {
+          toast.error("Background image not found in template data.");
+          return;
+      }
+      
+      // Calculate aspect ratio and scale to fit container
+      const imgAspectRatio = (img.width || 1) / (img.height || 1);
+      const containerAspectRatio = container.clientWidth / container.clientHeight;
+      let canvasWidth, canvasHeight;
 
-    const canvasElement = canvasRef.current;
-    if (!canvasElement) return;
+      if (imgAspectRatio > containerAspectRatio) {
+          canvasWidth = container.clientWidth;
+          canvasHeight = container.clientWidth / imgAspectRatio;
+      } else {
+          canvasHeight = container.clientHeight;
+          canvasWidth = container.clientHeight * imgAspectRatio;
+      }
 
-    const canvas = new fabric.Canvas(canvasElement);
-
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = template.imageUrl;
-
-    img.onload = () => {
-        const imgAspectRatio = img.width / img.height;
-        const containerAspectRatio = container.clientWidth / container.clientHeight;
-
-        let canvasWidth, canvasHeight;
-        if (imgAspectRatio > containerAspectRatio) {
-            canvasWidth = container.clientWidth;
-            canvasHeight = container.clientWidth / imgAspectRatio;
-        } else {
-            canvasHeight = container.clientHeight;
-            canvasWidth = container.clientHeight * imgAspectRatio;
-        }
-        
-        canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
-
-        fabric.Image.fromURL(template.imageUrl, (bgImg) => {
-            if (bgImg.width && bgImg.height) {
-                canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas), {
-                    scaleX: canvasWidth / bgImg.width,
-                    scaleY: canvasHeight / bgImg.height,
-                });
-            }
-
-            if (template.jsonData && Array.isArray(template.jsonData.objects)) {
-                const originalWidth = 800; // Original width used when creating default elements
-                const scaleFactor = canvasWidth / originalWidth;
-
-                template.jsonData.objects.forEach((objData: any) => {
-                    if (objData.type === 'textbox') {
-                        const options: fabric.ITextboxOptions = {
-                            ...objData,
-                            left: objData.left * scaleFactor,
-                            top: objData.top * scaleFactor,
-                            width: objData.width * scaleFactor,
-                            fontSize: (objData.fontSize || 20) * scaleFactor,
-                        };
-                        const textbox = new fabric.Textbox(objData.text || 'Default Text', options);
-                        canvas.add(textbox);
-                    }
-                });
-            }
-        }, { crossOrigin: 'anonymous' });
-    };
-
-    img.onerror = () => {
-        toast.error("Could not load template image.");
-    };
+      canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
+      
+      // Scale background image to fit new canvas dimensions
+      if (img.width && img.height) {
+        img.scaleToWidth(canvasWidth);
+        img.scaleToHeight(canvasHeight);
+      }
+      
+      // Calculate scaling factor for objects
+      const originalWidth = template.jsonData.width || 800; // Default if not specified
+      const scaleFactor = canvasWidth / originalWidth;
+      
+      // Scale each object
+      canvas.getObjects().forEach(obj => {
+          obj.scaleX *= scaleFactor;
+          obj.scaleY *= scaleFactor;
+          obj.left *= scaleFactor;
+          obj.top *= scaleFactor;
+          obj.setCoords();
+      });
+      
+      canvas.renderAll();
+      setFabricCanvas(canvas);
+    });
 
     const updateSelection = (e: fabric.IEvent) => {
       setSelectedObject(e.target || (e.selected && e.selected[0]) || null);
@@ -220,20 +216,18 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
     canvas.on('selection:updated', updateSelection);
     canvas.on('selection:cleared', () => setSelectedObject(null));
 
-    setFabricCanvas(canvas);
-
     return () => {
       canvas.dispose();
-      setFabricCanvas(null);
     };
   }, [template]);
 
   const containerRef = useCallback((node: HTMLDivElement) => {
-      if (node && !fabricCanvas) { // Initialize only if node exists and canvas is not yet created
-        initCanvas(node);
-      }
-  }, [initCanvas, fabricCanvas]);
-
+    if (node) {
+      // Create a new canvas whenever the container is mounted
+      initCanvas(node);
+    }
+  }, [initCanvas]);
+  
   const addText = () => {
     if (!fabricCanvas) return;
     const text = new fabric.Textbox('New Text', {
@@ -335,8 +329,8 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
             </div>
           </div>
           
-          {/* Canvas Area - Fixed */}
-          <div ref={containerRef} className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-hidden p-4">
+          {/* Canvas Area */}
+          <div ref={containerRef} className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-auto p-4">
               <canvas
                 ref={canvasRef}
                 className="border shadow-lg"
