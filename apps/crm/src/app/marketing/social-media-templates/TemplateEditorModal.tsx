@@ -9,7 +9,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { Label } from '@repo/ui/label';
 import { Download, Save, X, Image as ImageIcon, Upload, Plus, Trash2, Type, Move, Palette, Bold } from 'lucide-react';
 import { toast } from 'sonner';
-import { Canvas, FabricImage, Textbox, ITextboxOptions, Object as FabricObject } from 'fabric';
+import { fabric } from 'fabric';
 
 interface SocialMediaTemplate {
   _id: string;
@@ -33,7 +33,7 @@ interface TemplateEditorModalProps {
   onClose: () => void;
 }
 
-const EditorControls = ({ selectedObject, canvas }: { selectedObject: FabricObject | null, canvas: Canvas | null }) => {
+const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Object | null, canvas: fabric.Canvas | null }) => {
   const [text, setText] = useState('');
   const [fontSize, setFontSize] = useState(20);
   const [fill, setFill] = useState('#000000');
@@ -41,7 +41,7 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: FabricObje
 
   useEffect(() => {
     if (selectedObject && selectedObject.type === 'textbox') {
-      const textbox = selectedObject as Textbox;
+      const textbox = selectedObject as fabric.Textbox;
       setText(textbox.text || '');
       setFontSize(textbox.fontSize || 20);
       setFill(textbox.fill as string || '#000000');
@@ -53,7 +53,7 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: FabricObje
     const newText = e.target.value;
     setText(newText);
     if (selectedObject && selectedObject.type === 'textbox') {
-      (selectedObject as Textbox).set('text', newText);
+      (selectedObject as fabric.Textbox).set('text', newText);
       canvas?.requestRenderAll();
     }
   };
@@ -62,7 +62,7 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: FabricObje
     const newSize = parseInt(e.target.value, 10);
     setFontSize(newSize);
     if (selectedObject && selectedObject.type === 'textbox') {
-      (selectedObject as Textbox).set('fontSize', newSize);
+      (selectedObject as fabric.Textbox).set('fontSize', newSize);
       canvas?.requestRenderAll();
     }
   };
@@ -71,7 +71,7 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: FabricObje
     const newColor = e.target.value;
     setFill(newColor);
     if (selectedObject && selectedObject.type === 'textbox') {
-      (selectedObject as Textbox).set('fill', newColor);
+      (selectedObject as fabric.Textbox).set('fill', newColor);
       canvas?.requestRenderAll();
     }
   };
@@ -80,7 +80,7 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: FabricObje
     const newWeight = !isBold ? 'bold' : 'normal';
     setIsBold(!isBold);
     if (selectedObject && selectedObject.type === 'textbox') {
-      (selectedObject as Textbox).set('fontWeight', newWeight);
+      (selectedObject as fabric.Textbox).set('fontWeight', newWeight);
       canvas?.requestRenderAll();
     }
   };
@@ -148,18 +148,17 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: FabricObje
 };
 
 export default function TemplateEditorModal({ template, isOpen, onClose }: TemplateEditorModalProps) {
-  const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
-  const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
+  const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
+  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const initCanvas = useCallback((container: HTMLDivElement) => {
     if (!container || !template) return;
 
-    const canvas = new Canvas(canvasRef.current, {
-        width: container.clientWidth,
-        height: container.clientHeight,
-        backgroundColor: '#f0f0f0',
-    });
+    const canvasElement = canvasRef.current;
+    if (!canvasElement) return;
+
+    const canvas = new fabric.Canvas(canvasElement);
 
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -180,11 +179,13 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
         
         canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
 
-        FabricImage.fromURL(template.imageUrl, (bgImg) => {
-            canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas), {
-                scaleX: canvasWidth / bgImg.width!,
-                scaleY: canvasHeight / bgImg.height!,
-            });
+        fabric.Image.fromURL(template.imageUrl, (bgImg) => {
+            if (bgImg.width && bgImg.height) {
+                canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas), {
+                    scaleX: canvasWidth / bgImg.width,
+                    scaleY: canvasHeight / bgImg.height,
+                });
+            }
 
             if (template.jsonData && Array.isArray(template.jsonData.objects)) {
                 const originalWidth = 800; // Original width used when creating default elements
@@ -192,26 +193,26 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
 
                 template.jsonData.objects.forEach((objData: any) => {
                     if (objData.type === 'textbox') {
-                        const options: ITextboxOptions = {
+                        const options: fabric.ITextboxOptions = {
                             ...objData,
                             left: objData.left * scaleFactor,
                             top: objData.top * scaleFactor,
                             width: objData.width * scaleFactor,
                             fontSize: (objData.fontSize || 20) * scaleFactor,
                         };
-                        const textbox = new Textbox(objData.text || 'Default Text', options);
+                        const textbox = new fabric.Textbox(objData.text || 'Default Text', options);
                         canvas.add(textbox);
                     }
                 });
             }
-        });
+        }, { crossOrigin: 'anonymous' });
     };
 
     img.onerror = () => {
         toast.error("Could not load template image.");
     };
 
-    const updateSelection = (e: any) => {
+    const updateSelection = (e: fabric.IEvent) => {
       setSelectedObject(e.target || (e.selected && e.selected[0]) || null);
     };
 
@@ -228,17 +229,14 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   }, [template]);
 
   const containerRef = useCallback((node: HTMLDivElement) => {
-      if (node) {
-        // Now that the node is mounted, we can initialize the canvas
-        const cleanup = initCanvas(node);
-        // We can use the cleanup function if needed, but in this pattern,
-        // the re-creation logic handles cleanup via `fabricCanvas.dispose()`.
+      if (node && !fabricCanvas) { // Initialize only if node exists and canvas is not yet created
+        initCanvas(node);
       }
-  }, [initCanvas]);
+  }, [initCanvas, fabricCanvas]);
 
   const addText = () => {
     if (!fabricCanvas) return;
-    const text = new Textbox('New Text', {
+    const text = new fabric.Textbox('New Text', {
       left: 50,
       top: 50,
       fontSize: 40,
@@ -259,7 +257,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        FabricImage.fromURL(dataUrl, (img) => {
+        fabric.Image.fromURL(dataUrl, (img) => {
           img.scaleToWidth(100);
           img.set({
             left: fabricCanvas.getWidth() - img.getScaledWidth() - 20,
