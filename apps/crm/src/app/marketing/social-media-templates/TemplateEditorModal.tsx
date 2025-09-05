@@ -152,25 +152,30 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
   const initCanvas = useCallback(() => {
-    if (!canvasRef.current || !template) return;
+    if (!canvasRef.current || !template || !canvasContainerRef.current) return;
+
+    const canvasContainer = canvasContainerRef.current;
+    const containerWidth = canvasContainer.clientWidth;
+    const containerHeight = canvasContainer.clientHeight;
     
-    const canvasContainer = canvasRef.current.parentElement;
-    if (!canvasContainer) return;
+    // Dispose of the old canvas instance if it exists
+    if (fabricCanvas) {
+      fabricCanvas.dispose();
+    }
+    
+    const canvas = new Canvas(canvasRef.current);
     
     const img = new Image();
-    img.crossOrigin = 'anonymous'; // Important for using images from other domains
+    img.crossOrigin = 'anonymous';
     img.src = template.imageUrl;
 
     img.onload = () => {
-      // Calculate aspect ratios
-      const containerWidth = canvasContainer.clientWidth;
-      const containerHeight = canvasContainer.clientHeight;
       const imgAspectRatio = img.width / img.height;
       const containerAspectRatio = containerWidth / containerHeight;
 
-      // Determine canvas dimensions to fit within the container
       let canvasWidth, canvasHeight;
       if (imgAspectRatio > containerAspectRatio) {
         canvasWidth = containerWidth;
@@ -179,20 +184,16 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
         canvasHeight = containerHeight;
         canvasWidth = containerHeight * imgAspectRatio;
       }
-
-      // Initialize Fabric canvas
-      const canvas = new Canvas(canvasRef.current, {
-        width: canvasWidth,
-        height: canvasHeight,
-      });
-
-      // Set background image
+      
+      canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
+      
       canvas.setBackgroundImage(template.imageUrl, canvas.renderAll.bind(canvas), {
         scaleX: canvasWidth / img.width,
         scaleY: canvasHeight / img.height,
+        originX: 'left',
+        originY: 'top',
       });
-
-      // Load objects from jsonData if available
+      
       if (template.jsonData && Array.isArray(template.jsonData.objects)) {
         const originalWidth = 800; // Original width used when creating default elements
         const scaleFactor = canvasWidth / originalWidth;
@@ -210,7 +211,6 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
         });
       }
 
-      // Selection event handlers
       const updateSelection = (e: any) => {
         setSelectedObject(e.target || (e.selected && e.selected[0]) || null);
       };
@@ -226,19 +226,32 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
     img.onerror = () => {
       toast.error("Could not load template image.");
     };
-  }, [template]);
+
+  }, [template, fabricCanvas]);
 
   useEffect(() => {
-    let canvas: Canvas | null = null;
-    if (isOpen && template) {
-      initCanvas();
+    if (isOpen && template && canvasContainerRef.current) {
+        // Delay initialization slightly to ensure the container has dimensions
+        const timeoutId = setTimeout(() => {
+            initCanvas();
+        }, 100);
+
+        // Add a resize listener to re-initialize canvas on window resize
+        const handleResize = () => {
+            initCanvas();
+        };
+
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            clearTimeout(timeoutId);
+            window.removeEventListener('resize', handleResize);
+            if (fabricCanvas) {
+              fabricCanvas.dispose();
+              setFabricCanvas(null);
+            }
+        };
     }
-    return () => {
-      if (fabricCanvas) {
-        fabricCanvas.dispose();
-        setFabricCanvas(null);
-      }
-    };
   }, [isOpen, template, initCanvas]);
 
   const addText = () => {
@@ -290,9 +303,8 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
 
   const handleSave = () => {
     if (fabricCanvas) {
-        const json = fabricCanvas.toJSON(['selectable', 'evented', 'id']); // Include any custom properties
+        const json = fabricCanvas.toJSON(['selectable', 'evented', 'id']);
         console.log("Saving JSON:", JSON.stringify(json, null, 2));
-        // Here you would call an API to save the JSON data
         toast.success("Template customization saved!");
     }
   };
@@ -344,7 +356,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
           </div>
           
           {/* Canvas Area - Fixed */}
-          <div className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-hidden p-4">
+          <div ref={canvasContainerRef} className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-hidden p-4">
               <canvas
                 ref={canvasRef}
                 className="border shadow-lg"
