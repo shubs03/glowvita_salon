@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -18,6 +19,7 @@ interface SocialMediaTemplate {
   category: string;
   description: string;
   imageUrl: string;
+  jsonData: any;
   availableFor: string[];
   status: string;
   isActive: boolean;
@@ -44,7 +46,7 @@ export default function SocialMediaTemplatesPage() {
     refetchOnMountOrArgChange: true,
   });
 
-  const templates: SocialMediaTemplate[] = templatesResponse?.data || [];
+  const templates: SocialMediaTemplate[] = templatesResponse?.templates || [];
   const totalTemplates = templates.length || 0;
 
   const handleTemplateUse = (template: SocialMediaTemplate) => {

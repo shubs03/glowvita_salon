@@ -93,6 +93,7 @@ export const glowvitaApi = createApi({
     "CrmSmsPackage",
     "CrmCampaign",
     "SocialMediaTemplate",
+    "CrmSocialMediaTemplate",
     "Marketing",
     "SubscriptionPlan",
     "Vendor",
@@ -1280,18 +1281,10 @@ export const glowvitaApi = createApi({
       }),
       providesTags: ["CrmSocialMediaTemplate"],
       transformResponse: (response) => {
-        console.log('CRM Social Media Template API - Raw response:', response);
-        console.log('Response success:', response?.success);
-        console.log('Response data:', response?.data);
-        console.log('Response total:', response?.total);
-        
-        // Transform the response to match the expected format
-        const result = {
-          templates: response.success ? response.data : [],
-          total: response.success ? response.total : 0
-        };
-        console.log('CRM Social Media Template API - Transformed response:', result);
-        return result;
+        // Ensure the response is always in the { templates: [], total: number } format
+        const templates = response?.data || [];
+        const total = response?.total || templates.length;
+        return { templates, total };
       }
     }),
   }),
