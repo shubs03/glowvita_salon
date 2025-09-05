@@ -147,112 +147,94 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: FabricObje
   );
 };
 
-
 export default function TemplateEditorModal({ template, isOpen, onClose }: TemplateEditorModalProps) {
   const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
   const [selectedObject, setSelectedObject] = useState<FabricObject | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
-  const initCanvas = useCallback(() => {
-    if (!canvasRef.current || !template || !canvasContainerRef.current) return;
+  const initCanvas = useCallback((container: HTMLDivElement) => {
+    if (!container || !template) return;
 
-    const canvasContainer = canvasContainerRef.current;
-    const containerWidth = canvasContainer.clientWidth;
-    const containerHeight = canvasContainer.clientHeight;
-    
-    // Dispose of the old canvas instance if it exists
-    if (fabricCanvas) {
-      fabricCanvas.dispose();
-    }
-    
-    const canvas = new Canvas(canvasRef.current);
-    
+    const canvas = new Canvas(canvasRef.current, {
+        width: container.clientWidth,
+        height: container.clientHeight,
+        backgroundColor: '#f0f0f0',
+    });
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.src = template.imageUrl;
 
     img.onload = () => {
-      const imgAspectRatio = img.width / img.height;
-      const containerAspectRatio = containerWidth / containerHeight;
+        const imgAspectRatio = img.width / img.height;
+        const containerAspectRatio = container.clientWidth / container.clientHeight;
 
-      let canvasWidth, canvasHeight;
-      if (imgAspectRatio > containerAspectRatio) {
-        canvasWidth = containerWidth;
-        canvasHeight = containerWidth / imgAspectRatio;
-      } else {
-        canvasHeight = containerHeight;
-        canvasWidth = containerHeight * imgAspectRatio;
-      }
-      
-      canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
-      
-      canvas.setBackgroundImage(template.imageUrl, canvas.renderAll.bind(canvas), {
-        scaleX: canvasWidth / img.width,
-        scaleY: canvasHeight / img.height,
-        originX: 'left',
-        originY: 'top',
-      });
-      
-      if (template.jsonData && Array.isArray(template.jsonData.objects)) {
-        const originalWidth = 800; // Original width used when creating default elements
-        const scaleFactor = canvasWidth / originalWidth;
+        let canvasWidth, canvasHeight;
+        if (imgAspectRatio > containerAspectRatio) {
+            canvasWidth = container.clientWidth;
+            canvasHeight = container.clientWidth / imgAspectRatio;
+        } else {
+            canvasHeight = container.clientHeight;
+            canvasWidth = container.clientHeight * imgAspectRatio;
+        }
+        
+        canvas.setDimensions({ width: canvasWidth, height: canvasHeight });
 
-        template.jsonData.objects.forEach((objData: any) => {
-          const options: ITextboxOptions = {
-            ...objData,
-            left: objData.left * scaleFactor,
-            top: objData.top * scaleFactor,
-            width: objData.width * scaleFactor,
-            fontSize: (objData.fontSize || 20) * scaleFactor,
-          };
-          const textbox = new Textbox(objData.text || 'Default Text', options);
-          canvas.add(textbox);
+        FabricImage.fromURL(template.imageUrl, (bgImg) => {
+            canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas), {
+                scaleX: canvasWidth / bgImg.width!,
+                scaleY: canvasHeight / bgImg.height!,
+            });
+
+            if (template.jsonData && Array.isArray(template.jsonData.objects)) {
+                const originalWidth = 800; // Original width used when creating default elements
+                const scaleFactor = canvasWidth / originalWidth;
+
+                template.jsonData.objects.forEach((objData: any) => {
+                    if (objData.type === 'textbox') {
+                        const options: ITextboxOptions = {
+                            ...objData,
+                            left: objData.left * scaleFactor,
+                            top: objData.top * scaleFactor,
+                            width: objData.width * scaleFactor,
+                            fontSize: (objData.fontSize || 20) * scaleFactor,
+                        };
+                        const textbox = new Textbox(objData.text || 'Default Text', options);
+                        canvas.add(textbox);
+                    }
+                });
+            }
         });
-      }
-
-      const updateSelection = (e: any) => {
-        setSelectedObject(e.target || (e.selected && e.selected[0]) || null);
-      };
-      
-      canvas.on('selection:created', updateSelection);
-      canvas.on('selection:updated', updateSelection);
-      canvas.on('selection:cleared', () => setSelectedObject(null));
-
-      setFabricCanvas(canvas);
-      canvas.renderAll();
     };
 
     img.onerror = () => {
-      toast.error("Could not load template image.");
+        toast.error("Could not load template image.");
     };
 
-  }, [template, fabricCanvas]);
+    const updateSelection = (e: any) => {
+      setSelectedObject(e.target || (e.selected && e.selected[0]) || null);
+    };
 
-  useEffect(() => {
-    if (isOpen && template && canvasContainerRef.current) {
-        // Delay initialization slightly to ensure the container has dimensions
-        const timeoutId = setTimeout(() => {
-            initCanvas();
-        }, 100);
+    canvas.on('selection:created', updateSelection);
+    canvas.on('selection:updated', updateSelection);
+    canvas.on('selection:cleared', () => setSelectedObject(null));
 
-        // Add a resize listener to re-initialize canvas on window resize
-        const handleResize = () => {
-            initCanvas();
-        };
+    setFabricCanvas(canvas);
 
-        window.addEventListener('resize', handleResize);
+    return () => {
+      canvas.dispose();
+      setFabricCanvas(null);
+    };
+  }, [template]);
 
-        return () => {
-            clearTimeout(timeoutId);
-            window.removeEventListener('resize', handleResize);
-            if (fabricCanvas) {
-              fabricCanvas.dispose();
-              setFabricCanvas(null);
-            }
-        };
-    }
-  }, [isOpen, template, initCanvas]);
+  const containerRef = useCallback((node: HTMLDivElement) => {
+      if (node) {
+        // Now that the node is mounted, we can initialize the canvas
+        const cleanup = initCanvas(node);
+        // We can use the cleanup function if needed, but in this pattern,
+        // the re-creation logic handles cleanup via `fabricCanvas.dispose()`.
+      }
+  }, [initCanvas]);
 
   const addText = () => {
     if (!fabricCanvas) return;
@@ -356,7 +338,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
           </div>
           
           {/* Canvas Area - Fixed */}
-          <div ref={canvasContainerRef} className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-hidden p-4">
+          <div ref={containerRef} className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-hidden p-4">
               <canvas
                 ref={canvasRef}
                 className="border shadow-lg"
