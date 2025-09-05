@@ -8,7 +8,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { Label } from '@repo/ui/label';
 import { Download, Save, X, Image as ImageIcon, Upload, Plus, Trash2, Type } from 'lucide-react';
 import { toast } from 'sonner';
-import { fabric } from 'fabric';
+import { Canvas, FabricImage as Image, Textbox } from 'fabric';
 
 interface TextElement {
   id: string;
@@ -46,8 +46,8 @@ interface TemplateEditorModalProps {
 }
 
 export default function TemplateEditorModal({ template, isOpen, onClose }: TemplateEditorModalProps) {
-  const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
-  const [logo, setLogo] = useState<fabric.Image | null>(null);
+  const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
+  const [logo, setLogo] = useState<Image | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
         const canvasContainer = canvasRef.current.parentElement;
         if (!canvasContainer) return;
 
-        const canvas = new fabric.Canvas(canvasRef.current, {
+        const canvas = new Canvas(canvasRef.current, {
             width: canvasContainer.clientWidth,
             height: canvasContainer.clientHeight,
         });
@@ -68,7 +68,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
                 if (template.jsonData) {
                     canvas.loadFromJSON(template.jsonData, () => {
                         // Find and set background image from JSON
-                        if (canvas.backgroundImage instanceof fabric.Image) {
+                        if (canvas.backgroundImage instanceof Image) {
                            const img = canvas.backgroundImage;
                            const canvasAspect = canvas.width / canvas.height;
                            const imgAspect = img.width / img.height;
@@ -90,7 +90,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
             };
 
             if (template.imageUrl) {
-                 fabric.Image.fromURL(template.imageUrl, (img) => {
+                 Image.fromURL(template.imageUrl, (img) => {
                     const canvasAspect = canvas.width / canvas.height;
                     const imgAspect = img.width / img.height;
                     let scaleX = 1, scaleY = 1;
@@ -140,7 +140,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
 
   const addText = () => {
     if (!fabricCanvas) return;
-    const text = new fabric.Textbox('New Text', {
+    const text = new Textbox('New Text', {
       left: 50,
       top: 50,
       fontSize: 20,
@@ -155,7 +155,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl, (img) => {
+        Image.fromURL(dataUrl, (img) => {
           if(logo) fabricCanvas.remove(logo);
           img.scale(0.2);
           fabricCanvas.add(img);
