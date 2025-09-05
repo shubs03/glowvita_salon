@@ -135,69 +135,54 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
 export default function TemplateEditorModal({ template, isOpen, onClose }: TemplateEditorModalProps) {
   const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
   const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const initCanvas = useCallback((container: HTMLDivElement) => {
-    if (!template || !template.jsonData) return;
-    
-    // Create canvas
-    const canvasEl = document.createElement('canvas');
-    container.innerHTML = ''; // Clear previous canvas if any
-    container.appendChild(canvasEl);
-    const canvas = new fabric.Canvas(canvasEl);
-    
-    // Load JSON data
-    canvas.loadFromJSON(template.jsonData, () => {
-      // Scale canvas to fit container
-      const containerWidth = container.clientWidth;
-      const originalWidth = canvas.getWidth();
-      const scale = containerWidth / originalWidth;
-      
-      canvas.setDimensions({
-        width: originalWidth * scale,
-        height: canvas.getHeight() * scale
-      });
-
-      // Scale all objects on canvas
-      canvas.getObjects().forEach(obj => {
-        obj.scaleX = (obj.scaleX || 1) * scale;
-        obj.scaleY = (obj.scaleY || 1) * scale;
-        obj.left = (obj.left || 0) * scale;
-        obj.top = (obj.top || 0) * scale;
-        obj.setCoords();
-      });
-
-      // Scale background image if it exists
-      if (canvas.backgroundImage instanceof fabric.Image) {
-        canvas.backgroundImage.scaleX = (canvas.backgroundImage.scaleX || 1) * scale;
-        canvas.backgroundImage.scaleY = (canvas.backgroundImage.scaleY || 1) * scale;
+  // This useCallback with a ref is the key to ensuring the canvas initializes correctly.
+  // It's called only when the container div is mounted in the DOM.
+  const canvasContainerRef = useCallback((container: HTMLDivElement | null) => {
+    if (container && template && isOpen) {
+      if (fabricCanvas) {
+        fabricCanvas.dispose();
       }
+      
+      const canvasEl = document.createElement('canvas');
+      container.innerHTML = '';
+      container.appendChild(canvasEl);
+      
+      const canvas = new fabric.Canvas(canvasEl, {
+        width: container.clientWidth,
+        height: container.clientHeight,
+        backgroundColor: '#f0f0f0'
+      });
 
-      canvas.renderAll();
-      setFabricCanvas(canvas);
-    });
+      canvas.loadFromJSON(template.jsonData, () => {
+        const background = canvas.backgroundImage;
+        if (background instanceof fabric.Image) {
+          const canvasAspect = container.clientWidth / container.clientHeight;
+          const bgAspect = background.width! / background.height!;
+          let scale;
 
-    // Event listeners
-    canvas.on('selection:created', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
-    canvas.on('selection:updated', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
-    canvas.on('selection:cleared', () => setSelectedObject(null));
-    
-  }, [template]);
+          if (canvasAspect > bgAspect) {
+            scale = container.clientHeight / background.height!;
+          } else {
+            scale = container.clientWidth / background.width!;
+          }
 
-  useEffect(() => {
-    if (isOpen && template && canvasContainerRef.current) {
-      const container = canvasContainerRef.current;
-      // Use a short delay to ensure the container is fully rendered with correct dimensions
-      const timer = setTimeout(() => initCanvas(container), 100);
-      return () => {
-        clearTimeout(timer);
-        if (fabricCanvas) {
-          fabricCanvas.dispose();
-          setFabricCanvas(null);
+          canvas.setWidth(background.width! * scale);
+          canvas.setHeight(background.height! * scale);
+          canvas.setZoom(scale);
         }
-      };
+        
+        canvas.renderAll();
+        setFabricCanvas(canvas);
+      });
+
+      canvas.on('selection:created', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
+      canvas.on('selection:updated', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
+      canvas.on('selection:cleared', () => setSelectedObject(null));
     }
-  }, [isOpen, template, initCanvas]);
+  }, [isOpen, template]);
 
   const addText = () => {
     if (!fabricCanvas) return;
@@ -300,7 +285,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
           </div>
           
           <div ref={canvasContainerRef} className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-auto p-4">
-            {/* The canvas will be appended here by the initCanvas function */}
+            {/* The canvas will be appended here by the useCallback ref */}
           </div>
         </div>
       </DialogContent>
