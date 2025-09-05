@@ -136,53 +136,72 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
   const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
   
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // This useCallback with a ref is the key to ensuring the canvas initializes correctly.
-  // It's called only when the container div is mounted in the DOM.
-  const canvasContainerRef = useCallback((container: HTMLDivElement | null) => {
-    if (container && template && isOpen) {
-      if (fabricCanvas) {
-        fabricCanvas.dispose();
-      }
-      
-      const canvasEl = document.createElement('canvas');
-      container.innerHTML = '';
-      container.appendChild(canvasEl);
-      
-      const canvas = new fabric.Canvas(canvasEl, {
+  const initCanvas = useCallback(() => {
+    if (!canvasContainerRef.current || !template) return;
+    
+    // Create a new canvas element each time
+    const canvasEl = document.createElement('canvas');
+    canvasRef.current = canvasEl;
+    canvasContainerRef.current.innerHTML = '';
+    canvasContainerRef.current.appendChild(canvasEl);
+
+    const container = canvasContainerRef.current;
+    
+    const canvas = new fabric.Canvas(canvasEl, {
         width: container.clientWidth,
         height: container.clientHeight,
         backgroundColor: '#f0f0f0'
-      });
+    });
 
-      canvas.loadFromJSON(template.jsonData, () => {
-        const background = canvas.backgroundImage;
-        if (background instanceof fabric.Image) {
-          const canvasAspect = container.clientWidth / container.clientHeight;
-          const bgAspect = background.width! / background.height!;
-          let scale;
+    canvas.loadFromJSON(template.jsonData, () => {
+      const background = canvas.backgroundImage;
+      if (background instanceof fabric.Image && background.width && background.height) {
+        const canvasAspect = container.clientWidth / container.clientHeight;
+        const bgAspect = background.width / background.height;
+        let scale;
 
-          if (canvasAspect > bgAspect) {
-            scale = container.clientHeight / background.height!;
-          } else {
-            scale = container.clientWidth / background.width!;
-          }
-
-          canvas.setWidth(background.width! * scale);
-          canvas.setHeight(background.height! * scale);
-          canvas.setZoom(scale);
+        if (canvasAspect > bgAspect) {
+          scale = container.clientHeight / background.height;
+        } else {
+          scale = container.clientWidth / background.width;
         }
-        
-        canvas.renderAll();
-        setFabricCanvas(canvas);
-      });
 
-      canvas.on('selection:created', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
-      canvas.on('selection:updated', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
-      canvas.on('selection:cleared', () => setSelectedObject(null));
+        canvas.setWidth(background.width * scale);
+        canvas.setHeight(background.height * scale);
+        canvas.setZoom(scale);
+      }
+      
+      canvas.renderAll();
+      setFabricCanvas(canvas);
+    });
+
+    canvas.on('selection:created', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
+    canvas.on('selection:updated', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
+    canvas.on('selection:cleared', () => setSelectedObject(null));
+
+    return canvas;
+  }, [template]);
+  
+  useEffect(() => {
+    let canvas: fabric.Canvas | null = null;
+    if (isOpen && template) {
+      // Delay initialization to ensure the modal container has dimensions
+      const timer = setTimeout(() => {
+        canvas = initCanvas();
+      }, 50);
+
+      return () => {
+        clearTimeout(timer);
+        if (canvas) {
+          canvas.dispose();
+        }
+        setFabricCanvas(null);
+      };
     }
-  }, [isOpen, template]);
+  }, [isOpen, template, initCanvas]);
 
   const addText = () => {
     if (!fabricCanvas) return;
@@ -239,7 +258,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
     }
   };
 
-  if (!isOpen || !template) return null;
+  if (!template) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -284,8 +303,11 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
             </div>
           </div>
           
-          <div ref={canvasContainerRef} className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-auto p-4">
-            {/* The canvas will be appended here by the useCallback ref */}
+          <div 
+            ref={canvasContainerRef} 
+            className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-auto p-4"
+          >
+            {/* Canvas is dynamically appended here */}
           </div>
         </div>
       </DialogContent>
