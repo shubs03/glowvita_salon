@@ -7,7 +7,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from '@repo/ui/input';
 import { Textarea } from '@repo/ui/textarea';
 import { Label } from '@repo/ui/label';
-import { Download, Save, X, Image as ImageIcon, Upload, Plus, Trash2, Type, Move, Palette, Bold } from 'lucide-react';
+import { Download, Save, X, Image as ImageIcon, Type, Move, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { fabric } from 'fabric';
 
@@ -37,7 +37,6 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
   const [text, setText] = useState('');
   const [fontSize, setFontSize] = useState(20);
   const [fill, setFill] = useState('#000000');
-  const [isBold, setIsBold] = useState(false);
 
   useEffect(() => {
     if (selectedObject && selectedObject.type === 'textbox') {
@@ -45,7 +44,6 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
       setText(textbox.text || '');
       setFontSize(textbox.fontSize || 20);
       setFill(textbox.fill as string || '#000000');
-      setIsBold(textbox.fontWeight === 'bold');
     }
   }, [selectedObject]);
 
@@ -76,15 +74,6 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
     }
   };
   
-  const toggleBold = () => {
-    const newWeight = !isBold ? 'bold' : 'normal';
-    setIsBold(!isBold);
-    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
-      (selectedObject as fabric.Textbox).set('fontWeight', newWeight);
-      canvas.requestRenderAll();
-    }
-  };
-
   const handleDelete = () => {
     if (selectedObject && canvas) {
       canvas.remove(selectedObject);
@@ -125,10 +114,6 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
                 </div>
             </div>
           </div>
-          <Button onClick={toggleBold} variant={isBold ? "secondary" : "outline"} className="w-full">
-            <Bold className="h-4 w-4 mr-2" />
-            {isBold ? "Remove Bold" : "Make Bold"}
-          </Button>
         </div>
       )}
 
@@ -147,77 +132,63 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
   );
 };
 
-
 export default function TemplateEditorModal({ template, isOpen, onClose }: TemplateEditorModalProps) {
   const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
   const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  const initCanvas = () => {
-    if (!containerRef.current || !template || !canvasRef.current) {
-        console.log("Canvas init aborted: no container or template");
-        return;
-    }
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
-    fabric.Image.fromURL(template.imageUrl, (img) => {
-      const container = containerRef.current!;
-      const imgAspectRatio = img.width! / img.height!;
-      const containerAspectRatio = container.clientWidth / container.clientHeight;
+  const initCanvas = useCallback((container: HTMLDivElement) => {
+    if (!template || !template.jsonData) return;
+    
+    // Create canvas
+    const canvasEl = document.createElement('canvas');
+    container.innerHTML = ''; // Clear previous canvas if any
+    container.appendChild(canvasEl);
+    const canvas = new fabric.Canvas(canvasEl);
+    
+    // Load JSON data
+    canvas.loadFromJSON(template.jsonData, () => {
+      // Scale canvas to fit container
+      const containerWidth = container.clientWidth;
+      const originalWidth = canvas.getWidth();
+      const scale = containerWidth / originalWidth;
+      
+      canvas.setDimensions({
+        width: originalWidth * scale,
+        height: canvas.getHeight() * scale
+      });
 
-      let canvasWidth, canvasHeight;
-      if (imgAspectRatio > containerAspectRatio) {
-        canvasWidth = container.clientWidth;
-        canvasHeight = container.clientWidth / imgAspectRatio;
-      } else {
-        canvasHeight = container.clientHeight;
-        canvasWidth = container.clientHeight * imgAspectRatio;
+      // Scale all objects on canvas
+      canvas.getObjects().forEach(obj => {
+        obj.scaleX = (obj.scaleX || 1) * scale;
+        obj.scaleY = (obj.scaleY || 1) * scale;
+        obj.left = (obj.left || 0) * scale;
+        obj.top = (obj.top || 0) * scale;
+        obj.setCoords();
+      });
+
+      // Scale background image if it exists
+      if (canvas.backgroundImage instanceof fabric.Image) {
+        canvas.backgroundImage.scaleX = (canvas.backgroundImage.scaleX || 1) * scale;
+        canvas.backgroundImage.scaleY = (canvas.backgroundImage.scaleY || 1) * scale;
       }
 
-      const canvas = new fabric.Canvas(canvasRef.current, {
-        width: canvasWidth,
-        height: canvasHeight,
-        backgroundColor: '#f0f0f0',
-      });
-      
-      canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-          scaleX: canvasWidth / img.width!,
-          scaleY: canvasHeight / img.height!,
-      });
-      
-      if (template.jsonData && template.jsonData.objects) {
-          const originalWidth = template.jsonData.width || img.width; // Fallback to image width
-          const scaleFactor = canvasWidth / originalWidth;
-          
-          fabric.util.enlivenObjects(template.jsonData.objects, (objects: fabric.Object[]) => {
-            objects.forEach((obj) => {
-              if (obj instanceof fabric.Textbox) {
-                  obj.set({
-                    left: (obj.left || 0) * scaleFactor,
-                    top: (obj.top || 0) * scaleFactor,
-                    scaleX: (obj.scaleX || 1) * scaleFactor,
-                    scaleY: (obj.scaleY || 1) * scaleFactor,
-                  });
-              }
-              canvas.add(obj);
-            });
-            canvas.renderAll();
-          }, 'fabric');
-      }
-
-      canvas.on('selection:created', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
-      canvas.on('selection:updated', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
-      canvas.on('selection:cleared', () => setSelectedObject(null));
-
+      canvas.renderAll();
       setFabricCanvas(canvas);
-      
-    }, { crossOrigin: 'anonymous' });
-  };
-  
+    });
+
+    // Event listeners
+    canvas.on('selection:created', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
+    canvas.on('selection:updated', (e) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
+    canvas.on('selection:cleared', () => setSelectedObject(null));
+    
+  }, [template]);
+
   useEffect(() => {
-    if (isOpen && template) {
-      // Delay initialization to ensure the container is rendered and has dimensions
-      const timer = setTimeout(() => initCanvas(), 100);
+    if (isOpen && template && canvasContainerRef.current) {
+      const container = canvasContainerRef.current;
+      // Use a short delay to ensure the container is fully rendered with correct dimensions
+      const timer = setTimeout(() => initCanvas(container), 100);
       return () => {
         clearTimeout(timer);
         if (fabricCanvas) {
@@ -226,8 +197,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
         }
       };
     }
-  }, [isOpen, template]);
-
+  }, [isOpen, template, initCanvas]);
 
   const addText = () => {
     if (!fabricCanvas) return;
@@ -311,7 +281,6 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 overflow-hidden p-6">
-          {/* Controls Area - Scrollable */}
           <div className="lg:col-span-1 bg-background rounded-lg border p-4 overflow-y-auto space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-4">Add Elements</h3>
@@ -330,16 +299,11 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
             </div>
           </div>
           
-          {/* Canvas Area */}
-          <div ref={containerRef} className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-auto p-4">
-              <canvas
-                ref={canvasRef}
-                className="border shadow-lg"
-              />
+          <div ref={canvasContainerRef} className="lg:col-span-3 bg-muted/50 rounded-lg flex items-center justify-center overflow-auto p-4">
+            {/* The canvas will be appended here by the initCanvas function */}
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
