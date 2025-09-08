@@ -3,6 +3,12 @@ import { NextResponse } from "next/server";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import mongoose from 'mongoose';
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { genkit, googleAI } from 'genkit'; // Import Genkit and Google AI plugin
+
+// Initialize Genkit AI client
+const ai = genkit({
+  plugins: [googleAI()],
+});
 
 // Import the model using relative path to ensure it's registered
 const { default: SocialMediaTemplateModel, modelName } = await import("../../../../../../../packages/lib/src/models/Marketing/socialMediaTemplate.model.js");
