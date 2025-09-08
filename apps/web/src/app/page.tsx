@@ -9,6 +9,8 @@ import { FeaturedSalons } from "@/components/landing/FeaturedSalons";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PlatformFor } from "@/components/landing/PlatformFor";
+import { Testimonials } from "@/components/landing/Testimonials";
 
 export default function HomePage() {
   return (
@@ -52,9 +54,11 @@ export default function HomePage() {
             </div>
           </div>
         </section>
-
+        
+        <PlatformFor />
         <FeaturedSalons />
         <HowItWorks />
+        <Testimonials />
         <AppCTA />
 
       </main>
