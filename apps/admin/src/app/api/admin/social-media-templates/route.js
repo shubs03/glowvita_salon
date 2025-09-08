@@ -272,19 +272,6 @@ export const POST = authMiddlewareAdmin(async (req) => {
       }
     } else if (image) {
         // AI-powered text extraction and background generation
-        const { text, media } = await ai.generate({
-            model: 'googleai/gemini-2.5-flash-image-preview',
-            prompt: `You are a graphic design assistant. Analyze the following image.
-1.  Extract all text elements. For each element, provide its text content, approximate position (left, top), size (width, height), and style (font size, font weight, color hex code, text alignment). Format this as a JSON array.
-2.  Remove all the text from the image, cleanly inpainting the background where the text used to be.
-
-Image is here:
-{{media url="${image.toString()}"}}`,
-            config: {
-              responseModalities: ['TEXT', 'IMAGE'],
-            },
-        });
-        
         templateData.jsonData = {
             "version": "5.3.0",
             "objects": [
@@ -371,11 +358,6 @@ Image is here:
             ],
             "background": image
         };
-
-        // Also update the main imageUrl to be the clean one if available
-        if (media && media.url) {
-            templateData.imageUrl = media.url;
-        }
       
     } else {
       // Create a blank template with default background
@@ -792,5 +774,6 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     return NextResponse.json({ success: false, message: 'Failed to delete template', error: error.message }, { status: 500 });
   }
 });
+    
 
     
