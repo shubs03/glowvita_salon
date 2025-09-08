@@ -7,9 +7,18 @@ import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
 // Initialize Genkit AI client with the API key from environment variables
+if (!process.env.GEMINI_API_KEY) {
+  console.warn("GEMINI_API_KEY environment variable is not set. AI features will be disabled.");
+}
+
 const ai = genkit({
-  plugins: [googleAI({ apiKey: process.env.GEMINI_API_KEY })],
+  plugins: [
+    googleAI({
+      apiKey: process.env.GEMINI_API_KEY,
+    }),
+  ],
 });
+
 
 // Import the model using relative path to ensure it's registered
 const { default: SocialMediaTemplateModel, modelName } = await import("../../../../../../../packages/lib/src/models/Marketing/socialMediaTemplate.model.js");
@@ -265,10 +274,12 @@ export const POST = authMiddlewareAdmin(async (req) => {
         // AI-powered text extraction and background generation
         const { text, media } = await ai.generate({
             model: 'googleai/gemini-2.5-flash-image-preview',
-            prompt: [
-              { media: { url: image.toString() } },
-              { text: 'Extract all text elements with their positions and styles. Then, remove all text from the image, inpainting the background cleanly.' },
-            ],
+            prompt: `You are a graphic design assistant. Analyze the following image.
+1.  Extract all text elements. For each element, provide its text content, approximate position (left, top), size (width, height), and style (font size, font weight, color hex code, text alignment). Format this as a JSON array.
+2.  Remove all the text from the image, cleanly inpainting the background where the text used to be.
+
+Image is here:
+{{media url="${image.toString()}"}}`,
             config: {
               responseModalities: ['TEXT', 'IMAGE'],
             },
@@ -325,6 +336,9 @@ export const POST = authMiddlewareAdmin(async (req) => {
             });
         }
         
+        // Use the cleaned background image if available, otherwise fallback to the original image
+        const backgroundImageUrl = media?.url || image.toString();
+
         // Construct the jsonData for Fabric.js
         templateData.jsonData = {
             version: "5.3.0",
@@ -336,9 +350,9 @@ export const POST = authMiddlewareAdmin(async (req) => {
                 originY: 'top',
                 left: 0,
                 top: 0,
-                width: 900,
+                width: 900, // You might want to adjust this based on the actual image dimensions
                 height: 800,
-                src: media.url, // Use the cleaned background image from the AI
+                src: backgroundImageUrl,
                 crossOrigin: 'anonymous',
                 filters: []
             },
@@ -346,8 +360,8 @@ export const POST = authMiddlewareAdmin(async (req) => {
             height: 800
         };
 
-        // Also update the main imageUrl to be the clean one
-        templateData.imageUrl = media.url;
+        // Also update the main imageUrl to be the clean one if available
+        templateData.imageUrl = backgroundImageUrl;
       
     } else {
       // Create a blank template with default background

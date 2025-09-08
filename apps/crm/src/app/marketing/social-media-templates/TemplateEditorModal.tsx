@@ -96,7 +96,7 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
       canvas.requestRenderAll();
     }
   };
-
+  
   const handleTextAlignChange = (value: string) => {
     setTextAlign(value);
     if (selectedObject && selectedObject.type === 'textbox' && canvas) {
@@ -220,7 +220,7 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
                   onClick={() => {
                     if (canvas && selectedObject) {
                       selectedObject.set({ 
-                        left: canvas.width - selectedObject.width! - 50, 
+                        left: canvas.width - selectedObject.getScaledWidth() - 50, 
                         top: 50 
                       });
                       canvas.renderAll();
@@ -247,70 +247,40 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  
   const [saveCustomizedTemplate] = useSaveCustomizedTemplateMutation();
 
   const initCanvas = useCallback((container: HTMLDivElement) => {
-    if (!container || !template) return null;
-
-    const canvasEl = document.createElement('canvas');
+    if (!container || !template) return;
+    
+    // Clear previous canvas if any
     container.innerHTML = '';
+    const canvasEl = document.createElement('canvas');
     container.appendChild(canvasEl);
 
     const canvas = new fabric.Canvas(canvasEl, {
-      width: container.clientWidth,
-      height: container.clientHeight,
-      backgroundColor: '#f0f0f0'
+        width: container.clientWidth,
+        height: container.clientHeight,
+        backgroundColor: '#f0f0f0',
     });
 
     if (template.jsonData && typeof template.jsonData === 'object') {
-        canvas.loadFromJSON(template.jsonData, () => {
-            const background = canvas.backgroundImage as fabric.Image;
-            if (background) {
-                const containerWidth = container.clientWidth;
-                const containerHeight = container.clientHeight;
-                const imgAspectRatio = background.width / background.height;
-                const containerAspectRatio = containerWidth / containerHeight;
+      canvas.loadFromJSON(template.jsonData, () => {
+        const background = canvas.backgroundImage as fabric.Image;
+        if (background && background.width && background.height) {
+          const containerWidth = container.clientWidth;
+          const imgAspectRatio = background.width / background.height;
+          
+          const canvasWidth = containerWidth;
+          const canvasHeight = containerWidth / imgAspectRatio;
 
-                let canvasWidth, canvasHeight;
-                if (imgAspectRatio > containerAspectRatio) {
-                    canvasWidth = containerWidth;
-                    canvasHeight = containerWidth / imgAspectRatio;
-                } else {
-                    canvasHeight = containerHeight;
-                    canvasWidth = containerHeight * imgAspectRatio;
-                }
-                
-                canvas.setWidth(canvasWidth);
-                canvas.setHeight(canvasHeight);
-                canvas.setZoom(canvasWidth / background.width);
-            }
-            canvas.renderAll();
-        });
-    } else if (template.imageUrl) {
-        fabric.Image.fromURL(template.imageUrl, (img) => {
-            const containerWidth = container.clientWidth;
-            const containerHeight = container.clientHeight;
-            const imgAspectRatio = img.width / img.height;
-            const containerAspectRatio = containerWidth / containerHeight;
-
-            let canvasWidth, canvasHeight;
-            if (imgAspectRatio > containerAspectRatio) {
-                canvasWidth = containerWidth;
-                canvasHeight = containerWidth / imgAspectRatio;
-            } else {
-                canvasHeight = containerHeight;
-                canvasWidth = containerHeight * imgAspectRatio;
-            }
-
-            canvas.setWidth(canvasWidth);
-            canvas.setHeight(canvasHeight);
-            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-                scaleX: canvas.width / img.width,
-                scaleY: canvas.height / img.height
-            });
-        }, { crossOrigin: 'anonymous' });
+          canvas.setWidth(canvasWidth);
+          canvas.setHeight(canvasHeight);
+          canvas.setZoom(canvasWidth / background.width);
+        } else {
+            console.warn("Background image not found in JSON or has no dimensions.");
+        }
+        canvas.renderAll();
+      });
     }
 
     canvas.on('selection:created', (e: any) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
@@ -318,25 +288,21 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
     canvas.on('selection:cleared', () => setSelectedObject(null));
 
     setFabricCanvas(canvas);
-    return canvas;
   }, [template]);
 
   const canvasContainerRef = useCallback((node: HTMLDivElement) => {
       if (node && isOpen && template) {
-          const canvas = initCanvas(node);
-          return () => {
-              if(canvas) {
-                  canvas.dispose();
-              }
-          };
+          // Delay initialization to ensure modal is fully rendered
+          const timer = setTimeout(() => initCanvas(node), 50);
+          return () => clearTimeout(timer);
       }
   }, [isOpen, template, initCanvas]);
 
   const addText = () => {
     if (!fabricCanvas) return;
     const text = new fabric.Textbox('Click to edit text', {
-      left: fabricCanvas.width / 2 - 100,
-      top: fabricCanvas.height / 2,
+      left: (fabricCanvas.width || 0) / 2 - 100,
+      top: (fabricCanvas.height || 0) / 2,
       fontSize: 30,
       fill: '#000000',
       width: 200,
@@ -357,7 +323,6 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
         fabric.Image.fromURL(dataUrl, (img: any) => {
-          // Scale the image to a reasonable size
           const maxWidth = 150;
           const maxHeight = 150;
           
@@ -380,21 +345,18 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
       };
       reader.readAsDataURL(file);
     }
-    // Clear the input value to allow re-uploading the same file
     e.target.value = '';
   };
 
   const handleDownload = () => {
     if (fabricCanvas) {
-      // Temporarily deselect all objects to avoid selection outlines in the export
       fabricCanvas.discardActiveObject();
       fabricCanvas.renderAll();
       
-      // Export at higher quality
       const dataUrl = fabricCanvas.toDataURL({ 
         format: 'jpeg', 
         quality: 0.9,
-        multiplier: 2 // Export at 2x resolution for better quality
+        multiplier: 2
       });
       
       const link = document.createElement('a');
@@ -413,12 +375,8 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
       setIsSaving(true);
       
       try {
-        // Get the JSON representation of the canvas
         const canvasJson = fabricCanvas.toJSON(['selectable', 'evented', 'id']);
         
-        console.log("Saving canvas JSON:", JSON.stringify(canvasJson, null, 2));
-        
-        // Save as a customized version
         await saveCustomizedTemplate({
           templateId: template._id || template.id,
           jsonData: canvasJson,
@@ -433,9 +391,6 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
         }).unwrap();
         
         toast.success("Template customization saved successfully!");
-        
-        // Optionally close the modal after saving
-        // onClose();
         
       } catch (error) {
         console.error('Error saving template:', error);
@@ -464,22 +419,6 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
               <Button onClick={handleSave} variant="outline" size="sm" disabled={isSaving}>
                 <Save className="h-4 w-4 mr-2" />
                 {isSaving ? 'Saving...' : 'Save'}
-              </Button>
-              <Button 
-                onClick={() => {
-                  console.log('=== DEBUG TEMPLATE DATA ===');
-                  console.log('Template title:', template?.title);
-                  console.log('Template imageUrl length:', template?.imageUrl?.length);
-                  console.log('Template jsonData:', template?.jsonData);
-                  console.log('Canvas objects count:', fabricCanvas?.getObjects().length);
-                  console.log('Canvas background:', fabricCanvas?.backgroundColor);
-                  console.log('Canvas backgroundImage:', fabricCanvas?.backgroundImage);
-                  console.log('==============================');
-                }} 
-                variant="secondary" 
-                size="sm"
-              >
-                Debug
               </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
                 <X className="h-4 w-4" />
