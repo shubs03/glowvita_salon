@@ -314,7 +314,6 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
   );
 };
 
-
 export default function HomePage() {
   const scrollAdvantages = (direction: "left" | "right") => {
     const container = document.getElementById("advantages-container");
@@ -399,7 +398,6 @@ export default function HomePage() {
           </div>
           <div className="absolute bottom-0 left-0 right-0 h-16 md:h-32 bg-gradient-to-t from-secondary/30 to-transparent"></div>
         </section>
-
         <section className="py-16 md:py-20 bg-gradient-to-br from-background via-secondary/10 to-background relative overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-12 md:mb-16">

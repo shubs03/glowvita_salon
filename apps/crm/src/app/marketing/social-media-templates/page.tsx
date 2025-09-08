@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Input } from '@repo/ui/input';
 import { Badge } from '@repo/ui/badge';
-import { ArrowLeft, Search, Image, Eye, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Search, Image, Eye, RefreshCw, ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useGetCrmSocialMediaTemplatesQuery } from '@repo/store/services/api';
 import { toast } from 'sonner';
