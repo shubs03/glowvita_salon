@@ -6,9 +6,9 @@ import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
-// Initialize Genkit AI client
+// Initialize Genkit AI client with the API key from environment variables
 const ai = genkit({
-  plugins: [googleAI()],
+  plugins: [googleAI({ apiKey: process.env.GEMINI_API_KEY })],
 });
 
 // Import the model using relative path to ensure it's registered
