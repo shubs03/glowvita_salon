@@ -1,16 +1,10 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState, useMemo } from 'react';
+import { useDispatch } from 'react-redux';
 import { useGetSuperDataQuery, useCreateFaqMutation, useUpdateFaqMutation, useDeleteFaqMutation, useGetFaqsQuery } from '@repo/store/api';
-import { 
-  selectAllFaqs, 
-  selectFaqsStatus, 
-  selectFaqsError,
-  setFaqs,
-  resetError
-} from '../../../../../packages/store/src/slices/faqSlice';
+import { resetError } from '../../../../../packages/store/src/slices/faqSlice';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -19,11 +13,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
+import { Skeleton } from "@repo/ui/skeleton";
 import { Eye, Edit, Trash2, ToggleLeft, ToggleRight, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { toast } from "sonner";
-import { ThunkAction, UnknownAction } from '@reduxjs/toolkit';
-import { RootState } from '@repo/store/store';
 
 type FAQ = {
   _id: string;
@@ -39,20 +32,12 @@ export default function FaqManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   
-  const faqs = useSelector(selectAllFaqs);
-  const status = useSelector(selectFaqsStatus);
-  const error = useSelector(selectFaqsError);
-
-  const { data: fetchedFaqs, refetch } = useGetFaqsQuery(undefined);
+  // Use RTK Query data directly instead of Redux slice
+  const { data: faqs = [], isLoading: isFaqsLoading, refetch } = useGetFaqsQuery(undefined);
+  
   const [addNewFaq] = useCreateFaqMutation();
   const [updateFaqItem] = useUpdateFaqMutation();
   const [deleteFaqItem] = useDeleteFaqMutation();
-
-  useEffect(() => {
-    if (fetchedFaqs) {
-      dispatch(setFaqs(fetchedFaqs));
-    }
-  }, [fetchedFaqs, dispatch]);
   
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -147,6 +132,74 @@ export default function FaqManagementPage() {
     }
   };
 
+  if (isFaqsLoading || isSuperDataLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Skeleton className="h-8 w-48 mb-6" />
+
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <Skeleton className="h-6 w-64 mb-2" />
+                <Skeleton className="h-4 w-80" />
+              </div>
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-32" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                    <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                    <TableHead><Skeleton className="h-4 w-24" /></TableHead>
+                    <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                    <TableHead className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-medium max-w-sm">
+                        <Skeleton className="h-4 w-48" />
+                      </TableCell>
+                      <TableCell className="max-w-sm">
+                        <Skeleton className="h-4 w-40" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                      </TableCell>
+                      <TableCell className="max-w-sm">
+                        <Skeleton className="h-4 w-32" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-14 rounded-full" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-2">
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <Skeleton className="h-10 w-full mt-4" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -181,16 +234,7 @@ export default function FaqManagementPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {status === 'loading' ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div className="flex flex-col items-center justify-center space-y-2">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                        <p className="text-sm text-muted-foreground">Loading FAQs...</p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : faqs.length === 0 ? (
+                {faqs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       No FAQs found. Add your first FAQ to get started.
@@ -234,7 +278,7 @@ export default function FaqManagementPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleToggleClick(faq._id, faq.visible)}
-                            disabled={status === 'loading'}
+                            disabled={isFaqsLoading}
                           >
                             {faq.visible ? (
                               <ToggleRight className="h-4 w-4 text-green-600" />
@@ -355,7 +399,7 @@ export default function FaqManagementPage() {
             </Button>
             <Button 
               type="button"
-              disabled={status === 'loading'}
+              disabled={isFaqsLoading}
               onClick={async () => {
                 if (newFaq.question && newFaq.answer && newFaq.category) {
                   try {
@@ -487,7 +531,7 @@ export default function FaqManagementPage() {
             <Button
               type="button"
               disabled={
-                status === 'loading' ||
+                isFaqsLoading ||
                 !selectedFaq?.question ||
                 !selectedFaq?.answer ||
                 !selectedFaq?.category
@@ -495,7 +539,7 @@ export default function FaqManagementPage() {
               onClick={async () => {
                 if (selectedFaq) {
                   try {
-                    const originalFaq = faqs.find(f => f._id === selectedFaq._id);
+                    const originalFaq = faqs.find((f: FAQ) => f._id === selectedFaq._id);
                     if (originalFaq && (selectedFaq.question !== originalFaq.question || selectedFaq.answer !== originalFaq.answer || selectedFaq.category !== originalFaq.category)) {
                       await updateFaqItem({
                           id: selectedFaq._id,
@@ -519,7 +563,7 @@ export default function FaqManagementPage() {
                 }
               }}
             >
-              {status === 'loading' ? 'Saving...' : 'Save Changes'}
+              {isFaqsLoading ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </DialogContent>
