@@ -1287,6 +1287,15 @@ export const glowvitaApi = createApi({
         return { templates, total };
       }
     }),
+
+    saveCustomizedTemplate: builder.mutation({
+      query: (templateData) => ({
+        url: "/crm/social-media-templates",
+        method: "POST",
+        body: templateData,
+      }),
+      invalidatesTags: ["CrmSocialMediaTemplate"],
+    }),
   }),
 });
 
@@ -1490,4 +1499,5 @@ export const {
 
   // CRM Social Media Templates Endpoints
   useGetCrmSocialMediaTemplatesQuery,
+  useSaveCustomizedTemplateMutation,
 } = glowvitaApi;

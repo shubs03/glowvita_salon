@@ -36,6 +36,13 @@ const socialMediaTemplateSchema = new mongoose.Schema({
   jsonData: {
     type: Object,
     default: null,
+    validate: {
+      validator: function(v) {
+        // Allow null/undefined or valid objects
+        return v === null || v === undefined || typeof v === 'object';
+      },
+      message: 'JSON data must be a valid object'
+    }
   },
   
   // System fields

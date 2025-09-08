@@ -174,9 +174,9 @@ export const POST = authMiddlewareAdmin(async (req) => {
     }
 
     // Validate required fields
-    const { title, category, availableFor = 'admin', description = '', image, status = 'Draft' } = body;
+    const { title, category, availableFor = 'admin', description = '', image, jsonData, status = 'Draft' } = body;
     
-    console.log('Validating fields:', { title, category, availableFor });
+    console.log('Validating fields:', { title, category, availableFor, hasJsonData: !!jsonData });
     
     if (!title || !category || !availableFor) {
       const missingFields = [];
@@ -237,10 +237,133 @@ export const POST = authMiddlewareAdmin(async (req) => {
     // Only add imageUrl if image is provided
     if (image) {
       templateData.imageUrl = image.toString();
+    }
+    
+    // Add JSON data if provided, otherwise create default structure
+    if (jsonData) {
+      try {
+        templateData.jsonData = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
+        console.log('Using provided JSON data');
+      } catch (error) {
+        console.error('Error parsing jsonData:', error);
+        return NextResponse.json(
+          { 
+            success: false,
+            message: 'Invalid JSON data format' 
+          },
+          { status: 400 }
+        );
+      }
+    } else if (image) {
+      // Create default Fabric.js JSON structure with the uploaded image as background
       templateData.jsonData = {
         "version": "5.3.0",
-        "objects": [],
-        "background": image.toString(),
+        "objects": [
+          {
+            "type": "textbox",
+            "version": "5.3.0",
+            "originX": "center",
+            "originY": "center",
+            "left": 450,
+            "top": 100,
+            "width": 400,
+            "height": 60,
+            "fill": "#000000",
+            "text": "Your Title Here",
+            "fontSize": 48,
+            "fontWeight": "bold",
+            "fontFamily": "Arial",
+            "textAlign": "center",
+            "selectable": true,
+            "editable": true
+          },
+          {
+            "type": "textbox",
+            "version": "5.3.0",
+            "originX": "center",
+            "originY": "center",
+            "left": 450,
+            "top": 200,
+            "width": 500,
+            "height": 80,
+            "fill": "#333333",
+            "text": "Add your message here",
+            "fontSize": 24,
+            "fontWeight": "normal",
+            "fontFamily": "Arial",
+            "textAlign": "center",
+            "selectable": true,
+            "editable": true
+          }
+        ],
+        "backgroundImage": {
+          "type": "image",
+          "version": "5.3.0",
+          "originX": "left",
+          "originY": "top",
+          "left": 0,
+          "top": 0,
+          "width": 900,
+          "height": 800,
+          "fill": "rgb(0,0,0)",
+          "stroke": null,
+          "strokeWidth": 0,
+          "strokeDashArray": null,
+          "strokeLineCap": "butt",
+          "strokeDashOffset": 0,
+          "strokeLineJoin": "miter",
+          "strokeUniform": false,
+          "strokeMiterLimit": 4,
+          "scaleX": 1,
+          "scaleY": 1,
+          "angle": 0,
+          "flipX": false,
+          "flipY": false,
+          "opacity": 1,
+          "shadow": null,
+          "visible": true,
+          "backgroundColor": "",
+          "fillRule": "nonzero",
+          "paintFirst": "fill",
+          "globalCompositeOperation": "source-over",
+          "skewX": 0,
+          "skewY": 0,
+          "cropX": 0,
+          "cropY": 0,
+          "src": image.toString(),
+          "crossOrigin": "anonymous",
+          "filters": []
+        },
+        "width": 900,
+        "height": 800
+      };
+    } else {
+      // Create a blank template with default background
+      templateData.jsonData = {
+        "version": "5.3.0",
+        "objects": [
+          {
+            "type": "textbox",
+            "version": "5.3.0",
+            "originX": "center",
+            "originY": "center",
+            "left": 450,
+            "top": 400,
+            "width": 400,
+            "height": 60,
+            "fill": "#000000",
+            "text": "Your Title Here",
+            "fontSize": 48,
+            "fontWeight": "bold",
+            "fontFamily": "Arial",
+            "textAlign": "center",
+            "selectable": true,
+            "editable": true
+          }
+        ],
+        "backgroundColor": "#ffffff",
+        "width": 900,
+        "height": 800
       };
     }
     
