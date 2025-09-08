@@ -11,6 +11,8 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PlatformFor } from "@/components/landing/PlatformFor";
 import { Testimonials } from "@/components/landing/Testimonials";
+import { Offers } from "@/components/landing/Offers";
+import { Products } from "@/components/landing/Products";
 
 export default function HomePage() {
   return (
@@ -57,6 +59,8 @@ export default function HomePage() {
         
         <PlatformFor />
         <FeaturedSalons />
+        <Offers />
+        <Products />
         <HowItWorks />
         <Testimonials />
         <AppCTA />
