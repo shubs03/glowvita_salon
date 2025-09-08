@@ -6,6 +6,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
+import { Skeleton } from "@repo/ui/skeleton";
 import { toast } from "sonner";
 import { useGetTaxFeeSettingsQuery, useUpdateTaxFeeSettingsMutation } from '@repo/store/api';
 
@@ -22,7 +23,7 @@ interface FeeSettings {
 }
 
 export default function TaxAndFeesPage() {
-  const { data: currentSettings, isLoading: isFetching } = useGetTaxFeeSettingsQuery();
+  const { data: currentSettings, isLoading: isFetching } = useGetTaxFeeSettingsQuery(undefined);
   const [updateTaxFeeSettings, { isLoading: isUpdating }] = useUpdateTaxFeeSettingsMutation();
   
   const [settings, setSettings] = useState<FeeSettings>({
@@ -72,14 +73,131 @@ export default function TaxAndFeesPage() {
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
-      toast.error(error?.data?.message || "Failed to update settings");
+      const errorMessage =
+        (typeof error === "object" && error !== null && "data" in error && typeof (error as any).data?.message === "string")
+          ? (error as any).data.message
+          : "Failed to update settings";
+      toast.error(errorMessage);
     }
   };
 
   if (isFetching) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          <Skeleton className="h-8 w-64 mb-6" />
+          
+          <form>
+            <Card className="mb-8">
+              <CardHeader>
+                <Skeleton className="h-6 w-40 mb-2" />
+                <Skeleton className="h-4 w-80" />
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Platform Fee Section Skeleton */}
+                <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Skeleton className="h-6 w-32" />
+                      <div className="flex items-center space-x-2">
+                        <Skeleton className="h-6 w-11 rounded-full" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Skeleton className="h-4 w-8" />
+                      <div className="inline-flex rounded-md shadow-sm">
+                        <Skeleton className="h-9 w-24 rounded-l-lg" />
+                        <Skeleton className="h-9 w-32 rounded-r-lg" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <Skeleton className="h-4 w-32 mb-1" />
+                    <div className="relative rounded-md shadow-sm">
+                      <Skeleton className="h-10 w-full rounded-md" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Service Tax Section Skeleton */}
+                <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Skeleton className="h-6 w-40" />
+                      <div className="flex items-center space-x-2">
+                        <Skeleton className="h-6 w-11 rounded-full" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Skeleton className="h-4 w-8" />
+                      <div className="inline-flex rounded-md shadow-sm">
+                        <Skeleton className="h-9 w-24 rounded-l-lg" />
+                        <Skeleton className="h-9 w-32 rounded-r-lg" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <Skeleton className="h-4 w-32 mb-1" />
+                    <div className="relative rounded-md shadow-sm">
+                      <Skeleton className="h-10 w-full rounded-md" />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Active Fees Table Skeleton */}
+            <Card className="mb-8">
+              <CardHeader>
+                <Skeleton className="h-6 w-40 mb-2" />
+                <Skeleton className="h-4 w-80" />
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                      <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                      <TableHead><Skeleton className="h-4 w-12" /></TableHead>
+                      <TableHead className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="font-medium"><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-12 rounded-full" />
+                      </TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="h-4 w-8 ml-auto" />
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="font-medium"><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-12 rounded-full" />
+                      </TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="h-4 w-8 ml-auto" />
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <Skeleton className="h-9 w-20" />
+              <Skeleton className="h-9 w-28" />
+            </div>
+          </form>
+        </div>
       </div>
     );
   }
