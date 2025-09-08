@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 
 const socialMediaTemplateSchema = new mongoose.Schema({
@@ -21,6 +22,13 @@ const socialMediaTemplateSchema = new mongoose.Schema({
       message: 'Available For must be one of: admin, vendor, doctor, supplier'
     },
     default: 'admin'
+  },
+  
+  // imageUrl for preview cards
+  imageUrl: {
+    type: String,
+    default: '',
+    trim: true
   },
   
   // Optional fields with defaults

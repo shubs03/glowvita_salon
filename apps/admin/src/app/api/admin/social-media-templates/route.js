@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import mongoose from 'mongoose';
@@ -141,7 +140,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
       return NextResponse.json({ success: false, message: 'Authentication required' }, { status: 401 });
     }
 
-    const { title, category, availableFor = 'admin', description = '', image, jsonData, status = 'Draft' } = body;
+    const { title, category, availableFor = 'admin', description = '', image, status = 'Draft' } = body;
     
     if (!title || !category || !availableFor) {
       const missingFields = ['title', 'category', 'availableFor'].filter(f => !body[f]);
@@ -165,13 +164,11 @@ export const POST = authMiddlewareAdmin(async (req) => {
       status: status || 'Draft',
       createdBy: user._id,
       updatedBy: user._id,
-      isActive: body.isActive !== undefined ? Boolean(body.isActive) : true
-    };
-    
-    // Use hardcoded template data with the uploaded image as the background
-    templateData.jsonData = {
-        "version": "5.3.0",
-        "objects": [
+      isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
+      imageUrl: image, // Save the image url for preview cards
+      jsonData: {
+          "version": "5.3.0",
+          "objects": [
             {
                 "type": "textbox",
                 "version": "5.3.0",
@@ -263,8 +260,11 @@ export const POST = authMiddlewareAdmin(async (req) => {
                 "editable": true
             }
         ],
-        "background": image // Use the uploaded image directly as the background
-    };
+        "background": {
+          "type": "image",
+          "src": image // Correctly format for Fabric.js
+        }
+    }};
     
     const newTemplate = await SocialMediaTemplate.create(templateData);
 
@@ -412,9 +412,16 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
           { status: 400 }
         );
       }
+      // Update the imageUrl for the card preview
+      updateData.imageUrl = image;
+      
+      // Update the background in jsonData
       updateData.jsonData = {
         ...existingTemplate.jsonData,
-        "background": image
+        "background": {
+          "type": "image",
+          "src": image
+        }
       };
     }
     

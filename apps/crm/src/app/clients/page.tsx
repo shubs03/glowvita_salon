@@ -28,6 +28,7 @@ type Client = {
   occupation: string;
   profilePicture?: string;
   address: string;
+  preferences?: string;
   lastVisit: string;
   totalBookings: number;
   totalSpent: number;
@@ -89,6 +90,7 @@ export default function ClientsPage() {
         occupation: string;
         profilePicture: string;
         address: string;
+        preferences: string;
     }>({
         fullName: '',
         email: '',
@@ -99,6 +101,7 @@ export default function ClientsPage() {
         occupation: '',
         profilePicture: '',
         address: '',
+        preferences: ''
     });
 
     const filteredClients = useMemo(() => {
@@ -127,6 +130,7 @@ export default function ClientsPage() {
                 occupation: client.occupation,
                 profilePicture: client.profilePicture || '',
                 address: client.address,
+                preferences: client.preferences || ''
             });
         } else {
             setFormData({
@@ -139,6 +143,7 @@ export default function ClientsPage() {
                 occupation: '',
                 profilePicture: '',
                 address: '',
+                preferences: ''
             });
         }
         setSelectedClient(client || null);
@@ -178,7 +183,8 @@ export default function ClientsPage() {
                 country: formData.country.trim(),
                 occupation: formData.occupation.trim(),
                 profilePicture: formData.profilePicture,
-                address: formData.address.trim()
+                address: formData.address.trim(),
+                preferences: formData.preferences.trim()
             };
 
             if (selectedClient) {
@@ -746,6 +752,18 @@ export default function ClientsPage() {
                                 value={formData.address} 
                                 onChange={handleInputChange} 
                                 placeholder="Enter full address"
+                                rows={3}
+                            />
+                        </div>
+                        {/* Preferences */}
+                        <div className="space-y-2">
+                            <Label htmlFor="preferences">Preferences</Label>
+                            <Textarea
+                                id="preferences"
+                                name="preferences"
+                                value={formData.preferences}
+                                onChange={handleInputChange}
+                                placeholder="Enter any client preferences or notes"
                                 rows={3}
                             />
                         </div>
@@ -1361,6 +1379,10 @@ export default function ClientsPage() {
                                                         <Label className="text-xs md:text-sm font-medium text-gray-500">Address</Label>
                                                         <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.address || 'Not provided'}</p>
                                                     </div>
+                                                     <div className="col-span-1 md:col-span-2">
+                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Preferences</Label>
+                                                        <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.preferences || 'No preferences recorded.'}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1547,3 +1569,61 @@ export default function ClientsPage() {
         </div>
     );
 }
+
+```
+- packages/utils/package.json:
+```json
+{
+    "name": "@repo/utils",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC"
+  }
+  
+```
+- packages/utils/src/index.ts:
+```ts
+// packages/utils/src/index.ts
+
+export const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(price);
+};
+
+export const cn = (...classes: string[]) => {
+  return classes.filter(Boolean).join(' ');
+};
+
+```
+- tsconfig.base.json:
+```json
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Default",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": false,
+    "isolatedModules": true,
+    "moduleResolution": "bundler",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "preserveWatchOutput": true,
+    "skipLibCheck": true,
+    "strict": true
+  },
+  "exclude": ["node_modules"]
+}
+
+```
