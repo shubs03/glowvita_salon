@@ -37,7 +37,7 @@ export function SalonCard({ name, rating, location, image, hint, topRated = fals
       )}
 
       {/* Details container that slides up */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/30 backdrop-blur-lg text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out">
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/50 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out">
         <h3 className="font-bold text-xl truncate">{name}</h3>
         <div className="flex items-center justify-between text-sm mt-1 mb-2 text-gray-200">
             <div className="flex items-center gap-1">
