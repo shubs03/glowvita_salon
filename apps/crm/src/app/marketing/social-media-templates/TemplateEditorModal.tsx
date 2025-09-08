@@ -63,44 +63,9 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
     }
   };
 
-  const handleFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSize = parseInt(e.target.value, 10);
-    setFontSize(newSize);
-    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
-      (selectedObject as fabric.Textbox).set('fontSize', newSize);
-      canvas.requestRenderAll();
-    }
-  };
-
-  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newColor = e.target.value;
-    setFill(newColor);
-    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
-      (selectedObject as fabric.Textbox).set('fill', newColor);
-      canvas.requestRenderAll();
-    }
-  };
-
-  const handleFontFamilyChange = (value: string) => {
-    setFontFamily(value);
-    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
-      (selectedObject as fabric.Textbox).set('fontFamily', value);
-      canvas.requestRenderAll();
-    }
-  };
-
-  const handleFontWeightChange = (value: string) => {
-    setFontWeight(value);
-    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
-      (selectedObject as fabric.Textbox).set('fontWeight', value);
-      canvas.requestRenderAll();
-    }
-  };
-  
-  const handleTextAlignChange = (value: string) => {
-    setTextAlign(value);
-    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
-      (selectedObject as fabric.Textbox).set('textAlign', value);
+  const handlePropertyChange = (property: string, value: any) => {
+    if (selectedObject && canvas) {
+      selectedObject.set(property, value);
       canvas.requestRenderAll();
     }
   };
@@ -134,14 +99,14 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="font-size">Font Size</Label>
-              <Input id="font-size" type="number" value={fontSize} onChange={handleFontSizeChange} min="8" max="200" />
+              <Input id="font-size" type="number" value={fontSize} onChange={(e) => handlePropertyChange('fontSize', parseInt(e.target.value))} min="8" max="200" />
             </div>
             <div className="space-y-2">
                 <Label htmlFor="font-color">Color</Label>
                 <div className="relative">
                     <div className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border" style={{ backgroundColor: fill }} />
-                    <Input id="font-color" type="text" value={fill} onChange={handleColorChange} className="pl-9" />
-                    <Input type="color" value={fill} onChange={handleColorChange} className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 border-none bg-transparent cursor-pointer" />
+                    <Input id="font-color" type="text" value={fill} onChange={(e) => handlePropertyChange('fill', e.target.value)} className="pl-9" />
+                    <Input type="color" value={fill} onChange={(e) => handlePropertyChange('fill', e.target.value)} className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 border-none bg-transparent cursor-pointer" />
                 </div>
             </div>
           </div>
@@ -151,7 +116,7 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
               <select 
                 id="font-family" 
                 value={fontFamily} 
-                onChange={(e) => handleFontFamilyChange(e.target.value)}
+                onChange={(e) => handlePropertyChange('fontFamily', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="Arial">Arial</option>
@@ -169,7 +134,7 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
               <select 
                 id="font-weight" 
                 value={fontWeight} 
-                onChange={(e) => handleFontWeightChange(e.target.value)}
+                onChange={(e) => handlePropertyChange('fontWeight', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="normal">Normal</option>
@@ -183,7 +148,7 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
             <select 
               id="text-align" 
               value={textAlign} 
-              onChange={(e) => handleTextAlignChange(e.target.value)}
+              onChange={(e) => handlePropertyChange('textAlign', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="left">Left</option>
@@ -199,38 +164,6 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
          <div className="space-y-4 p-4 border rounded-lg">
             <h4 className="font-semibold text-lg flex items-center gap-2"><ImageIcon className="h-5 w-5" /> Image Properties</h4>
             <p className="text-sm text-muted-foreground">You can move and resize this image by dragging it on the canvas.</p>
-            <div className="space-y-2">
-              <Label>Position & Size</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
-                    if (canvas && selectedObject) {
-                      selectedObject.set({ left: 50, top: 50 });
-                      canvas.renderAll();
-                    }
-                  }}
-                >
-                  Top Left
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
-                    if (canvas && selectedObject) {
-                      selectedObject.set({ 
-                        left: canvas.width - selectedObject.getScaledWidth() - 50, 
-                        top: 50 
-                      });
-                      canvas.renderAll();
-                    }
-                  }}
-                >
-                  Top Right
-                </Button>
-              </div>
-            </div>
         </div>
       )}
       
@@ -252,72 +185,47 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   const initCanvas = useCallback((container: HTMLDivElement) => {
     if (!container || !template || !template.jsonData) return;
     
-    container.innerHTML = '';
+    container.innerHTML = ''; // Clear previous canvas
     const canvasEl = document.createElement('canvas');
     container.appendChild(canvasEl);
 
-    const canvas = new fabric.Canvas(canvasEl, {
-        width: container.clientWidth,
-        height: container.clientHeight,
-        backgroundColor: '#f0f0f0',
-    });
+    const canvas = new fabric.Canvas(canvasEl);
 
-    const { background, objects } = template.jsonData;
-
-    if (background && typeof background === 'string') {
-        fabric.Image.fromURL(background, (img) => {
-            const containerWidth = container.clientWidth;
-            const imgAspectRatio = img.width / img.height;
-            
+    // Load the entire scene from JSON data
+    canvas.loadFromJSON(template.jsonData, () => {
+        const bgImage = canvas.backgroundImage;
+        const containerWidth = container.clientWidth;
+        
+        if (bgImage instanceof fabric.Image && bgImage.width) {
+            const imgAspectRatio = bgImage.width / (bgImage.height || 1);
             const canvasWidth = containerWidth;
             const canvasHeight = containerWidth / imgAspectRatio;
-
+            
             canvas.setWidth(canvasWidth);
             canvas.setHeight(canvasHeight);
-            
-            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-                scaleX: canvasWidth / img.width,
-                scaleY: canvasHeight / img.height,
-            });
+        } else {
+            // Fallback size if no background image or dimensions are available
+            canvas.setWidth(containerWidth);
+            canvas.setHeight(containerWidth * (9/16)); // Default aspect ratio
+        }
 
-            if (objects && Array.isArray(objects)) {
-                // Scale objects according to the new canvas size
-                const originalWidth = template.jsonData.width || 900; // Original width from template data
-                const scale = canvasWidth / originalWidth;
-                
-                const scaledObjects = objects.map(obj => {
-                    obj.left *= scale;
-                    obj.top *= scale;
-                    obj.scaleX *= scale;
-                    obj.scaleY *= scale;
-                    return fabric.util.createObject(obj);
-                });
+        canvas.renderAll();
 
-                Promise.all(scaledObjects).then(fabricObjects => {
-                  fabricObjects.forEach(obj => {
-                      if(obj) canvas.add(obj);
-                  });
-                  canvas.renderAll();
-                });
-            }
-        });
-    } else {
-        // Fallback for templates without a background image
-        canvas.loadFromJSON(template.jsonData, canvas.renderAll.bind(canvas));
-    }
-
-    canvas.on('selection:created', (e: any) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
-    canvas.on('selection:updated', (e: any) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
-    canvas.on('selection:cleared', () => setSelectedObject(null));
+        // Setup event listeners after loading
+        canvas.on('selection:created', (e: any) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
+        canvas.on('selection:updated', (e: any) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
+        canvas.on('selection:cleared', () => setSelectedObject(null));
+    });
 
     setFabricCanvas(canvas);
+
   }, [template]);
 
   const canvasContainerRef = useCallback((node: HTMLDivElement) => {
-      if (node && isOpen && template) {
-          const timer = setTimeout(() => initCanvas(node), 100);
-          return () => clearTimeout(timer);
-      }
+    if (node && isOpen && template) {
+      const timer = setTimeout(() => initCanvas(node), 100);
+      return () => clearTimeout(timer);
+    }
   }, [isOpen, template, initCanvas]);
 
   const addText = () => {
@@ -335,7 +243,6 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
       selectable: true
     });
     fabricCanvas.add(text).setActiveObject(text);
-    fabricCanvas.renderAll();
   };
   
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -357,12 +264,12 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
             left: 50,
             top: 50,
             selectable: true,
-            moveable: true
+            hasControls: true,
+            hasBorders: true
           });
           
           fabricCanvas.add(img);
           fabricCanvas.setActiveObject(img);
-          fabricCanvas.renderAll();
         });
       };
       reader.readAsDataURL(file);
