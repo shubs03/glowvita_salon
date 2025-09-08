@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import mongoose from 'mongoose';
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
-import { genkit, googleAI } from 'genkit'; // Import Genkit and Google AI plugin
+import { genkit } from 'genkit';
+import { googleAI } from '@genkit-ai/googleai';
 
 // Initialize Genkit AI client
 const ai = genkit({
