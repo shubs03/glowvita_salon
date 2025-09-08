@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { Plus, Edit, Trash2, Link as LinkIcon, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Link as LinkIcon, ChevronDown, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Skeleton } from '@repo/ui/skeleton';
@@ -33,6 +33,7 @@ import {
   useDeleteAdminProductCategoryMutation,
 } from '../../../../../packages/store/src/services/api';
 import { Badge } from '@repo/ui/badge';
+import { cn } from '@repo/ui/cn';
 
 interface DropdownItem {
   _id: string;
@@ -83,7 +84,7 @@ const DropdownManager = ({
   listDescription: string;
   items: DropdownItem[];
   type: string;
-  onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => void;
+  onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete' | 'move') => void;
   isLoading: boolean;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -131,6 +132,13 @@ const DropdownManager = ({
     setCurrentItem(null);
   };
 
+  const handleMove = (index: number, direction: 'up' | 'down') => {
+      const item = items[index];
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= items.length) return;
+      onUpdate({ ...item, newIndex }, 'move');
+  }
+
   if (isLoading) {
     return (
       <Card>
@@ -143,34 +151,13 @@ const DropdownManager = ({
             <Skeleton className="h-9 w-28" />
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto no-scrollbar rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead><Skeleton className="h-4 w-16" /></TableHead>
-                  {type !== 'supplier' && (
-                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
-                  )}
-                  <TableHead className="text-right"><Skeleton className="h-4 w-16" /></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {[...Array(5)].map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    {type !== 'supplier' && (
-                      <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                    )}
-                    <TableCell className="text-right">
-                      <Skeleton className="h-8 w-8 inline-block mr-2" />
-                      <Skeleton className="h-8 w-8 inline-block" />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-4 bg-secondary p-3 rounded-md">
+                    <Skeleton className="h-6 w-full" />
+                    <Skeleton className="h-8 w-24" />
+                </div>
+            ))}
         </CardContent>
       </Card>
     );
@@ -191,57 +178,43 @@ const DropdownManager = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto no-scrollbar rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                {type !== 'supplier' && ( // Changed from 'supplierType' to 'supplier'
-                  <TableHead>{type === 'socialPlatform' ? 'Profile Link' : 'Description'}</TableHead>
-                )}
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((item: DropdownItem) => (
-                <TableRow key={item._id}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  {type !== 'supplier' && ( // Changed from 'supplierType' to 'supplier'
-                    <TableCell className="text-muted-foreground">
-                      {type === 'socialPlatform' && item.description ? (
-                          <a href={item.description} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline flex items-center gap-1">
-                              <LinkIcon className="h-3 w-3" />
-                              {item.description}
-                          </a>
-                      ) : item.description}
-                    </TableCell>
-                  )}
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(item)} disabled={isLoading}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {items.length === 0 && !isLoading && (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">
+        <div className="space-y-2">
+            {items.map((item: DropdownItem, index: number) => (
+                <div key={item._id} className="group flex items-center gap-2 bg-secondary/50 hover:bg-secondary p-2 rounded-md transition-colors">
+                    <div className="flex-grow">
+                        <p className="font-medium">{item.name}</p>
+                         {type !== 'supplier' && item.description && (
+                            <p className="text-sm text-muted-foreground">
+                                {type === 'socialPlatform' ? (
+                                    <a href={item.description} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                                        <LinkIcon className="h-3 w-3" />
+                                        {item.description}
+                                    </a>
+                                ) : item.description}
+                            </p>
+                        )}
+                    </div>
+                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Button variant="ghost" size="icon" onClick={() => handleMove(index, 'up')} disabled={index === 0}>
+                            <ArrowUp className="h-4 w-4" />
+                        </Button>
+                         <Button variant="ghost" size="icon" onClick={() => handleMove(index, 'down')} disabled={index === items.length - 1}>
+                            <ArrowDown className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(item)} disabled={isLoading}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            ))}
+            {items.length === 0 && !isLoading && (
+                <div className="text-center py-8 text-muted-foreground">
                     No items found.
-                  </TableCell>
-                </TableRow>
-              )}
-               {isLoading && (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">
-                    Loading...
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                </div>
+            )}
         </div>
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -1057,7 +1030,7 @@ export default function DropdownManagementPage() {
     const [updateItem] = useUpdateSuperDataItemMutation();
     const [deleteItem] = useDeleteSuperDataItemMutation();
 
-    const handleUpdate = async (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => {
+    const handleUpdate = async (item: Partial<DropdownItem> & { newIndex?: number }, action: 'add' | 'edit' | 'delete' | 'move') => {
         try {
             if (action === 'add') {
                 await createItem(item).unwrap();
@@ -1068,6 +1041,9 @@ export default function DropdownManagementPage() {
             } else if (action === 'delete' && item._id) {
                 await deleteItem({ id: item._id }).unwrap();
                 toast.success('Success', { description: 'Item deleted successfully.' });
+            } else if (action === 'move' && item._id) {
+                // This would require a backend endpoint to handle reordering
+                toast.info('Reordering functionality is not yet implemented on the backend.');
             }
         } catch (error: any) {
             const errorMessage = error?.data?.message || `Failed to ${action} item.`;
@@ -1390,8 +1366,7 @@ const ProductCategoryManager = () => {
                         <Plus className="mr-2 h-4 w-4" />
                         Add Category
                     </Button>
-                </div>
-            </CardHeader>
+                </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto no-scrollbar rounded-md border">
                     <Table>
