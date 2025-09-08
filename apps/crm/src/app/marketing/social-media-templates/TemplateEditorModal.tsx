@@ -191,24 +191,21 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
 
     const canvas = new fabric.Canvas(canvasEl);
 
-    // Load the entire scene from JSON data
+    // Correctly load the entire scene from JSON data
     canvas.loadFromJSON(template.jsonData, () => {
         const bgImage = canvas.backgroundImage;
         const containerWidth = container.clientWidth;
         
+        let canvasWidth = containerWidth;
+        let canvasHeight = containerWidth * (9/16); // Default aspect ratio
+
         if (bgImage instanceof fabric.Image && bgImage.width) {
             const imgAspectRatio = bgImage.width / (bgImage.height || 1);
-            const canvasWidth = containerWidth;
-            const canvasHeight = containerWidth / imgAspectRatio;
-            
-            canvas.setWidth(canvasWidth);
-            canvas.setHeight(canvasHeight);
-        } else {
-            // Fallback size if no background image or dimensions are available
-            canvas.setWidth(containerWidth);
-            canvas.setHeight(containerWidth * (9/16)); // Default aspect ratio
+            canvasHeight = containerWidth / imgAspectRatio;
         }
 
+        canvas.setWidth(canvasWidth);
+        canvas.setHeight(canvasHeight);
         canvas.renderAll();
 
         // Setup event listeners after loading
@@ -223,10 +220,11 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
 
   const canvasContainerRef = useCallback((node: HTMLDivElement) => {
     if (node && isOpen && template) {
-      const timer = setTimeout(() => initCanvas(node), 100);
+      const timer = setTimeout(() => initCanvas(node), 50); // Small delay to ensure modal is rendered
       return () => clearTimeout(timer);
     }
   }, [isOpen, template, initCanvas]);
+
 
   const addText = () => {
     if (!fabricCanvas) return;
