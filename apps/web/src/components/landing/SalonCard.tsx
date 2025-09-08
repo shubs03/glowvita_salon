@@ -26,7 +26,7 @@ export function SalonCard({ name, rating, location, image, hint, topRated = fals
       />
       
       {/* Static Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
       
       {/* Top Rated Badge */}
       {topRated && (
@@ -51,7 +51,7 @@ export function SalonCard({ name, rating, location, image, hint, topRated = fals
         </div>
         <div className="flex flex-wrap gap-1.5 text-xs my-3">
           {services.map(service => (
-            <div key={service} className="px-2 py-1 bg-white/20 rounded-full backdrop-blur-sm">
+            <div key={service} className="px-2 py-1 bg-white/20 rounded-full">
               {service}
             </div>
           ))}
