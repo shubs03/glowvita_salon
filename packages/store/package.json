@@ -25,7 +25,10 @@
     "./slices/faqSlice": "./src/slices/faqSlice.js",
     "./slices/appointmentSlice": "./src/slices/appointmentSlice.js",
     "./slices/shippingSlice": "./src/slices/shippingSlice.js",
-    "./slices/productSlice": "./src/slices/productSlice.js"
+    "./slices/productSlice": "./src/slices/productSlice.js",
+    "./slices/vendorprofileSlice": "./src/slices/vendorprofileSlice.js",
+    "./slices/workingHoursSlice": "./src/slices/workingHoursSlice.js"
+
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

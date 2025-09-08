@@ -19,7 +19,8 @@ export * from "./slices/smsTemplateSlice";
 export * from "./slices/faqSlice";
 export * from "./slices/appointmentSlice";
 export * from "./slices/blockTimeSlice";
-
+export * from "./slices/vendorprofileSlice";
+export * from "./slices/workingHoursSlice";
 
 
 export * from "./slices/shippingSlice";

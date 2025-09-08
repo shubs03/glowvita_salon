@@ -1,27 +1,50 @@
 "use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
-import { Calendar, Clock, User, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, User, Plus, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import { format, addDays, subDays, isToday, isSameDay } from 'date-fns';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import NewAppointmentForm from './NewAppointmentForm';
+import { AppointmentDetailView } from '../../../components/AppointmentDetailView';
 
 type Appointment = {
   id: string;
   clientName: string;
   service: string;
+  serviceName?: string;
   staffName: string;
   date: Date;
   startTime: string;
   endTime: string;
   notes?: string;
   status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+  isBlocked?: boolean;
+  description?: string;
 };
+
+interface StaffMember {
+  id: string;
+  name: string;
+  position?: string;
+  image?: string;
+  isActive: boolean;
+}
+
+interface TimeSlot {
+  time: string;
+  formattedTime: string;
+  id: string;
+}
 
 interface DayScheduleViewProps {
   selectedDate: Date;
   appointments: Appointment[];
+  timeSlots: TimeSlot[];
+  staffList?: StaffMember[];
+  isLoading?: boolean;
+  error?: any;
   onAppointmentClick?: (appointment: Appointment) => void;
   onCreateAppointment?: (appointment: Omit<Appointment, 'id'>) => void;
   onDateChange?: (date: Date) => void;
@@ -97,7 +120,6 @@ const employeeColors = [
 ];
 
 const getEmployeeColor = (name: string) => {
-  // Simple hash function to get consistent color for same name
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -121,7 +143,6 @@ const employeeBgColors = [
 ];
 
 const getEmployeeBgColor = (name: string) => {
-  // Simple hash function to get consistent background color for same name
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -130,23 +151,36 @@ const getEmployeeBgColor = (name: string) => {
   return employeeBgColors[index];
 };
 
+// Move date validation outside the component
+function validateDate(date: Date | null | undefined): date is Date {
+  return date instanceof Date && !isNaN(date.getTime());
+}
+
 export default function DayScheduleView({ 
   selectedDate, 
   appointments = [], 
+  timeSlots = [],
+  staffList = [],
+  isLoading = false,
+  error = null,
   onAppointmentClick: onAppointmentClickProp,
   onCreateAppointment,
   onDateChange
 }: DayScheduleViewProps) {
-  // Ensure selectedDate is a valid Date object
-  const safeSelectedDate = selectedDate && !isNaN(selectedDate.getTime()) 
-    ? selectedDate 
-    : new Date();
+  // Hooks must be called at the top level
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
-  const [newAppointmentDate, setNewAppointmentDate] = useState<Date>();
+  const [newAppointmentDate, setNewAppointmentDate] = useState<Date | null>(null);
+  const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isClient, setIsClient] = useState(false);
+
+  // Validate date after hooks
+  const safeSelectedDate = validateDate(selectedDate);
 
   useEffect(() => {
+    setIsClient(true);
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000); // Update every minute
@@ -174,30 +208,42 @@ export default function DayScheduleView({
     handleNewAppointment(date);
   };
 
-  const handleFormSubmit = (values: Omit<Appointment, 'id'>) => {
+  const handleFormSubmit = (appointment: Appointment) => {
+    console.log('Appointment updated:', appointment);
+    setIsFormOpen(false);
+    setSelectedAppointment(null);
+  };
+
+  const handleFormCancel = () => {
+    setIsFormOpen(false);
+    setSelectedAppointment(null);
+  };
+
+  const handleCreateNewAppointment = (appointment: Omit<Appointment, 'id'>) => {
     if (onCreateAppointment) {
       const appointmentDate = newAppointmentDate && !isNaN(newAppointmentDate.getTime())
         ? newAppointmentDate
         : new Date();
       
       onCreateAppointment({
-        ...values,
+        ...appointment,
         date: appointmentDate,
       });
     }
     setIsNewAppointmentOpen(false);
   };
 
-  const handleCreateNewAppointment = (appointment: Omit<Appointment, 'id'>) => {
-    handleFormSubmit(appointment);
+  const handleAppointmentClick = async (appointment: Appointment) => {
+    try {
+      setSelectedAppointment(appointment);
+      setIsDetailViewOpen(true);
+    } catch (error) {
+      console.error('Error handling appointment click:', error);
+    }
   };
 
-  const handleAppointmentClick = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    onAppointmentClickProp?.(appointment);
-  };
-
-  const handleCloseDetails = () => {
+  const handleCloseDetailView = () => {
+    setIsDetailViewOpen(false);
     setSelectedAppointment(null);
   };
 
@@ -221,12 +267,45 @@ export default function DayScheduleView({
     if (!a.isBlocked && b.isBlocked) return 1;
     return 0;
   });
-  const staffAppointments = groupAppointmentsByStaff(sortedAppointments);
-  const hours = Array.from({ length: 13 }, (_, i) => i + 8); // 8 AM to 8 PM
+  const staffAppointments = staffList && staffList.length > 0 
+    ? staffList.filter(staff => staff.isActive).map(staff => [
+        staff.name,
+        appointments.filter(appt => appt.staffName === staff.name)
+      ])
+    : groupAppointmentsByStaff(appointments);
+
+  const timeSlotsByHour = useMemo(() => {
+    if (!timeSlots.length) return null;
+    
+    return timeSlots.reduce((acc, slot) => {
+      const [hour] = slot.time.split(':').map(Number);
+      if (!acc[hour]) {
+        acc[hour] = [];
+      }
+      acc[hour].push(slot);
+      return acc;
+    }, {} as Record<number, typeof timeSlots>);
+  }, [timeSlots]);
+
+  // CHANGE 1: Use dynamic start hour from timeSlots
+  const startHour = timeSlots.length > 0 
+    ? parseInt(timeSlots[0].time.split(':')[0], 10) 
+    : 9; // Fallback to 9 AM if no time slots
+
+  // Get hours for the header
+  const hours = useMemo(() => {
+    if (timeSlotsByHour) {
+      return Object.keys(timeSlotsByHour).map(Number).sort((a, b) => a - b);
+    }
+    // Default to 9 AM to 6 PM if no time slots
+    return Array.from({ length: 10 }, (_, i) => i + 9); // 9 AM to 6 PM (9 to 18)
+  }, [timeSlotsByHour]);
   
   const isCurrentDate = isToday(safeSelectedDate);
+  // CHANGE 2: Adjust currentTopPosition to use startHour
   const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-  const currentTopPosition = (currentMinutes - 8 * 60) * (80 / 60) + 64; // 64px for header height
+  const isWithinWorkingHours = currentMinutes >= startHour * 60 && currentMinutes <= (startHour + 9) * 60;
+  const currentTimePosition = ((currentMinutes - startHour * 60) * (80 / 60)) + 64; // 64px for header
 
   const renderAppointment = (appointment: Appointment, index: number, staffIndex: number) => {
     if (appointment.isBlocked) {
@@ -236,69 +315,125 @@ export default function DayScheduleView({
       return (
         <div 
           key={`blocked-${index}`}
-          className="absolute left-0 right-0 mx-1 p-2 rounded border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-xs"
+          className="absolute left-0 right-0 mx-1 p-2 rounded-lg border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/20 text-amber-800 dark:text-amber-200 text-xs shadow-sm"
           style={{
-            top: `${(timeToMinutes(appointment.startTime) - 8 * 60) * (80 / 60)}px`,
-            height: `${(timeToMinutes(appointment.endTime) - timeToMinutes(appointment.startTime)) * (80 / 60)}px`,
+            top: `${(timeToMinutes(appointment.startTime) - startHour * 60) * (80 / 60)}px`,
+            height: `${Math.max(60, (timeToMinutes(appointment.endTime) - timeToMinutes(appointment.startTime)) * (80 / 60))}px`,
           }}
         >
-          <div className="font-medium">Blocked: {appointment.description || 'Not Available'}</div>
-          <div className="text-xs opacity-75">
-            {format(startTime, 'h:mm a')} - {format(endTime, 'h:mm a')}
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+            <div className="font-medium truncate">Blocked: {appointment.description || 'Not Available'}</div>
+          </div>
+          <div className="mt-1 text-[10px] text-amber-600 dark:text-amber-300/80">
+            {format(startTime, 'h:mma')} - {format(endTime, 'h:mma')}
           </div>
         </div>
       );
     }
     
-    const top = (timeToMinutes(appointment.startTime) - 8 * 60) * (80 / 60);
-    const height = (timeToMinutes(appointment.endTime) - timeToMinutes(appointment.startTime)) * (80 / 60);
+    const top = (timeToMinutes(appointment.startTime) - startHour * 60) * (80 / 60);
+    const height = Math.max(60, (timeToMinutes(appointment.endTime) - timeToMinutes(appointment.startTime)) * (80 / 60));
+    
+    // Get status configuration
     const statusConfig = getStatusConfig(appointment.status);
-    const employeeColor = getEmployeeColor(staffAppointments[staffIndex][0]);
+    const serviceTheme = {
+      hair: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
+      facial: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
+      nail: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
+      massage: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
+      default: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
+    };
+    
+    const serviceType = appointment.service?.toLowerCase() || 'default';
+    const themeClass = 
+      serviceType.includes('hair') ? serviceTheme.hair :
+      serviceType.includes('facial') || serviceType.includes('skin') ? serviceTheme.facial :
+      serviceType.includes('nail') || serviceType.includes('manicure') || serviceType.includes('pedicure') ? serviceTheme.nail :
+      serviceType.includes('massage') || serviceType.includes('spa') ? serviceTheme.massage :
+      serviceTheme.default;
     
     return (
       <div
         key={appointment.id}
-        className={`absolute p-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer border overflow-hidden ${
-          appointment.service.toLowerCase().includes('wedding') 
-            ? 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/30 border-red-200 dark:border-red-800' 
-            : appointment.service.toLowerCase().includes('home') 
-              ? 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 border-green-200 dark:border-green-800' 
-              : 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 border-blue-200 dark:border-blue-800'
-        }`}
+        className={`absolute left-1 right-1 p-3 rounded-lg border-l-4 ${themeClass} bg-white/95 dark:bg-blue-900/20 backdrop-blur-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden group`}
         style={{
           top: `${top}px`,
-          height: `${height}px`,
-          left: '4px',
-          right: '4px',
+          height: `${height + 4}px`, // Slightly increase height
         }}
-        onClick={() => handleAppointmentClick(appointment)}
+        onClick={() => onAppointmentClickProp?.(appointment) || handleAppointmentClick(appointment)}
       >
-        <div className="flex justify-between items-start mb-1">
-          <div className="min-w-0 flex-1">
-            <div className="font-bold text-gray-900 dark:text-white truncate">{appointment.clientName}</div>
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{appointment.service}</div>
+        <div className="h-full flex flex-col">
+          {/* Header with client name and status */}
+          <div className="flex justify-between items-start mb-1.5">
+            <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate pr-2">
+              {appointment.clientName}
+            </h4>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${statusConfig.className} whitespace-nowrap`}>
+              {statusConfig.label}
+            </span>
           </div>
-          <span className={`text-xs px-2 py-1 rounded-full font-medium flex-shrink-0 ml-2 ${statusConfig.className}`}>
-            {statusConfig.icon} {statusConfig.label}
-          </span>
-        </div>
-        <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
-          <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
-          <span className="truncate">{appointment.startTime} - {appointment.endTime}</span>
-        </div>
-        <div className="flex items-center mt-1">
-          <User className={`w-3 h-3 mr-1 flex-shrink-0 ${employeeColor}`} />
-          <span className={`text-xs font-medium truncate ${employeeColor}`}>{staffAppointments[staffIndex][0]}</span>
-        </div>
-        {appointment.notes && (
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-            {appointment.notes}
+          
+          {/* Service and time */}
+          <div className="mb-1.5">
+            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+              {appointment.serviceName || appointment.service}
+            </p>
+            <div className="flex items-center text-xs text-blue-600 dark:text-blue-300 mt-1">
+              <Clock className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+              <span>
+                {format(new Date(`2000-01-01T${appointment.startTime}`), 'h:mma').toLowerCase()} - 
+                {format(new Date(`2000-01-01T${appointment.endTime}`), 'h:mma').toLowerCase()}
+              </span>
+            </div>
           </div>
-        )}
+          
+          {/* Staff and notes (if any) */}
+          <div className="mt-auto pt-2 border-t border-blue-100 dark:border-blue-800/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center mr-2 flex-shrink-0">
+                  <User className="w-3 h-3 text-blue-600 dark:text-blue-300" />
+                </div>
+                <span className="text-xs font-medium text-blue-700 dark:text-blue-200 truncate">
+                  {appointment.staffName}
+                </span>
+              </div>
+              
+              {appointment.notes && (
+                <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0 group-hover:bg-blue-300 transition-colors" />
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Hover effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-white/50 to-transparent dark:from-blue-800/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
       </div>
     );
   };
 
+  // Handle loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <span className="ml-3 text-gray-600 dark:text-gray-400">Loading schedule...</span>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <div className="p-4 text-center text-red-500">
+        <p>Error loading schedule data. Please try again later.</p>
+        {error?.message && <p className="text-sm mt-2">{error.message}</p>}
+      </div>
+    );
+  }
+
+  // Handle no staff or appointments
   if (staffAppointments.length === 0) {
     return (
       <div className="flex flex-col h-full w-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -352,8 +487,16 @@ export default function DayScheduleView({
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full opacity-20 animate-pulse"></div>
                 <Calendar className="w-24 h-24 text-blue-500 dark:text-blue-400 relative z-10" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">No appointments scheduled for this day</h3>
-            
+              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                {staffList && staffList.length === 0 
+                  ? 'No staff members available' 
+                  : 'No appointments scheduled for this day'}
+              </h3>
+              {staffList && staffList.length === 0 && (
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  Please add staff members to start scheduling appointments.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -482,70 +625,22 @@ export default function DayScheduleView({
                     {/* Appointments for this staff */}
                     {staffAppointments
                       .find(([name]) => name === staffName)?.[1]
-                      .map(appointment => {
-                        const top = (timeToMinutes(appointment.startTime) - 8 * 60) * (80 / 60);
-                        const height = (timeToMinutes(appointment.endTime) - timeToMinutes(appointment.startTime)) * (80 / 60);
-                        const statusConfig = getStatusConfig(appointment.status);
-                        const employeeColor = getEmployeeColor(staffName);
-                        
-                        return (
-                          <div
-                            key={appointment.id}
-                            className={`absolute p-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer border overflow-hidden ${
-                              appointment.service.toLowerCase().includes('wedding') 
-                                ? 'bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/30 border-red-200 dark:border-red-800' 
-                                : appointment.service.toLowerCase().includes('home') 
-                                  ? 'bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 border-green-200 dark:border-green-800' 
-                                  : 'bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 border-blue-200 dark:border-blue-800'
-                            }`}
-                            style={{
-                              top: `${top}px`,
-                              height: `${height}px`,
-                              left: '4px',
-                              right: '4px',
-                            }}
-                            onClick={() => handleAppointmentClick(appointment)}
-                          >
-                            <div className="flex justify-between items-start mb-1">
-                              <div className="min-w-0 flex-1">
-                                <div className="font-bold text-gray-900 dark:text-white truncate">{appointment.clientName}</div>
-                                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{appointment.service}</div>
-                              </div>
-                              <span className={`text-xs px-2 py-1 rounded-full font-medium flex-shrink-0 ml-2 ${statusConfig.className}`}>
-                                {statusConfig.icon} {statusConfig.label}
-                              </span>
-                            </div>
-                            <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center">
-                              <Clock className="w-3 h-3 mr-1 flex-shrink-0" />
-                              <span className="truncate">{appointment.startTime} - {appointment.endTime}</span>
-                            </div>
-                            <div className="flex items-center mt-1">
-                              <User className={`w-3 h-3 mr-1 flex-shrink-0 ${employeeColor}`} />
-                              <span className={`text-xs font-medium truncate ${employeeColor}`}>{staffName}</span>
-                            </div>
-                            {appointment.notes && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                                {appointment.notes}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                      .map((appointment, index) => renderAppointment(appointment, index, staffIndex))}
                   </div>
                 ))}
               </div>
             </div>
             
-            {/* Current time indicator */}
-            {isCurrentDate && currentTopPosition >= 64 && currentTopPosition <= 1104 && (
-              <div
-                className="absolute left-0 right-0 z-30 pointer-events-none"
-                style={{ top: `${currentTopPosition - 64}px` }}
+            {/* Current Time Indicator */}
+            {isCurrentDate && isWithinWorkingHours && (
+              <div 
+                className="absolute left-0 right-0 h-px bg-red-500 z-50 flex items-center"
+                style={{ top: `${currentTimePosition}px` }}
               >
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-red-500 -ml-1.5 shadow-lg"></div>
-                  <div className="h-0.5 bg-red-500 flex-1 shadow-sm"></div>
+                <div className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-r">
+                  {format(currentTime, 'h:mm a')}
                 </div>
+                <div className="h-px bg-red-500 flex-1"></div>
               </div>
             )}
           </div>
@@ -561,11 +656,37 @@ export default function DayScheduleView({
             </DialogTitle>
           </DialogHeader>
           <NewAppointmentForm 
-            onSubmit={handleFormSubmit}
+            onSubmit={handleCreateNewAppointment}
             defaultDate={newAppointmentDate}
           />
         </DialogContent>
       </Dialog>
+
+      {/* Appointment Detail View */}
+      {selectedAppointment && (
+        <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-4 top-4 z-10 h-8 w-8 rounded-full"
+                onClick={handleCloseDetailView}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+              <AppointmentDetailView
+                appointment={{
+                  ...selectedAppointment,
+                  date: selectedAppointment.date instanceof Date ? selectedAppointment.date : new Date(selectedAppointment.date)
+                }}
+                onClose={handleCloseDetailView}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

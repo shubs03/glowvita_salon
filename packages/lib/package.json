@@ -7,7 +7,8 @@
     "./auth": "./src/auth.js",
 
     "./models/user": "./src/models/user.js",
-    "./models/staffModel":"./src/models/vendor/Staff.model.js",
+    "./models/staffModel": "./src/models/vendor/Staff.model.js",
+    "./models/VendorWorkingHours": "./src/models/Vendor/VendorWorkingHours.model.js",
     "./models": "./src/models"
   },
   "scripts": {
