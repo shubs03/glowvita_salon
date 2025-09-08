@@ -11,6 +11,7 @@ const offers = [
   { title: "Zero-G Massage", description: "Experience weightlessness with our zero-gravity massage pods. Limited time offer.", image: 'https://placehold.co/600x400.png', hint: 'floating massage pod' },
   { title: "Synth-Hair Weaving", description: "Get a free consultation and 20% off on your first synth-hair weaving session.", image: 'https://placehold.co/600x400.png', hint: 'glowing hair strands' },
   { title: "Neural-Link Manicure", description: "A manicure that syncs with your neural interface for custom light patterns.", image: 'https://placehold.co/600x400.png', hint: 'glowing nails manicure' },
+  { title: "Bio-Sculpt Pedi", description: "3D printed nail enhancements, perfectly tailored to you. 15% off for new clients.", image: 'https://placehold.co/600x400.png', hint: 'futuristic pedicure' },
 ];
 
 export function Offers() {
