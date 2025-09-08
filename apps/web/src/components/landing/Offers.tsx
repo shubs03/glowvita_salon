@@ -16,7 +16,7 @@ const offers = [
 export function Offers() {
   return (
     <section className="py-20 bg-background relative">
-      <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_500px_at_50%_200px,#7e22ce,transparent)] opacity-20 -z-10"></div>
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Transmission Offers</h2>
@@ -30,7 +30,7 @@ export function Offers() {
           >
             {offers.map((offer, index) => (
               <div key={index} className="snap-center shrink-0 w-80">
-                <Card className="overflow-hidden group hover:shadow-2xl transition-shadow duration-500 h-full flex flex-col bg-background/50 backdrop-blur-xl border border-border/50 hover:border-primary/30">
+                <Card className="overflow-hidden group hover:shadow-2xl transition-shadow duration-500 h-full flex flex-col bg-background/50 backdrop-blur-xl border border-white/10 hover:-translate-y-2 hover:border-primary/30">
                   <div className="relative h-48 overflow-hidden">
                     <Image
                       src={offer.image}
