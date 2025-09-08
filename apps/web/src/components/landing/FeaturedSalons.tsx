@@ -7,18 +7,19 @@ import { SalonCard } from './SalonCard';
 const locations = ['Mumbai', 'Delhi', 'Bangalore', 'Pune', 'Chennai'];
 
 const salons = [
-  { name: 'Cybernetic Styles', rating: 4.8, location: 'Neo Mumbai', image: 'https://placehold.co/600x400.png', hint: 'futuristic salon interior', topRated: true },
-  { name: 'Chrome & Cuts', rating: 4.9, location: 'Tech Delhi', image: 'https://placehold.co/600x400.png', hint: 'cyberpunk barber shop', topRated: true },
-  { name: 'Aether Spa', rating: 4.7, location: 'Bangalore', image: 'https://placehold.co/600x400.png', hint: 'zen spa with neon lights' },
-  { name: 'Quantum Quarters', rating: 4.8, location: 'Pune', image: 'https://placehold.co/600x400.png', hint: 'minimalist beauty salon' },
+  { name: 'Cybernetic Styles', rating: 4.8, location: 'Neo Mumbai', image: 'https://placehold.co/600x400.png', hint: 'futuristic salon interior', topRated: true, services: ['Zero-G Massage', 'Synth-Hair Weaving'] },
+  { name: 'Chrome & Cuts', rating: 4.9, location: 'Tech Delhi', image: 'https://placehold.co/600x400.png', hint: 'cyberpunk barber shop', topRated: true, services: ['Holographic Nails', 'Chroma-Shift Hair'] },
+  { name: 'Aether Spa', rating: 4.7, location: 'Bangalore', image: 'https://placehold.co/600x400.png', hint: 'zen spa with neon lights', services: ['Cryo-Mist Facial', 'Bio-Gel Pedicure'] },
+  { name: 'Quantum Quarters', rating: 4.8, location: 'Pune', image: 'https://placehold.co/600x400.png', hint: 'minimalist beauty salon', services: ['Laser Hair Sculpting', 'Neural-Link Manicure'] },
 ];
 
 export function FeaturedSalons() {
   return (
     <section className="py-20 bg-background relative overflow-hidden">
-      <div className="absolute inset-0 bg-secondary/50 [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,white,transparent_70%)]"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_400px_at_50%_300px,#fbfbfb36,transparent)] animate-pulse-slow duration-5000"></div>
-
+      <div className="absolute inset-0 bg-secondary/50 [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,white,transparent_70%)] -z-10"></div>
+      <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-30 -z-10"></div>
+      <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-primary/5 -z-10 animate-gradient-sweep"></div>
+      
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Featured Holo-Salons</h2>
