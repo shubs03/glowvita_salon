@@ -30,13 +30,6 @@ import {
   Award,
   UserPlus,
   PlayCircle,
-  Sparkles,
-  Zap,
-  TrendingUp,
-  Heart,
-  Globe,
-  Menu,
-  X,
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@repo/ui/cn";
@@ -408,7 +401,117 @@ export default function AppsPage() {
           </div>
         </div>
       </section>
-      
+
+      {/* Section 5: Testimonials */}
+      <section className="py-20 bg-background overflow-hidden">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4">
+            Loved by Professionals
+          </h2>
+          <p className="text-muted-foreground mt-2 text-lg max-w-3xl mx-auto mb-12">
+            See what salon owners and stylists are saying about our mobile apps.
+          </p>
+        </div>
+        <div className="relative pb-5 w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
+          <div className="flex w-fit items-start animate-slide hover:[animation-play-state:paused]">
+            {[
+              {
+                review:
+                  "The mobile app has been a game-changer for my salon. I can manage everything on the fly, and my clients love how easy it is to book appointments.",
+                author: "Jane D.",
+                role: "Owner, The Style Hub",
+                rating: 5,
+              },
+              {
+                review:
+                  "Finally, a CRM that understands the beauty industry. The analytics are powerful and the client management features are top-notch.",
+                author: "Michael S.",
+                role: "Lead Stylist, Urban Shears",
+                rating: 5,
+              },
+              {
+                review:
+                  "My no-show rate has dropped significantly since using the automated reminders in the app. A must-have for any serious salon owner.",
+                author: "Jessica P.",
+                role: "Nail Artist & Owner",
+                rating: 5,
+              },
+              {
+                review:
+                  "I love being able to check my schedule and sales from my phone. It gives me so much freedom and flexibility.",
+                author: "Chris T.",
+                role: "Barber, The Dapper Den",
+                rating: 4,
+              },
+              {
+                review:
+                  "Our clients constantly compliment how professional and easy our booking app is. It has definitely elevated our brand.",
+                author: "Emily R.",
+                role: "Spa Manager, Serenity Now",
+                rating: 5,
+              },
+              // Duplicate for seamless loop
+              {
+                review:
+                  "The mobile app has been a game-changer for my salon. I can manage everything on the fly, and my clients love how easy it is to book appointments.",
+                author: "Jane D.",
+                role: "Owner, The Style Hub",
+                rating: 5,
+              },
+              {
+                review:
+                  "Finally, a CRM that understands the beauty industry. The analytics are powerful and the client management features are top-notch.",
+                author: "Michael S.",
+                role: "Lead Stylist, Urban Shears",
+                rating: 5,
+              },
+              {
+                review:
+                  "My no-show rate has dropped significantly since using the automated reminders in the app. A must-have for any serious salon owner.",
+                author: "Jessica P.",
+                role: "Nail Artist & Owner",
+                rating: 5,
+              },
+            ].map((testimonial, i) => (
+              <div key={i} className="mx-4">
+                <TestimonialCard {...testimonial} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Section 6: How It Works */}
+      <section className="py-20 bg-secondary/50">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4">
+              Get Started in 3 Simple Steps
+            </h2>
+          </div>
+          <div className="space-y-12">
+            <HowItWorksStep 
+              icon={<Download className="h-8 w-8" />} 
+              title="Download & Setup"
+              description="Get your salon listed and set up your services, staff, and schedule in minutes."
+              step={1}
+            />
+            <HowItWorksStep 
+              icon={<Users className="h-8 w-8" />} 
+              title="Clients Book Online"
+              description="Clients find your salon and book appointments 24/7 through the GlowVita app or your website."
+              step={2}
+            />
+            <HowItWorksStep 
+              icon={<BarChart className="h-8 w-8" />} 
+              title="Manage & Grow"
+              description="Use the CRM app to manage bookings, process payments, and grow your business with marketing tools."
+              step={3}
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="py-20 text-center bg-background">
         <div className="container mx-auto px-4 max-w-4xl">
@@ -425,4 +528,3 @@ export default function AppsPage() {
     </div>
   );
 }
-

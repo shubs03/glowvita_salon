@@ -10,11 +10,10 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div className="space-y-4 md:col-span-2 lg:col-span-1">
             <div className="font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-              Vendor CRM
+              Monorepo Maestro
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Empowering salon owners with the tools they need to grow their
-              business and delight their clients.
+              The ultimate monorepo solution for building scalable web applications with Next.js, Turborepo, and a shared component library.
             </p>
           </div>
           <div className="space-y-4">
@@ -107,12 +106,12 @@ export function Footer() {
         </div>
         <div className="border-t border-border/50 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-center md:text-left text-muted-foreground text-sm">
-            &copy; {new Date().getFullYear()} Vendor CRM. All Rights Reserved.
+            &copy; {new Date().getFullYear()} Monorepo Maestro. All Rights Reserved.
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Heart className="h-4 w-4 text-red-500" />
-              <span>Made with love for salon owners</span>
+              <span>Built with passion and code</span>
             </div>
           </div>
         </div>

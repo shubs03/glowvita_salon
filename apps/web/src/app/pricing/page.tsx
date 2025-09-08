@@ -63,9 +63,150 @@ export default function PricingPage() {
         </div>
       </section>
 
+      {/* New Section: Customer Testimonials */}
+      <section className="py-16 bg-background border-y border-border/50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold">Trusted by Leading Salons</h2>
+            <p className="text-muted-foreground mt-2">See what our customers have to say</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="bg-secondary/5">
+              <CardHeader>
+                <div className="flex items-center gap-2 mb-2">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star key={n} className="h-4 w-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <CardTitle className="text-lg">"Transformed our business"</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm">
+                  "The platform has streamlined our operations and helped us grow our client base by 200% in just 6 months."
+                </p>
+                <div className="mt-4">
+                  <p className="font-medium">Sarah Johnson</p>
+                  <p className="text-sm text-muted-foreground">Glow Beauty Spa</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-secondary/5">
+              <CardHeader>
+                <div className="flex items-center gap-2 mb-2">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star key={n} className="h-4 w-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <CardTitle className="text-lg">"Worth every penny"</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm">
+                  "The customer support is outstanding, and the features have helped us automate our daily tasks effectively."
+                </p>
+                <div className="mt-4">
+                  <p className="font-medium">Michael Chen</p>
+                  <p className="text-sm text-muted-foreground">Style Studio</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-secondary/5">
+              <CardHeader>
+                <div className="flex items-center gap-2 mb-2">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star key={n} className="h-4 w-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <CardTitle className="text-lg">"Game changer"</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm">
+                  "The analytics and reporting features have given us insights that helped optimize our services."
+                </p>
+                <div className="mt-4">
+                  <p className="font-medium">Emma Davis</p>
+                  <p className="text-sm text-muted-foreground">Pure Salon</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* New Section: Feature Highlights */}
+      <section className="py-16 bg-gradient-to-br from-background via-primary/5 to-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Everything You Need to Succeed</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Our platform provides all the tools and features you need to manage and grow your salon business
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <Card className="text-center hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>Smart Booking</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Intelligent appointment scheduling system
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="text-center hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>Client Management</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Complete client profiles and history
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="text-center hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BarChart className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>Analytics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Detailed business insights and reports
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="text-center hover:shadow-lg transition-all duration-300">
+              <CardHeader>
+                <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>Marketing Tools</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  SMS and email campaign management
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Section 2: Pricing Plans */}
       <section className="py-20">
         <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Choose Your Plan</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Select the perfect plan for your salon's needs. All plans include our core features.
+            </p>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto items-start">
              <Card className="flex flex-col text-left h-full shadow-lg hover:shadow-2xl transition-all duration-300 rounded-md">
                 <CardHeader className="pb-4">
@@ -231,6 +372,98 @@ export default function PricingPage() {
           </div>
         </section>
 
+      {/* New Section: ROI Calculator */}
+      <section className="py-16 bg-gradient-to-br from-background via-primary/5 to-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">See Your Potential ROI</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Calculate the return on investment for your salon
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <Card className="bg-secondary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-primary" />
+                  Time Saved
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-4xl font-bold text-primary">15+</p>
+                <p className="text-sm text-muted-foreground">Hours per week</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-secondary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Client Growth
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-4xl font-bold text-primary">25%</p>
+                <p className="text-sm text-muted-foreground">Average increase</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-secondary/5">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart className="h-5 w-5 text-primary" />
+                  Revenue Boost
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-4xl font-bold text-primary">35%</p>
+                <p className="text-sm text-muted-foreground">Typical growth</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* New Section: Security & Compliance */}
+      <section className="py-16 bg-secondary/5">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Enterprise-Grade Security</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Your data is protected by industry-leading security measures
+            </p>
+          </div>
+          <div className="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <Card className="bg-background">
+              <CardContent className="pt-6 text-center">
+                <Shield className="h-8 w-8 mx-auto text-primary mb-4" />
+                <h3 className="font-medium mb-2">256-bit SSL</h3>
+                <p className="text-sm text-muted-foreground">Bank-level encryption</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-background">
+              <CardContent className="pt-6 text-center">
+                <Lock className="h-8 w-8 mx-auto text-primary mb-4" />
+                <h3 className="font-medium mb-2">GDPR</h3>
+                <p className="text-sm text-muted-foreground">Fully compliant</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-background">
+              <CardContent className="pt-6 text-center">
+                <FileCheck className="h-8 w-8 mx-auto text-primary mb-4" />
+                <h3 className="font-medium mb-2">Data Backup</h3>
+                <p className="text-sm text-muted-foreground">Daily automated</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-background">
+              <CardContent className="pt-6 text-center">
+                <ShieldCheck className="h-8 w-8 mx-auto text-primary mb-4" />
+                <h3 className="font-medium mb-2">ISO 27001</h3>
+                <p className="text-sm text-muted-foreground">Certified secure</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Section 5: CTA */}
       <section className="py-16 md:py-20 text-center bg-gradient-to-br from-background via-primary/10 to-background relative overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
@@ -252,7 +485,7 @@ export default function PricingPage() {
                   className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
                   asChild
                 >
-                  <Link href="/login">
+                  <Link href="/auth/register">
                     Start 7-Day Free Trial{" "}
                     <UserPlus className="ml-2 h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
                   </Link>
@@ -271,7 +504,7 @@ export default function PricingPage() {
 
               <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-blue-500" />
+                  <Check className="h-4 w-4 text-green-500" />
                   <span>No credit card required</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -279,13 +512,36 @@ export default function PricingPage() {
                   <span>No setup fees</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-500" />
+                  <Clock className="h-4 w-4 text-purple-500" />
                   <span>Cancel anytime</span>
                 </div>
               </div>
             </div>
           </div>
         </section>
+      
+      {/* New Section: Awards & Recognition */}
+      <section className="py-20 text-center bg-gradient-to-br from-background to-secondary/10">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div>
+              <Award className="h-12 w-12 mx-auto text-primary mb-4"/>
+              <h3 className="text-xl font-bold mb-2">Industry Leader</h3>
+              <p className="text-muted-foreground">Recognized for innovation in salon management</p>
+            </div>
+            <div>
+              <Star className="h-12 w-12 mx-auto text-primary mb-4"/>
+              <h3 className="text-xl font-bold mb-2">Customer Choice</h3>
+              <p className="text-muted-foreground">Highest rated salon CRM platform</p>
+            </div>
+            <div>
+              <Shield className="h-12 w-12 mx-auto text-primary mb-4"/>
+              <h3 className="text-xl font-bold mb-2">Security Excellence</h3>
+              <p className="text-muted-foreground">Best-in-class data protection</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

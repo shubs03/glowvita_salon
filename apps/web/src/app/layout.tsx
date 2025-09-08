@@ -13,10 +13,16 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  
-  // For this phase, we assume all pages in 'web' use the MarketingLayout.
-  // We can add logic for different layouts (e.g., a dashboard layout) later.
-  const useMarketingLayout = !pathname.startsWith('/dashboard'); // Example logic for later
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+  const isDashboardPage = pathname.startsWith('/dashboard');
+
+  let layoutContent: ReactNode;
+
+  if (isAuthPage || isDashboardPage) {
+    layoutContent = children;
+  } else {
+    layoutContent = <MarketingLayout>{children}</MarketingLayout>;
+  }
 
   return (
     <html lang="en">
@@ -26,13 +32,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <StoreProvider>
-            {useMarketingLayout ? (
-                <MarketingLayout>{children}</MarketingLayout>
-            ) : (
-                children
-            )}
-        </StoreProvider>
+        <StoreProvider>{layoutContent}</StoreProvider>
       </body>
     </html>
   );

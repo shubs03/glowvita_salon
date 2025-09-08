@@ -19,7 +19,7 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: Marketin
           href="/"
           className="font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent after:absolute after:inset-0 after:bg-gradient-to-r after:from-primary/5 after:to-transparent after:blur-2xl after:z-[-1] hover:opacity-80 transition-opacity"
         >
-          Vendor CRM
+          Monorepo Maestro
         </Link>
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-2">
@@ -40,8 +40,8 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: Marketin
             className="shadow-lg hover:shadow-xl transition-shadow duration-300 group"
             asChild
           >
-            <Link href="/auth/register">
-              Get started{" "}
+            <Link href="/signup">
+              Sign Up{" "}
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
             </Link>
           </Button>
@@ -63,7 +63,7 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: Marketin
             <Button variant="ghost" className="w-full" asChild><Link href="/pricing">Pricing</Link></Button>
             <Button variant="ghost" className="w-full" asChild><Link href="/support">Support</Link></Button>
             <Button variant="ghost" className="w-full" asChild><Link href="/login">Login</Link></Button>
-            <Button className="w-full mt-2" asChild><Link href="/auth/register">Get started</Link></Button>
+            <Button className="w-full mt-2" asChild><Link href="/signup">Sign Up</Link></Button>
           </nav>
         </div>
       )}
