@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -190,14 +189,17 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
     container.appendChild(canvasEl);
 
     const canvas = new fabric.Canvas(canvasEl);
+    
+    // Set a default size first
+    canvas.setWidth(container.clientWidth);
+    canvas.setHeight(container.clientWidth * (9/16));
 
-    // Correctly load the entire scene from JSON data
     canvas.loadFromJSON(template.jsonData, () => {
         const bgImage = canvas.backgroundImage;
         const containerWidth = container.clientWidth;
         
         let canvasWidth = containerWidth;
-        let canvasHeight = containerWidth * (9/16); // Default aspect ratio
+        let canvasHeight = containerWidth * (9/16);
 
         if (bgImage instanceof fabric.Image && bgImage.width) {
             const imgAspectRatio = bgImage.width / (bgImage.height || 1);
@@ -220,7 +222,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
 
   const canvasContainerRef = useCallback((node: HTMLDivElement) => {
     if (node && isOpen && template) {
-      const timer = setTimeout(() => initCanvas(node), 50); // Small delay to ensure modal is rendered
+      const timer = setTimeout(() => initCanvas(node), 100); // Give modal time to render
       return () => clearTimeout(timer);
     }
   }, [isOpen, template, initCanvas]);
