@@ -12,6 +12,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { Plus, Edit, Trash2, Link as LinkIcon, ChevronDown, ChevronRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Skeleton } from '@repo/ui/skeleton';
 import { toast } from 'sonner';
 import {
   useGetSuperDataQuery,
@@ -129,6 +130,51 @@ const DropdownManager = ({
     setIsDeleteModalOpen(false);
     setCurrentItem(null);
   };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <div>
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-4 w-64 mt-2" />
+            </div>
+            <Skeleton className="h-9 w-28" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto no-scrollbar rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                  {type !== 'supplier' && (
+                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                  )}
+                  <TableHead className="text-right"><Skeleton className="h-4 w-16" /></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    {type !== 'supplier' && (
+                      <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                    )}
+                    <TableCell className="text-right">
+                      <Skeleton className="h-8 w-8 inline-block mr-2" />
+                      <Skeleton className="h-8 w-8 inline-block" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -329,6 +375,49 @@ const ServiceCategoryManager = () => {
             }
         }
     };
+
+    if (isLoading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <Skeleton className="h-6 w-40" />
+                            <Skeleton className="h-4 w-56 mt-2" />
+                        </div>
+                        <Skeleton className="h-9 w-32" />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto no-scrollbar rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                                    <TableHead className="text-right"><Skeleton className="h-4 w-16" /></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {[...Array(5)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                        <TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
+                                        <TableCell className="text-right">
+                                            <Skeleton className="h-8 w-8 inline-block mr-2" />
+                                            <Skeleton className="h-8 w-8 inline-block" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card>
@@ -533,6 +622,51 @@ const ServiceManager = () => {
             }
         }
     };
+
+    if (isLoading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <Skeleton className="h-6 w-32" />
+                            <Skeleton className="h-4 w-52 mt-2" />
+                        </div>
+                        <Skeleton className="h-9 w-32" />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto no-scrollbar rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                                    <TableHead className="text-right"><Skeleton className="h-4 w-16" /></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {[...Array(5)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
+                                        <TableCell className="text-right">
+                                            <Skeleton className="h-8 w-8 inline-block mr-2" />
+                                            <Skeleton className="h-8 w-8 inline-block" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card>
@@ -782,6 +916,55 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
         );
     };
 
+    if (isLoading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <Skeleton className="h-6 w-48" />
+                            <Skeleton className="h-4 w-64 mt-2" />
+                        </div>
+                        <Skeleton className="h-9 w-40" />
+                    </div>
+                </CardHeader>
+                <CardContent className="border rounded-md">
+                    <div className="space-y-2">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="border-t first:border-t-0">
+                                <div className="flex items-center justify-between py-3 px-4">
+                                    <div className="flex items-center gap-3">
+                                        <Skeleton className="h-4 w-4" />
+                                        <Skeleton className="h-4 w-32" />
+                                        <Skeleton className="h-5 w-16 rounded-full" />
+                                    </div>
+                                    <div className="flex gap-1">
+                                        <Skeleton className="h-7 w-24" />
+                                        <Skeleton className="h-7 w-7" />
+                                        <Skeleton className="h-7 w-7" />
+                                    </div>
+                                </div>
+                                <div className="ml-4 pl-2 space-y-1">
+                                    {[...Array(2)].map((_, j) => (
+                                        <div key={j} className="border-t border-dashed">
+                                            <div className="flex items-center justify-between py-2 px-4 pl-8">
+                                                <Skeleton className="h-4 w-28" />
+                                                <div className="flex gap-1">
+                                                    <Skeleton className="h-7 w-7" />
+                                                    <Skeleton className="h-7 w-7" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
     return (
         <Card>
             <CardHeader>
@@ -895,6 +1078,64 @@ export default function DropdownManagementPage() {
 
     if (isError) {
         return <div className="p-8 text-center text-destructive">Error fetching data. Please try again.</div>;
+    }
+
+    if (isLoading) {
+        return (
+            <div className="p-4 sm:p-6 lg:p-8">
+                <Skeleton className="h-8 w-32 mb-6" />
+                <div className="w-full">
+                    {/* Tabs skeleton */}
+                    <div className="grid w-full grid-cols-2 md:grid-cols-7 max-w-5xl mb-6">
+                        {[...Array(7)].map((_, i) => (
+                            <Skeleton key={i} className="h-9 w-full" />
+                        ))}
+                    </div>
+                    
+                    {/* Tab content skeleton */}
+                    <div className="space-y-6">
+                        {[...Array(3)].map((_, i) => (
+                            <Card key={i}>
+                                <CardHeader>
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <Skeleton className="h-6 w-40" />
+                                            <Skeleton className="h-4 w-64 mt-2" />
+                                        </div>
+                                        <Skeleton className="h-9 w-28" />
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="overflow-x-auto no-scrollbar rounded-md border">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                                                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                                                    <TableHead className="text-right"><Skeleton className="h-4 w-16" /></TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {[...Array(5)].map((_, j) => (
+                                                    <TableRow key={j}>
+                                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Skeleton className="h-8 w-8 inline-block mr-2" />
+                                                            <Skeleton className="h-8 w-8 inline-block" />
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     const dropdownTypes = [
@@ -1093,6 +1334,49 @@ const ProductCategoryManager = () => {
             toast.error(error?.data?.message || 'Failed to delete category');
         }
     };
+
+    if (isLoading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <Skeleton className="h-6 w-40" />
+                            <Skeleton className="h-4 w-56 mt-2" />
+                        </div>
+                        <Skeleton className="h-9 w-32" />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto no-scrollbar rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                                    <TableHead className="text-right"><Skeleton className="h-4 w-16" /></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {[...Array(5)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell className="text-right">
+                                            <Skeleton className="h-8 w-8 inline-block mr-2" />
+                                            <Skeleton className="h-8 w-8 inline-block" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card>

@@ -96,7 +96,7 @@ interface GeoFencingState {
 export default function GeoFencingPage() {
   const dispatch = useAppDispatch();
   const { isModalOpen, isViewModalOpen, isDeleteModalOpen, selectedFence, isEditMode } = useAppSelector(
-    (state): GeoFencingState => selectRootState(state).geoFencing
+    (state: any): GeoFencingState => selectRootState(state).geoFencing
   );
 
   // RTK Query hooks

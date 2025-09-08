@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Download, Eye, DollarSign, Users, UserPlus, ShoppingCart, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Input } from '@repo/ui/input';
+import { Skeleton } from '@repo/ui/skeleton';
 
 interface Report {
   title: string;
@@ -130,6 +131,7 @@ export default function ReportsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Add loading state for skeleton demo
   
   const handleViewClick = (report: Report) => {
     setSelectedReport(report);
@@ -149,6 +151,67 @@ export default function ReportsPage() {
       }))
       .filter(category => category.reports.length > 0);
   }, [searchTerm]);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        {/* Header skeleton */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+          <div>
+            <Skeleton className="h-8 w-32 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <div className="relative mt-4 md:mt-0">
+            <Skeleton className="h-10 w-80" />
+          </div>
+        </div>
+
+        {/* Stats cards skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-3 w-32 mt-2" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Reports sections skeleton */}
+        <div className="space-y-10">
+          {[...Array(3)].map((_, sectionIndex) => (
+            <div key={sectionIndex}>
+              <Skeleton className="h-6 w-48 mb-4" />
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {[...Array(4)].map((_, cardIndex) => (
+                  <Card key={cardIndex} className="flex flex-col">
+                    <CardHeader>
+                      <Skeleton className="h-5 w-full mb-2" />
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                      <Skeleton className="h-4 w-full mb-1" />
+                      <Skeleton className="h-4 w-2/3" />
+                    </CardContent>
+                    <CardFooter className="flex justify-end gap-2">
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-8 w-24" />
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
