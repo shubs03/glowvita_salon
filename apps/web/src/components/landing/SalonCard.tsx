@@ -17,16 +17,19 @@ interface SalonCardProps {
 export function SalonCard({ name, rating, location, image, hint, topRated = false, services }: SalonCardProps) {
   return (
     <div className="group relative aspect-[4/5] overflow-hidden rounded-xl shadow-lg transition-all duration-500 hover:shadow-primary/20 transform hover:-translate-y-2">
-      <Image 
-          src={image} 
-          alt={name} 
-          layout="fill" 
+      <Image
+          src={image}
+          alt={name}
+          layout="fill"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
           data-ai-hint={hint}
       />
       
-      {/* Static Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+      {/* Semi-transparent black overlay on the entire image */}
+      <div className="absolute inset-0 bg-black/30"></div>
+
+      {/* Static Gradient Overlay at the bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/70 via-black/50 to-transparent"></div>
       
       {/* Top Rated Badge */}
       {topRated && (
@@ -37,7 +40,7 @@ export function SalonCard({ name, rating, location, image, hint, topRated = fals
       )}
 
       {/* Details container that slides up */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-black text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out">
+      <div className="absolute bottom-0 left-0 right-0 p-4 text-white transform translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out">
         <h3 className="font-bold text-xl truncate">{name}</h3>
         <div className="flex items-center justify-between text-sm mt-1 mb-2 text-gray-200">
             <div className="flex items-center gap-1">
