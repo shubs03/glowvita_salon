@@ -29,10 +29,6 @@ const socialMediaTemplateSchema = new mongoose.Schema({
     default: '',
     trim: true
   },
-  imageUrl: {
-    type: String,
-    default: ''
-  },
   jsonData: {
     type: Object,
     default: null,

@@ -1281,7 +1281,6 @@ export const glowvitaApi = createApi({
       }),
       providesTags: ["CrmSocialMediaTemplate"],
       transformResponse: (response) => {
-        // Ensure the response is always in the { templates: [], total: number } format
         const templates = response?.data || [];
         const total = response?.total || templates.length;
         return { templates, total };
