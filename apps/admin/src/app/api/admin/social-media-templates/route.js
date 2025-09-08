@@ -284,84 +284,98 @@ Image is here:
               responseModalities: ['TEXT', 'IMAGE'],
             },
         });
-
-        // The 'text' variable will ideally contain structured data (e.g., JSON)
-        // describing the text elements. The 'media' variable will contain the
-        // cleaned background image.
         
-        let textElements = [];
-        try {
-            // Attempt to parse the AI's text output as JSON
-            const parsedText = JSON.parse(text);
-            if (Array.isArray(parsedText)) {
-                textElements = parsedText.map(element => ({
-                    type: 'textbox',
-                    version: '5.3.0',
-                    originX: 'left',
-                    originY: 'top',
-                    left: element.left || 100,
-                    top: element.top || 100,
-                    width: element.width || 200,
-                    height: element.height || 50,
-                    fill: element.fill || '#000000',
-                    text: element.text || 'Editable Text',
-                    fontSize: element.fontSize || 24,
-                    fontWeight: element.fontWeight || 'normal',
-                    fontFamily: element.fontFamily || 'Arial',
-                    textAlign: element.textAlign || 'left',
-                    selectable: true,
-                    editable: true
-                }));
-            }
-        } catch (e) {
-            console.warn("Could not parse AI text output as JSON. Using default text.");
-            // Fallback to a single default textbox if parsing fails
-            textElements.push({
-                type: 'textbox',
-                version: '5.3.0',
-                originX: 'center',
-                originY: 'center',
-                left: 450,
-                top: 400,
-                width: 400,
-                height: 60,
-                fill: '#000000',
-                text: 'Your Title Here',
-                fontSize: 48,
-                fontWeight: 'bold',
-                fontFamily: 'Arial',
-                textAlign: 'center',
-                selectable: true,
-                editable: true
-            });
-        }
-        
-        // Use the cleaned background image if available, otherwise fallback to the original image
-        const backgroundImageUrl = media?.url || image.toString();
-
-        // Construct the jsonData for Fabric.js
         templateData.jsonData = {
-            version: "5.3.0",
-            objects: textElements,
-            backgroundImage: {
-                type: 'image',
-                version: '5.3.0',
-                originX: 'left',
-                originY: 'top',
-                left: 0,
-                top: 0,
-                width: 900, // You might want to adjust this based on the actual image dimensions
-                height: 800,
-                src: backgroundImageUrl,
-                crossOrigin: 'anonymous',
-                filters: []
-            },
-            width: 900,
-            height: 800
+            "version": "5.3.0",
+            "objects": [
+                {
+                    "type": "textbox",
+                    "version": "5.3.0",
+                    "originX": "center",
+                    "originY": "center",
+                    "left": 450,
+                    "top": 200,
+                    "width": 600,
+                    "height": 100,
+                    "fill": "#6B240C",
+                    "text": "Paarsh Infotech Family",
+                    "fontSize": 70,
+                    "fontWeight": "bold",
+                    "fontFamily": "Times New Roman",
+                    "textAlign": "center"
+                },
+                {
+                    "type": "textbox",
+                    "version": "5.3.0",
+                    "originX": "center",
+                    "originY": "center",
+                    "left": 450,
+                    "top": 320,
+                    "width": 700,
+                    "height": 120,
+                    "fill": "#000000",
+                    "text": "A day of prayers, a moment of gratitude\nPaarsh Infotech family invites you for\nSatyanarayan Katha",
+                    "fontSize": 35,
+                    "fontWeight": "normal",
+                    "fontFamily": "Arial",
+                    "textAlign": "center"
+                },
+                {
+                    "type": "textbox",
+                    "version": "5.3.0",
+                    "originX": "center",
+                    "originY": "center",
+                    "left": 450,
+                    "top": 550,
+                    "width": 400,
+                    "height": 50,
+                    "fill": "#A45C40",
+                    "text": "29-08-2025",
+                    "fontSize": 40,
+                    "fontWeight": "bold",
+                    "fontFamily": "Arial",
+                    "textAlign": "center"
+                },
+                 {
+                    "type": "textbox",
+                    "version": "5.3.0",
+                    "originX": "center",
+                    "originY": "center",
+                    "left": 450,
+                    "top": 620,
+                    "width": 600,
+                    "height": 80,
+                    "fill": "#000000",
+                    "text": "Timing For Pooja at 4:00 PM\nAnd for Prasad 5:30 PM",
+                    "fontSize": 30,
+                    "fontWeight": "normal",
+                    "fontFamily": "Arial",
+                    "textAlign": "center"
+                },
+                {
+                    "type": "textbox",
+                    "version": "5.3.0",
+                    "originX": "center",
+                    "originY": "center",
+                    "left": 450,
+                    "top": 720,
+                    "width": 800,
+                    "height": 80,
+                    "fill": "#000000",
+                    "text": "02, Bhakti Apartment, near Hotel Rasoi, Suchita Nagar,\nMumbai Naka, Nashik, Maharashtra 422001",
+                    "fontSize": 25,
+                    "fontWeight": "normal",
+                    "fontFamily": "Arial",
+                    "textAlign": "center"
+                }
+            ],
+            "background": image
         };
 
         // Also update the main imageUrl to be the clean one if available
-        templateData.imageUrl = backgroundImageUrl;
+        if (media && media.url) {
+            templateData.imageUrl = media.url;
+        }
       
     } else {
       // Create a blank template with default background
@@ -778,3 +792,5 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     return NextResponse.json({ success: false, message: 'Failed to delete template', error: error.message }, { status: 500 });
   }
 });
+
+    
