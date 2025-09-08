@@ -46,7 +46,7 @@ export default function SocialMediaTemplatesPage() {
     refetchOnMountOrArgChange: true,
   });
 
-  const templates: SocialMediaTemplate[] = templatesResponse?.templates || [];
+  const templates: SocialMediaTemplate[] = templatesResponse?.data || [];
   const totalTemplates = templates.length || 0;
 
   const handleTemplateUse = (template: SocialMediaTemplate) => {

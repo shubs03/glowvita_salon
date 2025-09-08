@@ -255,88 +255,93 @@ export const POST = authMiddlewareAdmin(async (req) => {
         );
       }
     } else if (image) {
-      // Create default Fabric.js JSON structure with the uploaded image as background
-      templateData.jsonData = {
-        "version": "5.3.0",
-        "objects": [
-          {
-            "type": "textbox",
-            "version": "5.3.0",
-            "originX": "center",
-            "originY": "center",
-            "left": 450,
-            "top": 100,
-            "width": 400,
-            "height": 60,
-            "fill": "#000000",
-            "text": "Your Title Here",
-            "fontSize": 48,
-            "fontWeight": "bold",
-            "fontFamily": "Arial",
-            "textAlign": "center",
-            "selectable": true,
-            "editable": true
-          },
-          {
-            "type": "textbox",
-            "version": "5.3.0",
-            "originX": "center",
-            "originY": "center",
-            "left": 450,
-            "top": 200,
-            "width": 500,
-            "height": 80,
-            "fill": "#333333",
-            "text": "Add your message here",
-            "fontSize": 24,
-            "fontWeight": "normal",
-            "fontFamily": "Arial",
-            "textAlign": "center",
-            "selectable": true,
-            "editable": true
-          }
-        ],
-        "backgroundImage": {
-          "type": "image",
-          "version": "5.3.0",
-          "originX": "left",
-          "originY": "top",
-          "left": 0,
-          "top": 0,
-          "width": 900,
-          "height": 800,
-          "fill": "rgb(0,0,0)",
-          "stroke": null,
-          "strokeWidth": 0,
-          "strokeDashArray": null,
-          "strokeLineCap": "butt",
-          "strokeDashOffset": 0,
-          "strokeLineJoin": "miter",
-          "strokeUniform": false,
-          "strokeMiterLimit": 4,
-          "scaleX": 1,
-          "scaleY": 1,
-          "angle": 0,
-          "flipX": false,
-          "flipY": false,
-          "opacity": 1,
-          "shadow": null,
-          "visible": true,
-          "backgroundColor": "",
-          "fillRule": "nonzero",
-          "paintFirst": "fill",
-          "globalCompositeOperation": "source-over",
-          "skewX": 0,
-          "skewY": 0,
-          "cropX": 0,
-          "cropY": 0,
-          "src": image.toString(),
-          "crossOrigin": "anonymous",
-          "filters": []
-        },
-        "width": 900,
-        "height": 800
-      };
+        // AI-powered text extraction and background generation
+        const { text, media } = await ai.generate({
+            model: 'googleai/gemini-2.5-flash-image-preview',
+            prompt: [
+              { media: { url: image.toString() } },
+              { text: 'Extract all text elements with their positions and styles. Then, remove all text from the image, inpainting the background cleanly.' },
+            ],
+            config: {
+              responseModalities: ['TEXT', 'IMAGE'],
+            },
+        });
+
+        // The 'text' variable will ideally contain structured data (e.g., JSON)
+        // describing the text elements. The 'media' variable will contain the
+        // cleaned background image.
+        
+        let textElements = [];
+        try {
+            // Attempt to parse the AI's text output as JSON
+            const parsedText = JSON.parse(text);
+            if (Array.isArray(parsedText)) {
+                textElements = parsedText.map(element => ({
+                    type: 'textbox',
+                    version: '5.3.0',
+                    originX: 'left',
+                    originY: 'top',
+                    left: element.left || 100,
+                    top: element.top || 100,
+                    width: element.width || 200,
+                    height: element.height || 50,
+                    fill: element.fill || '#000000',
+                    text: element.text || 'Editable Text',
+                    fontSize: element.fontSize || 24,
+                    fontWeight: element.fontWeight || 'normal',
+                    fontFamily: element.fontFamily || 'Arial',
+                    textAlign: element.textAlign || 'left',
+                    selectable: true,
+                    editable: true
+                }));
+            }
+        } catch (e) {
+            console.warn("Could not parse AI text output as JSON. Using default text.");
+            // Fallback to a single default textbox if parsing fails
+            textElements.push({
+                type: 'textbox',
+                version: '5.3.0',
+                originX: 'center',
+                originY: 'center',
+                left: 450,
+                top: 400,
+                width: 400,
+                height: 60,
+                fill: '#000000',
+                text: 'Your Title Here',
+                fontSize: 48,
+                fontWeight: 'bold',
+                fontFamily: 'Arial',
+                textAlign: 'center',
+                selectable: true,
+                editable: true
+            });
+        }
+        
+        // Construct the jsonData for Fabric.js
+        templateData.jsonData = {
+            version: "5.3.0",
+            objects: textElements,
+            backgroundImage: {
+                type: 'image',
+                version: '5.3.0',
+                originX: 'left',
+                originY: 'top',
+                left: 0,
+                top: 0,
+                width: 900,
+                height: 800,
+                src: media.url, // Use the cleaned background image from the AI
+                crossOrigin: 'anonymous',
+                filters: []
+            },
+            width: 900,
+            height: 800
+        };
+
+        // Also update the main imageUrl to be the clean one
+        templateData.imageUrl = media.url;
+      
     } else {
       // Create a blank template with default background
       templateData.jsonData = {

@@ -247,186 +247,89 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const [saveCustomizedTemplate] = useSaveCustomizedTemplateMutation();
 
-  const initCanvas = useCallback(() => {
-    if (!canvasContainerRef.current || !template) return;
-    
-    // Create a new canvas element each time
-    const canvasEl = document.createElement('canvas');
-    if (canvasRef.current) {
-      canvasRef.current = canvasEl;
-    }
-    canvasContainerRef.current.innerHTML = '';
-    canvasContainerRef.current.appendChild(canvasEl);
+  const initCanvas = useCallback((container: HTMLDivElement) => {
+    if (!container || !template) return null;
 
-    const container = canvasContainerRef.current;
-    
-    // Initialize canvas with proper dimensions
+    const canvasEl = document.createElement('canvas');
+    container.innerHTML = '';
+    container.appendChild(canvasEl);
+
     const canvas = new fabric.Canvas(canvasEl, {
-        width: 900, // Default canvas width
-        height: 800, // Default canvas height
-        backgroundColor: '#ffffff'
+      width: container.clientWidth,
+      height: container.clientHeight,
+      backgroundColor: '#f0f0f0'
     });
 
-    // Load template data if available
     if (template.jsonData && typeof template.jsonData === 'object') {
-      console.log('Loading template JSON data:', template.jsonData);
-      console.log('Template has background:', template.jsonData.background);
-      console.log('Template has backgroundImage:', template.jsonData.backgroundImage);
-      console.log('Template has backgroundColor:', template.jsonData.backgroundColor);
-      console.log('Template objects count:', template.jsonData.objects?.length);
-      
-      // Log each object type
-      if (template.jsonData.objects) {
-        template.jsonData.objects.forEach((obj: any, index: number) => {
-          console.log(`Object ${index}:`, obj.type, obj.text || obj.src || 'no content');
-        });
-      }
-      
-      try {
-        // First set canvas dimensions from JSON if available
-        if (template.jsonData.width) {
-          canvas.setWidth(template.jsonData.width);
-        }
-        if (template.jsonData.height) {
-          canvas.setHeight(template.jsonData.height);
-        }
-        
-        // Load from JSON with callback to handle scaling
         canvas.loadFromJSON(template.jsonData, () => {
-          console.log('Canvas JSON loaded successfully');
-          console.log('Canvas background after load:', canvas.backgroundColor);
-          console.log('Canvas background image after load:', canvas.backgroundImage);
-          console.log('Canvas objects after load:', canvas.getObjects().length);
-          
-          // Handle legacy templates that might have "background" instead of "backgroundImage"
-          if (template.jsonData.background && !canvas.backgroundImage) {
-            console.log('Found legacy background property, setting as background image');
-            fabric.Image.fromURL(template.jsonData.background, (img: any) => {
-              canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-                scaleX: canvas.width / (img.width || 1),
-                scaleY: canvas.height / (img.height || 1),
-                originX: 'left',
-                originY: 'top'
-              });
-              console.log('Legacy background image set');
-            });
-          }
-          
-          // List loaded objects
-          canvas.getObjects().forEach((obj: any, index: number) => {
-            console.log(`Loaded object ${index}:`, obj.type, obj.text || obj.src || 'no content');
-          });
-          
-          // After loading, scale the canvas to fit the container
-          const canvasWidth = canvas.getWidth();
-          const canvasHeight = canvas.getHeight();
-          
-          const containerWidth = container.clientWidth - 40; // Account for padding
-          const containerHeight = container.clientHeight - 40;
-          
-          const scaleX = containerWidth / canvasWidth;
-          const scaleY = containerHeight / canvasHeight;
-          const scale = Math.min(scaleX, scaleY, 0.8); // Slightly smaller to ensure it fits
-          
-          if (scale < 1) {
-            canvas.setZoom(scale);
-          }
-          
-          // Center the canvas
-          const scaledWidth = canvasWidth * scale;
-          const scaledHeight = canvasHeight * scale;
-          canvasEl.style.marginLeft = `${Math.max(0, (containerWidth - scaledWidth) / 2)}px`;
-          canvasEl.style.marginTop = `${Math.max(0, (containerHeight - scaledHeight) / 2)}px`;
-          
-          // Force a re-render to ensure everything displays
-          canvas.renderAll();
-          setFabricCanvas(canvas);
-          console.log('Canvas setup complete with scale:', scale);
+            const background = canvas.backgroundImage as fabric.Image;
+            if (background) {
+                const containerWidth = container.clientWidth;
+                const containerHeight = container.clientHeight;
+                const imgAspectRatio = background.width / background.height;
+                const containerAspectRatio = containerWidth / containerHeight;
+
+                let canvasWidth, canvasHeight;
+                if (imgAspectRatio > containerAspectRatio) {
+                    canvasWidth = containerWidth;
+                    canvasHeight = containerWidth / imgAspectRatio;
+                } else {
+                    canvasHeight = containerHeight;
+                    canvasWidth = containerHeight * imgAspectRatio;
+                }
+                
+                canvas.setWidth(canvasWidth);
+                canvas.setHeight(canvasHeight);
+                canvas.setZoom(canvasWidth / background.width);
+            }
+            canvas.renderAll();
         });
-      } catch (error) {
-        console.error('Error loading canvas from JSON:', error);
-        console.error('JSON data causing error:', template.jsonData);
-        // Fallback: create a blank canvas with background image if available
-        if (template.imageUrl) {
-          loadBackgroundImage(canvas, template.imageUrl);
-        } else {
-          setFabricCanvas(canvas);
-        }
-      }
     } else if (template.imageUrl) {
-      console.log('No JSON data, loading background image only:', template.imageUrl);
-      // Load background image if no JSON data
-      loadBackgroundImage(canvas, template.imageUrl);
-    } else {
-      console.log('No JSON data or background image, using blank canvas');
-      // Completely blank template
-      setFabricCanvas(canvas);
+        fabric.Image.fromURL(template.imageUrl, (img) => {
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+            const imgAspectRatio = img.width / img.height;
+            const containerAspectRatio = containerWidth / containerHeight;
+
+            let canvasWidth, canvasHeight;
+            if (imgAspectRatio > containerAspectRatio) {
+                canvasWidth = containerWidth;
+                canvasHeight = containerWidth / imgAspectRatio;
+            } else {
+                canvasHeight = containerHeight;
+                canvasWidth = containerHeight * imgAspectRatio;
+            }
+
+            canvas.setWidth(canvasWidth);
+            canvas.setHeight(canvasHeight);
+            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
+                scaleX: canvas.width / img.width,
+                scaleY: canvas.height / img.height
+            });
+        }, { crossOrigin: 'anonymous' });
     }
 
-    // Set up event listeners
     canvas.on('selection:created', (e: any) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
     canvas.on('selection:updated', (e: any) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
     canvas.on('selection:cleared', () => setSelectedObject(null));
 
+    setFabricCanvas(canvas);
     return canvas;
   }, [template]);
 
-  const loadBackgroundImage = (canvas: fabric.Canvas, imageUrl: string) => {
-    console.log('Loading background image, URL length:', imageUrl.length);
-    console.log('Image URL starts with data:', imageUrl.startsWith('data:'));
-    
-    fabric.Image.fromURL(imageUrl, (img: any) => {
-      console.log('Image loaded successfully, dimensions:', img.width, 'x', img.height);
-      
-      // Set the image as background
-      canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-        scaleX: canvas.width / (img.width || 1),
-        scaleY: canvas.height / (img.height || 1),
-        originX: 'left',
-        originY: 'top'
-      });
-      
-      const container = canvasContainerRef.current;
-      if (container) {
-        const containerWidth = container.clientWidth - 40;
-        const containerHeight = container.clientHeight - 40;
-        const scaleX = containerWidth / canvas.width;
-        const scaleY = containerHeight / canvas.height;
-        const scale = Math.min(scaleX, scaleY, 0.8);
-        
-        if (scale < 1) {
-          canvas.setZoom(scale);
-        }
+  const canvasContainerRef = useCallback((node: HTMLDivElement) => {
+      if (node && isOpen && template) {
+          const canvas = initCanvas(node);
+          return () => {
+              if(canvas) {
+                  canvas.dispose();
+              }
+          };
       }
-      
-      console.log('Background image set successfully');
-      setFabricCanvas(canvas);
-    }, { 
-      crossOrigin: 'anonymous'
-    });
-  };
-  
-  useEffect(() => {
-    let canvas: fabric.Canvas | null = null;
-    if (isOpen && template) {
-      // Delay initialization to ensure the modal container has dimensions
-      const timer = setTimeout(() => {
-        canvas = initCanvas();
-      }, 50);
-
-      return () => {
-        clearTimeout(timer);
-        if (canvas) {
-          canvas.dispose();
-        }
-        setFabricCanvas(null);
-      };
-    }
   }, [isOpen, template, initCanvas]);
 
   const addText = () => {
