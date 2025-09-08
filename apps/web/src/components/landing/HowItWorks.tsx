@@ -1,6 +1,6 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui/card";
-import { Search, CalendarCheck, Heart, ArrowRight } from "lucide-react";
+import { Search, CalendarCheck, Heart } from "lucide-react";
 
 const steps = [
     {

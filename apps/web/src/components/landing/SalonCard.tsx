@@ -15,7 +15,7 @@ interface SalonCardProps {
 
 export function SalonCard({ name, rating, location, image, hint, topRated = false }: SalonCardProps) {
   return (
-    <Card className="overflow-hidden group hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 rounded-xl border-border/50 bg-gradient-to-br from-background via-background to-primary/5 hover:border-primary/30">
+    <Card className="overflow-hidden group transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20 rounded-xl bg-background/30 backdrop-blur-xl border border-white/10 hover:-translate-y-2">
       <div className="relative aspect-[4/3] overflow-hidden">
         <Image 
             src={image} 
@@ -32,7 +32,7 @@ export function SalonCard({ name, rating, location, image, hint, topRated = fals
             </div>
         )}
       </div>
-      <CardContent className="p-4 bg-background/50">
+      <CardContent className="p-4 bg-transparent">
         <h3 className="font-bold text-lg truncate mb-2">{name}</h3>
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
             <div className="flex items-center gap-1">
