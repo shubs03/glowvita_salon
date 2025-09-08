@@ -250,9 +250,8 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   const [saveCustomizedTemplate] = useSaveCustomizedTemplateMutation();
 
   const initCanvas = useCallback((container: HTMLDivElement) => {
-    if (!container || !template) return;
+    if (!container || !template || !template.jsonData) return;
     
-    // Clear previous canvas if any
     container.innerHTML = '';
     const canvasEl = document.createElement('canvas');
     container.appendChild(canvasEl);
@@ -263,24 +262,48 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
         backgroundColor: '#f0f0f0',
     });
 
-    if (template.jsonData && typeof template.jsonData === 'object') {
-      canvas.loadFromJSON(template.jsonData, () => {
-        const background = canvas.backgroundImage as fabric.Image;
-        if (background && background.width && background.height) {
-          const containerWidth = container.clientWidth;
-          const imgAspectRatio = background.width / background.height;
-          
-          const canvasWidth = containerWidth;
-          const canvasHeight = containerWidth / imgAspectRatio;
+    const { background, objects } = template.jsonData;
 
-          canvas.setWidth(canvasWidth);
-          canvas.setHeight(canvasHeight);
-          canvas.setZoom(canvasWidth / background.width);
-        } else {
-            console.warn("Background image not found in JSON or has no dimensions.");
-        }
-        canvas.renderAll();
-      });
+    if (background && typeof background === 'string') {
+        fabric.Image.fromURL(background, (img) => {
+            const containerWidth = container.clientWidth;
+            const imgAspectRatio = img.width / img.height;
+            
+            const canvasWidth = containerWidth;
+            const canvasHeight = containerWidth / imgAspectRatio;
+
+            canvas.setWidth(canvasWidth);
+            canvas.setHeight(canvasHeight);
+            
+            canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
+                scaleX: canvasWidth / img.width,
+                scaleY: canvasHeight / img.height,
+            });
+
+            if (objects && Array.isArray(objects)) {
+                // Scale objects according to the new canvas size
+                const originalWidth = template.jsonData.width || 900; // Original width from template data
+                const scale = canvasWidth / originalWidth;
+                
+                const scaledObjects = objects.map(obj => {
+                    obj.left *= scale;
+                    obj.top *= scale;
+                    obj.scaleX *= scale;
+                    obj.scaleY *= scale;
+                    return fabric.util.createObject(obj);
+                });
+
+                Promise.all(scaledObjects).then(fabricObjects => {
+                  fabricObjects.forEach(obj => {
+                      if(obj) canvas.add(obj);
+                  });
+                  canvas.renderAll();
+                });
+            }
+        });
+    } else {
+        // Fallback for templates without a background image
+        canvas.loadFromJSON(template.jsonData, canvas.renderAll.bind(canvas));
     }
 
     canvas.on('selection:created', (e: any) => setSelectedObject(e.target || (e.selected && e.selected[0]) || null));
@@ -292,8 +315,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
 
   const canvasContainerRef = useCallback((node: HTMLDivElement) => {
       if (node && isOpen && template) {
-          // Delay initialization to ensure modal is fully rendered
-          const timer = setTimeout(() => initCanvas(node), 50);
+          const timer = setTimeout(() => initCanvas(node), 100);
           return () => clearTimeout(timer);
       }
   }, [isOpen, template, initCanvas]);

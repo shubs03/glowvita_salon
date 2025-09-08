@@ -7,18 +7,17 @@ import { genkit } from 'genkit';
 import { googleAI } from '@genkit-ai/googleai';
 
 // Initialize Genkit AI client with the API key from environment variables
-if (!process.env.GEMINI_API_KEY) {
+if (process.env.GEMINI_API_KEY) {
+    genkit({
+      plugins: [
+        googleAI({
+          apiKey: process.env.GEMINI_API_KEY,
+        }),
+      ],
+    });
+} else {
   console.warn("GEMINI_API_KEY environment variable is not set. AI features will be disabled.");
 }
-
-const ai = genkit({
-  plugins: [
-    googleAI({
-      apiKey: process.env.GEMINI_API_KEY,
-    }),
-  ],
-});
-
 
 // Import the model using relative path to ensure it's registered
 const { default: SocialMediaTemplateModel, modelName } = await import("../../../../../../../packages/lib/src/models/Marketing/socialMediaTemplate.model.js");
@@ -249,11 +248,6 @@ export const POST = authMiddlewareAdmin(async (req) => {
       updatedBy: user._id,
       isActive: body.isActive !== undefined ? Boolean(body.isActive) : true
     };
-
-    // Only add imageUrl if image is provided
-    if (image) {
-      templateData.imageUrl = image.toString();
-    }
     
     // Add JSON data if provided, otherwise create default structure
     if (jsonData) {
@@ -271,7 +265,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
         );
       }
     } else if (image) {
-        // AI-powered text extraction and background generation
+        // Use hardcoded template data with the uploaded image as the background
         templateData.jsonData = {
             "version": "5.3.0",
             "objects": [
@@ -356,7 +350,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
                     "textAlign": "center"
                 }
             ],
-            "background": image
+            "background": image // Use the uploaded image directly as the background
         };
       
     } else {
@@ -392,7 +386,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
     console.log('Creating template with data:', { 
       ...templateData, 
       createdBy: user._id,
-      imageUrl: templateData.imageUrl ? '[BASE64_IMAGE]' : null 
+      jsonData: { ...templateData.jsonData, background: '[BASE64_IMAGE]' }
     });
     
     const newTemplate = await SocialMediaTemplate.create(templateData);
@@ -576,91 +570,8 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
           { status: 400 }
         );
       }
-      updateData.imageUrl = image;
       updateData.jsonData = {
-        "version": "5.3.0",
-        "objects": [
-            {
-                "type": "textbox",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": 450,
-                "top": 200,
-                "width": 600,
-                "height": 100,
-                "fill": "#6B240C",
-                "text": "Paarsh Infotech Family",
-                "fontSize": 70,
-                "fontWeight": "bold",
-                "fontFamily": "Times New Roman",
-                "textAlign": "center"
-            },
-            {
-                "type": "textbox",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": 450,
-                "top": 320,
-                "width": 700,
-                "height": 120,
-                "fill": "#000000",
-                "text": "A day of prayers, a moment of gratitude\nPaarsh Infotech family invites you for\nSatyanarayan Katha",
-                "fontSize": 35,
-                "fontWeight": "normal",
-                "fontFamily": "Arial",
-                "textAlign": "center"
-            },
-            {
-                "type": "textbox",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": 450,
-                "top": 550,
-                "width": 400,
-                "height": 50,
-                "fill": "#A45C40",
-                "text": "29-08-2025",
-                "fontSize": 40,
-                "fontWeight": "bold",
-                "fontFamily": "Arial",
-                "textAlign": "center"
-            },
-             {
-                "type": "textbox",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": 450,
-                "top": 620,
-                "width": 600,
-                "height": 80,
-                "fill": "#000000",
-                "text": "Timing For Pooja at 4:00 PM\nAnd for Prasad 5:30 PM",
-                "fontSize": 30,
-                "fontWeight": "normal",
-                "fontFamily": "Arial",
-                "textAlign": "center"
-            },
-            {
-                "type": "textbox",
-                "version": "5.3.0",
-                "originX": "center",
-                "originY": "center",
-                "left": 450,
-                "top": 720,
-                "width": 800,
-                "height": 80,
-                "fill": "#000000",
-                "text": "02, Bhakti Apartment, near Hotel Rasoi, Suchita Nagar,\nMumbai Naka, Nashik, Maharashtra 422001",
-                "fontSize": 25,
-                "fontWeight": "normal",
-                "fontFamily": "Arial",
-                "textAlign": "center"
-            }
-        ],
+        ...existingTemplate.jsonData,
         "background": image
       };
     }
