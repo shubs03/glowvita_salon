@@ -23,7 +23,7 @@ interface FeeSettings {
 }
 
 export default function TaxAndFeesPage() {
-  const { data: currentSettings, isLoading: isFetching } = useGetTaxFeeSettingsQuery();
+  const { data: currentSettings, isLoading: isFetching } = useGetTaxFeeSettingsQuery(undefined);
   const [updateTaxFeeSettings, { isLoading: isUpdating }] = useUpdateTaxFeeSettingsMutation();
   
   const [settings, setSettings] = useState<FeeSettings>({
@@ -73,7 +73,11 @@ export default function TaxAndFeesPage() {
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
-      toast.error(error?.data?.message || "Failed to update settings");
+      const errorMessage =
+        (typeof error === "object" && error !== null && "data" in error && typeof (error as any).data?.message === "string")
+          ? (error as any).data.message
+          : "Failed to update settings";
+      toast.error(errorMessage);
     }
   };
 
