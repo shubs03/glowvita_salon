@@ -25,9 +25,6 @@ export function SalonCard({ name, rating, location, image, hint, topRated = fals
           data-ai-hint={hint}
       />
       
-      {/* Semi-transparent black overlay on the entire image */}
-      <div className="absolute inset-0 bg-black/30"></div>
-
       {/* Static Gradient Overlay at the bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/70 via-black/50 to-transparent"></div>
       
