@@ -28,6 +28,7 @@ type Client = {
   occupation: string;
   profilePicture?: string;
   address: string;
+  preferences?: string;
   lastVisit: string;
   totalBookings: number;
   totalSpent: number;
@@ -89,6 +90,7 @@ export default function ClientsPage() {
         occupation: string;
         profilePicture: string;
         address: string;
+        preferences: string;
     }>({
         fullName: '',
         email: '',
@@ -99,6 +101,7 @@ export default function ClientsPage() {
         occupation: '',
         profilePicture: '',
         address: '',
+        preferences: ''
     });
 
     const filteredClients = useMemo(() => {
@@ -127,6 +130,7 @@ export default function ClientsPage() {
                 occupation: client.occupation,
                 profilePicture: client.profilePicture || '',
                 address: client.address,
+                preferences: client.preferences || ''
             });
         } else {
             setFormData({
@@ -139,6 +143,7 @@ export default function ClientsPage() {
                 occupation: '',
                 profilePicture: '',
                 address: '',
+                preferences: ''
             });
         }
         setSelectedClient(client || null);
@@ -178,7 +183,8 @@ export default function ClientsPage() {
                 country: formData.country.trim(),
                 occupation: formData.occupation.trim(),
                 profilePicture: formData.profilePicture,
-                address: formData.address.trim()
+                address: formData.address.trim(),
+                preferences: formData.preferences.trim()
             };
 
             if (selectedClient) {
@@ -746,6 +752,18 @@ export default function ClientsPage() {
                                 value={formData.address} 
                                 onChange={handleInputChange} 
                                 placeholder="Enter full address"
+                                rows={3}
+                            />
+                        </div>
+                        {/* Preferences */}
+                        <div className="space-y-2">
+                            <Label htmlFor="preferences">Preferences</Label>
+                            <Textarea
+                                id="preferences"
+                                name="preferences"
+                                value={formData.preferences}
+                                onChange={handleInputChange}
+                                placeholder="Enter any client preferences or notes"
                                 rows={3}
                             />
                         </div>
@@ -1547,3 +1565,4 @@ export default function ClientsPage() {
         </div>
     );
 }
+
