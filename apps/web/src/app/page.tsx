@@ -42,6 +42,8 @@ import {
   Globe,
   Menu,
   X,
+  MapPin,
+  Search
 } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
@@ -329,75 +331,54 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-secondary/30 via-background to-secondary/20 text-foreground">
       <main className="flex-grow">
-        <section className="relative py-16 md:py-16 bg-background overflow-hidden">
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="text-center">
-              <div className="flex justify-center gap-4 md:gap-6 mb-8">
-                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-3 rounded-full text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
-                  <Scissors className="h-6 w-6 md:h-5 md:w-5" />
+      <section className="relative py-20 md:py-32 bg-background overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5 -z-10"></div>
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background to-transparent -z-10"></div>
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background to-transparent -z-10"></div>
+        
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-headline tracking-tighter mb-6 bg-gradient-to-r from-foreground via-foreground/80 to-foreground bg-clip-text text-transparent">
+              Find & Book Your Next Look
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 leading-relaxed">
+              Discover top-rated salons, spas, and barbershops near you. Effortlessly book appointments online, 24/7.
+            </p>
+            
+            <div className="max-w-3xl mx-auto">
+              <div className="relative bg-background rounded-full p-2 shadow-2xl shadow-primary/10 border border-border/50 flex flex-col sm:flex-row items-center gap-2">
+                <div className="relative flex-grow w-full">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search for services or salons"
+                    className="h-12 text-base pl-12 rounded-full sm:rounded-none sm:rounded-l-full border-0 focus-visible:ring-0 bg-transparent w-full"
+                  />
                 </div>
-                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-3 rounded-full text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
-                  <CalendarCheck className="h-6 w-6 md:h-5 md:w-5" />
+                <div className="hidden sm:block w-px h-6 bg-border"></div>
+                <div className="relative flex-grow w-full">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input 
+                    placeholder="Near me"
+                    className="h-12 text-base pl-12 rounded-full sm:rounded-none sm:rounded-r-full border-0 focus-visible:ring-0 bg-transparent w-full"
+                  />
                 </div>
-                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-3 md:p-3 rounded-full text-primary shadow-lg hover:shadow-xl transition-shadow duration-300 hover:scale-110 transform transition-transform duration-200">
-                  <LineChart className="h-6 w-6 md:h-5 md:w-5" />
-                </div>
-              </div>
-              <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-headline tracking-tighter mb-6 bg-gradient-to-r from-foreground via-foreground to-foreground/80 bg-clip-text text-transparent">
-                Elevate Your Salon Business
-              </h1>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-4xl mx-auto mb-10 leading-relaxed">
-                The all-in-one CRM designed for modern salons and stylists.
-                Manage your clients, bookings, and payments seamlessly to unlock
-                your salon's full potential.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center mb-12 md:mb-16">
-                <Button
-                  size="lg"
-                  className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-                  asChild
-                >
-                  <Link href="/auth/register">
-                    Get Started Free{" "}
-                    <Rocket className="ml-2 h-5 w-5 md:h-6 md:w-6 group-hover:scale-110 transition-transform duration-200" />
-                  </Link>
+                <Button size="lg" className="rounded-full w-full sm:w-auto px-8 h-12 text-base font-semibold group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300">
+                  Search <Search className="ml-2 h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-base md:text-lg px-6 md:px-8 py-3 md:py-4 h-auto shadow-xl hover:shadow-2xl transition-all duration-300 border-2 hover:border-primary/50"
-                  asChild
-                >
-                  <Link href="#">Learn More</Link>
-                </Button>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-6">
-                  Trusted by leading salons and stylists
-                </p>
-                <div className="flex justify-center items-center gap-6 md:gap-12 opacity-60 flex-wrap">
-                  <div className="flex items-center gap-2 hover:opacity-100 transition-opacity duration-300">
-                    <Users className="h-6 w-6 md:h-8 md:w-8" />
-                    <span className="font-semibold text-sm md:text-base">Teams</span>
-                  </div>
-                  <div className="flex items-center gap-2 hover:opacity-100 transition-opacity duration-300">
-                    <Shield className="h-6 w-6 md:h-8 md:w-8" />
-                    <span className="font-semibold text-sm md:text-base">Secure</span>
-                  </div>
-                  <div className="flex items-center gap-2 hover:opacity-100 transition-opacity duration-300">
-                    <Award className="h-6 w-6 md:h-8 md:w-8" />
-                    <span className="font-semibold text-sm md:text-base">Award Winning</span>
-                  </div>
-                  <div className="flex items-center gap-2 hover:opacity-100 transition-opacity duration-300">
-                    <Globe className="h-6 w-6 md:h-8 md:w-8" />
-                    <span className="font-semibold text-sm md:text-base">Global</span>
-                  </div>
-                </div>
               </div>
             </div>
+
+            <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">Popular:</span>
+              <Link href="#" className="hover:text-primary transition-colors">Haircut</Link>
+              <Link href="#" className="hover:text-primary transition-colors">Manicure</Link>
+              <Link href="#" className="hover:text-primary transition-colors">Facial</Link>
+              <Link href="#" className="hover:text-primary transition-colors">Massage</Link>
+            </div>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-16 md:h-32 bg-gradient-to-t from-secondary/30 to-transparent"></div>
-        </section>
+        </div>
+      </section>
+
         <section className="py-16 md:py-20 bg-gradient-to-br from-background via-secondary/10 to-background relative overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-12 md:mb-16">
