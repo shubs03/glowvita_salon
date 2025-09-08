@@ -16,12 +16,13 @@ const salons = [
 export function FeaturedSalons() {
   return (
     <section className="py-20 bg-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))] -z-10"></div>
-        <div className="absolute inset-0 bg-dots-grid -z-10 [mask-image:radial-gradient(white,transparent_70%)]"></div>
+      <div className="absolute inset-0 bg-secondary/50 [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,white,transparent_70%)]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_400px_at_50%_300px,#fbfbfb36,transparent)] animate-pulse-slow duration-5000"></div>
+
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Featured Holo-Salons</h2>
-          <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Discover elite cyber-stylists and bio-spas in your sector.</p>
+          <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Discover elite cyber-stylists and bio-spas in your designated sector.</p>
         </div>
         <div className="flex justify-center gap-2 mb-8 flex-wrap">
           {locations.map(loc => (

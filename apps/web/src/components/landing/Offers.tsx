@@ -45,7 +45,7 @@ export function Offers() {
                     <h3 className="text-xl font-bold mb-2">{offer.title}</h3>
                     <p className="text-sm text-muted-foreground mb-4 flex-grow">{offer.description}</p>
                     <Button variant="outline" className="w-full mt-auto group/btn bg-transparent border-primary/50 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300">
-                      <Zap className="mr-2 h-4 w-4 group-hover/btn:animate-ping" /> Activate Offer
+                      <Zap className="mr-2 h-4 w-4 group-hover/btn:text-yellow-300 transition-colors" /> Activate Offer
                     </Button>
                   </CardContent>
                 </Card>

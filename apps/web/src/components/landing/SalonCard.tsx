@@ -16,17 +16,17 @@ interface SalonCardProps {
 export function SalonCard({ name, rating, location, image, hint, topRated = false }: SalonCardProps) {
   return (
     <Card className="overflow-hidden group transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20 rounded-xl bg-background/30 backdrop-blur-xl border border-white/10 hover:-translate-y-2">
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-square overflow-hidden">
         <Image 
             src={image} 
             alt={name} 
             layout="fill" 
-            className="object-cover group-hover:scale-110 transition-transform duration-500"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
             data-ai-hint={hint}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
         {topRated && (
-            <div className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 border-2 border-primary-foreground/50">
+            <div className="absolute top-3 left-3 bg-primary text-primary-foreground text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1 border-2 border-primary-foreground/50 animate-pulse-slow">
                 <Sparkles className="h-4 w-4" />
                 ELITE
             </div>
@@ -45,7 +45,7 @@ export function SalonCard({ name, rating, location, image, hint, topRated = fals
             </div>
         </div>
         <Button className="w-full group/btn bg-primary/90 hover:bg-primary text-primary-foreground shadow-lg hover:shadow-primary/40 transition-all duration-300">
-          Request Teleport <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
+          Book Now <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
         </Button>
       </CardContent>
     </Card>

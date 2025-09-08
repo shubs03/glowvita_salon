@@ -13,6 +13,8 @@ import { PlatformFor } from "@/components/landing/PlatformFor";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { Offers } from "@/components/landing/Offers";
 import { Products } from "@/components/landing/Products";
+import { Pricing } from "@/components/landing/Pricing";
+import { FAQ } from "@/components/landing/FAQ";
 
 export default function HomePage() {
   return (
@@ -63,6 +65,8 @@ export default function HomePage() {
         <Products />
         <HowItWorks />
         <Testimonials />
+        <Pricing />
+        <FAQ />
         <AppCTA />
 
       </main>

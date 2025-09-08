@@ -1,7 +1,7 @@
 
 import { Card, CardContent } from '@repo/ui/card';
 import Image from 'next/image';
-import { Star, ShoppingCart, Zap } from 'lucide-react';
+import { Star, ShoppingCart } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 
 interface ProductCardProps {
@@ -39,7 +39,7 @@ export function ProductCard({ name, price, image, hint, rating, reviewCount }: P
         <div className="flex items-center justify-between">
           <p className="text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">₹{price.toFixed(2)}</p>
           <Button size="sm" variant="outline" className="group/btn border-primary/50 hover:bg-primary/90 hover:text-primary-foreground transition-all duration-300">
-             <Zap className="mr-2 h-4 w-4 group-hover/btn:text-yellow-300 transition-colors" /> Add to Synth-Cart
+             <ShoppingCart className="mr-2 h-4 w-4 group-hover/btn:text-yellow-300 transition-colors" /> Add to Cart
           </Button>
         </div>
       </CardContent>
