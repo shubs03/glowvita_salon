@@ -22,7 +22,8 @@ export * from "./slices/serviceSlice";
 export * from "./slices/staffSlice";
 export * from "./slices/appointmentSlice";
 export * from "./slices/blockTimeSlice";
-
+export * from "./slices/vendorprofileSlice";
+export * from "./slices/workingHoursSlice";
 
 
 export * from "./slices/shippingSlice";

@@ -113,6 +113,9 @@ export const glowvitaApi = createApi({
     "SmsTemplate",
     "SmsPackage",
     "SocialMediaTemplate",
+    "Appointment",
+
+    
   ],
 
   endpoints: (builder) => ({
@@ -1141,6 +1144,88 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Staff"],
     }),
+    //working hours endpoint
+
+    getWorkingHours: builder.query({
+      query: () => ({
+        url: "/crm/workinghours",
+        method: "GET",
+      }),
+      providesTags: ["WorkingHours"],
+    }),
+    updateWorkingHours: builder.mutation({
+      query: (workingHours) => ({
+        url: "/crm/workinghours",
+        method: "PUT",
+        body: workingHours,
+      }),
+      invalidatesTags: ["WorkingHours"],
+    }),
+    addSpecialHours: builder.mutation({
+      query: (specialHours) => ({
+        url: "/crm/workinghours",
+        method: "POST",
+        body: specialHours,
+      }),
+      invalidatesTags: ["WorkingHours"],
+    }),
+    deleteSpecialHours: builder.mutation({
+      query: (id) => ({
+        url: `/crm/workinghours?id=${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["WorkingHours"],
+    }),
+
+    // appointments endpoints
+    getAppointments: builder.query({
+      query: () => ({
+        url: "/crm/appointments",
+        method: "GET",
+      }),
+      providesTags: (result = [], error, arg) => [
+        'Appointments',
+        ...result.map(({ id }) => ({ type: 'Appointment', id }))
+      ],
+    }),
+    createAppointment: builder.mutation({
+      query: (appointment) => ({
+        url: "/crm/appointments",  
+        method: "POST",
+        body: appointment,
+      }),
+      invalidatesTags: ['Appointments'],
+    }),
+    updateAppointment: builder.mutation({
+      query: ({ id, ...updates }) => ({
+        url: `/api/crm/appointments/${id}`,  // Add /api prefix
+        method: "PUT",
+        body: updates,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Appointment', id },
+        'Appointments'
+      ],
+    }),
+    updateAppointmentStatus: builder.mutation({
+      query: ({ id, status, cancellationReason }) => ({
+        url: `/crm/appointments`,
+        method: "PATCH",
+        body: { _id: id, status, cancellationReason },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Appointment', id },
+        'Appointments'
+      ],
+    }),
+    deleteAppointment: builder.mutation({
+      query: (id) => ({
+        url: `/crm/appointments/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ['Appointments'],
+    }),
+   
     
     // Client Endpoints
     getClients: builder.query({
@@ -1296,6 +1381,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["CrmSocialMediaTemplate"],
     }),
   }),
+   
 });
 
 export const {
@@ -1466,6 +1552,18 @@ export const {
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
+  //working hours endpoints
+  useGetWorkingHoursQuery,
+  useUpdateWorkingHoursMutation,
+  useAddSpecialHoursMutation,
+  useDeleteSpecialHoursMutation,
+
+  // appointment endpoints
+  useGetAppointmentsQuery,
+  useCreateAppointmentMutation,
+  useUpdateAppointmentMutation,
+  useDeleteAppointmentMutation,
+  
   
   // Client Endpoints
   useGetClientsQuery,

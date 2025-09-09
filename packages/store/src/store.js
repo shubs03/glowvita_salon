@@ -20,6 +20,8 @@ import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
 import clientReducer from "./slices/CRM/clientSlice.js"; // Import client slice
 import appointmentReducer from './slices/appointmentSlice';
 import blockTimeReducer from './slices/blockTimeSlice';
+import vendorprofileReducer from './slices/vendorprofileSlice';
+import workingHoursReducer from './slices/workingHoursSlice';
   
 export const makeStore = () => {
   return configureStore({
@@ -46,7 +48,10 @@ export const makeStore = () => {
       faqs: faqReducer,
       service: serviceReducer,
       appointments: appointmentReducer,  
-      blockTime: blockTimeReducer
+      blockTime: blockTimeReducer,
+      vendorprofile: vendorprofileReducer,
+      workingHours: workingHoursReducer
+      
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
