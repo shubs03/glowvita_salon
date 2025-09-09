@@ -98,10 +98,28 @@ const config: Omit<Config, "content"> = {
       fontFamily: {
         body: ["Inter", "sans-serif"],
         headline: ["'Space Grotesk'", "sans-serif"],
+      },
+      clipPath: {
+        'futuristic': 'polygon(0% 5%, 5% 0%, 95% 0%, 100% 5%, 100% 95%, 95% 100%, 5% 100%, 0% 95%)',
+      },
+      perspective: {
+        '1000': '1000px',
       }
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function ({ addUtilities }: { addUtilities: any }) {
+      addUtilities({
+        '.futuristic-clip-path': {
+          'clip-path': 'polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)',
+        },
+        '.perspective-1000': {
+          'perspective': '1000px',
+        }
+      });
+    },
+  ],
 };
 
 export default config;
