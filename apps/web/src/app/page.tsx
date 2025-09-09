@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@repo/ui/button";
@@ -12,6 +13,7 @@ import { Offers } from "@/components/landing/Offers";
 import { Pricing } from "@/components/landing/Pricing";
 import { FAQ } from "@/components/landing/FAQ";
 import { AdvantageCard, VideoTestimonialSection, SecuritySection } from "@/components/landing/NewSections";
+import { FeaturedProducts } from "@/components/landing/FeaturedProducts";
 
 export default function HomePage() {
 
@@ -71,6 +73,8 @@ export default function HomePage() {
         <PlatformFor />
         <FeaturedSalons />
         <Offers />
+        <HowItWorks />
+        <FeaturedProducts />
         
         <section className="py-16 md:py-20 bg-gradient-to-br from-background via-primary/5 to-background relative overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
@@ -139,7 +143,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        <HowItWorks />
         <VideoTestimonialSection />
         <Testimonials />
         <Pricing />
