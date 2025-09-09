@@ -10,7 +10,6 @@ import { HowItWorks } from "@/components/landing/HowItWorks";
 import { PlatformFor } from "@/components/landing/PlatformFor";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { Offers } from "@/components/landing/Offers";
-import { Products } from "@/components/landing/Products";
 import { Pricing } from "@/components/landing/Pricing";
 import { FAQ } from "@/components/landing/FAQ";
 import { AdvantageCard, VideoTestimonialSection, SecuritySection } from "@/components/landing/NewSections";
@@ -73,8 +72,7 @@ export default function HomePage() {
         <PlatformFor />
         <FeaturedSalons />
         <Offers />
-        <Products />
-
+        
         <section className="py-16 md:py-20 bg-gradient-to-br from-background via-primary/5 to-background relative overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-12 md:mb-16">
