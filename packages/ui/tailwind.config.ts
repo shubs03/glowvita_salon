@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 const config: Omit<Config, "content"> = {
@@ -15,8 +14,8 @@ const config: Omit<Config, "content"> = {
         shimmer: "shimmer 2s linear infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        'slide': 'slide 40s linear infinite',
-        'slide-rtl': 'slide-rtl 40s linear infinite',
+        'slide': 'slide 90s linear infinite',
+        'slide-rtl': 'slide-rtl 90s linear infinite',
         'pulse-slow': 'pulse 5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'gradient-sweep': 'gradient-sweep 10s linear infinite',
         'shine': 'shine 1s ease-in-out',
@@ -98,9 +97,6 @@ const config: Omit<Config, "content"> = {
       fontFamily: {
         body: ["Inter", "sans-serif"],
         headline: ["'Space Grotesk'", "sans-serif"],
-      },
-      clipPath: {
-        'futuristic': 'polygon(0% 5%, 5% 0%, 95% 0%, 100% 5%, 100% 95%, 95% 100%, 5% 100%, 0% 95%)',
       },
       perspective: {
         '1000': '1000px',
