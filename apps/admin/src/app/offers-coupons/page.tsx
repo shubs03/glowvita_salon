@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -9,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Checkbox } from '@repo/ui/checkbox';
+import { Skeleton } from '@repo/ui/skeleton';
 import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee, Upload, X } from "lucide-react";
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { openModal, closeModal } from '@repo/store/slices/modal';
@@ -18,10 +20,11 @@ import {
   useGetAdminOffersQuery, 
   useCreateAdminOfferMutation, 
   useUpdateAdminOfferMutation, 
-  useDeleteAdminOfferMutation 
+  useDeleteAdminOfferMutation,
+  useGetSuperDataQuery
 } from '@repo/store/api';
 import { toast } from 'sonner';
-import { selectRootState } from '@repo/store/store';
+import { RootState } from '@repo/store/store';
 
 type Coupon = {
   _id: string;
@@ -51,8 +54,7 @@ type CouponForm = {
   isCustomCode: boolean;
 };
 
-// Predefined options for specialties and categories
-const specialtyOptions = ['Hair Cut', 'Spa', 'Massage', 'Facial', 'Manicure', 'Pedicure'];
+// Predefined options for categories
 const categoryOptions = ['Men', 'Women', 'Unisex'];
 
 export default function OffersCouponsPage() {
@@ -68,7 +70,7 @@ export default function OffersCouponsPage() {
 
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector(
-    (state) => selectRootState(state).modal
+    (state: RootState) => state.modal
   );
    
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<CouponForm>({
@@ -93,9 +95,15 @@ export default function OffersCouponsPage() {
     refetch 
   } = useGetAdminOffersQuery(undefined);
   
+  const { data: superData = [] } = useGetSuperDataQuery(undefined);
+
   const [createOffer, { isLoading: isCreating }] = useCreateAdminOfferMutation();
   const [updateOffer, { isLoading: isUpdating }] = useUpdateAdminOfferMutation();
   const [deleteOffer, { isLoading: isDeleting }] = useDeleteAdminOfferMutation();
+
+  const specialtyOptions = useMemo(() => {
+    return superData.filter((item: any) => item.type === 'service').map((item: any) => item.name);
+  }, [superData]);
 
   // Convert file to base64
   const convertToBase64 = (file: File): Promise<string> => {
@@ -111,18 +119,14 @@ export default function OffersCouponsPage() {
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         toast.error('Please select a valid image file');
         return;
       }
-      
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('Image size should be less than 5MB');
         return;
       }
-
       try {
         const base64 = await convertToBase64(file);
         setValue('offerImage', base64);
@@ -272,7 +276,78 @@ export default function OffersCouponsPage() {
     return acc + (1000 * (coupon.value / 100)) * coupon.redeemed;
   }, 0) : 0;
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Skeleton className="h-8 w-64 mb-6" />
+
+        {/* Stats cards skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-3 w-32 mt-2" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Main table skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-56 mt-2" />
+              </div>
+              <Skeleton className="h-9 w-40" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto no-scrollbar">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {[...Array(10)].map((_, i) => (
+                      <TableHead key={i}><Skeleton className="h-4 w-16" /></TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      {[...Array(10)].map((_, j) => (
+                        <TableCell key={j}>
+                          {j === 0 ? (
+                            <Skeleton className="h-8 w-8 rounded" />
+                          ) : j === 9 ? (
+                            <div className="flex gap-1">
+                              <Skeleton className="h-8 w-8" />
+                              <Skeleton className="h-8 w-8" />
+                              <Skeleton className="h-8 w-8" />
+                            </div>
+                          ) : (
+                            <Skeleton className="h-4 w-20" />
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <Skeleton className="h-10 w-full mt-4" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isError) return <div>Error loading coupons. Please try again.</div>;
 
   return (
@@ -360,7 +435,7 @@ export default function OffersCouponsPage() {
               </TableHeader>
               <TableBody>
                 {currentItems.map((coupon) => (
-                  <TableRow key={coupon.id}>
+                  <TableRow key={coupon._id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {coupon.code}
@@ -451,61 +526,67 @@ export default function OffersCouponsPage() {
           
           {modalType === 'viewCoupon' ? (
             <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Code</span>
-                <span className="col-span-2 flex items-center gap-2">
-                  {(data as Coupon)?.code || 'N/A'}
-                  {(data as Coupon)?.isCustomCode && (
-                    <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">Custom</span>
-                  )}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Discount</span>
-                <span className="col-span-2">{data ? formatDiscount(data as Coupon) : 'N/A'}</span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Status</span>
-                <span className="col-span-2">{(data as Coupon)?.status || 'N/A'}</span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Starts</span>
-                <span className="col-span-2">{(data as Coupon)?.startDate?.split('T')[0] || 'N/A'}</span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Expires</span>
-                <span className="col-span-2">{(data as Coupon)?.expires ? (data as Coupon).expires.split('T')[0] : 'N/A'}</span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Specialties</span>
-                <span className="col-span-2">{formatList((data as Coupon)?.applicableSpecialties)}</span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Categories</span>
-                <span className="col-span-2">{formatList((data as Coupon)?.applicableCategories)}</span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Image</span>
-                <div className="col-span-2">
-                  {(data as Coupon)?.offerImage ? (
-                    <img 
-                      src={(data as Coupon).offerImage} 
-                      alt="Offer" 
-                      className="w-20 h-20 object-cover rounded border"
-                    />
-                  ) : (
-                    <span className="text-gray-400">No image uploaded</span>
-                  )}
-                </div>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Redeemed</span>
-                <span className="col-span-2">{(data as Coupon)?.redeemed || 0}</span>
-              </div>
+              {(() => {
+                const couponData = data ? (data as unknown as Coupon) : null;
+                return (
+                  <>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <span className="font-semibold text-muted-foreground">Code</span>
+                      <span className="col-span-2 flex items-center gap-2">
+                        {couponData?.code || 'N/A'}
+                        {couponData?.isCustomCode && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">Custom</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <span className="font-semibold text-muted-foreground">Discount</span>
+                      <span className="col-span-2">{couponData ? formatDiscount(couponData) : 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <span className="font-semibold text-muted-foreground">Status</span>
+                      <span className="col-span-2">{couponData?.status || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <span className="font-semibold text-muted-foreground">Starts</span>
+                      <span className="col-span-2">{couponData?.startDate?.split('T')[0] || 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <span className="font-semibold text-muted-foreground">Expires</span>
+                      <span className="col-span-2">{couponData?.expires ? couponData.expires.split('T')[0] : 'N/A'}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <span className="font-semibold text-muted-foreground">Specialties</span>
+                      <span className="col-span-2">{formatList(couponData?.applicableSpecialties)}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <span className="font-semibold text-muted-foreground">Categories</span>
+                      <span className="col-span-2">{formatList(couponData?.applicableCategories)}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <span className="font-semibold text-muted-foreground">Image</span>
+                      <div className="col-span-2">
+                        {couponData?.offerImage ? (
+                          <img 
+                            src={couponData.offerImage} 
+                            alt="Offer" 
+                            className="w-20 h-20 object-cover rounded border"
+                          />
+                        ) : (
+                          <span className="text-gray-400">No image uploaded</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <span className="font-semibold text-muted-foreground">Redeemed</span>
+                      <span className="col-span-2">{couponData?.redeemed || 0}</span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
-              {/* Custom Code Toggle */}
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="useCustomCode" 
@@ -521,7 +602,6 @@ export default function OffersCouponsPage() {
                 <Label htmlFor="useCustomCode">Use custom coupon code</Label>
               </div>
 
-              {/* Coupon Code Field */}
               {useCustomCode && (
                 <div className="space-y-2">
                   <Label htmlFor="code">Custom Coupon Code</Label>
@@ -543,11 +623,10 @@ export default function OffersCouponsPage() {
                 </div>
               )}
 
-              {/* Discount Type */}
               <div className="space-y-2">
                 <Label htmlFor="type">Discount Type</Label>
                 <Select 
-                  defaultValue={(data as Coupon)?.type || 'percentage'} 
+                  defaultValue={data ? (data as Coupon).type || 'percentage' : 'percentage'} 
                   onValueChange={(value) => setValue('type', value as 'percentage' | 'fixed')}
                 >
                   <SelectTrigger id="type">
@@ -560,7 +639,6 @@ export default function OffersCouponsPage() {
                 </Select>
               </div>
 
-              {/* Discount Value */}
               <div className="space-y-2">
                 <Label htmlFor="value">Discount Value</Label>
                 <Input 
@@ -574,7 +652,6 @@ export default function OffersCouponsPage() {
                 {errors.value && <p className="text-red-500 text-sm">{errors.value.message}</p>}
               </div>
 
-              {/* Date Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Starts On</Label>
@@ -595,11 +672,10 @@ export default function OffersCouponsPage() {
                 </div>
               </div>
 
-              {/* Multiple Specialties Selection */}
               <div className="space-y-2">
-                <Label>Applicable Specialties (Select multiple or none for all)</Label>
-                <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
-                  {specialtyOptions.map((specialty) => (
+                <Label>Applicable Services (Select multiple or none for all)</Label>
+                <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
+                  {specialtyOptions.map((specialty: any) => (
                     <div key={specialty} className="flex items-center space-x-2">
                       <Checkbox
                         id={`specialty-${specialty}`}
@@ -613,11 +689,10 @@ export default function OffersCouponsPage() {
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {selectedSpecialties.length === 0 ? 'Will apply to all specialties' : `Selected: ${selectedSpecialties.length}`}
+                  {selectedSpecialties.length === 0 ? 'Will apply to all services' : `Selected: ${selectedSpecialties.length}`}
                 </p>
               </div>
 
-              {/* Multiple Categories Selection */}
               <div className="space-y-2">
                 <Label>Applicable Categories (Select multiple or none for all)</Label>
                 <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
@@ -639,7 +714,6 @@ export default function OffersCouponsPage() {
                 </p>
               </div>
 
-              {/* Image Upload */}
               <div className="space-y-2">
                 <Label>Offer Image (Optional)</Label>
                 <div className="space-y-2">

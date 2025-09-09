@@ -7,6 +7,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
 import { sidebarNavItems } from '@/lib/routes';
+import { cn } from '@repo/ui/cn';
 
 export function AdminLayout({ children }: { children: React.ReactNode; }) {
   const router = useRouter();
@@ -62,28 +63,30 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
      
   if (isLoading || !isAdminAuthenticated) {
     return (
-        <div className="flex items-center justify-center h-screen bg-background">
-            <div className="text-foreground">Unauthorized Access</div>
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="flex flex-col items-center">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-muted-foreground">Authenticating...</p>
         </div>
+      </div>
     )
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-secondary">
-      {/* Sidebar Component */}
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar 
         isOpen={isSidebarOpen} 
         toggleSidebar={toggleSidebar} 
         isMobile={isMobile}
       />
              
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
-        {/* Header */}
+      <div className={cn(
+        "flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden transition-all duration-300 ease-in-out",
+        !isMobile && (isSidebarOpen ? "lg:ml-64" : "lg:ml-20")
+      )}>
         <Header toggleSidebar={toggleSidebar} />
                  
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary/50">
           <div className="w-full max-w-none overflow-hidden">
             {children}
           </div>

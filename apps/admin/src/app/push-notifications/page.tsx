@@ -41,8 +41,8 @@ export default function PushNotificationsPage() {
   const { isModalOpen, modalType, notificationData } = useAppSelector(state => state.notification);
   
   const { data: notifications = [], isLoading: isNotificationsLoading } = useGetNotificationsQuery(undefined);
-  const { data: users = [], isLoading: isUsersLoading } = useGetUsersQuery();
-  const { data: vendors = [], isLoading: isVendorsLoading } = useGetVendorsQuery();
+  const { data: users = [], isLoading: isUsersLoading } = useGetUsersQuery(undefined);
+  const { data: vendors = [], isLoading: isVendorsLoading } = useGetVendorsQuery(undefined);
   const [createNotification] = useCreateNotificationMutation();
   const [updateNotification] = useUpdateNotificationMutation();
   const [deleteNotification] = useDeleteNotificationMutation();

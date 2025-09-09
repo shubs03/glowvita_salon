@@ -10,6 +10,7 @@ import { Pagination } from '@repo/ui/pagination';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
+import { Skeleton } from '@repo/ui/skeleton';
 import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
@@ -25,6 +26,9 @@ type Plan = {
   discountedPrice?: number;
   isAvailableForPurchase: boolean;
   status?: boolean;
+  features: string[];
+  userType: ('vendor' | 'supplier' | 'doctor')[];
+  isFeatured?: boolean;
 };
 
 type Subscription = {
@@ -87,6 +91,11 @@ export default function SubscriptionManagementPage() {
     price: '',
     discountedPrice: '',
     isAvailableForPurchase: true,
+    features: [] as string[],
+    userTypes: [] as ('vendor' | 'supplier' | 'doctor')[],
+    isFeatured: false,
+    planType: 'regular',
+    status: 'Active'
   });
 
   // Pagination state
@@ -125,6 +134,11 @@ export default function SubscriptionManagementPage() {
         price: plan.price.toString(),
         discountedPrice: plan.discountedPrice?.toString() || '',
         isAvailableForPurchase: plan.isAvailableForPurchase ?? true,
+        features: plan.features || [],
+        userTypes: plan.userType || [],
+        isFeatured: plan.isFeatured || false,
+        planType: 'regular',
+        status: 'Active'
       });
     } else {
       setPlanForm({
@@ -134,6 +148,11 @@ export default function SubscriptionManagementPage() {
         price: '',
         discountedPrice: '',
         isAvailableForPurchase: true,
+        features: [],
+        userTypes: [],
+        isFeatured: false,
+        planType: 'regular',
+        status: 'Active'
       });
     }
 
@@ -176,11 +195,14 @@ export default function SubscriptionManagementPage() {
         name: planForm.name,
         duration: parseInt(planForm.duration) || 1,
         durationType: planForm.durationType,
-        price: planForm.price ? parseFloat(planForm.price) : 0,
-        discountedPrice: planForm.discountedPrice ? parseFloat(planForm.discountedPrice) : undefined,
+        price: planForm.planType === 'trial' ? 0 : (planForm.price ? parseFloat(planForm.price) : 0),
+        discountedPrice: planForm.planType === 'trial' ? 0 : (planForm.discountedPrice ? parseFloat(planForm.discountedPrice) : undefined),
         isAvailableForPurchase: planForm.isAvailableForPurchase,
-        status: 'Active',
-        features: (planForm as any).features || [],
+        status: planForm.status,
+        features: planForm.features || [],
+        userTypes: planForm.userTypes,
+        planType: planForm.planType,
+        isFeatured: planForm.isFeatured
       };
 
       if (modalType === 'add') {
@@ -198,6 +220,11 @@ export default function SubscriptionManagementPage() {
         price: '',
         discountedPrice: '',
         isAvailableForPurchase: true,
+        features: [],
+        userTypes: [],
+        isFeatured: false,
+        planType: 'regular',
+        status: 'Active'
       });
 
       setIsPlanModalOpen(false);
@@ -249,12 +276,89 @@ export default function SubscriptionManagementPage() {
     setCurrentSubPage(1); // Reset to first page
   };
 
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Skeleton className="h-8 w-56 mb-6" />
+
+        {/* Stats cards skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16" />
+                <Skeleton className="h-3 w-36 mt-2" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Tabs skeleton */}
+        <div className="mb-6">
+          <div className="grid w-full grid-cols-2 max-w-md">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        </div>
+
+        {/* Main content skeleton */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-64 mt-2" />
+              </div>
+              <Skeleton className="h-9 w-32" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto no-scrollbar">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {[...Array(8)].map((_, i) => (
+                      <TableHead key={i}><Skeleton className="h-4 w-16" /></TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      {[...Array(8)].map((_, j) => (
+                        <TableCell key={j}>
+                          {j === 7 ? (
+                            <div className="flex gap-1">
+                              <Skeleton className="h-8 w-8" />
+                              <Skeleton className="h-8 w-8" />
+                              <Skeleton className="h-8 w-8" />
+                            </div>
+                          ) : (
+                            <Skeleton className="h-4 w-20" />
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <Skeleton className="h-10 w-full mt-4" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) return <div>Error: {(error as any).status || 'An error occurred'}</div>;
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Subscription Management</h1>
-
-      {isLoading && <p>Loading plans...</p>}
-      {error && <p>Error: {(error as any).status || 'An error occurred'}</p>}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -408,7 +512,7 @@ export default function SubscriptionManagementPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedPlans.map((plan) => (
+                      paginatedPlans.map((plan: Plan) => (
                         <TableRow key={plan._id}>
                           <TableCell className="font-medium">{plan.name}</TableCell>
                           <TableCell>

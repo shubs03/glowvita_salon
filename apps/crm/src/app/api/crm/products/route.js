@@ -1,15 +1,27 @@
+
 import { NextResponse } from "next/server";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import ProductModel from "../../../../../../../packages/lib/src/models/Vendor/Product.model.js";
+import VendorModel from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js";
 import ProductCategoryModel from "../../../../../../../packages/lib/src/models/admin/ProductCategory.model.js";
 import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
 
 await _db();
 
-// GET - Fetch all products
+// GET - Fetch products for the current user (vendor or supplier)
 const getProducts = async (req) => {
   try {
-    const products = await ProductModel.find({})
+    const vendorId = req.user?._id;
+
+    if (!vendorId) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized: Vendor ID not found" },
+        { status: 401 }
+      );
+    }
+    
+    // Filter products by the current user's ID (whether vendor or supplier)
+    const products = await ProductModel.find({ vendorId: vendorId })
       .populate('category', 'name description')
       .sort({ createdAt: -1 })
       .lean();
@@ -18,7 +30,8 @@ const getProducts = async (req) => {
     const transformedProducts = products.map(product => ({
       ...product,
       category: product.category?.name || '',
-      categoryDescription: product.category?.description || product.categoryDescription || ''
+      categoryDescription: product.category?.description || product.categoryDescription || '',
+      status: product.status === 'rejected' ? 'disapproved' : product.status // Map rejected to disapproved for frontend
     }));
 
     return NextResponse.json({
@@ -35,14 +48,14 @@ const getProducts = async (req) => {
   }
 };
 
-export const GET = authMiddlewareCrm(getProducts, ["vendor"]);
+export const GET = authMiddlewareCrm(getProducts, ["vendor", "supplier"]);
 
 // POST - Create new product
 const createProduct = async (req) => {
     try {
         const body = await req.json();
         console.log('Creating product with data:', body);
-        const { productName, description, category, categoryDescription, price, salePrice, stock, productImage, isActive } = body;
+        const { productName, description, category, categoryDescription, price, salePrice, stock, productImage, isActive, status } = body;
 
         // Validate required fields
         if (!productName || !category || price === undefined || stock === undefined) {
@@ -87,6 +100,7 @@ const createProduct = async (req) => {
 
         // Create new product
         const newProduct = new ProductModel({
+            vendorId: req.user._id.toString(), // Set vendorId to current user
             productName: productName.trim(),
             description: description?.trim() || '',
             category: categoryId,
@@ -96,6 +110,7 @@ const createProduct = async (req) => {
             stock: Number(stock),
             productImage: imageUrl,
             isActive: Boolean(isActive),
+            status: status === 'disapproved' ? 'rejected' : (status || 'pending'), // Map disapproved to rejected
             createdBy: req.user._id.toString(),
             updatedBy: req.user._id.toString(),
         });
@@ -103,10 +118,16 @@ const createProduct = async (req) => {
         const savedProduct = await newProduct.save();
         console.log('Product saved successfully:', savedProduct._id);
 
+        // Transform the response to match frontend expectations
+        const responseProduct = {
+            ...savedProduct.toObject(),
+            status: savedProduct.status === 'rejected' ? 'disapproved' : savedProduct.status
+        };
+
         return NextResponse.json({
             success: true,
             message: 'Product created successfully',
-            data: savedProduct
+            data: responseProduct
         }, { status: 201 });
 
     } catch (error) {
@@ -118,12 +139,12 @@ const createProduct = async (req) => {
     }
 };
 
-export const POST = authMiddlewareCrm(createProduct, ["vendor"]);
+export const POST = authMiddlewareCrm(createProduct, ["vendor", "supplier"]);
 
 // PUT (update) a product
 export const PUT = authMiddlewareCrm(async (req) => {
   try {
-    const { id, productImage, category, ...updateData } = await req.json();
+    const { id, productImage, category, status, ...updateData } = await req.json();
 
     if (!id) {
       return NextResponse.json({ 
@@ -173,29 +194,43 @@ export const PUT = authMiddlewareCrm(async (req) => {
       imageUrl = productImage;
     }
 
+    // Check if the product exists and belongs to the current user
+    const existingProduct = await ProductModel.findOne({ 
+      _id: id, 
+      vendorId: req.user._id 
+    });
+
+    if (!existingProduct) {
+      return NextResponse.json({ 
+        success: false,
+        message: "Product not found or you don't have permission to update this product" 
+      }, { status: 404 });
+    }
+
     const updatedProduct = await ProductModel.findByIdAndUpdate(
       id,
       { 
         ...updateData,
         category: categoryId,
         productImage: imageUrl,
+        status: status === 'disapproved' ? 'rejected' : status, // Map disapproved to rejected
+        vendorId: req.user._id.toString(), // Ensure vendorId is maintained
         updatedBy: req.user._id.toString(),
         updatedAt: new Date()
       },
       { new: true, runValidators: true }
     );
 
-    if (!updatedProduct) {
-      return NextResponse.json({ 
-        success: false,
-        message: "Product not found" 
-      }, { status: 404 });
-    }
+    // Transform the response to match frontend expectations
+    const responseProduct = {
+      ...updatedProduct.toObject(),
+      status: updatedProduct.status === 'rejected' ? 'disapproved' : updatedProduct.status
+    };
 
     return NextResponse.json({
       success: true,
       message: 'Product updated successfully',
-      data: updatedProduct
+      data: responseProduct
     });
 
   } catch (error) {
@@ -206,7 +241,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
       error: error.message 
     }, { status: 500 });
   }
-}, ["vendor"]);
+}, ["vendor", "supplier"]);
 
 // DELETE a product
 export const DELETE = authMiddlewareCrm(async (req) => {
@@ -224,12 +259,16 @@ export const DELETE = authMiddlewareCrm(async (req) => {
       }, { status: 400 });
     }
 
-    const deletedProduct = await ProductModel.findByIdAndDelete(id);
+    // Find and delete product only if it belongs to the current user
+    const deletedProduct = await ProductModel.findOneAndDelete({ 
+      _id: id, 
+      vendorId: req.user._id 
+    });
 
     if (!deletedProduct) {
       return NextResponse.json({ 
         success: false,
-        message: "Product not found" 
+        message: "Product not found or you don't have permission to delete this product" 
       }, { status: 404 });
     }
     
@@ -248,4 +287,4 @@ export const DELETE = authMiddlewareCrm(async (req) => {
       error: error.message 
     }, { status: 500 });
   }
-}, ["vendor"]);
+}, ["vendor", "supplier"]);

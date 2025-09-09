@@ -11,6 +11,27 @@ import _db from "../../../../../../../../packages/lib/src/db.js";
 
 await _db();
 
+// Helper to generate unique referral code
+const generateReferralCode = async (name, ModelToCheck) => {
+  let referralCode;
+  let isUnique = false;
+  
+  while (!isUnique) {
+    const namePrefix = name.substring(0, 3).toUpperCase();
+    const randomNumbers = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    referralCode = `${namePrefix}${randomNumbers}`;
+    
+    // Check uniqueness across all models
+    const existingVendor = await VendorModel.findOne({ referralCode });
+    const existingDoctor = await DoctorModel.findOne({ referralCode });
+    const existingSupplier = await SupplierModel.findOne({ referralCode });
+    
+    isUnique = !existingVendor && !existingDoctor && !existingSupplier;
+  }
+  
+  return referralCode;
+};
+
 export async function POST(request) {
   try {
     const { email, password } = await request.json();
@@ -28,32 +49,54 @@ export async function POST(request) {
     let Model = null;
     let permissions = [];
 
-    // Define search order and corresponding models/roles
     const userRoles = [
-      { model: VendorModel, type: 'vendor' },
-      { model: DoctorModel, type: 'doctor' },
-      { model: SupplierModel, type: 'supplier' },
-      { model: StaffModel, type: 'staff' },
+      { model: VendorModel, type: 'vendor', selectFields: '+password' },
+      { model: DoctorModel, type: 'doctor', selectFields: '+password' },
+      { model: SupplierModel, type: 'supplier', selectFields: '+password' },
+      { model: StaffModel, type: 'staff', selectFields: '+password' },
     ];
 
     for (const roleInfo of userRoles) {
-      const foundUser = await roleInfo.model.findOne({ email }).select('+password');
+      const foundUser = await roleInfo.model.findOne({ email }).select(roleInfo.selectFields);
       if (foundUser) {
         user = foundUser;
         userType = roleInfo.type;
         Model = roleInfo.model;
         permissions = foundUser.permissions || [];
-        break; // Stop searching once a user is found
+        break;
       }
     }
     
     if (!user) {
-      return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json({ success: false, error: "User not found" }, { status: 401 });
+    }
+    
+    if (!user.password) {
+      return NextResponse.json({ success: false, error: "Authentication failed for this user." }, { status: 401 });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return NextResponse.json({ success: false, error: "Incorrect password" }, { status: 401 });
+    }
+
+    // Generate referralCode for users who don't have one
+    if (userType === 'supplier' && !user.referralCode) {
+      const referralCode = await generateReferralCode(user.shopName || user.firstName, SupplierModel);
+      await SupplierModel.findByIdAndUpdate(user._id, { referralCode });
+      user.referralCode = referralCode;
+    }
+
+    if (userType === 'doctor' && !user.referralCode) {
+      const referralCode = await generateReferralCode(user.name || user.firstName, DoctorModel);
+      await DoctorModel.findByIdAndUpdate(user._id, { referralCode });
+      user.referralCode = referralCode;
+    }
+
+    if (userType === 'vendor' && !user.referralCode) {
+      const referralCode = await generateReferralCode(user.businessName || user.firstName, VendorModel);
+      await VendorModel.findByIdAndUpdate(user._id, { referralCode });
+      user.referralCode = referralCode;
     }
 
     const { accessToken, refreshToken } = generateTokens(user._id, userType, permissions);
@@ -71,7 +114,7 @@ export async function POST(request) {
       access_token: accessToken,
       refresh_token: refreshToken,
       role: userType,
-      permissions: permissions, // Include permissions in the response
+      permissions: permissions,
     });
 
     response.cookies.set('crm_access_token', accessToken, {

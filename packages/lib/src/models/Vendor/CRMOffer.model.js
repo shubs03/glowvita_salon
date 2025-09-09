@@ -1,3 +1,4 @@
+
 // crm/models/CRMOffer.model.js
 
 import mongoose from "mongoose";
@@ -57,6 +58,28 @@ const crmOfferSchema = new mongoose.Schema({
   isCustomCode: {
     type: Boolean,
     default: false,
+  },
+  // Fields for doctor-specific offers
+  applicableDiseases: {
+    type: [String],
+    default: [],
+  },
+  // Fields for supplier-specific offers
+  minOrderAmount: {
+    type: Number,
+    min: 0,
+    default: null,
+  },
+  // Field to track which business (vendor/doctor/supplier) owns this offer
+  businessType: {
+    type: String,
+    enum: ['vendor', 'doctor', 'supplier'],
+    required: true,
+  },
+  businessId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    refPath: 'businessType' // Dynamic reference to Vendor/Doctor/Supplier model based on businessType
   },
   createdAt: {
     type: Date,

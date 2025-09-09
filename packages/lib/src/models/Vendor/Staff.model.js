@@ -44,9 +44,16 @@ const staffSchema = new mongoose.Schema(
   {
     vendorId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Vendor",
       required: true,
       index: true,
+      refPath: 'userType' // Dynamic reference based on userType
+    },
+    userType: {
+      type: String,
+      required: true,
+      enum: ['Vendor', 'Doctor'],
+      default: 'Vendor',
+      index: true
     },
     fullName: {
       type: String,
@@ -65,7 +72,6 @@ const staffSchema = new mongoose.Schema(
       required: true,
       trim: true,
       index: true, // For contact searches
-      unique: true,
     },
     emailAddress: {
       type: String,

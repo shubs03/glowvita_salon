@@ -1,13 +1,15 @@
+
 // crm/offers/page.tsx (modified to include advanced features like the admin panel)
 
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { Skeleton } from "@repo/ui/skeleton";
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Checkbox } from '@repo/ui/checkbox';
@@ -20,10 +22,12 @@ import {
   useGetOffersQuery, 
   useCreateOfferMutation, 
   useUpdateOfferMutation, 
-  useDeleteOfferMutation 
+  useDeleteOfferMutation,
+  useGetSuperDataQuery
 } from '@repo/store/api';
 import { toast } from 'sonner';
 import { selectRootState } from '@repo/store/store';
+import { useCrmAuth } from "@/hooks/useCrmAuth";
 
 type Coupon = {
   _id: string;
@@ -36,8 +40,12 @@ type Coupon = {
   redeemed: number;
   applicableSpecialties: string[];
   applicableCategories: string[];
+  applicableDiseases: string[];
+  minOrderAmount?: number;
   offerImage?: string;
   isCustomCode?: boolean;
+  businessType: string;
+  businessId: string;
 };
 
 type CouponForm = {
@@ -48,6 +56,8 @@ type CouponForm = {
   expires: string;
   applicableSpecialties: string[];
   applicableCategories: string[];
+  applicableDiseases: string[];
+  minOrderAmount?: number;
   offerImage?: string;
   isCustomCode: boolean;
 };
@@ -63,10 +73,18 @@ export default function OffersCouponsPage() {
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [useCustomCode, setUseCustomCode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Get user and business info from auth context
+  const auth = useCrmAuth();
+  const userRole = auth?.role || 'vendor'; // Simplified fallback
+  const businessId = auth?.user?._id; // Use user ID as businessId
+  
+  console.log('Auth Debug:', { auth, userRole, businessId }); // Debug auth values
+  
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector(
     (state) => selectRootState(state).modal
@@ -81,21 +99,48 @@ export default function OffersCouponsPage() {
       expires: '',
       applicableSpecialties: [],
       applicableCategories: [],
+      applicableDiseases: [],
+      minOrderAmount: 0,
       offerImage: '',
       isCustomCode: false,
     }
   });
+  
+  // Prepare query parameters with memoization to prevent infinite re-renders
+  const queryParams = useMemo(() => ({
+    businessId: businessId || '',
+    businessType: userRole,
+    ...(auth?.user?._id && { vendorId: auth.user._id }), // Use consistent user ID
+  }), [businessId, userRole, auth?.user?._id]);
 
-  // RTK Query hooks
+  // RTK Query hooks with proper query parameters
   const { 
     data: couponsData = [], 
     isLoading, 
-    isError 
-  } = useGetOffersQuery(undefined);
+    isError,
+    refetch 
+  } = useGetOffersQuery(queryParams, {
+    skip: !auth || !businessId, // Skip query if not authenticated or no businessId
+    refetchOnMountOrArgChange: false, // Disable to prevent infinite loops
+  });
+
+  // Removed problematic useEffect that was causing infinite API calls
+  // useEffect(() => {
+  //   if (auth) {
+  //     refetch();
+  //   }
+  // }, [auth, refetch]);
+  
+  const { data: superData = [], isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
   
   const [createOffer, { isLoading: isCreating }] = useCreateOfferMutation();
   const [updateOffer, { isLoading: isUpdating }] = useUpdateOfferMutation();
   const [deleteOffer, { isLoading: isDeleting }] = useDeleteOfferMutation();
+
+  // Get diseases from superData for doctors
+  const availableDiseases = useMemo(() => {
+    return superData?.filter((item: any) => item.type === 'disease') || [];
+  }, [superData]);
 
   // Convert file to base64
   const convertToBase64 = (file: File): Promise<string> => {
@@ -160,6 +205,15 @@ export default function OffersCouponsPage() {
     setValue('applicableCategories', updated);
   };
 
+  // Handle disease selection (for doctors)
+  const handleDiseaseChange = (diseaseId: string, checked: boolean) => {
+    const updated = checked 
+      ? [...selectedDiseases, diseaseId]
+      : selectedDiseases.filter(d => d !== diseaseId);
+    setSelectedDiseases(updated);
+    setValue('applicableDiseases', updated);
+  };
+
   // Update form values when editing
   useEffect(() => {
     if (modalType === 'editCoupon' && data) {
@@ -172,11 +226,15 @@ export default function OffersCouponsPage() {
       
       const specialties = Array.isArray(coupon.applicableSpecialties) ? coupon.applicableSpecialties : [];
       const categories = Array.isArray(coupon.applicableCategories) ? coupon.applicableCategories : [];
+      const diseases = Array.isArray(coupon.applicableDiseases) ? coupon.applicableDiseases : [];
       
       setSelectedSpecialties(specialties);
       setSelectedCategories(categories);
+      setSelectedDiseases(diseases);
       setValue('applicableSpecialties', specialties);
       setValue('applicableCategories', categories);
+      setValue('applicableDiseases', diseases);
+      setValue('minOrderAmount', coupon.minOrderAmount || 0);
       setValue('offerImage', coupon.offerImage || '');
       setPreviewImage(coupon.offerImage || null);
       setUseCustomCode(coupon.isCustomCode || false);
@@ -185,6 +243,7 @@ export default function OffersCouponsPage() {
       reset();
       setSelectedSpecialties([]);
       setSelectedCategories([]);
+      setSelectedDiseases([]);
       setPreviewImage(null);
       setUseCustomCode(false);
     }
@@ -205,6 +264,7 @@ export default function OffersCouponsPage() {
     reset();
     setSelectedSpecialties([]);
     setSelectedCategories([]);
+    setSelectedDiseases([]);
     setPreviewImage(null);
     setUseCustomCode(false);
   };
@@ -228,12 +288,22 @@ export default function OffersCouponsPage() {
   };
 
   const onSubmit = async (formData: CouponForm) => {
+    // Validate required data
+    if (!businessId || !userRole) {
+      toast.error('Session expired. Please login again.');
+      return;
+    }
+
     const processedData = {
       ...formData,
       code: useCustomCode ? formData.code : '', // Send empty if auto-generate
-      applicableSpecialties: selectedSpecialties,
-      applicableCategories: selectedCategories,
+      applicableSpecialties: userRole === 'vendor' ? selectedSpecialties : [],
+      applicableCategories: userRole === 'vendor' ? selectedCategories : [],
+      applicableDiseases: userRole === 'doctor' ? selectedDiseases : [],
+      minOrderAmount: userRole === 'supplier' ? formData.minOrderAmount : undefined,
       isCustomCode: useCustomCode,
+      businessType: userRole,
+      businessId: businessId,
     };
 
     try {
@@ -271,12 +341,160 @@ export default function OffersCouponsPage() {
     return acc + (1000 * (coupon.value / 100)) * coupon.redeemed;
   }, 0) : 0;
 
-  if (isLoading) return <div>Loading...</div>;
-  if (isError) return <div>Error loading coupons. Please try again.</div>;
+  // Get role-specific page title
+  const getPageTitle = () => {
+    switch (userRole) {
+      case 'doctor':
+        return 'Medical Offers & Promotions';
+      case 'supplier':
+        return 'Supplier Offers & Discounts';
+      case 'vendor':
+      default:
+        return 'Offers & Coupons';
+    }
+  };
+
+  // Get role-specific button text
+  const getCreateButtonText = () => {
+    switch (userRole) {
+      case 'doctor':
+        return 'Create Medical Offer';
+      case 'supplier':
+        return 'Create Supplier Offer';
+      case 'vendor':
+      default:
+        return 'Create New Coupon';
+    }
+  };
+
+  // Handle authentication state
+  if (!auth) {
+    return (
+      <div className="p-4 text-center">
+        <h2 className="text-xl font-semibold mb-2">Authentication Required</h2>
+        <p className="text-muted-foreground">Please log in to view your offers.</p>
+      </div>
+    );
+  }
+
+  // Show loading state while waiting for businessId resolution
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+              <div>
+                <Skeleton className="h-6 w-32 mb-2" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <div className="relative">
+                  <Skeleton className="h-10 w-80" />
+                </div>
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-10 w-24" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {["Code", "Type", "Value", "Status", "Expiry", "Usage", "Actions"].map((_, i) => (
+                      <TableHead key={i}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-4" />
+                          <Skeleton className="h-4 w-16" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-16" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-6 w-16 rounded-full" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-12" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="mt-4">
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-4 text-center">
+        <h2 className="text-xl font-semibold text-red-600 mb-2">Error Loading Offers</h2>
+        <p className="text-muted-foreground mb-4">There was a problem loading your offers.</p>
+        <Button onClick={() => refetch()} variant="outline">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  // Check if we have any offers
+  const hasOffers = Array.isArray(couponsData) && couponsData.length > 0;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Offers & Coupons</h1>
+      <h1 className="text-2xl font-bold font-headline mb-6">{getPageTitle()}</h1>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -336,7 +554,7 @@ export default function OffersCouponsPage() {
             </div>
             <Button onClick={() => handleOpenModal('addCoupon')} disabled={isCreating}>
               <Plus className="mr-2 h-4 w-4" />
-              Create New Coupon
+              {getCreateButtonText()}
             </Button>
           </div>
         </CardHeader>
@@ -345,13 +563,15 @@ export default function OffersCouponsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Coupon Code</TableHead>
+                  <TableHead>Code</TableHead>
                   <TableHead>Discount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Starts On</TableHead>
                   <TableHead>Expires On</TableHead>
-                  <TableHead>Specialties</TableHead>
-                  <TableHead>Categories</TableHead>
+                  {userRole === 'vendor' && <TableHead>Specialties</TableHead>}
+                  {userRole === 'vendor' && <TableHead>Categories</TableHead>}
+                  {userRole === 'doctor' && <TableHead>Applicable Conditions</TableHead>}
+                  {userRole === 'supplier' && <TableHead>Min Order Amount</TableHead>}
                   <TableHead>Image</TableHead>
                   <TableHead>Redeemed</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -380,8 +600,21 @@ export default function OffersCouponsPage() {
                     </TableCell>
                     <TableCell>{coupon.startDate.split('T')[0]}</TableCell>
                     <TableCell>{coupon.expires ? coupon.expires.split('T')[0] : 'N/A'}</TableCell>
-                    <TableCell>{formatList(coupon.applicableSpecialties)}</TableCell>
-                    <TableCell>{formatList(coupon.applicableCategories)}</TableCell>
+                    {userRole === 'vendor' && <TableCell>{formatList(coupon.applicableSpecialties)}</TableCell>}
+                    {userRole === 'vendor' && <TableCell>{formatList(coupon.applicableCategories)}</TableCell>}
+                    {userRole === 'doctor' && (
+                      <TableCell>
+                        {coupon.applicableDiseases && coupon.applicableDiseases.length > 0 
+                          ? `${coupon.applicableDiseases.length} condition(s)` 
+                          : 'All conditions'
+                        }
+                      </TableCell>
+                    )}
+                    {userRole === 'supplier' && (
+                      <TableCell>
+                        {coupon.minOrderAmount ? `₹${coupon.minOrderAmount.toLocaleString()}` : 'No minimum'}
+                      </TableCell>
+                    )}
                     <TableCell>
                       {coupon.offerImage ? (
                         <img 
@@ -426,14 +659,14 @@ export default function OffersCouponsPage() {
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {modalType === 'addCoupon' && 'Create New Coupon'}
-              {modalType === 'editCoupon' && 'Edit Coupon'}
-              {modalType === 'viewCoupon' && 'Coupon Details'}
+              {modalType === 'addCoupon' && getCreateButtonText()}
+              {modalType === 'editCoupon' && `Edit ${userRole === 'doctor' ? 'Medical Offer' : userRole === 'supplier' ? 'Supplier Offer' : 'Coupon'}`}
+              {modalType === 'viewCoupon' && `${userRole === 'doctor' ? 'Medical Offer' : userRole === 'supplier' ? 'Supplier Offer' : 'Coupon'} Details`}
             </DialogTitle>
             <DialogDescription>
-              {modalType === 'addCoupon' && "Enter the details for the new coupon."}
-              {modalType === 'editCoupon' && "Update the details for this coupon."}
-              {modalType === 'viewCoupon' && "Viewing details for this coupon."}
+              {modalType === 'addCoupon' && `Enter the details for the new ${userRole === 'doctor' ? 'medical offer' : userRole === 'supplier' ? 'supplier offer' : 'coupon'}.`}
+              {modalType === 'editCoupon' && `Update the details for this ${userRole === 'doctor' ? 'medical offer' : userRole === 'supplier' ? 'supplier offer' : 'coupon'}.`}
+              {modalType === 'viewCoupon' && `Viewing details for this ${userRole === 'doctor' ? 'medical offer' : userRole === 'supplier' ? 'supplier offer' : 'coupon'}.`}
             </DialogDescription>
           </DialogHeader>
           
@@ -464,14 +697,42 @@ export default function OffersCouponsPage() {
                 <span className="font-semibold text-muted-foreground">Expires</span>
                 <span className="col-span-2">{(data as Coupon)?.expires ? (data as Coupon).expires.split('T')[0] : 'N/A'}</span>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Specialties</span>
-                <span className="col-span-2">{formatList((data as Coupon)?.applicableSpecialties)}</span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">Categories</span>
-                <span className="col-span-2">{formatList((data as Coupon)?.applicableCategories)}</span>
-              </div>
+              
+              {/* Role-specific view details */}
+              {userRole === 'vendor' && (
+                <>
+                  <div className="grid grid-cols-3 items-center gap-4">
+                    <span className="font-semibold text-muted-foreground">Specialties</span>
+                    <span className="col-span-2">{formatList((data as Coupon)?.applicableSpecialties)}</span>
+                  </div>
+                  <div className="grid grid-cols-3 items-center gap-4">
+                    <span className="font-semibold text-muted-foreground">Categories</span>
+                    <span className="col-span-2">{formatList((data as Coupon)?.applicableCategories)}</span>
+                  </div>
+                </>
+              )}
+
+              {userRole === 'doctor' && (
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <span className="font-semibold text-muted-foreground">Applicable Conditions</span>
+                  <span className="col-span-2">
+                    {(data as Coupon)?.applicableDiseases && (data as Coupon).applicableDiseases.length > 0 
+                      ? `${(data as Coupon).applicableDiseases.length} condition(s) selected` 
+                      : 'All conditions'
+                    }
+                  </span>
+                </div>
+              )}
+
+              {userRole === 'supplier' && (
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <span className="font-semibold text-muted-foreground">Min Order Amount</span>
+                  <span className="col-span-2">
+                    {(data as Coupon)?.minOrderAmount ? `₹${(data as Coupon).minOrderAmount?.toLocaleString()}` : 'No minimum'}
+                  </span>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 items-center gap-4">
                 <span className="font-semibold text-muted-foreground">Image</span>
                 <div className="col-span-2">
@@ -583,49 +844,100 @@ export default function OffersCouponsPage() {
                 </div>
               </div>
 
-              {/* Multiple Specialties Selection */}
-              <div className="space-y-2">
-                <Label>Applicable Specialties (Select multiple or none for all)</Label>
-                <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
-                  {specialtyOptions.map((specialty) => (
-                    <div key={specialty} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`specialty-${specialty}`}
-                        checked={selectedSpecialties.includes(specialty)}
-                        onCheckedChange={(checked) => handleSpecialtyChange(specialty, !!checked)}
-                      />
-                      <Label htmlFor={`specialty-${specialty}`} className="text-sm">
-                        {specialty}
-                      </Label>
+              {/* Role-specific fields */}
+              {userRole === 'vendor' && (
+                <>
+                  {/* Multiple Specialties Selection for Vendors */}
+                  <div className="space-y-2">
+                    <Label>Applicable Specialties (Select multiple or none for all)</Label>
+                    <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
+                      {specialtyOptions.map((specialty) => (
+                        <div key={specialty} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`specialty-${specialty}`}
+                            checked={selectedSpecialties.includes(specialty)}
+                            onCheckedChange={(checked) => handleSpecialtyChange(specialty, !!checked)}
+                          />
+                          <Label htmlFor={`specialty-${specialty}`} className="text-sm">
+                            {specialty}
+                          </Label>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {selectedSpecialties.length === 0 ? 'Will apply to all specialties' : `Selected: ${selectedSpecialties.length}`}
-                </p>
-              </div>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedSpecialties.length === 0 ? 'Will apply to all specialties' : `Selected: ${selectedSpecialties.length}`}
+                    </p>
+                  </div>
 
-              {/* Multiple Categories Selection */}
-              <div className="space-y-2">
-                <Label>Applicable Categories (Select multiple or none for all)</Label>
-                <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
-                  {categoryOptions.map((category) => (
-                    <div key={category} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`category-${category}`}
-                        checked={selectedCategories.includes(category)}
-                        onCheckedChange={(checked) => handleCategoryChange(category, !!checked)}
-                      />
-                      <Label htmlFor={`category-${category}`} className="text-sm">
-                        {category}
-                      </Label>
+                  {/* Multiple Categories Selection for Vendors */}
+                  <div className="space-y-2">
+                    <Label>Applicable Categories (Select multiple or none for all)</Label>
+                    <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
+                      {categoryOptions.map((category) => (
+                        <div key={category} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`category-${category}`}
+                            checked={selectedCategories.includes(category)}
+                            onCheckedChange={(checked) => handleCategoryChange(category, !!checked)}
+                          />
+                          <Label htmlFor={`category-${category}`} className="text-sm">
+                            {category}
+                          </Label>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                    <p className="text-sm text-muted-foreground">
+                      {selectedCategories.length === 0 ? 'Will apply to all categories' : `Selected: ${selectedCategories.length}`}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {userRole === 'doctor' && (
+                <div className="space-y-2">
+                  <Label>Applicable Diseases/Conditions</Label>
+                  {isSuperDataLoading ? (
+                    <div className="p-3 border rounded-md">Loading diseases...</div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
+                      {availableDiseases.map((disease: any) => (
+                        <div key={disease._id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`disease-${disease._id}`}
+                            checked={selectedDiseases.includes(disease._id)}
+                            onCheckedChange={(checked) => handleDiseaseChange(disease._id, !!checked)}
+                          />
+                          <Label htmlFor={`disease-${disease._id}`} className="text-sm">
+                            {disease.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    {selectedDiseases.length === 0 ? 'Will apply to all conditions' : `Selected: ${selectedDiseases.length} condition(s)`}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {selectedCategories.length === 0 ? 'Will apply to all categories' : `Selected: ${selectedCategories.length}`}
-                </p>
-              </div>
+              )}
+
+              {userRole === 'supplier' && (
+                <div className="space-y-2">
+                  <Label htmlFor="minOrderAmount">Minimum Order Amount (₹)</Label>
+                  <Input 
+                    id="minOrderAmount" 
+                    type="number" 
+                    step="0.01"
+                    placeholder="Enter minimum order amount for this offer"
+                    {...register('minOrderAmount', {
+                      min: { value: 0, message: 'Amount must be greater than or equal to 0' }
+                    })} 
+                  />
+                  {errors.minOrderAmount && <p className="text-red-500 text-sm">{errors.minOrderAmount.message}</p>}
+                  <p className="text-sm text-muted-foreground">
+                    Customers must spend at least this amount to use this offer
+                  </p>
+                </div>
+              )}
 
               {/* Image Upload */}
               <div className="space-y-2">

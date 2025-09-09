@@ -13,11 +13,18 @@ import { Switch } from '@repo/ui/switch';
 import { useCreateStaffMutation, useUpdateStaffMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
-import { vendorNavItems } from '@/lib/routes';
+import { vendorNavItems, doctorNavItems } from '@/lib/routes';
 import { Eye, EyeOff, Plus, Trash2, Clock, Calendar } from 'lucide-react';
 
-export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
-    const { user } = useCrmAuth();
+interface StaffFormModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    staff?: any;
+    onSuccess: () => void;
+}
+
+export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }: StaffFormModalProps) => {
+    const { user, role } = useCrmAuth();
     const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
     const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
     const [activeTab, setActiveTab] = useState('personal');
@@ -39,18 +46,23 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
         permissions: [],
         password: '',
         confirmPassword: '',
-        timing: {
-            sunday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-            monday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-            tuesday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-            wednesday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-            thursday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-            friday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-            saturday: { startTime: '10:00', endTime: '19:00', isWorking: true }
-        },
-        blockTime: {
-            entries: []
-        },
+        // Individual day availability fields to match Staff model
+        sundayAvailable: true,
+        sundaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+        mondayAvailable: true,
+        mondaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+        tuesdayAvailable: true,
+        tuesdaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+        wednesdayAvailable: true,
+        wednesdaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+        thursdayAvailable: true,
+        thursdaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+        fridayAvailable: true,
+        fridaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+        saturdayAvailable: true,
+        saturdaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+        // Block times array to match Staff model
+        blockedTimes: [],
         bankDetails: {
             accountHolderName: '',
             accountNumber: '',
@@ -59,6 +71,8 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
             upiId: '',
         }
     });
+
+    const navItems = role === 'doctor' ? doctorNavItems : vendorNavItems;
 
     useEffect(() => {
         if (staff) {
@@ -78,16 +92,23 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 permissions: staff.permissions || [],
                 password: '',
                 confirmPassword: '',
-                timing: staff.timing || {
-                    sunday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    monday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    tuesday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    wednesday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    thursday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    friday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    saturday: { startTime: '10:00', endTime: '19:00', isWorking: true }
-                },
-                blockTime: staff.blockTime || { entries: [] },
+                // Individual day availability fields from Staff model
+                sundayAvailable: staff.sundayAvailable !== undefined ? staff.sundayAvailable : true,
+                sundaySlots: staff.sundaySlots || [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                mondayAvailable: staff.mondayAvailable !== undefined ? staff.mondayAvailable : true,
+                mondaySlots: staff.mondaySlots || [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                tuesdayAvailable: staff.tuesdayAvailable !== undefined ? staff.tuesdayAvailable : true,
+                tuesdaySlots: staff.tuesdaySlots || [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                wednesdayAvailable: staff.wednesdayAvailable !== undefined ? staff.wednesdayAvailable : true,
+                wednesdaySlots: staff.wednesdaySlots || [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                thursdayAvailable: staff.thursdayAvailable !== undefined ? staff.thursdayAvailable : true,
+                thursdaySlots: staff.thursdaySlots || [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                fridayAvailable: staff.fridayAvailable !== undefined ? staff.fridayAvailable : true,
+                fridaySlots: staff.fridaySlots || [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                saturdayAvailable: staff.saturdayAvailable !== undefined ? staff.saturdayAvailable : true,
+                saturdaySlots: staff.saturdaySlots || [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                // Block times from Staff model
+                blockedTimes: staff.blockedTimes || [],
                 bankDetails: staff.bankDetails || {
                     accountHolderName: '',
                     accountNumber: '',
@@ -102,16 +123,22 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 fullName: '', position: '', mobileNo: '', emailAddress: '', photo: null, description: '',
                 salary: '', startDate: '', endDate: '', yearOfExperience: '', clientsServed: '', commission: false, permissions: [],
                 password: '', confirmPassword: '',
-                timing: {
-                    sunday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    monday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    tuesday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    wednesday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    thursday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    friday: { startTime: '10:00', endTime: '19:00', isWorking: true },
-                    saturday: { startTime: '10:00', endTime: '19:00', isWorking: true }
-                },
-                blockTime: { entries: [] },
+                // Individual day availability fields for new staff
+                sundayAvailable: true,
+                sundaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                mondayAvailable: true,
+                mondaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                tuesdayAvailable: true,
+                tuesdaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                wednesdayAvailable: true,
+                wednesdaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                thursdayAvailable: true,
+                thursdaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                fridayAvailable: true,
+                fridaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                saturdayAvailable: true,
+                saturdaySlots: [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }],
+                blockedTimes: [],
                 bankDetails: { accountHolderName: '', accountNumber: '', bankName: '', ifscCode: '', upiId: '' }
             });
         }
@@ -121,12 +148,12 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData((prev: any) => ({ ...prev, [name]: value }));
     };
 
     const handleBankDetailsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
             bankDetails: {
                 ...prev.bankDetails,
@@ -136,59 +163,104 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
     };
     
     const handleTimingChange = (day: string, field: string, value: any) => {
-        setFormData(prev => ({
-            ...prev,
-            timing: {
-                ...prev.timing,
-                [day]: {
-                    ...(prev.timing as any)[day],
-                    [field]: value
+        if (field === 'isWorking') {
+            // Update the availability field for the day
+            const availableField = `${day}Available`;
+            setFormData((prev: any) => ({
+                ...prev,
+                [availableField]: value
+            }));
+        } else {
+            // Update the slots for the day
+            const slotsField = `${day}Slots`;
+            const timeToMinutes = (timeStr: string) => {
+                const [hours, minutes] = timeStr.split(':').map(Number);
+                return hours * 60 + minutes;
+            };
+            
+            setFormData((prev: any) => {
+                const currentSlots = prev[slotsField] || [];
+                const updatedSlots = currentSlots.length > 0 ? [...currentSlots] : [{ startTime: '10:00', endTime: '19:00', startMinutes: 600, endMinutes: 1140 }];
+                
+                if (field === 'startTime') {
+                    updatedSlots[0] = {
+                        ...updatedSlots[0],
+                        startTime: value,
+                        startMinutes: timeToMinutes(value)
+                    };
+                } else if (field === 'endTime') {
+                    updatedSlots[0] = {
+                        ...updatedSlots[0],
+                        endTime: value,
+                        endMinutes: timeToMinutes(value)
+                    };
                 }
-            }
-        }));
+                
+                return {
+                    ...prev,
+                    [slotsField]: updatedSlots
+                };
+            });
+        }
     };
     
     const handleBlockTimeChange = (index: number, field: string, value: any) => {
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
-            blockTime: {
-                ...prev.blockTime,
-                entries: (prev.blockTime.entries as any[]).map((entry: any, i: number) => 
-                    i === index ? { ...entry, [field]: value } : entry
-                )
-            }
+            blockedTimes: (prev.blockedTimes as any[]).map((entry: any, i: number) => {
+                if (i === index) {
+                    const updatedEntry = { ...entry, [field]: value };
+                    
+                    // Auto-calculate minutes when time fields change
+                    if (field === 'startTime' || field === 'endTime') {
+                        const timeToMinutes = (timeStr: string) => {
+                            const [hours, minutes] = timeStr.split(':').map(Number);
+                            return hours * 60 + minutes;
+                        };
+                        
+                        if (field === 'startTime') {
+                            updatedEntry.startMinutes = timeToMinutes(value);
+                        } else if (field === 'endTime') {
+                            updatedEntry.endMinutes = timeToMinutes(value);
+                        }
+                    }
+                    
+                    return updatedEntry;
+                }
+                return entry;
+            })
         }));
     };
     
     const addBlockTimeEntry = () => {
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
-            blockTime: {
-                ...prev.blockTime,
-                entries: [...(prev.blockTime.entries as any[]), {
-                    date: '',
-                    startTime: '',
-                    endTime: '',
-                    description: ''
-                }]
-            }
+            blockedTimes: [...(prev.blockedTimes as any[]), {
+                date: '',
+                startTime: '',
+                endTime: '',
+                startMinutes: 0,
+                endMinutes: 0,
+                reason: '',
+                isRecurring: false,
+                recurringType: null,
+                isActive: true
+            }]
         }));
     };
     
     const removeBlockTimeEntry = (index: number) => {
-        setFormData(prev => ({
+        setFormData((prev: any) => ({
             ...prev,
-            blockTime: {
-                ...prev.blockTime,
-                entries: (prev.blockTime.entries as any[]).filter((_: any, i: number) => i !== index)
-            }
+            blockedTimes: (prev.blockedTimes as any[]).filter((_: any, i: number) => i !== index)
         }));
     };
     
-    const handleCheckboxChange = (permission: string, checked: boolean) => {
-        setFormData(prev => ({
+    const handleCheckboxChange = (permission: string, checked: boolean | string) => {
+        const isChecked = typeof checked === 'string' ? checked === 'true' : checked;
+        setFormData((prev: any) => ({
             ...prev,
-            permissions: checked
+            permissions: isChecked
                 ? [...(prev.permissions as string[]), permission]
                 : (prev.permissions as string[]).filter(p => p !== permission)
         }));
@@ -199,16 +271,15 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
         if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, photo: reader.result as string }));
+                setFormData((prev: any) => ({ ...prev, photo: reader.result as string }));
             };
             reader.readAsDataURL(file);
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         
-        // Only validate password for new staff members (when staff is null/undefined)
         if (!staff) {
             if (!formData.password) {
                 toast.error("Password is required for new staff members.");
@@ -219,7 +290,6 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 return;
             }
         } else {
-            // For existing staff, only validate password if they're trying to change it
             if (formData.password && formData.password !== formData.confirmPassword) {
                 toast.error("Passwords do not match.");
                 return;
@@ -229,6 +299,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
         const payload: any = {
             ...formData,
             vendorId: user._id,
+            userType: role === 'doctor' ? 'Doctor' : 'Vendor',
         };
 
         if (!payload.password) {
@@ -236,16 +307,22 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
         }
         delete payload.confirmPassword;
         
-        // Log the payload to verify timing and blockTime data
         console.log('Saving staff data:', {
-            timing: payload.timing,
-            blockTime: payload.blockTime,
+            availabilityFields: {
+                sundayAvailable: payload.sundayAvailable,
+                mondayAvailable: payload.mondayAvailable,
+            },
+            slotsFields: {
+                sundaySlots: payload.sundaySlots,
+                mondaySlots: payload.mondaySlots,
+            },
+            blockedTimes: payload.blockedTimes,
             fullPayload: payload
         });
 
         try {
             if (staff) {
-                await updateStaff({ id: staff._id, ...payload }).unwrap();
+                await updateStaff({ _id: staff._id, ...payload }).unwrap();
                 toast.success("Staff member updated successfully.");
             } else {
                 await createStaff(payload).unwrap();
@@ -254,8 +331,11 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
             onSuccess();
         } catch (error: any) {
             console.error("Failed to save staff member:", error);
-            const errorMessage = error?.data?.message || "Failed to save staff member.";
-            toast.error(errorMessage);
+            if (error?.status === 409) {
+                toast.error(error.data.message || "A staff member with these details already exists.");
+            } else {
+                toast.error(error?.data?.message || "Failed to save staff member.");
+            }
         }
     };
 
@@ -265,6 +345,14 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
         else if (activeTab === 'bank') setActiveTab('permissions');
         else if (activeTab === 'permissions') setActiveTab('timing');
         else if (activeTab === 'timing') setActiveTab('blockTime');
+    }
+
+    const handlePreviousTab = () => {
+        if (activeTab === 'employment') setActiveTab('personal');
+        else if (activeTab === 'bank') setActiveTab('employment');
+        else if (activeTab === 'permissions') setActiveTab('bank');
+        else if (activeTab === 'timing') setActiveTab('permissions');
+        else if (activeTab === 'blockTime') setActiveTab('timing');
     }
 
     const renderPersonalTab = () => (
@@ -289,21 +377,23 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                     <Input id="emailAddress" name="emailAddress" type="email" value={formData.emailAddress} onChange={handleInputChange} required/>
                 </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                    <Label htmlFor="password">{staff ? 'New Password (Optional)' : 'Password'}</Label>
-                    <div className="relative">
-                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleInputChange} required={!staff} />
-                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
-                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
+            {!staff && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <div className="relative">
+                            <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleInputChange} required={!staff} />
+                            <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Confirm Password</Label>
+                        <Input id="confirmPassword" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} required={!staff && !!formData.password} />
                     </div>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input id="confirmPassword" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} required={!staff && !!formData.password} />
-                </div>
-            </div>
+            )}
             <div className="space-y-2">
                 <Label htmlFor="photo">Photo</Label>
                 <Input id="photo" type="file" onChange={handleFileChange} />
@@ -346,7 +436,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 <Switch 
                     id="commission" 
                     checked={formData.commission} 
-                    onCheckedChange={(checked) => setFormData(prev => ({...prev, commission: checked}))}
+                    onCheckedChange={(checked) => setFormData((prev: any) => ({...prev, commission: checked}))}
                 />
                 <Label htmlFor="commission">Enable Staff Commission</Label>
             </div>
@@ -385,12 +475,12 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
      const renderPermissionsTab = () => (
         <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border p-4 rounded-md">
-                {vendorNavItems.map((item) => (
+                {navItems.map((item) => (
                     <div key={item.permission} className="flex items-center space-x-2">
                         <Checkbox
                             id={item.permission}
                             checked={(formData.permissions as string[]).includes(item.permission)}
-                            onCheckedChange={(checked) => handleCheckboxChange(item.permission, checked)}
+                            onCheckedChange={(checked) => handleCheckboxChange(item.permission, checked as boolean)}
                         />
                         <Label htmlFor={item.permission} className="text-sm font-medium">
                             {item.title}
@@ -421,59 +511,67 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 </div>
                 
                 <div className="space-y-3">
-                    {days.map(day => (
-                        <div key={day} className="border p-4 rounded-lg">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-                                {/* Day Name and Toggle */}
-                                <div className="flex items-center space-x-3">
-                                    <Switch
-                                        checked={(formData.timing as any)[day]?.isWorking}
-                                        onCheckedChange={(checked) => handleTimingChange(day, 'isWorking', checked)}
-                                    />
-                                    <Label className="font-medium min-w-[80px]">{(dayLabels as any)[day]}</Label>
-                                </div>
-                                
-                                {/* Start Time */}
-                                <div>
-                                    <Label htmlFor={`${day}-start`} className="text-sm text-gray-600">Start Time</Label>
-                                    <Input
-                                        id={`${day}-start`}
-                                        type="time"
-                                        value={(formData.timing as any)[day]?.startTime || ''}
-                                        onChange={(e) => handleTimingChange(day, 'startTime', e.target.value)}
-                                        disabled={!(formData.timing as any)[day]?.isWorking}
-                                        className="mt-1"
-                                    />
-                                </div>
-                                
-                                {/* End Time */}
-                                <div>
-                                    <Label htmlFor={`${day}-end`} className="text-sm text-gray-600">End Time</Label>
-                                    <Input
-                                        id={`${day}-end`}
-                                        type="time"
-                                        value={(formData.timing as any)[day]?.endTime || ''}
-                                        onChange={(e) => handleTimingChange(day, 'endTime', e.target.value)}
-                                        disabled={!(formData.timing as any)[day]?.isWorking}
-                                        className="mt-1"
-                                    />
-                                </div>
-                                
-                                {/* Working Hours Display */}
-                                <div className="text-sm text-gray-500">
-                                    {(formData.timing as any)[day]?.isWorking ? (
-                                        <span>
-                                            {(formData.timing as any)[day]?.startTime && (formData.timing as any)[day]?.endTime
-                                                ? `${(formData.timing as any)[day]?.startTime} - ${(formData.timing as any)[day]?.endTime}`
-                                                : 'Set times'}
-                                        </span>
-                                    ) : (
-                                        <span className="text-red-500">Off</span>
-                                    )}
+                    {days.map(day => {
+                        const availableField = `${day}Available`;
+                        const slotsField = `${day}Slots`;
+                        const isAvailable = formData[availableField];
+                        const slots = formData[slotsField] || [];
+                        const currentSlot = slots.length > 0 ? slots[0] : { startTime: '10:00', endTime: '19:00' };
+                        
+                        return (
+                            <div key={day} className="border p-4 rounded-lg">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                                    {/* Day Name and Toggle */}
+                                    <div className="flex items-center space-x-3">
+                                        <Switch
+                                            checked={isAvailable}
+                                            onCheckedChange={(checked) => handleTimingChange(day, 'isWorking', checked)}
+                                        />
+                                        <Label className="font-medium min-w-[80px]">{(dayLabels as any)[day]}</Label>
+                                    </div>
+                                    
+                                    {/* Start Time */}
+                                    <div>
+                                        <Label htmlFor={`${day}-start`} className="text-sm text-gray-600">Start Time</Label>
+                                        <Input
+                                            id={`${day}-start`}
+                                            type="time"
+                                            value={currentSlot.startTime || ''}
+                                            onChange={(e) => handleTimingChange(day, 'startTime', e.target.value)}
+                                            disabled={!isAvailable}
+                                            className="mt-1"
+                                        />
+                                    </div>
+                                    
+                                    {/* End Time */}
+                                    <div>
+                                        <Label htmlFor={`${day}-end`} className="text-sm text-gray-600">End Time</Label>
+                                        <Input
+                                            id={`${day}-end`}
+                                            type="time"
+                                            value={currentSlot.endTime || ''}
+                                            onChange={(e) => handleTimingChange(day, 'endTime', e.target.value)}
+                                            disabled={!isAvailable}
+                                            className="mt-1"
+                                        />
+                                    </div>
+                                    
+                                    {/* Working Hours Display */}
+                                    <div className="text-sm text-gray-500">
+                                        {isAvailable ? (
+                                            <span>
+                                                {currentSlot.startTime && currentSlot.endTime
+                                                    ? `${currentSlot.startTime} - ${currentSlot.endTime}`
+                                                    : 'Set times'}
+                                            </span>
+                                        ) : (
+                                            <span className="text-red-500">Off</span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         );
@@ -492,13 +590,13 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                 </Button>
             </div>
             
-            {formData.blockTime.entries.length === 0 ? (
+            {formData.blockedTimes.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                     No block time entries. Click "Add Block Time" to create one.
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {formData.blockTime.entries.map((entry, index) => (
+                    {formData.blockedTimes.map((entry: any, index: number) => (
                         <div key={index} className="border p-4 rounded-lg space-y-4">
                             <div className="flex justify-between items-center">
                                 <h5 className="font-medium">Block Time Entry {index + 1}</h5>
@@ -518,7 +616,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                                     <Input
                                         id={`block-date-${index}`}
                                         type="date"
-                                        value={entry.date}
+                                        value={entry.date instanceof Date ? entry.date.toISOString().split('T')[0] : entry.date}
                                         onChange={(e) => handleBlockTimeChange(index, 'date', e.target.value)}
                                     />
                                 </div>
@@ -543,11 +641,11 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                             </div>
                             
                             <div>
-                                <Label htmlFor={`block-desc-${index}`}>Description</Label>
+                                <Label htmlFor={`block-reason-${index}`}>Reason</Label>
                                 <Textarea
-                                    id={`block-desc-${index}`}
-                                    value={entry.description}
-                                    onChange={(e) => handleBlockTimeChange(index, 'description', e.target.value)}
+                                    id={`block-reason-${index}`}
+                                    value={entry.reason || ''}
+                                    onChange={(e) => handleBlockTimeChange(index, 'reason', e.target.value)}
                                     placeholder="Reason for block time (e.g., Lunch break, Meeting, etc.)"
                                 />
                             </div>
@@ -567,15 +665,15 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                         Fill in the details below.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <div>
+                    <Tabs value={activeTab} className="w-full">
                         <TabsList className="grid w-full grid-cols-6">
-                            <TabsTrigger value="personal">Personal</TabsTrigger>
-                            <TabsTrigger value="employment">Employment</TabsTrigger>
-                            <TabsTrigger value="bank">Bank Details</TabsTrigger>
-                            <TabsTrigger value="permissions">Permissions</TabsTrigger>
-                            <TabsTrigger value="timing">Timing</TabsTrigger>
-                            <TabsTrigger value="blockTime">Block Time</TabsTrigger>
+                            <TabsTrigger value="personal" onClick={() => setActiveTab('personal')}>Personal</TabsTrigger>
+                            <TabsTrigger value="employment" onClick={() => setActiveTab('employment')}>Employment</TabsTrigger>
+                            <TabsTrigger value="bank" onClick={() => setActiveTab('bank')}>Bank Details</TabsTrigger>
+                            <TabsTrigger value="permissions" onClick={() => setActiveTab('permissions')}>Permissions</TabsTrigger>
+                            <TabsTrigger value="timing" onClick={() => setActiveTab('timing')}>Timing</TabsTrigger>
+                            <TabsTrigger value="blockTime" onClick={() => setActiveTab('blockTime')}>Block Time</TabsTrigger>
                         </TabsList>
                         <TabsContent value="personal" className="py-4">
                             {renderPersonalTab()}
@@ -600,15 +698,20 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }) => {
                         <Button type="button" variant="outline" onClick={onClose} disabled={isCreating || isUpdating}>
                             Cancel
                         </Button>
+                        {activeTab !== 'personal' && (
+                            <Button type="button" variant="outline" onClick={handlePreviousTab}>
+                                Previous
+                            </Button>
+                        )}
                         {activeTab !== 'blockTime' ? (
                             <Button type="button" onClick={handleNextTab}>Next</Button>
                         ) : (
-                            <Button type="submit" disabled={isCreating || isUpdating}>
+                            <Button type="button" onClick={handleSubmit} disabled={isCreating || isUpdating}>
                                 {isCreating || isUpdating ? 'Saving...' : 'Save Staff'}
                             </Button>
                         )}
                     </DialogFooter>
-                </form>
+                </div>
             </DialogContent>
         </Dialog>
     );

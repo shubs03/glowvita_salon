@@ -1,12 +1,12 @@
-import { configureStore, getDefaultMiddleware } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
-import adminAuthReducer from '@repo/store/slices/adminAuthSlice';
+import adminAuthReducer from './slices/Admin/adminAuthSlice';
 import crmAuthReducer from '@repo/store/slices/crmAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
 import vendorReducer from './slices/vendorSlice';
-import marketingReducer from './slices/marketingSlice';
+import marketingReducer from './slices/marketingslice';
 import supplierReducer from './slices/supplierSlice';
 import subscriptionReducer from './slices/subscriptionSlice';
 import notificationReducer from './slices/notificationSlice';
@@ -17,6 +17,7 @@ import shippingReducer from './slices/shippingSlice';
 import productReducer from './slices/productSlice';
 import serviceReducer from "./slices/CRM/serviceSlice.js";
 import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
+import clientReducer from "./slices/CRM/clientSlice.js"; // Import client slice
 import appointmentReducer from './slices/appointmentSlice';
 import blockTimeReducer from './slices/blockTimeSlice';
 import vendorprofileReducer from './slices/vendorprofileSlice';
@@ -43,6 +44,7 @@ export const makeStore = () => {
       shipping: shippingReducer,
       products: productReducer,
       staff: staffReducer, 
+      client: clientReducer,
       faqs: faqReducer,
       service: serviceReducer,
       appointments: appointmentReducer,  
@@ -75,4 +77,5 @@ export const makeStore = () => {
   });
 };
 
+// Export the root reducer state type for manual type checking
 export const selectRootState = (state) => state;

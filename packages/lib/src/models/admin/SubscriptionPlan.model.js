@@ -29,6 +29,17 @@ const subscriptionPlanSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  planType: {
+    type: String,
+    enum: ['trial', 'regular'],
+    required: true,
+    default: 'regular'
+  },
+  userTypes: [{
+    type: String,
+    enum: ['vendor', 'supplier', 'doctor'],
+    required: true
+  }],
   status: {
     type: String,
     enum: ['Active', 'Inactive'],
@@ -38,6 +49,10 @@ const subscriptionPlanSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
+  isFeatured: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now

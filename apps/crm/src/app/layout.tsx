@@ -24,13 +24,23 @@ export default function RootLayout({
     '/clients',
     '/services',
     '/products',
+    '/sales',
+    '/orders',
     '/salon-profile',
     '/offers-coupons',
     '/referrals',
     '/marketing',
     '/push-notifications',
     '/reports',
-    '/staff'
+    '/staff',
+    '/earnings',
+    '/doctor-reports',
+    '/doctor-referrals',
+    '/doctor-staff',
+    '/timetable',
+    '/consultations',
+    '/patients',
+    '/shipping'
   ].some(path => pathname.startsWith(path));
   
   const showMarketingLayout = ['/', '/apps', '/pricing', '/support'].includes(pathname);

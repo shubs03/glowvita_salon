@@ -7,10 +7,9 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { Skeleton } from "@repo/ui/skeleton";
 import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
-import { Textarea } from '@repo/ui/textarea';
-import { Plus, Search, FileDown, Eye, Edit, Trash2, Users, UserPlus, UserX, ShoppingBag } from 'lucide-react';
+import { Plus, Search, FileDown, Eye, Edit, Trash2, Users, UserPlus } from 'lucide-react';
 import { StaffFormModal } from '@/components/StaffFormModal';
 import { useGetStaffQuery, useDeleteStaffMutation } from '@repo/store/api';
 import { toast } from 'sonner';
@@ -24,24 +23,32 @@ export type Staff = {
   emailAddress: string;
   photo?: string;
   status: 'Active' | 'Inactive';
-  timing?: {
-    sunday: { startTime: string; endTime: string; isWorking: boolean };
-    monday: { startTime: string; endTime: string; isWorking: boolean };
-    tuesday: { startTime: string; endTime: string; isWorking: boolean };
-    wednesday: { startTime: string; endTime: string; isWorking: boolean };
-    thursday: { startTime: string; endTime: string; isWorking: boolean };
-    friday: { startTime: string; endTime: string; isWorking: boolean };
-    saturday: { startTime: string; endTime: string; isWorking: boolean };
-  };
-  blockTime?: {
-    entries: Array<{
-      _id?: string;
-      date: string;
-      startTime: string;
-      endTime: string;
-      description: string;
-    }>;
-  };
+  sundayAvailable?: boolean;
+  sundaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+  mondayAvailable?: boolean;
+  mondaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+  tuesdayAvailable?: boolean;
+  tuesdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+  wednesdayAvailable?: boolean;
+  wednesdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+  thursdayAvailable?: boolean;
+  thursdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+  fridayAvailable?: boolean;
+  fridaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+  saturdayAvailable?: boolean;
+  saturdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+  blockedTimes?: Array<{
+    _id?: string;
+    date: Date | string;
+    startTime: string;
+    endTime: string;
+    startMinutes: number;
+    endMinutes: number;
+    reason: string;
+    isRecurring: boolean;
+    recurringType?: string;
+    isActive: boolean;
+  }>;
 };
 
 export default function StaffPage() {
@@ -57,12 +64,10 @@ export default function StaffPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-    const [viewStaff, setViewStaff] = useState<Staff | null>(null);
     
     const filteredStaff = useMemo(() => {
         if (!staffList) return [];
-        return staffList.filter(staff => 
+        return staffList.filter((staff: Staff) => 
             staff.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
             staff.emailAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
             staff.mobileNo.includes(searchTerm)
@@ -82,11 +87,6 @@ export default function StaffPage() {
     const handleDeleteClick = (staff: Staff) => {
         setSelectedStaff(staff);
         setIsDeleteModalOpen(true);
-    };
-    
-    const handleViewClick = (staff: Staff) => {
-        setViewStaff(staff);
-        setIsViewModalOpen(true);
     };
     
     const handleConfirmDelete = async () => {
@@ -112,7 +112,94 @@ export default function StaffPage() {
     };
 
     if(isLoading) {
-        return <div>Loading staff...</div>
+        return (
+            <div className="p-4 sm:p-6 lg:p-8">
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+                    <div>
+                        <Skeleton className="h-8 w-64" />
+                    </div>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                    {[...Array(2)].map((_, i) => (
+                        <Card key={i}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-4 w-4" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-8 w-16 mb-2" />
+                                <Skeleton className="h-3 w-32" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+
+                <Card>
+                    <CardHeader>
+                        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                            <div>
+                                <Skeleton className="h-6 w-24 mb-2" />
+                                <Skeleton className="h-4 w-48" />
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                                <div className="relative">
+                                    <Skeleton className="h-10 w-80" />
+                                </div>
+                                <Skeleton className="h-10 w-20" />
+                                <Skeleton className="h-10 w-28" />
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="overflow-x-auto no-scrollbar rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-secondary hover:bg-secondary">
+                                        {["Name", "Contact", "Position", "Status", "Actions"].map((_, i) => (
+                                            <TableHead key={i}>
+                                                <Skeleton className="h-5 w-full" />
+                                            </TableHead>
+                                        ))}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {[...Array(5)].map((_, i) => (
+                                        <TableRow key={i} className="hover:bg-muted/50">
+                                            <TableCell className="font-medium py-3">
+                                                <div className="flex items-center gap-3">
+                                                    <Skeleton className="w-10 h-10 rounded-full" />
+                                                    <Skeleton className="h-5 w-32" />
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Skeleton className="h-5 w-full mb-1" />
+                                                <Skeleton className="h-4 w-24" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Skeleton className="h-5 w-full" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Skeleton className="h-6 w-16 rounded-full" />
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <Skeleton className="h-8 w-8 rounded" />
+                                                    <Skeleton className="h-8 w-8 rounded" />
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <div className="mt-4">
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
 
     if(isError) {
@@ -140,7 +227,7 @@ export default function StaffPage() {
                         <UserPlus className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-green-600">{staffList.filter(s => s.status === 'Active').length}</div>
+                        <div className="text-2xl font-bold text-green-600">{staffList.filter((s: Staff) => s.status === 'Active').length}</div>
                         <p className="text-xs text-muted-foreground">Currently active members</p>
                     </CardContent>
                 </Card>
@@ -179,7 +266,7 @@ export default function StaffPage() {
                     <div className="overflow-x-auto no-scrollbar rounded-md border">
                         <Table>
                             <TableHeader>
-                                <TableRow>
+                                <TableRow className="bg-secondary hover:bg-secondary">
                                     <TableHead>Name</TableHead>
                                     <TableHead>Contact</TableHead>
                                     <TableHead>Position</TableHead>
@@ -188,11 +275,11 @@ export default function StaffPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {currentItems.map(staff => (
-                                    <TableRow key={staff._id}>
-                                        <TableCell className="font-medium flex items-center gap-2">
-                                            <img src={staff.photo || `https://placehold.co/40x40.png?text=${staff.fullName[0]}`} alt={staff.fullName} className="w-8 h-8 rounded-full object-cover" />
-                                            {staff.fullName}
+                                {currentItems.map((staff: Staff) => (
+                                    <TableRow key={staff._id} className="hover:bg-muted/50">
+                                        <TableCell className="font-medium flex items-center gap-3 py-3">
+                                            <img src={staff.photo || `https://placehold.co/40x40.png?text=${staff.fullName[0]}`} alt={staff.fullName} className="w-10 h-10 rounded-full object-cover" />
+                                            <span className="font-semibold">{staff.fullName}</span>
                                         </TableCell>
                                         <TableCell>
                                             <div>{staff.emailAddress}</div>
@@ -205,9 +292,6 @@ export default function StaffPage() {
                                             </span>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(staff)}>
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleOpenModal(staff)}>
                                                 <Edit className="h-4 w-4" />
                                             </Button>
@@ -242,96 +326,6 @@ export default function StaffPage() {
                 }}
             />
             
-            {/* View Staff Details Modal */}
-            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Staff Details</DialogTitle>
-                        <DialogDescription>
-                            Complete information for {viewStaff?.fullName}
-                        </DialogDescription>
-                    </DialogHeader>
-                    {viewStaff && (
-                        <div className="space-y-6">
-                            {/* Profile Section */}
-                            <div className="flex items-center space-x-4">
-                                <img 
-                                    src={viewStaff.photo || `https://placehold.co/80x80.png?text=${viewStaff.fullName[0]}`} 
-                                    alt={viewStaff.fullName} 
-                                    className="w-20 h-20 rounded-full object-cover border-2 border-gray-200" 
-                                />
-                                <div>
-                                    <h3 className="text-xl font-semibold">{viewStaff.fullName}</h3>
-                                    <p className="text-gray-600">{viewStaff.position}</p>
-                                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium mt-2 ${getStatusColor(viewStaff.status)}`}>
-                                        {viewStaff.status}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            {/* Contact Information */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-gray-900">Contact Information</h4>
-                                    <div>
-                                        <Label className="text-sm font-medium text-gray-500">Email Address</Label>
-                                        <p className="mt-1">{viewStaff.emailAddress}</p>
-                                    </div>
-                                    <div>
-                                        <Label className="text-sm font-medium text-gray-500">Mobile Number</Label>
-                                        <p className="mt-1">{viewStaff.mobileNo}</p>
-                                    </div>
-                                </div>
-                                
-                                <div className="space-y-3">
-                                    <h4 className="font-semibold text-gray-900">Work Information</h4>
-                                    <div>
-                                        <Label className="text-sm font-medium text-gray-500">Position</Label>
-                                        <p className="mt-1">{viewStaff.position}</p>
-                                    </div>
-                                    <div>
-                                        <Label className="text-sm font-medium text-gray-500">Status</Label>
-                                        <p className="mt-1">{viewStaff.status}</p>
-                                    </div>
-                                    {viewStaff.timing && (
-                                        <div>
-                                            <Label className="text-sm font-medium text-gray-500">Working Hours</Label>
-                                            <div className="mt-1 space-y-1">
-                                                {Object.entries(viewStaff.timing).map(([day, schedule]: [string, any]) => (
-                                                    schedule.isWorking && (
-                                                        <div key={day} className="text-sm">
-                                                            <span className="font-medium capitalize">{day}:</span> {schedule.startTime} - {schedule.endTime}
-                                                        </div>
-                                                    )
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                    {viewStaff.blockTime && viewStaff.blockTime.entries && viewStaff.blockTime.entries.length > 0 && (
-                                        <div>
-                                            <Label className="text-sm font-medium text-gray-500">Block Time Entries</Label>
-                                            <div className="mt-1 space-y-2">
-                                                {viewStaff.blockTime.entries.map((entry: any, index: number) => (
-                                                    <div key={index} className="text-sm border p-2 rounded bg-red-50">
-                                                        <div><span className="font-medium">Date:</span> {entry.date}</div>
-                                                        <div><span className="font-medium">Time:</span> {entry.startTime} - {entry.endTime}</div>
-                                                        {entry.description && <div><span className="font-medium">Reason:</span> {entry.description}</div>}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>Close</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-            
-            {/* Delete Confirmation Modal */}
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
                     <DialogHeader>

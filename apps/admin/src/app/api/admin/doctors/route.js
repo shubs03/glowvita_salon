@@ -1,9 +1,32 @@
+
+
 import _db from "../../../../../../../packages/lib/src/db.js";
 import DoctorModel from "../../../../../../../packages/lib/src/models/Vendor/Docters.model.js";
+import { ReferralModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
+import SubscriptionPlan from "../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import bcrypt from "bcryptjs";
 
 await _db();
+
+// Function to generate a unique referral code for a doctor
+const generateDoctorReferralCode = async (name) => {
+  let referralCode;
+  let isUnique = false;
+  const namePrefix = name.replace(/[^a-zA-Z]/g, '').toUpperCase().substring(0, 3);
+  
+  while (!isUnique) {
+    const randomNumbers = Math.floor(100 + Math.random() * 900); // Generates 3-digit number
+    referralCode = `DR${namePrefix}${randomNumbers}`;
+    
+    const existingDoctor = await DoctorModel.findOne({ referralCode });
+    if (!existingDoctor) {
+      isUnique = true;
+    }
+  }
+  return referralCode;
+};
+
 
 export const POST = async (req) => {
   const body = await req.json();
@@ -13,7 +36,9 @@ export const POST = async (req) => {
     phone,
     gender,
     registrationNumber,
-    specialization,
+    doctorType, 
+    specialties,
+    diseases, 
     experience,
     clinicName,
     clinicAddress,
@@ -33,6 +58,7 @@ export const POST = async (req) => {
     landline,
     workingWithHospital,
     videoConsultation,
+    referredByCode,
   } = body;
 
   // 1️⃣ Validate required fields
@@ -42,7 +68,8 @@ export const POST = async (req) => {
     !phone ||
     !gender ||
     !registrationNumber ||
-    !specialization ||
+    !doctorType || 
+    !specialties || !Array.isArray(specialties) || specialties.length === 0 || 
     !experience ||
     !clinicName ||
     !clinicAddress ||
@@ -77,15 +104,29 @@ export const POST = async (req) => {
 
   // 3️⃣ Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
+  
+  // 4️⃣ Generate unique referral code
+  const referralCode = await generateDoctorReferralCode(name);
+  
+    // 5️⃣ Assign a default trial plan
+  const trialPlan = await SubscriptionPlan.findOne({ name: 'Trial Plan' });
+  if (!trialPlan) {
+    return Response.json({ message: "Default trial plan for doctors not found." }, { status: 500 });
+  }
+  const subscriptionEndDate = new Date();
+  subscriptionEndDate.setDate(subscriptionEndDate.getDate() + trialPlan.duration);
 
-  // 4️⃣ Create doctor
+
+  // 6️⃣ Create doctor
   const newDoctor = await DoctorModel.create({
     name,
     email,
     phone,
     gender,
     registrationNumber,
-    specialization,
+    doctorType,
+    specialties,
+    diseases: diseases || [],
     experience,
     clinicName,
     clinicAddress,
@@ -105,9 +146,39 @@ export const POST = async (req) => {
     landline: landline || null,
     workingWithHospital,
     videoConsultation,
+    referralCode,
+    subscription: {
+        plan: trialPlan._id,
+        status: 'Active',
+        endDate: subscriptionEndDate,
+        history: [],
+    }
   });
+  
+  // 7️⃣ Handle referral if a code was provided
+  if (referredByCode) {
+    const referringDoctor = await DoctorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
+    if (referringDoctor) {
+      const v2vSettings = await V2VSettingsModel.findOne({});
+      const bonusValue = v2vSettings?.referrerBonus?.bonusValue || 0;
 
-  // 5️⃣ Remove password before returning
+      const referralType = 'V2V';
+      const count = await ReferralModel.countDocuments({ referralType });
+      const referralId = `${referralType}-${String(count + 1).padStart(3, '0')}`;
+
+      await ReferralModel.create({
+        referralId,
+        referralType,
+        referrer: referringDoctor.name,
+        referee: newDoctor.name,
+        date: new Date(),
+        status: 'Completed',
+        bonus: String(bonusValue),
+      });
+    }
+  }
+
+  // 8️⃣ Remove password before returning
   const doctorData = newDoctor.toObject();
   delete doctorData.password;
 
@@ -129,6 +200,12 @@ export const PUT = authMiddlewareAdmin(
     // If password is provided, hash it
     if (password) {
       body.password = await bcrypt.hash(password, 10);
+    }
+    
+    // Legacy support for single specialization (can be removed if no longer needed)
+    if (body.specialization && !body.specialties) {
+      body.specialties = [body.specialization];
+      delete body.specialization;
     }
 
     const updatedDoctor = await DoctorModel.findByIdAndUpdate(

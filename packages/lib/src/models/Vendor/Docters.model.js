@@ -1,4 +1,5 @@
 
+
 import mongoose from "mongoose";
 
 const doctorSchema = new mongoose.Schema({
@@ -31,12 +32,20 @@ const doctorSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
-  specialization: {
+  doctorType: { 
     type: String,
     required: true,
-    // enum: ["Dermatologist", "Cosmetologist", "Trichologist", "Aesthetic Physician", "Plastic Surgeon"],
-    trim: true,
+    enum: ['Physician', 'Surgeon'],
   },
+  specialties: [{ 
+    type: String,
+    required: true,
+    trim: true,
+  }],
+  diseases: [{
+    type: String,
+    trim: true,
+  }],
   experience: {
     type: String,
     required: true,
@@ -71,6 +80,49 @@ const doctorSchema = new mongoose.Schema({
     type: String,
     enum: ["Approved", "Pending", "Rejected"],
     default: "Pending",
+  },
+  subscription: {
+    plan: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SubscriptionPlan",
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ["Active", "Expired"],
+      default: "Active",
+    },
+    startDate: {
+      type: Date,
+      default: Date.now,
+    },
+    endDate: {
+      type: Date,
+      required: true
+    },
+    history: {
+      type: [{
+        plan: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "SubscriptionPlan",
+          required: true
+        },
+        startDate: {
+          type: Date,
+          required: true
+        },
+        endDate: {
+          type: Date,
+          required: true
+        },
+        status: {
+          type: String,
+          enum: ["Active", "Expired"],
+          required: true
+        }
+      }],
+      default: [],
+    }
   },
   profileImage: {
     type: String,
@@ -130,6 +182,12 @@ const doctorSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  referralCode: {
+    type: String,
+    trim: true,
+    unique: true,
+    sparse: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -140,6 +198,11 @@ const doctorSchema = new mongoose.Schema({
   },
 });
 
+doctorSchema.virtual('specialization').get(function() {
+    return this.specialties?.[0] || '';
+});
+
 const DoctorModel = mongoose.models.Doctor || mongoose.model("Doctor", doctorSchema);
 
 export default DoctorModel;
+    

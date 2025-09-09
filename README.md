@@ -7,7 +7,7 @@ Welcome to Monorepo Maestro, a Next.js 15 monorepo project built with Turborepo.
 This Turborepo includes the following packages and applications:
 
 ### Apps
-
+g 
 - `web`: The main public-facing website.
 - `crm`: A customer relationship management portal for vendors.
 - `admin`: An internal administrative dashboard.

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -11,39 +10,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
+import { Skeleton } from "@repo/ui/skeleton";
 import { useGetSuppliersQuery, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/api';
 import { useGetDoctorsQuery, useUpdateDoctorMutation, useDeleteDoctorMutation } from '../../../../../packages/store/src/services/api';
 import { useGetVendorsQuery, useUpdateVendorStatusMutation } from '@repo/store/api';
 import { useGetPendingServicesQuery, useUpdateServiceStatusMutation } from '@repo/store/api';
+import { useGetVendorProductsQuery, useUpdateProductStatusMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 
-// Static data for products (unchanged)
-const productsData = [
-  {
-    id: "PROD-001",
-    productImage: "https://placehold.co/400x400.png",
-    productName: "Organic Face Serum",
-    salonName: "New Beauty Haven",
-    price: 85.00,
-    salePrice: 75.00,
-    category: "Skincare",
-    description: "A hydrating serum made with natural ingredients.",
-    stock: 50,
-  },
-  {
-    id: "PROD-002",
-    productImage: "https://placehold.co/400x400.png",
-    productName: "Matte Lipstick",
-    salonName: "The Glow Up Studio",
-    price: 25.00,
-    salePrice: 25.00,
-    category: "Makeup",
-    description: "A long-lasting matte lipstick in a vibrant red shade.",
-    stock: 120,
-  }
-];
-
-// Updated Vendor type based on provided data structure
+// Vendor type
 type Vendor = {
   _id: string;
   businessName: string;
@@ -71,15 +46,26 @@ type Vendor = {
 };
 
 type Service = {
-    _id: string;
-    serviceName: string;
-    vendorName: string;
-    category: string;
-    price: number;
-    status: "pending" | "approved" | "disapproved";
-    description: string;
+  _id: string;
+  serviceName: string;
+  vendorName: string;
+  category: string;
+  price: number;
+  status: "pending" | "approved" | "disapproved";
+  description: string;
 };
-type Product = typeof productsData[0];
+
+type Product = {
+  _id: string;
+  productImage: string;
+  productName: string; // Changed to match data
+  price: number;
+  salePrice: number;
+  category: { _id: string; name: string }; // Updated to match data
+  description: string;
+  stock: number;
+  status: 'pending' | 'approved' | 'disapproved';
+};
 
 type Doctor = {
   _id: string;
@@ -129,6 +115,13 @@ export default function VendorApprovalPage() {
   const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
   const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetPendingServicesQuery(undefined);
   const [updateServiceStatus] = useUpdateServiceStatusMutation();
+  const { data: productDatas, isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useGetVendorProductsQuery(undefined);
+  const [updateProductStatus] = useUpdateProductStatusMutation();
+
+  // Safely extract products array
+  const productsData = Array.isArray(productDatas?.products) ? productDatas.products : [];
+
+  console.log("Products Data:", productsData);
 
   const [updateSupplier] = useUpdateSupplierMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
@@ -149,19 +142,20 @@ export default function VendorApprovalPage() {
   const pendingSuppliers = suppliersData.filter((s: Supplier) => s.status === 'Pending');
   const pendingDoctors = doctorsData.filter((d: Doctor) => d.status === 'Pending');
   const pendingVendors = vendors.filter((v: Vendor) => v.status === 'Pending' || v.status === 'Disabled');
+  const pendingProducts = productsData.filter((p: Product) => p.status === 'pending');
 
   // Pagination logic
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
   const currentVendors = pendingVendors.slice(firstItemIndex, lastItemIndex);
   const currentServices = pendingServices.slice(firstItemIndex, lastItemIndex);
-  const currentProducts = productsData.slice(firstItemIndex, lastItemIndex);
+  const currentProducts = pendingProducts.slice(firstItemIndex, lastItemIndex);
   const currentDoctors = pendingDoctors.slice(firstItemIndex, lastItemIndex);
   const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
 
   const totalVendorPages = Math.ceil(pendingVendors.length / itemsPerPage);
   const totalServicePages = Math.ceil(pendingServices.length / itemsPerPage);
-  const totalProductPages = Math.ceil(productsData.length / itemsPerPage);
+  const totalProductPages = Math.ceil(pendingProducts.length / itemsPerPage);
   const totalDoctorPages = Math.ceil(pendingDoctors.length / itemsPerPage);
   const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
 
@@ -219,13 +213,21 @@ export default function VendorApprovalPage() {
           toast.success('Success', { description: `Doctor "${itemName}" status updated to ${newStatus}.` });
         }
       } else if (itemType === 'service') {
-          const service = selectedItem as Service;
+        const service = selectedItem as Service;
+        const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
+        await updateServiceStatus({ serviceId: service._id, status: newStatus }).unwrap();
+        toast.success(`Service "${service.serviceName}" has been ${newStatus}.`);
+        refetchPendingServices();
+      } else if (itemType === 'product') {
+        const product = selectedItem as Product;
+        if (actionType === 'delete') {
+          toast.error('Error', { description: 'Delete functionality for products is not yet implemented.' });
+        } else {
           const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
-          await updateServiceStatus({ serviceId: service._id, status: newStatus }).unwrap();
-          toast.success(`Service "${service.serviceName}" has been ${newStatus}.`);
-          refetchPendingServices(); // Refetch the list of pending services
-      } else {
-        console.log(`Performing ${actionType} on ${itemType} ${itemName}`);
+          await updateProductStatus({ productId: product._id, status: newStatus }).unwrap();
+          toast.success(`Product "${product.productName}" has been ${newStatus}.`);
+          refetchProducts();
+        }
       }
     } catch (error) {
       toast.error('Error', { description: `Failed to perform action on ${itemType}.` });
@@ -240,7 +242,7 @@ export default function VendorApprovalPage() {
   const getModalContent = () => {
     if (!actionType || !selectedItem || !itemType) return { title: '', description: '', buttonText: '' };
 
-    const itemName = (selectedItem as any).businessName || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).name || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
+    const itemName = (selectedItem as any).businessName || (selectedItem as any).serviceName || (selectedItem as any).productName || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
 
     switch (actionType) {
       case 'approve':
@@ -267,6 +269,68 @@ export default function VendorApprovalPage() {
   };
 
   const { title, description, buttonText } = getModalContent();
+
+  // Check if any of the main data is still loading
+  const isMainDataLoading = vendorsLoading || suppliersLoading || doctorsLoading || servicesLoading || productsLoading;
+
+  if (isMainDataLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+        <div>
+          <Skeleton className="h-8 w-64" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {[...Array(8)].map((_, i) => (
+                      <TableHead key={i}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      {[...Array(8)].map((_, j) => (
+                        <TableCell key={j}>
+                          <Skeleton className="h-5 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="mt-4">
+              <Skeleton className="h-8 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -346,9 +410,15 @@ export default function VendorApprovalPage() {
                   </TableHeader>
                   <TableBody>
                     {vendorsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center">Loading...</TableCell>
-                      </TableRow>
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(8)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
                     ) : vendorsError ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center">Error loading vendors.</TableCell>
@@ -358,20 +428,20 @@ export default function VendorApprovalPage() {
                         <TableCell colSpan={8} className="text-center">No pending vendor approvals.</TableCell>
                       </TableRow>
                     ) : (
-                      currentVendors.map((vendor) => (
+                      currentVendors.map((vendor: Vendor) => (
                         <TableRow key={vendor._id}>
                           <TableCell className="font-mono text-xs">{vendor._id}</TableCell>
-                          <TableCell className="font-medium">{vendor.businessName}</TableCell>
-                          <TableCell>{`${vendor.firstName} ${vendor.lastName}`}</TableCell>
-                          <TableCell>{vendor.phone}</TableCell>
-                          <TableCell>{vendor.city}</TableCell>
-                          <TableCell>{vendor.pincode}</TableCell>
+                          <TableCell className="font-medium">{vendor.businessName || 'N/A'}</TableCell>
+                          <TableCell>{`${vendor.firstName} ${vendor.lastName}` || 'N/A'}</TableCell>
+                          <TableCell>{vendor.phone || 'N/A'}</TableCell>
+                          <TableCell>{vendor.city || 'N/A'}</TableCell>
+                          <TableCell>{vendor.pincode || 'N/A'}</TableCell>
                           <TableCell>
                             <Badge
                               variant={vendor.status === 'Pending' || vendor.status === 'Disabled' ? 'default' : 'secondary'}
                               className={vendor.status === 'Pending' || vendor.status === 'Disabled' ? 'bg-yellow-100 text-yellow-800' : ''}
                             >
-                              {vendor.status}
+                              {vendor.status || 'N/A'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
@@ -434,41 +504,48 @@ export default function VendorApprovalPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                   {servicesLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center">Loading...</TableCell>
-                      </TableRow>
+                    {servicesLoading ? (
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(5)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
                     ) : currentServices.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center">No pending service approvals.</TableCell>
                       </TableRow>
                     ) : (
-                      currentServices.map((service) => (
-                      <TableRow key={service._id}>
-                        <TableCell className="font-medium">{service.serviceName}</TableCell>
-                        <TableCell>{service.vendorName}</TableCell>
-                        <TableCell>₹{service.price.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                            {service.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewClick(service, 'service')}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View Details</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'approve')}>
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                            <span className="sr-only">Approve</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'reject')}>
-                            <XCircle className="h-4 w-4 text-red-600" />
-                            <span className="sr-only">Reject</span>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    )))}
+                      currentServices.map((service: Service) => (
+                        <TableRow key={service._id}>
+                          <TableCell className="font-medium">{service.serviceName || 'N/A'}</TableCell>
+                          <TableCell>{service.vendorName || 'N/A'}</TableCell>
+                          <TableCell>{service.price ? `₹${service.price.toFixed(2)}` : 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                              {service.status || 'pending'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(service, 'service')}>
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View Details</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'approve')}>
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="sr-only">Approve</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'reject')}>
+                              <XCircle className="h-4 w-4 text-red-600" />
+                              <span className="sr-only">Reject</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -496,61 +573,92 @@ export default function VendorApprovalPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Product</TableHead>
-                      <TableHead>Salon Name</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead>Category</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Image
-                              src={product.productImage}
-                              alt={product.productName}
-                              width={40}
-                              height={40}
-                              className="rounded-md cursor-pointer"
-                              onClick={() => handleImageClick(product.productImage)}
-                            />
-                            <span className="font-medium">{product.productName}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{product.salonName}</TableCell>
-                        <TableCell>
-                          <div>
-                            <span className={product.salePrice < product.price ? "line-through text-muted-foreground" : ""}>
-                              ${product.price.toFixed(2)}
-                            </span>
-                            {product.salePrice < product.price && (
-                              <div className="text-green-600 font-semibold">${product.salePrice.toFixed(2)}</div>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">Sale price is the discounted price.</p>
-                        </TableCell>
-                        <TableCell>{product.category}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleViewClick(product, 'product')}>
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View Details</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'product', 'approve')}>
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                            <span className="sr-only">Approve</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'product', 'reject')}>
-                            <XCircle className="h-4 w-4 text-red-600" />
-                            <span className="sr-only">Reject</span>
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'product', 'delete')}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </TableCell>
+                    {productsLoading ? (
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(5)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : productsError ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">Error loading products.</TableCell>
                       </TableRow>
-                    ))}
+                    ) : !Array.isArray(currentProducts) || currentProducts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">No pending product approvals.</TableCell>
+                      </TableRow>
+                    ) : (
+                      currentProducts.map((product) => (
+                        <TableRow key={product._id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Image
+                                src={product.productImage || 'https://placehold.co/400x400.png'}
+                                alt={product.productName || 'Product'}
+                                width={40}
+                                height={40}
+                                className="rounded-md cursor-pointer"
+                                onClick={() => handleImageClick(product.productImage || 'https://placehold.co/400x400.png')}
+                              />
+                              <span className="font-medium">{product.productName || 'N/A'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <span className={product.salePrice < product.price ? "line-through text-muted-foreground" : ""}>
+                                {product.price ? `$${product.price.toFixed(2)}` : 'N/A'}
+                              </span>
+                              {product.salePrice < product.price && (
+                                <div className="text-green-600 font-semibold">
+                                  {product.salePrice ? `$${product.salePrice.toFixed(2)}` : 'N/A'}
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Sale price is the discounted price.</p>
+                          </TableCell>
+                          <TableCell>{product.category?.name || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                              {product.status || 'pending'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(product, 'product')}>
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View Details</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'product', 'approve')}>
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="sr-only">Approve</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'product', 'reject')}>
+                              <XCircle className="h-4 w-4 text-red-600" />
+                              <span className="sr-only">Reject</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleActionClick(product, 'product', 'delete')}
+                              disabled
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -561,7 +669,7 @@ export default function VendorApprovalPage() {
                 onPageChange={setCurrentPage}
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
-                totalItems={productsData.length}
+                totalItems={pendingProducts.length}
               />
             </CardContent>
           </Card>
@@ -585,31 +693,44 @@ export default function VendorApprovalPage() {
                   </TableHeader>
                   <TableBody>
                     {doctorsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center">Loading...</TableCell>
-                      </TableRow>
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(4)].map((_, j) => (
+                            <TableCell key={j}>
+                              {j === 0 ? (
+                                <div className="flex items-center gap-3">
+                                  <Skeleton className="h-10 w-10 rounded-full" />
+                                  <Skeleton className="h-5 w-32" />
+                                </div>
+                              ) : (
+                                <Skeleton className="h-5 w-full" />
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
                     ) : currentDoctors.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={4} className="text-center">No pending doctor approvals.</TableCell>
                       </TableRow>
                     ) : (
-                      currentDoctors.map((doctor) => (
+                      currentDoctors.map((doctor: Doctor) => (
                         <TableRow key={doctor._id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Image
                                 src={doctor.profileImage || "https://placehold.co/400x400.png"}
-                                alt={doctor.name}
+                                alt={doctor.name || 'Doctor'}
                                 width={40}
                                 height={40}
                                 className="rounded-full cursor-pointer"
                                 onClick={() => handleImageClick(doctor.profileImage || "https://placehold.co/400x400.png")}
                               />
-                              <span className="font-medium">{doctor.name}</span>
+                              <span className="font-medium">{doctor.name || 'N/A'}</span>
                             </div>
                           </TableCell>
-                          <TableCell>{doctor.clinicName}</TableCell>
-                          <TableCell>{doctor.specialization}</TableCell>
+                          <TableCell>{doctor.clinicName || 'N/A'}</TableCell>
+                          <TableCell>{doctor.specialization || 'N/A'}</TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleViewClick(doctor, 'doctor')}>
                               <Eye className="h-4 w-4" />
@@ -667,27 +788,33 @@ export default function VendorApprovalPage() {
                   </TableHeader>
                   <TableBody>
                     {suppliersLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center">Loading...</TableCell>
-                      </TableRow>
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(6)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
                     ) : currentSuppliers.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center">No pending supplier approvals.</TableCell>
                       </TableRow>
                     ) : (
-                      currentSuppliers.map((supplier) => (
+                      currentSuppliers.map((supplier: Supplier) => (
                         <TableRow key={supplier._id}>
-                          <TableCell className="font-medium">{supplier.firstName + " " + supplier.lastName}</TableCell>
-                          <TableCell>{supplier.businessRegistrationNo}</TableCell>
-                          <TableCell>{supplier.supplierType}</TableCell>
+                          <TableCell className="font-medium">{(supplier.firstName + " " + supplier.lastName) || 'N/A'}</TableCell>
+                          <TableCell>{supplier.businessRegistrationNo || 'N/A'}</TableCell>
+                          <TableCell>{supplier.supplierType || 'N/A'}</TableCell>
                           <TableCell>
-                            <a href={supplier.licenseFile} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            <a href={supplier.licenseFile || '#'} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                               View License
                             </a>
                           </TableCell>
                           <TableCell>
                             <Badge variant={supplier.status === 'Pending' ? 'default' : 'secondary'} className={supplier.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}>
-                              {supplier.status}
+                              {supplier.status || 'N/A'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
@@ -759,52 +886,52 @@ export default function VendorApprovalPage() {
                 <div className="flex items-center gap-4">
                   <Image
                     src={(selectedItem as Vendor).profileImage || 'https://placehold.co/100x100.png'}
-                    alt={(selectedItem as Vendor).businessName}
+                    alt={(selectedItem as Vendor).businessName || 'Vendor'}
                     width={80}
                     height={80}
                     className="rounded-lg"
                     onClick={() => handleImageClick((selectedItem as Vendor).profileImage || 'https://placehold.co/100x100.png')}
                   />
                   <div>
-                    <h3 className="text-lg font-semibold">{(selectedItem as Vendor).businessName}</h3>
-                    <p className="text-muted-foreground">{`${(selectedItem as Vendor).firstName} ${(selectedItem as Vendor).lastName}`}</p>
+                    <h3 className="text-lg font-semibold">{(selectedItem as Vendor).businessName || 'N/A'}</h3>
+                    <p className="text-muted-foreground">{`${(selectedItem as Vendor).firstName} ${(selectedItem as Vendor).lastName}` || 'N/A'}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Vendor ID</span>
-                  <span className="col-span-2">{(selectedItem as Vendor)._id}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor)._id || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Email</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).email}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).email || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Phone</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).phone}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).phone || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-start gap-4">
                   <span className="font-semibold text-muted-foreground">Address</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).address}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).address || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">City</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).city}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).city || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">State</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).state}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).state || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Pincode</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).pincode}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).pincode || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Category</span>
-                  <span className="col-span-2"><Badge>{(selectedItem as Vendor).category}</Badge></span>
+                  <span className="col-span-2"><Badge>{(selectedItem as Vendor).category || 'N/A'}</Badge></span>
                 </div>
                 <div className="grid grid-cols-3 items-start gap-4">
                   <span className="font-semibold text-muted-foreground">Sub-Categories</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).subCategories.join(', ') || 'None'}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).subCategories?.join(', ') || 'None'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Description</span>
@@ -815,7 +942,7 @@ export default function VendorApprovalPage() {
                   <span className="col-span-2">
                     {(selectedItem as Vendor).website ? (
                       <a
-                        href={(selectedItem as Vendor).website}
+                        href={(selectedItem as Vendor).website || '#'}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline"
@@ -829,40 +956,40 @@ export default function VendorApprovalPage() {
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Status</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).status}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).status || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Subscription Status</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).subscription.status}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).subscription?.status || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Created At</span>
-                  <span className="col-span-2">{new Date((selectedItem as Vendor).createdAt).toLocaleString()}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).createdAt ? new Date((selectedItem as Vendor).createdAt).toLocaleString() : 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Updated At</span>
-                  <span className="col-span-2">{new Date((selectedItem as Vendor).updatedAt).toLocaleString()}</span>
+                  <span className="col-span-2">{(selectedItem as Vendor).updatedAt ? new Date((selectedItem as Vendor).updatedAt).toLocaleString() : 'N/A'}</span>
                 </div>
               </>
             )}
             {itemType === 'service' && selectedItem && (
               <>
-                <h3 className="text-lg font-semibold">{(selectedItem as Service).serviceName}</h3>
+                <h3 className="text-lg font-semibold">{(selectedItem as Service).serviceName || 'N/A'}</h3>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Vendor</span>
-                  <span className="col-span-2">{(selectedItem as Service).vendorName}</span>
+                  <span className="col-span-2">{(selectedItem as Service).vendorName || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Price</span>
-                  <span className="col-span-2">₹{(selectedItem as Service).price.toFixed(2)}</span>
+                  <span className="col-span-2">{(selectedItem as Service).price ? `₹${(selectedItem as Service).price.toFixed(2)}` : 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-start gap-4">
                   <span className="font-semibold text-muted-foreground">Description</span>
-                  <p className="col-span-2">{(selectedItem as Service).description}</p>
+                  <p className="col-span-2">{(selectedItem as Service).description || 'N/A'}</p>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Status</span>
-                  <span className="col-span-2">{(selectedItem as Service).status}</span>
+                  <span className="col-span-2">{(selectedItem as Service).status || 'N/A'}</span>
                 </div>
               </>
             )}
@@ -870,40 +997,44 @@ export default function VendorApprovalPage() {
               <>
                 <div className="flex items-center gap-4">
                   <Image
-                    src={(selectedItem as Product).productImage}
-                    alt={(selectedItem as Product).productName}
+                    src={(selectedItem as Product).productImage || 'https://placehold.co/100x100.png'}
+                    alt={(selectedItem as Product).productName || 'Product'}
                     width={80}
                     height={80}
                     className="rounded-lg"
+                    onClick={() => handleImageClick((selectedItem as Product).productImage || 'https://placehold.co/100x100.png')}
                   />
                   <div>
-                    <h3 className="text-lg font-semibold">{(selectedItem as Product).productName}</h3>
-                    <p className="text-muted-foreground">{(selectedItem as Product).salonName}</p>
+                    <h3 className="text-lg font-semibold">{(selectedItem as Product).productName || 'N/A'}</h3>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Product ID</span>
-                  <span className="col-span-2">{(selectedItem as Product).id}</span>
+                  <span className="col-span-2">{(selectedItem as Product)._id || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Category</span>
-                  <span className="col-span-2"><Badge>{(selectedItem as Product).category}</Badge></span>
+                  <span className="col-span-2"><Badge>{(selectedItem as Product).category?.name || 'N/A'}</Badge></span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Price</span>
-                  <span className="col-span-2">${(selectedItem as Product).price.toFixed(2)}</span>
+                  <span className="col-span-2">{(selectedItem as Product).price ? `$${(selectedItem as Product).price.toFixed(2)}` : 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Sale Price</span>
-                  <span className="col-span-2">${(selectedItem as Product).salePrice.toFixed(2)}</span>
+                  <span className="col-span-2">{(selectedItem as Product).salePrice ? `$${(selectedItem as Product).salePrice.toFixed(2)}` : 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Stock</span>
-                  <span className="col-span-2">{(selectedItem as Product).stock} units</span>
+                  <span className="col-span-2">{(selectedItem as Product).stock != null ? `${(selectedItem as Product).stock} units` : 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-start gap-4">
                   <span className="font-semibold text-muted-foreground">Description</span>
-                  <p className="col-span-2">{(selectedItem as Product).description}</p>
+                  <p className="col-span-2">{(selectedItem as Product).description || 'N/A'}</p>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <span className="font-semibold text-muted-foreground">Status</span>
+                  <span className="col-span-2">{(selectedItem as Product).status || 'N/A'}</span>
                 </div>
               </>
             )}
@@ -912,66 +1043,71 @@ export default function VendorApprovalPage() {
                 <div className="flex items-start gap-4">
                   <Image
                     src={(selectedItem as Doctor).profileImage || "https://placehold.co/100x100.png"}
-                    alt={(selectedItem as Doctor).name}
+                    alt={(selectedItem as Doctor).name || 'Doctor'}
                     width={80}
                     height={80}
                     className="rounded-lg"
+                    onClick={() => handleImageClick((selectedItem as Doctor).profileImage || "https://placehold.co/100x100.png")}
                   />
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold">{(selectedItem as Doctor).name}</h3>
-                    <p className="text-sm text-muted-foreground">{(selectedItem as Doctor).clinicName}</p>
-                    <Badge variant="outline" className="mt-2">{(selectedItem as Doctor).specialization}</Badge>
+                    <h3 className="text-lg font-semibold">{(selectedItem as Doctor).name || 'N/A'}</h3>
+                    <p className="text-sm text-muted-foreground">{(selectedItem as Doctor).clinicName || 'N/A'}</p>
+                    <Badge variant="outline" className="mt-2">{(selectedItem as Doctor).specialization || 'N/A'}</Badge>
                   </div>
                 </div>
                 <div className="mt-4 border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Email:</span><span>{(selectedItem as Doctor).email}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Phone:</span><span>{(selectedItem as Doctor).phone}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Gender:</span><span>{(selectedItem as Doctor).gender}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Reg. No:</span><span>{(selectedItem as Doctor).registrationNumber}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Experience:</span><span>{(selectedItem as Doctor).experience}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Qualification:</span><span>{(selectedItem as Doctor).qualification}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Availability:</span><span>{(selectedItem as Doctor).doctorAvailability}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Consultation Time:</span><span>{(selectedItem as Doctor).physicalConsultationStartTime} - {(selectedItem as Doctor).physicalConsultationEndTime}</span></div>
-                  <div className="flex justify-between border-b py-1 md:col-span-2"><span className="text-muted-foreground">Location:</span><span>{`${(selectedItem as Doctor).city}, ${(selectedItem as Doctor).state}, ${(selectedItem as Doctor).pincode}`}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Assistant Name:</span><span>{(selectedItem as Doctor).assistantName}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Assistant Contact:</span><span>{(selectedItem as Doctor).assistantContact}</span></div>
+                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Email:</span><span>{(selectedItem as Doctor).email || 'N/A'}</span></div>
+                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Phone:</span><span>{(selectedItem as Doctor).phone || 'N/A'}</span></div>
+                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Gender:</span><span>{(selectedItem as Doctor).gender || 'N/A'}</span></div>
+                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Reg. No:</span><span>{(selectedItem as Doctor).registrationNumber || 'N/A'}</span></div>
+                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Experience:</span><span>{(selectedItem as Doctor).experience || 'N/A'}</span></div>
+                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Qualification:</span><span>{(selectedItem as Doctor).qualification || 'N/A'}</span></div>
+                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Availability:</span><span>{(selectedItem as Doctor).doctorAvailability || 'N/A'}</span></div>
+                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Consultation Time:</span><span>{(selectedItem as Doctor).physicalConsultationStartTime && (selectedItem as Doctor).physicalConsultationEndTime ? `${(selectedItem as Doctor).physicalConsultationStartTime} - ${(selectedItem as Doctor).physicalConsultationEndTime}` : 'N/A'}</span></div>
+                  <div className="flex justify-between border-b py-1 md:col-span-2"><span className="text-muted-foreground">Location:</span><span>{[(selectedItem as Doctor).city, (selectedItem as Doctor).state, (selectedItem as Doctor).pincode].filter(Boolean).join(', ') || 'N/A'}</span></div>
+                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Assistant Name:</span><span>{(selectedItem as Doctor).assistantName || 'N/A'}</span></div>
+                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Assistant Contact:</span><span>{(selectedItem as Doctor).assistantContact || 'N/A'}</span></div>
                 </div>
               </>
             )}
             {itemType === 'supplier' && selectedItem && (
               <>
-                <h3 className="text-lg font-semibold">{(selectedItem as Supplier).supplierName}</h3>
+                <h3 className="text-lg font-semibold">{(selectedItem as Supplier).supplierName || 'N/A'}</h3>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Supplier ID</span>
-                  <span className="col-span-2">{(selectedItem as Supplier)._id}</span>
+                  <span className="col-span-2">{(selectedItem as Supplier)._id || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Owner</span>
-                  <span className="col-span-2">{`${(selectedItem as Supplier).firstName} ${(selectedItem as Supplier).lastName}`}</span>
+                  <span className="col-span-2">{[(selectedItem as Supplier).firstName, (selectedItem as Supplier).lastName].filter(Boolean).join(' ') || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Contact</span>
-                  <span className="col-span-2">{(selectedItem as Supplier).email}<br />{(selectedItem as Supplier).phone}</span>
+                  <span className="col-span-2">{[(selectedItem as Supplier).email, (selectedItem as Supplier).phone].filter(Boolean).join(', ') || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Business Reg. No.</span>
-                  <span className="col-span-2">{(selectedItem as Supplier).businessRegistrationNo}</span>
+                  <span className="col-span-2">{(selectedItem as Supplier).businessRegistrationNo || 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Supplier Type</span>
-                  <span className="col-span-2"><Badge>{(selectedItem as Supplier).supplierType}</Badge></span>
+                  <span className="col-span-2"><Badge>{(selectedItem as Supplier).supplierType || 'N/A'}</Badge></span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">License</span>
                   <span className="col-span-2">
-                    <a href={(selectedItem as Supplier).licenseFile} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                      View License
-                    </a>
+                    {(selectedItem as Supplier).licenseFile ? (
+                      <a href={(selectedItem as Supplier).licenseFile} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                        View License
+                      </a>
+                    ) : (
+                      'N/A'
+                    )}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Status</span>
-                  <span className="col-span-2">{(selectedItem as Supplier).status}</span>
+                  <span className="col-span-2">{(selectedItem as Supplier).status || 'N/A'}</span>
                 </div>
               </>
             )}
