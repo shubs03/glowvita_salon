@@ -1142,7 +1142,7 @@ export const glowvitaApi = createApi({
     }),
     updateAppointment: builder.mutation({
       query: ({ id, ...updates }) => ({
-        url: `/crm/appointments/${id}`,
+        url: `/api/crm/appointments/${id}`,  // Add /api prefix
         method: "PUT",
         body: updates,
       }),

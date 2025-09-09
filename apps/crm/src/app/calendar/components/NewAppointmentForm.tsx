@@ -91,7 +91,7 @@ export default function NewAppointmentForm({
   const vendorId = user?.vendorId || user?._id;
 
   // Fetch staff data using the getStaff query
-  const { data: staffData = [], isLoading: isLoadingStaff } = glowvitaApi.useGetStaffQuery(undefined, {
+  const { data: staffResponse = [], isLoading: isLoadingStaff } = glowvitaApi.useGetStaffQuery(undefined, {
     refetchOnMountOrArgChange: true,
     selectFromResult: ({ data = [], isLoading }) => ({
       // Map the API response to match the StaffMember interface
@@ -104,6 +104,30 @@ export default function NewAppointmentForm({
       isLoading
     })
   });
+
+  // Update the staff data transformation
+  const staffData = React.useMemo(() => {
+    console.log('Raw staff response:', staffResponse);
+    
+    // Handle different response structures
+    let rawStaff = [];
+    if (Array.isArray(staffResponse)) {
+      // Case 1: Response is already an array
+      rawStaff = staffResponse;
+    } else if (staffResponse?.data) {
+      // Case 2: Response has a data property that might be an array
+      rawStaff = Array.isArray(staffResponse.data) ? staffResponse.data : [];
+    }
+    
+    console.log('Processed staff data:', rawStaff);
+    
+    return rawStaff.map((staff: any) => ({
+      _id: staff._id || staff.id,
+      name: staff.name || staff.fullName || staff.staffName,
+      email: staff.email || staff.emailAddress,
+      phone: staff.phone || staff.mobileNo
+    }));
+  }, [staffResponse]);
 
   // Fetch services data using the getVendorServices query
   const { data: servicesResponse, isLoading: isLoadingServices, error: servicesError } = glowvitaApi.useGetVendorServicesQuery(
@@ -118,25 +142,30 @@ export default function NewAppointmentForm({
 
   // Transform services data to match our expected format
   const services = React.useMemo(() => {
-    // Use servicesResponse.services if present
     let servicesData = [];
-    if (Array.isArray(servicesResponse?.services)) {
+    
+    // Handle different possible response structures
+    if (servicesResponse?.data?.services) {
+      servicesData = servicesResponse.data.services;
+    } else if (servicesResponse?.services) {
       servicesData = servicesResponse.services;
     } else if (Array.isArray(servicesResponse?.data)) {
       servicesData = servicesResponse.data;
-    } else if (Array.isArray(servicesResponse?.data?.services)) {
-      servicesData = servicesResponse.data.services;
+    } else if (Array.isArray(servicesResponse)) {
+      servicesData = servicesResponse;
     }
+
     if (!Array.isArray(servicesData)) {
-      console.error('Invalid services data format:', servicesData);
+      console.error('Invalid services data format:', servicesResponse);
       return [];
     }
+
     return servicesData.map((service: any) => ({
       id: service._id || service.id,
       _id: service._id || service.id,
-      name: service.name || 'Unnamed Service',
+      name: service.name || service.serviceName || 'Unnamed Service',  // Added serviceName fallback
       duration: service.duration || 60,
-      price: service.price || 0,
+      price: service.price || service.amount || 0,  // Added amount fallback
       category: service.category,
       staff: service.staff || [],
       description: service.description || '',
@@ -190,55 +219,65 @@ export default function NewAppointmentForm({
   const isInitialMount = useRef(true);
 
   useEffect(() => {
+    console.log('Services data:', services);
+    console.log('Staff data:', staffData);
+    console.log('Appointment data:', appointmentData);
+  }, [services, staffData, appointmentData]);
+
+  useEffect(() => {
     if (!defaultValues || !isInitialMount.current) return;
     
     isInitialMount.current = false;
     
+    console.log('Default values received:', defaultValues);
+    
     const updates: Partial<Appointment> = {};
     
-    const hasChanged = (key: keyof Appointment, newValue: any) => {
-      return defaultValues[key] !== undefined && 
-             defaultValues[key] !== newValue;
-    };
-
-    if (hasChanged('staff', appointmentData.staff)) {
-      updates.staff = defaultValues.staff || appointmentData.staff;
+    // Handle service mapping
+    if (defaultValues.service || defaultValues.serviceName) {
+      const serviceId = defaultValues.service || 
+        services.find(s => s.name === defaultValues.serviceName)?._id;
+      
+      if (serviceId) {
+        updates.service = serviceId;
+        updates.serviceName = defaultValues.serviceName || 
+          services.find(s => s._id === serviceId)?.name || '';
+      }
     }
     
-    if (hasChanged('staffName', appointmentData.staffName)) {
-      updates.staffName = defaultValues.staffName || 
-        (defaultValues.staff && staffData.length
-          ? staffData.find((s) => s._id === defaultValues.staff)?.name || ''
-          : appointmentData.staffName);
-    }
-
-    const fieldsToCheck: Array<keyof Appointment> = [
-      'date', 'startTime', 'endTime', 'duration', 'notes', 
-      'status', 'amount', 'discount', 'totalAmount', 
-      'paymentStatus', 'tax', 'service', 'serviceName', 'client', 'clientName'
-    ];
-
-    fieldsToCheck.forEach(field => {
-      if (hasChanged(field, appointmentData[field])) {
-        if (field === 'date' && defaultValues.date) {
-          updates[field] = new Date(defaultValues.date);
-        } else if (defaultValues[field] !== undefined) {
-          updates[field] = defaultValues[field];
+    // Handle staff mapping - support both object and string formats
+    if (defaultValues.staff) {
+      if (typeof defaultValues.staff === 'object' && defaultValues.staff !== null) {
+        // If staff is an object, extract the ID and name
+        updates.staff = defaultValues.staff._id;
+        updates.staffName = defaultValues.staff.fullName || defaultValues.staffName || '';
+      } else if (typeof defaultValues.staff === 'string') {
+        // If staff is a string ID, find the corresponding staff member
+        const staff = staffData.find(s => s._id === defaultValues.staff);
+        if (staff) {
+          updates.staff = staff._id;
+          updates.staffName = staff.name || defaultValues.staffName || '';
         }
       }
-    });
-
+    } else if (defaultValues.staffName) {
+      // If only staffName is provided, try to find the staff by name
+      const staff = staffData.find(s => s.name === defaultValues.staffName);
+      if (staff) {
+        updates.staff = staff._id;
+        updates.staffName = staff.name;
+      }
+    }
+    
+    // Apply all updates
     if (Object.keys(updates).length > 0) {
       setAppointmentData(prev => ({
         ...prev,
+        ...defaultValues,
         ...updates,
-        // Ensure service details are properly set
-        ...(updates.service && {
-          serviceName: services.find(s => s.id === updates.service)?.name || ''
-        })
+        date: defaultValues.date ? new Date(defaultValues.date) : prev.date,
       }));
     }
-  }, [defaultValues, staffData]);
+  }, [defaultValues, services, staffData]);
 
   // Update the staff change handler
   const handleStaffChange = (staffId: string) => {
@@ -668,33 +707,44 @@ export default function NewAppointmentForm({
               Staff <span className="text-red-500">*</span>
             </Label>
             {staffData.length > 0 ? (
-              <Select
-                value={appointmentData.staff}
-                onValueChange={handleStaffChange}
-                disabled={isLoadingStaff || staffData.length === 0}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={
-                    isLoadingStaff ? 'Loading staff...' : 
-                    staffData.length === 0 ? 'No staff available' : 'Select a staff member'
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {staffData.map((staff) => (
-                    <SelectItem key={staff._id} value={staff._id}>
-                      <div className="flex flex-col">
-                        <span>{staff.name}</span>
-                        {staff.email && (
-                          <span className="text-xs text-gray-500">{staff.email}</span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <>
+                {/* <div className="text-xs text-gray-500 mb-1">
+                  Available staff: {staffData.length} members loaded
+                </div> */}
+                <Select
+                  value={appointmentData.staff}
+                  onValueChange={handleStaffChange}
+                  disabled={isLoadingStaff || staffData.length === 0}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={
+                      isLoadingStaff ? 'Loading staff...' : 
+                      staffData.length === 0 ? 'No staff available' : 'Select a staff member'
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {staffData.map((staff) => {
+                      console.log('Staff item:', staff); // Debug log
+                      return (
+                        <SelectItem key={staff._id} value={staff._id}>
+                          <div className="flex flex-col">
+                            <span>{staff.name}</span>
+                            {staff.email && (
+                              <span className="text-xs text-gray-500">{staff.email}</span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </>
             ) : (
               <div className="text-sm text-gray-500">
                 {isLoadingStaff ? 'Loading staff...' : 'No staff members found'}
+                <div className="text-xs text-gray-400 mt-1">
+                  Staff response: {JSON.stringify(staffResponse, null, 2)}
+                </div>
               </div>
             )}
           </div>
