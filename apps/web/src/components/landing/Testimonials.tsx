@@ -1,7 +1,6 @@
 
 import Image from 'next/image';
-import { Star, PlayCircle } from 'lucide-react';
-import { Button } from '@repo/ui/button';
+import { Star } from 'lucide-react';
 
 const TestimonialCard = ({
   review,
@@ -52,45 +51,6 @@ const TestimonialCard = ({
   </div>
 );
 
-const VideoTestimonialCard = () => (
-  <div className="h-[380px] w-[80vw] shrink-0 snap-center overflow-hidden laptop:w-[853px] group">
-    <div className="relative size-full overflow-hidden rounded-lg shadow-xl group-hover:shadow-2xl transition-shadow duration-300">
-      <Image
-        src="https://placehold.co/853x480.png"
-        alt="Testimonial video poster"
-        layout="fill"
-        objectFit="cover"
-        className="transition-transform duration-500 group-hover:scale-105"
-        data-ai-hint="salon professional"
-      />
-      <div className="absolute inset-0 z-10 flex h-full max-w-full flex-col justify-end rounded-xl text-white bg-gradient-to-t from-black/70 via-black/20 to-transparent">
-        <div className="mx-6 flex items-center justify-between gap-2 pb-6">
-          <div className="flex items-center gap-3">
-            <div className="relative flex size-10 shrink-0 overflow-hidden rounded-full border-2 border-white/80">
-              <Image
-                src="https://placehold.co/40x40.png"
-                alt="Chris Ward"
-                width={40}
-                height={40}
-                data-ai-hint="portrait man"
-              />
-            </div>
-            <div>
-              <p className="text-[17px] font-medium">Chris Ward</p>
-              <p className="text-[15px] opacity-80">Founder of HUCKLE</p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-full p-0 h-12 w-12 hover:scale-110 transition-all duration-200"
-          >
-            <PlayCircle className="h-8 w-8" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 export function Testimonials() {
   return (
@@ -98,12 +58,10 @@ export function Testimonials() {
         <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-primary font-headline mb-6">
-            Loved by Professionals
+            Don't just take our word for it
             </h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-            Our dedication to building the best-in-class booking software
-            and delivering exceptional customer experience continues to be
-            recognized time and time again.
+            See what our customers are saying about how our platform has transformed their business.
             </p>
         </div>
         <div className="relative">
@@ -114,7 +72,6 @@ export function Testimonials() {
             style={{ scrollbarWidth: "none" }}
             >
             <div className="flex gap-6 md:gap-8">
-                <VideoTestimonialCard />
                 <TestimonialCard
                 author="Pamela B"
                 role="Salon owner, NYC"
@@ -126,6 +83,18 @@ export function Testimonials() {
                 role="Hair stylist and owner"
                 rating={5}
                 review="This appointment scheduling software is very user friendly and it's incredibly powerful! I decided to give it a go and was utterly surprised as it had more functionality than previous software I was using. The marketplace has been incredible for our salon business too."
+                />
+                 <TestimonialCard
+                author="Jane D."
+                role="Owner, The Style Hub"
+                rating={5}
+                review="The mobile app has been a game-changer for my salon. I can manage everything on the fly, and my clients love how easy it is to book appointments."
+                />
+                <TestimonialCard
+                author="Michael S."
+                role="Lead Stylist, Urban Shears"
+                rating={5}
+                review="Finally, a CRM that understands the beauty industry. The analytics are powerful and the client management features are top-notch."
                 />
             </div>
             </div>
