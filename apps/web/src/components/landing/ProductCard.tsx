@@ -19,7 +19,7 @@ export function ProductCard({ name, description, price, image, hint, vendorName,
   return (
     <Card className="overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col group">
       <CardHeader className="p-0 relative">
-        <div className="aspect-square relative">
+        <div className="aspect-square relative rounded-t-2xl overflow-hidden">
           <Image
             src={image}
             alt={name}
