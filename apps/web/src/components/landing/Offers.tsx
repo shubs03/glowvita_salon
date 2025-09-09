@@ -27,10 +27,9 @@ export function Offers() {
         
         <div className="w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_5%,white_95%,transparent)]">
             <div className="flex w-fit animate-slide hover:[animation-play-state:paused]">
-                {/* We need to duplicate the items for a seamless loop */}
                 {[...offers, ...offers].map((offer, index) => (
-                    <div key={index} className="flex-shrink-0 mx-4" style={{ width: '280px' }}>
-                        <Card className="relative group overflow-hidden rounded-xl h-[350px] w-full transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20 transform hover:-translate-y-2">
+                    <div key={index} className="flex-shrink-0 mx-4" style={{ width: '256px' }}>
+                        <Card className="relative group overflow-hidden rounded-xl h-80 w-full transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20 transform hover:-translate-y-2 border border-border/50">
                            <Image
                                 src={offer.image}
                                 alt={offer.title}
@@ -38,18 +37,16 @@ export function Offers() {
                                 className="object-cover transition-transform duration-500 group-hover:scale-105"
                                 data-ai-hint={offer.hint}
                             />
-                            {/* Static overlay for title readability */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent"></div>
                             
-                            {/* Title visible by default */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
+                            
                             <div className="absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 group-hover:opacity-0">
                                 <h3 className="font-bold text-lg text-white truncate">{offer.title}</h3>
                             </div>
 
-                            {/* Details slide up on hover */}
-                            <div className="absolute bottom-0 left-0 right-0 p-4 bg-black/50 backdrop-blur-lg text-white translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out">
-                                <h3 className="font-bold text-lg mb-2">{offer.title}</h3>
-                                <p className="text-sm text-gray-300 mb-4 h-12">{offer.description}</p>
+                            <div className="absolute bottom-0 left-0 right-0 p-4 bg-background/70 backdrop-blur-md text-foreground translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out">
+                                <h3 className="font-bold text-lg mb-2 truncate">{offer.title}</h3>
+                                <p className="text-sm text-muted-foreground mb-4 h-16 line-clamp-3">{offer.description}</p>
                                 <Button variant="default" className="w-full group/btn bg-primary/90 hover:bg-primary transition-all duration-300">
                                     <Zap className="mr-2 h-4 w-4 group-hover/btn:text-yellow-300 transition-colors" /> Activate Offer
                                 </Button>
