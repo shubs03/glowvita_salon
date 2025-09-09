@@ -4,6 +4,7 @@
 import Image from 'next/image';
 import { Star, PlayCircle, Shield, Lock, FileCheck, ShieldCheck } from 'lucide-react';
 import { Button } from '@repo/ui/button';
+import {Card, CardContent} from "@repo/ui/card";
 
 export const AdvantageCard = ({
   stat,
