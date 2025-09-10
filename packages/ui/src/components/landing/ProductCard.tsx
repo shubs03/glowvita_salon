@@ -1,5 +1,5 @@
 
-import { Card, CardContent } from '@repo/ui/card';
+import { Card, CardContent, CardHeader } from '@repo/ui/card';
 import Image from 'next/image';
 import { Star, ShoppingCart } from 'lucide-react';
 import { Button } from '@repo/ui/button';
@@ -16,10 +16,16 @@ interface ProductCardProps {
 export function ProductCard({ name, price, image, hint, rating, reviewCount }: ProductCardProps) {
   return (
     <div className="group relative w-full aspect-[4/5] perspective-1000">
-      <div className="relative w-full h-full text-white bg-black/50 backdrop-blur-xl border border-white/10 rounded-lg futuristic-clip-path transition-all duration-500 ease-in-out group-hover:bg-primary/10 group-hover:border-primary/50 group-hover:shadow-2xl group-hover:shadow-primary/20">
+      <div 
+        className="relative w-full h-full text-white bg-black/50 backdrop-blur-xl border border-white/10 rounded-lg transition-all duration-500 ease-in-out group-hover:bg-primary/10 group-hover:border-primary/50 group-hover:shadow-2xl group-hover:shadow-primary/20"
+        style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%)' }}
+      >
         
         {/* Glowing border effect on hover */}
-        <div className="absolute inset-0 futuristic-clip-path border-2 border-primary rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse-slow"></div>
+        <div 
+            className="absolute inset-0 border-2 border-primary rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse-slow"
+            style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%)' }}
+        ></div>
 
         {/* Floating Image */}
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-40 h-40 transition-transform duration-500 ease-in-out group-hover:scale-110 group-hover:-translate-y-2">

@@ -10,7 +10,6 @@ import { HowItWorks } from "@/components/landing/HowItWorks";
 import { PlatformFor } from "@/components/landing/PlatformFor";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { Offers } from "@/components/landing/Offers";
-import { Pricing } from "@/components/landing/Pricing";
 import { FAQ } from "@/components/landing/FAQ";
 import { AdvantageCard, VideoTestimonialSection, SecuritySection } from "@/components/landing/NewSections";
 import { FeaturedProducts } from "@/components/landing/FeaturedProducts";
@@ -145,7 +144,6 @@ export default function HomePage() {
 
         <VideoTestimonialSection />
         <Testimonials />
-        <Pricing />
         <SecuritySection />
         <FAQ />
         <AppCTA />

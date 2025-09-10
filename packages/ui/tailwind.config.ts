@@ -183,16 +183,6 @@ const config: Omit<Config, "content"> = {
   },
   plugins: [
     require("tailwindcss-animate"),
-    function ({ addUtilities }: { addUtilities: any }) {
-      addUtilities({
-        '.futuristic-clip-path': {
-          'clip-path': 'polygon(0 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%)',
-        },
-        '.perspective-1000': {
-          'perspective': '1000px',
-        }
-      });
-    },
   ],
 };
 
