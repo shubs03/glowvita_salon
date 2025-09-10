@@ -362,7 +362,8 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   return (
     <>
-      <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2">
+      {/* Added responsive container with proper scrolling for mobile */}
+      <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2 overflow-y-auto max-h-[calc(100vh-20px)]">
         <div className="fixed top-4 sm:top-8 left-4 sm:left-10 right-4 sm:right-10 flex justify-between items-center z-20">
           <Button 
             type="button" 
@@ -397,6 +398,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
         </div>
       
         <form id="registration-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 pb-8 mt-4">
+          {/* Added responsive container for form content */}
           <div className="flex flex-col justify-start" style={{ minHeight: 'calc(100vh - 200px)' }}>
             {step === 1 && (
               <div className="space-y-4 sm:space-y-6 animate-in fade-in-50 duration-500">
@@ -422,6 +424,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                   </div>
                   <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} value={formData.confirmPassword} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
                 </div>
+                <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} value={formData.referredByCode} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
               </div>
             )}
 
