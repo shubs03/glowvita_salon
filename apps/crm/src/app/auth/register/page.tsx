@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, Suspense } from 'react';
@@ -19,28 +18,50 @@ interface RoleCardProps {
   description: string;
   onClick: () => void;
   isSelected: boolean;
+  index: number;
 }
 
-const RoleCard = ({ icon: Icon, title, description, onClick, isSelected }: RoleCardProps) => (
-  <button 
+const RoleCard = ({ icon: Icon, title, description, onClick, isSelected, index }: RoleCardProps) => (
+  <div 
     className={cn(
-        "p-6 text-center cursor-pointer transition-all duration-300 ease-in-out transform hover:-translate-y-1 hover:shadow-2xl w-full rounded-lg",
-        "bg-background/50 backdrop-blur-sm border",
-        isSelected 
-            ? 'border-primary ring-2 ring-primary shadow-xl' 
-            : 'border-border/20 hover:border-primary/50'
+      "group relative p-4 sm:p-6 text-center transition-all duration-300 ease-out transform hover:-translate-y-2 hover:scale-[1.02] w-full rounded-xl cursor-pointer overflow-hidden",
+      "bg-white border border-gray-100 shadow-md hover:shadow-lg backdrop-blur-sm",
+      "animate-fade-in-up",
+      isSelected 
+        ? 'border-purple-400 ring-2 ring-purple-100 shadow-purple-200/40' 
+        : 'hover:border-purple-200 hover:shadow-purple-100/20'
     )}
+    style={{
+      animationDelay: `${index * 100}ms`,
+    }}
     onClick={onClick}
   >
-    <div className={cn(
-        "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-all duration-300 transform group-hover:scale-110",
-        isSelected ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground'
-    )}>
-      <Icon className="w-8 h-8" />
+    {/* Animated background gradient */}
+    <div className="absolute inset-0 bg-gradient-to-br from-purple-50/30 via-indigo-50/20 to-pink-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+    
+    {/* Floating particles effect */}
+    <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute -top-1 -right-1 w-10 h-10 bg-gradient-to-br from-purple-200/20 to-pink-200/20 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-125 group-hover:rotate-45" />
+      <div className="absolute -bottom-2 -left-2 w-12 h-12 bg-gradient-to-br from-indigo-200/20 to-purple-200/20 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 delay-100 transform group-hover:scale-110 group-hover:-rotate-45" />
     </div>
-    <h3 className="text-lg font-semibold">{title}</h3>
-    <p className="text-sm text-muted-foreground mt-1">{description}</p>
-  </button>
+    
+    <div className="relative z-10">
+      <div className={cn(
+        "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 transition-all duration-300 transform group-hover:scale-110",
+        "bg-gradient-to-br shadow-lg relative overflow-hidden",
+        isSelected 
+          ? 'from-purple-50 via-indigo-50 to-purple-100 text-purple-600 shadow-purple-100/50 border border-purple-100' 
+          : 'from-gray-50 via-white to-gray-100 text-gray-500 group-hover:from-purple-50 group-hover:via-indigo-50 group-hover:to-purple-100 group-hover:text-purple-600 group-hover:shadow-purple-100/50 group-hover:border group-hover:border-purple-100'
+      )}>
+        {/* Icon container shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
+        <Icon className="w-9 h-9 relative z-10" />
+      </div>
+      
+      <h3 className="text-xl font-semibold text-gray-900 mb-3 group-hover:text-gray-900 tracking-tight transition-all duration-300">{title}</h3>
+      <p className="text-sm text-gray-600 leading-relaxed group-hover:text-gray-700 font-medium transition-all duration-300">{description}</p>
+    </div>
+  </div>
 );
 
 interface RoleSelectionScreenProps {
@@ -48,39 +69,70 @@ interface RoleSelectionScreenProps {
 }
 
 const RoleSelectionScreen = ({ onSelectRole }: RoleSelectionScreenProps) => (
-    <div className="w-full max-w-4xl mx-auto bg-background/70 backdrop-blur-sm border border-white/20 shadow-2xl shadow-blue-500/10 p-8 md:p-12 rounded-lg animate-in fade-in-50 duration-500">
-        <h1 className="text-3xl font-bold text-center mb-2">Join Our Platform</h1>
-        <p className="text-muted-foreground text-center mb-8">Choose your role to get started.</p>
-        <div className="grid md:grid-cols-3 gap-6">
-            <RoleCard 
-                icon={Building} 
-                title="Salon/Vendor" 
-                description="Register your salon or spa to manage bookings and clients."
-                onClick={() => onSelectRole('vendor')}
-                isSelected={false}
-            />
-            <RoleCard 
-                icon={Stethoscope} 
-                title="Doctor/Dermatologist" 
-                description="Join as a professional to offer consultations and services."
-                onClick={() => onSelectRole('doctor')}
-                isSelected={false}
-            />
-            <RoleCard 
-                icon={User} 
-                title="Supplier" 
-                description="Register as a supplier to provide products to our vendors."
-                onClick={() => onSelectRole('supplier')}
-                isSelected={false}
-            />
-        </div>
-        <p className="text-center text-sm text-muted-foreground mt-8">
-            Already have an account?{" "}
-            <Link href="/login" className="font-medium text-primary hover:underline">
-                Sign in
-            </Link>
-        </p>
+  <div className="w-full max-w-6xl mx-auto px-4 py-6 sm:px-6 sm:py-10 relative">
+    {/* Background animated shapes */}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute top-16 left-8 w-28 h-28 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full opacity-60 animate-float" />
+      <div className="absolute top-32 right-12 w-20 h-20 bg-gradient-to-br from-pink-100 to-purple-100 rounded-full opacity-50 animate-float-delayed" />
+      <div className="absolute bottom-24 left-16 w-32 h-32 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full opacity-40 animate-float-slow" />
+      <div className="absolute bottom-16 right-8 w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full opacity-50 animate-float-delayed" />
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-gradient-to-br from-purple-50/30 to-indigo-50/30 rounded-full opacity-30 animate-pulse-slow" />
     </div>
+
+    <div className="text-center mb-6 sm:mb-12 relative z-10">
+      <div className="inline-block mb-3 sm:mb-5">
+        <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4 tracking-tight bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800 bg-clip-text text-transparent animate-fade-in">
+          Join GlowVita
+        </h1>
+        <div className="h-1 w-12 sm:w-20 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full mx-auto animate-expand-width" />
+      </div>
+      <p className="text-sm sm:text-lg text-gray-600 max-w-2xl mx-auto font-medium leading-relaxed animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+        Choose your role and become part of our growing beauty and wellness community
+      </p>
+    </div>
+    
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8 mb-6 sm:mb-12">
+      <RoleCard 
+        icon={Building} 
+        title="Salon/Vendor" 
+        description="Register your salon or spa to manage bookings and clients."
+        onClick={() => onSelectRole('vendor')}
+        isSelected={false}
+        index={0}
+      />
+      <RoleCard 
+        icon={Stethoscope} 
+        title="Doctor/Dermatologist" 
+        description="Join as a professional to offer consultations and services."
+        onClick={() => onSelectRole('doctor')}
+        isSelected={false}
+        index={1}
+      />
+      <RoleCard 
+        icon={User} 
+        title="Supplier" 
+        description="Register as a supplier to provide products to our vendors."
+        onClick={() => onSelectRole('supplier')}
+        isSelected={false}
+        index={2}
+      />
+    </div>
+    
+    <div className="text-center relative z-10">
+      <div className="inline-flex items-center justify-center p-3 sm:p-5 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-100 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+        <p className="text-gray-600 font-medium text-sm sm:text-base">
+          Already have an account?{" "}
+          <Link 
+            href="/login" 
+            className="font-semibold text-purple-600 hover:text-purple-700 transition-all duration-300 hover:underline hover:scale-105 inline-block relative group"
+          >
+            Sign in
+            <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-600 to-indigo-600 group-hover:w-full transition-all duration-300" />
+          </Link>
+        </p>
+      </div>
+    </div>
+  </div>
 );
 
 const RegistrationFlow = () => {
@@ -94,38 +146,172 @@ const RegistrationFlow = () => {
   const renderForm = () => {
     switch(selectedRole) {
       case 'vendor':
-        return <VendorRegistrationForm onSuccess={handleSuccess} />;
+        return (
+          <div className="animate-slide-in-right">
+            <VendorRegistrationForm onSuccess={handleSuccess} />
+          </div>
+        );
       case 'doctor':
-        return <DoctorRegistrationForm onSuccess={handleSuccess} />;
+        return (
+          <div className="animate-slide-in-right">
+            <DoctorRegistrationForm onSuccess={handleSuccess} />
+          </div>
+        );
       case 'supplier':
-        return <SupplierRegistrationForm onSuccess={handleSuccess} />;
+        return (
+          <div className="animate-slide-in-right">
+            <SupplierRegistrationForm onSuccess={handleSuccess} />
+          </div>
+        );
       default:
         return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-950 flex flex-col items-center justify-center p-4">
-      {selectedRole && (
-          <div className="w-full max-w-4xl mb-4">
-              <Button variant="ghost" onClick={() => setSelectedRole(null)} className="text-muted-foreground hover:text-foreground">
-                  <ArrowLeft className="mr-2 h-4 w-4"/> Back to role selection
-              </Button>
-          </div>
-      )}
+    <div className="min-h-screen max-h-screen bg-white flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Enhanced background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-purple-50/20 via-transparent to-indigo-50/20 transform rotate-12 animate-drift" />
+        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-pink-50/20 via-transparent to-purple-50/20 transform -rotate-12 animate-drift-reverse" />
+      </div>
+
       {!selectedRole ? (
         <RoleSelectionScreen onSelectRole={setSelectedRole} />
       ) : (
-        renderForm()
+        // Added responsive classes for proper scrolling on mobile
+        <div className="relative z-10 w-full max-h-full overflow-y-auto sm:overflow-y-scroll md:overflow-y-auto">
+          <div className="max-w-4xl mx-auto w-full">
+            {renderForm()}
+          </div>
+        </div>
       )}
     </div>
   );
 };
 
 export default function RegisterPage() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <RegistrationFlow />
-        </Suspense>
-    )
+  return (
+    <>
+      <style jsx global>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slide-in-right {
+          from { opacity: 0; transform: translateX(30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(5deg); }
+        }
+
+        @keyframes float-delayed {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-15px) rotate(-3deg); }
+        }
+
+        @keyframes float-slow {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-10px) rotate(2deg); }
+        }
+
+        @keyframes pulse-slow {
+          0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.3; }
+          50% { transform: scale(1.05) rotate(2deg); opacity: 0.2; }
+        }
+
+        @keyframes expand-width {
+          from { width: 0; }
+          to { width: 6rem; }
+        }
+
+        @keyframes drift {
+          0%, 100% { transform: rotate(12deg) translateX(0px); }
+          50% { transform: rotate(12deg) translateX(20px); }
+        }
+
+        @keyframes drift-reverse {
+          0%, 100% { transform: rotate(-12deg) translateX(0px); }
+          50% { transform: rotate(-12deg) translateX(-20px); }
+        }
+
+        .animate-fade-in {
+          animation: fade-in 0.6s ease-out;
+        }
+
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s ease-out;
+          animation-fill-mode: both;
+        }
+
+        .animate-slide-in-right {
+          animation: slide-in-right 0.5s ease-out;
+        }
+
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+
+        .animate-float-delayed {
+          animation: float-delayed 8s ease-in-out infinite;
+        }
+
+        .animate-float-slow {
+          animation: float-slow 10s ease-in-out infinite;
+        }
+
+        .animate-pulse-slow {
+          animation: pulse-slow 8s ease-in-out infinite;
+        }
+
+        .animate-expand-width {
+          animation: expand-width 0.8s ease-out 0.5s both;
+        }
+
+        .animate-drift {
+          animation: drift 20s ease-in-out infinite;
+        }
+
+        .animate-drift-reverse {
+          animation: drift-reverse 25s ease-in-out infinite;
+        }
+
+        /* Added responsive adjustments for small screens */
+        @media (max-width: 640px) {
+          .min-h-screen {
+            min-height: 100vh;
+            height: auto;
+          }
+          
+          .max-h-screen {
+            max-height: none;
+          }
+          
+          /* Ensure proper scrolling on mobile */
+          .overflow-y-auto {
+            -webkit-overflow-scrolling: touch;
+          }
+        }
+      `}</style>
+      <Suspense fallback={
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+            <div className="text-gray-600 font-medium">Loading...</div>
+          </div>
+        </div>
+      }>
+        <RegistrationFlow />
+      </Suspense>
+    </>
+  );
 }

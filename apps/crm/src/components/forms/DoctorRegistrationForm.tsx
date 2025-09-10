@@ -390,11 +390,12 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
             {formData.doctorType && (
               <div className="animate-in fade-in-50 duration-500">
                 <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Select your specialty/specialties</h3>
-                <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                {/* Added responsive classes for proper scrolling on mobile */}
+                <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 max-h-64 sm:max-h-48">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 pr-2">
                   {isLoadingDropdowns ? 
                     [...Array(4)].map((_, i) => (
-                      <Skeleton key={i} className="h-20 sm:h-24 w-full" />
+                      <Skeleton key={i} className="h-16 sm:h-20 md:h-18 w-full" />
                     )) : (
                     filteredSpecialties.map((spec: any) => (
                       <div 
@@ -431,6 +432,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
               filteredDiseases.map(([specialtyName, diseases]) => (
                 <div key={specialtyName} className="space-y-2 sm:space-y-3">
                   <h4 className="text-lg sm:text-xl font-semibold">{specialtyName}</h4>
+                  {/* Added responsive grid for diseases */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 border p-3 sm:p-4 rounded-md">
                     {diseases.map((disease: any) => (
                       <div key={disease._id} className="flex items-center space-x-2">
@@ -465,7 +467,8 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   return (
     <>
-      <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2">
+      {/* Added responsive container with proper scrolling for mobile */}
+      <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2 overflow-y-auto max-h-[calc(100vh-20px)]">
         <div className="fixed top-4 sm:top-8 left-4 sm:left-10 right-4 sm:right-10 flex justify-between items-center z-20">
           <Button 
             type="button" 
@@ -500,6 +503,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
         </div>
       
         <form id="registration-form" onSubmit={handleFinalSubmit} className="space-y-4 sm:space-y-6 pb-8 mt-4">
+          {/* Added responsive container for form content */}
           <div className="flex flex-col justify-start" style={{ minHeight: 'calc(100vh - 200px)' }}>
             {renderStepContent()}
           </div>
@@ -513,4 +517,4 @@ export const DoctorRegistrationFormWithSuspense = (props: { onSuccess: () => voi
     <Suspense fallback={<div>Loading...</div>}>
         <DoctorRegistrationForm {...props} />
     </Suspense>
-)
+);
