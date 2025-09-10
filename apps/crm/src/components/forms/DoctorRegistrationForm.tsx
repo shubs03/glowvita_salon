@@ -3,60 +3,79 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
 import { useCreateDoctorMutation, useGetSuperDataQuery } from '@repo/store/api';
 import { Label } from '@repo/ui/label';
 import { Checkbox } from '@repo/ui/checkbox';
 import { Skeleton } from '@repo/ui/skeleton';
-import { CheckCircle, Stethoscope, User, HeartPulse, Bone, ArrowRight, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Stethoscope, User, HeartPulse, Microscope, ArrowRight, ArrowLeft } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 
-const StepIndicator = ({ currentStep }) => {
-    const steps = [
-        { id: 1, name: 'Create Account', icon: User },
-        { id: 2, name: 'Role & Specialty', icon: Stethoscope },
-        { id: 3, name: 'Disease Focus', icon: HeartPulse },
-    ];
-    
-    return (
-        <nav aria-label="Progress">
-            <ol role="list" className="flex items-center">
-                {steps.map((step, stepIdx) => (
-                    <li key={step.name} className={cn("relative", stepIdx !== steps.length - 1 ? "flex-1" : "")}>
-                        <div className="flex items-center">
-                            <span 
-                                className={cn(
-                                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                                    currentStep > step.id ? "bg-primary text-white" :
-                                    currentStep === step.id ? "border-2 border-primary bg-primary/10 text-primary" :
-                                    "border-2 border-gray-300 bg-background text-muted-foreground"
-                                )}
-                            >
-                                {currentStep > step.id ? <CheckCircle className="h-5 w-5" /> : <step.icon className="h-5 w-5" />}
-                            </span>
-                            <span className={cn(
-                                "ml-3 hidden font-medium text-muted-foreground md:inline",
-                                currentStep >= step.id && "text-foreground"
-                            )}>
-                                {step.name}
-                            </span>
-                        </div>
-                        {stepIdx !== steps.length - 1 && (
-                            <div className="absolute right-0 top-4 -z-10 hidden h-0.5 w-full bg-gray-200 md:block" aria-hidden="true" />
-                        )}
-                    </li>
-                ))}
-            </ol>
-        </nav>
-    );
+interface FormData {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+  gender: string;
+  doctorType: string;
+  specialties: string[];
+  diseases: string[];
+  experience: string;
+  registrationNumber: string;
+  clinicName: string;
+  clinicAddress: string;
+  state: string;
+  city: string;
+  pincode: string;
+  physicalConsultationStartTime: string;
+  physicalConsultationEndTime: string;
+  assistantName: string;
+  assistantContact: string;
+  doctorAvailability: string;
+  workingWithHospital: boolean;
+  videoConsultation: boolean;
+  referredByCode: string;
+}
+
+const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep: (step: number) => void }) => {
+  return (
+    <div className="w-full mb-4 mt-2">
+      <div className="flex space-x-2">
+        {/* Step 1 Line */}
+        <div 
+          className={cn(
+            "h-1 flex-1 rounded-full transition-colors cursor-pointer",
+            currentStep >= 1 ? "bg-purple-600" : "bg-gray-200"
+          )}
+          onClick={() => currentStep > 1 && setStep(1)}
+        />
+        {/* Step 2 Line */}
+        <div 
+          className={cn(
+            "h-1 flex-1 rounded-full transition-colors cursor-pointer",
+            currentStep >= 2 ? "bg-purple-600" : "bg-gray-200"
+          )}
+          onClick={() => currentStep > 2 && setStep(2)}
+        />
+        {/* Step 3 Line */}
+        <div 
+          className={cn(
+            "h-1 flex-1 rounded-full transition-colors cursor-pointer",
+            currentStep >= 3 ? "bg-purple-600" : "bg-gray-200"
+          )}
+          onClick={() => currentStep > 3 && setStep(3)}
+        />
+      </div>
+    </div>
+  );
 };
 
-export function DoctorRegistrationForm({ onSuccess }) {
+export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
   const { data: dropdownData = [], isLoading: isLoadingDropdowns } = useGetSuperDataQuery(undefined);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
     phone: '',
@@ -91,11 +110,11 @@ export function DoctorRegistrationForm({ onSuccess }) {
     { name: "Surgeon", description: "Specializes in surgical procedures." }
   ];
 
-  const allSpecialties = useMemo(() => dropdownData.filter(d => d.type === 'specialization'), [dropdownData]);
-  const allDiseases = useMemo(() => dropdownData.filter(d => d.type === 'disease'), [dropdownData]);
+  const allSpecialties = useMemo(() => dropdownData.filter((d: any) => d.type === 'specialization'), [dropdownData]);
+  const allDiseases = useMemo(() => dropdownData.filter((d: any) => d.type === 'disease'), [dropdownData]);
 
   const filteredSpecialties = useMemo(() => {
-    return formData.doctorType ? allSpecialties.filter(s => s.doctorType === formData.doctorType) : [];
+    return formData.doctorType ? allSpecialties.filter((s: any) => s.doctorType === formData.doctorType) : [];
   }, [allSpecialties, formData.doctorType]);
 
   const filteredDiseases = useMemo(() => {
@@ -103,9 +122,9 @@ export function DoctorRegistrationForm({ onSuccess }) {
     if (formData.specialties.length > 0) {
       const selectedSpecialtyIds = formData.specialties;
       
-      allDiseases.forEach(disease => {
+      allDiseases.forEach((disease: any) => {
         if (selectedSpecialtyIds.includes(disease.parentId)) {
-          const specialty = allSpecialties.find(s => s._id === disease.parentId);
+          const specialty = allSpecialties.find((s: any) => s._id === disease.parentId);
           if (specialty) {
             if (!diseaseMap.has(specialty.name)) {
               diseaseMap.set(specialty.name, []);
@@ -118,18 +137,18 @@ export function DoctorRegistrationForm({ onSuccess }) {
     return Array.from(diseaseMap.entries());
   }, [allDiseases, allSpecialties, formData.specialties]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDoctorTypeChange = (typeName, e) => {
+  const handleDoctorTypeChange = (typeName: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setFormData(prev => ({ ...prev, doctorType: typeName, specialties: [], diseases: [] }));
   };
 
-  const handleSpecialtyChange = (specId, e) => {
+  const handleSpecialtyChange = (specId: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setFormData(prev => {
@@ -138,7 +157,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
         : [...prev.specialties, specId];
       
       const validDiseases = prev.diseases.filter(diseaseId => {
-        const disease = allDiseases.find(d => d._id === diseaseId);
+        const disease = allDiseases.find((d: any) => d._id === diseaseId);
         return newSpecialties.includes(disease?.parentId);
       });
 
@@ -146,7 +165,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
     });
   };
 
-  const handleDiseaseChange = (diseaseId) => {
+  const handleDiseaseChange = (diseaseId: string) => {
     setFormData(prev => ({
       ...prev,
       diseases: prev.diseases.includes(diseaseId)
@@ -155,7 +174,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
     }));
   };
 
-  const preventSubmission = (e) => {
+  const preventSubmission = (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
     console.log(`Form submission prevented on step ${step}`);
@@ -169,22 +188,22 @@ export function DoctorRegistrationForm({ onSuccess }) {
       return;
     }
     
-    const specialtyNames = formData.specialties.map(id => allSpecialties.find(s => s._id === id)?.name).filter(Boolean);
-    const diseaseNames = formData.diseases.map(id => allDiseases.find(d => d._id === id)?.name).filter(Boolean);
+    const specialtyNames = formData.specialties.map(id => allSpecialties.find((s: any) => s._id === id)?.name).filter(Boolean);
+    const diseaseNames = formData.diseases.map(id => allDiseases.find((d: any) => d._id === id)?.name).filter(Boolean);
     
     const submissionData = { ...formData, specialties: specialtyNames, diseases: diseaseNames };
     
     try {
       await createDoctor(submissionData).unwrap();
-      toast.success("Doctor registration submitted successfully!");
+      toast.success(`Dr. ${formData.name}'s registration submitted successfully!`);
       onSuccess();
     } catch (err) {
-      toast.error(err?.data?.message || "Registration failed. Please try again.");
+      toast.error((err as any)?.data?.message || "Registration failed. Please try again.");
     }
   };
 
   // This should never be called, but exists as a safety net
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
     console.log(`Unexpected form submission blocked on step ${step}`);
@@ -192,7 +211,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
   };
 
   // Enhanced navigation functions - completely separate from form submission
-  const navigateToNextStep = (e) => {
+  const navigateToNextStep = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -218,7 +237,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
     }
   };
 
-  const navigateToPrevStep = (e) => {
+  const navigateToPrevStep = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -228,7 +247,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
   };
 
   // Final step submit handler - only for actual submission
-  const handleFinalSubmit = async (e) => {
+  const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -239,7 +258,7 @@ export function DoctorRegistrationForm({ onSuccess }) {
     }
   };
 
-  const handleInputKeyDown = (e) => {
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && step < 3) {
       e.preventDefault();
       e.stopPropagation();
@@ -248,58 +267,152 @@ export function DoctorRegistrationForm({ onSuccess }) {
     }
   };
 
-  const handleKeyDown = (e) => {
-    // Prevent Enter key from submitting form on steps 1 and 2
-    if (e.key === 'Enter' && step < 3) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log(`Enter key blocked on step ${step}`);
-      return false;
-    }
-  };
-
   const renderStepContent = () => {
     switch(step) {
       case 1:
         return (
-          <div className="space-y-4 animate-in fade-in-50 duration-500 max-w-lg mx-auto">
-            <h3 className="font-semibold text-lg text-center">Create Your Doctor Account</h3>
-            <Input name="name" placeholder="Full Name" onChange={handleChange} onKeyDown={handleInputKeyDown} />
-            <Input name="email" type="email" placeholder="Email Address" onChange={handleChange} onKeyDown={handleInputKeyDown} />
-            <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} onKeyDown={handleInputKeyDown} />
-            <Input name="registrationNumber" placeholder="Registration Number" onChange={handleChange} onKeyDown={handleInputKeyDown} />
-            <Input name="password" type="password" placeholder="Password" onChange={handleChange} onKeyDown={handleInputKeyDown} />
-            <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} onKeyDown={handleInputKeyDown} />
-            <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} onKeyDown={handleInputKeyDown} />
+          <div className="space-y-4 sm:space-y-6 animate-in fade-in-50 duration-500">
+            <div className="mb-4 sm:mb-6">
+              <p className="text-base sm:text-lg text-gray-500 mb-2">Account setup</p>
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Create your account</h1>
+              <p className="text-gray-600 text-base sm:text-lg">Enter your personal details to get started.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+              <Input 
+                name="name" 
+                placeholder="Full Name" 
+                onChange={handleChange} 
+                value={formData.name}
+                onKeyDown={handleInputKeyDown}
+                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                required
+              />
+              <Input 
+                name="registrationNumber" 
+                placeholder="Registration Number" 
+                onChange={handleChange} 
+                value={formData.registrationNumber}
+                onKeyDown={handleInputKeyDown}
+                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+              <Input 
+                name="email" 
+                type="email" 
+                placeholder="Email Address" 
+                onChange={handleChange} 
+                value={formData.email}
+                onKeyDown={handleInputKeyDown}
+                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                required
+              />
+              <Input 
+                name="phone" 
+                type="tel" 
+                placeholder="Phone Number" 
+                onChange={handleChange} 
+                value={formData.phone}
+                onKeyDown={handleInputKeyDown}
+                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+              <Input 
+                name="password" 
+                type="password" 
+                placeholder="Password (min. 8 characters)" 
+                onChange={handleChange} 
+                value={formData.password}
+                onKeyDown={handleInputKeyDown}
+                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                required
+              />
+              <Input 
+                name="confirmPassword" 
+                type="password" 
+                placeholder="Confirm Password" 
+                onChange={handleChange} 
+                value={formData.confirmPassword}
+                onKeyDown={handleInputKeyDown}
+                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                required
+              />
+            </div>
+            <Input 
+              name="referredByCode" 
+              placeholder="Referral Code (Optional)" 
+              onChange={handleChange} 
+              value={formData.referredByCode}
+              onKeyDown={handleInputKeyDown}
+              className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+            />
           </div>
         );
       case 2:
         return (
-          <div className="space-y-6 animate-in fade-in-50 duration-500">
+          <div className="space-y-2 sm:space-y-3 animate-in fade-in-50 duration-500">
+            <div className="mb-1 sm:mb-2">
+              <p className="text-base sm:text-lg text-gray-500 mb-2">Professional Details</p>
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Tell us about your practice</h1>
+              <p className="text-gray-600 text-base sm:text-lg">Provide information about your medical practice.</p>
+            </div>
+            
             <div>
-              <h3 className="font-semibold text-lg text-center mb-4">What describes you best?</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+              <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">What describes you best?</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-md mx-auto">
                 {doctorTypes.map(type => (
-                  <Card key={type.name} onClick={(e) => handleDoctorTypeChange(type.name, e)} className={cn("cursor-pointer transition-all duration-200 text-center p-6", formData.doctorType === type.name ? "border-primary ring-2 ring-primary bg-primary/5" : "hover:border-primary/50 hover:bg-secondary/50")}>
-                    <div className="text-primary mb-3">{type.name === 'Physician' ? <HeartPulse className="h-10 w-10 mx-auto" /> : <Stethoscope className="h-10 w-10 mx-auto" />}</div>
-                    <h4 className="font-bold text-lg">{type.name}</h4>
-                    <p className="text-sm text-muted-foreground">{type.description}</p>
-                  </Card>
+                  <div 
+                    key={type.name} 
+                    onClick={(e) => handleDoctorTypeChange(type.name, e)} 
+                    className={cn(
+                      "cursor-pointer transition-all duration-200 text-center p-2 sm:p-3 h-full border rounded-lg",
+                      formData.doctorType === type.name 
+                        ? "border-purple-400 ring-2 ring-purple-100 bg-purple-50/50" 
+                        : "border-gray-200 hover:border-purple-200 hover:bg-gray-50"
+                    )}
+                  >
+                    <div className="text-purple-600 mb-1">
+                      {type.name === 'Physician' ? 
+                        <HeartPulse className="h-4 w-4 sm:h-6 sm:w-6 mx-auto" /> : 
+                        <Stethoscope className="h-4 w-4 sm:h-6 sm:w-6 mx-auto" />
+                      }
+                    </div>
+                    <h4 className="font-semibold text-xs sm:text-sm">{type.name}</h4>
+                    <p className="text-xs text-gray-600 text-xs">{type.description}</p>
+                  </div>
                 ))}
               </div>
             </div>
+
             {formData.doctorType && (
               <div className="animate-in fade-in-50 duration-500">
-                <h3 className="font-semibold text-lg text-center mb-4">Select your specialty/specialties</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {isLoadingDropdowns ? [...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />) : (
-                    filteredSpecialties.map(spec => (
-                      <div key={spec._id} onClick={(e) => handleSpecialtyChange(spec._id, e)} className={cn("p-4 border rounded-lg cursor-pointer flex flex-col items-center justify-center text-center transition-all duration-200", formData.specialties.includes(spec._id) ? "border-primary ring-2 ring-primary bg-primary/5" : "hover:border-primary/50 hover:bg-secondary/50")}>
-                        <Bone className="h-8 w-8 text-primary mb-2" />
-                        <span className="font-medium text-sm">{spec.name}</span>
+                <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">Select your specialty/specialties</h3>
+                <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 pr-2">
+                  {isLoadingDropdowns ? 
+                    [...Array(4)].map((_, i) => (
+                      <Skeleton key={i} className="h-20 sm:h-24 w-full" />
+                    )) : (
+                    filteredSpecialties.map((spec: any) => (
+                      <div 
+                        key={spec._id} 
+                        onClick={(e) => handleSpecialtyChange(spec._id, e)} 
+                        className={cn(
+                          "p-2 sm:p-3 border rounded-lg cursor-pointer flex flex-col items-center justify-center text-center transition-all duration-200 h-16 sm:h-20 md:h-18",
+                          formData.specialties.includes(spec._id) 
+                            ? "border-purple-400 ring-2 ring-purple-100 bg-purple-50/50" 
+                            : "border-gray-200 hover:border-purple-200 hover:bg-gray-50"
+                        )}
+                      >
+                        <Microscope className="h-5 w-5 sm:h-7 sm:w-7 text-purple-600 mb-1" />
+                        <span className="font-medium text-sm sm:text-base">{spec.name}</span>
                       </div>
                     ))
                   )}
+                  </div>
                 </div>
               </div>
             )}
@@ -307,84 +420,96 @@ export function DoctorRegistrationForm({ onSuccess }) {
         );
       case 3:
         return (
-          <div className="space-y-6 animate-in fade-in-50 duration-500">
-            <h3 className="font-semibold text-lg text-center">Which diseases do you specialize in?</h3>
-            {filteredDiseases.length > 0 ? filteredDiseases.map(([specialtyName, diseases]) => (
-              <div key={specialtyName}>
-                <h4 className="font-semibold mb-2">{specialtyName}</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 border p-4 rounded-md">
-                  {diseases.map(disease => (
-                    <div key={disease._id} className="flex items-center space-x-2">
-                      <Checkbox id={disease._id} checked={formData.diseases.includes(disease._id)} onCheckedChange={() => handleDiseaseChange(disease._id)} />
-                      <Label htmlFor={disease._id} className="text-sm font-normal">{disease.name}</Label>
-                    </div>
-                  ))}
+          <div className="space-y-4 sm:space-y-6 animate-in fade-in-50 duration-500">
+            <div className="mb-4 sm:mb-6">
+              <p className="text-base sm:text-lg text-gray-500 mb-2">Specialization Details</p>
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Your areas of expertise</h1>
+              <p className="text-gray-600 text-base sm:text-lg">Select the diseases you specialize in treating.</p>
+            </div>
+            
+            {filteredDiseases.length > 0 ? (
+              filteredDiseases.map(([specialtyName, diseases]) => (
+                <div key={specialtyName} className="space-y-2 sm:space-y-3">
+                  <h4 className="text-lg sm:text-xl font-semibold">{specialtyName}</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 border p-3 sm:p-4 rounded-md">
+                    {diseases.map((disease: any) => (
+                      <div key={disease._id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={disease._id} 
+                          checked={formData.diseases.includes(disease._id)} 
+                          onCheckedChange={() => handleDiseaseChange(disease._id)} 
+                          className="h-3 w-3 sm:h-4 sm:w-4"
+                        />
+                        <Label 
+                          htmlFor={disease._id} 
+                          className="text-xs sm:text-sm font-normal cursor-pointer"
+                        >
+                          {disease.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )) : (
-              <p className="text-center text-muted-foreground">No diseases found for selected specialties. You can add them later.</p>
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm sm:text-base">
+                No diseases found for selected specialties. You can add them later.
+              </p>
             )}
           </div>
         );
-      default: return null;
+      default: 
+        return null;
     }
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
-      <div className="bg-background/70 backdrop-blur-sm border-white/20 shadow-2xl shadow-blue-500/10 p-8 rounded-lg">
-        <div className="mb-8">
-          <StepIndicator currentStep={step} />
+    <>
+      <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2">
+        <div className="fixed top-4 sm:top-8 left-4 sm:left-10 right-4 sm:right-10 flex justify-between items-center z-20">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={step === 1 ? () => window.history.back() : navigateToPrevStep} 
+            className="px-3 sm:px-4 py-2 text-base sm:text-lg text-gray-600 border-gray-300 hover:bg-gray-50 h-10 sm:h-auto"
+          >
+            ← {step === 1 ? 'Back to Role Selection' : 'Back'}
+          </Button>
+          {step < 3 ? (
+            <Button 
+              type="button" 
+              onClick={navigateToNextStep} 
+              className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
+            >
+              Continue →
+            </Button>
+          ) : (
+            <Button 
+              type="submit" 
+              disabled={isLoading} 
+              className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
+              form="registration-form"
+            >
+              {isLoading ? "Submitting..." : "Complete Registration"}
+            </Button>
+          )}
         </div>
         
-        {/* Navigation steps (1 & 2) - NO form element */}
-        {step < 3 ? (
-          <div onKeyDown={handleKeyDown} className="space-y-6">
+        <div className="mt-16 sm:mt-8">
+          <StepIndicator currentStep={step} setStep={setStep} />
+        </div>
+      
+        <form id="registration-form" onSubmit={handleFinalSubmit} className="space-y-4 sm:space-y-6 pb-8 mt-4">
+          <div className="flex flex-col justify-start" style={{ minHeight: 'calc(100vh - 200px)' }}>
             {renderStepContent()}
-            <div className="flex justify-between pt-6 border-t mt-8">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={navigateToPrevStep} 
-                disabled={step === 1}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" /> Back
-              </Button>
-              <Button 
-                type="button" 
-                onClick={navigateToNextStep}
-              >
-                Next <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
           </div>
-        ) : (
-          /* Final step (3) - ONLY here we use form element */
-          <form onSubmit={handleFinalSubmit} className="space-y-6">
-            {renderStepContent()}
-            <div className="flex justify-between pt-6 border-t mt-8">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={navigateToPrevStep}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" /> Back
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isLoading}
-              >
-                {isLoading ? "Submitting..." : "Submit Application"}
-              </Button>
-            </div>
-          </form>
-        )}
+        </form>
       </div>
-    </div>
+    </>
   );
 }
 
-export const DoctorRegistrationFormWithSuspense = (props) => (
+export const DoctorRegistrationFormWithSuspense = (props: { onSuccess: () => void }) => (
     <Suspense fallback={<div>Loading...</div>}>
         <DoctorRegistrationForm {...props} />
     </Suspense>
