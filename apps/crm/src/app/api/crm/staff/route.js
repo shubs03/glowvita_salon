@@ -33,27 +33,23 @@ const cleanupOldIndexes = async () => {
     }
 };
 
-// GET all staff for a vendor
+// GET all staff for a vendor or doctor
 export const GET = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        const ownerId = req.user._id;
         
-        console.log('Fetching staff for vendor:', vendorId);
+        console.log(`Fetching staff for owner: ${ownerId} (Role: ${req.user.role})`);
         
-        const staff = await StaffModel.find({ vendorId: vendorId });
+        const staff = await StaffModel.find({ vendorId: ownerId });
         
-        console.log('Found staff count:', staff.length);
-        if (staff.length > 0) {
-            console.log('Existing staff emails:', staff.map(s => s.emailAddress));
-            console.log('Existing staff mobiles:', staff.map(s => s.mobileNo));
-        }
+        console.log(`Found ${staff.length} staff member(s).`);
         
         return NextResponse.json(staff, { status: 200 });
     } catch (error) {
         console.error('Error fetching staff:', error);
         return NextResponse.json({ message: "Error fetching staff", error: error.message }, { status: 500 });
     }
-}, ['vendor']);
+}, ['vendor', 'doctor']);
 
 // POST a new staff member
 export const POST = authMiddlewareCrm(async (req) => {
@@ -61,54 +57,42 @@ export const POST = authMiddlewareCrm(async (req) => {
         // Clean up indexes before creating a new entry
         await cleanupOldIndexes();
         
-        const vendorId = req.user._id.toString();
+        const ownerId = req.user._id.toString();
+        const userType = req.user.role === 'doctor' ? 'Doctor' : 'Vendor';
         const body = await req.json();
         
-        // Trim input to avoid whitespace issues
         const trimmedBody = {
             ...body,
             emailAddress: body.emailAddress?.trim(),
             mobileNo: body.mobileNo?.trim()
         };
         
-        console.log('Creating staff for vendor:', vendorId);
+        console.log(`Creating staff for owner: ${ownerId} (Type: ${userType})`);
         console.log('Request payload:', trimmedBody);
 
-        // Basic validation
         if (!trimmedBody.fullName || !trimmedBody.emailAddress || !trimmedBody.mobileNo || !trimmedBody.position || !trimmedBody.password) {
-            console.log('Missing fields in request:', {
-                fullName: !!trimmedBody.fullName,
-                emailAddress: !!trimmedBody.emailAddress,
-                mobileNo: !!trimmedBody.mobileNo,
-                position: !!trimmedBody.position,
-                password: !!trimmedBody.password
-            });
             return NextResponse.json({ message: "Missing required fields, including password" }, { status: 400 });
         }
         
-        // Check for duplicate email (case-insensitive)
         const existingEmailStaff = await StaffModel.findOne({ 
-            vendorId: vendorId, 
+            vendorId: ownerId, 
             emailAddress: { $regex: new RegExp(`^${trimmedBody.emailAddress}$`, 'i') }
         });
         if (existingEmailStaff) {
-            console.log('Duplicate email found:', existingEmailStaff.emailAddress, 'for vendor:', vendorId);
             return NextResponse.json({ 
-                message: "A staff member with this email already exists for this vendor.",
+                message: `A staff member with this email already exists for this ${userType.toLowerCase()}.`,
                 field: 'emailAddress',
                 value: trimmedBody.emailAddress
             }, { status: 409 });
         }
         
-        // Check for duplicate mobile number
         const existingMobileStaff = await StaffModel.findOne({ 
-            vendorId: vendorId, 
+            vendorId: ownerId, 
             mobileNo: trimmedBody.mobileNo 
         });
         if (existingMobileStaff) {
-            console.log('Duplicate mobile found:', existingMobileStaff.mobileNo, 'for vendor:', vendorId);
-            return NextResponse.json({ 
-                message: "A staff member with this mobile number already exists for this vendor.",
+             return NextResponse.json({ 
+                message: `A staff member with this mobile number already exists for this ${userType.toLowerCase()}.`,
                 field: 'mobileNo',
                 value: trimmedBody.mobileNo
             }, { status: 409 });
@@ -116,16 +100,13 @@ export const POST = authMiddlewareCrm(async (req) => {
 
         const hashedPassword = await bcrypt.hash(trimmedBody.password, 10);
         
-        console.log('Creating new staff with hashed password');
-        
         const newStaff = await StaffModel.create({
             ...trimmedBody,
-            vendorId: vendorId,
+            vendorId: ownerId,
+            userType: userType, // Set the userType based on owner's role
             password: hashedPassword,
         });
         
-        console.log('Staff created successfully:', newStaff._id);
-
         const staffData = newStaff.toObject();
         delete staffData.password;
 
@@ -134,73 +115,65 @@ export const POST = authMiddlewareCrm(async (req) => {
         console.error('Error creating staff:', error);
         
         if (error.code === 11000) {
-            console.log('Duplicate key error details:', error.keyPattern, error.keyValue);
             const duplicateField = Object.keys(error.keyPattern)[0];
+            const userType = req.user.role === 'doctor' ? 'doctor' : 'vendor';
             if (duplicateField === 'emailAddress' || duplicateField.includes('emailAddress')) {
                 return NextResponse.json({ 
-                    message: "A staff member with this email already exists for this vendor.",
-                    field: 'emailAddress',
-                    value: error.keyValue?.emailAddress || trimmedBody.emailAddress
+                    message: `A staff member with this email already exists for this ${userType}.`,
+                    field: 'emailAddress'
                 }, { status: 409 });
             } else if (duplicateField === 'mobileNo' || duplicateField.includes('mobileNo')) {
                 return NextResponse.json({ 
-                    message: "A staff member with this mobile number already exists for this vendor.",
-                    field: 'mobileNo', 
-                    value: error.keyValue?.mobileNo || trimmedBody.mobileNo
+                    message: `A staff member with this mobile number already exists for this ${userType}.`,
+                    field: 'mobileNo'
                 }, { status: 409 });
             } else {
                 return NextResponse.json({ 
-                    message: "A staff member with these details already exists for this vendor.",
-                    duplicateField: duplicateField,
-                    keyPattern: error.keyPattern
+                    message: `A staff member with these details already exists for this ${userType}.`
                 }, { status: 409 });
             }
         }
         return NextResponse.json({ message: "Error creating staff", error: error.message }, { status: 500 });
     }
-}, ['vendor']);
+}, ['vendor', 'doctor']);
 
 // PUT (update) a staff member
 export const PUT = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        const ownerId = req.user._id;
         const { _id, ...updateData } = await req.json();
 
         if (!_id) {
             return NextResponse.json({ message: "Staff ID is required for update" }, { status: 400 });
         }
         
-        // Ensure the staff member belongs to the vendor
-        const staff = await StaffModel.findOne({ _id: _id, vendorId: vendorId });
+        const staff = await StaffModel.findOne({ _id: _id, vendorId: ownerId });
         if (!staff) {
             return NextResponse.json({ message: "Staff not found or access denied" }, { status: 404 });
         }
         
-        // Check for duplicate email (excluding current staff member)
         if (updateData.emailAddress && updateData.emailAddress !== staff.emailAddress) {
             const existingEmailStaff = await StaffModel.findOne({ 
-                vendorId, 
+                vendorId: ownerId, 
                 emailAddress: updateData.emailAddress.trim(), 
                 _id: { $ne: _id } 
             });
             if (existingEmailStaff) {
-                return NextResponse.json({ message: "A staff member with this email already exists for this vendor." }, { status: 409 });
+                return NextResponse.json({ message: "A staff member with this email already exists." }, { status: 409 });
             }
         }
         
-        // Check for duplicate mobile number (excluding current staff member)
         if (updateData.mobileNo && updateData.mobileNo !== staff.mobileNo) {
             const existingMobileStaff = await StaffModel.findOne({ 
-                vendorId, 
+                vendorId: ownerId, 
                 mobileNo: updateData.mobileNo.trim(), 
                 _id: { $ne: _id } 
             });
             if (existingMobileStaff) {
-                return NextResponse.json({ message: "A staff member with this mobile number already exists for this vendor." }, { status: 409 });
+                return NextResponse.json({ message: "A staff member with this mobile number already exists." }, { status: 409 });
             }
         }
         
-        // If password is being updated, hash it
         if (updateData.password && updateData.password.trim() !== '') {
             updateData.password = await bcrypt.hash(updateData.password, 10);
         } else {
@@ -212,23 +185,16 @@ export const PUT = authMiddlewareCrm(async (req) => {
         return NextResponse.json(updatedStaff, { status: 200 });
     } catch (error) {
         if (error.code === 11000) {
-            const duplicateField = Object.keys(error.keyPattern)[0];
-            if (duplicateField === 'emailAddress') {
-                return NextResponse.json({ message: "A staff member with this email already exists for this vendor." }, { status: 409 });
-            } else if (duplicateField === 'mobileNo') {
-                return NextResponse.json({ message: "A staff member with this mobile number already exists for this vendor." }, { status: 409 });
-            } else {
-                return NextResponse.json({ message: "A staff member with these details already exists for this vendor." }, { status: 409 });
-            }
+            return NextResponse.json({ message: "A staff member with these details already exists." }, { status: 409 });
         }
         return NextResponse.json({ message: "Error updating staff", error: error.message }, { status: 500 });
     }
-}, ['vendor']);
+}, ['vendor', 'doctor']);
 
 // DELETE a staff member
 export const DELETE = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        const ownerId = req.user._id;
         const url = new URL(req.url);
         const id = url.searchParams.get('id') || (await req.json()).id;
 
@@ -236,7 +202,7 @@ export const DELETE = authMiddlewareCrm(async (req) => {
             return NextResponse.json({ message: "Staff ID is required for deletion" }, { status: 400 });
         }
 
-        const deletedStaff = await StaffModel.findOneAndDelete({ _id: id, vendorId: vendorId });
+        const deletedStaff = await StaffModel.findOneAndDelete({ _id: id, vendorId: ownerId });
 
         if (!deletedStaff) {
             return NextResponse.json({ message: "Staff not found or access denied" }, { status: 404 });
@@ -246,4 +212,4 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     } catch (error) {
         return NextResponse.json({ message: "Error deleting staff", error: error.message }, { status: 500 });
     }
-}, ['vendor']);
+}, ['vendor', 'doctor']);

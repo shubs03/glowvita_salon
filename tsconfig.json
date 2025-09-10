@@ -6,7 +6,8 @@
     "paths": {
       "@/*": ["*"],
       "@models/*": ["packages/models/*"],
-      "@utils/*": ["packages/utils/*"]
+      "@utils/*": ["packages/utils/*"],
+      "@repo/store/*": ["packages/store/src/*"]
     }
   }
 }

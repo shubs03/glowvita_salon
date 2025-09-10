@@ -7,6 +7,7 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { Skeleton } from "@repo/ui/skeleton";
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
@@ -27,6 +28,7 @@ type Client = {
   occupation: string;
   profilePicture?: string;
   address: string;
+  preferences?: string;
   lastVisit: string;
   totalBookings: number;
   totalSpent: number;
@@ -88,6 +90,7 @@ export default function ClientsPage() {
         occupation: string;
         profilePicture: string;
         address: string;
+        preferences: string;
     }>({
         fullName: '',
         email: '',
@@ -98,6 +101,7 @@ export default function ClientsPage() {
         occupation: '',
         profilePicture: '',
         address: '',
+        preferences: ''
     });
 
     const filteredClients = useMemo(() => {
@@ -126,6 +130,7 @@ export default function ClientsPage() {
                 occupation: client.occupation,
                 profilePicture: client.profilePicture || '',
                 address: client.address,
+                preferences: client.preferences || ''
             });
         } else {
             setFormData({
@@ -138,6 +143,7 @@ export default function ClientsPage() {
                 occupation: '',
                 profilePicture: '',
                 address: '',
+                preferences: ''
             });
         }
         setSelectedClient(client || null);
@@ -177,7 +183,8 @@ export default function ClientsPage() {
                 country: formData.country.trim(),
                 occupation: formData.occupation.trim(),
                 profilePicture: formData.profilePicture,
-                address: formData.address.trim()
+                address: formData.address.trim(),
+                preferences: formData.preferences.trim()
             };
 
             if (selectedClient) {
@@ -296,10 +303,101 @@ export default function ClientsPage() {
 
     if(isLoading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading clients...</p>
+            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 sm:p-6 lg:p-8">
+                <div className="max-w-7xl mx-auto">
+                    <div className="mb-8">
+                        <Skeleton className="h-9 w-64 mb-2" />
+                        <Skeleton className="h-5 w-80" />
+                    </div>
+
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+                        {[...Array(4)].map((_, i) => (
+                            <Card key={i} className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                                    <Skeleton className="h-4 w-24" />
+                                    <div className="p-2 bg-gray-100 rounded-lg">
+                                        <Skeleton className="h-4 w-4" />
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <Skeleton className="h-8 w-16 mb-2" />
+                                    <Skeleton className="h-3 w-32" />
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                    <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
+                        <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100">
+                            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                                <div>
+                                    <Skeleton className="h-6 w-32 mb-2" />
+                                    <Skeleton className="h-4 w-64" />
+                                </div>
+                                <div className="flex gap-3 flex-wrap">
+                                    <div className="relative">
+                                        <Skeleton className="h-10 w-80" />
+                                    </div>
+                                    <Skeleton className="h-10 w-24" />
+                                    <Skeleton className="h-10 w-32" />
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto rounded-lg">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            {["Client", "Contact", "Last Visit", "Bookings", "Status", "Actions"].map((_, i) => (
+                                                <TableHead key={i}>
+                                                    <Skeleton className="h-5 w-full" />
+                                                </TableHead>
+                                            ))}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {[...Array(5)].map((_, i) => (
+                                            <TableRow key={i}>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-3">
+                                                        <Skeleton className="w-10 h-10 rounded-full" />
+                                                        <div>
+                                                            <Skeleton className="h-5 w-32 mb-1" />
+                                                            <Skeleton className="h-4 w-24" />
+                                                        </div>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Skeleton className="h-5 w-full mb-1" />
+                                                    <Skeleton className="h-4 w-28" />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Skeleton className="h-5 w-20" />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Skeleton className="h-5 w-8" />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Skeleton className="h-6 w-16 rounded-full" />
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-1">
+                                                        <Skeleton className="h-8 w-8 rounded" />
+                                                        <Skeleton className="h-8 w-8 rounded" />
+                                                        <Skeleton className="h-8 w-8 rounded" />
+                                                        <Skeleton className="h-8 w-8 rounded" />
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <div className="mt-4">
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         );
@@ -654,6 +752,18 @@ export default function ClientsPage() {
                                 value={formData.address} 
                                 onChange={handleInputChange} 
                                 placeholder="Enter full address"
+                                rows={3}
+                            />
+                        </div>
+                        {/* Preferences */}
+                        <div className="space-y-2">
+                            <Label htmlFor="preferences">Preferences</Label>
+                            <Textarea
+                                id="preferences"
+                                name="preferences"
+                                value={formData.preferences}
+                                onChange={handleInputChange}
+                                placeholder="Enter any client preferences or notes"
                                 rows={3}
                             />
                         </div>
@@ -1269,6 +1379,10 @@ export default function ClientsPage() {
                                                         <Label className="text-xs md:text-sm font-medium text-gray-500">Address</Label>
                                                         <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.address || 'Not provided'}</p>
                                                     </div>
+                                                     <div className="col-span-1 md:col-span-2">
+                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Preferences</Label>
+                                                        <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.preferences || 'No preferences recorded.'}</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1455,3 +1569,61 @@ export default function ClientsPage() {
         </div>
     );
 }
+
+```
+- packages/utils/package.json:
+```json
+{
+    "name": "@repo/utils",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC"
+  }
+  
+```
+- packages/utils/src/index.ts:
+```ts
+// packages/utils/src/index.ts
+
+export const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(price);
+};
+
+export const cn = (...classes: string[]) => {
+  return classes.filter(Boolean).join(' ');
+};
+
+```
+- tsconfig.base.json:
+```json
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Default",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": false,
+    "isolatedModules": true,
+    "moduleResolution": "bundler",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "preserveWatchOutput": true,
+    "skipLibCheck": true,
+    "strict": true
+  },
+  "exclude": ["node_modules"]
+}
+
+```

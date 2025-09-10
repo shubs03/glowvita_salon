@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 
 const socialMediaTemplateSchema = new mongoose.Schema({
@@ -23,15 +24,29 @@ const socialMediaTemplateSchema = new mongoose.Schema({
     default: 'admin'
   },
   
+  // imageUrl for preview cards
+  imageUrl: {
+    type: String,
+    default: '',
+    trim: true
+  },
+  
   // Optional fields with defaults
   description: {
     type: String,
     default: '',
     trim: true
   },
-  imageUrl: {
-    type: String,
-    default: ''
+  jsonData: {
+    type: Object,
+    default: null,
+    validate: {
+      validator: function(v) {
+        // Allow null/undefined or valid objects
+        return v === null || v === undefined || typeof v === 'object';
+      },
+      message: 'JSON data must be a valid object'
+    }
   },
   
   // System fields

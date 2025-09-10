@@ -9,6 +9,7 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { Skeleton } from "@repo/ui/skeleton";
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Checkbox } from '@repo/ui/checkbox';
@@ -79,8 +80,8 @@ export default function OffersCouponsPage() {
 
   // Get user and business info from auth context
   const auth = useCrmAuth();
-  const userRole = auth?.role || auth?.type || 'vendor'; // Fallback for different auth structures
-  const businessId = auth?.businessId || auth?.id; // Fallback for different auth structures
+  const userRole = auth?.role || 'vendor'; // Simplified fallback
+  const businessId = auth?.user?._id; // Use user ID as businessId
   
   console.log('Auth Debug:', { auth, userRole, businessId }); // Debug auth values
   
@@ -105,14 +106,12 @@ export default function OffersCouponsPage() {
     }
   });
   
-  // Prepare query parameters
-  const queryParams = {
+  // Prepare query parameters with memoization to prevent infinite re-renders
+  const queryParams = useMemo(() => ({
     businessId: businessId || '',
     businessType: userRole,
-    ...(auth?.vendorId && { vendorId: auth.vendorId }), // Include vendorId if available
-    ...(auth?.doctorId && { doctorId: auth.doctorId }), // Include doctorId if available
-    ...(auth?.supplierId && { supplierId: auth.supplierId }) // Include supplierId if available
-  };
+    ...(auth?.user?._id && { vendorId: auth.user._id }), // Use consistent user ID
+  }), [businessId, userRole, auth?.user?._id]);
 
   // RTK Query hooks with proper query parameters
   const { 
@@ -121,16 +120,16 @@ export default function OffersCouponsPage() {
     isError,
     refetch 
   } = useGetOffersQuery(queryParams, {
-    skip: !auth, // Skip query if not authenticated
-    refetchOnMountOrArgChange: true, // Always refetch when component mounts or auth changes
+    skip: !auth || !businessId, // Skip query if not authenticated or no businessId
+    refetchOnMountOrArgChange: false, // Disable to prevent infinite loops
   });
 
-  // Refetch data when auth changes
-  useEffect(() => {
-    if (auth) {
-      refetch();
-    }
-  }, [auth, refetch]);
+  // Removed problematic useEffect that was causing infinite API calls
+  // useEffect(() => {
+  //   if (auth) {
+  //     refetch();
+  //   }
+  // }, [auth, refetch]);
   
   const { data: superData = [], isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
   
@@ -381,12 +380,99 @@ export default function OffersCouponsPage() {
   // Show loading state while waiting for businessId resolution
   if (isLoading) {
     return (
-      <div className="p-4 text-center">
-        <div className="animate-pulse">
-          <div className="h-8 w-48 bg-gray-200 rounded mx-auto mb-4"></div>
-          <div className="h-4 w-32 bg-gray-200 rounded mx-auto"></div>
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <Skeleton className="h-10 w-32" />
         </div>
-        <p className="mt-4 text-muted-foreground">Loading offers...</p>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+              <div>
+                <Skeleton className="h-6 w-32 mb-2" />
+                <Skeleton className="h-4 w-48" />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <div className="relative">
+                  <Skeleton className="h-10 w-80" />
+                </div>
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-10 w-24" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {["Code", "Type", "Value", "Status", "Expiry", "Usage", "Actions"].map((_, i) => (
+                      <TableHead key={i}>
+                        <Skeleton className="h-5 w-full" />
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <Skeleton className="h-5 w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-4" />
+                          <Skeleton className="h-4 w-16" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-16" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-6 w-16 rounded-full" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-12" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                          <Skeleton className="h-8 w-8 rounded" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="mt-4">
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

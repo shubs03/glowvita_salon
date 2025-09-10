@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 const config: Omit<Config, "content"> = {
@@ -15,6 +14,14 @@ const config: Omit<Config, "content"> = {
         shimmer: "shimmer 2s linear infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        'slide': 'slide 90s linear infinite',
+        'slide-rtl': 'slide-rtl 90s linear infinite',
+        'pulse-slow': 'pulse 5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'gradient-sweep': 'gradient-sweep 10s linear infinite',
+        'shine': 'shine 1s ease-in-out',
+      },
+      backgroundImage: {
+        'dots-grid': "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%239C92AC' fill-opacity='0.1' fill-rule='evenodd'%3E%3Cpath d='M0 38.59l2.83-2.83 1.41 1.41L1.41 40H0v-1.41zM0 1.4l2.83 2.83 1.41-1.41L1.41 0H0v1.41zM38.59 40l-2.83-2.83 1.41-1.41L40 38.59V40h-1.41zM40 1.41l-2.83 2.83-1.41-1.41L38.59 0H40v1.41z'/%3E%3C/g%3E%3C/svg%3E\")",
       },
       keyframes: {
         shimmer: {
@@ -28,6 +35,23 @@ const config: Omit<Config, "content"> = {
         "accordion-up": {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
+        },
+        slide: {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(-50%)' },
+        },
+        "slide-rtl": {
+            from: { transform: 'translateX(-50%)' },
+            to: { transform: 'translateX(0)' },
+        },
+        'gradient-sweep': {
+          '0%': { 'background-position': '0% 50%' },
+          '50%': { 'background-position': '100% 50%' },
+          '100%': { 'background-position': '0% 50%' },
+        },
+        shine: {
+          '0%': { transform: 'translateX(-100%) translateY(-100%) rotate(30deg)' },
+          '100%': { transform: 'translateX(100%) translateY(100%) rotate(30deg)' },
         },
       },
       colors: {
@@ -70,37 +94,28 @@ const config: Omit<Config, "content"> = {
         md: `calc(var(--radius) - 2px)`,
         sm: "calc(var(--radius) - 4px)",
       },
-      keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
-        slide: {
-          from: { transform: 'translateX(0)' },
-          to: { transform: 'translateX(-50%)' },
-        },
-        "slide-rtl": {
-            from: { transform: 'translateX(-50%)' },
-            to: { transform: 'translateX(0)' },
-        },
-      },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        'slide': 'slide 90s linear infinite',
-        'slide-rtl': 'slide-rtl 90s linear infinite',
-      },
       fontFamily: {
         body: ["Inter", "sans-serif"],
         headline: ["'Space Grotesk'", "sans-serif"],
+      },
+      perspective: {
+        '1000': '1000px',
       }
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function ({ addUtilities }: { addUtilities: any }) {
+      addUtilities({
+        '.futuristic-clip-path': {
+          'clip-path': 'polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)',
+        },
+        '.perspective-1000': {
+          'perspective': '1000px',
+        }
+      });
+    },
+  ],
 };
 
 export default config;

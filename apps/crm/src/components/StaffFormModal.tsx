@@ -13,7 +13,7 @@ import { Switch } from '@repo/ui/switch';
 import { useCreateStaffMutation, useUpdateStaffMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
-import { vendorNavItems } from '@/lib/routes';
+import { vendorNavItems, doctorNavItems } from '@/lib/routes';
 import { Eye, EyeOff, Plus, Trash2, Clock, Calendar } from 'lucide-react';
 
 interface StaffFormModalProps {
@@ -24,7 +24,7 @@ interface StaffFormModalProps {
 }
 
 export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }: StaffFormModalProps) => {
-    const { user } = useCrmAuth();
+    const { user, role } = useCrmAuth();
     const [createStaff, { isLoading: isCreating }] = useCreateStaffMutation();
     const [updateStaff, { isLoading: isUpdating }] = useUpdateStaffMutation();
     const [activeTab, setActiveTab] = useState('personal');
@@ -71,6 +71,8 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }: StaffFormM
             upiId: '',
         }
     });
+
+    const navItems = role === 'doctor' ? doctorNavItems : vendorNavItems;
 
     useEffect(() => {
         if (staff) {
@@ -278,7 +280,6 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }: StaffFormM
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         
-        // Only validate password for new staff members (when staff is null/undefined)
         if (!staff) {
             if (!formData.password) {
                 toast.error("Password is required for new staff members.");
@@ -289,7 +290,6 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }: StaffFormM
                 return;
             }
         } else {
-            // For existing staff, only validate password if they're trying to change it
             if (formData.password && formData.password !== formData.confirmPassword) {
                 toast.error("Passwords do not match.");
                 return;
@@ -299,6 +299,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }: StaffFormM
         const payload: any = {
             ...formData,
             vendorId: user._id,
+            userType: role === 'doctor' ? 'Doctor' : 'Vendor',
         };
 
         if (!payload.password) {
@@ -306,25 +307,14 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }: StaffFormM
         }
         delete payload.confirmPassword;
         
-        // Log the payload to verify timing and blocked times data
         console.log('Saving staff data:', {
             availabilityFields: {
                 sundayAvailable: payload.sundayAvailable,
                 mondayAvailable: payload.mondayAvailable,
-                tuesdayAvailable: payload.tuesdayAvailable,
-                wednesdayAvailable: payload.wednesdayAvailable,
-                thursdayAvailable: payload.thursdayAvailable,
-                fridayAvailable: payload.fridayAvailable,
-                saturdayAvailable: payload.saturdayAvailable,
             },
             slotsFields: {
                 sundaySlots: payload.sundaySlots,
                 mondaySlots: payload.mondaySlots,
-                tuesdaySlots: payload.tuesdaySlots,
-                wednesdaySlots: payload.wednesdaySlots,
-                thursdaySlots: payload.thursdaySlots,
-                fridaySlots: payload.fridaySlots,
-                saturdaySlots: payload.saturdaySlots,
             },
             blockedTimes: payload.blockedTimes,
             fullPayload: payload
@@ -341,24 +331,10 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }: StaffFormM
             onSuccess();
         } catch (error: any) {
             console.error("Failed to save staff member:", error);
-            
-            // Handle specific 409 conflict errors with detailed information
-            if (error?.status === 409 && error?.data) {
-                console.log('Conflict details:', error.data);
-                
-                if (error.data.field && error.data.existingStaff) {
-                    const conflictField = error.data.field === 'emailAddress' ? 'email' : 'mobile number';
-                    const existingStaff = error.data.existingStaff;
-                    toast.error(
-                        `Conflict: A staff member "${existingStaff.fullName}" already exists with this ${conflictField}. ` +
-                        `Please use a different ${conflictField}.`
-                    );
-                } else {
-                    toast.error(error.data.message || "A staff member with these details already exists.");
-                }
+            if (error?.status === 409) {
+                toast.error(error.data.message || "A staff member with these details already exists.");
             } else {
-                const errorMessage = error?.data?.message || "Failed to save staff member.";
-                toast.error(errorMessage);
+                toast.error(error?.data?.message || "Failed to save staff member.");
             }
         }
     };
@@ -499,7 +475,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }: StaffFormM
      const renderPermissionsTab = () => (
         <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border p-4 rounded-md">
-                {vendorNavItems.map((item) => (
+                {navItems.map((item) => (
                     <div key={item.permission} className="flex items-center space-x-2">
                         <Checkbox
                             id={item.permission}
@@ -692,12 +668,12 @@ export const StaffFormModal = ({ isOpen, onClose, staff, onSuccess }: StaffFormM
                 <div>
                     <Tabs value={activeTab} className="w-full">
                         <TabsList className="grid w-full grid-cols-6">
-                            <TabsTrigger value="personal" disabled={true}>Personal</TabsTrigger>
-                            <TabsTrigger value="employment" disabled={true}>Employment</TabsTrigger>
-                            <TabsTrigger value="bank" disabled={true}>Bank Details</TabsTrigger>
-                            <TabsTrigger value="permissions" disabled={true}>Permissions</TabsTrigger>
-                            <TabsTrigger value="timing" disabled={true}>Timing</TabsTrigger>
-                            <TabsTrigger value="blockTime" disabled={true}>Block Time</TabsTrigger>
+                            <TabsTrigger value="personal" onClick={() => setActiveTab('personal')}>Personal</TabsTrigger>
+                            <TabsTrigger value="employment" onClick={() => setActiveTab('employment')}>Employment</TabsTrigger>
+                            <TabsTrigger value="bank" onClick={() => setActiveTab('bank')}>Bank Details</TabsTrigger>
+                            <TabsTrigger value="permissions" onClick={() => setActiveTab('permissions')}>Permissions</TabsTrigger>
+                            <TabsTrigger value="timing" onClick={() => setActiveTab('timing')}>Timing</TabsTrigger>
+                            <TabsTrigger value="blockTime" onClick={() => setActiveTab('blockTime')}>Block Time</TabsTrigger>
                         </TabsList>
                         <TabsContent value="personal" className="py-4">
                             {renderPersonalTab()}

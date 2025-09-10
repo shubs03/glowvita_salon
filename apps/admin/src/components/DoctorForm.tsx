@@ -58,6 +58,8 @@ export interface Doctor {
   assistantName: string;
   assistantContact: string;
   doctorAvailability: 'Online' | 'Offline';
+  createdAt?: string;
+  updatedAt?: string;
   landline?: string;
   workingWithHospital?: boolean;
   videoConsultation?: boolean;

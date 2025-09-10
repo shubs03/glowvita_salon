@@ -56,6 +56,7 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
       category: template.category,
       description: template.description,
       imageUrl: template.imageUrl,
+      jsonData: template.jsonData, // Include JSON data for canvas editing
       availableFor: template.availableFor,
       status: template.status,
       isActive: template.isActive,
@@ -89,6 +90,77 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
           'Content-Type': 'application/json'
         }
       }
+    );
+  }
+}, ['vendor']);
+
+// POST - Create a customized version of a template
+export const POST = authMiddlewareCrm(async (req, ctx) => {
+  try {
+    console.log('Received POST /api/crm/social-media-templates request');
+    
+    // Connect to database
+    await _db();
+    
+    // Get or create the model
+    let SocialMediaTemplate;
+    try {
+      SocialMediaTemplate = mongoose.model(modelName);
+    } catch (e) {
+      SocialMediaTemplate = mongoose.model(modelName, SocialMediaTemplateModel.schema);
+    }
+    
+    const body = await req.json();
+    const { templateId, jsonData, title, customizations } = body;
+    
+    if (!templateId || !jsonData) {
+      return NextResponse.json(
+        { success: false, message: 'Template ID and JSON data are required' },
+        { status: 400 }
+      );
+    }
+    
+    // Find the original template
+    const originalTemplate = await SocialMediaTemplate.findById(templateId);
+    if (!originalTemplate) {
+      return NextResponse.json(
+        { success: false, message: 'Original template not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Create a customized version
+    const customizedTemplate = {
+      title: title || `${originalTemplate.title} - Customized`,
+      category: originalTemplate.category,
+      description: `Customized version of ${originalTemplate.title}`,
+      availableFor: originalTemplate.availableFor,
+      status: 'Draft',
+      isActive: true,
+      jsonData: jsonData,
+      imageUrl: originalTemplate.imageUrl, // Keep original background
+      createdBy: req.user._id,
+      updatedBy: req.user._id,
+      parentTemplateId: templateId // Reference to original template
+    };
+    
+    const newCustomizedTemplate = await SocialMediaTemplate.create(customizedTemplate);
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Customized template saved successfully',
+      data: newCustomizedTemplate
+    }, { status: 201 });
+    
+  } catch (error) {
+    console.error('Error in POST /api/crm/social-media-templates:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        message: 'Error saving customized template', 
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+      },
+      { status: 500 }
     );
   }
 }, ['vendor']);

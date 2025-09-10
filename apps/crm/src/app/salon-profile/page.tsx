@@ -752,6 +752,178 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
   );
 };
 
+import { useSelector } from 'react-redux';
+
+const OpeningHoursTab = () => {
+  // Get the token from Redux store
+  const token = useSelector((state) => state.crmAuth?.token);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [hours, setHours] = useState<OpeningHour[]>([
+    { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
+    { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
+    { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
+    { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
+    { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
+    { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
+    { day: 'Sunday', open: '', close: '', isOpen: false },
+  ]);
+
+  // Fetch working hours on component mount
+  useEffect(() => {
+    const fetchWorkingHours = async () => {
+      try {
+        if (!token) {
+          console.error('No authentication token found in Redux store');
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('/api/crm/workinghours', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('API Response:', data); // Debug log
+          
+          // Check if data is an array or has a workingHours property
+          const workingHours = Array.isArray(data) ? data : 
+                             (Array.isArray(data.workingHours) ? data.workingHours : null);
+          
+          if (workingHours) {
+            setHours(prevHours => 
+              prevHours.map(day => {
+                const savedDay = workingHours.find((h: any) => h.day === day.day);
+                return {
+                  ...day,
+                  ...(savedDay || {})
+                };
+              })
+            );
+          }
+        } else if (response.status === 401) {
+          // Handle unauthorized error
+          console.error('Unauthorized: Please log in again');
+        }
+      } catch (error) {
+        console.error('Error fetching working hours:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWorkingHours();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+
+      const response = await fetch('/api/crm/workinghours', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          workingHours: hours,
+          timezone: 'Asia/Kolkata',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save working hours');
+      }
+
+      // Show success message
+      alert('Working hours saved successfully!');
+    } catch (error) {
+      console.error('Error saving working hours:', error);
+      alert('Failed to save working hours. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateHours = (index: number, updates: Partial<OpeningHour>) => {
+    setHours(prev => {
+      const newHours = [...prev];
+      newHours[index] = { ...newHours[index], ...updates };
+      return newHours;
+    });
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center h-40">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Opening Hours</CardTitle>
+        <CardDescription>Set your weekly business hours.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {hours.map((hour, index) => (
+          <div key={hour.day} className="grid grid-cols-4 items-center gap-4">
+            <div className="col-span-1 flex items-center">
+              <Checkbox
+                id={hour.day}
+                checked={hour.isOpen}
+                onCheckedChange={(checked) => {
+                  updateHours(index, { isOpen: !!checked });
+                }}
+                className="mr-2"
+              />
+              <Label htmlFor={hour.day} className="font-medium">
+                {hour.day}
+              </Label>
+            </div>
+            <div className="col-span-1">
+              <Input
+                type="time"
+                value={hour.open}
+                disabled={!hour.isOpen}
+                onChange={(e) => {
+                  updateHours(index, { open: e.target.value });
+                }}
+              />
+            </div>
+            <div className="col-span-1">
+              <Input
+                type="time"
+                value={hour.close}
+                disabled={!hour.isOpen}
+                onChange={(e) => {
+                  updateHours(index, { close: e.target.value });
+                }}
+              />
+            </div>
+            <div className="col-span-1 text-right">
+              {hour.isOpen ? (
+                <span className="text-green-600">Open</span>
+              ) : (
+                <span className="text-red-600">Closed</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+};
 const OpeningHoursTab = ({
   hours,
   setHours,
@@ -766,7 +938,7 @@ const OpeningHoursTab = ({
     </CardHeader>
     <CardContent className="space-y-4">
       {hours && hours.map((hour, index) => (
-        <div key={hour.day} className="grid grid-cols-4 items-center gap-4">
+        <><div key={hour.day} className="grid grid-cols-4 items-center gap-4">
           <div className="col-span-1">
             <Checkbox
               id={hour.day}
@@ -775,51 +947,20 @@ const OpeningHoursTab = ({
                 const newHours = [...hours];
                 newHours[index].isOpen = !!checked;
                 setHours(newHours);
-              }}
-            />
+              } } />
             <Label htmlFor={hour.day} className="ml-2 font-medium">
               {hour.day}
             </Label>
           </div>
-          <div className="col-span-1">
-            <Input
-              type="time"
-              value={hour.open}
-              disabled={!hour.isOpen}
-              onChange={(e) => {
-                const newHours = [...hours];
-                newHours[index].open = e.target.value;
-                setHours(newHours);
-              }}
-            />
-          </div>
-          <div className="col-span-1">
-            <Input
-              type="time"
-              value={hour.close}
-              disabled={!hour.isOpen}
-              onChange={(e) => {
-                const newHours = [...hours];
-                newHours[index].close = e.target.value;
-                setHours(newHours);
-              }}
-            />
-          </div>
-          <div className="col-span-1 text-right">
-            {hour.isOpen ? (
-              <span className="text-green-600">Open</span>
-            ) : (
-              <span className="text-red-600">Closed</span>
-            )}
-          </div>
-        </div>
-      ))}
-    </CardContent>
-    <CardFooter>
-      <Button>Save Hours</Button>
-    </CardFooter>
-  </Card>
-);
+          ))}
+        </CardContent><CardFooter>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Hours'}
+            </Button>
+          </CardFooter></>
+    </Card>
+  );
+};
 
 const CategoriesTab = () => (
   <Card>
@@ -838,6 +979,8 @@ const CategoriesTab = () => (
 
 // MAIN PAGE COMPONENT
 export default function SalonProfilePage() {
+  const [vendor, setVendor] = useState(initialVendorData);
+  // Remove unused state since OpeningHoursTab manages its own state now
   const dispatch = useDispatch();
   const vendor = useSelector(selectVendor);
   const loading = useSelector(selectVendorLoading);
@@ -1113,7 +1256,7 @@ export default function SalonProfilePage() {
           />
         </TabsContent>
         <TabsContent value="opening-hours" className="mt-4">
-          <OpeningHoursTab hours={openingHours} setHours={setOpeningHours} />
+          <OpeningHoursTab />
         </TabsContent>
         <TabsContent value="categories" className="mt-4">
           <CategoriesTab />

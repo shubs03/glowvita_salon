@@ -7,7 +7,8 @@
     "./auth": "./src/auth.js",
 
     "./models/user": "./src/models/user.js",
-    "./models/staffModel":"./src/models/vendor/Staff.model.js",
+    "./models/staffModel": "./src/models/vendor/Staff.model.js",
+    "./models/VendorWorkingHours": "./src/models/Vendor/VendorWorkingHours.model.js",
     "./models": "./src/models",
     "./stateCity": "./src/state-city.json",
     "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",

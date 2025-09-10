@@ -9,11 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@genkit-ai/googleai": "^1.0.0",
     "@mapbox/mapbox-gl-draw": "^1.4.3",
+    "@reduxjs/toolkit": "^2.2.5",
     "@repo/lib": "*",
     "@repo/store": "*",
     "@repo/ui": "*",
-    "@reduxjs/toolkit": "^2.2.5",
+    "fabric": "^5.3.0",
+    "genkit": "^1.0.0",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.395.0",
     "mapbox-gl": "^3.4.0",
