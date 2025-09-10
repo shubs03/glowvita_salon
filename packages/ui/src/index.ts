@@ -18,3 +18,8 @@ export * from "./skeleton";
 export * from "./dropdown-menu";
 export * from "./avatar";
 export * from "./logout-confirmation-modal";
+export * from "./status-indicator";
+export * from "./floating-action-button";
+export * from "./stats-card";
+export * from "./modern-card";
+export * from "./page-container";

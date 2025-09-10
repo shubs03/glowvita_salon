@@ -3,14 +3,8 @@
 
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from "@repo/ui/card";
+import { ModernCard } from "@repo/ui/modern-card";
+import { PageContainer } from "@repo/ui/page-container";
 import {
   ArrowRight,
   Book,
@@ -46,6 +40,7 @@ import {
 import Image from "next/image";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 
 const FeatureItem = ({
   icon,
@@ -78,32 +73,30 @@ const BenefitItem = ({
   children: React.ReactNode;
   features: string[];
 }) => (
-  <div className="group relative p-6 md:p-8 bg-gradient-to-br from-background via-background to-primary/5 rounded-lg shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden text-left border border-border/50 hover:border-primary/20">
-    <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 ease-out"></div>
-    <div className="flex items-start gap-4 mb-4 relative z-10">
-      <div className="flex-shrink-0 bg-gradient-to-br from-primary/10 to-primary/5 h-12 w-12 md:h-14 md:w-14 flex items-center justify-center rounded-xl text-primary shadow-sm group-hover:shadow-md transition-shadow duration-300">
+  <ModernCard variant="glassmorphism" hover padding="lg" className="h-full">
+    <div className="flex items-start gap-4 mb-4">
+      <div className="flex-shrink-0 bg-primary/10 h-12 w-12 flex items-center justify-center rounded-xl text-primary">
         {icon}
       </div>
-      <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+      <h3 className="text-lg font-bold text-foreground">
         {title}
       </h3>
     </div>
-    <p className="text-muted-foreground text-sm mb-6 relative z-10 leading-relaxed">
+    <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
       {children}
     </p>
-    <ul className="space-y-3 text-sm relative z-10">
+    <ul className="space-y-3 text-sm">
       {features.map((feature, index) => (
         <li
           key={index}
-          className="flex items-center gap-3 text-muted-foreground group-hover:text-foreground transition-colors duration-300"
+          className="flex items-center gap-3 text-muted-foreground"
         >
           <Check className="h-4 w-4 text-blue-500 flex-shrink-0" />
           <span>{feature}</span>
         </li>
       ))}
     </ul>
-  </div>
+  </ModernCard>
 );
 
 const AdvantageCard = ({
@@ -117,23 +110,19 @@ const AdvantageCard = ({
   description: string;
   icon: React.ReactNode;
 }) => (
-  <div className="flex-shrink-0 w-64 md:w-80 h-80 md:h-96 bg-gradient-to-br from-background via-background to-primary/5 rounded-lg shadow-xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden group hover:shadow-2xl transition-all duration-500 border border-border/50">
-    <div className="absolute -top-10 -right-10 text-primary/5 text-9xl md:text-[120px] group-hover:text-primary/10 transition-colors duration-500">
-      {icon}
-    </div>
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-    <div className="relative z-10">
-      <p className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent group-hover:from-primary group-hover:to-primary transition-all duration-300">
+  <ModernCard variant="elevated" padding="lg" hover className="flex-shrink-0 w-64 md:w-80 h-80 md:h-96 flex flex-col justify-between">
+    <div>
+      <p className="text-4xl md:text-5xl font-bold text-primary mb-2">
         {stat}
       </p>
-      <h3 className="text-lg md:text-xl font-semibold mt-2 group-hover:text-primary transition-colors duration-300">
+      <h3 className="text-lg md:text-xl font-semibold">
         {title}
       </h3>
     </div>
-    <p className="text-muted-foreground text-sm md:text-base relative z-10 group-hover:text-foreground transition-colors duration-300">
+    <p className="text-muted-foreground text-sm md:text-base">
       {description}
     </p>
-  </div>
+  </ModernCard>
 );
 
 const TestimonialCard = ({
@@ -147,41 +136,38 @@ const TestimonialCard = ({
   role: string;
   rating: number;
 }) => (
-  <div
-    className="shrink-0 snap-center overflow-hidden group"
-    style={{ width: "300px" }}
-  >
-    <div className="flex h-[480px] flex-col items-start gap-3 overflow-hidden rounded-lg bg-gradient-to-br from-muted to-muted/80 p-8 text-muted-foreground shadow-lg group-hover:shadow-xl transition-all duration-300 border border-border/50">
-      <div className="flex h-5 gap-2 text-yellow-400">
+  <div className="shrink-0 snap-center" style={{ width: "300px" }}>
+    <ModernCard variant="glassmorphism" padding="lg" className="h-[480px] flex flex-col">
+      <div className="flex h-5 gap-1 text-yellow-400 mb-4">
         {[...Array(rating)].map((_, i) => (
           <Star
             key={i}
-            className="h-5 w-5 hover:scale-110 transition-transform duration-200"
+            className="h-4 w-4"
             fill="currentColor"
           />
         ))}
         {[...Array(5 - rating)].map((_, i) => (
-          <Star key={i + rating} className="h-5 w-5" />
+          <Star key={i + rating} className="h-4 w-4 text-muted-foreground" />
         ))}
       </div>
-      <div className="relative flex-1 overflow-hidden">
-        <div className="h-full overflow-hidden">
-          <p className="text-[17px] leading-6 group-hover:text-foreground transition-colors duration-300">
-            {review}
-          </p>
-        </div>
+      
+      <div className="flex-1 mb-4">
+        <p className="text-sm leading-6 text-foreground">
+          {review}
+        </p>
       </div>
-      <div className="flex w-full items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-col">
-          <p className="text-[17px] font-medium leading-[24px] text-foreground">
+      
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <p className="font-medium text-foreground">
             {author}
           </p>
-          <p className="truncate text-[15px] leading-[20px] text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {role}
           </p>
         </div>
       </div>
-    </div>
+    </ModernCard>
   </div>
 );
 
