@@ -1,46 +1,49 @@
 
-import { Card, CardContent } from '@repo/ui/card';
+import { Card, CardContent, CardHeader } from '@repo/ui/card';
 import Image from 'next/image';
-import { Star, ShoppingCart } from 'lucide-react';
 import { Button } from '@repo/ui/button';
+import { Badge } from '@repo/ui/badge';
+import { ShoppingCart } from 'lucide-react';
 
 interface ProductCardProps {
   name: string;
+  description: string;
   price: number;
   image: string;
   hint: string;
-  rating: number;
-  reviewCount: number;
+  vendorName: string;
+  isNew?: boolean;
 }
 
-export function ProductCard({ name, price, image, hint, rating, reviewCount }: ProductCardProps) {
+export function ProductCard({ name, description, price, image, hint, vendorName, isNew }: ProductCardProps) {
   return (
-    <Card className="overflow-hidden group transition-all duration-500 hover:shadow-2xl hover:shadow-primary/20 rounded-xl bg-background/30 backdrop-blur-xl border border-white/10 hover:-translate-y-2">
-      <div className="relative aspect-square overflow-hidden">
-        <Image
-          src={image}
-          alt={name}
-          layout="fill"
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-          data-ai-hint={hint}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 group-hover:from-black/50 transition-all duration-300"></div>
-      </div>
-      <CardContent className="p-4 bg-transparent">
-        <h3 className="font-bold text-lg truncate mb-1">{name}</h3>
-        <div className="flex items-center gap-2 mb-3">
-          <div className="flex items-center gap-0.5">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className={`h-4 w-4 ${i < Math.floor(rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-500'}`} />
-            ))}
-          </div>
-          <span className="text-xs text-muted-foreground">({reviewCount} reviews)</span>
+    <Card className="overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 flex flex-col group">
+      <CardHeader className="p-0 relative">
+        <div className="aspect-square relative rounded-t-2xl overflow-hidden">
+          <Image
+            src={image}
+            alt={name}
+            layout="fill"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
+            data-ai-hint={hint}
+          />
+           {isNew && (
+            <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground border-2 border-background shadow-lg">
+              NEW
+            </Badge>
+          )}
         </div>
-        <div className="flex items-center justify-between">
-          <p className="text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">₹{price.toFixed(2)}</p>
-          <Button size="sm" variant="outline" className="group/btn border-primary/50 hover:bg-primary/90 hover:text-primary-foreground transition-all duration-300">
-             <ShoppingCart className="mr-2 h-4 w-4 group-hover/btn:text-yellow-300 transition-colors" /> Add to Cart
-          </Button>
+      </CardHeader>
+      <CardContent className="p-4 flex-grow flex flex-col">
+        <p className="text-xs text-muted-foreground mb-1">Sold by {vendorName}</p>
+        <h3 className="text-lg font-semibold leading-tight group-hover:text-primary transition-colors">{name}</h3>
+        <p className="text-sm text-muted-foreground mt-2 flex-grow">{description}</p>
+        <div className="flex justify-between items-center mt-4">
+            <p className="text-xl font-bold">₹{price.toFixed(2)}</p>
+            <Button size="sm">
+                <ShoppingCart className="mr-2 h-4 w-4"/>
+                Add to Cart
+            </Button>
         </div>
       </CardContent>
     </Card>

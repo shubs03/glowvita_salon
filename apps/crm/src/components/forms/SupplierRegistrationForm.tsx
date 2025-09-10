@@ -1,67 +1,93 @@
 "use client";
 
-import React, { useState, Suspense, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Building, Map, User, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import { toast } from 'sonner';
 import { useCreateSupplierMutation } from '@repo/store/api';
-import { User, Building, ArrowRight, ArrowLeft, Map } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-// Import environment variable directly
-const NEXT_PUBLIC_MAPBOX_API_KEY = process.env.NEXT_PUBLIC_MAPBOX_API_KEY;
+import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../../packages/config/config';
 
 // Mapbox access token
 const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
 
-const StepIndicator = ({ currentStep }: { currentStep: number }) => {
-    const steps = [
-        { id: 1, name: 'Create Account', icon: User },
-        { id: 2, name: 'Business Details', icon: Building },
-    ];
-    
-    return (
-        <nav aria-label="Progress">
-            <ol role="list" className="flex items-center">
-                {steps.map((step, stepIdx) => (
-                    <li key={step.name} className={cn("relative", stepIdx !== steps.length - 1 ? 'flex-1' : '')}>
-                         <div className="flex items-center text-sm font-medium">
-                            <span className={cn(
-                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
-                                currentStep > step.id ? "bg-primary text-white" :
-                                currentStep === step.id ? "border-2 border-primary bg-primary/10 text-primary" :
-                                "border-2 border-gray-300 bg-background text-muted-foreground"
-                            )}>
-                                {currentStep > step.id ? <User className="h-5 w-5" /> : <step.icon className="h-5 w-5" />}
-                            </span>
-                            <span className={cn(
-                                "ml-3 hidden font-medium text-muted-foreground md:inline",
-                                currentStep >= step.id && "text-foreground"
-                            )}>
-                                {step.name}
-                            </span>
-                        </div>
-                        {stepIdx !== steps.length - 1 && (
-                            <div className="absolute right-0 top-4 -z-10 hidden h-0.5 w-full bg-gray-200 md:block" aria-hidden="true" />
-                        )}
-                    </li>
-                ))}
-            </ol>
-        </nav>
-    );
+interface FormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  mobile: string;
+  shopName: string;
+  country: string;
+  state: string;
+  city: string;
+  pincode: string;
+  address: string;
+  supplierType: string;
+  businessRegistrationNo: string;
+  location: { lat: number; lng: number } | null;
+  password: string;
+  confirmPassword: string;
+  referredByCode: string;
+}
+
+interface MapboxFeature {
+  id: string;
+  place_name: string;
+  geometry: {
+    coordinates: [number, number];
+  };
+  context?: Array<{
+    id: string;
+    text: string;
+  }>;
+}
+
+const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep: (step: number) => void }) => {
+  return (
+    <div className="w-full mb-4 mt-2">
+      <div className="flex space-x-2">
+        {/* Step 1 Line */}
+        <div 
+          className={cn(
+            "h-1 flex-1 rounded-full transition-colors cursor-pointer",
+            currentStep >= 1 ? "bg-purple-600" : "bg-gray-200"
+          )}
+          onClick={() => currentStep > 1 && setStep(1)}
+        />
+        {/* Step 2 Line */}
+        <div 
+          className={cn(
+            "h-1 flex-1 rounded-full transition-colors cursor-pointer",
+            currentStep >= 2 ? "bg-purple-600" : "bg-gray-200"
+          )}
+          onClick={() => currentStep > 2 && setStep(2)}
+        />
+        {/* Step 3 Line */}
+        <div 
+          className={cn(
+            "h-1 flex-1 rounded-full transition-colors cursor-pointer",
+            currentStep >= 3 ? "bg-purple-600" : "bg-gray-200"
+          )}
+          onClick={() => currentStep > 3 && setStep(3)}
+        />
+      </div>
+    </div>
+  );
 };
 
 export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const refCode = searchParams?.get('ref');
   
   const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
     email: '',
@@ -74,26 +100,98 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     address: 'N/A',
     supplierType: 'General',
     businessRegistrationNo: '',
-    location: null as { lat: number; lng: number } | null,
+    location: null,
     password: '',
     confirmPassword: '',
     referredByCode: refCode || '',
   });
 
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [createSupplier, { isLoading }] = useCreateSupplierMutation();
 
   // Map functionality states
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const marker = useRef<mapboxgl.Marker | null>(null);
 
-  const handleChange = (e: any) => {
+  useEffect(() => {
+    if (refCode) {
+      setFormData(prev => ({...prev, referredByCode: refCode}));
+    }
+  }, [refCode]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  const validateStep1 = () => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
+    if (!formData.firstName) newErrors.firstName = 'First name is required';
+    if (!formData.lastName) newErrors.lastName = 'Last name is required';
+    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.mobile) newErrors.mobile = 'Mobile number is required';
+    if (!formData.password) newErrors.password = 'Password is required';
+    if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
+    if (!formData.shopName) newErrors.shopName = 'Shop name is required';
+    if (!formData.supplierType) newErrors.supplierType = 'Supplier type is required';
+    if (!formData.businessRegistrationNo) newErrors.businessRegistrationNo = 'Business registration number is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep3 = () => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
+    if (!formData.address) newErrors.address = 'Address is required';
+    if (!formData.state) newErrors.state = 'State is required';
+    if (!formData.city) newErrors.city = 'City is required';
+    if (!formData.pincode) newErrors.pincode = 'Pincode is required';
+    if (!formData.location) newErrors.location = 'Location is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateStep1() || !validateStep2() || !validateStep3()) {
+        toast.error("Please ensure all required fields are filled correctly.");
+        return;
+    }
+
+    try {
+      // Prepare form data with proper location format
+      const submissionData = {
+        ...formData,
+        location: formData.location ? JSON.stringify(formData.location) : ''
+      };
+      
+      await createSupplier(submissionData).unwrap();
+      toast.success(`${formData.shopName} supplier registration submitted successfully!`);
+      onSuccess();
+    } catch (err) {
+       toast.error((err as any)?.data?.message || "Registration failed. Please try again.");
+    }
+  };
+  
+  const nextStep = () => {
+    if (step === 1 && validateStep1()) {
+        setStep(2);
+    } else if (step === 2 && validateStep2()) {
+        setStep(3);
+    }
+  }
+
+  const prevStep = () => setStep(s => s - 1);
 
   // Initialize Mapbox when modal opens
   useEffect(() => {
@@ -136,7 +234,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
           fetchAddress([lngLat.lng, lngLat.lat]);
         });
 
-        map.current.on('click', (e: any) => {
+        map.current.on('click', (e: mapboxgl.MapLayerMouseEvent) => {
           const { lng, lat } = e.lngLat;
           setFormData(prev => ({ 
             ...prev, 
@@ -241,7 +339,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
   };
 
   // Handle search result selection
-  const handleSearchResultSelect = (result: any) => {
+  const handleSearchResultSelect = (result: MapboxFeature) => {
     const coordinates = result.geometry.coordinates;
     const newLocation = { lat: coordinates[1], lng: coordinates[0] };
 
@@ -256,7 +354,11 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     if (map.current) {
       map.current.setCenter(coordinates);
       map.current.setZoom(15);
-      setTimeout(() => map.current!.resize(), 100);
+      setTimeout(() => {
+        if (map.current) {
+          map.current.resize();
+        }
+      }, 100);
     }
 
     if (marker.current) {
@@ -267,199 +369,305 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     setSearchQuery('');
   };
   
-  const validateStep1 = () => {
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.mobile || !formData.password) {
-        toast.error("Please fill all required fields in this step.");
-        return false;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match.");
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-    if (!validateStep1()) return;
-
-    try {
-      // Prepare form data with proper location format
-      const submissionData = {
-        ...formData,
-        location: formData.location ? JSON.stringify(formData.location) : ''
-      };
-      
-      await createSupplier(submissionData).unwrap();
-      toast.success("Supplier registration submitted successfully!");
-      onSuccess();
-    } catch (err) {
-       toast.error((err as any)?.data?.message || "Registration failed. Please try again.");
-    }
-  };
-  
-  const nextStep = () => {
-      if (validateStep1()) {
-          setStep(2);
-      }
-  }
-
-  const prevStep = () => setStep(1);
-
   return (
-    <div className="w-full max-w-xl mx-auto">
-        <div className="bg-background/70 backdrop-blur-sm border-white/20 shadow-2xl shadow-blue-500/10 p-8 rounded-lg">
-            <div className="mb-8">
-                <StepIndicator currentStep={step} />
-            </div>
-            <form onSubmit={handleSubmit} className="mt-8">
-                {step === 1 && (
-                    <div className="space-y-6 animate-in fade-in-50 duration-500">
-                        <h2 className="text-xl font-semibold text-center">Create Your Supplier Account</h2>
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <Input name="firstName" placeholder="First Name" onChange={handleChange} required />
-                            <Input name="lastName" placeholder="Last Name" onChange={handleChange} required />
-                        </div>
-                        <Input name="email" type="email" placeholder="Email Address" onChange={handleChange} required />
-                        <Input name="mobile" type="tel" placeholder="Mobile Number" onChange={handleChange} required />
-                        <Input name="password" type="password" placeholder="Password" onChange={handleChange} required />
-                        <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} required />
-                        <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} value={formData.referredByCode} />
-                    </div>
-                )}
-                {step === 2 && (
-                    <div className="space-y-6 animate-in fade-in-50 duration-500">
-                        <h2 className="text-xl font-semibold text-center">Tell us about your Business</h2>
-                        <Input name="shopName" placeholder="Shop Name" onChange={handleChange} required />
-                        <Input name="supplierType" placeholder="Supplier Type (e.g., Cosmetics, Equipment)" onChange={handleChange} required />
-                        <Input name="businessRegistrationNo" placeholder="Business Registration Number (Optional)" onChange={handleChange} value={formData.businessRegistrationNo} />
-                        
-                        <div className="space-y-2">
-                            <Label htmlFor="location">Location</Label>
-                            <div className="flex items-center gap-2">
-                                <Input
-                                    id="location"
-                                    value={formData.location ? `${formData.location.lat.toFixed(6)}, ${formData.location.lng.toFixed(6)}` : ''}
-                                    placeholder="Select location from map"
-                                    readOnly
-                                />
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setIsMapOpen(true)}
-                                >
-                                    <Map className="mr-2 h-4 w-4" />
-                                    Choose from Map
-                                </Button>
-                            </div>
-                        </div>
-                        
-                        <div className="grid md:grid-cols-3 gap-4">
-                            <Input name="city" placeholder="City" onChange={handleChange} value={formData.city} required />
-                            <Input name="state" placeholder="State" onChange={handleChange} value={formData.state} required />
-                            <Input name="pincode" placeholder="Pincode" onChange={handleChange} value={formData.pincode} required />
-                        </div>
-                        
-                        <Input name="address" placeholder="Business Address" onChange={handleChange} value={formData.address} required />
-                    </div>
-                )}
-                <div className="flex justify-between pt-6 border-t mt-8">
-                    <Button type="button" variant="outline" onClick={prevStep} disabled={step === 1}>
-                        <ArrowLeft className="h-4 w-4 mr-2" /> Back
-                    </Button>
-                    {step < 2 ? (
-                        <Button type="button" onClick={nextStep}>
-                            Next <ArrowRight className="h-4 w-4 ml-2" />
-                        </Button>
-                    ) : (
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading ? 'Creating Account...' : 'Complete Registration'}
-                        </Button>
-                    )}
-                </div>
-            </form>
-
-            {/* Map Modal */}
-            <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
-                <DialogContent className="sm:max-w-4xl max-h-[80vh]">
-                    <DialogHeader>
-                        <DialogTitle>Select Location</DialogTitle>
-                        <DialogDescription>
-                            Search for a location, click on the map, or drag the marker to select the exact position.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 flex flex-col h-[60vh]">
-                        <div className="relative">
-                            <Input
-                                placeholder="Search for a location (e.g., Mumbai, Delhi, Bangalore)"
-                                value={searchQuery}
-                                onChange={(e) => {
-                                    setSearchQuery(e.target.value);
-                                    handleSearch(e.target.value);
-                                }}
-                                className="w-full"
-                            />
-                            {searchResults.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto mt-1">
-                                    {searchResults.map((result) => (
-                                        <div
-                                            key={result.id}
-                                            className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0 text-sm"
-                                            onClick={() => handleSearchResultSelect(result)}
-                                        >
-                                            <div className="font-medium">{result.place_name}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        
-                        {formData.location && (
-                            <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                                <strong>Selected Location:</strong> {formData.location?.lat.toFixed(6)}, {formData.location?.lng.toFixed(6)}
-                            </div>
-                        )}
-                        
-                        <div className="flex-1 relative border rounded-lg overflow-hidden" style={{ minHeight: '400px' }}>
-                            <div 
-                                ref={mapContainer} 
-                                className="w-full h-full"
-                                style={{ minHeight: '400px' }}
-                            />
-                            
-                            {!MAPBOX_TOKEN && (
-                                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-                                    <div className="text-center">
-                                        <p className="text-gray-600">Map unavailable</p>
-                                        <p className="text-sm text-gray-500">Mapbox API key not configured</p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="text-xs text-gray-500 space-y-1">
-                            <p>• Click anywhere on the map to place the marker</p>
-                            <p>• Drag the marker to adjust the location</p>
-                            <p>• Use the search box to find specific places</p>
-                        </div>
-                    </div>
-                    
-                    <DialogFooter className="mt-4">
-                        <Button type="button" variant="outline" onClick={() => setIsMapOpen(false)}>
-                            Cancel
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={() => setIsMapOpen(false)}
-                        >
-                            Confirm Location
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+    <>
+      <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2">
+        <div className="fixed top-4 sm:top-8 left-4 sm:left-10 right-4 sm:right-10 flex justify-between items-center z-20">
+          <Button 
+            type="button" 
+            variant="outline" 
+            onClick={step === 1 ? () => window.history.back() : prevStep} 
+            className="px-3 sm:px-4 py-2 text-base sm:text-lg text-gray-600 border-gray-300 hover:bg-gray-50 h-10 sm:h-auto"
+          >
+            ← {step === 1 ? 'Back to Role Selection' : 'Back'}
+          </Button>
+          {step < 3 ? (
+            <Button 
+              type="button" 
+              onClick={nextStep} 
+              className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
+            >
+              Continue →
+            </Button>
+          ) : (
+            <Button 
+              type="submit" 
+              disabled={isLoading} 
+              className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
+              form="registration-form"
+            >
+              {isLoading ? "Submitting..." : "Complete Registration"}
+            </Button>
+          )}
         </div>
-    </div>
+        
+        <div className="mt-16 sm:mt-8">
+          <StepIndicator currentStep={step} setStep={setStep} />
+        </div>
+      
+        <form id="registration-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 pb-8 mt-4">
+          <div className="flex flex-col justify-start" style={{ minHeight: 'calc(100vh - 200px)' }}>
+            {step === 1 && (
+              <div className="space-y-4 sm:space-y-6 animate-in fade-in-50 duration-500">
+                <div className="mb-4 sm:mb-6">
+                  <p className="text-base sm:text-lg text-gray-500 mb-2">Account setup</p>
+                  <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Create your account</h1>
+                  <p className="text-gray-600 text-base sm:text-lg">Enter your personal details to get started.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <Input 
+                    name="firstName" 
+                    placeholder="First Name" 
+                    onChange={handleChange} 
+                    value={formData.firstName} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                  <Input 
+                    name="lastName" 
+                    placeholder="Last Name" 
+                    onChange={handleChange} 
+                    value={formData.lastName} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <Input 
+                    name="email" 
+                    type="email" 
+                    placeholder="Email Address" 
+                    onChange={handleChange} 
+                    value={formData.email} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                  <Input 
+                    name="mobile" 
+                    type="tel" 
+                    placeholder="Mobile Number" 
+                    onChange={handleChange} 
+                    value={formData.mobile} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <Input 
+                    name="password" 
+                    type="password"
+                    placeholder="Password (min. 8 characters)" 
+                    onChange={handleChange} 
+                    value={formData.password} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                  <Input 
+                    name="confirmPassword" 
+                    type="password"
+                    placeholder="Confirm Password" 
+                    onChange={handleChange} 
+                    value={formData.confirmPassword} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                </div>
+                <Input 
+                  name="referredByCode" 
+                  placeholder="Referral Code (Optional)" 
+                  onChange={handleChange} 
+                  value={formData.referredByCode} 
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                />
+              </div>
+            )}
+            
+            {step === 2 && (
+              <div className="space-y-4 sm:space-y-6 animate-in fade-in-50 duration-500">
+                <div className="mb-4 sm:mb-6">
+                  <p className="text-base sm:text-lg text-gray-500 mb-2">Business Information</p>
+                  <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Tell us about your Business</h1>
+                  <p className="text-gray-600 text-base sm:text-lg">Provide basic information about your business.</p>
+                </div>
+                <Input 
+                  name="shopName" 
+                  placeholder="Shop Name" 
+                  onChange={handleChange} 
+                  value={formData.shopName} 
+                  required 
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                />
+                <Input 
+                  name="supplierType" 
+                  placeholder="Supplier Type (e.g., Cosmetics, Equipment)" 
+                  onChange={handleChange} 
+                  value={formData.supplierType} 
+                  required 
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                />
+                <Input 
+                  name="businessRegistrationNo" 
+                  placeholder="Business Registration Number" 
+                  onChange={handleChange} 
+                  value={formData.businessRegistrationNo} 
+                  required 
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                />
+              </div>
+            )}
+            
+            {step === 3 && (
+              <div className="space-y-4 sm:space-y-6 animate-in fade-in-50 duration-500">
+                <div className="mb-4 sm:mb-6">
+                  <p className="text-base sm:text-lg text-gray-500 mb-2">Business Location</p>
+                  <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Business Address Details</h1>
+                  <p className="text-gray-600 text-base sm:text-lg">Provide your business location and address details.</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="location" className="text-base sm:text-lg">Location</Label>
+                  <div className="flex flex-col gap-3">
+                    <Input
+                      id="location"
+                      value={formData.location ? `${formData.location.lat.toFixed(6)}, ${formData.location.lng.toFixed(6)}` : ''}
+                      placeholder="Select location from map"
+                      readOnly
+                      className="flex-1 h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      onClick={() => setIsMapOpen(true)}
+                      className="w-full h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                    >
+                      <Map className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      Choose from Map
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <Input 
+                    name="city" 
+                    placeholder="City" 
+                    onChange={handleChange} 
+                    value={formData.city} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                  <Input 
+                    name="state" 
+                    placeholder="State" 
+                    onChange={handleChange} 
+                    value={formData.state} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <Input 
+                    name="address" 
+                    placeholder="Business Address" 
+                    onChange={handleChange} 
+                    value={formData.address} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                  <Input 
+                    name="pincode" 
+                    placeholder="Pincode" 
+                    onChange={handleChange} 
+                    value={formData.pincode} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </form>
+
+        {/* Map Modal */}
+        <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+          <DialogContent className="sm:max-w-4xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Select Location</DialogTitle>
+              <DialogDescription>
+                Search for a location, click on the map, or drag the marker to select the exact position.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 flex flex-col max-h-[50vh] overflow-y-auto">
+              <div className="relative">
+                <Input
+                  placeholder="Search for a location (e.g., Mumbai, Delhi, Bangalore)"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    handleSearch(e.target.value);
+                  }}
+                  className="w-full"
+                />
+                {searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto mt-1">
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.id}
+                        className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0 text-sm"
+                        onClick={() => handleSearchResultSelect(result)}
+                      >
+                        <div className="font-medium">{result.place_name}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {formData.location && (
+                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                  <strong>Selected Location:</strong> {formData.location?.lat.toFixed(6)}, {formData.location?.lng.toFixed(6)}
+                </div>
+              )}
+              
+              <div className="relative border rounded-lg overflow-hidden" style={{ height: '300px' }}>
+                <div 
+                  ref={mapContainer} 
+                  className="w-full h-full"
+                />
+                
+                {!MAPBOX_TOKEN && (
+                  <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-gray-600">Map unavailable</p>
+                      <p className="text-sm text-gray-500">Mapbox API key not configured</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="text-xs text-gray-500 space-y-1">
+                <p>• Click anywhere on the map to place the marker</p>
+                <p>• Drag the marker to adjust the location</p>
+                <p>• Use the search box to find specific places</p>
+              </div>
+            </div>
+            
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setIsMapOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setIsMapOpen(false)}
+              >
+                Confirm Location
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
 }
 
