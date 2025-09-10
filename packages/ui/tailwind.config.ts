@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 const config: Omit<Config, "content"> = {
@@ -185,7 +186,7 @@ const config: Omit<Config, "content"> = {
     function ({ addUtilities }: { addUtilities: any }) {
       addUtilities({
         '.futuristic-clip-path': {
-          'clip-path': 'polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%, 0 20px)',
+          'clip-path': 'polygon(0 0, 100% 0, 100% calc(100% - 30px), calc(100% - 30px) 100%, 0 100%)',
         },
         '.perspective-1000': {
           'perspective': '1000px',

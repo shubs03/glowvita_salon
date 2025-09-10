@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Star, PlayCircle, Shield, Lock, FileCheck, ShieldCheck } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import {Card, CardContent} from "@repo/ui/card";
+import { ModernCard } from '@repo/ui/modern-card';
 
 export const AdvantageCard = ({
   stat,
@@ -36,60 +37,11 @@ export const AdvantageCard = ({
   </div>
 );
 
-const TestimonialCard = ({
-  review,
-  author,
-  role,
-  rating,
-}: {
-  review: string;
-  author: string;
-  role: string;
-  rating: number;
-}) => (
-  <div
-    className="shrink-0 snap-center overflow-hidden group"
-    style={{ width: "300px" }}
-  >
-    <div className="flex h-[480px] flex-col items-start gap-3 overflow-hidden rounded-lg bg-gradient-to-br from-muted to-muted/80 p-8 text-muted-foreground shadow-lg group-hover:shadow-xl transition-all duration-300 border border-border/50">
-      <div className="flex h-5 gap-2 text-yellow-400">
-        {[...Array(rating)].map((_, i) => (
-          <Star
-            key={i}
-            className="h-5 w-5 hover:scale-110 transition-transform duration-200"
-            fill="currentColor"
-          />
-        ))}
-        {[...Array(5 - rating)].map((_, i) => (
-          <Star key={i + rating} className="h-5 w-5" />
-        ))}
-      </div>
-      <div className="relative flex-1 overflow-hidden">
-        <div className="h-full overflow-hidden">
-          <p className="text-[17px] leading-6 group-hover:text-foreground transition-colors duration-300">
-            {review}
-          </p>
-        </div>
-      </div>
-      <div className="flex w-full items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-col">
-          <p className="text-[17px] font-medium leading-[24px] text-foreground">
-            {author}
-          </p>
-          <p className="truncate text-[15px] leading-[20px] text-muted-foreground">
-            {role}
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
 const VideoTestimonialCard = () => (
   <div className="h-[480px] w-[80vw] shrink-0 snap-center overflow-hidden laptop:w-[853px] group">
     <div className="relative size-full overflow-hidden rounded-lg shadow-xl group-hover:shadow-2xl transition-shadow duration-300">
       <Image
-        src="https://placehold.co/853x480.png"
+        src="https://picsum.photos/seed/video/853/480"
         alt="Testimonial video poster"
         layout="fill"
         objectFit="cover"
@@ -101,7 +53,7 @@ const VideoTestimonialCard = () => (
           <div className="flex items-center gap-3">
             <div className="relative flex size-10 shrink-0 overflow-hidden rounded-full border-2 border-white/80">
               <Image
-                src="https://placehold.co/40x40.png"
+                src="https://picsum.photos/seed/avatar1/40/40"
                 alt="Chris Ward"
                 width={40}
                 height={40}
@@ -142,29 +94,8 @@ export const VideoTestimonialSection = () => (
                     recognized time and time again.
                 </p>
             </div>
-            <div className="relative">
-                <div className="absolute left-0 top-0 bottom-0 w-8 md:w-20 bg-gradient-to-r from-secondary/20 to-transparent z-10 pointer-events-none"></div>
-                <div className="absolute right-0 top-0 bottom-0 w-8 md:w-20 bg-gradient-to-l from-secondary/20 to-transparent z-10 pointer-events-none"></div>
-                <div
-                    className="flex snap-x snap-mandatory gap-6 md:gap-8 overflow-x-auto scroll-smooth px-5 pb-4"
-                    style={{ scrollbarWidth: "none" }}
-                >
-                    <div className="flex gap-6 md:gap-8">
-                        <VideoTestimonialCard />
-                        <TestimonialCard
-                            author="Pamela B"
-                            role="Salon owner, NYC"
-                            rating={5}
-                            review="I work with booth renters at my top-rated salon in Manhattan. I love this CRM because it offers my clients a professional appointment booking experience with seamless online booking features, automated reminders, and the best payment processing rates."
-                        />
-                        <TestimonialCard
-                            author="Alex E"
-                            role="Hair stylist and owner"
-                            rating={5}
-                            review="This appointment scheduling software is very user friendly and it's incredibly powerful! I decided to give it a go and was utterly surprised as it had more functionality than previous software I was using. The marketplace has been incredible for our salon business too."
-                        />
-                    </div>
-                </div>
+            <div className="flex justify-center">
+              <VideoTestimonialCard />
             </div>
         </div>
     </section>
@@ -212,4 +143,3 @@ export const SecuritySection = () => (
         </div>
     </section>
 );
-
