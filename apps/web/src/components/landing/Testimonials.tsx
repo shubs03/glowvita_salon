@@ -84,7 +84,9 @@ export function Testimonials() {
         <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
             <div className="flex w-fit animate-slide hover:[animation-play-state:paused]">
                 {[...testimonials, ...testimonials].map((testimonial, i) => (
-                    <TestimonialCard key={i} {...testimonial} />
+                    <div key={i} className="px-4">
+                        <TestimonialCard {...testimonial} />
+                    </div>
                 ))}
             </div>
         </div>

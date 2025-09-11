@@ -31,7 +31,7 @@ const Marquee = ({ logos, reverse = false }: { logos: { src: string, alt: string
         <div className={`flex w-fit items-center ${reverse ? 'animate-slide-rtl' : 'animate-slide'} hover:[animation-play-state:paused]`}>
             {[...logos, ...logos, ...logos, ...logos].map((logo, index) => (
                 <figure key={index} className="size-20 md:size-[120px] bg-background rounded-full flex items-center justify-center mx-4 md:mx-[17px] border-[10px] border-secondary/50 shrink-0">
-                    <Image src={logo.src} alt={logo.alt} width={48} height={48} className="size-12" data-ai-hint={logo.hint} />
+                    <Image src={logo.src} alt={logo.alt} width={48} height={48} className="size-12 rounded-full" data-ai-hint={logo.hint} />
                 </figure>
             ))}
         </div>
@@ -50,7 +50,8 @@ export function Integrations() {
                 Enhance your productivity effortlessly with over 50 integrations.
               </h2>
               <p className="text-muted-foreground max-w-[582px] mx-auto">
-                Until recently, the prevailing view assumed lorem ipsum was born as a nonsense text. It's not Latin though it looks like nothing.
+                Until recently, the prevailing view assumed lorem ipsum was born as a nonsense text. It's
+                not Latin though it looks like nothing.
               </p>
             </div>
           </div>
