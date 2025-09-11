@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
@@ -14,14 +15,14 @@ const services = [
   {
     icon: <Bot className="h-8 w-8" />,
     title: "AI-Powered Applications",
-    description: "Boost your workflow automation and improve efficiency with custom-built AI applications tailored to your needs.",
-    className: "",
+    description: "Boost your workflow automation and improve efficiency.",
+    className: "lg:col-span-1",
   },
   {
     icon: <BrainCircuit className="h-8 w-8" />,
     title: "End-to-End AI Consulting",
     description: "From strategy to implementation, our AI experts will help you discover your business's full potential.",
-    className: "",
+    className: "lg:col-span-1",
   },
   {
     icon: <Code className="h-8 w-8" />,
@@ -62,7 +63,7 @@ export function Services() {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {services.map((service, index) => (
                 <ServiceCard key={index} {...service} />
             ))}
