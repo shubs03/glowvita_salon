@@ -1,19 +1,22 @@
 
 "use client";
 
-import { HeroSection } from "@/components/landing/HeroSection";
-import { AppCTA } from "@/components/landing/AppCTA";
-import { FeaturedSalons } from "@/components/landing/FeaturedSalons";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import { PlatformFor } from "@/components/landing/PlatformFor";
-import { Testimonials } from "@/components/landing/Testimonials";
-import { Offers } from "@/components/landing/Offers";
-import { FAQ } from "@/components/landing/FAQ";
-import { AdvantageCard, VideoTestimonialSection, SecuritySection } from "@/components/landing/NewSections";
-import { Award, Users, LineChart, Clock } from 'lucide-react';
-import { FeaturedProducts } from "@/components/landing/FeaturedProducts";
+import {
+  HeroSection,
+  AppCTA,
+  FeaturedSalons,
+  HowItWorks,
+  PlatformFor,
+  Testimonials,
+  Offers,
+  FAQ,
+  AdvantageCard,
+  VideoTestimonialSection,
+  SecuritySection,
+  FeaturedProducts
+} from "@/components/landing";
+import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
-import { ArrowRight } from 'lucide-react';
 
 export default function HomePage() {
 
