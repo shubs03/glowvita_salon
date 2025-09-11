@@ -76,7 +76,7 @@ const config: Omit<Config, "content"> = {
           '0%': { transform: 'translateX(-100%) translateY(-100%) rotate(30deg)' },
           '100%': { transform: 'translateX(100%) translateY(100%) rotate(30deg)' },
         },
-        // Enhanced professional keyframes
+        // Enhanced professional animations
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-20px)' },
@@ -173,8 +173,8 @@ const config: Omit<Config, "content"> = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        body: ["Inter", "sans-serif"],
-        headline: ["'Space Grotesk'", "sans-serif"],
+        body: ["Roboto", "sans-serif"],
+        headline: ["Roboto", "sans-serif"],
       },
       perspective: {
         '1000': '1000px',
