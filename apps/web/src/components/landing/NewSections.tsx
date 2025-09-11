@@ -1,8 +1,7 @@
-
 "use client";
 
 import Image from 'next/image';
-import { Star, PlayCircle, Shield, Lock, FileCheck, ShieldCheck, Check } from 'lucide-react';
+import { Star, PlayCircle, Shield, Lock, FileCheck, ShieldCheck, Check, Percent, Zap, Database } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import {Card, CardContent} from "@repo/ui/card";
 import { ModernCard } from '@repo/ui/modern-card';
@@ -101,8 +100,7 @@ export const VideoTestimonialSection = () => (
     </section>
 );
 
-const SecurityFeature = ({ icon, title, description }: { icon: React.ElementType, title: string, description: string }) => {
-  const Icon = icon;
+const SecurityFeature = ({ icon: Icon, title, description, stat }: { icon: React.ElementType, title: string, description: string, stat: string }) => {
   return (
     <div className="group relative rounded-xl border border-border/30 bg-background/50 p-6 text-center transition-all duration-500 transform-style-3d hover:-translate-y-2 hover:rotate-x-8">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -115,20 +113,24 @@ const SecurityFeature = ({ icon, title, description }: { icon: React.ElementType
             <h3 className="font-semibold text-lg mb-2 text-foreground transition-colors duration-300 group-hover:text-primary">
                 {title}
             </h3>
-            <p className="text-sm text-muted-foreground transition-colors duration-300 group-hover:text-foreground/80">
+            <p className="text-sm text-muted-foreground transition-colors duration-300 group-hover:text-foreground/80 mb-4">
                 {description}
             </p>
+            <div className="mt-auto px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold">
+                {stat}
+            </div>
         </div>
     </div>
   );
 };
 
 export const SecuritySection = () => (
-  <section className="py-16 bg-gradient-to-br from-background via-primary/5 to-background">
+  <section className="py-16 bg-gradient-to-br from-background via-secondary/10 to-background relative">
+    <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-[0.05]"></div>
     <div className="container mx-auto px-4">
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
             <Shield size={16} />
             Your Data is Safe
           </div>
@@ -146,17 +148,19 @@ export const SecuritySection = () => (
                   "Granular Staff Access Control",
               ].map((feature, i) => (
                   <li key={i} className="flex items-center gap-3 text-muted-foreground">
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <div className="flex-shrink-0 h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Check className="h-3.5 w-3.5 text-primary" />
+                      </div>
                       <span>{feature}</span>
                   </li>
               ))}
           </ul>
         </div>
         <div className="grid sm:grid-cols-2 gap-6 perspective-1000">
-          <SecurityFeature icon={Shield} title="256-bit SSL" description="Bank-level encryption for all data." />
-          <SecurityFeature icon={Lock} title="GDPR Compliant" description="Full compliance with data privacy regulations." />
-          <SecurityFeature icon={FileCheck} title="Daily Backups" description="Automated data backups to prevent loss." />
-          <SecurityFeature icon={ShieldCheck} title="ISO 27001 Certified" description="Internationally recognized security standard." />
+          <SecurityFeature icon={Shield} title="256-bit SSL" description="Bank-level encryption for all data." stat="AES-256" />
+          <SecurityFeature icon={Lock} title="GDPR Compliant" description="Full compliance with data privacy regulations." stat="Privacy First" />
+          <SecurityFeature icon={FileCheck} title="Daily Backups" description="Automated data backups to prevent loss." stat="99.99% Uptime" />
+          <SecurityFeature icon={Database} title="PCI DSS Level 1" description="Secure payment processing." stat="Service Provider" />
         </div>
       </div>
     </div>
