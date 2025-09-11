@@ -22,7 +22,7 @@ export function Offers() {
       <div className="container mx-auto px-4 relative z-10">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Limited-Time Offers</h2>
-          <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Exclusive data-packets for premium services.</p>
+          <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">Exclusive data-packets for premium services.</p>
         </div>
         
         <div className="w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_5%,white_95%,transparent)]">

@@ -26,7 +26,7 @@ export function HowItWorks() {
         <div className="container mx-auto px-4">
             <div className="text-center mb-16">
                 <h2 className="text-3xl md:text-4xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">The Protocol</h2>
-                <p className="text-muted-foreground mt-2">Initiating your next upgrade sequence is simple.</p>
+                <p className="text-lg text-muted-foreground mt-2">Initiating your next upgrade sequence is simple.</p>
             </div>
             <div className="relative max-w-lg mx-auto md:max-w-4xl">
                  <div className="absolute top-0 left-1/2 w-1 h-full bg-border/50 -translate-x-1/2 hidden md:block"></div>
@@ -44,7 +44,7 @@ export function HowItWorks() {
                            </div>
                            <div className={`md:w-1/2 ${index % 2 === 0 ? '' : 'md:text-right'}`}>
                                 <h3 className="text-2xl font-semibold mb-2">{step.title}</h3>
-                                <p className="text-muted-foreground">{step.description}</p>
+                                <p className="text-lg text-muted-foreground">{step.description}</p>
                            </div>
                        </div>
                     ))}

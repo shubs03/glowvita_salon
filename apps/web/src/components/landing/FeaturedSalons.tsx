@@ -23,7 +23,7 @@ export function FeaturedSalons() {
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Featured Holo-Salons</h2>
-          <p className="text-muted-foreground mt-2 max-w-2xl mx-auto">Discover elite cyber-stylists and bio-spas in your designated sector.</p>
+          <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">Discover elite cyber-stylists and bio-spas in your designated sector.</p>
         </div>
         <div className="flex justify-center gap-2 mb-8 flex-wrap">
           {locations.map(loc => (

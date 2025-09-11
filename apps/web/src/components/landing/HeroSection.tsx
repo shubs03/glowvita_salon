@@ -1,8 +1,9 @@
+
 "use client";
 
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
-import { ArrowRight, Sparkles, Star, Shield, Users, TrendingUp } from 'lucide-react';
+import { ArrowRight, Sparkles, Star } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -74,15 +75,6 @@ export function HeroSection() {
 
       <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
 
-      <div className="absolute bottom-0 left-0 w-full h-[50px] overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
-        <div className="flex w-fit animate-slide hover:[animation-play-state:paused]">
-          {[...categories, ...categories].map((category, index) => (
-            <div key={index} className="flex-shrink-0 mx-3 py-2 px-6 text-lg font-semibold rounded-full bg-background/50 backdrop-blur-sm border border-border/30 shadow-md">
-              {category}
-            </div>
-          ))}
-        </div>
-      </div>
     </section>
   );
 }
