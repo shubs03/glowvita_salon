@@ -1,130 +1,67 @@
-
 "use client";
 
 import Image from 'next/image';
-import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
-import { Card } from '@repo/ui/card';
+import { Card, CardContent } from '@repo/ui/card';
+import { Button } from '@repo/ui/button';
 
 const features = [
   {
-    title: "Big data consulting",
-    description: "Utilize comprehensive data security frameworks to effectively safeguard sensitive information from unauthorized access and breaches.",
-    images: [
-      { src: "https://picsum.photos/seed/kf1a/233/300", alt: "time increase", hint: "data chart" },
-      { src: "https://picsum.photos/seed/kf1b/350/250", alt: "control card", hint: "dashboard interface" }
-    ],
-    trustedBy: false
+    title: "Web Security",
+    description: "Safeguard websites from cyber threats, malware, and unauthorized access.",
+    image: "https://picsum.photos/seed/websec/402/300",
+    hint: "server security"
   },
   {
-    title: "Machine learning & AI",
-    description: "Utilize advanced predictive analytics to proactively identify potential threats before they escalate by analyzing patterns and trends in data.",
-    images: [
-      { src: "https://picsum.photos/seed/kf2a/326/317", alt: "revenue", hint: "financial graph" },
-      { src: "https://picsum.photos/seed/kf2b/255/178", alt: "balance", hint: "abstract data" }
-    ],
-    trustedBy: false
+    title: "Software Analytics",
+    description: "Ensure your applications and systems are always up-to-date and secure.",
+    image: "https://picsum.photos/seed/softan/402/300",
+    hint: "data analytics chart"
   },
   {
-    title: "Business analysis",
-    description: "Continuously monitor for vulnerabilities and implement proactive measures to prevent cyber attacks before they can occur.",
-    images: [
-      { src: "https://picsum.photos/seed/kf3a/350/345", alt: "earning", hint: "business meeting" },
-      { src: "https://picsum.photos/seed/kf3b/286/190", alt: "daily payment", hint: "mobile payment" }
-    ],
-    trustedBy: true
-  },
-  {
-    title: "Data visualization",
-    description: "Utilize advanced predictive analytics to proactively identify potential threats before they escalate by analyzing patterns and trends in data.",
-    images: [
-      { src: "https://picsum.photos/seed/kf4a/408/300", alt: "revenue green", hint: "data visualization" },
-      { src: "https://picsum.photos/seed/kf4b/225/200", alt: "currency rate", hint: "stock market chart" }
-    ],
-    trustedBy: false
+    title: "Payment Security",
+    description: "End-to-end encryption and fraud prevention for online transactions.",
+    image: "https://picsum.photos/seed/paysec/402/300",
+    hint: "secure payment"
   }
 ];
 
 export function KeyFeatures() {
   return (
-    <section className="py-20 bg-secondary/50">
+    <section className="py-20 md:py-24 bg-background">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <Badge variant="secondary" className="bg-green-100 text-green-700 mb-4">Services</Badge>
-          <h2 className="text-3xl md:text-4xl font-bold font-headline">Enterprise-grade security & intelligence</h2>
+        <div className="max-w-3xl mx-auto text-center space-y-5 mb-12 md:mb-16">
+          <Badge variant="secondary" className="bg-primary/10 text-primary">More features</Badge>
+          <h2 className="text-3xl lg:text-4xl font-bold font-headline">Managing your money has never been easier</h2>
         </div>
-
-        <div className="space-y-8">
-          {features.map((feature, index) => (
-            <Card key={index} className="p-8 lg:p-12 rounded-2xl border bg-background overflow-hidden">
-              <div className={`grid grid-cols-1 lg:grid-cols-2 items-center gap-12 lg:gap-20`}>
-                <div className={`space-y-6 ${index % 2 !== 0 ? 'lg:order-2' : ''}`}>
-                  <h3 className="text-2xl font-bold">{feature.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
-                  <Button>Read More</Button>
-                </div>
-                
-                <div className={`lg:col-span-1 ${index % 2 !== 0 ? 'lg:order-1' : ''}`}>
-                  {index === 0 && (
-                    <div className="flex items-center gap-8">
-                      <figure className="w-[233px] rounded-2xl overflow-hidden shadow-lg">
-                        <Image src={feature.images[0].src} alt={feature.images[0].alt} width={233} height={300} data-ai-hint={feature.images[0].hint} className="w-full" />
-                      </figure>
-                      <figure className="w-[350px] rounded-2xl overflow-hidden shadow-lg mt-8">
-                        <Image src={feature.images[1].src} alt={feature.images[1].alt} width={350} height={250} data-ai-hint={feature.images[1].hint} className="w-full" />
-                      </figure>
-                    </div>
-                  )}
-                   {index === 1 && (
-                     <div className="flex items-center gap-8">
-                        <figure className="w-[326px] h-[317px] rounded-2xl overflow-hidden shadow-lg">
-                            <Image src={feature.images[0].src} alt={feature.images[0].alt} width={326} height={317} data-ai-hint={feature.images[0].hint} className="w-full h-full object-cover" />
-                        </figure>
-                        <figure className="w-[255px] h-[178px] rounded-2xl overflow-hidden shadow-lg">
-                           <Image src={feature.images[1].src} alt={feature.images[1].alt} width={255} height={178} data-ai-hint={feature.images[1].hint} className="w-full h-full object-cover" />
-                        </figure>
-                    </div>
-                  )}
-                  {index === 2 && (
-                    <div className="flex items-start gap-8">
-                        <figure className="w-[350px] h-[345px] rounded-2xl overflow-hidden shadow-lg">
-                           <Image src={feature.images[0].src} alt={feature.images[0].alt} width={350} height={345} data-ai-hint={feature.images[0].hint} className="w-full h-full object-cover" />
-                        </figure>
-                        <div className="space-y-8">
-                            <figure className="w-[286px] h-[190px] rounded-2xl overflow-hidden shadow-lg">
-                                <Image src={feature.images[1].src} alt={feature.images[1].alt} width={286} height={190} data-ai-hint={feature.images[1].hint} className="w-full h-full object-cover" />
-                            </figure>
-                            <div>
-                                <div className="flex -space-x-3.5 cursor-pointer mb-4">
-                                  <Image className="inline-block size-11 rounded-full ring-4 ring-background" src="https://picsum.photos/seed/avatar1/44/44" alt="Avatar 1" width={44} height={44} data-ai-hint="person" />
-                                  <Image className="inline-block size-11 rounded-full ring-4 ring-background" src="https://picsum.photos/seed/avatar2/44/44" alt="Avatar 2" width={44} height={44} data-ai-hint="person" />
-                                  <Image className="inline-block size-11 rounded-full ring-4 ring-background" src="https://picsum.photos/seed/avatar3/44/44" alt="Avatar 3" width={44} height={44} data-ai-hint="person" />
-                                   <div className="inline-flex items-center justify-center size-11 bg-primary text-primary-foreground rounded-full ring-4 ring-background font-medium text-xs">
-                                        99+
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="font-medium text-foreground">Trusted by 20k+</p>
-                                    <p className="text-sm text-muted-foreground">Customers across the globe</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                  )}
-                  {index === 3 && (
-                    <div className="flex items-start -space-x-20">
-                        <figure className="w-[408px] rounded-2xl overflow-hidden shadow-lg">
-                             <Image src={feature.images[0].src} alt={feature.images[0].alt} width={408} height={300} data-ai-hint={feature.images[0].hint} className="w-full h-full object-cover" />
-                        </figure>
-                        <figure className="w-[225px] rounded-2xl overflow-hidden shadow-lg mt-4">
-                           <Image src={feature.images[1].src} alt={feature.images[1].alt} width={225} height={200} data-ai-hint={feature.images[1].hint} className="w-full h-full object-cover" />
-                        </figure>
-                    </div>
-                  )}
+        <div className="mb-12 sm:mb-16 md:mb-20">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => (
+              <div key={index}>
+                <div className="space-y-4">
+                  <div className="border border-border/50 bg-secondary/30 p-2.5 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+                    <figure className="w-full aspect-[4/3] rounded-lg overflow-hidden">
+                      <Image 
+                        src={feature.image} 
+                        alt={feature.title} 
+                        width={402}
+                        height={300}
+                        data-ai-hint={feature.hint}
+                        className="w-full h-full object-cover" 
+                      />
+                    </figure>
+                  </div>
+                  <div className="space-y-1 pl-2.5">
+                    <h3 className="text-xl font-semibold">{feature.title}</h3>
+                    <p className="text-muted-foreground">{feature.description}</p>
+                  </div>
                 </div>
               </div>
-            </Card>
-          ))}
+            ))}
+          </div>
+        </div>
+        <div className="text-center">
+          <Button size="lg">Explore all features</Button>
         </div>
       </div>
     </section>
