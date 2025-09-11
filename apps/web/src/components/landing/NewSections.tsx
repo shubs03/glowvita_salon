@@ -103,43 +103,42 @@ export const VideoTestimonialSection = () => (
 
 export const SecuritySection = () => (
     <section className="py-16 bg-gradient-to-br from-background via-primary/5 to-background">
-        <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-                <h2 className="text-3xl font-bold mb-4">Enterprise-Grade Security</h2>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
-                    Your data is protected by industry-leading security measures
-                </p>
-            </div>
-            <div className="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-                <Card className="bg-secondary/5">
-                    <CardContent className="pt-6 text-center">
-                        <Shield className="h-8 w-8 mx-auto text-primary mb-4" />
-                        <h3 className="font-medium mb-2">256-bit SSL</h3>
-                        <p className="text-sm text-muted-foreground">Bank-level encryption</p>
-                    </CardContent>
-                </Card>
-                <Card className="bg-secondary/5">
-                    <CardContent className="pt-6 text-center">
-                        <Lock className="h-8 w-8 mx-auto text-primary mb-4" />
-                        <h3 className="font-medium mb-2">GDPR</h3>
-                        <p className="text-sm text-muted-foreground">Fully compliant</p>
-                    </CardContent>
-                </Card>
-                <Card className="bg-secondary/5">
-                    <CardContent className="pt-6 text-center">
-                        <FileCheck className="h-8 w-8 mx-auto text-primary mb-4" />
-                        <h3 className="font-medium mb-2">Data Backup</h3>
-                        <p className="text-sm text-muted-foreground">Daily automated</p>
-                    </CardContent>
-                </Card>
-                <Card className="bg-secondary/5">
-                    <CardContent className="pt-6 text-center">
-                        <ShieldCheck className="h-8 w-8 mx-auto text-primary mb-4" />
-                        <h3 className="font-medium mb-2">ISO 27001</h3>
-                        <p className="text-sm text-muted-foreground">Certified secure</p>
-                    </CardContent>
-                </Card>
-            </div>
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold mb-4">Enterprise-Grade Security</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Your data is protected by industry-leading security measures
+          </p>
         </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto perspective-1000">
+          {[
+            { icon: Shield, title: "256-bit SSL", description: "Bank-level encryption" },
+            { icon: Lock, title: "GDPR", description: "Fully compliant" },
+            { icon: FileCheck, title: "Data Backup", description: "Daily automated" },
+            { icon: ShieldCheck, title: "ISO 27001", description: "Certified secure" },
+          ].map((item, index) => (
+            <div
+              key={index}
+              className="group relative rounded-xl border border-border/30 bg-background/50 p-6 text-center transition-all duration-500 transform-style-3d hover:-translate-y-2 hover:rotate-x-8"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="relative mb-4 w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-primary/30 border border-primary/20">
+                  <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-white/20 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
+                  <item.icon className="h-8 w-8 text-primary transition-all duration-500 group-hover:scale-125" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2 text-foreground transition-colors duration-300 group-hover:text-primary">
+                  {item.title}
+                </h3>
+                <p className="text-sm text-muted-foreground transition-colors duration-300 group-hover:text-foreground/80">
+                  {item.description}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
-);
+  );
+  
+
