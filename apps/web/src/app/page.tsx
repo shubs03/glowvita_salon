@@ -15,6 +15,7 @@ import {
   FeaturedProducts,
   Integrations,
   Blog,
+  Services,
 } from "@/components/landing";
 import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
@@ -41,6 +42,7 @@ export default function HomePage() {
         <Offers />
         <HowItWorks />
         <FeaturedProducts />
+        <Services />
         
         <section className="py-16 md:py-20 bg-gradient-to-br from-background via-primary/5 to-background relative overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
@@ -52,7 +54,7 @@ export default function HomePage() {
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
                 Unlock Your Potential
               </h2>
-              <p className="text-muted-foreground text-base md:text-lg max-w-3xl mx-auto leading-relaxed">
+              <p className="text-muted-foreground text-lg max-w-3xl mx-auto leading-relaxed">
                 See the real-world impact of using our CRM. These metrics
                 represent actual improvements from our satisfied clients.
               </p>
