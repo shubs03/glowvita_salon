@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from 'next/image';
@@ -7,22 +8,40 @@ import { Button } from '@repo/ui/button';
 
 const features = [
   {
-    title: "Web Security",
-    description: "Safeguard websites from cyber threats, malware, and unauthorized access.",
-    image: "https://picsum.photos/seed/websec/402/300",
-    hint: "server security"
+    title: "Big data consulting",
+    description: "Utilize comprehensive data security frameworks to effectively safeguard sensitive information from unauthorized access and breaches.",
+    images: [
+        { src: "https://picsum.photos/seed/timeIncrease/233/300", alt: "Time Increase", hint: "data chart graph" },
+        { src: "https://picsum.photos/seed/controlCard/350/200", alt: "Control Card", hint: "dashboard interface" }
+    ],
+    layout: "normal"
   },
   {
-    title: "Software Analytics",
-    description: "Ensure your applications and systems are always up-to-date and secure.",
-    image: "https://picsum.photos/seed/softan/402/300",
-    hint: "data analytics chart"
+    title: "Machine learning & AI",
+    description: "Utilize advanced predictive analytics to proactively identify potential threats before they escalate by analyzing patterns and trends in data.",
+    images: [
+        { src: "https://picsum.photos/seed/revenue/326/317", alt: "Revenue", hint: "financial chart" },
+        { src: "https://picsum.photos/seed/balance/255/178", alt: "Balance", hint: "mobile banking app" }
+    ],
+    layout: "reversed"
   },
   {
-    title: "Payment Security",
-    description: "End-to-end encryption and fraud prevention for online transactions.",
-    image: "https://picsum.photos/seed/paysec/402/300",
-    hint: "secure payment"
+    title: "Business analysis",
+    description: "Continuously monitor for vulnerabilities and implement proactive measures to prevent cyber attacks before they can occur.",
+    images: [
+        { src: "https://picsum.photos/seed/earning/350/345", alt: "Earning", hint: "investment dashboard" },
+        { src: "https://picsum.photos/seed/dailyPayment/286/190", alt: "Daily Payment", hint: "payment confirmation screen" }
+    ],
+    layout: "normal"
+  },
+   {
+    title: "Data Visualization",
+    description: "Utilize advanced predictive analytics to proactively identify potential threats before they escalate. by analyzing patterns and trends in data.",
+    images: [
+        { src: "https://picsum.photos/seed/revenueGreen/408/300", alt: "Revenue Green", hint: "green data chart" },
+        { src: "https://picsum.photos/seed/currencyRate/225/200", alt: "Currency Rate", hint: "currency exchange interface" }
+    ],
+    layout: "reversed"
   }
 ];
 
@@ -34,33 +53,52 @@ export function KeyFeatures() {
           <Badge variant="secondary" className="bg-primary/10 text-primary">More features</Badge>
           <h2 className="text-3xl lg:text-4xl font-bold font-headline">Managing your money has never been easier</h2>
         </div>
-        <div className="mb-12 sm:mb-16 md:mb-20">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div key={index}>
-                <div className="space-y-4">
-                  <div className="border border-border/50 bg-secondary/30 p-2.5 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300">
-                    <figure className="w-full aspect-[4/3] rounded-lg overflow-hidden">
+        
+        <div className="space-y-[42px]">
+          {features.map((feature, index) => (
+            <div key={index} className="p-7 lg:p-[42px] rounded-[20px] border border-border/50 bg-secondary/30">
+              <div className={`grid grid-cols-12 items-center xl:gap-[100px] lg:gap-20 gap-y-10`}>
+                <div className={`col-span-12 lg:col-span-6 ${feature.layout === 'reversed' ? 'lg:order-2' : ''}`}>
+                  <div className="space-y-8">
+                    <div className="space-y-2">
+                      <h3 className="text-2xl lg:text-3xl font-semibold">{feature.title}</h3>
+                      <p className="max-w-[493px] w-full text-muted-foreground">{feature.description}</p>
+                    </div>
+                    <div>
+                      <Button variant="outline">Read more</Button>
+                    </div>
+                  </div>
+                </div>
+                <div className={`col-span-12 lg:col-span-6 ${feature.layout === 'reversed' ? 'lg:order-1' : ''}`}>
+                   <div className={`flex items-center gap-8 ${feature.layout === 'reversed' ? 'justify-start' : 'justify-end'}`}>
+                    <figure className="max-w-[233px] w-full rounded-2xl overflow-hidden shadow-lg">
                       <Image 
-                        src={feature.image} 
-                        alt={feature.title} 
-                        width={402}
+                        src={feature.images[0].src} 
+                        alt={feature.images[0].alt} 
+                        width={233}
                         height={300}
-                        data-ai-hint={feature.hint}
+                        data-ai-hint={feature.images[0].hint}
+                        className="w-full h-full object-cover" 
+                      />
+                    </figure>
+                    <figure className="max-w-[350px] w-full rounded-[20px] overflow-hidden shadow-lg">
+                      <Image 
+                        src={feature.images[1].src} 
+                        alt={feature.images[1].alt} 
+                        width={350}
+                        height={200}
+                        data-ai-hint={feature.images[1].hint}
                         className="w-full h-full object-cover" 
                       />
                     </figure>
                   </div>
-                  <div className="space-y-1 pl-2.5">
-                    <h3 className="text-xl font-semibold">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.description}</p>
-                  </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-        <div className="text-center">
+        
+        <div className="text-center mt-12 sm:mt-16 md:mt-20">
           <Button size="lg">Explore all features</Button>
         </div>
       </div>
