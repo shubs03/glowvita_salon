@@ -104,7 +104,7 @@ const HeroSection = () => {
             <Star className="w-4 h-4 text-primary" /> 10k+ Bookings
           </div>
           <div className="flex items-center gap-2">
-            <Scissors className="w-4 h-4 text-primary" /> 500+ Partner Salons
+            <Scissors className="w-4 h-4 text-primary" /> Top-rated salons
           </div>
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" /> 24/7 Online Booking
