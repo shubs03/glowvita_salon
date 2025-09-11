@@ -1,3 +1,4 @@
+
 import { Search, MapPin, Star, Scissors, Sparkles, ShieldCheck, User } from "lucide-react";
 import { Input } from "@repo/ui/input";
 import { Button } from '@repo/ui/button';
@@ -15,7 +16,7 @@ export const HeroSection = () => {
         </div>
 
         {/* Headline */}
-        <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-headline tracking-tight mb-6">
+        <h1 className="text-5xl sm:text-6xl md:text-8xl font-black font-headline tracking-tighter mb-6">
           <span className="bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
             Find & Book
           </span>{" "}
@@ -23,7 +24,7 @@ export const HeroSection = () => {
         </h1>
 
         {/* Sub-text */}
-        <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 leading-relaxed">
+        <p className="text-lg md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-10 leading-relaxed">
           Discover top-rated salons, spas, and barbershops near you. Effortlessly
           book appointments online, 24/7.
         </p>
@@ -61,54 +62,17 @@ export const HeroSection = () => {
           </div>
         </div>
 
-        {/* Quick appointment + Hygiene badge */}
-        <div className="flex flex-wrap justify-center gap-4 mt-8">
-          <div className="flex items-center gap-2 bg-background px-4 py-2 rounded-full text-sm font-medium shadow">
-            <ShieldCheck className="w-4 h-4 text-primary" /> Book in 2 Minutes – No Waiting
-          </div>
-          <div className="flex items-center gap-2 bg-background px-4 py-2 rounded-full text-sm font-medium shadow">
-            <ShieldCheck className="w-4 h-4 text-primary" /> 100% Hygiene Certified
-          </div>
-        </div>
-
-        {/* Top Cities */}
+        {/* Category quick links */}
         <div className="flex flex-wrap justify-center gap-3 mt-8">
-          {["Mumbai", "Pune", "Delhi", "Bangalore"].map((city) => (
+          <p className="text-sm text-muted-foreground font-medium mr-2">Popular:</p>
+          {["Haircuts", "Nails", "Spa", "Barbershop"].map((cat) => (
             <button
-              key={city}
-              className="px-5 py-2 rounded-full bg-secondary/20 hover:bg-primary/10 text-sm font-medium transition"
+              key={cat}
+              className="px-4 py-1.5 rounded-full bg-secondary/20 hover:bg-primary/10 text-sm font-medium transition"
             >
-              {city}
+              {cat}
             </button>
           ))}
-        </div>
-
-        {/* Featured Stylist */}
-        <div className="mt-10 flex justify-center">
-          <div className="bg-background border border-border/50 rounded-2xl p-5 flex items-center gap-4 shadow-lg max-w-sm">
-            <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center">
-              <User className="w-8 h-8 text-primary" />
-            </div>
-            <div className="text-left">
-              <p className="font-semibold">Stylist of the Month</p>
-              <p className="text-muted-foreground text-sm">
-                Riya Sharma – Bridal & Hair Expert
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Trust signals */}
-        <div className="flex flex-wrap justify-center gap-6 mt-10 text-muted-foreground text-sm">
-          <div className="flex items-center gap-2">
-            <Star className="w-4 h-4 text-primary" /> 10k+ Bookings
-          </div>
-          <div className="flex items-center gap-2">
-            <Scissors className="w-4 h-4 text-primary" /> Top-rated salons
-          </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" /> 24/7 Online Booking
-          </div>
         </div>
       </div>
     </section>
