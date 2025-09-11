@@ -1,4 +1,3 @@
-
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 
 const products = [
@@ -10,6 +9,8 @@ const products = [
     hint: 'skincare product bottle',
     rating: 4.5,
     reviewCount: 812,
+    vendorName: 'Aura Cosmetics',
+    isNew: true,
   },
   {
     name: 'Chroma Balm',
@@ -19,6 +20,7 @@ const products = [
     hint: 'cosmetic balm',
     rating: 4.8,
     reviewCount: 1254,
+    vendorName: 'Chroma Beauty',
   },
   {
     name: 'Zen Mist',
@@ -28,6 +30,7 @@ const products = [
     hint: 'spray bottle',
     rating: 4.7,
     reviewCount: 987,
+    vendorName: 'Serenity Skincare',
   },
   {
     name: 'Terra Scrub',
@@ -37,6 +40,8 @@ const products = [
     hint: 'cosmetic jar',
     rating: 4.9,
     reviewCount: 2310,
+    vendorName: 'Earthly Essentials',
+    isNew: true,
   },
 ];
 
@@ -58,6 +63,8 @@ export function FeaturedProducts() {
               hint={product.hint}
               rating={product.rating}
               reviewCount={product.reviewCount}
+              vendorName={product.vendorName}
+              isNew={product.isNew}
             />
           ))}
         </div>
