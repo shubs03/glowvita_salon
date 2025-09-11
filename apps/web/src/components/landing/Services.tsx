@@ -1,100 +1,71 @@
-
 "use client";
 
-import Image from 'next/image';
-import { Badge } from "@repo/ui/badge";
-import { Button } from "@repo/ui/button";
-import { BrainCircuit, Bot, LineChart, Code } from 'lucide-react';
-import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
+import { BrainCircuit, Bot, LineChart, Code, ArrowRight } from 'lucide-react';
+import { cn } from '@repo/ui/cn';
 
 const services = [
   {
-    icon: <LineChart className="h-6 w-6" />,
-    title: "Real-time data analytics",
-    description: "Bring your ideas to life and make informed decisions.",
+    icon: <LineChart className="h-8 w-8" />,
+    title: "Real-Time Data Analytics",
+    description: "Bring your ideas to life and make informed decisions with powerful, real-time data analytics and visualization.",
+    className: "lg:col-span-2",
   },
   {
-    icon: <Bot className="h-6 w-6" />,
-    title: "AI-powered apps",
-    description: "Boost workflow automation and improve efficiency.",
+    icon: <Bot className="h-8 w-8" />,
+    title: "AI-Powered Applications",
+    description: "Boost your workflow automation and improve efficiency with custom-built AI applications tailored to your needs.",
+    className: "",
   },
   {
-    icon: <BrainCircuit className="h-6 w-6" />,
-    title: "End-to-end AI consulting",
-    description: "Discover your business's potential with our AI consulting.",
+    icon: <BrainCircuit className="h-8 w-8" />,
+    title: "End-to-End AI Consulting",
+    description: "From strategy to implementation, our AI experts will help you discover your business's full potential.",
+    className: "",
   },
   {
-    icon: <Code className="h-6 w-6" />,
-    title: "ML model development",
-    description: "Quickly develop tools and platforms for machine learning.",
+    icon: <Code className="h-8 w-8" />,
+    title: "ML Model Development",
+    description: "Quickly develop, train, and deploy powerful machine learning models for any use case.",
+    className: "lg:col-span-2",
   },
 ];
+
+const ServiceCard = ({ icon, title, description, className }: { icon: React.ReactNode, title: string, description: string, className?: string }) => (
+    <div className={cn("group relative rounded-2xl bg-gradient-to-br from-background via-background to-secondary/20 p-8 shadow-lg border border-border/50 hover:border-primary/50 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-primary/10 overflow-hidden", className)}>
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="relative z-10">
+            <div className="bg-primary/10 text-primary w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-md border border-primary/20 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300">
+                {icon}
+            </div>
+            <h3 className="text-xl font-bold mb-3 text-foreground">{title}</h3>
+            <p className="text-muted-foreground leading-relaxed mb-6">{description}</p>
+            <a href="#" className="font-semibold text-primary inline-flex items-center group/link">
+                Learn More
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover/link:translate-x-1" />
+            </a>
+        </div>
+    </div>
+);
 
 export function Services() {
   return (
     <section className="py-16 md:py-20 lg:py-24 bg-background relative overflow-hidden">
-      <div className="absolute inset-0 bg-secondary/30 [mask-image:radial-gradient(ellipse_at_center,white,transparent_70%)] opacity-50"></div>
+      <div className="absolute inset-0 bg-secondary/30 [mask-image:radial-gradient(ellipse_at_top,white,transparent_70%)] opacity-30"></div>
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          
-          {/* Left Column: Content */}
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <Badge variant="secondary" className="bg-primary/10 text-primary border border-primary/20 shadow-sm">
-                Our Services
-              </Badge>
-              <h2 className="text-3xl lg:text-5xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-                AI Services That Deliver Real Results
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-lg">
-                From consulting to implementation, our solutions are built to transform the way you work and drive tangible business outcomes.
-              </p>
-            </div>
-            
-            <div className="space-y-4">
-              {services.map((service, index) => (
-                <div key={index} className="group p-4 rounded-lg hover:bg-background/80 hover:shadow-lg transition-all duration-300 border border-transparent hover:border-border/50">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 bg-primary/10 text-primary p-3 rounded-xl group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 group-hover:scale-110">
-                      {service.icon}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {service.title}
-                      </h3>
-                      <p className="text-muted-foreground mt-1">
-                        {service.description}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <div className="pt-4">
-              <Button size="lg" asChild>
-                <Link href="#">
-                  Talk to an Expert
-                </Link>
-              </Button>
-            </div>
-          </div>
-          
-          {/* Right Column: Image */}
-          <div className="relative aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl shadow-primary/10 group">
-             <Image
-                src="https://picsum.photos/seed/services-main/800/1000"
-                alt="AI services illustration"
-                layout="fill"
-                className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-                data-ai-hint="futuristic abstract technology"
-              />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-            <div className="absolute bottom-0 left-0 p-8 text-white">
-                <h3 className="text-2xl font-bold">Innovate with AI</h3>
-                <p className="mt-2 opacity-80">Unlock new possibilities with our cutting-edge artificial intelligence solutions.</p>
-            </div>
-          </div>
+        <div className="max-w-3xl mx-auto text-center space-y-4 mb-12 md:mb-16">
+          <h2 className="text-3xl lg:text-5xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+            AI Services That Deliver Real Results
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            From consulting to implementation, our solutions are built to transform the way you work and drive tangible business outcomes.
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            {services.map((service, index) => (
+                <ServiceCard key={index} {...service} />
+            ))}
         </div>
       </div>
     </section>
