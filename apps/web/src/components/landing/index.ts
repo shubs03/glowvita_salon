@@ -1,6 +1,5 @@
 
 export * from './HeroSection';
-export * from './HeroSection2';
 export * from './AppCTA';
 export * from './FeaturedSalons';
 export * from './HowItWorks';
@@ -11,5 +10,4 @@ export * from './FAQ';
 export * from './NewSections';
 export * from './FeaturedProducts';
 export * from './Integrations';
-export * from './KeyFeatures';
 export * from './Blog';
