@@ -10,3 +10,4 @@ export * from './FAQ';
 export * from './NewSections';
 export * from './FeaturedProducts';
 export * from './Integrations';
+export * from './KeyFeatures';

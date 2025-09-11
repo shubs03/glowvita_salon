@@ -14,6 +14,7 @@ import {
   SecuritySection,
   FeaturedProducts,
   Integrations,
+  KeyFeatures,
 } from "@/components/landing";
 import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
@@ -114,6 +115,7 @@ export default function HomePage() {
         <SecuritySection />
         <Integrations />
         <FAQ />
+        <KeyFeatures />
         <AppCTA />
 
       </main>
