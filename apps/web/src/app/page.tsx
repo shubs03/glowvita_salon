@@ -15,8 +15,6 @@ import {
   FeaturedProducts,
   Integrations,
   Blog,
-  KeyFeatures,
-  HeroSection2,
 } from "@/components/landing";
 import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
@@ -37,10 +35,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <main className="flex-grow">
-        <HeroSection />
-        <HeroSection2 />
-        <KeyFeatures />
-        
+        <HeroSection /> 
         <PlatformFor />
         <FeaturedSalons />
         <Offers />
