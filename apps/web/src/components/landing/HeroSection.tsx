@@ -90,9 +90,9 @@ export function HeroSection() {
 
         {/* Scroll indicator */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="w-6 h-10 border-2 border-primary rounded-full flex items-start justify-center p-1">
+          {/* <div className="w-6 h-10 border-2 border-primary rounded-full flex items-start justify-center p-1">
             <div className="w-1 h-2 bg-primary rounded-full animate-pulse-slow"></div>
-          </div>
+          </div> */}
         </div>
       </div>
     </section>

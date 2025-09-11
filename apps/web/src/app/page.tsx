@@ -10,6 +10,7 @@ import { Testimonials } from "@/components/landing/Testimonials";
 import { Offers } from "@/components/landing/Offers";
 import { FAQ } from "@/components/landing/FAQ";
 import { AdvantageCard, VideoTestimonialSection, SecuritySection } from "@/components/landing/NewSections";
+import { Award, Users, LineChart, Clock } from 'lucide-react';
 import { FeaturedProducts } from "@/components/landing/FeaturedProducts";
 import { Button } from '@repo/ui/button';
 import { ArrowRight } from 'lucide-react';
