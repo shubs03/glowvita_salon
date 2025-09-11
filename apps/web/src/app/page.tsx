@@ -1,6 +1,5 @@
 
 "use client";
-
 import {
   HeroSection,
   AppCTA,
@@ -13,7 +12,7 @@ import {
   AdvantageCard,
   VideoTestimonialSection,
   SecuritySection,
-  FeaturedProducts
+  FeaturedProducts,
 } from "@/components/landing";
 import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';

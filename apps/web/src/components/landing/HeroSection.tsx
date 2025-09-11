@@ -2,7 +2,7 @@ import { Search, MapPin, Star, Scissors, Sparkles, ShieldCheck, User } from "luc
 import { Input } from "@repo/ui/input";
 import { Button } from '@repo/ui/button';
 
-const HeroSection = () => {
+export const HeroSection = () => {
   return (
     <section className="relative py-24 md:py-36 bg-secondary/30 overflow-hidden">
       {/* Background gradient */}
@@ -114,5 +114,3 @@ const HeroSection = () => {
     </section>
   );
 }
-
-export default HeroSection;
