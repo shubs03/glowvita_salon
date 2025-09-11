@@ -1,3 +1,4 @@
+
 export * from './HeroSection';
 export * from './HeroSection2';
 export * from './AppCTA';
@@ -11,3 +12,4 @@ export * from './NewSections';
 export * from './FeaturedProducts';
 export * from './Integrations';
 export * from './KeyFeatures';
+export * from './Blog';
