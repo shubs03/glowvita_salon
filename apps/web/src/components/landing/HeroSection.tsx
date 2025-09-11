@@ -4,6 +4,7 @@
 import { Search, MapPin, Star, Scissors, Sparkles, ArrowRight } from "lucide-react";
 import { Input } from "@repo/ui/input";
 import { Button } from "@repo/ui/button";
+import Link from "next/link";
 
 export function HeroSection() {
   return (
@@ -14,8 +15,8 @@ export function HeroSection() {
       </div>
 
       {/* Floating decorative elements */}
-      <Sparkles className="absolute top-20 left-10 text-primary/40 w-12 h-12 animate-pulse-slow" />
-      <Scissors className="absolute bottom-32 right-12 text-primary/30 w-14 h-14 animate-bounce-soft" />
+      <Sparkles className="absolute top-20 left-10 text-primary/40 w-12 h-12" />
+      <Scissors className="absolute bottom-32 right-12 text-primary/30 w-14 h-14" />
 
       <div className="container mx-auto px-4 relative z-10 text-center">
         {/* Headline */}
@@ -58,41 +59,45 @@ export function HeroSection() {
               className="rounded-full w-full sm:w-auto px-8 h-12 text-base font-semibold group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300"
             >
               Search{" "}
-              <Search className="ml-2 h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
+              <Search className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </div>
 
+        {/* Secondary Call-to-Action */}
+        <div className="mt-4 text-center">
+            <p className="text-sm text-muted-foreground">
+                Are you a salon owner?{' '}
+                <Link href="/auth/register" className="font-semibold text-primary hover:underline">
+                    List your business <ArrowRight className="inline h-4 w-4" />
+                </Link>
+            </p>
+        </div>
+
         {/* Category quick links */}
         <div className="flex flex-wrap justify-center gap-3 mt-8">
+          <p className="text-sm font-medium text-muted-foreground self-center mr-2">Popular:</p>
           {["💇 Haircuts", "💅 Nails", "💆 Spa", "✂️ Barbershop"].map((cat) => (
             <button
               key={cat}
-              className="px-5 py-2 rounded-full bg-background/50 border border-border/50 hover:bg-primary/10 text-sm font-medium transition hover:shadow-md backdrop-blur-sm"
+              className="px-4 py-1.5 rounded-full bg-background/50 border border-border/50 hover:bg-primary/10 text-sm font-medium transition"
             >
               {cat}
             </button>
           ))}
         </div>
 
-        {/* Trust signals */}
+        {/* Trust signals / Statistics Block */}
         <div className="flex flex-wrap justify-center gap-6 mt-10 text-muted-foreground text-sm">
           <div className="flex items-center gap-2">
             <Star className="w-4 h-4 text-primary" /> 10k+ Bookings
           </div>
           <div className="flex items-center gap-2">
-            <Scissors className="w-4 h-4 text-primary" /> Top-rated salons
+            <Scissors className="w-4 h-4 text-primary" /> 500+ Salons Listed
           </div>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" /> 24/7 Online Booking
+            <Sparkles className="w-4 h-4 text-primary" /> 4.8/5 Average Rating
           </div>
-        </div>
-
-        {/* Scroll indicator */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-bounce">
-          {/* <div className="w-6 h-10 border-2 border-primary rounded-full flex items-start justify-center p-1">
-            <div className="w-1 h-2 bg-primary rounded-full animate-pulse-slow"></div>
-          </div> */}
         </div>
       </div>
     </section>
