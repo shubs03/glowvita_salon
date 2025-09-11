@@ -1,26 +1,21 @@
-
-"use client";
-
-import { Search, MapPin, Star, Scissors, Sparkles, ArrowRight } from "lucide-react";
+import { Search, MapPin, Star, Scissors, Sparkles, ShieldCheck, User } from "lucide-react";
 import { Input } from "@repo/ui/input";
-import { Button } from "@repo/ui/button";
-import Link from "next/link";
+import { Button } from '@repo/ui/button';
 
-export function HeroSection() {
+const HeroSection = () => {
   return (
     <section className="relative py-24 md:py-36 bg-secondary/30 overflow-hidden">
-      {/* Background gradient & image overlay */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background/80 to-primary/5" />
-      </div>
-
-      {/* Floating decorative elements */}
-      <Sparkles className="absolute top-20 left-10 text-primary/40 w-12 h-12" />
-      <Scissors className="absolute bottom-32 right-12 text-primary/30 w-14 h-14" />
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background/80 to-primary/5" />
 
       <div className="container mx-auto px-4 relative z-10 text-center">
+        {/* Promo banner */}
+        <div className="mb-6 inline-block bg-primary/10 text-primary px-4 py-1 rounded-full text-sm font-medium">
+          Flat 20% OFF on First Booking
+        </div>
+
         {/* Headline */}
-        <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-headline tracking-tighter mb-6">
+        <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-headline tracking-tight mb-6">
           <span className="bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">
             Find & Book
           </span>{" "}
@@ -35,7 +30,8 @@ export function HeroSection() {
 
         {/* Search Bar */}
         <div className="max-w-3xl mx-auto">
-          <div className="relative bg-background rounded-full p-2 shadow-2xl shadow-primary/10 border border-border/50 flex flex-col sm:flex-row items-center gap-2">
+          <div className="relative bg-background rounded-full p-2 shadow-2xl border border-border/50 flex flex-col sm:flex-row items-center gap-2">
+            {/* Service search */}
             <div className="relative flex-grow w-full">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
@@ -46,6 +42,7 @@ export function HeroSection() {
 
             <div className="hidden sm:block w-px h-6 bg-border"></div>
 
+            {/* Location search */}
             <div className="relative flex-grow w-full">
               <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
@@ -53,28 +50,55 @@ export function HeroSection() {
                 className="h-12 text-base pl-12 rounded-full sm:rounded-none sm:rounded-r-full border-0 focus-visible:ring-0 bg-transparent w-full"
               />
             </div>
-            
+
+            {/* CTA button */}
             <Button
               size="lg"
-              className="rounded-full w-full sm:w-auto px-8 h-12 text-base font-semibold group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300"
+              className="rounded-full w-full sm:w-auto px-8 h-12 text-base font-semibold bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg transition-all duration-300"
             >
-              Search{" "}
-              <Search className="ml-2 h-5 w-5" />
+              Search
             </Button>
           </div>
         </div>
-        
-        {/* Secondary Call-to-Action */}
-        <div className="mt-4 text-center">
-            <p className="text-sm text-muted-foreground">
-                Are you a salon owner?{' '}
-                <Link href="/auth/register" className="font-semibold text-primary hover:underline">
-                    List your business <ArrowRight className="inline h-4 w-4" />
-                </Link>
-            </p>
+
+        {/* Quick appointment + Hygiene badge */}
+        <div className="flex flex-wrap justify-center gap-4 mt-8">
+          <div className="flex items-center gap-2 bg-background px-4 py-2 rounded-full text-sm font-medium shadow">
+            <ShieldCheck className="w-4 h-4 text-primary" /> Book in 2 Minutes – No Waiting
+          </div>
+          <div className="flex items-center gap-2 bg-background px-4 py-2 rounded-full text-sm font-medium shadow">
+            <ShieldCheck className="w-4 h-4 text-primary" /> 100% Hygiene Certified
+          </div>
         </div>
 
-        {/* Trust signals / Statistics Block */}
+        {/* Top Cities */}
+        <div className="flex flex-wrap justify-center gap-3 mt-8">
+          {["Mumbai", "Pune", "Delhi", "Bangalore"].map((city) => (
+            <button
+              key={city}
+              className="px-5 py-2 rounded-full bg-secondary/20 hover:bg-primary/10 text-sm font-medium transition"
+            >
+              {city}
+            </button>
+          ))}
+        </div>
+
+        {/* Featured Stylist */}
+        <div className="mt-10 flex justify-center">
+          <div className="bg-background border border-border/50 rounded-2xl p-5 flex items-center gap-4 shadow-lg max-w-sm">
+            <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center">
+              <User className="w-8 h-8 text-primary" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold">Stylist of the Month</p>
+              <p className="text-muted-foreground text-sm">
+                Riya Sharma – Bridal & Hair Expert
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust signals */}
         <div className="flex flex-wrap justify-center gap-6 mt-10 text-muted-foreground text-sm">
           <div className="flex items-center gap-2">
             <Star className="w-4 h-4 text-primary" /> 10k+ Bookings
@@ -90,3 +114,5 @@ export function HeroSection() {
     </section>
   );
 }
+
+export default HeroSection;
