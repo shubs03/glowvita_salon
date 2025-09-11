@@ -3,8 +3,6 @@
 
 import Image from 'next/image';
 import { Badge } from '@repo/ui/badge';
-import { Card, CardContent } from '@repo/ui/card';
-import { Button } from '@repo/ui/button';
 import { ArrowRight } from 'lucide-react';
 
 const integrations = [
@@ -20,7 +18,7 @@ export function Integrations() {
   return (
     <section className="py-20 md:py-[100px] bg-secondary/50">
       <div className="container mx-auto px-4">
-        <div className="relative overflow-hidden z-10 rounded-[25px] border border-border/50 bg-background/50 sm:py-[100px] py-[50px]">
+        <div className="relative z-10 rounded-[25px] border border-border/50 bg-background/50 sm:py-[100px] py-[50px]">
           <div className="space-y-5 text-center sm:mb-[70px] mb-[50px]">
             <Badge variant="secondary" className="bg-green-100 text-green-700">Integrations</Badge>
             <div className="space-y-3">
