@@ -13,6 +13,7 @@ import {
   VideoTestimonialSection,
   SecuritySection,
   FeaturedProducts,
+  Integrations,
 } from "@/components/landing";
 import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
@@ -111,6 +112,7 @@ export default function HomePage() {
         <VideoTestimonialSection />
         <Testimonials />
         <SecuritySection />
+        <Integrations />
         <FAQ />
         <AppCTA />
 

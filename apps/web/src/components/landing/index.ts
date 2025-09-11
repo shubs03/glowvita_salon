@@ -1,3 +1,4 @@
+
 export * from './HeroSection';
 export * from './AppCTA';
 export * from './FeaturedSalons';
@@ -8,3 +9,4 @@ export * from './Offers';
 export * from './FAQ';
 export * from './NewSections';
 export * from './FeaturedProducts';
+export * from './Integrations';
