@@ -15,7 +15,7 @@ export function Blog() {
             Journal
           </Badge>
           <h2 className="text-3xl lg:text-4xl font-bold font-headline">
-            Thoughts &amp; Ideas
+            Thoughts & Ideas
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
             A collection of thoughts, experiments, and insights around design,
@@ -25,14 +25,14 @@ export function Blog() {
         <div>
           <div className="grid grid-cols-12 items-start lg:gap-8 gap-y-12">
             <div className="col-span-12 xl:col-span-6 lg:col-span-5 group">
-              <div className="rounded-2xl overflow-hidden bg-background shadow-lg transition-all duration-500 group-hover:scale-[1.01] group-hover:shadow-xl">
+              <div className="rounded-2xl overflow-hidden bg-background shadow-lg transition-all duration-500 hover:scale-[1.01] hover:shadow-xl">
                 <figure className="aspect-video overflow-hidden">
                   <Image
                     src="https://picsum.photos/seed/blog1/627/260"
                     alt="Framer vs Webflow"
                     width={627}
                     height={260}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     data-ai-hint="abstract design"
                   />
                 </figure>
@@ -72,7 +72,7 @@ export function Blog() {
                     alt="Brand Identity"
                     width={298}
                     height={260}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     data-ai-hint="logo design process"
                   />
                 </figure>
@@ -107,7 +107,7 @@ export function Blog() {
                     alt="Design Process"
                     width={298}
                     height={260}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     data-ai-hint="ux design wireframe"
                   />
                 </figure>
