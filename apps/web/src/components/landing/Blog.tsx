@@ -4,143 +4,171 @@ import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, ArrowRight } from "lucide-react";
+
+const blogPosts = [
+  {
+    title: "Framer vs Webflow: Which One for Startups?",
+    category: "Design Tools",
+    image: "https://picsum.photos/seed/blog1/800/600",
+    hint: "abstract design comparison",
+    date: "14.05.2025",
+    readTime: "5 min read",
+    excerpt: "In the world of no-code web design, two giants stand tall: Framer and Webflow. We dive deep into which platform is the ultimate choice for startups looking to build stunning, high-performance websites without writing a single line of code.",
+    author: {
+      name: "Alex Johnson",
+      avatar: "https://picsum.photos/seed/author1/40/40",
+      hint: "professional man"
+    }
+  },
+  {
+    title: "How I Designed a Brand Identity in 3 Days",
+    category: "Branding",
+    image: "https://picsum.photos/seed/blog2/400/300",
+    hint: "logo design process",
+    date: "12.05.2025",
+    readTime: "3 min read",
+    excerpt: "A behind-the-scenes look at a rapid brand identity project, from initial concept to final delivery.",
+    author: {
+        name: "Maria Garcia",
+        avatar: "https://picsum.photos/seed/author2/40/40",
+        hint: "creative woman"
+    }
+  },
+  {
+    title: "Unlocking Creativity: A Guide to the Design Process",
+    category: "Creativity",
+    image: "https://picsum.photos/seed/blog3/400/300",
+    hint: "ux design wireframe",
+    date: "10.05.2025",
+    readTime: "7 min read",
+    excerpt: "Stuck in a creative rut? This guide breaks down the design process into actionable steps to spark your next big idea.",
+    author: {
+        name: "David Chen",
+        avatar: "https://picsum.photos/seed/author3/40/40",
+        hint: "designer thinking"
+    }
+  },
+  {
+    title: "The Future of AI in Web Development",
+    category: "Technology",
+    image: "https://picsum.photos/seed/blog4/400/300",
+    hint: "ai code generation",
+    date: "08.05.2025",
+    readTime: "6 min read",
+    excerpt: "Explore how artificial intelligence is set to revolutionize the way we build and interact with websites.",
+    author: {
+        name: "Sophia Lee",
+        avatar: "https://picsum.photos/seed/author4/40/40",
+        hint: "tech professional"
+    }
+  }
+];
 
 export function Blog() {
+  const featuredPost = blogPosts[0];
+  const otherPosts = blogPosts.slice(1);
+
   return (
-    <section className="py-16 md:py-20 lg:py-24 xl:py-28 bg-secondary/30">
-      <div className="container mx-auto px-4">
+    <section className="py-16 md:py-20 lg:py-24 xl:py-28 bg-secondary/30 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-secondary/10 to-transparent"></div>
+      <div className="absolute inset-0 bg-dots-grid opacity-5"></div>
+
+      <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto space-y-5 mb-10 md:mb-16 text-center">
-          <Badge variant="secondary" className="bg-primary/10 text-primary">
+          <Badge variant="secondary" className="bg-primary/10 text-primary border border-primary/20 shadow-sm">
             Journal
           </Badge>
-          <h2 className="text-3xl lg:text-4xl font-bold font-headline">
+          <h2 className="text-3xl lg:text-5xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
             Thoughts & Ideas
           </h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             A collection of thoughts, experiments, and insights around design,
             technology, and creativity.
           </p>
         </div>
-        <div>
-          <div className="grid grid-cols-12 items-start lg:gap-8 gap-y-12">
-            <div className="col-span-12 xl:col-span-6 lg:col-span-5 group">
-              <div className="rounded-2xl overflow-hidden bg-background shadow-lg transition-all duration-500 hover:scale-[1.01] hover:shadow-xl">
-                <figure className="aspect-video overflow-hidden">
-                  <Image
-                    src="https://picsum.photos/seed/blog1/627/260"
-                    alt="Framer vs Webflow"
-                    width={627}
-                    height={260}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    data-ai-hint="abstract design"
-                  />
-                </figure>
-                <div className="p-8">
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      <span>14.05.2025</span>
-                    </div>
-                    <div className="w-px h-5 bg-border"></div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      <span>1 min read</span>
-                    </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          {/* Featured Post */}
+          <div className="group relative rounded-2xl overflow-hidden shadow-2xl shadow-black/10 transition-all duration-500 hover:scale-[1.02] hover:shadow-primary/20">
+            <Link href="#" className="block">
+              <figure className="aspect-video">
+                <Image
+                  src={featuredPost.image}
+                  alt={featuredPost.title}
+                  width={800}
+                  height={450}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  data-ai-hint={featuredPost.hint}
+                />
+              </figure>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+              <div className="absolute bottom-0 left-0 p-6 md:p-8 text-white">
+                <Badge variant="secondary" className="mb-3 bg-white/20 text-white backdrop-blur-sm">
+                  {featuredPost.category}
+                </Badge>
+                <h3 className="text-2xl md:text-3xl font-bold line-clamp-2 mb-3 leading-tight group-hover:text-primary/90 transition-colors">
+                  {featuredPost.title}
+                </h3>
+                <p className="text-white/80 line-clamp-2 mb-4 hidden md:block">
+                  {featuredPost.excerpt}
+                </p>
+                <div className="flex items-center gap-4 text-sm text-white/80">
+                  <div className="flex items-center gap-2">
+                    <Image src={featuredPost.author.avatar} alt={featuredPost.author.name} width={24} height={24} className="rounded-full border-2 border-white/50" data-ai-hint={featuredPost.author.hint} />
+                    <span>{featuredPost.author.name}</span>
                   </div>
-                  <Link href="#" className="block mb-4">
-                    <h3 className="text-xl md:text-2xl font-semibold line-clamp-2 hover:text-primary transition-colors">
-                      Framer vs Webflow: Which One for Startups?
-                    </h3>
-                  </Link>
-                  <p className="text-muted-foreground line-clamp-2 mb-8">
-                    They captured every moment beautifully with creativity and
-                    professionalism. Their attention to detail and seamless
-                    process made it a joy to work with them.
-                  </p>
-                  <Button variant="outline" asChild>
-                    <Link href="#">Read more</Link>
-                  </Button>
+                  <div className="w-px h-5 bg-white/30"></div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>{featuredPost.date}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="col-span-12 xl:col-span-6 lg:col-span-7 space-y-8">
-              <div className="group flex sm:flex-row flex-col sm:gap-8 gap-4 items-center bg-background p-4 rounded-2xl shadow-lg transition-all duration-500 hover:scale-[1.01] hover:shadow-xl">
-                <figure className="sm:w-1/3 w-full h-40 sm:h-auto sm:aspect-square shrink-0 overflow-hidden rounded-xl">
+            </Link>
+          </div>
+          
+          {/* Other Posts */}
+          <div className="space-y-6">
+            {otherPosts.map((post, index) => (
+              <Link href="#" key={index} className="group flex flex-col sm:flex-row gap-4 items-start bg-background p-4 rounded-xl shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/10 border border-border/50 hover:border-primary/30 overflow-hidden">
+                <figure className="w-full sm:w-1/3 aspect-video sm:aspect-square shrink-0 overflow-hidden rounded-lg">
                   <Image
-                    src="https://picsum.photos/seed/blog2/298/260"
-                    alt="Brand Identity"
-                    width={298}
-                    height={260}
+                    src={post.image}
+                    alt={post.title}
+                    width={200}
+                    height={200}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    data-ai-hint="logo design process"
+                    data-ai-hint={post.hint}
                   />
                 </figure>
-                <div className="space-y-4 p-4 sm:p-0">
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-3 w-3" />
-                      <span>14.05.2025</span>
-                    </div>
-                    <div className="w-px h-4 bg-border"></div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3 w-3" />
-                      <span>1 min read</span>
-                    </div>
-                  </div>
-                  <Link href="#" className="block">
-                    <h3 className="text-lg md:text-xl font-semibold line-clamp-2 hover:text-primary transition-colors">
-                      How I Designed a Brand Identity in 3 Days
-                    </h3>
-                  </Link>
+                <div className="flex flex-col flex-1 justify-between h-full py-1">
                   <div>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="#">Read more</Link>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="group flex sm:flex-row flex-col sm:gap-8 gap-4 items-center bg-background p-4 rounded-2xl shadow-lg transition-all duration-500 hover:scale-[1.01] hover:shadow-xl">
-                <figure className="sm:w-1/3 w-full h-40 sm:h-auto sm:aspect-square shrink-0 overflow-hidden rounded-xl">
-                  <Image
-                    src="https://picsum.photos/seed/blog3/298/260"
-                    alt="Design Process"
-                    width={298}
-                    height={260}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    data-ai-hint="ux design wireframe"
-                  />
-                </figure>
-                <div className="space-y-4 p-4 sm:p-0">
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-3 w-3" />
-                      <span>12.05.2025</span>
-                    </div>
-                    <div className="w-px h-4 bg-border"></div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3 w-3" />
-                      <span>3 min read</span>
-                    </div>
-                  </div>
-                  <Link href="#" className="block">
-                    <h3 className="text-lg md:text-xl font-semibold line-clamp-2 hover:text-primary transition-colors">
-                      Unlocking Creativity: A Guide to the Design Process
+                    <Badge variant="outline" className="mb-2 bg-secondary text-secondary-foreground">{post.category}</Badge>
+                    <h3 className="text-lg font-semibold line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                      {post.title}
                     </h3>
-                  </Link>
-                  <div>
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href="#">Read more</Link>
-                    </Button>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-3">
+                    <div className="flex items-center gap-1.5">
+                      <Image src={post.author.avatar} alt={post.author.name} width={20} height={20} className="rounded-full" data-ai-hint={post.author.hint} />
+                      <span>{post.author.name}</span>
+                    </div>
+                    <span className="text-muted-foreground/50">•</span>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{post.readTime}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
+              </Link>
+            ))}
           </div>
         </div>
+        
         <div className="text-center mt-12 md:mt-16">
-          <Button size="lg" variant="secondary">
-            Visit our blog
+          <Button size="lg" variant="secondary" asChild>
+            <Link href="#">Visit our blog <ArrowRight className="ml-2 h-4 w-4" /></Link>
           </Button>
         </div>
       </div>
