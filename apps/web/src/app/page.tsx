@@ -2,6 +2,7 @@
 "use client";
 import {
   HeroSection,
+  HeroSection2,
   AppCTA,
   FeaturedSalons,
   HowItWorks,
@@ -36,6 +37,7 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-background">
       <main className="flex-grow">
         <HeroSection />
+        <HeroSection2 />
         
         <PlatformFor />
         <FeaturedSalons />

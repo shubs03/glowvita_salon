@@ -1,5 +1,6 @@
 
 export * from './HeroSection';
+export * from './HeroSection2';
 export * from './AppCTA';
 export * from './FeaturedSalons';
 export * from './HowItWorks';
