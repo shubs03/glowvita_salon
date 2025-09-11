@@ -2,7 +2,7 @@
 "use client";
 
 import Image from 'next/image';
-import { Star, PlayCircle, Shield, Lock, FileCheck, ShieldCheck, Check } from 'lucide-react';
+import { Star, PlayCircle, Shield, Lock, FileCheck, ShieldCheck, Check, CheckCircle2 } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import {Card, CardContent} from "@repo/ui/card";
 import { ModernCard } from '@repo/ui/modern-card';
