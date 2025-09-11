@@ -29,7 +29,8 @@
     "./floating-action-button": "./src/floating-action-button.tsx",
     "./stats-card": "./src/stats-card.tsx",
     "./modern-card": "./src/modern-card.tsx",
-    "./page-container": "./src/page-container.tsx"
+    "./page-container": "./src/page-container.tsx",
+    "./components/landing/ProductCard": "./src/components/landing/ProductCard.tsx"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
