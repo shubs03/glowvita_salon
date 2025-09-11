@@ -1,5 +1,5 @@
 
-import { ProductCard } from '@repo/ui/components/landing/ProductCard';
+import { ProductCard } from './ProductCard';
 
 const products = [
   {
@@ -8,8 +8,8 @@ const products = [
     price: 68.00,
     image: 'https://picsum.photos/id/1027/400/400',
     hint: 'skincare product bottle',
-    rating: 4.5,
-    reviewCount: 92,
+    vendorName: 'Starlight Cosmetics',
+    isNew: true,
   },
   {
     name: 'Chroma Balm',
@@ -17,8 +17,8 @@ const products = [
     price: 24.00,
     image: 'https://picsum.photos/id/1028/400/400',
     hint: 'cosmetic balm',
-    rating: 4.8,
-    reviewCount: 156,
+    vendorName: 'Hue & Shade',
+    isNew: false,
   },
   {
     name: 'Zen Mist',
@@ -26,8 +26,8 @@ const products = [
     price: 35.00,
     image: 'https://picsum.photos/id/1029/400/400',
     hint: 'spray bottle',
-    rating: 4.6,
-    reviewCount: 78,
+    vendorName: 'Aether Beauty',
+    isNew: false,
   },
   {
     name: 'Terra Scrub',
@@ -35,8 +35,8 @@ const products = [
     price: 48.00,
     image: 'https://picsum.photos/id/1031/400/400',
     hint: 'cosmetic jar',
-    rating: 4.9,
-    reviewCount: 210,
+    vendorName: 'Earthly Essentials',
+    isNew: false,
   },
 ];
 
@@ -53,11 +53,12 @@ export function FeaturedProducts() {
             <ProductCard 
               key={index} 
               name={product.name}
+              description={product.description}
               price={product.price}
               image={product.image}
               hint={product.hint}
-              rating={product.rating}
-              reviewCount={product.reviewCount}
+              vendorName={product.vendorName}
+              isNew={product.isNew}
             />
           ))}
         </div>

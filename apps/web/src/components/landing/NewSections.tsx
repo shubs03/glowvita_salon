@@ -101,40 +101,44 @@ export const VideoTestimonialSection = () => (
     </section>
 );
 
-const SecurityFeatureCard = ({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) => (
-  <div className="group relative rounded-xl border border-white/10 bg-white/5 p-6 text-center transform-style-3d transition-transform duration-500 hover:[transform:rotateY(-20deg)_rotateX(10deg)]">
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-    <div className="relative z-10 flex flex-col items-center">
-      <div className="relative mb-4 w-16 h-16 rounded-full bg-gradient-to-br from-white/15 to-white/5 border border-white/20 flex items-center justify-center transition-all duration-500 ease-out group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-primary/20">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/20 to-transparent animate-[shimmer_3s_infinite]"></div>
-        <Icon className="h-8 w-8 text-white/80 transition-colors duration-500 group-hover:text-white" />
-      </div>
-      <h3 className="font-semibold text-lg text-white mb-2">{title}</h3>
-      <p className="text-sm text-white/60 group-hover:text-white/80 transition-colors duration-500">
-        {description}
-      </p>
-    </div>
-  </div>
-);
-
 export const SecuritySection = () => (
-    <section className="py-20 bg-gray-900 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-5"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/50 via-gray-900 to-purple-900/50 opacity-30 animate-gradient-sweep"></div>
-        
-        <div className="container mx-auto px-4 relative z-10">
+    <section className="py-16 bg-gradient-to-br from-background via-primary/5 to-background">
+        <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-                <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Enterprise-Grade Security</h2>
-                <p className="text-white/70 max-w-2xl mx-auto">
+                <h2 className="text-3xl font-bold mb-4">Enterprise-Grade Security</h2>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
                     Your data is protected by industry-leading security measures
                 </p>
             </div>
-            
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 perspective-1000">
-                <SecurityFeatureCard icon={Shield} title="256-bit SSL" description="Bank-level encryption for all data in transit." />
-                <SecurityFeatureCard icon={Lock} title="GDPR & CCPA" description="Fully compliant with global privacy regulations." />
-                <SecurityFeatureCard icon={FileCheck} title="Data Backup" description="Daily automated backups to secure your information." />
-                <SecurityFeatureCard icon={ShieldCheck} title="ISO 27001 Certified" description="Adhering to the highest standards for information security." />
+            <div className="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+                <Card className="bg-secondary/5">
+                    <CardContent className="pt-6 text-center">
+                        <Shield className="h-8 w-8 mx-auto text-primary mb-4" />
+                        <h3 className="font-medium mb-2">256-bit SSL</h3>
+                        <p className="text-sm text-muted-foreground">Bank-level encryption</p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-secondary/5">
+                    <CardContent className="pt-6 text-center">
+                        <Lock className="h-8 w-8 mx-auto text-primary mb-4" />
+                        <h3 className="font-medium mb-2">GDPR</h3>
+                        <p className="text-sm text-muted-foreground">Fully compliant</p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-secondary/5">
+                    <CardContent className="pt-6 text-center">
+                        <FileCheck className="h-8 w-8 mx-auto text-primary mb-4" />
+                        <h3 className="font-medium mb-2">Data Backup</h3>
+                        <p className="text-sm text-muted-foreground">Daily automated</p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-secondary/5">
+                    <CardContent className="pt-6 text-center">
+                        <ShieldCheck className="h-8 w-8 mx-auto text-primary mb-4" />
+                        <h3 className="font-medium mb-2">ISO 27001</h3>
+                        <p className="text-sm text-muted-foreground">Certified secure</p>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     </section>
