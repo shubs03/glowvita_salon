@@ -63,7 +63,7 @@ export function HeroSection() {
             </Button>
           </div>
         </div>
-
+        
         {/* Secondary Call-to-Action */}
         <div className="mt-4 text-center">
             <p className="text-sm text-muted-foreground">
@@ -74,29 +74,16 @@ export function HeroSection() {
             </p>
         </div>
 
-        {/* Category quick links */}
-        <div className="flex flex-wrap justify-center gap-3 mt-8">
-          <p className="text-sm font-medium text-muted-foreground self-center mr-2">Popular:</p>
-          {["💇 Haircuts", "💅 Nails", "💆 Spa", "✂️ Barbershop"].map((cat) => (
-            <button
-              key={cat}
-              className="px-4 py-1.5 rounded-full bg-background/50 border border-border/50 hover:bg-primary/10 text-sm font-medium transition"
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
         {/* Trust signals / Statistics Block */}
         <div className="flex flex-wrap justify-center gap-6 mt-10 text-muted-foreground text-sm">
           <div className="flex items-center gap-2">
             <Star className="w-4 h-4 text-primary" /> 10k+ Bookings
           </div>
           <div className="flex items-center gap-2">
-            <Scissors className="w-4 h-4 text-primary" /> 500+ Salons Listed
+            <Scissors className="w-4 h-4 text-primary" /> Top-rated salons
           </div>
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" /> 4.8/5 Average Rating
+            <Sparkles className="w-4 h-4 text-primary" /> 24/7 Online Booking
           </div>
         </div>
       </div>
