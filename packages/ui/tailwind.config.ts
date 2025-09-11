@@ -183,11 +183,14 @@ const config: Omit<Config, "content"> = {
   },
   plugins: [
     require("tailwindcss-animate"),
-    function ({ addUtilities }) {
+    function ({ addUtilities }: { addUtilities: (utilities: any) => void }) {
       addUtilities({
         '.transform-style-3d': {
           'transform-style': 'preserve-3d',
         },
+        '.perspective-1000': {
+          'perspective': '1000px',
+        }
       });
     },
   ],
