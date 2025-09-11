@@ -19,32 +19,6 @@ export function HeroSection() {
       </div>
       
       <div className="container mx-auto px-4 relative z-10">
-        {/* Floating Card - Left */}
-        <div className="hidden lg:block absolute top-[15%] left-[5%] xl:left-[10%] w-64 animate-float" style={{ animationDelay: '0.5s' }}>
-          <div className="bg-background/80 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-border/30">
-            <p className="text-sm text-muted-foreground mb-2">Credit Limit</p>
-            <div className="w-full bg-muted rounded-full h-2.5">
-              <div className="bg-primary h-2.5 rounded-full" style={{ width: '48%' }}></div>
-            </div>
-            <p className="text-right text-sm font-semibold mt-1 text-primary">48% Used</p>
-          </div>
-        </div>
-
-        {/* Floating Card - Right */}
-        <div className="hidden lg:block absolute top-[20%] right-[5%] xl:right-[10%] w-56 animate-float" style={{ animationDelay: '1s' }}>
-          <div className="bg-background/80 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-border/30">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-full">
-                <Shield className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-foreground">Data Protection</p>
-                <p className="text-xs text-muted-foreground">Enabled</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
         <Badge variant="outline" className="mb-6 bg-primary/10 text-primary border-primary/20 shadow-sm animate-fade-in-up">
           <Sparkles className="h-3 w-3 mr-2 text-primary" />
           The #1 Platform for Modern Salons
@@ -100,10 +74,10 @@ export function HeroSection() {
 
       <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
 
-      <div className="absolute bottom-[-10%] md:bottom-[-20%] left-0 w-full h-[50vh] overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
+      <div className="absolute bottom-0 left-0 w-full h-[50px] overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
         <div className="flex w-fit animate-slide hover:[animation-play-state:paused]">
           {[...categories, ...categories].map((category, index) => (
-            <div key={index} className="flex-shrink-0 mx-3 py-3 px-6 text-lg font-semibold rounded-full bg-background/50 backdrop-blur-sm border border-border/30 shadow-md">
+            <div key={index} className="flex-shrink-0 mx-3 py-2 px-6 text-lg font-semibold rounded-full bg-background/50 backdrop-blur-sm border border-border/30 shadow-md">
               {category}
             </div>
           ))}
