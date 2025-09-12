@@ -1,7 +1,7 @@
 
 "use client";
 
-import { BrainCircuit, Bot, LineChart, Code, ArrowRight } from 'lucide-react';
+import { BrainCircuit, Bot, LineChart, Code, Check, ArrowRight } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 
 const services = [
