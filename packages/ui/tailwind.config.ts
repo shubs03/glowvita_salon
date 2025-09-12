@@ -178,8 +178,11 @@ const config: Omit<Config, "content"> = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        body: ["Roboto", "sans-serif"],
-        headline: ["Roboto", "sans-serif"],
+        'body': ['Roboto', 'sans-serif'],
+        'headline': ['Playfair Display', 'serif'],
+        'display': ['Playfair Display', 'serif'],
+        'sans': ['Roboto', 'sans-serif'],
+        'serif': ['Playfair Display', 'serif'],
       },
       perspective: {
         '1000': '1000px',

@@ -1,10 +1,10 @@
-
 "use client";
 
-import Image from 'next/image';
-import { useState, useEffect } from 'react';
-import { cn } from '@repo/ui/cn';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import Image from "next/image";
+import { useState, useEffect } from "react";
+import { cn } from "@repo/ui/cn";
+import { Sparkles, ArrowRight } from "lucide-react";
+import { Badge } from '@repo/ui/badge';
 
 const PlatformForCard = ({
   title,
@@ -27,19 +27,19 @@ const PlatformForCard = ({
       height={224}
       data-ai-hint={hint}
     />
-    
+
     {/* Shimmer Effect */}
     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
-    
-    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent">
-      <div className="flex flex-row items-center justify-between gap-2 p-4 md:p-6">
-        <div className="text-lg md:text-2xl font-bold leading-tight text-white group-hover:text-primary transition-colors duration-300">
+
+    <div className="rounded-md absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent">
+      <div className="rounded-md flex flex-row items-center justify-between gap-2 p-4 md:p-6">
+        <div className="text-base md:text-base font-bold leading-tight text-white group-hover:text-primary transition-colors duration-300">
           {title}
         </div>
-        <ArrowRight className="h-5 w-5 text-white/70 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300" />
+        <ArrowRight className="h-5s w-5 text-white/70 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300" />
       </div>
     </div>
-    
+
     {/* Hover overlay */}
     <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
   </a>
@@ -81,7 +81,7 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
   return (
     <div className="w-full overflow-hidden">
       <div
-        className={`flex w-fit items-start space-x-6 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
+        className={`pt-5 flex w-fit items-start space-x-6 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
       >
         {[...items, ...items].map((item, index) => (
           <PlatformForCard
@@ -96,7 +96,6 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
   );
 };
 
-
 export function PlatformFor() {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -110,14 +109,14 @@ export function PlatformFor() {
       { threshold: 0.1 }
     );
 
-    const element = document.getElementById('platform-for');
+    const element = document.getElementById("platform-for");
     if (element) observer.observe(element);
 
     return () => observer.disconnect();
   }, []);
 
   return (
-    <section 
+    <section
       id="platform-for"
       className="py-20 md:py-28 bg-gradient-to-br from-secondary/20 via-background to-primary/10 relative overflow-hidden"
     >
@@ -125,29 +124,44 @@ export function PlatformFor() {
       <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,white,transparent_70%)] opacity-20"></div>
       <div className="absolute top-10 left-10 w-96 h-96 bg-gradient-to-r from-primary/15 to-transparent rounded-full blur-3xl animate-float"></div>
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-gradient-to-r from-secondary/15 to-transparent rounded-full blur-3xl animate-float-delayed"></div>
-      
+
       <div className="mx-auto max-w-[2000px] space-y-12 md:space-y-16 relative z-10">
-        <div className={cn(
-          "text-center space-y-6 px-4 transition-all duration-1000",
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-        )}>
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-6 py-3 rounded-full text-sm font-medium mb-4 shadow-lg backdrop-blur-sm">
-            <Sparkles className="h-4 w-4 animate-spin-slow" />
-            Perfect For Every Business
+        <div
+          className={cn(
+            "text-center space-y-6 px-4 transition-all duration-1000",
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+          )}
+        >
+          <div
+            className={`transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}
+          >
+            <Badge
+              variant="outline"
+              className=" bg-primary/10 text-primary border-primary/20 shadow-lg hover:shadow-primary/25 animate-pulse-glow backdrop-blur-sm"
+            >
+              <Sparkles className="h-3 w-3 mr-2 text-primary animate-spin-slow" />
+              <span className="font-semibold">
+                Perfect For Every Business
+              </span>
+            </Badge>
           </div>
-          
+
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
             One Platform, Every Beauty Business
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-            From intimate boutique salons to large wellness centers, our platform scales with your ambitions and adapts to your unique business requirements.
+            From intimate boutique salons to large wellness centers, our
+            platform scales with your ambitions and adapts to your unique
+            business requirements.
           </p>
         </div>
 
-        <div className={cn(
-          "space-y-8 transition-all duration-1000 delay-300",
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-        )}>
+        <div
+          className={cn(
+            "space-y-8 transition-all duration-1000 delay-300",
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+          )}
+        >
           <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
             <PlatformForMarquee />
           </div>
@@ -157,5 +171,5 @@ export function PlatformFor() {
         </div>
       </div>
     </section>
-  )
+  );
 }
