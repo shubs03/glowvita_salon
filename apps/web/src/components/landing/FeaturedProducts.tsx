@@ -54,7 +54,7 @@ export function FeaturedProducts() {
           <h2 className="text-3xl md:text-4xl font-bold font-headline">Featured Products</h2>
           <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">Discover our curated selection of high-quality products from top vendors.</p>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
           {products.map((product, index) => (
             <ProductCard 
               key={index} 
