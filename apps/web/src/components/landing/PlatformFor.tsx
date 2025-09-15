@@ -1,5 +1,10 @@
+"use client";
 
-import Image from 'next/image';
+import Image from "next/image";
+import { useState, useEffect } from "react";
+import { cn } from "@repo/ui/cn";
+import { Sparkles, ArrowRight } from "lucide-react";
+import { Badge } from '@repo/ui/badge';
 
 const PlatformForCard = ({
   title,
@@ -11,64 +16,72 @@ const PlatformForCard = ({
   hint: string;
 }) => (
   <a
-    className="relative inline-block h-40 w-64 md:h-[194px] md:w-[309px] shrink-0 overflow-hidden rounded-lg transition-all duration-300 hover:shadow-2xl group border border-border/50"
+    className="relative inline-block h-48 w-72 md:h-56 md:w-80 shrink-0 overflow-hidden rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-primary/25 group border-2 border-border/30 hover:border-primary/50 hover-lift bg-gradient-to-br from-background to-primary/5"
     href="#"
   >
     <Image
-      className="size-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+      className="size-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110 filter group-hover:brightness-110"
       src={imageUrl}
       alt={title}
-      width={309}
-      height={194}
+      width={320}
+      height={224}
       data-ai-hint={hint}
     />
-    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent">
-      <div className="flex flex-row items-center justify-between gap-2 p-3 md:p-4">
-        <div className="text-base md:text-xl font-semibold leading-tight text-white">
+
+    {/* Shimmer Effect */}
+    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
+
+    <div className="rounded-md absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent">
+      <div className="rounded-md flex flex-row items-center justify-between gap-2 p-4 md:p-6">
+        <div className="text-base md:text-base font-bold leading-tight text-white group-hover:text-primary transition-colors duration-300">
           {title}
         </div>
+        <ArrowRight className="h-5s w-5 text-white/70 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300" />
       </div>
     </div>
+
+    {/* Hover overlay */}
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
   </a>
 );
 
 const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
   const items = [
     {
-      title: "Hair Salon",
-      imageUrl: "https://placehold.co/309x194.png",
-      hint: "hair salon",
+      title: "Hair Salons",
+      imageUrl: "https://placehold.co/320x224.png",
+      hint: "modern hair salon interior",
     },
     {
-      title: "Nail Salon",
-      imageUrl: "https://placehold.co/309x194.png",
-      hint: "nail salon",
+      title: "Nail Studios",
+      imageUrl: "https://placehold.co/320x224.png",
+      hint: "elegant nail salon",
     },
     {
-      title: "Barbers",
-      imageUrl: "https://placehold.co/309x194.png",
-      hint: "barber shop",
+      title: "Barber Shops",
+      imageUrl: "https://placehold.co/320x224.png",
+      hint: "contemporary barber shop",
     },
     {
-      title: "Waxing Salon",
-      imageUrl: "https://placehold.co/309x194.png",
-      hint: "waxing salon",
+      title: "Beauty Spas",
+      imageUrl: "https://placehold.co/320x224.png",
+      hint: "luxury spa treatment room",
     },
     {
-      title: "Medspa",
-      imageUrl: "https://placehold.co/309x194.png",
-      hint: "spa",
+      title: "Wellness Centers",
+      imageUrl: "https://placehold.co/320x224.png",
+      hint: "modern wellness center",
     },
     {
-      title: "Eyebrow Bar",
-      imageUrl: "https://placehold.co/309x194.png",
-      hint: "eyebrows",
+      title: "Bridal Boutiques",
+      imageUrl: "https://placehold.co/320x224.png",
+      hint: "bridal makeup studio",
     },
   ];
   return (
     <div className="w-full overflow-hidden">
       <div
-        className={`flex w-fit items-start space-x-4 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
+        className={`pt-5 flex w-fit items-start space-x-6 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
       >
         {[...items, ...items].map((item, index) => (
           <PlatformForCard
@@ -83,29 +96,80 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
   );
 };
 
-
 export function PlatformFor() {
-    return (
-        <section className="py-16 md:py-20 bg-gradient-to-br from-background via-primary/5 to-background relative overflow-hidden">
-          <div className="mx-auto max-w-[2000px] space-y-8 md:space-y-12 relative z-10">
-            <div className="text-center space-y-4 px-4">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                A platform for everyone
-              </h2>
-              <p className="text-base md:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                Whether you're running a small boutique salon or managing
-                multiple locations, our platform adapts to your unique business
-                needs.
-              </p>
-            </div>
+  const [isVisible, setIsVisible] = useState(false);
 
-            <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
-              <PlatformForMarquee />
-            </div>
-            <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
-              <PlatformForMarquee rtl={true} />
-            </div>
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const element = document.getElementById("platform-for");
+    if (element) observer.observe(element);
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <section
+      id="platform-for"
+      className="py-20 md:py-28 bg-gradient-to-br from-secondary/20 via-background to-primary/10 relative overflow-hidden"
+    >
+      {/* Enhanced Background */}
+      <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,white,transparent_70%)] opacity-20"></div>
+      <div className="absolute top-10 left-10 w-96 h-96 bg-gradient-to-r from-primary/15 to-transparent rounded-full blur-3xl animate-float"></div>
+      <div className="absolute bottom-10 right-10 w-80 h-80 bg-gradient-to-r from-secondary/15 to-transparent rounded-full blur-3xl animate-float-delayed"></div>
+
+      <div className="mx-auto max-w-[2000px] space-y-12 md:space-y-16 relative z-10">
+        <div
+          className={cn(
+            "text-center space-y-6 px-4 transition-all duration-1000",
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+          )}
+        >
+          <div
+            className={`transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}
+          >
+            <Badge
+              variant="outline"
+              className=" bg-primary/10 text-primary border-primary/20 shadow-lg hover:shadow-primary/25 animate-pulse-glow backdrop-blur-sm"
+            >
+              <Sparkles className="h-3 w-3 mr-2 text-primary animate-spin-slow" />
+              <span className="font-semibold">
+                Perfect For Every Business
+              </span>
+            </Badge>
           </div>
-        </section>
-    )
+
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+            One Platform, Every Beauty Business
+          </h2>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
+            From intimate boutique salons to large wellness centers, our
+            platform scales with your ambitions and adapts to your unique
+            business requirements.
+          </p>
+        </div>
+
+        <div
+          className={cn(
+            "space-y-8 transition-all duration-1000 delay-300",
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+          )}
+        >
+          <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
+            <PlatformForMarquee />
+          </div>
+          <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
+            <PlatformForMarquee rtl={true} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
