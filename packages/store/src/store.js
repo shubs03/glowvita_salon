@@ -22,6 +22,7 @@ import appointmentReducer from './slices/appointmentSlice';
 import blockTimeReducer from './slices/blockTimeSlice';
 import vendorprofileReducer from './slices/vendorprofileSlice';
 import workingHoursReducer from './slices/workingHoursSlice';
+import orderReducer from './slices/orderSlice';
   
 export const makeStore = () => {
   return configureStore({
@@ -50,8 +51,8 @@ export const makeStore = () => {
       appointments: appointmentReducer,  
       blockTime: blockTimeReducer,
       vendorprofile: vendorprofileReducer,
-      workingHours: workingHoursReducer
-      
+      workingHours: workingHoursReducer,
+      order: orderReducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
