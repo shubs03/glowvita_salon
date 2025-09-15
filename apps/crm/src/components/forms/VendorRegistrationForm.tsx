@@ -163,11 +163,24 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.firstName) newErrors.firstName = 'First name is required';
     if (!formData.lastName) newErrors.lastName = 'Last name is required';
-    if (!formData.email) newErrors.email = 'Email is required';
-    if (!formData.phone) newErrors.phone = 'Phone is required';
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+    if (!formData.phone) {
+      newErrors.phone = 'Phone is required';
+    } else if (!/^\d{10}$/.test(formData.phone)) {
+      newErrors.phone = 'Phone must be 10 digits';
+    }
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -186,7 +199,11 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     if (!formData.address) newErrors.address = 'Address is required';
     if (!formData.state) newErrors.state = 'State is required';
     if (!formData.city) newErrors.city = 'City is required';
-    if (!formData.pincode) newErrors.pincode = 'Pincode is required';
+    if (!formData.pincode) {
+      newErrors.pincode = 'Pincode is required';
+    } else if (!/^\d{6}$/.test(formData.pincode)) {
+      newErrors.pincode = 'Pincode must be 6 digits';
+    }
     if (!formData.location) newErrors.location = 'Location is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -213,6 +230,13 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
         setStep(2);
     } else if (step === 2 && validateStep2()) {
         setStep(3);
+    } else {
+      // Show error toast if validation fails
+      if ((step === 1 && !validateStep1()) || 
+          (step === 2 && !validateStep2()) || 
+          (step === 3 && !validateStep3())) {
+        toast.error("Please fill all required fields correctly.");
+      }
     }
   }
 
@@ -360,6 +384,13 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     setSearchQuery('');
   };
 
+  const renderError = (fieldName: keyof FormData) => {
+    if (errors[fieldName]) {
+      return <p className="text-red-500 text-sm mt-1">{errors[fieldName]}</p>;
+    }
+    return null;
+  };
+
   return (
     <>
       {/* Added responsive container with proper scrolling for mobile */}
@@ -408,12 +439,24 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                   <p className="text-gray-600 text-base sm:text-lg">Enter your personal details to get started.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                  <Input name="firstName" placeholder="First Name" onChange={handleChange} value={formData.firstName} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
-                  <Input name="lastName" placeholder="Last Name" onChange={handleChange} value={formData.lastName} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                  <div>
+                    <Input name="firstName" placeholder="First Name" onChange={handleChange} value={formData.firstName} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    {renderError('firstName')}
+                  </div>
+                  <div>
+                    <Input name="lastName" placeholder="Last Name" onChange={handleChange} value={formData.lastName} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    {renderError('lastName')}
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                  <Input name="email" type="email" placeholder="Email Address" onChange={handleChange} value={formData.email} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
-                  <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} value={formData.phone} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                  <div>
+                    <Input name="email" type="email" placeholder="Email Address" onChange={handleChange} value={formData.email} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    {renderError('email')}
+                  </div>
+                  <div>
+                    <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} value={formData.phone} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    {renderError('phone')}
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div className="relative">
@@ -421,8 +464,12 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                     <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10" onClick={() => setShowPassword(!showPassword)}>
                       {showPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
                     </Button>
+                    {renderError('password')}
                   </div>
-                  <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} value={formData.confirmPassword} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                  <div>
+                    <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} value={formData.confirmPassword} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    {renderError('confirmPassword')}
+                  </div>
                 </div>
                 <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} value={formData.referredByCode} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
               </div>
@@ -437,17 +484,15 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
-                    <Label htmlFor="businessName" className="text-base sm:text-lg block mb-1">Business Name</Label>
-                    <Input name="businessName" id="businessName" placeholder="Enter business name" onChange={handleChange} value={formData.businessName} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    <Input name="businessName" placeholder="Enter business name" onChange={handleChange} value={formData.businessName} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    {renderError('businessName')}
                   </div>
                   <div>
-                    <Label htmlFor="description" className="text-base sm:text-lg block mb-1">Business Description</Label>
-                    <Textarea name="description" id="description" placeholder="Enter business description" onChange={handleChange} value={formData.description} className="min-h-[70px] sm:min-h-[80px] px-4 sm:px-5 py-2 sm:py-3 text-base sm:text-lg" />
+                    <Textarea name="description" placeholder="Enter business description" onChange={handleChange} value={formData.description} className="min-h-[70px] sm:min-h-[80px] px-4 sm:px-5 py-2 sm:py-3 text-base sm:text-lg" />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
-                    <Label htmlFor="category" className="text-base sm:text-lg block mb-1">Salon Category</Label>
                     <Select name="category" onValueChange={(value) => setFormData(prev => ({...prev, category: value as SalonCategory}))} value={formData.category}>
                       <SelectTrigger className="h-12 sm:h-14 w-full text-base sm:text-lg">
                         <SelectValue placeholder="Select salon category" />
@@ -458,9 +503,9 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                         <SelectItem value="women" className="text-base sm:text-lg">Women</SelectItem>
                       </SelectContent>
                     </Select>
+                    {renderError('category')}
                   </div>
                   <div>
-                    <Label className="text-base sm:text-lg block mb-1">Business Type</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                       {(['shop', 'shop-at-home', 'onsite'] as SubCategory[]).map(sc => (
                         <div key={sc} className="flex items-center space-x-2 p-2 sm:p-3 border rounded-md hover:bg-gray-50">
@@ -476,16 +521,15 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                         </div>
                       ))}
                     </div>
+                    {renderError('subCategories')}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
-                    <Label htmlFor="website" className="text-base sm:text-lg block mb-1">Website URL</Label>
-                    <Input name="website" id="website" placeholder="https://example.com" onChange={handleChange} value={formData.website} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    <Input name="website" placeholder="https://example.com" onChange={handleChange} value={formData.website} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
                   </div>
                   <div>
-                    <Label htmlFor="referredByCode" className="text-base sm:text-lg block mb-1">Referral Code (Optional)</Label>
-                    <Input name="referredByCode" id="referredByCode" placeholder="Enter referral code if any" onChange={handleChange} value={formData.referredByCode} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    <Input name="referredByCode" placeholder="Enter referral code if any" onChange={handleChange} value={formData.referredByCode} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
                   </div>
                 </div>
               </div>
@@ -508,6 +552,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                       readOnly
                       className="flex-1 h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
+                    {renderError('location')}
                     <Button
                       type="button"
                       variant="outline"
@@ -521,21 +566,21 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="address" className="text-base sm:text-lg block mb-1">Full Address</Label>
-                  <Input name="address" id="address" placeholder="Full Address" onChange={handleChange} value={formData.address} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                  <Input name="address" placeholder="Full Address" onChange={handleChange} value={formData.address} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                  {renderError('address')}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
                   <div>
-                    <Label htmlFor="state" className="text-base sm:text-lg block mb-1">State</Label>
-                    <Input name="state" id="state" placeholder="State" onChange={handleChange} value={formData.state} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    <Input name="state" placeholder="State" onChange={handleChange} value={formData.state} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    {renderError('state')}
                   </div>
                   <div>
-                    <Label htmlFor="city" className="text-base sm:text-lg block mb-1">City</Label>
-                    <Input name="city" id="city" placeholder="City" onChange={handleChange} value={formData.city} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    <Input name="city" placeholder="City" onChange={handleChange} value={formData.city} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    {renderError('city')}
                   </div>
                   <div>
-                    <Label htmlFor="pincode" className="text-base sm:text-lg block mb-1">Pincode</Label>
-                    <Input name="pincode" id="pincode" placeholder="Pincode" onChange={handleChange} value={formData.pincode} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    <Input name="pincode" placeholder="Pincode" onChange={handleChange} value={formData.pincode} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    {renderError('pincode')}
                   </div>
                 </div>
               </div>

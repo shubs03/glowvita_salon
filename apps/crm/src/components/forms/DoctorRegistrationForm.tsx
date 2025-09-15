@@ -75,6 +75,8 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
 export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
   const { data: dropdownData = [], isLoading: isLoadingDropdowns } = useGetSuperDataQuery(undefined);
   
+  const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
+  
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -210,6 +212,46 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     return false;
   };
 
+  const validateStep1 = () => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
+    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+    if (!formData.phone) {
+      newErrors.phone = 'Phone is required';
+    } else if (!/^\d{10}$/.test(formData.phone)) {
+      newErrors.phone = 'Phone must be 10 digits';
+    }
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    if (!formData.registrationNumber) newErrors.registrationNumber = 'Registration number is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
+    if (!formData.doctorType) newErrors.doctorType = 'Doctor type is required';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep3 = () => {
+    const newErrors: Partial<Record<keyof FormData, string>> = {};
+    // No specific validations needed for step 3 as it's mainly about disease selection
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   // Enhanced navigation functions - completely separate from form submission
   const navigateToNextStep = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -217,15 +259,15 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     
     // Step 1 validation
     if (step === 1) {
-      if (!formData.name || !formData.email || !formData.phone || !formData.password) {
-        toast.error("Please fill all required fields.");
+      if (!validateStep1()) {
+        toast.error("Please fill all required fields correctly.");
         return;
       }
     }
     
     // Step 2 validation
     if (step === 2) {
-      if (!formData.doctorType) {
+      if (!validateStep2()) {
         toast.error("Please select a role.");
         return;
       }
@@ -267,6 +309,13 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     }
   };
 
+  const renderError = (fieldName: keyof FormData) => {
+    if (errors[fieldName]) {
+      return <p className="text-red-500 text-sm mt-1">{errors[fieldName]}</p>;
+    }
+    return null;
+  };
+
   const renderStepContent = () => {
     switch(step) {
       case 1:
@@ -278,77 +327,104 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
               <p className="text-gray-600 text-base sm:text-lg">Enter your personal details to get started.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-              <Input 
-                name="name" 
-                placeholder="Full Name" 
-                onChange={handleChange} 
-                value={formData.name}
-                onKeyDown={handleInputKeyDown}
-                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-                required
-              />
-              <Input 
-                name="registrationNumber" 
-                placeholder="Registration Number" 
-                onChange={handleChange} 
-                value={formData.registrationNumber}
-                onKeyDown={handleInputKeyDown}
-                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-                required
-              />
+              <div>
+                <Input 
+                  id="name"
+                  name="name" 
+                  placeholder="Full Name" 
+                  onChange={handleChange} 
+                  value={formData.name}
+                  onKeyDown={handleInputKeyDown}
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  required
+                />
+                {renderError('name')}
+              </div>
+              <div>
+                <Input 
+                  id="registrationNumber"
+                  name="registrationNumber" 
+                  placeholder="Registration Number" 
+                  onChange={handleChange} 
+                  value={formData.registrationNumber}
+                  onKeyDown={handleInputKeyDown}
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  required
+                />
+                {renderError('registrationNumber')}
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-              <Input 
-                name="email" 
-                type="email" 
-                placeholder="Email Address" 
-                onChange={handleChange} 
-                value={formData.email}
-                onKeyDown={handleInputKeyDown}
-                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-                required
-              />
-              <Input 
-                name="phone" 
-                type="tel" 
-                placeholder="Phone Number" 
-                onChange={handleChange} 
-                value={formData.phone}
-                onKeyDown={handleInputKeyDown}
-                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-                required
-              />
+              <div>
+                <Input 
+                  id="email"
+                  name="email" 
+                  type="email" 
+                  placeholder="Email Address" 
+                  onChange={handleChange} 
+                  value={formData.email}
+                  onKeyDown={handleInputKeyDown}
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  required
+                />
+                {renderError('email')}
+              </div>
+              <div>
+                <Input 
+                  id="phone"
+                  name="phone" 
+                  type="tel" 
+                  placeholder="Phone Number" 
+                  onChange={handleChange} 
+                  value={formData.phone}
+                  onKeyDown={handleInputKeyDown}
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  required
+                />
+                {renderError('phone')}
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+              <div>
+                <Input 
+                  id="password"
+                  name="password" 
+                  type="password" 
+                  placeholder="Password (min. 8 characters)" 
+                  onChange={handleChange} 
+                  value={formData.password}
+                  onKeyDown={handleInputKeyDown}
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  required
+                />
+                {renderError('password')}
+              </div>
+              <div>
+                <Input 
+                  id="confirmPassword"
+                  name="confirmPassword" 
+                  type="password" 
+                  placeholder="Confirm Password" 
+                  onChange={handleChange} 
+                  value={formData.confirmPassword}
+                  onKeyDown={handleInputKeyDown}
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  required
+                />
+                {renderError('confirmPassword')}
+              </div>
+            </div>
+            <div>
               <Input 
-                name="password" 
-                type="password" 
-                placeholder="Password (min. 8 characters)" 
+                id="referredByCode"
+                name="referredByCode" 
+                placeholder="Referral Code (Optional)" 
                 onChange={handleChange} 
-                value={formData.password}
+                value={formData.referredByCode}
                 onKeyDown={handleInputKeyDown}
                 className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-                required
-              />
-              <Input 
-                name="confirmPassword" 
-                type="password" 
-                placeholder="Confirm Password" 
-                onChange={handleChange} 
-                value={formData.confirmPassword}
-                onKeyDown={handleInputKeyDown}
-                className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-                required
               />
             </div>
-            <Input 
-              name="referredByCode" 
-              placeholder="Referral Code (Optional)" 
-              onChange={handleChange} 
-              value={formData.referredByCode}
-              onKeyDown={handleInputKeyDown}
-              className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-            />
           </div>
         );
       case 2:
@@ -385,6 +461,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                   </div>
                 ))}
               </div>
+              {renderError('doctorType')}
             </div>
 
             {formData.doctorType && (
