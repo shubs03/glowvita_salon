@@ -1,3 +1,4 @@
+
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -114,8 +115,10 @@ export const glowvitaApi = createApi({
     "SmsPackage",
     "SocialMediaTemplate",
     "Appointment",
-
-    
+    "ShippingCharge",
+    "Order",
+    "CrmProducts",
+    "SupplierProducts",
   ],
 
   endpoints: (builder) => ({
@@ -155,6 +158,7 @@ export const glowvitaApi = createApi({
       query: (id) => ({
         url: `/admin/sms-template?id=${id}`,
         method: "DELETE",
+        body: { _id: id },
       }),
       invalidatesTags: ["SmsTemplate"],
     }),
@@ -835,61 +839,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Faq"],
     }),
 
-    // Admin Product Categories Endpoints
-    getAdminProductCategories: builder.query({
-      query: () => ({
-        url: "/admin/product-categories",
-        method: "GET",
-      }),
-      providesTags: ["AdminProductCategory"],
-      transformResponse: (response) => {
-        // Ensure we always return an array
-        if (Array.isArray(response)) {
-          return response;
-        }
-        if (response && Array.isArray(response.data)) {
-          return response.data;
-        }
-        if (
-          response &&
-          response.productCategories &&
-          Array.isArray(response.productCategories)
-        ) {
-          return response.productCategories;
-        }
-        return [];
-      },
-    }),
-
-    createAdminProductCategory: builder.mutation({
-      query: (category) => ({
-        url: "/admin/product-categories",
-        method: "POST",
-        body: category,
-      }),
-      invalidatesTags: ["AdminProductCategory"],
-    }),
-
-    updateAdminProductCategory: builder.mutation({
-      query: (category) => ({
-        url: "/admin/product-categories",
-        method: "PUT",
-        body: category,
-      }),
-      invalidatesTags: ["AdminProductCategory"],
-    }),
-
-    deleteAdminProductCategory: builder.mutation({
-      query: ({ id }) => ({
-        url: "/admin/product-categories",
-        method: "DELETE",
-        body: { id },
-      }),
-      invalidatesTags: ["AdminProductCategory"],
-    }),
-
     // Product Approval
-
     getVendorProducts: builder.query({
       query: () => ({ url: "/admin/product-approval", method: "GET" }),
       providesTags: ["Product"],
@@ -1380,6 +1330,14 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["CrmSocialMediaTemplate"],
     }),
+    getSupplierProducts: builder.query({
+      query: () => ({
+          url: "/crm/supplier-products",
+          method: "GET"
+      }),
+      providesTags: ["SupplierProducts"],
+      transformResponse: (response) => response.data || [],
+  }),
   }),
    
 });
@@ -1539,6 +1497,7 @@ export const {
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
   useDeleteCrmProductMutation,
+  useGetSupplierProductsQuery,
 
   // shipping charge endpoints
   useGetShippingConfigQuery,
@@ -1598,3 +1557,5 @@ export const {
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
 } = glowvitaApi;
+
+    
