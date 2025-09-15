@@ -839,6 +839,61 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Faq"],
     }),
 
+     // Admin Product Categories 
+     
+    getAdminProductCategories: builder.query({
+      query: () => ({
+        url: "/admin/product-categories",
+        method: "GET",
+      }),
+      providesTags: ["AdminProductCategory"],
+      transformResponse: (response) => {
+        // Ensure we always return an array
+        if (Array.isArray(response)) {
+          return response;
+        }
+        if (response && Array.isArray(response.data)) {
+          return response.data;
+        }
+        if (
+          response &&
+          response.productCategories &&
+          Array.isArray(response.productCategories)
+        ) {
+          return response.productCategories;
+        }
+        return [];
+      },
+    }),
+
+    createAdminProductCategory: builder.mutation({
+      query: (category) => ({
+        url: "/admin/product-categories",
+        method: "POST",
+        body: category,
+      }),
+      invalidatesTags: ["AdminProductCategory"],
+    }),
+
+    updateAdminProductCategory: builder.mutation({
+      query: (category) => ({
+        url: "/admin/product-categories",
+        method: "PUT",
+        body: category,
+      }),
+      invalidatesTags: ["AdminProductCategory"],
+    }),
+
+    deleteAdminProductCategory: builder.mutation({
+      query: ({ id }) => ({
+        url: "/admin/product-categories",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["AdminProductCategory"],
+    }),
+
+
     // Product Approval
     getVendorProducts: builder.query({
       query: () => ({ url: "/admin/product-approval", method: "GET" }),
