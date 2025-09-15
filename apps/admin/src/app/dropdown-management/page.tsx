@@ -1366,6 +1366,7 @@ const ProductCategoryManager = () => {
                         <Plus className="mr-2 h-4 w-4" />
                         Add Category
                     </Button>
+                </div>
                 </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto no-scrollbar rounded-md border">
