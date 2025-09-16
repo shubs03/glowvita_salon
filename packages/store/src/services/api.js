@@ -1,3 +1,4 @@
+
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -122,8 +123,10 @@ export const glowvitaApi = createApi({
     "SmsPackage",
     "SocialMediaTemplate",
     "Appointment",
-
-    
+    "ShippingCharge",
+    "Order",
+    "CrmProducts",
+    "SupplierProducts",
   ],
 
   endpoints: (builder) => ({
@@ -163,6 +166,7 @@ export const glowvitaApi = createApi({
       query: (id) => ({
         url: `/admin/sms-template?id=${id}`,
         method: "DELETE",
+        body: { _id: id },
       }),
       invalidatesTags: ["SmsTemplate"],
     }),
@@ -843,7 +847,8 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Faq"],
     }),
 
-    // Admin Product Categories Endpoints
+     // Admin Product Categories 
+     
     getAdminProductCategories: builder.query({
       query: () => ({
         url: "/admin/product-categories",
@@ -896,8 +901,8 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["AdminProductCategory"],
     }),
 
-    // Product Approval
 
+    // Product Approval
     getVendorProducts: builder.query({
       query: () => ({ url: "/admin/product-approval", method: "GET" }),
       providesTags: ["Product"],
@@ -1394,6 +1399,14 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["CrmSocialMediaTemplate"],
     }),
+    getSupplierProducts: builder.query({
+      query: () => ({
+          url: "/crm/supplier-products",
+          method: "GET"
+      }),
+      providesTags: ["SupplierProducts"],
+      transformResponse: (response) => response.data || [],
+  }),
   }),
    
 });
@@ -1553,6 +1566,7 @@ export const {
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
   useDeleteCrmProductMutation,
+  useGetSupplierProductsQuery,
 
   // shipping charge endpoints
   useGetShippingConfigQuery,
@@ -1612,3 +1626,5 @@ export const {
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
 } = glowvitaApi;
+
+    

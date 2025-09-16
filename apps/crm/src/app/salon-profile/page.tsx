@@ -752,8 +752,6 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
   );
 };
 
-import { useSelector } from 'react-redux';
-
 const OpeningHoursTab = () => {
   // Get the token from Redux store
   const token = useSelector((state) => state.crmAuth?.token);
@@ -924,7 +922,7 @@ const OpeningHoursTab = () => {
     </Card>
   );
 };
-const OpeningHoursTab = ({
+const OpeningHoursWithPropsTab = ({
   hours,
   setHours,
 }: {
@@ -936,31 +934,37 @@ const OpeningHoursTab = ({
       <CardTitle>Opening Hours</CardTitle>
       <CardDescription>Set your weekly business hours.</CardDescription>
     </CardHeader>
+
     <CardContent className="space-y-4">
-      {hours && hours.map((hour, index) => (
-        <><div key={hour.day} className="grid grid-cols-4 items-center gap-4">
-          <div className="col-span-1">
-            <Checkbox
-              id={hour.day}
-              checked={hour.isOpen}
-              onCheckedChange={(checked) => {
-                const newHours = [...hours];
-                newHours[index].isOpen = !!checked;
-                setHours(newHours);
-              } } />
-            <Label htmlFor={hour.day} className="ml-2 font-medium">
-              {hour.day}
-            </Label>
+      {hours &&
+        hours.map((hour, index) => (
+          <div key={hour.day} className="grid grid-cols-4 items-center gap-4">
+            <div className="col-span-1 flex items-center">
+              <Checkbox
+                id={hour.day}
+                checked={hour.isOpen}
+                onCheckedChange={(checked) => {
+                  const newHours = [...hours];
+                  newHours[index].isOpen = !!checked;
+                  setHours(newHours);
+                }}
+              />
+              <Label htmlFor={hour.day} className="ml-2 font-medium">
+                {hour.day}
+              </Label>
+            </div>
           </div>
-          ))}
-        </CardContent><CardFooter>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Hours'}
-            </Button>
-          </CardFooter></>
-    </Card>
-  );
-};
+        ))}
+    </CardContent>
+
+    <CardFooter>
+      <Button onClick={handleSave} disabled={saving}>
+        {saving ? "Saving..." : "Save Hours"}
+      </Button>
+    </CardFooter>
+  </Card>
+);
+
 
 const CategoriesTab = () => (
   <Card>
@@ -979,7 +983,6 @@ const CategoriesTab = () => (
 
 // MAIN PAGE COMPONENT
 export default function SalonProfilePage() {
-  const [vendor, setVendor] = useState(initialVendorData);
   // Remove unused state since OpeningHoursTab manages its own state now
   const dispatch = useDispatch();
   const vendor = useSelector(selectVendor);

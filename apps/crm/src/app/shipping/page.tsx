@@ -148,8 +148,8 @@ const ShippingPage = () => {
           )}
         </CardContent>
         <CardFooter className="flex justify-end border-t pt-6">
-          <Button onClick={handleSave} loading={isUpdating}>
-            Save Changes
+          <Button onClick={handleSave} disabled={isUpdating}>
+            {isUpdating ? 'Saving...' : 'Save Changes'}
           </Button>
         </CardFooter>
       </Card>
@@ -158,3 +158,5 @@ const ShippingPage = () => {
 };
 
 export default ShippingPage;
+
+    

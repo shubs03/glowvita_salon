@@ -1,71 +1,128 @@
 
 "use client";
-
-import { Button } from "@repo/ui/button";
-import { Input } from "@repo/ui/input";
-import { Search, MapPin } from "lucide-react";
-import { AppCTA } from "@/components/landing/AppCTA";
-import { FeaturedSalons } from "@/components/landing/FeaturedSalons";
-import { HowItWorks } from "@/components/landing/HowItWorks";
-import Link from "next/link";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { PlatformFor } from "@/components/landing/PlatformFor";
-import { Testimonials } from "@/components/landing/Testimonials";
-import { Offers } from "@/components/landing/Offers";
-import { Products } from "@/components/landing/Products";
-import { Pricing } from "@/components/landing/Pricing";
-import { FAQ } from "@/components/landing/FAQ";
+import {
+  HeroSection,
+  AppCTA,
+  FeaturedSalons,
+  HowItWorks,
+  PlatformFor,
+  Testimonials,
+  Offers,
+  FAQ,
+  AdvantageCard,
+  VideoTestimonialSection,
+  SecuritySection,
+  FeaturedProducts,
+  Integrations,
+  Blog,
+  Services,
+} from "@/components/landing";
+import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
+import { Button } from '@repo/ui/button';
 
 export default function HomePage() {
+
+  const scrollAdvantages = (direction: "left" | "right") => {
+    const container = document.getElementById("advantages-container");
+    if (container) {
+      const scrollAmount = container.clientWidth / 2;
+      container.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <main className="flex-grow">
-        <section className="relative py-20 md:py-32 bg-secondary/30 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5 -z-10"></div>
-          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-background to-transparent -z-10"></div>
-          
+        <HeroSection /> 
+        <PlatformFor />
+        <FeaturedSalons />
+        <Offers />
+        <HowItWorks />
+        <FeaturedProducts />
+        <Services />
+        
+        <section className="py-20 md:py-28 bg-gradient-to-br from-background via-primary/8 to-secondary/8 relative overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
-            <div className="text-center">
-              <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold font-headline tracking-tighter mb-6 bg-gradient-to-r from-foreground via-foreground/80 to-foreground bg-clip-text text-transparent">
-                Find & Book Your Next Look
-              </h1>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 leading-relaxed">
-                Discover top-rated salons, spas, and barbershops near you. Effortlessly book appointments online, 24/7.
+            {/* Enhanced Background Effects */}
+            <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,white,transparent_70%)] opacity-20"></div>
+            <div className="absolute top-10 left-10 w-96 h-96 bg-gradient-to-r from-primary/15 to-transparent rounded-full blur-3xl animate-float"></div>
+            <div className="absolute bottom-10 right-10 w-80 h-80 bg-gradient-to-r from-secondary/15 to-transparent rounded-full blur-3xl animate-float-delayed"></div>
+            
+            <div className="text-center mb-16 md:mb-20">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary/10 to-secondary/10 text-primary px-6 py-3 rounded-full text-sm font-medium mb-6 shadow-lg backdrop-blur-sm border border-primary/20">
+                <Award className="h-4 w-4" />
+                <span className="font-semibold">Real Results</span>
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
+              </div>
+              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-headline mb-6 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+                Unlock Your Salon's Full Potential
+              </h2>
+              <p className="text-muted-foreground text-xl max-w-4xl mx-auto leading-relaxed">
+                See the real-world impact of using our comprehensive salon management platform. These metrics represent actual improvements from our satisfied clients across the globe.
               </p>
-              
-              <div className="max-w-3xl mx-auto">
-                <div className="relative bg-background rounded-full p-2 shadow-2xl shadow-primary/10 border border-border/50 flex flex-col sm:flex-row items-center gap-2">
-                  <div className="relative flex-grow w-full">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input 
-                      placeholder="Search for services or salons"
-                      className="h-12 text-base pl-12 rounded-full sm:rounded-none sm:rounded-l-full border-0 focus-visible:ring-0 bg-transparent w-full"
-                    />
-                  </div>
-                  <div className="hidden sm:block w-px h-6 bg-border"></div>
-                  <div className="relative flex-grow w-full">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input 
-                      placeholder="Near me"
-                      className="h-12 text-base pl-12 rounded-full sm:rounded-none sm:rounded-r-full border-0 focus-visible:ring-0 bg-transparent w-full"
-                    />
-                  </div>
-                  <Button size="lg" className="rounded-full w-full sm:w-auto px-8 h-12 text-base font-semibold group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-300">
-                    Search <Search className="ml-2 h-5 w-5 group-hover:scale-110 transition-transform duration-200" />
-                  </Button>
-                </div>
+            </div>
+            
+            <div
+              id="advantages-container"
+              className="flex gap-6 md:gap-8 pb-8 overflow-x-auto snap-x snap-mandatory no-scrollbar"
+            >
+              <AdvantageCard
+                stat="40%"
+                title="Increase in Bookings"
+                description="Clients booking through our platform are more likely to commit and show up for their appointments with automated reminders and seamless experience."
+                icon={<Users />}
+              />
+              <AdvantageCard
+                stat="25%"
+                title="More Repeat Clients"
+                description="Build lasting loyalty with detailed client profiles, service history, and personalized experiences that keep customers coming back."
+                icon={<Users />}
+              />
+              <AdvantageCard
+                stat="15%"
+                title="Higher Average Spend"
+                description="Intelligently upsell services and products by understanding complete client history, preferences, and targeted recommendations."
+                icon={<LineChart />}
+              />
+              <AdvantageCard
+                stat="50%"
+                title="Less Admin Time"
+                description="Automate appointment reminders, payment processing, and administrative tasks so you can focus on your craft and clients."
+                icon={<Clock />}
+              />
+            </div>
+            
+            <div className="flex justify-center mt-12">
+              <div className="flex gap-4 bg-background/80 backdrop-blur-sm p-3 rounded-2xl shadow-lg border border-border/50">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="shadow-lg hover:shadow-xl transition-all duration-300 rounded-full bg-background hover:bg-primary hover:text-white border-2 hover:border-primary group"
+                  onClick={() => scrollAdvantages("left")}
+                >
+                  <ArrowRight className="h-4 w-4 transform rotate-180 group-hover:scale-110 transition-transform" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="shadow-lg hover:shadow-xl transition-all duration-300 rounded-full bg-background hover:bg-primary hover:text-white border-2 hover:border-primary group"
+                  onClick={() => scrollAdvantages("right")}
+                >
+                  <ArrowRight className="h-4 w-4 group-hover:scale-110 transition-transform" />
+                </Button>
               </div>
             </div>
           </div>
         </section>
-        
-        <PlatformFor />
-        <FeaturedSalons />
-        <Offers />
-        <Products />
-        <HowItWorks />
+
+        <VideoTestimonialSection />
         <Testimonials />
-        <Pricing />
+        <SecuritySection />
+        <Integrations />
+        <Blog />
         <FAQ />
         <AppCTA />
 
