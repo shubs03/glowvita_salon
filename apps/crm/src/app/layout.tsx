@@ -40,7 +40,10 @@ export default function RootLayout({
     '/doctor-staff',
     '/timetable',
     '/consultations',
-    '/patients'
+    '/patients',
+    '/calendar',
+    '/appointments/[id]',
+    '/appointments'
   ].some(path => pathname.startsWith(path));
   
   const showMarketingLayout = ['/', '/apps', '/pricing', '/support'].includes(pathname);

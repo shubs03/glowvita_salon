@@ -71,6 +71,7 @@ interface NewAppointmentFormProps {
   defaultValues?: Partial<Appointment>;
   defaultDate?: Date;
   isEditing?: boolean;
+  isRescheduling?: boolean;
   onSubmit?: (appointment: Appointment) => Promise<void>;
   onCancel?: () => void;
   onSuccess?: () => void;
@@ -81,6 +82,7 @@ export default function NewAppointmentForm({
   defaultValues,
   defaultDate,
   isEditing = false,
+  isRescheduling = false,
   onSubmit,
   onCancel = () => {},
   onSuccess,
@@ -279,6 +281,37 @@ export default function NewAppointmentForm({
       }));
     }
   }, [defaultValues, services, staffData]);
+
+  // Handle default values when services load
+  useEffect(() => {
+    if (isLoadingServices || services.length === 0) return;
+    
+    // If we have a default service ID but no name, try to find and set it
+    if (appointmentData.service && !appointmentData.serviceName) {
+      const defaultService = services.find(s => s.id === appointmentData.service);
+      if (defaultService) {
+        setAppointmentData(prev => ({
+          ...prev,
+          serviceName: defaultService.name,
+          duration: defaultService.duration || 60,
+          amount: defaultService.price || 0,
+          totalAmount: defaultService.price || 0
+        }));
+      }
+    }
+    // If no service is selected but we have services, select the first one
+    else if (!appointmentData.service && services.length > 0) {
+      const firstService = services[0];
+      setAppointmentData(prev => ({
+        ...prev,
+        service: firstService.id,
+        serviceName: firstService.name,
+        duration: firstService.duration || 60,
+        amount: firstService.price || 0,
+        totalAmount: firstService.price || 0
+      }));
+    }
+  }, [isLoadingServices, services, appointmentData.service, appointmentData.serviceName]);
 
   // Update the staff change handler
   const handleStaffChange = (staffId: string) => {
@@ -562,14 +595,27 @@ export default function NewAppointmentForm({
     return date < today;
   };
 
+  // Update the form title based on the mode
+  const formTitle = isRescheduling 
+    ? 'Reschedule Appointment' 
+    : isEditing 
+      ? 'Edit Appointment' 
+      : 'New Appointment';
+
+  const formDescription = isRescheduling
+    ? 'Update the date and time for this appointment'
+    : isEditing
+      ? 'Update the appointment details'
+      : 'Fill in the details to schedule a new appointment';
+
   return (
     <div className="space-y-6 p-4">
       <div className="space-y-1">
         <h2 className="text-xl font-semibold text-gray-900">
-          {isEditing ? 'Edit Appointment' : 'New Appointment'}
+          {formTitle}
         </h2>
         <p className="text-sm text-gray-500">
-          {isEditing ? 'Update the appointment details' : 'Fill in the details to schedule a new appointment'}
+          {formDescription}
         </p>
       </div>
 
@@ -671,31 +717,38 @@ export default function NewAppointmentForm({
             <Label htmlFor="service" className="text-sm font-medium text-gray-700">
               Service <span className="text-red-500">*</span>
             </Label>
-            <Select
-              value={appointmentData.service}
-              onValueChange={handleServiceChange}
-              disabled={isLoadingServices || services.length === 0}
-              required
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={
-                  isLoadingServices ? 'Loading services...' : 
-                  services.length === 0 ? 'No services available' : 'Select a service'
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {services.map((service) => (
-                  <SelectItem key={service.id} value={service.id}>
-                    <div className="flex justify-between w-full">
-                      <span>{service.name}</span>
-                      <span className="ml-2 text-sm text-gray-500">
-                        ${service.price?.toFixed(2) || '0.00'}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isLoadingServices ? (
+              <div className="flex items-center justify-center p-2 bg-gray-100 rounded-md">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <span>Loading services...</span>
+              </div>
+            ) : (
+              <Select
+                value={appointmentData.service}
+                onValueChange={handleServiceChange}
+                disabled={isLoadingServices || services.length === 0}
+                required
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={
+                    isLoadingServices ? 'Loading services...' : 
+                    services.length === 0 ? 'No services available' : 'Select a service'
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      <div className="flex justify-between w-full">
+                        <span>{service.name}</span>
+                        <span className="ml-2 text-sm text-gray-500">
+                          ${service.price?.toFixed(2) || '0.00'}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {!isLoadingServices && services.length === 0 && (
               <p className="text-sm text-red-500">No services found. Please add services first.</p>
             )}

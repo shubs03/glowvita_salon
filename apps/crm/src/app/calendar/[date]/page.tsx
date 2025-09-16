@@ -10,15 +10,7 @@ import { Card } from '@repo/ui/card';
 import { Badge } from '@repo/ui/badge';
 import { ChevronLeft, Loader2, Clock, Plus, X } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Label, Textarea } from '@repo/ui/select';
-// Simple toast notification function
-const toast = {
-  success: (title: string, description?: string) => {
-    alert(`${title}\n${description || ''}`);
-  },
-  error: (title: string, description?: string) => {
-    alert(`Error: ${title}\n${description || ''}`);
-  }
-};
+import { toast } from 'sonner';
 import React from 'react';
 import { format, parseISO, isSameDay, addMinutes, parse, isWithinInterval, addDays, startOfDay, endOfDay } from 'date-fns';
 
@@ -159,6 +151,7 @@ export default function DailySchedulePage() {
 
   // Handle appointment form submission
   const handleAppointmentSubmit = async (appointmentData: any) => {
+    const toastId = toast.loading('Saving appointment...');
     try {
       setIsLoading(true);
       
@@ -196,12 +189,12 @@ export default function DailySchedulePage() {
       
     } catch (error: any) {
       console.error('Error saving appointment:', error);
-      toast.error(
-        'Failed to save appointment',
-        error?.data?.message || error.message || 'Please try again.'
-      );
+      toast.error('Failed to save appointment', {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
     } finally {
       setIsLoading(false);
+      toast.dismiss(toastId);
     }
   };
 
@@ -224,10 +217,9 @@ export default function DailySchedulePage() {
       setSelectedAppointment(null);
     } catch (error: any) {
       console.error('Error updating appointment status:', error);
-      toast.error(
-        'Failed to update appointment status',
-        error?.data?.message || error.message || 'Please try again.'
-      );
+      toast.error('Failed to update appointment status', {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -247,10 +239,9 @@ export default function DailySchedulePage() {
         setSelectedAppointment(null);
       } catch (error: any) {
         console.error('Error deleting appointment:', error);
-        toast.error(
-          'Failed to delete appointment',
-          error?.data?.message || error.message || 'Please try again.'
-        );
+        toast.error('Failed to delete appointment', {
+          description: error?.data?.message || error.message || 'Please try again.'
+        });
       } finally {
         setIsLoading(false);
       }
@@ -375,10 +366,9 @@ export default function DailySchedulePage() {
       
     } catch (error: any) {
       console.error('Error updating appointment status:', error);
-      toast.error(
-        `Failed to ${newStatus} appointment`,
-        error?.data?.message || error.message || 'Please try again.'
-      );
+      toast.error(`Failed to ${newStatus} appointment`, {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -389,18 +379,23 @@ export default function DailySchedulePage() {
     try {
       // Here you would typically make an API call to process the payment
       // For now, we'll just show a success message
-      toast.success('Payment collected successfully', `Payment of $${paymentDetails.amount} processed`);
+      toast.success('Payment collected successfully', {
+        description: `Payment of $${paymentDetails.amount} processed`
+      });
       
       // Optionally refresh the appointments list
       // await dispatch(refreshAppointments());
     } catch (error) {
       console.error('Error processing payment:', error);
-      toast.error('Failed to process payment', error.message);
+      toast.error('Failed to process payment', {
+        description: error.message
+      });
     }
   };
 
   // Handle updating an appointment
   const handleUpdateAppointment = useCallback(async (updatedAppointment: any) => {
+    const toastId = toast.loading('Updating appointment...');
     try {
       const appointmentId = updatedAppointment?._id || updatedAppointment?.id;
       if (!appointmentId) {
@@ -434,16 +429,18 @@ export default function DailySchedulePage() {
       
     } catch (error: any) {
       console.error('Error updating appointment:', error);
-      toast.error(
-        'Failed to update appointment',
-        error?.data?.message || error.message || 'Please try again.'
-      );
+      toast.error('Failed to update appointment', {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
       throw error;
+    } finally {
+      toast.dismiss(toastId);
     }
   }, [updateAppointment, refetchAppointments]);
 
   // Handle appointment reschedule
   const handleRescheduleAppointment = async (appointmentData: any) => {
+    const toastId = toast.loading('Rescheduling appointment...');
     try {
       const appointmentId = appointmentData?._id || appointmentData?.id;
       if (!appointmentId) {
@@ -476,11 +473,12 @@ export default function DailySchedulePage() {
       
     } catch (error: any) {
       console.error('Error rescheduling appointment:', error);
-      toast.error(
-        'Failed to reschedule appointment',
-        error?.data?.message || error.message || 'Please try again.'
-      );
+      toast.error('Failed to reschedule appointment', {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
       throw error;
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 

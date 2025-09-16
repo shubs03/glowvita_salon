@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@repo/ui/dialog";
 import { Input } from "@repo/ui/input";
@@ -14,7 +14,7 @@ import { Badge } from "@repo/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
 import NewAppointmentForm, { type AppointmentFormData } from "../app/calendar/components/NewAppointmentForm";
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface PaymentDetails {
   amount: number;
@@ -57,6 +57,7 @@ interface AppointmentDetailViewProps {
   onCollectPayment?: (paymentData: { amount: number; paymentMethod: string; notes?: string }) => void;
   onUpdateAppointment?: (appointment: Appointment) => Promise<void>;
   onRescheduleAppointment?: (appointment: Appointment) => Promise<void>;
+  onCloseReschedule?: () => void;
 }
 
 interface ClientAppointment {
@@ -79,6 +80,7 @@ export function AppointmentDetailView({
   onCollectPayment,
   onUpdateAppointment,
   onRescheduleAppointment,
+  onCloseReschedule,
 }: AppointmentDetailViewProps) {
   const [activeTab, setActiveTab] = useState('details');
   const [clientHistory, setClientHistory] = useState<ClientAppointment[]>([]);
@@ -102,20 +104,28 @@ export function AppointmentDetailView({
   const [cancellationReason, setCancellationReason] = useState('');
 
   // Prepare default values for edit/reschedule form
-  const defaultFormValues = {
+  const defaultFormValues = useMemo(() => ({
     ...appointment,
     date: appointment.date instanceof Date ? appointment.date : new Date(appointment.date),
     startTime: appointment.startTime,
     endTime: appointment.endTime,
     service: appointment.service, // This should be the service ID
-    serviceName: appointment.serviceName,
+    serviceName: appointment.serviceName || appointment.service, // Fallback to service ID if name is missing
     staff: appointment.staff, // This should be the staff ID
     staffName: appointment.staffName,
     clientName: appointment.clientName,
     notes: appointment.notes || '',
     amount: appointment.amount,
-    status: appointment.status
-  };
+    status: appointment.status,
+    // Ensure these are always defined
+    _id: appointment._id || appointment.id,
+    id: appointment.id || appointment._id,
+    duration: appointment.duration || 60,
+    totalAmount: appointment.totalAmount || appointment.amount || 0,
+    discount: appointment.discount || 0,
+    tax: (appointment as any).tax || 0,
+    paymentStatus: (appointment as any).paymentStatus || 'pending'
+  }), [appointment]);
 
   // Create service object in the format expected by NewAppointmentForm
   const currentService = {
@@ -142,46 +152,40 @@ export function AppointmentDetailView({
 
   // Handle reschedule form submission
   const handleRescheduleSubmit = async (data: any) => {
+    const toastId = toast.loading('Rescheduling appointment...');
     try {
       // Call the parent component's onStatusChange with the updated appointment data
       if (onRescheduleAppointment) {
         const updatedAppointment = {
           ...appointment,
           ...data,
-          // Ensure date is properly formatted
+          // Ensure date is a Date object
           date: data.date instanceof Date ? data.date : new Date(data.date),
-          // Update the status to 'rescheduled' if it's a reschedule
-          status: 'rescheduled',
-          // Update the service and staff references if they were changed
-          service: data.service,
-          serviceName: data.serviceName,
-          staff: data.staff,
-          staffName: data.staffName,
-          // Update timing information
-          startTime: data.startTime,
-          endTime: data.endTime,
-          duration: data.duration,
-          // Update notes and amount
-          notes: data.notes,
-          amount: data.amount
+          // Preserve the original status unless explicitly changed
+          status: appointment.status,
         };
-        
+
         await onRescheduleAppointment(updatedAppointment);
-        
-        // Show success message
-        alert('Appointment rescheduled successfully!');
-        
-        // Close the dialog
-        setIsRescheduling(false);
+        // Don't show success toast here, let the parent component handle it
+      }
+
+      // Close the reschedule dialog if open
+      if (onCloseReschedule) {
+        onCloseReschedule();
       }
     } catch (error) {
       console.error('Error rescheduling appointment:', error);
-      alert('Failed to reschedule appointment. Please try again.');
+      toast.error('Failed to reschedule appointment', {
+        description: error.message || 'Please try again.'
+      });
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
   // Handle form submission
   const handleFormSubmit = async (formData: any) => {
+    const toastId = toast.loading('Saving appointment...');
     try {
       console.log('Starting form submission with data:', { formData, appointment });
       
@@ -226,6 +230,7 @@ export function AppointmentDetailView({
       // Call the update handler if provided
       if (onUpdateAppointment) {
         await onUpdateAppointment(updatedAppointment);
+        toast.success('Appointment updated successfully');
       }
 
       // Close the detail view
@@ -233,9 +238,12 @@ export function AppointmentDetailView({
       
     } catch (error) {
       console.error('Error in handleFormSubmit:', error);
-      alert(`Failed to save appointment: ${error.message || 'Unknown error'}`);
+      toast.error('Failed to save appointment', {
+        description: error.message || 'Unknown error occurred'
+      });
     } finally {
       setIsSaving(false);
+      toast.dismiss(toastId);
     }
   };
 
@@ -430,6 +438,7 @@ export function AppointmentDetailView({
   const [isStatusChanging, setIsStatusChanging] = useState(false);
 
   const handleStatusChange = useCallback(async (newStatus: string) => {
+    const toastId = toast.loading('Updating status...');
     if (!appointment || !onStatusChange) return;
     
     if (newStatus === 'cancelled') {
@@ -446,13 +455,17 @@ export function AppointmentDetailView({
       toast.success(`Status updated to ${newStatus}`);
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error('Failed to update status');
+      toast.error('Failed to update status', {
+        description: error.message || 'Please try again.'
+      });
     } finally {
       setIsStatusChanging(false);
+      toast.dismiss(toastId);
     }
   }, [appointment, onStatusChange]);
 
   const handleConfirmCancel = useCallback(async () => {
+    const toastId = toast.loading('Cancelling appointment...');
     if (!pendingStatus || !onStatusChange) return;
     
     setIsStatusChanging(true);
@@ -464,10 +477,13 @@ export function AppointmentDetailView({
       setCancellationReason('');
     } catch (error) {
       console.error('Error cancelling appointment:', error);
-      toast.error('Failed to cancel appointment');
+      toast.error('Failed to cancel appointment', {
+        description: error.message || 'Please try again.'
+      });
     } finally {
       setIsStatusChanging(false);
       setPendingStatus(null);
+      toast.dismiss(toastId);
     }
   }, [pendingStatus, onStatusChange, cancellationReason]);
 
@@ -531,10 +547,11 @@ export function AppointmentDetailView({
             </DialogTitle>
           </DialogHeader>
           <NewAppointmentForm
-            key={`form-${appointment._id}`}
+            key={`form-${appointment._id}-${isRescheduling ? 'reschedule' : 'edit'}`}
             defaultValues={defaultFormValues}
-            isEditing={isEditing}
-            onSubmit={handleFormSubmit}
+            isEditing={isEditing && !isRescheduling}
+            isRescheduling={isRescheduling}
+            onSubmit={isRescheduling ? handleRescheduleSubmit : handleFormSubmit}
             onCancel={handleCancelEdit}
             onSuccess={onClose}
           />
