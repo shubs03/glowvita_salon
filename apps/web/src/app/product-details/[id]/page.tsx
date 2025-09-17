@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
+import { Input } from '@repo/ui/input';
+import { Label } from '@repo/ui/label';
 
 const product = {
   id: '1',
@@ -68,31 +70,36 @@ export default function ProductDetailsPage() {
       <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start py-12">
         {/* Left Column: Image Gallery (Sticky) */}
         <div className="lg:sticky top-24">
-          <div className="aspect-square max-w-96 max-h-96 relative rounded-lg overflow-hidden mb-4 shadow-lg">
-            <Image 
-              src={mainImage} 
-              alt={product.name} 
-              layout="fill" 
-              objectFit="cover"
-              data-ai-hint="skincare product"
-            />
-          </div>
-          <div className="grid grid-cols-4 gap-4">
-            {product.images.map((img, index) => (
-              <div 
-                key={index} 
-                className={`aspect-square relative rounded-md overflow-hidden cursor-pointer border-2 transition-all ${mainImage === img ? 'border-primary shadow-md' : 'border-transparent hover:border-primary/50'}`}
-                onClick={() => setMainImage(img)}
-              >
-                <Image 
-                  src={img} 
-                  alt={`${product.name} thumbnail ${index + 1}`} 
-                  layout="fill" 
-                  objectFit="cover"
-                  data-ai-hint="product photo"
-                />
-              </div>
-            ))}
+          <div className="flex gap-4">
+            {/* Vertical Thumbnails */}
+            <div className="flex flex-col gap-4">
+              {product.images.map((img, index) => (
+                <div 
+                  key={index} 
+                  className={`relative w-20 h-20 rounded-md overflow-hidden cursor-pointer border-2 transition-all ${mainImage === img ? 'border-primary shadow-md' : 'border-transparent hover:border-primary/50'}`}
+                  onClick={() => setMainImage(img)}
+                >
+                  <Image 
+                    src={img} 
+                    alt={`${product.name} thumbnail ${index + 1}`} 
+                    layout="fill" 
+                    objectFit="cover"
+                    data-ai-hint="product photo"
+                  />
+                </div>
+              ))}
+            </div>
+            
+            {/* Main Image */}
+            <div className="flex-1 aspect-square relative rounded-lg overflow-hidden shadow-lg">
+              <Image 
+                src={mainImage} 
+                alt={product.name} 
+                layout="fill" 
+                objectFit="cover"
+                data-ai-hint="skincare product"
+              />
+            </div>
           </div>
         </div>
 
@@ -124,11 +131,11 @@ export default function ProductDetailsPage() {
               <Button variant="outline" size="icon" className="h-12 w-12"><Heart className="h-6 w-6" /></Button>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3 pt-4 border-t">
               {product.details.map(detail => (
-                <div key={detail.title} className="flex">
-                  <span className="font-semibold w-32">{detail.title}</span>
-                  <span className="text-muted-foreground">{detail.content}</span>
+                <div key={detail.title} className="grid grid-cols-3 gap-2 text-sm">
+                  <span className="font-semibold text-gray-600">{detail.title}</span>
+                  <span className="text-muted-foreground col-span-2">{detail.content}</span>
                 </div>
               ))}
             </div>
@@ -148,14 +155,18 @@ export default function ProductDetailsPage() {
           {/* Section: Specifications */}
           <div>
             <h2 className="text-2xl font-bold mb-4">Specifications</h2>
-            <div className="grid grid-cols-2 gap-4 text-sm border rounded-lg p-4">
-              {Object.entries(product.specifications).map(([key, value]) => (
-                <div key={key}>
-                  <p className="font-semibold">{key}</p>
-                  <p className="text-muted-foreground">{value}</p>
+            <Card>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                  {Object.entries(product.specifications).map(([key, value]) => (
+                    <div key={key} className="border-b pb-2">
+                      <p className="font-semibold text-gray-600">{key}</p>
+                      <p className="text-muted-foreground">{value}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Section: Frequently Bought Together */}
@@ -163,18 +174,19 @@ export default function ProductDetailsPage() {
             <h2 className="text-2xl font-bold mb-4">Frequently Bought Together</h2>
             <Card>
               <CardContent className="p-6">
-                <div className="flex items-center justify-center space-x-4">
+                <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
                   {broughtTogether.map((p, index) => (
                     <React.Fragment key={p.id}>
                       <div className="flex flex-col items-center text-center">
-                        <Image src={p.image} alt={p.name} width={80} height={80} className="rounded-md" />
-                        <p className="text-xs mt-2 max-w-[80px] truncate">{p.name}</p>
+                        <Image src={p.image} alt={p.name} width={100} height={100} className="rounded-lg shadow-md" />
+                        <p className="text-sm mt-2 max-w-[100px] truncate">{p.name}</p>
+                        <p className="text-xs font-bold">₹{p.price.toFixed(2)}</p>
                       </div>
-                      {index < broughtTogether.length - 1 && <Plus className="text-muted-foreground" />}
+                      {index < broughtTogether.length - 1 && <Plus className="text-muted-foreground my-4 sm:my-0" />}
                     </React.Fragment>
                   ))}
                 </div>
-                <div className="mt-6 text-center">
+                <div className="mt-6 text-center border-t pt-4">
                     <p className="text-lg">Total Price: <span className="font-bold">₹{totalBoughtTogetherPrice.toFixed(2)}</span></p>
                     <Button className="mt-2">Add all three to cart</Button>
                 </div>
@@ -221,6 +233,13 @@ export default function ProductDetailsPage() {
                     </div>
                   </div>
                 ))}
+                <div className="pt-4">
+                  <Label htmlFor="ask-question" className="font-semibold">Have a question?</Label>
+                  <div className="flex gap-2 mt-2">
+                    <Input id="ask-question" placeholder="Ask a question about this product..." />
+                    <Button>Submit</Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
