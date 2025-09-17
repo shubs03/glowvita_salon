@@ -2,6 +2,7 @@
 
 import { Check, Package, Send, Truck, Home } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
+import React from 'react';
 
 const statuses = ['Processing', 'Packed', 'Shipped', 'Delivered'];
 
