@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useAppDispatch } from '@repo/store/hooks';
 import { addToCart } from '@repo/store/slices/cartSlice';
 import { Skeleton } from '@repo/ui/skeleton';
+import { Label } from 'recharts';
 
 type Product = {
   _id: string;
