@@ -14,7 +14,7 @@ import Image from 'next/image';
 import { useGetCrmOrdersQuery, useUpdateCrmOrderMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { OrderStatusTimeline } from '@/components/OrderStatusTimeline';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { toast } from 'sonner';
 
