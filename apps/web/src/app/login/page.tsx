@@ -1,20 +1,42 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
-import { Eye, EyeOff } from 'lucide-react';
+import { Label } from '@repo/ui/label';
+import { Eye, EyeOff, Map } from 'lucide-react';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
+
+// Dynamically import mapbox-gl only on client side
+let mapboxgl: any = null;
+if (typeof window !== 'undefined') {
+  import('mapbox-gl').then((module) => {
+    mapboxgl = module.default;
+    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_API_KEY;
+  }).catch((err) => {
+    console.warn('Mapbox failed to load:', err);
+  });
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const router = useRouter();
+
+  // Map functionality states
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const mapContainer = useRef<HTMLDivElement | null>(null);
+  const map = useRef<any | null>(null);
+  const marker = useRef<any | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +54,138 @@ export default function LoginPage() {
       const data = await res.json();
       setError(data.message || 'Failed to log in.');
     }
+  };
+
+  // Initialize Map when modal opens
+  useEffect(() => {
+    if (!isMapOpen || !mapboxgl) return;
+
+    const initMap = () => {
+      if (!mapContainer.current) return;
+
+      try {
+        mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_API_KEY;
+        if (map.current) {
+          map.current.remove();
+        }
+
+        map.current = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: 'mapbox://styles/mapbox/streets-v11',
+          center: location ? [location.lng, location.lat] : [77.4126, 23.2599],
+          zoom: location ? 15 : 5,
+          attributionControl: false
+        });
+
+        if (marker.current) {
+          marker.current.remove();
+        }
+
+        marker.current = new mapboxgl.Marker({
+          draggable: true,
+          color: '#3B82F6'
+        })
+          .setLngLat(location ? [location.lng, location.lat] : [77.4126, 23.2599])
+          .addTo(map.current);
+
+        marker.current.on('dragend', () => {
+          const lngLat = marker.current!.getLngLat();
+          setLocation({ lat: lngLat.lat, lng: lngLat.lng });
+        });
+
+        map.current.on('click', (e: any) => {
+          const { lng, lat } = e.lngLat;
+          setLocation({ lat, lng });
+          marker.current!.setLngLat([lng, lat]);
+        });
+
+        map.current.on('load', () => {
+          setTimeout(() => {
+            if (map.current) {
+              map.current.resize();
+            }
+          }, 100);
+        });
+      } catch (error) {
+        console.error('Error initializing Mapbox:', error);
+      }
+    };
+
+    const timeoutId = setTimeout(initMap, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
+      if (marker.current) {
+        marker.current.remove();
+        marker.current = null;
+      }
+    };
+  }, [isMapOpen, location]);
+
+  // Resize map when modal is fully opened
+  useEffect(() => {
+    if (isMapOpen && map.current) {
+      setTimeout(() => {
+        if (map.current) {
+          map.current.resize();
+        }
+      }, 300);
+    }
+  }, [isMapOpen]);
+
+  // Search for locations using Mapbox Geocoding API
+  const handleSearch = async (query: string) => {
+    if (!query || !mapboxgl || !process.env.NEXT_PUBLIC_MAPBOX_API_KEY) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          query
+        )}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_KEY}&country=IN&types=place,locality,neighborhood,address`
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setSearchResults(data.features || []);
+    } catch (error) {
+      console.error('Error searching locations:', error);
+      setSearchResults([]);
+    }
+  };
+
+  // Handle search result selection
+  const handleSearchResultSelect = (result: any) => {
+    const coordinates = result.geometry.coordinates;
+    const newLocation = { lat: coordinates[1], lng: coordinates[0] };
+
+    setLocation(newLocation);
+
+    if (map.current) {
+      map.current.setCenter(coordinates);
+      map.current.setZoom(15);
+      setTimeout(() => {
+        if (map.current) {
+          map.current.resize();
+        }
+      }, 100);
+    }
+
+    if (marker.current) {
+      marker.current.setLngLat(coordinates);
+    }
+
+    setSearchResults([]);
+    setSearchQuery('');
   };
 
   return (
@@ -85,6 +239,31 @@ export default function LoginPage() {
                       )}
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* Location Field */}
+              <div className="space-y-2">
+                <Label htmlFor="location" className="text-sm font-medium text-gray-700">
+                  Location
+                </Label>
+                <div className="flex flex-col gap-2">
+                  <Input
+                    id="location"
+                    value={location ? `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}` : ''}
+                    placeholder="Select your location"
+                    readOnly
+                    className="flex-1 h-12 px-4 text-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsMapOpen(true)}
+                    className="w-full h-12 px-4 text-sm"
+                  >
+                    <Map className="mr-2 h-4 w-4" />
+                    Choose from Map
+                  </Button>
                 </div>
               </div>
 
@@ -169,6 +348,84 @@ export default function LoginPage() {
           />
         </div>
       </div>
+
+      {/* Map Modal */}
+      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Select Location</DialogTitle>
+            <DialogDescription>
+              Search for a location, click on the map, or drag the marker to select your location.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 flex flex-col max-h-[50vh] overflow-y-auto">
+            <div className="relative">
+              <Input
+                placeholder="Search for a location (e.g., Mumbai, Delhi, Bangalore)"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                className="w-full"
+              />
+              {searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto mt-1">
+                  {searchResults.map((result) => (
+                    <div
+                      key={result.id}
+                      className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0 text-sm"
+                      onClick={() => handleSearchResultSelect(result)}
+                    >
+                      <div className="font-medium">{result.place_name}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {location && (
+              <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                <strong>Selected Location:</strong> {location?.lat.toFixed(6)}, {location?.lng.toFixed(6)}
+              </div>
+            )}
+            
+            <div className="relative border rounded-lg overflow-hidden" style={{ height: '300px' }}>
+              <div 
+                ref={mapContainer} 
+                className="w-full h-full"
+              />
+              
+              {!mapboxgl && (
+                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                  <div className="text-center">
+                    <p className="text-gray-600">Map unavailable</p>
+                    <p className="text-sm text-gray-500">Mapbox library not loaded</p>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="text-xs text-gray-500 space-y-1">
+              <p>• Click anywhere on the map to place the marker</p>
+              <p>• Drag the marker to adjust the location</p>
+              <p>• Use the search box to find specific places</p>
+            </div>
+          </div>
+          
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={() => setIsMapOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => setIsMapOpen(false)}
+            >
+              Confirm Location
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
