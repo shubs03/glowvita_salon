@@ -90,10 +90,16 @@ export default function HomePage() {
                 description="Automate appointment reminders, payment processing, and administrative tasks so you can focus on your craft and clients."
                 icon={<Clock />}
               />
+              <AdvantageCard
+                stat="50%"
+                title="Less Admin Time"
+                description="Automate appointment reminders, payment processing, and administrative tasks so you can focus on your craft and clients."
+                icon={<Clock />}
+              />
             </div>
             
-            <div className="flex justify-center mt-12">
-              <div className="flex gap-4 bg-background/80 backdrop-blur-sm p-3 rounded-2xl shadow-lg border border-border/50">
+            <div className="flex justify-start mt-12">
+              <div className="flex gap-4 justify-center">
                 <Button
                   variant="outline"
                   size="icon"
