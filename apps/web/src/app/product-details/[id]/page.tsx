@@ -1,6 +1,7 @@
 
 "use client";
 
+import React from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
@@ -63,11 +64,11 @@ export default function ProductDetailsPage() {
   const totalBoughtTogetherPrice = broughtTogether.reduce((acc, p) => acc + p.price, 0);
 
   return (
-    <PageContainer maxWidth="7xl">
+    <PageContainer className='max-w-7xl'>
       <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start py-12">
         {/* Left Column: Image Gallery (Sticky) */}
         <div className="lg:sticky top-24">
-          <div className="aspect-square relative rounded-lg overflow-hidden mb-4 shadow-lg">
+          <div className="aspect-square max-w-96 max-h-96 relative rounded-lg overflow-hidden mb-4 shadow-lg">
             <Image 
               src={mainImage} 
               alt={product.name} 
