@@ -9,10 +9,6 @@ export function FAQ() {
     <section className="py-16 md:py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
       <div className="container mx-auto px-4 max-w-5xl relative z-10">
         <div className="text-center mb-12 md:mb-16">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
-            <HelpCircle className="h-4 w-4" />
-            FAQ
-          </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
             Frequently Asked Questions
           </h2>

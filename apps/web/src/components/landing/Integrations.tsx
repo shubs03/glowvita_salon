@@ -25,9 +25,6 @@ export function Integrations() {
       
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto space-y-5 mb-10 md:mb-16 text-center">
-          <Badge variant="secondary" className="bg-green-100 text-green-700 border border-green-200/80 shadow-sm">
-            Integrations
-          </Badge>
           <h2 className="text-3xl lg:text-5xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
             Link Up With Your Favorite Tools
           </h2>

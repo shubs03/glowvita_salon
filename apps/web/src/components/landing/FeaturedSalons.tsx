@@ -72,11 +72,6 @@ export function FeaturedSalons() {
           "text-center mb-16 transition-all duration-1000",
           isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         )}>
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary/10 to-secondary/10 text-primary px-6 py-3 rounded-full text-sm font-medium mb-6 shadow-lg backdrop-blur-sm border border-primary/20">
-            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-            Top Rated Salons
-            <TrendingUp className="h-4 w-4" />
-          </div>
           
           <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-6">
             Discover Premium Salons
