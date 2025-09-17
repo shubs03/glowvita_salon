@@ -5,8 +5,9 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
+import { Label } from '@repo/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui/card';
-import { X, Plus, Minus, Heart, Tag } from 'lucide-react';
+import { X, Plus, Minus, Heart, Shield, Tag } from 'lucide-react';
 import { PageContainer } from '@repo/ui/page-container';
 
 const initialCartItems = [

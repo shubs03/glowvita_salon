@@ -3,7 +3,6 @@
 import {
   HeroSection,
   AppCTA,
-  FeaturedSalons,
   HowItWorks,
   PlatformFor,
   Testimonials,
@@ -17,6 +16,7 @@ import {
   Blog,
   Services,
   BentoGrid,
+  SalonsSection,
 } from "@/components/landing";
 import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
@@ -38,11 +38,11 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-background">
       <main className="flex-grow">
         <HeroSection /> 
+        <SalonsSection />
         <Offers />
-        <BentoGrid/>
+        {/* <BentoGrid/> */}
         <PlatformFor />
-        <FeaturedSalons />
-        <HowItWorks />
+        {/* <HowItWorks /> */}
         <FeaturedProducts />
         <Services />
         
@@ -117,9 +117,9 @@ export default function HomePage() {
 
         <VideoTestimonialSection />
         <Testimonials />
-        <SecuritySection />
-        <Integrations />
-        <Blog />
+        {/* <SecuritySection /> */}
+        {/* <Integrations /> */}
+        {/* <Blog /> */}
         <FAQ />
         <AppCTA />
 
