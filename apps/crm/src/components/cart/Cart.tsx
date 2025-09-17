@@ -205,4 +205,9 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             <Button onClick={handlePlaceOrder} disabled={isCreatingOrder}>
                 {isCreatingOrder ? 'Placing Orders...' : 'Place Order'}
             </Button>
-          
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};

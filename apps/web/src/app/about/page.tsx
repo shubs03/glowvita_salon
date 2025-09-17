@@ -4,7 +4,7 @@
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
-import { Users, Globe, Target, Shield, Heart, Award, ArrowRight, TrendingUp } from 'lucide-react';
+import { Users, Globe, Target, Shield, Star, Sparkles, Heart, Award, ArrowRight, TrendingUp } from 'lucide-react';
 import { PageContainer } from '@repo/ui/page-container';
 
 const teamMembers = [

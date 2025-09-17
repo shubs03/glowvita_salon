@@ -165,7 +165,7 @@ export function Services() {
   return (
     <section 
       id="services-section"
-      className="py-20 md:py-28 lg:py-32 bg-gradient-to-br from-background via-secondary/5 to-background relative overflow-hidden"
+      className="py-20 md:py-28 bg-gradient-to-br from-background via-secondary/5 to-background relative overflow-hidden"
     >
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0 bg-secondary/30 [mask-image:radial-gradient(ellipse_at_top,white,transparent_70%)] opacity-30"></div>

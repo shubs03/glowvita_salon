@@ -103,35 +103,41 @@ export function SalonsSection() {
       { threshold: 0.1 }
     );
 
-    const element = document.getElementById('salons-section');
+    const element = document.getElementById("salons-section");
     if (element) observer.observe(element);
 
     return () => observer.disconnect();
   }, []);
 
   return (
-    <section 
+    <section
       id="salons-section"
-      className="py-24 md:py-32 bg-gradient-to-br from-background via-primary/3 to-secondary/5 relative overflow-hidden"
+      className="py-20 md:py-28 bg-gradient-to-br from-background via-primary/3 to-secondary/5 relative overflow-hidden"
     >
       {/* Background Elements */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_50%_200px,hsl(var(--primary))_0%,transparent_50%)] opacity-10"></div>
       <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,white,transparent_70%)] opacity-20"></div>
-      
+
       <div className="container mx-auto px-4 relative z-10">
         {/* Key Features Section */}
         <div
           className={`transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}
         >
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-              Trusted by{" "}
-              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                Top Salons
-              </span>
+          <div
+            className={cn(
+              "text-center mb-16 transition-all duration-1000",
+              isVisible
+                ? "translate-y-0 opacity-100"
+                : "translate-y-8 opacity-0"
+            )}
+          >
+            <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-6">
+              Success Stories from Our Partners
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              See how leading salon businesses are thriving with GlowVita
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              Discover how leading beauty businesses have transformed their
+              operations and achieved remarkable growth with GlowVita's
+              comprehensive platform
             </p>
           </div>
 

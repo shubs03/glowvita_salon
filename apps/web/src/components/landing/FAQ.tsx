@@ -6,13 +6,13 @@ import { HelpCircle, Shield, Settings, Clock } from 'lucide-react';
 
 export function FAQ() {
   return (
-    <section className="py-16 md:py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
       <div className="container mx-auto px-4 max-w-5xl relative z-10">
         <div className="text-center mb-12 md:mb-16">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+          <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-6">
             Frequently Asked Questions
           </h2>
-          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Have questions? We've got answers. Here are the most common
             questions about our platform.
           </p>
