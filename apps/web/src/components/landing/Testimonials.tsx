@@ -1,4 +1,3 @@
-
 import Image from 'next/image';
 import { Star } from 'lucide-react';
 import { ModernCard } from '@repo/ui/modern-card';
@@ -19,24 +18,22 @@ const TestimonialCard = ({
   hint: string;
 }) => (
   <div className="shrink-0 snap-center mx-4" style={{ width: "358px" }}>
-    <ModernCard variant="glassmorphism" padding="lg" className="h-full flex flex-col">
-      <div className="flex h-5 gap-1 text-yellow-400 mb-4">
-        {[...Array(rating)].map((_, i) => (
-          <Star
-            key={i}
-            className="h-5 w-5"
-            fill="currentColor"
-          />
-        ))}
-        {[...Array(5 - rating)].map((_, i) => (
-          <Star key={i + rating} className="h-5 w-5 text-muted-foreground/30" />
-        ))}
-      </div>
-      
-      <div className="flex-1 mb-6">
-        <p className="text-lg leading-relaxed text-foreground/90">
-          "{review}"
-        </p>
+    <ModernCard variant="elevated" padding="lg" hover className="h-full flex flex-col">
+      <div className="flex-grow flex flex-col">
+        <div className="flex h-5 gap-1 text-yellow-400 mb-4">
+          {[...Array(5)].map((_, i) => (
+            <Star
+              key={i}
+              className={`h-5 w-5 ${i < rating ? 'fill-current' : 'text-muted-foreground/30'}`}
+            />
+          ))}
+        </div>
+        
+        <div className="flex-1 mb-6">
+          <p className="text-lg leading-relaxed text-foreground/90">
+            "{review}"
+          </p>
+        </div>
       </div>
       
       <div className="flex items-center gap-4">
