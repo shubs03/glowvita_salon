@@ -1,3 +1,4 @@
+
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -18,25 +19,25 @@ const baseQuery = async (args, api, extraOptions) => {
   }
 
   let targetService = "web"; // Default
-  let token = null;
-  const state = api.getState();
-
   if (requestUrl.startsWith("/admin")) {
     targetService = "admin";
-    token = state.adminAuth.token || state.crmAuth.token;
   } else if (requestUrl.startsWith("/crm")) {
     targetService = "crm";
-    token = state.crmAuth.token;
-  } else {
-    // For web routes, it might use either, but let's assume a default or check both
-    token = state.crmAuth.token || state.adminAuth.token;
   }
 
   const baseUrl = API_BASE_URLS[targetService];
+  
+  // Remove any leading slashes from requestUrl to prevent double slashes
+  const cleanRequestUrl = requestUrl.startsWith("/") ? requestUrl.substring(1) : requestUrl;
+  const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
+  
+  console.log("API Request URL:", fullUrl); // Debug log
 
   const dynamicFetch = fetchBaseQuery({
-    baseUrl,
+    baseUrl: "", // We're already building the full URL
     prepareHeaders: (headers) => {
+      const state = api.getState();
+      let token = state.crmAuth?.token || state.adminAuth?.token;
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -44,20 +45,28 @@ const baseQuery = async (args, api, extraOptions) => {
     },
   });
 
-  let result = await dynamicFetch(args, api, extraOptions);
-
-  if (result.error && result.error.status === 401) {
-    console.warn(
-      `Received 401 Unauthorized for ${targetService}. Logging out.`
+  try {
+    const result = await dynamicFetch(
+      { ...(typeof args === 'object' ? args : {}), url: fullUrl },
+      api,
+      extraOptions
     );
-    if (targetService === "admin") {
-      api.dispatch(clearAdminAuth());
-    } else if (targetService === "crm") {
-      api.dispatch(clearCrmAuth());
-    }
-  }
 
-  return result;
+    // Handle 401 Unauthorized
+    if (result.error?.status === 401) {
+      const state = api.getState();
+      if (state.crmAuth?.token) {
+        api.dispatch(clearCrmAuth());
+      } else if (state.adminAuth?.token) {
+        api.dispatch(clearAdminAuth());
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error("API Error:", error);
+    return { error: { status: "CUSTOM_ERROR", error: error.message } };
+  }
 };
 
 export const glowvitaApi = createApi({
@@ -114,8 +123,10 @@ export const glowvitaApi = createApi({
     "SmsPackage",
     "SocialMediaTemplate",
     "Appointment",
-
-    
+    "ShippingCharge",
+    "Order",
+    "CrmProducts",
+    "SupplierProducts",
   ],
 
   endpoints: (builder) => ({
@@ -155,6 +166,7 @@ export const glowvitaApi = createApi({
       query: (id) => ({
         url: `/admin/sms-template?id=${id}`,
         method: "DELETE",
+        body: { _id: id },
       }),
       invalidatesTags: ["SmsTemplate"],
     }),
@@ -305,7 +317,7 @@ export const glowvitaApi = createApi({
       query: ({ id, ...data }) => ({
         url: `/admin`,
         method: "PUT",
-        body: { _id: id, ...data },
+        body: { id, ...data },
       }),
       invalidatesTags: ["admin"],
     }),
@@ -314,7 +326,7 @@ export const glowvitaApi = createApi({
       query: (id) => ({
         url: `/admin`,
         method: "DELETE",
-        body: { _id: id },
+        body: { id },
       }),
       invalidatesTags: ["admin"],
     }),
@@ -835,7 +847,8 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Faq"],
     }),
 
-    // Admin Product Categories Endpoints
+     // Admin Product Categories 
+     
     getAdminProductCategories: builder.query({
       query: () => ({
         url: "/admin/product-categories",
@@ -888,8 +901,8 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["AdminProductCategory"],
     }),
 
-    // Product Approval
 
+    // Product Approval
     getVendorProducts: builder.query({
       query: () => ({ url: "/admin/product-approval", method: "GET" }),
       providesTags: ["Product"],
@@ -1197,13 +1210,19 @@ export const glowvitaApi = createApi({
       invalidatesTags: ['Appointments'],
     }),
     updateAppointment: builder.mutation({
-      query: ({ id, ...updates }) => ({
-        url: `/api/crm/appointments/${id}`,  // Add /api prefix
-        method: "PUT",
-        body: updates,
-      }),
-      invalidatesTags: (result, error, { id }) => [
-        { type: 'Appointment', id },
+      query: (appointmentData) => {
+        console.log('updateAppointment data:', appointmentData);
+        // Extract the ID and updates from the appointment data
+        const { _id, ...updates } = appointmentData;
+        
+        return {
+          url: `/crm/appointments/${_id}`,
+          method: "PUT",
+          body: updates,
+        };
+      },
+      invalidatesTags: (result, error, { _id }) => [
+        { type: 'Appointment', id: _id },
         'Appointments'
       ],
     }),
@@ -1380,6 +1399,14 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["CrmSocialMediaTemplate"],
     }),
+    getSupplierProducts: builder.query({
+      query: () => ({
+          url: "/crm/supplier-products",
+          method: "GET"
+      }),
+      providesTags: ["SupplierProducts"],
+      transformResponse: (response) => response.data || [],
+  }),
   }),
    
 });
@@ -1539,6 +1566,7 @@ export const {
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
   useDeleteCrmProductMutation,
+  useGetSupplierProductsQuery,
 
   // shipping charge endpoints
   useGetShippingConfigQuery,
@@ -1598,3 +1626,5 @@ export const {
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
 } = glowvitaApi;
+
+    

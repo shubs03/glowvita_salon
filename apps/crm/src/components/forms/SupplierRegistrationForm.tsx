@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Building, Map, User, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Building, Map, User, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -132,11 +132,24 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.firstName) newErrors.firstName = 'First name is required';
     if (!formData.lastName) newErrors.lastName = 'Last name is required';
-    if (!formData.email) newErrors.email = 'Email is required';
-    if (!formData.mobile) newErrors.mobile = 'Mobile number is required';
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+    if (!formData.mobile) {
+      newErrors.mobile = 'Mobile number is required';
+    } else if (!/^\d{10}$/.test(formData.mobile)) {
+      newErrors.mobile = 'Mobile number must be 10 digits';
+    }
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    }
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -155,7 +168,11 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     if (!formData.address) newErrors.address = 'Address is required';
     if (!formData.state) newErrors.state = 'State is required';
     if (!formData.city) newErrors.city = 'City is required';
-    if (!formData.pincode) newErrors.pincode = 'Pincode is required';
+    if (!formData.pincode) {
+      newErrors.pincode = 'Pincode is required';
+    } else if (!/^\d{6}$/.test(formData.pincode)) {
+      newErrors.pincode = 'Pincode must be 6 digits';
+    }
     if (!formData.location) newErrors.location = 'Location is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -188,6 +205,13 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
         setStep(2);
     } else if (step === 2 && validateStep2()) {
         setStep(3);
+    } else {
+      // Show error toast if validation fails
+      if ((step === 1 && !validateStep1()) || 
+          (step === 2 && !validateStep2()) || 
+          (step === 3 && !validateStep3())) {
+        toast.error("Please fill all required fields correctly.");
+      }
     }
   }
 
@@ -368,7 +392,16 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     setSearchResults([]);
     setSearchQuery('');
   };
-  
+
+  const renderError = (fieldName: keyof FormData) => {
+    if (errors[fieldName]) {
+      return <p className="text-red-500 text-sm mt-1">{errors[fieldName]}</p>;
+    }
+    return null;
+  };
+
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <>
       <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2">
@@ -415,62 +448,89 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                   <p className="text-gray-600 text-base sm:text-lg">Enter your personal details to get started.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                  <Input 
-                    name="firstName" 
-                    placeholder="First Name" 
-                    onChange={handleChange} 
-                    value={formData.firstName} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                  />
-                  <Input 
-                    name="lastName" 
-                    placeholder="Last Name" 
-                    onChange={handleChange} 
-                    value={formData.lastName} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                  />
+                  <div>
+                    <Input 
+                      name="firstName" 
+                      placeholder="First Name" 
+                      onChange={handleChange} 
+                      value={formData.firstName} 
+                      required 
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    />
+                    {renderError('firstName')}
+                  </div>
+                  <div>
+                    <Input 
+                      name="lastName" 
+                      placeholder="Last Name" 
+                      onChange={handleChange} 
+                      value={formData.lastName} 
+                      required 
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    />
+                    {renderError('lastName')}
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                  <Input 
-                    name="email" 
-                    type="email" 
-                    placeholder="Email Address" 
-                    onChange={handleChange} 
-                    value={formData.email} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                  />
-                  <Input 
-                    name="mobile" 
-                    type="tel" 
-                    placeholder="Mobile Number" 
-                    onChange={handleChange} 
-                    value={formData.mobile} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                  />
+                  <div>
+                    <Input 
+                      name="email" 
+                      type="email" 
+                      placeholder="Email Address" 
+                      onChange={handleChange} 
+                      value={formData.email} 
+                      required 
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    />
+                    {renderError('email')}
+                  </div>
+                  <div>
+                    <Input 
+                      name="mobile" 
+                      type="tel" 
+                      placeholder="Mobile Number" 
+                      onChange={handleChange} 
+                      value={formData.mobile} 
+                      required 
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    />
+                    {renderError('mobile')}
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                  <Input 
-                    name="password" 
-                    type="password"
-                    placeholder="Password (min. 8 characters)" 
-                    onChange={handleChange} 
-                    value={formData.password} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                  />
-                  <Input 
-                    name="confirmPassword" 
-                    type="password"
-                    placeholder="Confirm Password" 
-                    onChange={handleChange} 
-                    value={formData.confirmPassword} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                  />
+                  <div className="relative">
+                    <Input 
+                      name="password" 
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Password (min. 8 characters)" 
+                      onChange={handleChange} 
+                      value={formData.password} 
+                      required 
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg w-full" 
+                    />
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10" 
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
+                    </Button>
+                    {renderError('password')}
+                  </div>
+                  <div>
+                    <Input 
+                      name="confirmPassword" 
+                      type="password"
+                      placeholder="Confirm Password" 
+                      onChange={handleChange} 
+                      value={formData.confirmPassword} 
+                      required 
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    />
+                    {renderError('confirmPassword')}
+                  </div>
                 </div>
                 <Input 
                   name="referredByCode" 
@@ -489,30 +549,39 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                   <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Tell us about your Business</h1>
                   <p className="text-gray-600 text-base sm:text-lg">Provide basic information about your business.</p>
                 </div>
-                <Input 
-                  name="shopName" 
-                  placeholder="Shop Name" 
-                  onChange={handleChange} 
-                  value={formData.shopName} 
-                  required 
-                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                />
-                <Input 
-                  name="supplierType" 
-                  placeholder="Supplier Type (e.g., Cosmetics, Equipment)" 
-                  onChange={handleChange} 
-                  value={formData.supplierType} 
-                  required 
-                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                />
-                <Input 
-                  name="businessRegistrationNo" 
-                  placeholder="Business Registration Number" 
-                  onChange={handleChange} 
-                  value={formData.businessRegistrationNo} 
-                  required 
-                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                />
+                <div>
+                  <Input 
+                    name="shopName" 
+                    placeholder="Shop Name" 
+                    onChange={handleChange} 
+                    value={formData.shopName} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                  {renderError('shopName')}
+                </div>
+                <div>
+                  <Input 
+                    name="supplierType" 
+                    placeholder="Supplier Type (e.g., Cosmetics, Equipment)" 
+                    onChange={handleChange} 
+                    value={formData.supplierType} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                  {renderError('supplierType')}
+                </div>
+                <div>
+                  <Input 
+                    name="businessRegistrationNo" 
+                    placeholder="Business Registration Number" 
+                    onChange={handleChange} 
+                    value={formData.businessRegistrationNo} 
+                    required 
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  />
+                  {renderError('businessRegistrationNo')}
+                </div>
               </div>
             )}
             
@@ -534,6 +603,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                       readOnly
                       className="flex-1 h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
+                    {renderError('location')}
                     <Button
                       type="button"
                       variant="outline"
@@ -548,41 +618,53 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                  <Input 
-                    name="city" 
-                    placeholder="City" 
-                    onChange={handleChange} 
-                    value={formData.city} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                  />
-                  <Input 
-                    name="state" 
-                    placeholder="State" 
-                    onChange={handleChange} 
-                    value={formData.state} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                  />
+                  <div>
+                    <Input 
+                      name="city" 
+                      placeholder="City" 
+                      onChange={handleChange} 
+                      value={formData.city} 
+                      required 
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    />
+                    {renderError('city')}
+                  </div>
+                  <div>
+                    <Input 
+                      name="state" 
+                      placeholder="State" 
+                      onChange={handleChange} 
+                      value={formData.state} 
+                      required 
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    />
+                    {renderError('state')}
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                  <Input 
-                    name="address" 
-                    placeholder="Business Address" 
-                    onChange={handleChange} 
-                    value={formData.address} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                  />
-                  <Input 
-                    name="pincode" 
-                    placeholder="Pincode" 
-                    onChange={handleChange} 
-                    value={formData.pincode} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
-                  />
+                  <div>
+                    <Input 
+                      name="address" 
+                      placeholder="Business Address" 
+                      onChange={handleChange} 
+                      value={formData.address} 
+                      required 
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    />
+                    {renderError('address')}
+                  </div>
+                  <div>
+                    <Input 
+                      name="pincode" 
+                      placeholder="Pincode" 
+                      onChange={handleChange} 
+                      value={formData.pincode} 
+                      required 
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    />
+                    {renderError('pincode')}
+                  </div>
                 </div>
               </div>
             )}

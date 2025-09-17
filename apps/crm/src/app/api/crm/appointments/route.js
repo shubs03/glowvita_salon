@@ -5,12 +5,41 @@ import { authMiddlewareCrm } from '@/middlewareCrm.js';
 
 await _db();
 
+// Helper function to extract appointment ID from URL
+const extractAppointmentId = (url, params) => {
+    // First try to get from params (for dynamic routes like [id] or [...id])
+    if (params?.id) {
+        // Handle both single ID and array of IDs
+        const id = Array.isArray(params.id) ? params.id[0] : params.id;
+        if (id && /^[0-9a-fA-F]{24}$/.test(id)) {
+            return id;
+        }
+    }
+    
+    // Fallback: try to extract from URL path
+    const urlObj = new URL(url);
+    const pathSegments = urlObj.pathname.split('/');
+    const appointmentsIndex = pathSegments.findIndex(segment => segment === 'appointments');
+    if (appointmentsIndex !== -1 && pathSegments[appointmentsIndex + 1]) {
+        const potentialId = pathSegments[appointmentsIndex + 1];
+        // Validate if it's a MongoDB ObjectId
+        if (/^[0-9a-fA-F]{24}$/.test(potentialId)) {
+            return potentialId;
+        }
+    }
+    
+    return null;
+};
+
 // Handle both GET /api/crm/appointments and GET /api/crm/appointments/[id]
 export const GET = authMiddlewareCrm(async (req, { params }) => {
     try {
         const vendorId = req.user._id;
         const { searchParams } = new URL(req.url);
-        const id = params?.id?.[0]; // Get ID from dynamic route if exists
+        const id = extractAppointmentId(req.url, params);
+
+        console.log('GET request - extracted ID:', id);
+        console.log('GET request - params:', params);
 
         // If ID is provided, return single appointment
         if (id) {
@@ -56,7 +85,7 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
 
         return NextResponse.json(appointments, { status: 200 });
     } catch (error) {
-        console.error("Error in appointments API:", error);
+        console.error("Error in appointments GET API:", error);
         return NextResponse.json(
             { message: "Error processing request", error: error.message },
             { status: 500 }
@@ -69,6 +98,8 @@ export const POST = authMiddlewareCrm(async (req) => {
     try {
         const vendorId = req.user._id.toString();
         const body = await req.json();
+
+        console.log('POST request - creating appointment:', body);
 
         // Required fields validation
         const requiredFields = [
@@ -136,37 +167,45 @@ export const POST = authMiddlewareCrm(async (req) => {
     }
 }, ['vendor']);
 
-// PUT (update) an appointment
-export const PUT = authMiddlewareCrm(async (req) => {
+// Handle PUT /api/crm/appointments/[id] (update)
+export const PUT = authMiddlewareCrm(async (req, { params }) => {
     try {
         const vendorId = req.user._id;
-        const { _id, ...updateData } = await req.json();
-
-        if (!_id) {
+        const appointmentId = params?.id;
+        
+        if (!appointmentId) {
             return NextResponse.json(
-                { message: "Appointment ID is required for update" },
+                { success: false, message: 'Appointment ID is required' },
                 { status: 400 }
             );
         }
 
-        // Ensure the appointment belongs to the vendor
-        const existingAppointment = await AppointmentModel.findOne({ _id, vendorId });
+        const requestBody = await req.json();
+        
+        // Handle both direct updates and updates in an 'updates' object
+        const updateData = requestBody.updates || requestBody;
+        
+        if (!updateData || Object.keys(updateData).length === 0) {
+            return NextResponse.json(
+                { success: false, message: 'No update data provided' },
+                { status: 400 }
+            );
+        }
+
+        // Ensure the appointment exists and belongs to the vendor
+        const existingAppointment = await AppointmentModel.findOne({
+            _id: appointmentId,
+            vendorId: vendorId
+        });
+
         if (!existingAppointment) {
             return NextResponse.json(
-                { message: "Appointment not found or access denied" },
+                { success: false, message: 'Appointment not found or access denied' },
                 { status: 404 }
             );
         }
 
-        // Recalculate total amount if amount, discount, or tax is updated
-        if (updateData.amount !== undefined || updateData.discount !== undefined || updateData.tax !== undefined) {
-            const amount = updateData.amount !== undefined ? Number(updateData.amount) : existingAppointment.amount;
-            const discount = updateData.discount !== undefined ? Number(updateData.discount) : existingAppointment.discount;
-            const tax = updateData.tax !== undefined ? Number(updateData.tax) : existingAppointment.tax;
-            updateData.totalAmount = amount - discount + tax;
-        }
-
-        // Recalculate end time if start time or duration is updated
+        // Calculate end time if start time or duration is updated
         if (updateData.startTime || updateData.duration) {
             const startTime = updateData.startTime || existingAppointment.startTime;
             const duration = updateData.duration || existingAppointment.duration;
@@ -177,64 +216,112 @@ export const PUT = authMiddlewareCrm(async (req) => {
             updateData.endTime = endDate.toTimeString().slice(0, 5);
         }
 
+        // Recalculate total amount if relevant fields are updated
+        if (updateData.amount !== undefined || updateData.discount !== undefined || updateData.tax !== undefined) {
+            const amount = updateData.amount !== undefined ? Number(updateData.amount) : existingAppointment.amount;
+            const discount = updateData.discount !== undefined ? Number(updateData.discount) : existingAppointment.discount || 0;
+            const tax = updateData.tax !== undefined ? Number(updateData.tax) : existingAppointment.tax || 0;
+            updateData.totalAmount = Math.max(0, amount - discount + tax);
+        }
+
+        // Update the appointment
         const updatedAppointment = await AppointmentModel.findByIdAndUpdate(
-            _id,
-            { $set: updateData },
+            appointmentId,
+            { 
+                $set: updateData,
+                $currentDate: { updatedAt: true }
+            },
             { new: true, runValidators: true }
         )
-        .populate('staff', 'fullName position')
-        .populate('service', 'name duration price');
+        .populate('client', 'name email phone')
+        .populate('service', 'name duration price')
+        .populate('staff', 'name email phone');
 
         if (!updatedAppointment) {
-            return NextResponse.json(
-                { message: "Failed to update appointment" },
-                { status: 500 }
-            );
+            throw new Error('Failed to update appointment');
         }
 
         return NextResponse.json({
-            message: "Appointment updated successfully",
-            appointment: updatedAppointment
+            success: true,
+            data: updatedAppointment,
+            message: 'Appointment updated successfully'
         });
+
     } catch (error) {
         console.error('Error updating appointment:', error);
         return NextResponse.json(
-            { message: "Error updating appointment", error: error.message },
+            { 
+                success: false, 
+                message: 'Failed to update appointment',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            },
+            { status: 500 }
+        );
+    }
+});
+
+// DELETE an appointment
+export const DELETE = authMiddlewareCrm(async (req, { params }) => {
+    try {
+        console.log('=== DELETE REQUEST START ===');
+        const vendorId = req.user._id;
+        const appointmentId = extractAppointmentId(req.url, params);
+        
+        console.log('DELETE Request URL:', req.url);
+        console.log('DELETE Request params:', params);
+        console.log('Extracted appointment ID:', appointmentId);
+
+        if (!appointmentId) {
+            console.error('No appointment ID found for deletion');
+            return NextResponse.json(
+                { 
+                    message: "Appointment ID is required for deletion",
+                    receivedUrl: req.url,
+                    receivedParams: params
+                },
+                { status: 400 }
+            );
+        }
+
+        const deletedAppointment = await AppointmentModel.findOneAndDelete({ 
+            _id: appointmentId, 
+            vendorId: vendorId 
+        });
+
+        if (!deletedAppointment) {
+            return NextResponse.json(
+                { message: "Appointment not found or access denied" }, 
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json(
+            { 
+                message: "Appointment deleted successfully",
+                appointment: deletedAppointment
+            }, 
+            { status: 200 }
+        );
+    } catch (error) {
+        console.error('Error deleting appointment:', error);
+        return NextResponse.json(
+            { message: "Error deleting appointment", error: error.message },
             { status: 500 }
         );
     }
 }, ['vendor']);
 
-// DELETE an appointment
-export const DELETE = authMiddlewareCrm(async (req) => {
-    try {
-        const vendorId = req.user._id;
-        const url = new URL(req.url);
-        const id = url.searchParams.get('id') || (await req.json()).id;
-
-        if (!id) {
-            return NextResponse.json({ message: "Appointment ID is required for deletion" }, { status: 400 });
-        }
-
-        const deletedAppointment = await AppointmentModel.findOneAndDelete({ _id: id, vendorId: vendorId });
-
-        if (!deletedAppointment) {
-            return NextResponse.json({ message: "Appointment not found or access denied" }, { status: 404 });
-        }
-
-        return NextResponse.json({ message: "Appointment deleted successfully" }, { status: 200 });
-    } catch (error) {
-        return NextResponse.json({ message: "Error deleting appointment", error: error.message }, { status: 500 });
-    }
-}, ['vendor']);
-
 // PATCH /api/crm/appointments - Update appointment status
-export const PATCH = authMiddlewareCrm(async (req) => {
+export const PATCH = authMiddlewareCrm(async (req, { params }) => {
     try {
         const vendorId = req.user._id;
-        const { _id, status, cancellationReason } = await req.json();
+        const body = await req.json();
+        const appointmentId = extractAppointmentId(req.url, params) || body._id;
+        
+        console.log('PATCH Request - ID:', appointmentId);
+        console.log('PATCH Request - body:', body);
 
-        if (!_id || !status) {
+        if (!appointmentId || !body.status) {
             return NextResponse.json(
                 { message: "Appointment ID and status are required" },
                 { status: 400 }
@@ -243,7 +330,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
 
         // Validate status
         const validStatuses = ['scheduled', 'confirmed', 'completed', 'cancelled', 'no-show'];
-        if (!validStatuses.includes(status)) {
+        if (!validStatuses.includes(body.status)) {
             return NextResponse.json(
                 { message: "Invalid status value" },
                 { status: 400 }
@@ -251,12 +338,12 @@ export const PATCH = authMiddlewareCrm(async (req) => {
         }
 
         // Add cancellation reason to notes if status is cancelled
-        if (status === 'cancelled') {
-            const cancellationReasonText = cancellationReason || 'No reason provided';
+        if (body.status === 'cancelled') {
+            const cancellationReasonText = body.cancellationReason || 'No reason provided';
             const cancellationNote = `[${new Date().toISOString()}] Appointment cancelled: ${cancellationReasonText}`;
             
             // Get the existing appointment to append to the notes
-            const existingAppointment = await AppointmentModel.findOne({ _id, vendorId });
+            const existingAppointment = await AppointmentModel.findOne({ _id: appointmentId, vendorId });
             const existingNotes = existingAppointment?.notes || '';
             
             const updateObj = {
@@ -269,7 +356,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
             };
 
             const updatedAppointment = await AppointmentModel.findOneAndUpdate(
-                { _id, vendorId },
+                { _id: appointmentId, vendorId },
                 updateObj,
                 { new: true, runValidators: true }
             )
@@ -289,8 +376,8 @@ export const PATCH = authMiddlewareCrm(async (req) => {
             });
         } else {
             const updatedAppointment = await AppointmentModel.findOneAndUpdate(
-                { _id, vendorId },
-                { $set: { status } },
+                { _id: appointmentId, vendorId },
+                { $set: { status: body.status } },
                 { new: true, runValidators: true }
             )
             .populate('staff', 'fullName position')

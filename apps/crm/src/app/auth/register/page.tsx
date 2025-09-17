@@ -147,21 +147,15 @@ const RegistrationFlow = () => {
     switch(selectedRole) {
       case 'vendor':
         return (
-          <div className="animate-slide-in-right">
-            <VendorRegistrationForm onSuccess={handleSuccess} />
-          </div>
+          <VendorRegistrationForm onSuccess={handleSuccess} />
         );
       case 'doctor':
         return (
-          <div className="animate-slide-in-right">
-            <DoctorRegistrationForm onSuccess={handleSuccess} />
-          </div>
+          <DoctorRegistrationForm onSuccess={handleSuccess} />
         );
       case 'supplier':
         return (
-          <div className="animate-slide-in-right">
-            <SupplierRegistrationForm onSuccess={handleSuccess} />
-          </div>
+          <SupplierRegistrationForm onSuccess={handleSuccess} />
         );
       default:
         return null;

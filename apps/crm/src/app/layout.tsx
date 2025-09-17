@@ -26,6 +26,7 @@ export default function RootLayout({
     '/products',
     '/sales',
     '/orders',
+    '/shipping',
     '/salon-profile',
     '/offers-coupons',
     '/referrals',
@@ -40,7 +41,9 @@ export default function RootLayout({
     '/timetable',
     '/consultations',
     '/patients',
-    '/shipping'
+    '/calendar',
+    '/appointments/[id]',
+    '/appointments'
   ].some(path => pathname.startsWith(path));
   
   const showMarketingLayout = ['/', '/apps', '/pricing', '/support'].includes(pathname);
@@ -104,3 +107,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    

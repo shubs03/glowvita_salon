@@ -9,21 +9,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/ui/dialo
 import { Card } from '@repo/ui/card';
 import { Badge } from '@repo/ui/badge';
 import { ChevronLeft, Loader2, Clock, Plus, X } from 'lucide-react';
-// Simple toast notification function
-const toast = {
-  success: (title: string, description?: string) => {
-    alert(`${title}\n${description || ''}`);
-  },
-  error: (title: string, description?: string) => {
-    alert(`Error: ${title}\n${description || ''}`);
-  }
-};
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Label, Textarea } from '@repo/ui/select';
+import { toast } from 'sonner';
 import React from 'react';
 import { format, parseISO, isSameDay, addMinutes, parse, isWithinInterval, addDays, startOfDay, endOfDay } from 'date-fns';
 
 // Components
 import DayScheduleView from '../components/DayScheduleView';
 import NewAppointmentForm from '../components/NewAppointmentForm';
+import AppointmentDetailView from '../../../components/AppointmentDetailView';
 
 // Store
 import { 
@@ -48,6 +42,14 @@ const parseTimeString = (timeStr: string) => {
   return [hours, minutes || 0];
 };
 
+// Helper function to format dates without timezone issues
+const formatDateForAPI = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Move date validation outside the component
 function validateAndParseDate(dateString: any): { isValid: boolean; date?: Date; dayName?: string } {
   if (!dateString || typeof dateString !== 'string') return { isValid: false };
@@ -55,6 +57,7 @@ function validateAndParseDate(dateString: any): { isValid: boolean; date?: Date;
   const [year, month, day] = dateString.split('-').map(Number);
   if (isNaN(year) || isNaN(month) || isNaN(day)) return { isValid: false };
   
+  // Create date in local timezone to avoid timezone shift
   const date = new Date(year, month - 1, day);
   const isValid = date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
   
@@ -74,13 +77,18 @@ export default function DailySchedulePage() {
   
   // State
   const [showBlockTimeModal, setShowBlockTimeModal] = useState(false);
-  const [showNewAppointmentForm, setShowNewAppointmentForm] = useState(false);
+  const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [selectedStaff, setSelectedStaff] = useState('All Staff');
+  const [cancelReason, setCancelReason] = useState('');
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+
   // RTK Query hooks
   const [createAppointment] = glowvitaApi.useCreateAppointmentMutation();
   const [updateAppointment] = glowvitaApi.useUpdateAppointmentMutation();
   const [deleteAppointment] = glowvitaApi.useDeleteAppointmentMutation();
+  const [updateAppointmentStatus] = glowvitaApi.useUpdateAppointmentStatusMutation();
   
   // Extract and validate date
   const { date: dateString } = params || {};
@@ -88,28 +96,184 @@ export default function DailySchedulePage() {
   
   // Get appointments from Redux store
   const allAppointments = useSelector(selectAllAppointments);
-  const selectedAppointment = useSelector(selectSelectedAppointment);
   
   // Fetch appointments for the selected date range using RTK Query
-  const { data: appointmentsData, isLoading: isLoadingAppointments } = glowvitaApi.useGetAppointmentsQuery(
+  const { data: appointmentsData, isLoading: isLoadingAppointments, refetch: refetchAppointments } = glowvitaApi.useGetAppointmentsQuery(
     {
-      startDate: selectedDate ? startOfDay(selectedDate).toISOString() : '',
-      endDate: selectedDate ? endOfDay(selectedDate).toISOString() : '',
+      startDate: selectedDate ? formatDateForAPI(selectedDate) : '',
+      endDate: selectedDate ? formatDateForAPI(selectedDate) : '',
     },
     { skip: !selectedDate }
   );
 
-  // Handle appointments data
-  useEffect(() => {
-    if (appointmentsData && Array.isArray(appointmentsData)) {
-      // Process and store appointments in Redux if needed
-      console.log('Fetched appointments:', appointmentsData);
-    }
+  // Transform appointments data to match the expected format
+  const appointments = useMemo(() => {
+    if (!appointmentsData || !Array.isArray(appointmentsData)) return [];
+    return appointmentsData.map((appt: any) => ({
+      id: appt._id || appt.id,
+      client: appt.client || appt.clientName,
+      clientName: appt.clientName || appt.client,
+      service: appt.service,
+      serviceName: appt.serviceName,
+      staff: appt.staff,
+      staffName: appt.staffName,
+      date: new Date(appt.date),
+      startTime: appt.startTime,
+      endTime: appt.endTime,
+      duration: appt.duration,
+      notes: appt.notes || '',
+      status: appt.status || 'scheduled',
+      paymentStatus: appt.paymentStatus || 'pending',
+      amount: appt.amount || 0,
+      discount: appt.discount || 0,
+      tax: appt.tax || 0,
+      totalAmount: appt.totalAmount || appt.amount || 0,
+    }));
   }, [appointmentsData]);
   
+  // Filter appointments for the selected staff and date
+  const filteredAppointments = useMemo(() => {
+    if (!appointments || !Array.isArray(appointments)) return [];
+    if (!selectedDate) return [];
+    
+    return appointments.filter(appointment => {
+      // Filter by date
+      if (!isSameDay(new Date(appointment.date), selectedDate)) return false;
+      
+      // Filter by staff if a specific staff is selected
+      if (selectedStaff !== 'All Staff' && appointment.staffName !== selectedStaff) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [appointments, selectedDate, selectedStaff]);
+
+  // Handle appointment form submission
+  const handleAppointmentSubmit = async (appointmentData: any) => {
+    const toastId = toast.loading('Saving appointment...');
+    try {
+      setIsLoading(true);
+      
+      // Always use the selected date from the URL for the appointment
+      const appointmentDate = selectedDate || new Date();
+      
+      // Format the appointment data with timezone-safe date
+      const formattedData = {
+        ...appointmentData,
+        date: formatDateForAPI(appointmentDate),
+        startTime: appointmentData.startTime,
+        endTime: appointmentData.endTime,
+        status: appointmentData.status || 'scheduled',
+      };
+
+      if (selectedAppointment?._id) {
+        // Update existing appointment
+        await updateAppointment({
+          id: selectedAppointment._id,
+          ...formattedData,
+        });
+        toast.success('Appointment updated successfully');
+      } else {
+        // Create new appointment
+        await createAppointment(formattedData);
+        toast.success('Appointment created successfully');
+      }
+      
+      // Refresh appointments
+      await refetchAppointments();
+      
+      // Close the form
+      setIsNewAppointmentOpen(false);
+      setSelectedAppointment(null);
+      
+    } catch (error: any) {
+      console.error('Error saving appointment:', error);
+      toast.error('Failed to save appointment', {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+      toast.dismiss(toastId);
+    }
+  };
+
+  // Handle appointment status update
+  const handleUpdateStatus = async (status: string, reason: string = '') => {
+    if (!selectedAppointment?._id) return;
+    
+    try {
+      setIsLoading(true);
+      await updateAppointmentStatus({
+        id: selectedAppointment._id,
+        status,
+        cancellationReason: status === 'cancelled' ? reason : undefined
+      });
+      
+      toast.success('Appointment status updated successfully');
+      await refetchAppointments();
+      setShowCancelDialog(false);
+      setCancelReason('');
+      setSelectedAppointment(null);
+    } catch (error: any) {
+      console.error('Error updating appointment status:', error);
+      toast.error('Failed to update appointment status', {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle appointment deletion
+  const handleDeleteAppointment = async (id: string) => {
+    if (!id) return;
+    
+    if (window.confirm('Are you sure you want to delete this appointment?')) {
+      try {
+        setIsLoading(true);
+        await deleteAppointment(id).unwrap();
+        toast.success('Appointment deleted successfully');
+        await refetchAppointments();
+        setIsNewAppointmentOpen(false);
+        setSelectedAppointment(null);
+      } catch (error: any) {
+        console.error('Error deleting appointment:', error);
+        toast.error('Failed to delete appointment', {
+          description: error?.data?.message || error.message || 'Please try again.'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  // Handle appointment click
+  const handleAppointmentClick = useCallback((appointment: any) => {
+    setSelectedAppointment(appointment);
+    // setIsNewAppointmentOpen(true);
+  }, []);
+
+  // Handle new appointment button click
+  const handleNewAppointment = useCallback(() => {
+    setSelectedAppointment(null);
+    setIsNewAppointmentOpen(true);
+  }, []);
+
+  // Handle edit appointment button click
+  const handleEditAppointment = useCallback((appointment: any) => {
+    setSelectedAppointment(appointment);
+    // setIsNewAppointmentOpen(true);
+  }, []);
+
+  // Handle back button click
+  const handleBackClick = useCallback(() => {
+    router.push('/calendar');
+  }, [router]);
+
   // Fetch working hours
   const { data: workingHoursData, isLoading: isLoadingWorkingHours, error: workingHoursError } = glowvitaApi.useGetWorkingHoursQuery(
-    selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
+    selectedDate ? formatDateForAPI(selectedDate) : '',
     { skip: !selectedDate }
   );
 
@@ -171,23 +335,6 @@ export default function DailySchedulePage() {
     return found || null;
   }, [workingHoursData, dayName]);
   
-  // Get appointments for the selected date
-  const filteredAppointments = useMemo(() => {
-    if (!selectedDate || !appointmentsData || !Array.isArray(appointmentsData)) return [];
-    
-    return appointmentsData.filter((appointment: any) => {
-      if (!appointment?.date) return false;
-      
-      try {
-        const appointmentDate = new Date(appointment.date);
-        return isSameDay(appointmentDate, selectedDate);
-      } catch (error) {
-        console.error('Error parsing appointment date:', error);
-        return false;
-      }
-    });
-  }, [appointmentsData, selectedDate]);
-
   // Get blocked times for the selected date
   const blockedTimes = useSelector((state: any) => 
     (state.blockTime?.blockedTimes || []).filter((block: any) => {
@@ -197,131 +344,143 @@ export default function DailySchedulePage() {
     })
   );
   
-  // Callback functions
-  const handleAppointmentClick = useCallback((appointment: any) => {
-    // This will be handled by DayScheduleView directly
-  }, []);
+  // Handle status change from AppointmentDetailView
+  const handleStatusChange = useCallback(async (newStatus: string, cancellationReason?: string) => {
+    if (!selectedAppointment) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Call the updateAppointmentStatus mutation
+      await updateAppointmentStatus({
+        id: selectedAppointment._id || selectedAppointment.id,
+        status: newStatus,
+        cancellationReason: cancellationReason || (newStatus === 'cancelled' ? 'No reason provided' : undefined)
+      }).unwrap();
+      
+      // Show success message
+      toast.success(`Appointment ${newStatus} successfully`);
+      
+      // Close the detail view
+      setSelectedAppointment(null);
+      
+    } catch (error: any) {
+      console.error('Error updating appointment status:', error);
+      toast.error(`Failed to ${newStatus} appointment`, {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedAppointment, updateAppointmentStatus]);
 
-  const handleBackClick = () => {
-    router.push('/calendar');
+  // Handle collect payment
+  const handleCollectPayment = async (appointmentId: string, paymentDetails: any) => {
+    try {
+      // Here you would typically make an API call to process the payment
+      // For now, we'll just show a success message
+      toast.success('Payment collected successfully', {
+        description: `Payment of $${paymentDetails.amount} processed`
+      });
+      
+      // Optionally refresh the appointments list
+      // await dispatch(refreshAppointments());
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      toast.error('Failed to process payment', {
+        description: error.message
+      });
+    }
   };
 
-  // Handle form submission
-  const handleAppointmentSubmit = useCallback(async (appointmentData: any) => {
-    if (isLoading) return;
-
-    console.group('=== Handling Appointment Submission ===');
-    console.log('Submitting appointment data:', JSON.stringify(appointmentData, null, 2));
-
+  // Handle updating an appointment
+  const handleUpdateAppointment = useCallback(async (updatedAppointment: any) => {
+    const toastId = toast.loading('Updating appointment...');
     try {
-      // Format date for backend (YYYY-MM-DD)
-      let formattedDate = appointmentData.date;
-      if (appointmentData.date instanceof Date) {
-        formattedDate = format(appointmentData.date, 'yyyy-MM-dd');
-      } else if (selectedDate instanceof Date) {
-        formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      const appointmentId = updatedAppointment?._id || updatedAppointment?.id;
+      if (!appointmentId) {
+        throw new Error('Cannot update appointment: Missing appointment ID');
       }
 
-      // Create a clean appointment object with only the fields we want to send
-      const appointmentToSubmit = {
-        client: appointmentData.client,
-        service: appointmentData.service,
-        staff: appointmentData.staff,
-        date: formattedDate,
-        startTime: appointmentData.startTime,
-        endTime: appointmentData.endTime,
-        duration: Number(appointmentData.duration) || 60,
-        notes: appointmentData.notes || '',
-        status: appointmentData.status || 'scheduled',
-        amount: Number(appointmentData.amount) || 0,
-        discount: Number(appointmentData.discount) || 0,
-        totalAmount: (Number(appointmentData.amount) || 0) - (Number(appointmentData.discount) || 0)
+      console.log('Updating appointment with data:', updatedAppointment);
+      
+      // Format the data for the API
+      const updateData = {
+        id: appointmentId,
+        _id: appointmentId, // Include both id and _id for backward compatibility
+        ...updatedAppointment,
+        // Ensure date is properly formatted for the API
+        date: formatDateForAPI(new Date(updatedAppointment.date)),
+        // Ensure all required fields are included
+        clientName: updatedAppointment.clientName || updatedAppointment.client,
+        serviceName: updatedAppointment.serviceName || updatedAppointment.service,
+        staffName: updatedAppointment.staffName || updatedAppointment.staff,
       };
 
-      // Remove any undefined or null values
-      Object.keys(appointmentToSubmit).forEach(key => {
-        if (appointmentToSubmit[key] === undefined || appointmentToSubmit[key] === null) {
-          delete appointmentToSubmit[key];
-        }
-      });
-
-      console.log('Submitting appointment to API:', JSON.stringify(appointmentToSubmit, null, 2));
-
-      if (selectedAppointment?.id) {
-        console.log('Updating existing appointment with ID:', selectedAppointment.id);
-        await updateAppointment({
-          id: selectedAppointment.id,
-          ...appointmentToSubmit
-        }).unwrap();
-        toast.success('Appointment updated successfully');
-      } else {
-        console.log('Creating new appointment');
-        await createAppointment(appointmentToSubmit).unwrap();
-        toast.success('Appointment created successfully');
-      }
-
-      setShowNewAppointmentForm(false);
-      setSelectedAppointment(null);
-
-      dispatch(glowvitaApi.util.invalidateTags(['Appointment']));
-  
-    } catch (error) {
-      console.error('Error in handleAppointmentSubmit:', {
-        error,
-        message: error?.message,
-        data: error?.data,
-        status: error?.status
-      });
-
-      let errorMessage = `Failed to create appointment`;
-      if (error?.data?.message) {
-        errorMessage = error.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-
-      toast.error(errorMessage);
-    } finally {
-      console.groupEnd();
-    }
-  }, [createAppointment, updateAppointment, selectedDate, selectedAppointment, isLoading, dispatch]);
-
-  const handleEditAppointment = useCallback((appointment: any) => {
-    setSelectedAppointment(appointment);
-    setShowNewAppointmentForm(true);
-  }, []);
-
-  const handleOpenBlockTimeModal = () => {
-    setShowBlockTimeModal(true);
-  };
-
-  const handleCloseBlockTimeModal = () => {
-    setShowBlockTimeModal(false);
-  };
-
-  // Handle appointment update
-  const handleUpdateAppointment = useCallback(async (id: string, updates: any) => {
-    try {
-      await updateAppointment({ id, ...updates }).unwrap();
+      console.log('Sending update request with data:', updateData);
+      
+      const result = await updateAppointment(updateData).unwrap();
+      
+      console.log('Update successful, refreshing appointments...');
+      await refetchAppointments();
+      
       toast.success('Appointment updated successfully');
-    } catch (error) {
+      return result;
+      
+    } catch (error: any) {
       console.error('Error updating appointment:', error);
-      toast.error('Failed to update appointment');
+      toast.error('Failed to update appointment', {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
+      throw error;
+    } finally {
+      toast.dismiss(toastId);
     }
-  }, [updateAppointment]);
+  }, [updateAppointment, refetchAppointments]);
 
-  // Handle appointment deletion
-  const handleDeleteAppointment = useCallback(async (id: string) => {
+  // Handle appointment reschedule
+  const handleRescheduleAppointment = async (appointmentData: any) => {
+    const toastId = toast.loading('Rescheduling appointment...');
     try {
-      await deleteAppointment(id).unwrap();
-      toast.success('Appointment deleted successfully');
-      setShowNewAppointmentForm(false);
-      setSelectedAppointment(null);
-    } catch (error) {
-      console.error('Error deleting appointment:', error);
-      toast.error('Failed to delete appointment');
+      const appointmentId = appointmentData?._id || appointmentData?.id;
+      if (!appointmentId) {
+        throw new Error('Cannot reschedule appointment: Missing appointment ID');
+      }
+
+      console.log('Rescheduling appointment with data:', appointmentData);
+      
+      // Format the data for the API
+      const rescheduleData = {
+        id: appointmentId,
+        ...appointmentData,
+        // Ensure date is properly formatted for the API
+        date: formatDateForAPI(new Date(appointmentData.date)),
+        // Ensure all required fields are included
+        clientName: appointmentData.clientName || appointmentData.client,
+        serviceName: appointmentData.serviceName || appointmentData.service,
+        staffName: appointmentData.staffName || appointmentData.staff,
+      };
+
+      console.log('Sending reschedule request with data:', rescheduleData);
+      
+      const result = await updateAppointment(rescheduleData).unwrap();
+      
+      console.log('Reschedule successful, refreshing appointments...');
+      await refetchAppointments();
+      
+      toast.success('Appointment rescheduled successfully');
+      return result;
+      
+    } catch (error: any) {
+      console.error('Error rescheduling appointment:', error);
+      toast.error('Failed to reschedule appointment', {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
+      throw error;
+    } finally {
+      toast.dismiss(toastId);
     }
-  }, [deleteAppointment]);
+  };
 
   if (!isValid || !selectedDate) {
     return (
@@ -338,10 +497,27 @@ export default function DailySchedulePage() {
           <ChevronLeft className="mr-2 h-4 w-4" />
           Back to Calendar
         </Button>
-        <Button onClick={() => setShowNewAppointmentForm(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Appointment
-        </Button>
+        
+        <div className="flex items-center space-x-4">
+          <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select staff" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All Staff">All Staff</SelectItem>
+              {staffList.map(staff => (
+                <SelectItem key={staff.id} value={staff.name}>
+                  {staff.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <Button onClick={handleNewAppointment}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Appointment
+          </Button>
+        </div>
       </div>
 
       <DayScheduleView
@@ -350,91 +526,94 @@ export default function DailySchedulePage() {
         staffList={staffList}
         isLoading={isLoadingStaff || isLoadingWorkingHours}
         error={staffError || workingHoursError}
+        onAppointmentClick={handleAppointmentClick}
       />
 
+      {/* New/Edit Appointment Dialog */}
       <Dialog 
-        open={!!selectedAppointment} 
+        open={isNewAppointmentOpen} 
         onOpenChange={(isOpen) => {
           if (!isOpen) {
-            setSelectedAppointment(null);
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-[800px] max-w-[95vw] max-h-[90vh] h-auto overflow-y-auto p-6">
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-4 top-4 z-10 h-8 w-8 rounded-full"
-              onClick={() => setSelectedAppointment(null)}
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </Button>
-            {selectedAppointment && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Appointment Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Client</p>
-                    <p>{selectedAppointment.clientName || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Service</p>
-                    <p>{selectedAppointment.serviceName || selectedAppointment.service || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date</p>
-                    <p>{format(new Date(selectedAppointment.date), 'PPP')}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Time</p>
-                    <p>{selectedAppointment.startTime} - {selectedAppointment.endTime}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <p className="capitalize">{selectedAppointment.status || 'N/A'}</p>
-                  </div>
-                  {selectedAppointment.notes && (
-                    <div className="col-span-2">
-                      <p className="text-sm text-muted-foreground">Notes</p>
-                      <p className="whitespace-pre-line">{selectedAppointment.notes}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={showNewAppointmentForm}
-        onOpenChange={(open) => {
-          setShowNewAppointmentForm(open);
-          if (!open) {
+            setIsNewAppointmentOpen(false);
             setSelectedAppointment(null);
           }
         }}
       >
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedAppointment ? 'Edit Appointment' : 'New Appointment'}</DialogTitle>
+            <DialogTitle>
+              {selectedAppointment ? 'Edit Appointment' : 'New Appointment'}
+            </DialogTitle>
           </DialogHeader>
           <NewAppointmentForm
+            defaultValues={selectedAppointment || { 
+              date: selectedDate, // Use the selected date from URL
+              status: 'scheduled',
+              paymentStatus: 'pending'
+            }}
+            defaultDate={selectedDate} // Pass the selected date to the form
+            isEditing={!!selectedAppointment}
             onSubmit={handleAppointmentSubmit}
-            onDelete={selectedAppointment ? handleDeleteAppointment : undefined}
             onCancel={() => {
-              setShowNewAppointmentForm(false);
+              setIsNewAppointmentOpen(false);
               setSelectedAppointment(null);
             }}
-            onSuccess={() => {
-              setShowNewAppointmentForm(false);
+            onDelete={selectedAppointment?._id ? () => handleDeleteAppointment(selectedAppointment._id) : undefined}
+            onSuccess={async () => {
+              await refetchAppointments();
+              setIsNewAppointmentOpen(false);
               setSelectedAppointment(null);
             }}
-            defaultDate={selectedDate}
-            defaultValues={selectedAppointment}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Appointment Detail View */}
+      {selectedAppointment && (
+        <AppointmentDetailView
+          appointment={selectedAppointment}
+          onClose={() => setSelectedAppointment(null)}
+          onStatusChange={handleStatusChange}
+          onCollectPayment={handleCollectPayment}
+          onUpdateAppointment={handleUpdateAppointment}
+          onRescheduleAppointment={handleRescheduleAppointment}
+        />
+      )}
+
+      {/* Cancel Appointment Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Appointment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>Are you sure you want to cancel this appointment?</p>
+            <div className="space-y-2">
+              <Label htmlFor="cancelReason">Reason for cancellation</Label>
+              <Textarea
+                id="cancelReason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Please provide a reason for cancellation"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowCancelDialog(false)}
+                disabled={isLoading}
+              >
+                No, Keep It
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => handleUpdateStatus('cancelled', cancelReason)}
+                disabled={isLoading || !cancelReason.trim()}
+              >
+                {isLoading ? 'Cancelling...' : 'Yes, Cancel'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

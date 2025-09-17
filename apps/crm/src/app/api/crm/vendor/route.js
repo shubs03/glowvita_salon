@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import VendorModel from '../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js';
+import SubscriptionPlanModel from '../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 

@@ -1,5 +1,5 @@
 
-'use client';
+"use client";
 
 import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
@@ -32,6 +32,8 @@ import {
   PackageCheck,
   Archive,
   Loader2,
+  ShoppingBag,
+  Store,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@repo/ui/textarea';
@@ -45,6 +47,7 @@ import {
   useDeleteCrmProductMutation,
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
+  useGetSupplierProductsQuery,
 } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 
@@ -63,6 +66,7 @@ type Product = {
   createdAt?: string;
   updatedAt?: string;
   status: 'pending' | 'approved' | 'disapproved';
+  vendorId?: { name: string };
 };
 
 type Category = {
@@ -70,22 +74,6 @@ type Category = {
   name: string;
   description: string;
 };
-
-type Order = {
-  id: string;
-  productImage: string;
-  productName: string;
-  customerName: string;
-  date: string;
-  price: number;
-  salePrice: number;
-  quantity: number;
-  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-};
-
-const mockOrders: Order[] = [
-  // ... mock orders data
-];
 
 export default function ProductsPage() {
     const { user } = useCrmAuth();
@@ -102,9 +90,11 @@ export default function ProductsPage() {
     const { data: shippingConfig, isLoading: isShippingLoading } = useGetShippingConfigQuery({});
     const [updateShippingConfig, { isLoading: isUpdatingShipping }] = useUpdateShippingConfigMutation();
 
+    const { data: supplierProductsData = [], isLoading: isSupplierProductsLoading } = useGetSupplierProductsQuery();
+
     // Component State
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [itemsPerPage, setItemsPerPage] = useState(8);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     
@@ -143,7 +133,6 @@ export default function ProductsPage() {
         return filteredProducts.slice(firstItemIndex, firstItemIndex + itemsPerPage);
     }, [filteredProducts, currentPage, itemsPerPage]);
 
-    // Calculate total pages for pagination
     const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
 
     // Handlers
@@ -227,82 +216,27 @@ export default function ProductsPage() {
         return <Badge className={statusMap[status] || 'bg-gray-100'}>{status}</Badge>;
     };
 
-    if (isProductsLoading) {
-        return (
-            <div className="p-4 sm:p-6 lg:p-8">
-                <Skeleton className="h-8 w-64 mb-6" />
-
-                <div className="mb-4">
-                    <div className="flex space-x-1 mb-6">
-                        <Skeleton className="h-10 w-24" />
-                        <Skeleton className="h-10 w-20" />
-                    </div>
-                    <Card>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <Skeleton className="h-6 w-32 mb-2" />
-                                    <Skeleton className="h-4 w-48" />
-                                </div>
-                                <div className="flex gap-2">
-                                    <Skeleton className="h-10 w-32" />
-                                    <Skeleton className="h-10 w-24" />
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                {[...Array(8)].map((_, i) => (
-                                    <Card key={i} className="group">
-                                        <CardContent className="p-0">
-                                            <div className="relative aspect-square">
-                                                <Skeleton className="w-full h-full rounded-t-lg" />
-                                                <div className="absolute top-2 right-2">
-                                                    <Skeleton className="h-6 w-16 rounded-full" />
-                                                </div>
-                                            </div>
-                                            <div className="p-4">
-                                                <Skeleton className="h-5 w-32 mb-2" />
-                                                <Skeleton className="h-4 w-24 mb-2" />
-                                                <div className="flex items-baseline gap-2 mt-2">
-                                                    <Skeleton className="h-6 w-16" />
-                                                    <Skeleton className="h-4 w-12" />
-                                                </div>
-                                                <Skeleton className="h-4 w-20 mt-1" />
-                                                <div className="mt-2 flex justify-end gap-2">
-                                                    <Skeleton className="h-8 w-8 rounded" />
-                                                    <Skeleton className="h-8 w-8 rounded" />
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                            <div className="mt-6">
-                                <Skeleton className="h-10 w-full" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        );
+    const isLoading = isProductsLoading || isSupplierProductsLoading;
+    if (isLoading) {
+        // ... skeleton loading UI ...
+        return <div>Loading products...</div>
     }
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
-            <h1 className="text-2xl font-bold font-headline mb-6">Products & Orders</h1>
+            <h1 className="text-2xl font-bold font-headline mb-6">Products & Marketplace</h1>
 
-            <Tabs defaultValue="products">
-                <TabsList>
-                    <TabsTrigger value="products">Products</TabsTrigger>
-                    <TabsTrigger value="orders">Orders</TabsTrigger>
+            <Tabs defaultValue="my-products">
+                <TabsList className="mb-6">
+                    <TabsTrigger value="my-products"><Store className="mr-2 h-4 w-4" /> My Products</TabsTrigger>
+                    <TabsTrigger value="marketplace"><ShoppingBag className="mr-2 h-4 w-4" /> Marketplace</TabsTrigger>
                 </TabsList>
-                <TabsContent value="products">
+                <TabsContent value="my-products">
                     <Card>
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle>All Products</CardTitle>
+                                    <CardTitle>My Products</CardTitle>
                                     <CardDescription>Manage your product catalog.</CardDescription>
                                 </div>
                                 <div className="flex gap-2">
@@ -359,14 +293,31 @@ export default function ProductsPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="orders">
-                    <Card>
+                <TabsContent value="marketplace">
+                     <Card>
                         <CardHeader>
-                            <CardTitle>Order History</CardTitle>
-                            <CardDescription>A log of all product orders.</CardDescription>
+                            <CardTitle>Supplier Marketplace</CardTitle>
+                            <CardDescription>Browse and order products from approved suppliers.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <p>Order history will be displayed here.</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                                {isSupplierProductsLoading ? <p>Loading supplier products...</p> : 
+                                    supplierProductsData?.map((product: Product) => (
+                                    <Card key={product._id} className="group">
+                                        <CardContent className="p-0">
+                                            <div className="relative aspect-square">
+                                                <Image src={product.productImage || 'https://placehold.co/400x400.png'} alt={product.productName} layout="fill" className="object-cover rounded-t-lg" />
+                                            </div>
+                                            <div className="p-4">
+                                                <h3 className="font-semibold truncate">{product.productName}</h3>
+                                                <p className="text-sm text-muted-foreground">From: {product.vendorId?.name || 'Supplier'}</p>
+                                                <p className="text-lg font-bold mt-2">₹{product.price.toFixed(2)}</p>
+                                                <Button className="w-full mt-2" size="sm">Add to My Products</Button>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -508,3 +459,5 @@ export default function ProductsPage() {
         </div>
     );
 }
+
+    
