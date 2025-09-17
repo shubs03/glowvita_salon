@@ -10,7 +10,7 @@ const services = [
   {
     icon: <Calendar className="h-6 w-6" />,
     title: "Smart Booking System",
-    description: "Intelligent appointment scheduling with automated reminders, real-time availability, and seamless calendar integration that reduces no-shows by 40%.",
+    description: "Help your clients book appointments effortlessly with our intelligent scheduling system featuring real-time availability, automated reminders, and seamless calendar sync that reduces no-shows by 40%.",
     className: "lg:col-span-2",
     gradient: "from-blue-500/20 to-cyan-500/20",
     color: "text-blue-600"
@@ -18,42 +18,42 @@ const services = [
   {
     icon: <Users className="h-6 w-6" />,
     title: "Client Management",
-    description: "Comprehensive client profiles with service history, preferences, and personalized notes to deliver exceptional customer experiences.",
+    description: "Provide personalized experiences for your clients with comprehensive profiles, service history tracking, preference management, and detailed notes that enhance customer satisfaction.",
     className: "lg:col-span-1",
-    gradient: "from-purple-500/20 to-pink-500/20",
-    color: "text-purple-600"
+    gradient: "from-blue-600/20 to-blue-500/20",
+    color: "text-blue-600"
   },
   {
     icon: <CreditCard className="h-6 w-6" />,
     title: "Payment Processing",
-    description: "Secure, instant payments with multiple payment options, automated invoicing, and detailed financial reporting.",
+    description: "Offer your clients convenient, secure payment options with instant processing, multiple payment methods, automated invoicing, and transparent financial tracking.",
     className: "lg:col-span-1",
-    gradient: "from-green-500/20 to-emerald-500/20",
-    color: "text-green-600"
+    gradient: "from-indigo-500/20 to-blue-500/20",
+    color: "text-blue-600"
   },
   {
     icon: <TrendingUp className="h-6 w-6" />,
     title: "Analytics & Insights",
-    description: "Powerful business intelligence with revenue tracking, customer analytics, and performance metrics to grow your salon strategically.",
+    description: "Understand your clients better with powerful analytics showing booking patterns, service preferences, revenue insights, and customer lifetime value to enhance their experience.",
     className: "lg:col-span-2",
-    gradient: "from-orange-500/20 to-red-500/20",
-    color: "text-orange-600"
+    gradient: "from-cyan-500/20 to-blue-500/20",
+    color: "text-blue-600"
   },
   {
     icon: <Scissors className="h-6 w-6" />,
     title: "Service Catalog",
-    description: "Dynamic service management with pricing optimization, package deals, and upselling recommendations.",
+    description: "Present your services beautifully to clients with dynamic catalogs, transparent pricing, service packages, and personalized recommendations based on their preferences.",
     className: "lg:col-span-1",
-    gradient: "from-indigo-500/20 to-blue-500/20",
-    color: "text-indigo-600"
+    gradient: "from-blue-700/20 to-blue-500/20",
+    color: "text-blue-600"
   },
   {
     icon: <Sparkles className="h-6 w-6" />,
     title: "Loyalty Programs",
-    description: "Automated reward systems and personalized promotions that increase customer retention and lifetime value.",
+    description: "Reward your loyal clients with automated loyalty programs, personalized promotions, and exclusive offers that increase retention and encourage repeat visits.",
     className: "lg:col-span-1",
-    gradient: "from-yellow-500/20 to-orange-500/20",
-    color: "text-yellow-600"
+    gradient: "from-sky-500/20 to-blue-500/20",
+    color: "text-blue-600"
   },
 ];
 
@@ -180,15 +180,11 @@ export function Services() {
           "text-center mb-16 md:mb-20 transition-all duration-1000",
           isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         )}>
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6 shadow-lg">
-            <Sparkles className="h-4 w-4 animate-spin-slow" />
-            Everything You Need
-          </div>
           <h2 className="text-4xl lg:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-6">
-            Powerful Features for Modern Salons
+            Powerful Features for Your Clients
           </h2>
           <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-            Transform your salon operations with our comprehensive suite of tools designed to streamline workflows, delight customers, and boost your bottom line.
+            Enhance your clients' experience with GlowVita's comprehensive suite of tools designed to streamline their booking journey, provide personalized service, and create lasting relationships.
           </p>
         </div>
         

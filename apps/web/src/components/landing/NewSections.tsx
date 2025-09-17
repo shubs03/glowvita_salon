@@ -116,10 +116,6 @@ export const VideoTestimonialSection = () => (
     <section className="py-16 md:py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
         <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16">
-                <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
-                    <Star className="h-4 w-4 fill-current" />
-                    Client Reviews
-                </div>
                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-primary font-headline mb-6">
                     Top-Rated by the Industry
                 </h2>
@@ -166,10 +162,6 @@ export const SecuritySection = () => (
     <div className="container mx-auto px-4">
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-            <Shield size={16} />
-            Your Data is Safe
-          </div>
           <h2 className="text-3xl sm:text-4xl font-bold font-headline leading-tight">
             Enterprise-Grade Security You Can Trust
           </h2>

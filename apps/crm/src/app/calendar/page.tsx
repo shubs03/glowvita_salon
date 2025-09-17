@@ -6,9 +6,9 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Label } from '@repo/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { ChevronLeft, Plus, Clock, User, Calendar as CalendarIcon, Clock3, X, CalendarDays, Eye, Pencil, MoreVertical, CheckCircle2, XCircle, ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronLeft, Plus, Clock, User, Calendar as CalendarIcon, Clock3, X, CalendarDays, Eye, Pencil, MoreVertical, CheckCircle2, XCircle, ChevronRight, ChevronDown, Scissors } from 'lucide-react';
 import NewAppointmentForm, { Appointment } from './components/NewAppointmentForm';
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { cn } from '@repo/ui/cn';
@@ -24,6 +24,75 @@ import { startOfDay, endOfDay, isSameDay } from 'date-fns';
 const validStatuses = ['confirmed','cancelled'];
 const staffMembers = ['All Staff'];
 
+interface CancelAppointmentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCancel: (reason: string) => Promise<void>;
+  isSubmitting: boolean;
+  selectedAppointment: any;
+}
+
+const CancelAppointmentDialog: React.FC<CancelAppointmentDialogProps> = ({
+  open,
+  onOpenChange,
+  onCancel,
+  isSubmitting,
+  selectedAppointment,
+}) => {
+  const [reason, setReason] = useState('');
+
+  const handleSubmit = async () => {
+    if (!reason) return;
+    await onCancel(reason);
+    setReason('');
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Cancel Appointment</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to cancel this appointment? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <label htmlFor="cancelReason" className="text-sm font-medium">
+              Reason
+            </label>
+            <textarea
+              id="cancelReason"
+              className="col-span-3 flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              placeholder="Enter the reason for cancellation"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Back
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleSubmit}
+            disabled={!reason || isSubmitting}
+          >
+            {isSubmitting ? 'Cancelling...' : 'Cancel Appointment'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -34,8 +103,7 @@ export default function CalendarPage() {
   const [selectedDateForBlock, setSelectedDateForBlock] = useState<Date | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
   const router = useRouter();
   const dispatch = useAppDispatch();
 
@@ -48,14 +116,13 @@ export default function CalendarPage() {
     {
       refetchOnFocus: false,
       refetchOnReconnect: false,
-      refetchOnMountOrArgChange: true,
     }
   );
 
   const [createAppointment, { isLoading: isCreating }] = glowvitaApi.useCreateAppointmentMutation();
   const [updateAppointment, { isLoading: isUpdating }] = glowvitaApi.useUpdateAppointmentMutation();
   const [deleteAppointment, { isLoading: isDeleting }] = glowvitaApi.useDeleteAppointmentMutation();
-  const [updateAppointmentStatus, { isLoading: isUpdatingStatus }] = glowvitaApi.useUpdateAppointmentStatusMutation();
+  const [updateAppointmentStatus] = glowvitaApi.useUpdateAppointmentStatusMutation();
 
   const selectedAppointment = useSelector(selectSelectedAppointment);
   const blockedTimes = useSelector((state) =>
@@ -162,25 +229,39 @@ export default function CalendarPage() {
     setSelectedDateForBlock(null);
   }, []);
 
+  const handleEditAppointment = useCallback((appointment: Appointment) => {
+    dispatch(setSelectedAppointment(appointment));
+    setIsEditing(true);
+    setIsModalOpen(true);
+  }, [dispatch]);
+
   const handleFormSubmit = useCallback(
     async (appointmentData: Appointment) => {
       try {
-        if (isEditing && selectedAppointment?.id) {
-          await updateAppointment({
-            id: selectedAppointment.id,
+        if (isEditing && selectedAppointment) {
+          // For updates, use the original ID
+          const updateData = {
             ...appointmentData,
-          }).unwrap();
+            id: selectedAppointment.id || selectedAppointment._id,
+            _id: selectedAppointment._id || selectedAppointment.id,
+          };
+          await updateAppointment(updateData).unwrap();
           toast.success('Appointment updated successfully');
         } else {
+          // For new appointments
           await createAppointment(appointmentData).unwrap();
           toast.success('Appointment created successfully');
         }
+        
+        // Close modal and reset state
         setIsModalOpen(false);
         setIsEditing(false);
         dispatch(setSelectedAppointment(null));
+        
+        // Refresh the appointments list
         await refetch();
       } catch (error: any) {
-        console.error('Failed to save appointment:', error);
+        console.error('Error saving appointment:', error);
         toast.error(
           `Failed to ${isEditing ? 'update' : 'create'} appointment: ${
             error?.data?.message || error.message || 'Unknown error'
@@ -188,7 +269,7 @@ export default function CalendarPage() {
         );
       }
     },
-    [createAppointment, updateAppointment, dispatch, selectedAppointment, isEditing, refetch]
+    [createAppointment, updateAppointment, dispatch, isEditing, selectedAppointment, refetch]
   );
 
   const handleDeleteAppointment = useCallback(
@@ -212,10 +293,35 @@ export default function CalendarPage() {
     [deleteAppointment, dispatch, refetch]
   );
 
-  const handleCancelAppointment = (appointmentId: string) => {
-    setSelectedAppointmentId(appointmentId);
-    setCancelReason(''); // Reset cancel reason
-    setShowCancelDialog(true);
+  const handleCancelAppointment = async (reason: string) => {
+    const appointment = selectedAppointment;
+    if (!appointment || (!appointment._id && !appointment.id)) {
+      toast.error('No appointment selected');
+      return;
+    }
+    
+    try {
+      setIsCancelling(true);
+      
+      // Use either _id or id, whichever is available
+      const appointmentId = appointment._id || appointment.id;
+      
+      await updateAppointmentStatus({
+        id: appointmentId,
+        status: 'cancelled',
+        cancellationReason: reason
+      }).unwrap();
+      
+      toast.success('Appointment cancelled successfully');
+      setShowCancelDialog(false);
+      await refetch();
+    } catch (error: any) {
+      console.error('Error cancelling appointment:', error);
+      toast.error(error?.data?.message || 'Failed to cancel appointment');
+    } finally {
+      setIsCancelling(false);
+      dispatch(setSelectedAppointment(null));
+    }
   };
 
   const handleUpdateAppointmentStatus = async (id: string, status: string, reason: string = '') => {
@@ -261,6 +367,7 @@ export default function CalendarPage() {
       case 'scheduled':
       case 'pending': return 'bg-yellow-500';
       case 'cancelled': return 'bg-red-500';
+      case 'missed': return 'bg-gray-500';
       default: return 'bg-gray-500';
     }
   };
@@ -355,10 +462,12 @@ export default function CalendarPage() {
     dispatch(setSelectedAppointment(null));
   };
 
-  const AppointmentMenu = ({ appointment, onView, onEdit }: { appointment: any, onView: () => void, onEdit: () => void }) => {
+  const AppointmentMenu = ({ appointment, onView, onEdit, onDelete, onCancel }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [showStatusMenu, setShowStatusMenu] = useState(false);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const dispatch = useAppDispatch();
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -367,24 +476,35 @@ export default function CalendarPage() {
           setShowStatusMenu(false);
         }
       };
+
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleStatusChange = async (newStatus: string) => {
-      if (newStatus === 'cancelled') {
-        handleCancelAppointment(appointment.id);
-        setIsOpen(false);
+    const handleStatusChange = async (status: string) => {
+      if (status === 'cancelled') {
+        dispatch(setSelectedAppointment(appointment));
+        setShowCancelDialog(true);
         setShowStatusMenu(false);
-      } else {
-        try {
-          await handleUpdateAppointmentStatus(appointment.id, newStatus, '');
-          setIsOpen(false);
-          setShowStatusMenu(false);
-        } catch (error: any) {
-          console.error('Failed to update status:', error);
-          toast.error(`Failed to update status: ${error?.data?.message || error.message || 'Unknown error'}`);
-        }
+        setIsOpen(false);
+        return;
+      }
+
+      try {
+        setIsUpdatingStatus(true);
+        const appointmentId = appointment._id || appointment.id;
+        await updateAppointmentStatus({
+          id: appointmentId,
+          status,
+        }).unwrap();
+        toast.success(`Appointment marked as ${status}`);
+        setShowStatusMenu(false);
+        setIsOpen(false);
+      } catch (error) {
+        console.error('Error updating status:', error);
+        toast.error('Failed to update appointment status');
+      } finally {
+        setIsUpdatingStatus(false);
       }
     };
 
@@ -400,6 +520,7 @@ export default function CalendarPage() {
         >
           <MoreVertical className="h-4 w-4" />
         </button>
+
         {isOpen && (
           <div className="absolute right-0 mt-1 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
             <div className="py-1">
@@ -415,7 +536,6 @@ export default function CalendarPage() {
                 View Details
               </button>
               
-              {/* Change Status Option - Now available for all statuses */}
               <div className="relative">
                 <button
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
@@ -430,39 +550,41 @@ export default function CalendarPage() {
                   </div>
                   <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showStatusMenu ? 'rotate-180' : ''}`} />
                 </button>
+                
                 {showStatusMenu && (
                   <div className="absolute left-0 right-0 mt-1 w-full bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-30">
                     <div className="py-1">
-                      {validStatuses
-                        .filter((status) => status !== appointment.status)
-                        .map((status) => (
-                          <button
-                            key={status}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(status);
-                            }}
-                            disabled={isUpdatingStatus}
-                            className={cn(
-                              'w-full text-left px-4 py-2 text-sm flex items-center transition-colors',
-                              status === 'cancelled' 
-                                ? 'text-red-600 hover:bg-red-50' 
-                                : status === 'completed'
-                                ? 'text-green-600 hover:bg-green-50'
-                                : status === 'confirmed'
-                                ? 'text-blue-600 hover:bg-blue-50'
-                                : 'text-yellow-600 hover:bg-yellow-50',
-                              isUpdatingStatus && 'opacity-50 cursor-not-allowed'
-                            )}
-                          >
-                            {status === 'cancelled' ? (
-                              <XCircle className="mr-2 h-4 w-4" />
-                            ) : (
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                            )}
-                            {status.charAt(0).toUpperCase() + status.slice(1)}
-                          </button>
-                        ))}
+                      {['confirmed','cancelled'].map((status) => (
+                        <button
+                          key={status}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusChange(status);
+                          }}
+                          disabled={isUpdatingStatus}
+                          className={cn(
+                            'w-full text-left px-4 py-2 text-sm flex items-center transition-colors',
+                            status === 'cancelled' || status === 'no-show'
+                              ? 'text-red-600 hover:bg-red-50' 
+                              : status === 'completed'
+                              ? 'text-green-600 hover:bg-green-50'
+                              : status === 'confirmed'
+                              ? 'text-blue-600 hover:bg-blue-50'
+                              : 'text-yellow-600 hover:bg-yellow-50',
+                            isUpdatingStatus && 'opacity-50 cursor-not-allowed'
+                          )}
+                        >
+                          {status === 'cancelled' ? (
+                            <XCircle className="mr-2 h-4 w-4" />
+                          ) : (
+                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                          )}
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                          {isUpdatingStatus && status === appointment.status && (
+                            <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                          )}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -477,7 +599,7 @@ export default function CalendarPage() {
                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
               >
                 <Pencil className="mr-2 h-4 w-4" />
-                Rescheduled/Edit Appointment
+                Reschedule/Edit Appointment
               </button>
             </div>
           </div>
@@ -486,117 +608,49 @@ export default function CalendarPage() {
     );
   };
 
-  const CancelAppointmentDialog = () => {
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const textareaRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const checkAndMarkMissedAppointments = async () => {
+      if (!appointmentsData?.data) return;
 
-    useEffect(() => {
-      if (showCancelDialog && textareaRef.current) {
-        textareaRef.current.focus();
-      }
-    }, [showCancelDialog]);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to start of today
 
-    const handleSubmit = async () => {
-      if (!cancelReason.trim()) {
-        toast.error('Please provide a cancellation reason');
-        return;
-      }
-      if (!selectedAppointmentId) {
-        toast.error('No appointment selected');
-        return;
-      }
-      setIsSubmitting(true);
-      try {
-        await handleUpdateAppointmentStatus(selectedAppointmentId, 'cancelled', cancelReason);
-        setShowCancelDialog(false);
-        setCancelReason('');
-        setSelectedAppointmentId(null);
-      } finally {
-        setIsSubmitting(false);
+      const appointmentsToUpdate = appointmentsData.data.filter(appointment => {
+        // Skip if already marked as completed, cancelled, or missed
+        if (['completed', 'cancelled', 'missed'].includes(appointment.status)) {
+          return false;
+        }
+
+        const appointmentDate = new Date(appointment.date);
+        appointmentDate.setHours(0, 0, 0, 0);
+
+        // Check if appointment date is before today
+        return appointmentDate < today;
+      });
+
+      // Update all eligible appointments in parallel
+      if (appointmentsToUpdate.length > 0) {
+        try {
+          await Promise.all(
+            appointmentsToUpdate.map(appointment =>
+              updateAppointmentStatus({
+                id: appointment.id,
+                status: 'missed',
+                cancellationReason: 'Automatically marked as missed - appointment date has passed'
+              }).unwrap()
+            )
+          );
+          // Refetch to update the UI
+          refetch();
+        } catch (error) {
+          console.error('Error updating appointment statuses:', error);
+        }
       }
     };
 
-    const handleClose = () => {
-      if (!isSubmitting) {
-        setShowCancelDialog(false);
-        setCancelReason('');
-        setSelectedAppointmentId(null);
-      }
-    };
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-              Cancel Appointment
-            </h3>
-            <button
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="text-gray-400 hover:text-gray-500 disabled:cursor-not-allowed"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-            Are you sure you want to cancel this appointment? Please provide a reason for cancellation.
-          </p>
-          
-          <div className="mb-4">
-            <label htmlFor="cancel-reason" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Cancellation Reason *
-            </label>
-            <input
-              ref={textareaRef}
-              type="text"
-              id="cancel-reason"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Enter cancellation reason"
-              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-              disabled={isSubmitting}
-              maxLength={100}
-            />
-            <div className="text-xs text-gray-500 mt-1">
-              {cancelReason.length}/100 characters
-            </div>
-          </div>
-          
-          <div className="flex justify-end space-x-3">
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="px-4 py-2"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={!cancelReason.trim() || isSubmitting}
-              className={cn(
-                "px-4 py-2 text-white",
-                cancelReason.trim() && !isSubmitting
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-red-400 cursor-not-allowed'
-              )}
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                  Cancelling...
-                </>
-              ) : (
-                'Confirm Cancellation'
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  };
+    // Run the check when the component mounts and when appointments data changes
+    checkAndMarkMissedAppointments();
+  }, [appointmentsData, updateAppointmentStatus, refetch]);
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -708,79 +762,92 @@ export default function CalendarPage() {
                         "hover:shadow-md hover:border-indigo-100 hover:bg-indigo-50/50",
                         "cursor-pointer bg-white"
                       )}
+                      onClick={() => {
+                        const formattedDate = new Date(appointment.date).toISOString().split('T')[0];
+                        router.push(`/calendar/${formattedDate}?appointmentId=${appointment.id}`);
+                      }}
                     >
                       <div className="absolute right-2 top-2">
                         <AppointmentMenu
                           appointment={appointment}
                           onView={() => {
-                            const dateStr = appointment?.date?.toISOString().split('T')[0];
-                            if (dateStr) {
-                              router.push(`/calendar/${dateStr}?appointmentId=${appointment.id}`);
-                            }
+                            const formattedDate = new Date(appointment.date).toISOString().split('T')[0];
+                            router.push(`/calendar/${formattedDate}?appointmentId=${appointment.id}`);
                           }}
-                          onEdit={() => {
-                            dispatch(setSelectedAppointment(appointment));
-                            setIsEditing(true);
-                            setIsModalOpen(true);
-                          }}
+                          onEdit={() => handleEditAppointment(appointment)}
                         />
                       </div>
-                      <div className="flex justify-between items-start pr-6">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-2">
-                            <h4 className="font-medium text-gray-900 truncate">
-                              {appointment.clientName || 'No Name'}
-                            </h4>
+                      
+                      <div className="flex items-start justify-between">
+                        {/* Time and Status */}
+                        <div className="flex items-center">
+                          <div className="text-center mr-4">
+                            <p className="text-sm font-medium text-gray-500">Time</p>
+                            <p className="text-lg font-semibold text-gray-900">
+                              {appointment.startTime} - {appointment.endTime}
+                            </p>
+                          </div>
+                          <div className="h-12 w-px bg-gray-200 mx-2"></div>
+                          <div className="ml-2">
+                            <p className="text-sm font-medium text-gray-500">Status</p>
                             <span
                               className={cn(
-                                "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
+                                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
                                 appointment.status === 'completed'
                                   ? 'bg-green-100 text-green-800'
                                   : appointment.status === 'cancelled'
                                   ? 'bg-red-100 text-red-800'
+                                  : appointment.status === 'missed'
+                                  ? 'bg-gray-100 text-gray-800'
                                   : 'bg-blue-100 text-blue-800'
                               )}
                             >
                               {appointment.status?.charAt(0).toUpperCase() + appointment.status?.slice(1) || 'Scheduled'}
                             </span>
                           </div>
-                          <div className="mt-1.5 flex items-center text-sm text-gray-600">
-                            <span className="font-medium text-gray-800">
-                              {appointment.serviceName || 'No service specified'}
-                            </span>
-                            {appointment.duration && (
-                              <>
-                                <span className="mx-2 text-gray-300">•</span>
-                                <span className="text-gray-500 flex items-center">
-                                  <Clock className="h-3.5 w-3.5 mr-1" />
-                                  {appointment.duration} min
-                                </span>
-                              </>
-                            )}
-                          </div>
-                          <div className="mt-2 flex items-center text-sm text-gray-500">
-                            <User className="h-4 w-4 mr-1.5 flex-shrink-0 text-gray-400" />
-                            <span className="truncate">{appointment.staffName || 'No staff assigned'}</span>
-                          </div>
-                          {appointment.notes && (
-                            <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-md">
-                              <p className="line-clamp-2">
-                                {appointment.notes.includes('Appointment cancelled:') 
-                                  ? appointment.notes.split('Appointment cancelled:')[1].trim() 
-                                  : appointment.notes.split(' - ').pop()}
-                              </p>
-                            </div>
-                          )}
                         </div>
-                        <div className="ml-4 text-right">
-                          <p className="text-sm font-medium text-gray-900 whitespace-nowrap">
-                            {appointment.startTime} - {appointment.endTime}
-                          </p>
-                          <p className="mt-1 text-sm text-gray-500">
+                        
+                        {/* Price */}
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-500">Total</p>
+                          <p className="text-lg font-semibold text-gray-900">
                             ${appointment.totalAmount?.toFixed(2) || '0.00'}
                           </p>
                         </div>
                       </div>
+                      
+                      <div className="mt-3">
+                        <h4 className="text-base font-medium text-gray-900">
+                          {appointment.clientName || 'No Name'}
+                        </h4>
+                        <div className="mt-1 text-sm text-gray-600">
+                          <div className="flex items-center">
+                            <Scissors className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                            <span className="truncate">{appointment.serviceName || 'No service specified'}</span>
+                          </div>
+                          <div className="flex items-center mt-1">
+                            <User className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                            <span className="truncate">{appointment.staffName || 'No staff assigned'}</span>
+                          </div>
+                          {appointment.duration && (
+                            <div className="flex items-center mt-1">
+                              <Clock className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                              <span>{appointment.duration} minutes</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {appointment.notes && (
+                        <div className="mt-3 pt-3 border-t border-gray-100">
+                          <p className="text-sm text-gray-600 line-clamp-2">
+                            <span className="font-medium text-gray-700">Notes: </span>
+                            {appointment.notes.includes('Appointment cancelled:') 
+                              ? appointment.notes.split('Appointment cancelled:')[1].trim() 
+                              : appointment.notes.split(' - ').pop()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
@@ -806,24 +873,52 @@ export default function CalendarPage() {
         </div>
       </div>
       
-      <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isEditing ? 'Edit Appointment' : 'New Appointment'}</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <NewAppointmentForm
-              onSubmit={handleFormSubmit}
-              onSuccess={handleCloseModal}
-              onCancel={handleCloseModal}
-              onDelete={isEditing && selectedAppointment?.id ? () => handleDeleteAppointment(selectedAppointment.id!) : undefined}
-              defaultDate={selectedDate}
-              defaultValues={selectedAppointment || undefined}
-              isEditing={isEditing}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {isModalOpen && (
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {isEditing ? 'Edit Appointment' : 'New Appointment'}
+              </DialogTitle>
+              <DialogDescription>
+                {isEditing ? 'Update the appointment details' : 'Create a new appointment'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <NewAppointmentForm
+                defaultValues={selectedAppointment || undefined}
+                isEditing={isEditing}
+                onSubmit={handleFormSubmit}
+                onCancel={() => {
+                  setIsModalOpen(false);
+                  setIsEditing(false);
+                  dispatch(setSelectedAppointment(null));
+                }}
+                onSuccess={() => {
+                  setIsModalOpen(false);
+                  setIsEditing(false);
+                  dispatch(setSelectedAppointment(null));
+                }}
+                onDelete={isEditing ? async (id) => {
+                  if (window.confirm('Are you sure you want to delete this appointment?')) {
+                    try {
+                      await deleteAppointment(id).unwrap();
+                      toast.success('Appointment deleted successfully');
+                      setIsModalOpen(false);
+                      setIsEditing(false);
+                      dispatch(setSelectedAppointment(null));
+                      await refetch();
+                    } catch (error) {
+                      console.error('Error deleting appointment:', error);
+                      toast.error('Failed to delete appointment');
+                    }
+                  }
+                } : undefined}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
       
       <Dialog open={isBlockTimeModalOpen} onOpenChange={setIsBlockTimeModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
@@ -840,7 +935,13 @@ export default function CalendarPage() {
         </DialogContent>
       </Dialog>
       
-      {showCancelDialog && <CancelAppointmentDialog />}
+      <CancelAppointmentDialog 
+        open={showCancelDialog}
+        onOpenChange={setShowCancelDialog}
+        onCancel={(reason) => handleCancelAppointment(reason)}
+        isSubmitting={isCancelling}
+        selectedAppointment={selectedAppointment}
+      />
     </div>
   );
 }

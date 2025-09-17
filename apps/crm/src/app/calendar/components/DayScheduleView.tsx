@@ -237,12 +237,15 @@ export default function DayScheduleView({
     try {
       setSelectedAppointment(appointment);
       setIsDetailViewOpen(true);
+      // Call the prop if provided
+      onAppointmentClickProp?.(appointment);
     } catch (error) {
       console.error('Error handling appointment click:', error);
     }
   };
 
-  const handleCloseDetailView = () => {
+  const handleCloseDetailView = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setIsDetailViewOpen(false);
     setSelectedAppointment(null);
   };
@@ -460,13 +463,6 @@ export default function DayScheduleView({
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
-                <Button 
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 rounded-full shadow-md"
-                  onClick={() => handleCreateAppointment(selectedDate)}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Appointment
-                </Button>
               </div>
       
       {/* Add CSS to hide scrollbars */}
@@ -531,13 +527,6 @@ export default function DayScheduleView({
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
-            <Button 
-              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 rounded-full shadow-md"
-              onClick={() => handleCreateAppointment(selectedDate)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              New Appointment
-            </Button>
           </div>
         </div>
         
@@ -664,26 +653,46 @@ export default function DayScheduleView({
 
       {/* Appointment Detail View */}
       {selectedAppointment && (
-        <Dialog open={isDetailViewOpen} onOpenChange={setIsDetailViewOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-4 top-4 z-10 h-8 w-8 rounded-full"
-                onClick={handleCloseDetailView}
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </Button>
-              <AppointmentDetailView
-                appointment={{
-                  ...selectedAppointment,
-                  date: selectedAppointment.date instanceof Date ? selectedAppointment.date : new Date(selectedAppointment.date)
-                }}
-                onClose={handleCloseDetailView}
-              />
-            </div>
+        <Dialog open={isDetailViewOpen} onOpenChange={(open) => !open && handleCloseDetailView()}>
+          <DialogContent 
+            className="max-w-3xl"
+            onInteractOutside={(e) => {
+              e.preventDefault();
+              handleCloseDetailView();
+            }}
+            onEscapeKeyDown={(e) => {
+              e.preventDefault();
+              handleCloseDetailView();
+            }}
+          >
+            <AppointmentDetailView 
+              appointment={{
+                ...selectedAppointment,
+                date: selectedAppointment.date,
+                serviceName: selectedAppointment.service,
+                _id: selectedAppointment.id,
+                clientName: selectedAppointment.clientName,
+                staff: '',
+                staffName: selectedAppointment.staffName,
+                service: selectedAppointment.service,
+                startTime: selectedAppointment.startTime,
+                endTime: selectedAppointment.endTime,
+                duration: 0,
+                amount: 0,
+                totalAmount: 0,
+                status: selectedAppointment.status,
+                notes: selectedAppointment.notes,
+              }}
+              onClose={handleCloseDetailView}
+              onStatusChange={(status, reason) => {
+                handleUpdateStatus(status as any);
+              }}
+              onCollectPayment={handleCollectPayment}
+              onUpdateAppointment={async (updatedAppointment) => {
+                // Handle update if needed
+                console.log('Appointment updated:', updatedAppointment);
+              }}
+            />
           </DialogContent>
         </Dialog>
       )}

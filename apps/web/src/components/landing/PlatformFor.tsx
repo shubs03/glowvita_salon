@@ -132,19 +132,6 @@ export function PlatformFor() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           )}
         >
-          <div
-            className={`transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}
-          >
-            <Badge
-              variant="outline"
-              className=" bg-primary/10 text-primary border-primary/20 shadow-lg hover:shadow-primary/25 animate-pulse-glow backdrop-blur-sm"
-            >
-              <Sparkles className="h-3 w-3 mr-2 text-primary animate-spin-slow" />
-              <span className="font-semibold">
-                Perfect For Every Business
-              </span>
-            </Badge>
-          </div>
 
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
             One Platform, Every Beauty Business
