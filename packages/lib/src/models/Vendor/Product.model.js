@@ -4,7 +4,7 @@ const productSchema = new mongoose.Schema({
   vendorId: {
     type: mongoose.Schema.Types.ObjectId,
     required: [true, 'Owner is required'],
-    // Can reference either Vendor or Supplier - we'll handle this in the application logic
+    refPath: 'origin'
   },
   productName: {
     type: String,
@@ -50,20 +50,25 @@ const productSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
+    enum: ['pending', 'approved', 'rejected', 'disapproved'],
     default: 'pending',
+  },
+  origin: {
+    type: String,
+    required: true,
+    enum: ['Vendor', 'Supplier'],
+    default: 'Vendor'
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
   },
   updatedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
+}, {
+  timestamps: true,
 });
 
 productSchema.pre('save', function (next) {

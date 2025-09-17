@@ -31,7 +31,8 @@
     "./slices/vendorprofileSlice": "./src/slices/vendorprofileSlice.js",
     "./slices/workingHoursSlice": "./src/slices/workingHoursSlice.js",
     "./slices/vendorSlice": "./src/slices/vendorSlice.js",
-    "./slices/smsTemplateSlice": "./src/slices/smsTemplateSlice.js"
+    "./slices/smsTemplateSlice": "./src/slices/smsTemplateSlice.js",
+    "./slices/orderSlice": "./src/slices/orderSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
