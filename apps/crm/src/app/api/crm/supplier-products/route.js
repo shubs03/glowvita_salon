@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import ProductModel from '../../../../../../../packages/lib/src/models/Vendor/Product.model.js';
@@ -9,14 +10,21 @@ await _db();
 export const GET = authMiddlewareCrm(async (req) => {
   try {
     const products = await ProductModel.find({ origin: 'Supplier', status: 'approved' })
-      .populate('vendorId', 'shopName email') // 'vendorId' here is the supplier
+      .populate({
+        path: 'vendorId',
+        model: 'Supplier', // Explicitly specify the Supplier model for population
+        select: 'shopName email'
+      })
       .populate('category', 'name')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     const transformedProducts = products.map(p => ({
-        ...p.toObject(),
+        ...p,
         supplierName: p.vendorId?.shopName,
-        supplierEmail: p.vendorId?.email
+        supplierEmail: p.vendorId?.email,
+        // Ensure category is a string
+        category: p.category?.name || 'Uncategorized',
     }));
 
     return NextResponse.json(transformedProducts, { status: 200 });
