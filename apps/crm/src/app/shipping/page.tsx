@@ -8,7 +8,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Switch } from '@repo/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
-import { useGetShippingConfigQuery, useUpdateShippingConfigMutation } from '../../../../packages/store/src/services/api';
+import { useGetShippingConfigQuery, useUpdateShippingConfigMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 import { Skeleton } from '@repo/ui/skeleton';
 
@@ -45,7 +45,7 @@ const ShippingPageSkeleton = () => (
 );
 
 const ShippingPage = () => {
-  const { data: shippingConfig, isLoading, isError, refetch } = useGetShippingConfigQuery();
+  const { data: shippingConfig, isLoading, isError, refetch } = useGetShippingConfigQuery(undefined);
   const [updateShipping, { isLoading: isUpdating }] = useUpdateShippingConfigMutation();
   
   const [isEnabled, setIsEnabled] = useState(false);
