@@ -23,7 +23,7 @@ import { usePathname } from 'next/navigation';
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
-import { Cart } from "./cart/Cart";
+import Cart from "./cart/Cart";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
@@ -268,3 +268,5 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
     </header>
   );
 }
+
+export default Header;

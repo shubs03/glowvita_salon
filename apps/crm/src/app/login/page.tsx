@@ -12,7 +12,7 @@ import { Eye, EyeOff, Scissors, Calendar, Users, CreditCard, Megaphone, Zap, Pac
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { setCrmAuth } from '@repo/store/slices/crmAuthSlice';
 import Image from 'next/image';
-import salonImage from '../../../public/images/young-man-barbershop-trimming-hair.jpg';
+import salonImage from '../../../public/images/crm_registartion.jpg';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -60,6 +60,7 @@ export default function LoginPage() {
             <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
           </svg>
         </button>
+        <div className="absolute inset-0 bg-black/30 z-10"></div>
         <div className="absolute inset-0">
           <Image
             src={salonImage}
@@ -92,7 +93,6 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full h-12 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
-                    required
                   />
                 </div>
               </div>
@@ -107,7 +107,6 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full h-12 text-sm p-5 font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
-                      required
                     />
                     <button
                       type="button"
@@ -166,6 +165,7 @@ export default function LoginPage() {
               </div>
 
               <Button 
+                type="button"
                 onClick={() => {/* Add Google OAuth handler */}}
                 className="w-full h-12 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
               >
@@ -184,13 +184,14 @@ export default function LoginPage() {
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
-                <div className="relative flex justify-center">
-                  <span className="px-2 bg-gray-50 text-xs text-gray-500 font-medium">NEW TO GLOWVITASALON?</span>
+                <div className="relative flex justify-center text-xs">
+                  <span className="px-2 bg-gray-50 text-gray-500">NEW TO GLOWVITASALON?</span>
                 </div>
               </div>
 
               <Button 
                 variant="outline" 
+                type="button"
                 className="w-full h-12 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-blue-600 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                 onClick={() => router.push('/auth/register')}
               >
