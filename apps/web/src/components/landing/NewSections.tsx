@@ -111,36 +111,91 @@ export const VideoTestimonialSection = () => (
   </section>
 );
 
-const SecurityFeature = ({
-  icon: Icon,
-  title,
-  description,
-  stat,
+const TestimonialCard = ({
+  review,
+  author,
+  role,
+  rating,
+  image,
+  hint,
 }: {
-  icon: React.ElementType;
-  title: string;
-  description: string;
-  stat: string;
-}) => {
-  return (
-    <div className="group relative rounded-xl border border-border/30 bg-background/50 p-6 text-center transition-all duration-500 transform-style-3d hover:-translate-y-2 hover:rotate-x-8">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="relative mb-4 w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-primary/30 border border-primary/20">
-          <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-white/20 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-0 group-hover:opacity-30 transition-opacity duration-500 animate-pulse-slow"></div>
-          <Icon className="h-8 w-8 text-primary transition-all duration-500 group-hover:scale-125" />
+  review: string;
+  author: string;
+  role: string;
+  rating: number;
+  image: string;
+  hint: string;
+}) => (
+  <div className="shrink-0 snap-center mx-4" style={{ width: "358px" }}>
+    <ModernCard variant="elevated" padding="lg" hover className="h-full flex flex-col">
+      <div className="flex-grow flex flex-col">
+        <div className="flex h-5 gap-1 text-yellow-400 mb-4">
+          {[...Array(5)].map((_, i) => (
+            <Star
+              key={i}
+              className={`h-5 w-5 ${i < rating ? 'fill-current' : 'text-muted-foreground/30'}`}
+            />
+          ))}
         </div>
-        <h3 className="font-semibold text-lg mb-2 text-foreground transition-colors duration-300 group-hover:text-primary">
-          {title}
-        </h3>
-        <p className="text-sm text-muted-foreground transition-colors duration-300 group-hover:text-foreground/80 mb-4">
-          {description}
-        </p>
-        <div className="mt-auto px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold">
-          {stat}
+        
+        <div className="flex-1 mb-6">
+          <p className="text-lg leading-relaxed text-foreground/90">
+            "{review}"
+          </p>
         </div>
       </div>
+      
+      <div className="flex items-center gap-4">
+        <div className="relative flex size-12 shrink-0 overflow-hidden rounded-full border-2 border-primary/20">
+          <Image
+            src={image}
+            alt={author}
+            width={48}
+            height={48}
+            data-ai-hint={hint}
+            className="object-cover"
+          />
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-foreground">
+            {author}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {role}
+          </p>
+        </div>
+      </div>
+    </ModernCard>
+  </div>
+);
+
+const securityFeatures = [
+  { icon: Shield, title: "256-bit SSL", description: "Bank-level encryption for all data.", stat: "AES-256" },
+  { icon: Lock, title: "GDPR Compliant", description: "Full compliance with data privacy regulations.", stat: "Privacy First" },
+  { icon: FileCheck, title: "Daily Backups", description: "Automated data backups to prevent loss.", stat: "99.99% Uptime" },
+  { icon: Database, title: "PCI DSS Level 1", description: "Secure payment processing.", stat: "Service Provider" },
+];
+
+const SecurityFeature = ({ icon: Icon, title, description, stat }: { icon: React.ElementType, title: string, description: string, stat: string }) => {
+  return (
+    <div className="group relative rounded-xl border border-border/30 bg-background/50 p-6 text-center transition-all duration-500 transform-style-3d hover:-translate-y-2 hover:rotate-x-8">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="relative z-10 flex flex-col items-center">
+            <div className="relative mb-4 w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:shadow-2xl group-hover:shadow-primary/30 border border-primary/20">
+                <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-white/20 to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-0 group-hover:opacity-30 transition-opacity duration-500 animate-pulse-slow"></div>
+                <Icon className="h-8 w-8 text-primary transition-all duration-500 group-hover:scale-125" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2 text-foreground transition-colors duration-300 group-hover:text-primary">
+                {title}
+            </h3>
+            <p className="text-sm text-muted-foreground transition-colors duration-300 group-hover:text-foreground/80 mb-4">
+                {description}
+            </p>
+            <div className="mt-auto px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold">
+                {stat}
+            </div>
+        </div>
     </div>
   );
 };
@@ -178,30 +233,9 @@ export const SecuritySection = () => (
           </ul>
         </div>
         <div className="grid sm:grid-cols-2 gap-6 perspective-1000">
-          <SecurityFeature
-            icon={Shield}
-            title="256-bit SSL"
-            description="Bank-level encryption for all data."
-            stat="AES-256"
-          />
-          <SecurityFeature
-            icon={Lock}
-            title="GDPR Compliant"
-            description="Full compliance with data privacy regulations."
-            stat="Privacy First"
-          />
-          <SecurityFeature
-            icon={FileCheck}
-            title="Daily Backups"
-            description="Automated data backups to prevent loss."
-            stat="99.99% Uptime"
-          />
-          <SecurityFeature
-            icon={Database}
-            title="PCI DSS Level 1"
-            description="Secure payment processing."
-            stat="Service Provider"
-          />
+          {securityFeatures.map((feature, index) => (
+            <SecurityFeature key={index} {...feature} />
+          ))}
         </div>
       </div>
     </div>
