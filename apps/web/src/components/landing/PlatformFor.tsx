@@ -118,7 +118,7 @@ export function PlatformFor() {
   return (
     <section
       id="platform-for"
-      className="py-20 md:py-28 bg-gradient-to-br from-secondary/20 via-background to-primary/10 relative overflow-hidden"
+      className="py-20 md:py-28 bg-gradient-to-br from-secondary/20 via-primary/15 to-primary/10 relative overflow-hidden"
     >
       {/* Enhanced Background */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,white,transparent_70%)] opacity-20"></div>
@@ -134,7 +134,7 @@ export function PlatformFor() {
         >
 
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-            One Platform, Every Beauty Business
+            Trusted by Top Salons
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
             From intimate boutique salons to large wellness centers, our

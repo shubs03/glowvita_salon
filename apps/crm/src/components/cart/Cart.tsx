@@ -30,7 +30,11 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
   const handleUpdateQuantity = (_id: string, quantity: number) => {
-    dispatch(updateQuantity({ _id, quantity }));
+    if (quantity > 0) {
+        dispatch(updateQuantity({ _id, quantity }));
+    } else {
+        dispatch(removeFromCart(_id));
+    }
   };
 
   const handleRemoveFromCart = (_id: string) => {
@@ -43,7 +47,6 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
         return;
     }
 
-    // Group items by supplier
     const ordersBySupplier = cartItems.reduce((acc, item) => {
         const supplierId = item.vendorId;
         if (!acc[supplierId]) {
@@ -174,7 +177,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             </div>
             <div>
               <h4 className="font-medium mb-2">Order Summary</h4>
-              <div className="p-4 bg-secondary rounded-md space-y-2">
+              <div className="p-4 bg-secondary rounded-md space-y-2 max-h-60 overflow-y-auto">
                 {Object.entries(cartItems.reduce((acc, item) => {
                   const supplier = item.supplierName || 'Unknown Supplier';
                   if (!acc[supplier]) {
@@ -207,4 +210,4 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
       </Dialog>
     </>
   );
-}
+};

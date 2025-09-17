@@ -48,11 +48,11 @@ const products = [
 
 export function FeaturedProducts() {
   return (
-    <section className="py-20 bg-secondary/30">
+    <section className="py-20 md:py-28 bg-secondary/30">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold font-headline">Featured Products</h2>
-          <p className="text-lg text-muted-foreground mt-2 max-w-2xl mx-auto">Discover our curated selection of high-quality products from top vendors.</p>
+          <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-6">Featured Products</h2>
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">Discover our curated selection of high-quality products from top vendors.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
           {products.map((product, index) => (

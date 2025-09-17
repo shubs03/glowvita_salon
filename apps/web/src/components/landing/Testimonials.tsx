@@ -73,11 +73,11 @@ export function Testimonials() {
   ];
 
   return (
-    <section className="py-20 bg-secondary/30 relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-secondary/30 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-black/[0.03] dark:bg-grid-white/[0.03] [mask-image:linear-gradient(to_bottom,white_10%,transparent_90%)]"></div>
         <div className="container mx-auto px-4 text-center relative z-10">
-            <h2 className="text-3xl md:text-4xl font-bold font-headline mb-4">Hear From Our Customers</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto mb-12">
+            <h2 className="text-4xl md:text-6xl font-bold font-headline mb-4">Hear From Our Customers</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed mb-12">
                 Discover the impact we’ve made through their own words. From seamless onboarding to exceptional support and tangible results.
             </p>
         </div>

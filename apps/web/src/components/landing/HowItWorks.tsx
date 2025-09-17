@@ -64,7 +64,7 @@ export function HowItWorks() {
   return (
     <section 
       id="how-it-works"
-      className="py-16 md:py-20 bg-gradient-to-br from-secondary/20 via-background to-primary/10 relative overflow-hidden"
+      className="py-20 md:py-28 bg-gradient-to-br from-secondary/20 via-background to-primary/10 relative overflow-hidden"
     >
       {/* Enhanced Background */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,white,transparent_70%)] opacity-20"></div>
@@ -80,10 +80,10 @@ export function HowItWorks() {
           isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         )}>
           
-          <h2 className="text-3xl md:text-5xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4">
+          <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-6">
             How It Works
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Get started in just three simple steps and experience the future of salon booking.
           </p>
         </div>
@@ -134,7 +134,7 @@ export function HowItWorks() {
                   <div className="relative">
                     {/* Main Circle */}
                     <div className={cn(
-                      "w-32 h-32 lg:w-36 lg:h-36 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 border-4 border-white/20 relative overflow-hidden",
+                      "w-24 h-24 lg:w-28 lg:h-28 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 border-4 border-white/20 relative overflow-hidden",
                       step.bgColor,
                       activeStep === index ? "scale-110 shadow-primary/30" : "scale-100"
                     )}>
@@ -177,25 +177,6 @@ export function HowItWorks() {
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Step Indicators */}
-        <div className={cn(
-          "flex justify-center gap-3 mt-12 transition-all duration-1000 delay-600",
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-        )}>
-          {steps.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setActiveStep(index)}
-              className={cn(
-                "w-2.5 h-2.5 rounded-full transition-all duration-300",
-                activeStep === index 
-                  ? "bg-primary scale-125 shadow-lg shadow-primary/50" 
-                  : "bg-primary/30 hover:bg-primary/50"
-              )}
-            />
-          ))}
         </div>
       </div>
     </section>

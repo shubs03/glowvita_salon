@@ -113,13 +113,13 @@ const VideoTestimonialCard = () => (
 );
 
 export const VideoTestimonialSection = () => (
-    <section className="py-16 md:py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
+    <section className="py-20 md:py-28 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
         <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16">
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-primary font-headline mb-6">
+                <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-6">
                     Top-Rated by the Industry
                 </h2>
-                <p className="text-lg text-muted-foreground leading-relaxed">
+                <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
                     Our dedication to building the best-in-class booking software
                     and delivering exceptional customer experience continues to be
                     recognized time and time again.
@@ -157,7 +157,7 @@ const SecurityFeature = ({ icon: Icon, title, description, stat }: { icon: React
 };
 
 export const SecuritySection = () => (
-  <section className="py-16 bg-gradient-to-br from-background via-secondary/10 to-background relative">
+  <section className="py-20 md:py-28 bg-gradient-to-br from-background via-secondary/10 to-background relative">
     <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-[0.05]"></div>
     <div className="container mx-auto px-4">
       <div className="grid lg:grid-cols-2 gap-12 items-center">

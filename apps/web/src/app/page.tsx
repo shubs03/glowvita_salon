@@ -3,7 +3,6 @@
 import {
   HeroSection,
   AppCTA,
-  FeaturedSalons,
   HowItWorks,
   PlatformFor,
   Testimonials,
@@ -17,6 +16,7 @@ import {
   Blog,
   Services,
   BentoGrid,
+  SalonsSection,
 } from "@/components/landing";
 import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
@@ -38,11 +38,11 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-background">
       <main className="flex-grow">
         <HeroSection /> 
+        <SalonsSection />
         <Offers />
-        <BentoGrid/>
+        {/* <BentoGrid/> */}
         <PlatformFor />
-        <FeaturedSalons />
-        <HowItWorks />
+        {/* <HowItWorks /> */}
         <FeaturedProducts />
         <Services />
         
@@ -57,7 +57,7 @@ export default function HomePage() {
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-headline mb-6 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
                 Unlock Your Salon's Full Potential
               </h2>
-              <p className="text-muted-foreground text-xl max-w-4xl mx-auto leading-relaxed">
+              <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
                 See the real-world impact of using our comprehensive salon management platform. These metrics represent actual improvements from our satisfied clients across the globe.
               </p>
             </div>
@@ -117,9 +117,9 @@ export default function HomePage() {
 
         <VideoTestimonialSection />
         <Testimonials />
-        <SecuritySection />
-        <Integrations />
-        <Blog />
+        {/* <SecuritySection /> */}
+        {/* <Integrations /> */}
+        {/* <Blog /> */}
         <FAQ />
         <AppCTA />
 

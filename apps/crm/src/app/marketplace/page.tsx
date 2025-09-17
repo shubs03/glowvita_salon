@@ -6,15 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Input } from '@repo/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
-import { Search, ShoppingCart, Info, X, Heart, Eye, Minus, Plus } from 'lucide-react';
+import { Search, ShoppingCart, Info, X, Heart, Eye, Minus, Plus, Building, Mail, MapPin } from 'lucide-react';
 import Image from 'next/image';
-import { useGetSupplierProductsQuery, useGetSupplierProfileQuery, useCreateCrmOrderMutation } from '@repo/store/api';
+import { useGetSupplierProductsQuery, useGetSupplierProfileQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 import { useAppDispatch } from '@repo/store/hooks';
 import { addToCart } from '@repo/store/slices/cartSlice';
 import { Skeleton } from '@repo/ui/skeleton';
-import { Label } from 'recharts';
+import { Label } from '@repo/ui/label';
 
 type Product = {
   _id: string;
@@ -145,27 +145,23 @@ export default function MarketplacePage() {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProducts.map((product: Product) => (
-              <Card key={product._id} className="group overflow-hidden rounded-lg shadow-sm hover:shadow-lg transition-shadow">
-                <CardContent className="p-0">
+              <Card key={product._id} className="group overflow-hidden rounded-lg shadow-sm hover:shadow-lg transition-shadow flex flex-col">
                   <div className="relative aspect-square cursor-pointer" onClick={() => handleViewDetails(product)}>
                     <Image src={product.productImage || 'https://placehold.co/400x400.png'} alt={product.productName} layout="fill" className="object-cover rounded-t-lg group-hover:scale-105 transition-transform" />
                   </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold truncate">{product.productName}</h3>
-                    <p className="text-sm text-muted-foreground cursor-pointer hover:underline" onClick={(e) => handleViewSupplier(e, product.vendorId)}>
+                  <div className="p-4 flex flex-col flex-grow">
+                    <h3 className="font-semibold truncate flex-grow">{product.productName}</h3>
+                    <p className="text-xs text-muted-foreground cursor-pointer hover:underline" onClick={(e) => handleViewSupplier(e, product.vendorId)}>
                       By: {product.supplierName || 'Supplier'}
                     </p>
-                    <p className="text-lg font-bold mt-2">₹{product.price.toFixed(2)}</p>
-                    <div className="mt-4 flex gap-2">
-                       <Button className="w-full" size="sm" onClick={() => handleAddToCart(product, 1)}>
-                        <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleViewDetails(product)}>
-                        <Eye className="mr-2 h-4 w-4" /> View
-                      </Button>
+                    <div className="flex justify-between items-baseline mt-2">
+                        <p className="text-lg font-bold">₹{product.price.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">Stock: {product.stock}</p>
                     </div>
+                    <Button className="w-full mt-3" size="sm" onClick={() => handleAddToCart(product, 1)}>
+                      <ShoppingCart className="mr-2 h-4 w-4" /> Add to Cart
+                    </Button>
                   </div>
-                </CardContent>
               </Card>
             ))}
           </div>
@@ -179,7 +175,7 @@ export default function MarketplacePage() {
             <DialogTitle>{selectedProduct?.productName}</DialogTitle>
           </DialogHeader>
           {selectedProduct && (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-6 py-4">
               <Image src={selectedProduct.productImage || 'https://placehold.co/400x400.png'} alt={selectedProduct.productName} width={400} height={400} className="rounded-md mx-auto" />
               <div className="space-y-4">
                 <p className="text-muted-foreground">{selectedProduct.description}</p>
@@ -209,13 +205,16 @@ export default function MarketplacePage() {
           <DialogHeader>
             <DialogTitle>Supplier Profile</DialogTitle>
           </DialogHeader>
-          {isSupplierLoading ? <Skeleton className="h-24 w-full" /> : supplierData && (
-            <div className="flex flex-col items-center text-center">
-              <Image src={supplierData.profileImage || 'https://placehold.co/100x100.png'} alt={supplierData.shopName} width={100} height={100} className="rounded-full mx-auto" />
+          {isSupplierLoading ? <Skeleton className="h-48 w-full" /> : supplierData && (
+            <div className="flex flex-col items-center text-center p-4">
+              <Image src={supplierData.profileImage || 'https://placehold.co/100x100.png'} alt={supplierData.shopName} width={100} height={100} className="rounded-full mx-auto border-4 border-primary/20 shadow-lg" />
               <h3 className="text-xl font-semibold mt-4">{supplierData.shopName}</h3>
-              <p className="text-muted-foreground">{supplierData.email}</p>
-              <p className="text-sm mt-2">{supplierData.city}, {supplierData.country}</p>
-              <p className="mt-4 text-sm text-center">{supplierData.description}</p>
+              <p className="text-muted-foreground text-sm">{supplierData.email}</p>
+              <div className="flex items-center gap-2 text-muted-foreground text-sm mt-2">
+                <MapPin className="h-4 w-4"/>
+                <span>{supplierData.city}, {supplierData.country}</span>
+              </div>
+              <p className="mt-4 text-sm text-center bg-secondary p-3 rounded-lg">{supplierData.description}</p>
             </div>
           )}
         </DialogContent>

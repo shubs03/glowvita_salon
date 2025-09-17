@@ -13,3 +13,4 @@ export * from './FeaturedProducts';
 export * from './Integrations';
 export * from './Blog';
 export * from './Services';
+export * from './SalonsSection';

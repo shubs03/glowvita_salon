@@ -93,7 +93,7 @@ export function Offers() {
   return (
     <section 
       id="offers-section"
-      className="py-24 md:py-32 bg-gradient-to-br from-background via-primary/5 to-secondary/5 relative overflow-hidden"
+      className="py-20 md:py-28 bg-gradient-to-br from-background via-primary/5 to-secondary/5 relative overflow-hidden"
     >
       {/* Enhanced Background */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_50%_200px,hsl(var(--primary))_0%,transparent_50%)] opacity-10"></div>
@@ -123,7 +123,7 @@ export function Offers() {
           <div className="flex w-fit animate-slide hover:[animation-play-state:paused] px-4">
             {[...offers, ...offers].map((offer, index) => (
               <div key={index} className="flex-shrink-0 mx-4" style={{ width: '320px' }}>
-                <Card className="relative group overflow-hidden rounded-2xl h-48 w-full transition-all duration-700 hover:shadow-2xl hover:shadow-primary/25 transform hover:-translate-y-2 border-2 border-border/30 bg-gradient-to-br from-background to-primary/5">
+                <Card className="relative group overflow-hidden rounded-lg h-48 w-full transition-all duration-700 hover:shadow-2xl hover:shadow-primary/25 transform hover:-translate-y-2 border-2 border-border/30 bg-gradient-to-br from-background to-primary/5">
                   {/* Discount Badge */}
                   <div className="absolute top-4 left-4 z-20 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse-glow opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                     <Percent className="h-3 w-3 inline mr-1" />
