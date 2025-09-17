@@ -37,7 +37,7 @@ type Client = {
   updatedAt?: string;
 };
 
-export default function ClientsPage() {
+export function ClientsPage() {
     const { user } = useCrmAuth();
     const { data: clientList = [], isLoading, isError, refetch } = useGetClientsQuery({
         search: '',

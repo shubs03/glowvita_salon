@@ -13,7 +13,7 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+  const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
   const isDashboardPage = pathname.startsWith('/dashboard');
 
   let layoutContent: ReactNode;

@@ -73,60 +73,15 @@ export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
   baseQuery: baseQuery,
   tagTypes: [
-    "admin",
-    "offers",
-    "Referrals",
-    "Settings",
-    "SuperData",
-    "Supplier",
-    "SubscriptionPlan",
-    "Vendor",
-    "doctors",
-    "GeoFence",
-    "Category",
-    "Service",
-    "Staff",
-    "Client",
-    "Offers",
-    "Notification",
-    "TaxFeeSettings",
-    "User",
-    "PendingServices",
-    "AdminProductCategory",
-    "ProductCategory",
-    "SmsTemplate",
-    "SmsPackage",
-    "CrmSmsTemplate",
-    "TestSmsTemplate",
-    "SmsPackage",
-    "CrmSmsPackage",
-    "CrmCampaign",
-    "SocialMediaTemplate",
-    "CrmSocialMediaTemplate",
-    "Marketing",
-    "SubscriptionPlan",
-    "Vendor",
-    "doctors",
-    "GeoFence",
-    "Category",
-    "Service",
-    "Staff",
-    "Client",
-    "Offers",
-    "Notification",
-    "TaxFeeSettings",
-    "User",
-    "PendingServices",
-    "AdminProductCategory",
-    "ProductCategory",
-    "SmsTemplate",
-    "SmsPackage",
-    "SocialMediaTemplate",
-    "Appointment",
-    "ShippingCharge",
-    "Order",
-    "CrmProducts",
-    "SupplierProducts",
+    "admin", "offers", "Referrals", "Settings", "SuperData", "Supplier", 
+    "SubscriptionPlan", "Vendor", "doctors", "GeoFence", "Category", 
+    "Service", "Staff", "Client", "Offers", "Notification", 
+    "TaxFeeSettings", "User", "PendingServices", "AdminProductCategory", 
+    "ProductCategory", "SmsTemplate", "SmsPackage", "CrmSmsTemplate", 
+    "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign", 
+    "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing", 
+    "Appointment", "ShippingCharge", "Order", "CrmProducts", 
+    "SupplierProducts", "CrmOrder", "SupplierProfile"
   ],
 
   endpoints: (builder) => ({
@@ -261,7 +216,7 @@ export const glowvitaApi = createApi({
     // Admin Panel Endpoints
     getUsers: builder.query({
       query: () => ({
-        url: "/admin/users", // Assumes an endpoint exists at /api/admin/users
+        url: "/admin/users",
         method: "GET",
       }),
       providesTags: ["admin"],
@@ -850,54 +805,19 @@ export const glowvitaApi = createApi({
      // Admin Product Categories 
      
     getAdminProductCategories: builder.query({
-      query: () => ({
-        url: "/admin/product-categories",
-        method: "GET",
-      }),
+      query: () => ({ url: "/admin/product-categories", method: "GET" }),
       providesTags: ["AdminProductCategory"],
-      transformResponse: (response) => {
-        // Ensure we always return an array
-        if (Array.isArray(response)) {
-          return response;
-        }
-        if (response && Array.isArray(response.data)) {
-          return response.data;
-        }
-        if (
-          response &&
-          response.productCategories &&
-          Array.isArray(response.productCategories)
-        ) {
-          return response.productCategories;
-        }
-        return [];
-      },
     }),
-
     createAdminProductCategory: builder.mutation({
-      query: (category) => ({
-        url: "/admin/product-categories",
-        method: "POST",
-        body: category,
-      }),
+      query: (category) => ({ url: "/admin/product-categories", method: "POST", body: category }),
       invalidatesTags: ["AdminProductCategory"],
     }),
-
     updateAdminProductCategory: builder.mutation({
-      query: (category) => ({
-        url: "/admin/product-categories",
-        method: "PUT",
-        body: category,
-      }),
+      query: (category) => ({ url: "/admin/product-categories", method: "PUT", body: category }),
       invalidatesTags: ["AdminProductCategory"],
     }),
-
     deleteAdminProductCategory: builder.mutation({
-      query: ({ id }) => ({
-        url: "/admin/product-categories",
-        method: "DELETE",
-        body: { id },
-      }),
+      query: ({ id }) => ({ url: "/admin/product-categories", method: "DELETE", body: { id } }),
       invalidatesTags: ["AdminProductCategory"],
     }),
 
@@ -907,7 +827,6 @@ export const glowvitaApi = createApi({
       query: () => ({ url: "/admin/product-approval", method: "GET" }),
       providesTags: ["Product"],
     }),
-
     updateProductStatus: builder.mutation({
       query: ({ productId, status }) => ({
         url: "/admin/product-approval", 
@@ -918,295 +837,170 @@ export const glowvitaApi = createApi({
     }),
 
     //======================================================== CRM Endpoints ====================================================//
-
-    // CRM Endpoints
-
     // Vendor Endpoints
     vendorLogin: builder.mutation({
-      query: (credentials) => ({
-        url: "/crm/auth/login",
-        method: "POST",
-        body: credentials,
-      }),
+      query: (credentials) => ({ url: "/crm/auth/login", method: "POST", body: credentials }),
     }),
-
     vendorRegister: builder.mutation({
-      query: (vendorData) => ({
-        url: "/crm/auth/register",
-        method: "POST",
-        body: vendorData,
-      }),
+      query: (vendorData) => ({ url: "/crm/auth/register", method: "POST", body: vendorData }),
     }),
-
     getVendorServices: builder.query({
-      query: ({
-        vendorId,
-        page = 1,
-        limit = 100,
-        status = null,
-        category = null,
-      }) => ({
+      query: ({ vendorId, page = 1, limit = 100, status = null, category = null }) => ({
         url: `/crm/services?vendorId=${vendorId}&page=${page}&limit=${limit}${status ? `&status=${status}` : ""}${category ? `&category=${category}` : ""}`,
         method: "GET",
       }),
       providesTags: ["VendorServices"],
     }),
-
     createVendorServices: builder.mutation({
-      query: ({ vendor, services }) => ({
-        url: "/crm/services",
-        method: "POST",
-        body: { vendor, services },
-      }),
+      query: ({ vendor, services }) => ({ url: "/crm/services", method: "POST", body: { vendor, services } }),
       invalidatesTags: ["VendorServices"],
     }),
-
     updateVendorServices: builder.mutation({
-      query: ({ vendor, services }) => ({
-        url: "/crm/services",
-        method: "PUT",
-        body: { vendor, services },
-      }),
+      query: ({ vendor, services }) => ({ url: "/crm/services", method: "PUT", body: { vendor, services } }),
       invalidatesTags: ["VendorServices"],
     }),
-
     deleteVendorServices: builder.mutation({
-      query: ({ vendor, serviceId }) => ({
-        url: "/crm/services",
-        method: "DELETE",
-        body: { vendor, serviceId },
-      }),
+      query: ({ vendor, serviceId }) => ({ url: "/crm/services", method: "DELETE", body: { vendor, serviceId } }),
       invalidatesTags: ["VendorServices"],
     }),
-
-    getOffers: builder.query({
-      query: () => "/crm/offers",
-      providesTags: ["Offer"],
-    }),
-
+    getOffers: builder.query({ query: () => "/crm/offers", providesTags: ["Offer"] }),
     createOffer: builder.mutation({
-      query: (body) => ({
-        url: "/crm/offers",
-        method: "POST",
-        body,
-      }),
+      query: (body) => ({ url: "/crm/offers", method: "POST", body }),
       invalidatesTags: ["Offer"],
     }),
-
     updateOffer: builder.mutation({
-      query: (body) => ({
-        url: "/crm/offers",
-        method: "PUT",
-        body,
-      }),
+      query: (body) => ({ url: "/crm/offers", method: "PUT", body }),
       invalidatesTags: ["Offer"],
     }),
-
     deleteOffer: builder.mutation({
-      query: (id) => ({
-        url: "/crm/offers",
-        method: "DELETE",
-        body: { id },
-      }),
+      query: (id) => ({ url: "/crm/offers", method: "DELETE", body: { id } }),
       invalidatesTags: ["Offer"],
     }),
-
     getVendorNotifications: builder.query({
-      query: ({ vendorId }) => ({
-        url: `/crm/notifications?vendorId=${vendorId}`,
-        method: "GET",
-      }),
+      query: ({ vendorId }) => ({ url: `/crm/notifications?vendorId=${vendorId}`, method: "GET" }),
       providesTags: ["VendorNotifications"],
     }),
-
     createVendorNotification: builder.mutation({
-      query: (notification) => ({
-        url: "/crm/notifications",
-        method: "POST",
-        body: notification,
-      }),
+      query: (notification) => ({ url: "/crm/notifications", method: "POST", body: notification }),
       invalidatesTags: ["VendorNotifications"],
     }),
-
     deleteVendorNotification: builder.mutation({
-      query: ({ notificationId }) => ({
-        url: "/crm/notifications",
-        method: "DELETE",
-        body: { notificationId },
-      }),
+      query: ({ notificationId }) => ({ url: "/crm/notifications", method: "DELETE", body: { notificationId } }),
       invalidatesTags: ["VendorNotifications"],
     }),
 
     // Products endpoints
     getCrmProducts: builder.query({
-      query: (vendorId) => ({ // Accept vendorId
-        url: "/crm/products", // The API route will get vendorId from auth
-        method: "GET",
-        // No need to pass vendorId as a query param if middleware handles it
-      }),
-      providesTags: ["CrmProducts", "Product"],
-      transformResponse: (response) => {
-        // Handle both direct array and wrapped response formats
-        if (Array.isArray(response)) {
-          return response;
-        }
-        if (response && response.success && Array.isArray(response.data)) {
-          return response.data;
-        }
-        // Fallback for unexpected response structure
-        console.warn(
-          "Unexpected API response structure for products:",
-          response
-        );
-        return [];
-      },
+      query: () => ({ url: "/crm/products", method: "GET" }),
+      providesTags: ["CrmProducts"],
+      transformResponse: (response) => response.data || [],
     }),
-
     createCrmProduct: builder.mutation({
-      query: (product) => ({
-        url: "/crm/products",
-        method: "POST",
-        body: product,
-      }),
-      invalidatesTags: ["CrmProducts", "Product"],
+      query: (product) => ({ url: "/crm/products", method: "POST", body: product }),
+      invalidatesTags: ["CrmProducts"],
     }),
-
     updateCrmProduct: builder.mutation({
-      query: (product) => ({
-        url: "/crm/products",
-        method: "PUT",
-        body: product,
-      }),
-      invalidatesTags: ["CrmProducts", "Product"],
+      query: (product) => ({ url: "/crm/products", method: "PUT", body: product }),
+      invalidatesTags: ["CrmProducts"],
     }),
-
     deleteCrmProduct: builder.mutation({
-      query: (id) => ({
-        url: `/crm/products?id=${id}`,
-        method: "DELETE",
-      }),
-      invalidatesTags: ["CrmProducts", "Product"],
+      query: (id) => ({ url: "/crm/products", method: "DELETE", body: { id } }),
+      invalidatesTags: ["CrmProducts"],
     }),
 
+    // Supplier Products & Profile
+    getSupplierProducts: builder.query({
+      query: () => ({ url: '/crm/supplier-products' }),
+      providesTags: ['SupplierProducts'],
+    }),
+    getSupplierProfile: builder.query({
+      query: (id) => `/crm/supplier-profile/${id}`,
+      providesTags: (result, error, id) => [{ type: 'SupplierProfile', id }],
+    }),
+
+    // Orders
+    getCrmOrders: builder.query({
+        query: () => ({ url: '/crm/orders' }),
+        providesTags: ['CrmOrder'],
+    }),
+    createCrmOrder: builder.mutation({
+        query: (orderData) => ({ url: '/crm/orders', method: 'POST', body: orderData }),
+        invalidatesTags: ['CrmOrder'],
+    }),
+    updateCrmOrder: builder.mutation({
+        query: ({ orderId, ...updateData }) => ({
+            url: '/crm/orders',
+            method: 'PATCH',
+            body: { orderId, ...updateData },
+        }),
+        invalidatesTags: ['CrmOrder'],
+    }),
+    
     // shipping charge endpoints
     getShippingConfig: builder.query({
-      query: () => ({
-        url: "/crm/shipping",
-        method: "GET",
-      }),
+      query: () => ({ url: "/crm/shipping", method: "GET" }),
       providesTags: ["ShippingCharge"],
       transformResponse: (response) => response.data || response,
     }),
-
     updateShippingConfig: builder.mutation({
-      query: (charge) => ({
-        url: "/crm/shipping",
-        method: "PUT",
-        body: charge,
-      }),
+      query: (charge) => ({ url: "/crm/shipping", method: "PUT", body: charge }),
       invalidatesTags: ["ShippingCharge"],
       transformResponse: (response) => response.data || response,
     }),
 
     // product categories endpoints
     getProductCategories: builder.query({
-      query: () => ({
-        url: "/crm/productcategories",
-        method: "GET",
-      }),
+      query: () => ({ url: "/crm/product-categories", method: "GET" }),
       providesTags: ["ProductCategory"],
     }),
     createProductCategory: builder.mutation({
-      query: (category) => ({
-        url: "/crm/productcategories",
-        method: "POST",
-        body: category,
-      }),
+      query: (category) => ({ url: "/crm/product-categories", method: "POST", body: category }),
       invalidatesTags: ["ProductCategory"],
     }),
     
     // Staff Endpoints
     getStaff: builder.query({
-      query: () => ({
-        url: "/crm/staff",
-        method: "GET",
-      }),
+      query: () => ({ url: "/crm/staff", method: "GET" }),
       providesTags: ["Staff"],
     }),
     createStaff: builder.mutation({
-      query: (staff) => ({
-        url: "/crm/staff",
-        method: "POST",
-        body: staff,
-      }),
+      query: (staff) => ({ url: "/crm/staff", method: "POST", body: staff }),
       invalidatesTags: ["Staff"],
     }),
     updateStaff: builder.mutation({
-      query: (staff) => ({
-        url: "/crm/staff",
-        method: "PUT",
-        body: staff,
-      }),
+      query: (staff) => ({ url: "/crm/staff", method: "PUT", body: staff }),
       invalidatesTags: ["Staff"],
     }),
     deleteStaff: builder.mutation({
-      query: (id) => ({
-        url: "/crm/staff",
-        method: "DELETE",
-        body: { id },
-      }),
+      query: (id) => ({ url: "/crm/staff", method: "DELETE", body: { id } }),
       invalidatesTags: ["Staff"],
     }),
-    //working hours endpoint
 
+    //working hours endpoint
     getWorkingHours: builder.query({
-      query: () => ({
-        url: "/crm/workinghours",
-        method: "GET",
-      }),
+      query: () => ({ url: "/crm/workinghours", method: "GET" }),
       providesTags: ["WorkingHours"],
     }),
     updateWorkingHours: builder.mutation({
-      query: (workingHours) => ({
-        url: "/crm/workinghours",
-        method: "PUT",
-        body: workingHours,
-      }),
+      query: (workingHours) => ({ url: "/crm/workinghours", method: "PUT", body: workingHours }),
       invalidatesTags: ["WorkingHours"],
     }),
     addSpecialHours: builder.mutation({
-      query: (specialHours) => ({
-        url: "/crm/workinghours",
-        method: "POST",
-        body: specialHours,
-      }),
+      query: (specialHours) => ({ url: "/crm/workinghours", method: "POST", body: specialHours }),
       invalidatesTags: ["WorkingHours"],
     }),
     deleteSpecialHours: builder.mutation({
-      query: (id) => ({
-        url: `/crm/workinghours?id=${id}`,
-        method: "DELETE",
-      }),
+      query: (id) => ({ url: `/crm/workinghours?id=${id}`, method: "DELETE" }),
       invalidatesTags: ["WorkingHours"],
     }),
 
     // appointments endpoints
     getAppointments: builder.query({
-      query: () => ({
-        url: "/crm/appointments",
-        method: "GET",
-      }),
-      providesTags: (result = [], error, arg) => [
-        'Appointments',
-        ...result.map(({ id }) => ({ type: 'Appointment', id }))
-      ],
+      query: () => ({ url: "/crm/appointments", method: "GET" }),
+      providesTags: (result = [], error, arg) => [ 'Appointments', ...result.map(({ id }) => ({ type: 'Appointment', id })) ],
     }),
     createAppointment: builder.mutation({
-      query: (appointment) => ({
-        url: "/crm/appointments",  
-        method: "POST",
-        body: appointment,
-      }),
+      query: (appointment) => ({ url: "/crm/appointments", method: "POST", body: appointment }),
       invalidatesTags: ['Appointments'],
     }),
     updateAppointment: builder.mutation({
@@ -1227,25 +1021,14 @@ export const glowvitaApi = createApi({
       ],
     }),
     updateAppointmentStatus: builder.mutation({
-      query: ({ id, status, cancellationReason }) => ({
-        url: `/crm/appointments`,
-        method: "PATCH",
-        body: { _id: id, status, cancellationReason },
-      }),
-      invalidatesTags: (result, error, { id }) => [
-        { type: 'Appointment', id },
-        'Appointments'
-      ],
+      query: ({ id, status, cancellationReason }) => ({ url: `/crm/appointments`, method: "PATCH", body: { _id: id, status, cancellationReason } }),
+      invalidatesTags: (result, error, { id }) => [ { type: 'Appointment', id }, 'Appointments' ],
     }),
     deleteAppointment: builder.mutation({
-      query: (id) => ({
-        url: `/crm/appointments/${id}`,
-        method: "DELETE",
-      }),
+      query: (id) => ({ url: `/crm/appointments/${id}`, method: "DELETE" }),
       invalidatesTags: ['Appointments'],
     }),
    
-    
     // Client Endpoints
     getClients: builder.query({
       query: ({ search, status, page = 1, limit = 100 } = {}) => {
@@ -1254,135 +1037,70 @@ export const glowvitaApi = createApi({
         if (status) params.append('status', status);
         params.append('page', page.toString());
         params.append('limit', limit.toString());
-        
-        return {
-          url: `/crm/clients?${params.toString()}`,
-          method: "GET",
-        };
+        return { url: `/crm/clients?${params.toString()}`, method: "GET" };
       },
       providesTags: ["Client"],
-      transformResponse: (response) => {
-        if (response && response.success) {
-          return response.data || [];
-        }
-        return [];
-      },
+      transformResponse: (response) => (response && response.success ? response.data || [] : []),
     }),
     createClient: builder.mutation({
-      query: (client) => ({
-        url: "/crm/clients",
-        method: "POST",
-        body: client,
-      }),
+      query: (client) => ({ url: "/crm/clients", method: "POST", body: client }),
       invalidatesTags: ["Client"],
     }),
     updateClient: builder.mutation({
-      query: (client) => ({
-        url: "/crm/clients",
-        method: "PUT",
-        body: client,
-      }),
+      query: (client) => ({ url: "/crm/clients", method: "PUT", body: client }),
       invalidatesTags: ["Client"],
     }),
     deleteClient: builder.mutation({
-      query: (id) => ({
-        url: "/crm/clients",
-        method: "DELETE",
-        body: { id },
-      }),
+      query: (id) => ({ url: "/crm/clients", method: "DELETE", body: { id } }),
       invalidatesTags: ["Client"],
     }),
     
     // Vendor Profile Endpoints
     getVendorProfile: builder.query({
-      query: () => ({
-        url: "/crm/vendor",
-        method: "GET",
-      }),
+      query: () => ({ url: "/crm/vendor", method: "GET" }),
       providesTags: ["Vendor"],
     }),
     
     updateVendorProfile: builder.mutation({
-      query: (vendorData) => ({
-        url: "/crm/vendor",
-        method: "PUT",
-        body: vendorData,
-      }),
+      query: (vendorData) => ({ url: "/crm/vendor", method: "PUT", body: vendorData }),
       invalidatesTags: ["Vendor"],
     }),
 
-    // =============================================== Doctor Working Hours ================================================= //
-
+    // Doctor Working Hours Endpoints
     getDoctorWorkingHours: builder.query({
-      query: (doctorId) => ({
-        url: `/api/doctor/working-hours?doctorId=${doctorId}`,
-        method: 'GET',
-      }),
-      providesTags: ['DoctorWorkingHours'], // For caching/invalidation
+      query: (doctorId) => ({ url: `/api/doctor/working-hours?doctorId=${doctorId}`, method: 'GET' }),
+      providesTags: ['DoctorWorkingHours'],
     }),
     updateDoctorWorkingHours: builder.mutation({
-      query: ({ doctorId, hours }) => ({
-        url: `/api/doctor/working-hours`,
-        method: 'PUT',
-        body: { doctorId, hours },
-      }),
-      invalidatesTags: ['DoctorWorkingHours'], // Invalidate cache after update
+      query: ({ doctorId, hours }) => ({ url: `/api/doctor/working-hours`, method: 'PUT', body: { doctorId, hours } }),
+      invalidatesTags: ['DoctorWorkingHours'],
     }),
 
     //subscription renewal
-
-      changePlan: builder.mutation({
-      query: (data) => ({
-        url: `/crm/subscription/change-plan`,
-        method: "POST",
-        body: data,
-      }),
+    changePlan: builder.mutation({
+      query: (data) => ({ url: `/crm/subscription/change-plan`, method: "POST", body: data }),
       invalidatesTags: ["SubscriptionPlan"],
     }),
-
     renewPlan: builder.mutation({
-      query: (data) => ({
-        url: `/crm/subscription/renew`,
-        method: "POST",
-        body: data,
-      }),
+      query: (data) => ({ url: `/crm/subscription/renew`, method: "POST", body: data }),
       invalidatesTags: ["SubscriptionPlan"],
     }),
-
 
     // CRM SMS Packages Endpoints
     getCrmSmsPackages: builder.query({
-      query: () => ({
-        url: "/crm/sms-packages",
-        method: "GET",
-      }),
+      query: () => ({ url: "/crm/sms-packages", method: "GET" }),
       providesTags: ["CrmSmsPackage"],
     }),
-
-    // CRM Campaigns Endpoints
     getCrmCampaigns: builder.query({
-      query: () => ({
-        url: "/crm/campaigns",
-        method: "GET",
-      }),
+      query: () => ({ url: "/crm/campaigns", method: "GET" }),
       providesTags: ["CrmCampaign"],
     }),
-
     createCrmCampaign: builder.mutation({
-      query: (campaign) => ({
-        url: "/crm/campaigns",
-        method: "POST",
-        body: campaign,
-      }),
+      query: (campaign) => ({ url: "/crm/campaigns", method: "POST", body: campaign }),
       invalidatesTags: ["CrmCampaign"],
     }),
-
-    // CRM Social Media Templates Endpoints
     getCrmSocialMediaTemplates: builder.query({
-      query: () => ({
-        url: "/crm/social-media-templates",
-        method: "GET",
-      }),
+      query: () => ({ url: "/crm/social-media-templates", method: "GET" }),
       providesTags: ["CrmSocialMediaTemplate"],
       transformResponse: (response) => {
         const templates = response?.data || [];
@@ -1390,25 +1108,11 @@ export const glowvitaApi = createApi({
         return { templates, total };
       }
     }),
-
     saveCustomizedTemplate: builder.mutation({
-      query: (templateData) => ({
-        url: "/crm/social-media-templates",
-        method: "POST",
-        body: templateData,
-      }),
+      query: (templateData) => ({ url: "/crm/social-media-templates", method: "POST", body: templateData }),
       invalidatesTags: ["CrmSocialMediaTemplate"],
     }),
-    getSupplierProducts: builder.query({
-      query: () => ({
-          url: "/crm/supplier-products",
-          method: "GET"
-      }),
-      providesTags: ["SupplierProducts"],
-      transformResponse: (response) => response.data || [],
   }),
-  }),
-   
 });
 
 export const {
@@ -1422,91 +1126,63 @@ export const {
   useDeleteAdminMutation,
   useGetAdminsQuery,
   useGetUsersQuery,
-
-  // Service Approval
   useGetPendingServicesQuery,
   useUpdateServiceStatusMutation,
-
-  // offers
   useGetAdminOffersQuery,
   useCreateAdminOfferMutation,
   useUpdateAdminOfferMutation,
   useDeleteAdminOfferMutation,
-
-  // refferal
   useGetReferralsQuery,
   useCreateReferralMutation,
   useUpdateReferralMutation,
   useDeleteReferralMutation,
   useUpdateSettingsMutation,
   useGetSettingsQuery,
-
-  // SuperData (Dropdowns)
   useGetSuperDataQuery,
   useCreateSuperDataItemMutation,
   useUpdateSuperDataItemMutation,
   useDeleteSuperDataItemMutation,
-
-  // Admin Product Categories
   useGetAdminProductCategoriesQuery,
   useCreateAdminProductCategoryMutation,
   useUpdateAdminProductCategoryMutation,
   useDeleteAdminProductCategoryMutation,
-
-  // Vendor Endpoints
   useCreateVendorMutation,
   useGetVendorsQuery,
   useGetVendorByIdQuery,
   useUpdateVendorMutation,
   useUpdateVendorStatusMutation,
   useDeleteVendorMutation,
-
-  // Doctor Endpoints
   useGetDoctorsQuery,
   useCreateDoctorMutation,
   useUpdateDoctorMutation,
   useDeleteDoctorMutation,
-
-  // Supplier Endpoints
   useGetSuppliersQuery,
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
-
-  // Subscription Plans
   useGetSubscriptionPlansQuery,
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
-  
-  // Marketing hooks
   useGetSmsTemplatesQuery,
   useGetSmsTemplateByIdQuery,
   useCreateSmsTemplateMutation,
   useUpdateSmsTemplateMutation,
   useDeleteSmsTemplateMutation,
-  
-  // SMS Package Endpoints
   useGetSmsPackagesQuery,
   useGetSmsPackageByIdQuery,
   useCreateSmsPackageMutation,
   useUpdateSmsPackageMutation,
   useDeleteSmsPackageMutation,
-  
-  // Social Media Template Endpoints
   useGetSocialMediaTemplatesQuery,
   useGetSocialMediaTemplateByIdQuery,
   useCreateSocialMediaTemplateMutation,
   useUpdateSocialMediaTemplateMutation,
   useDeleteSocialMediaTemplateMutation,
-
-  // Geo Fence Endpoints
   useGetGeoFencesQuery,
   useCreateGeoFenceMutation,
   useUpdateGeoFenceMutation,
   useDeleteGeoFenceMutation,
-
-  // Category and Service Endpoints
   useGetCategoriesQuery,
   useCreateCategoryMutation,
   useUpdateCategoryMutation,
@@ -1515,116 +1191,73 @@ export const {
   useCreateServiceMutation,
   useUpdateServiceMutation,
   useDeleteServiceMutation,
-
-  // Admin Custom Push Notification Endpoints
   useGetNotificationsQuery,
   useCreateNotificationMutation,
   useUpdateNotificationMutation,
   useDeleteNotificationMutation,
-
-  // Tax Fee Settings Endpoints
   useGetTaxFeeSettingsQuery,
   useUpdateTaxFeeSettingsMutation,
-
-  // FAQ Endpoints
   useGetFaqsQuery,
   useCreateFaqMutation,
   useUpdateFaqMutation,
   useDeleteFaqMutation,
-
-  // Product Approval
   useGetVendorProductsQuery,
   useUpdateProductStatusMutation,
-
-  //======================================================== CRM Endpoints ====================================================//
-
+  
   // CRM Endpoints
-
-  // Vendor Endpoints
   useVendorLoginMutation,
   useVendorRegisterMutation,
-
-  // Services Endpoints
   useGetVendorServicesQuery,
   useCreateVendorServicesMutation,
   useUpdateVendorServicesMutation,
   useDeleteVendorServicesMutation,
-
-  // Offer Endpoints
   useGetOffersQuery,
   useCreateOfferMutation,
   useUpdateOfferMutation,
   useDeleteOfferMutation,
-
-  // Vendor Notification Endpoints
   useGetVendorNotificationsQuery,
   useCreateVendorNotificationMutation,
   useDeleteVendorNotificationMutation,
-
-  // Products endpoints
   useGetCrmProductsQuery,
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
   useDeleteCrmProductMutation,
   useGetSupplierProductsQuery,
-
-  // shipping charge endpoints
+  useGetSupplierProfileQuery,
+  useGetCrmOrdersQuery,
+  useCreateCrmOrderMutation,
+  useUpdateCrmOrderMutation,
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
-
-  // product categories endpoints
   useGetProductCategoriesQuery,
   useCreateProductCategoryMutation,
-  // Staff Endpoints
   useGetStaffQuery,
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
-  //working hours endpoints
   useGetWorkingHoursQuery,
   useUpdateWorkingHoursMutation,
   useAddSpecialHoursMutation,
   useDeleteSpecialHoursMutation,
-
-  // appointment endpoints
   useGetAppointmentsQuery,
   useCreateAppointmentMutation,
   useUpdateAppointmentMutation,
   useDeleteAppointmentMutation,
-  
-  
-  // Client Endpoints
   useGetClientsQuery,
   useCreateClientMutation,
   useUpdateClientMutation,
   useDeleteClientMutation,
-  // Vendor Profile Endpoints
   useGetVendorProfileQuery,
   useUpdateVendorProfileMutation,
-
-  // Doctor Working Hours Endpoints
   useGetDoctorWorkingHoursQuery,
   useUpdateDoctorWorkingHoursMutation,
-
-  // CRM Referral Endpoints
   useGetCrmReferralsQuery,
   useGetCrmReferralSettingsQuery,
-
-  //subscription renewal
-    useChangePlanMutation,
+  useChangePlanMutation,
   useRenewPlanMutation,
-
-
-  // CRM SMS Packages Endpoints
   useGetCrmSmsPackagesQuery,
-
-  // CRM Campaigns Endpoints
   useGetCrmCampaignsQuery,
   useCreateCrmCampaignMutation,
-
-  // CRM Social Media Templates Endpoints
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
 } = glowvitaApi;
-
-    

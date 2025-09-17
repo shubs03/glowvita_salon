@@ -24,9 +24,11 @@ export default function RootLayout({
     '/clients',
     '/services',
     '/products',
+    '/marketplace',
     '/sales',
     '/orders',
     '/shipping',
+    '/settlements',
     '/salon-profile',
     '/offers-coupons',
     '/referrals',
@@ -107,5 +109,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    

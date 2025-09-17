@@ -108,13 +108,7 @@ export function Offers() {
           "text-center mb-16 transition-all duration-1000",
           isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         )}>
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500/10 to-red-500/10 text-orange-600 px-6 py-3 rounded-full text-sm font-medium mb-6 shadow-lg backdrop-blur-sm border border-orange-500/20">
-            <Gift className="h-4 w-4" />
-            <span className="font-semibold">Limited Time Offers</span>
-            <Clock className="h-4 w-4 animate-pulse" />
-          </div>
-          
-          <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-orange-600 to-foreground bg-clip-text text-transparent mb-6">
+          <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-6">
             Exclusive Deals & Packages
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
@@ -123,21 +117,21 @@ export function Offers() {
         </div>
         
         <div className={cn(
-          "w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)] transition-all duration-1000 delay-300",
+          "w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)] transition-all duration-1000 delay-300 py-6",
           isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         )}>
-          <div className="flex w-fit animate-slide hover:[animation-play-state:paused]">
+          <div className="flex w-fit animate-slide hover:[animation-play-state:paused] px-4">
             {[...offers, ...offers].map((offer, index) => (
               <div key={index} className="flex-shrink-0 mx-4" style={{ width: '320px' }}>
-                <Card className="relative group overflow-hidden rounded-2xl h-48 w-full transition-all duration-700 hover:shadow-2xl hover:shadow-primary/25 transform hover:-translate-y-2 border-2 border-border/30 hover:border-primary/50 bg-gradient-to-br from-background to-primary/5">
+                <Card className="relative group overflow-hidden rounded-2xl h-48 w-full transition-all duration-700 hover:shadow-2xl hover:shadow-primary/25 transform hover:-translate-y-2 border-2 border-border/30 bg-gradient-to-br from-background to-primary/5">
                   {/* Discount Badge */}
-                  <div className="absolute top-4 left-4 z-20 bg-gradient-to-r from-red-500 to-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg animate-pulse-glow">
+                  <div className="absolute top-4 left-4 z-20 bg-gradient-to-r from-blue-500 to-cyan-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse-glow opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                     <Percent className="h-3 w-3 inline mr-1" />
                     {offer.discount} OFF
                   </div>
                   
                   {/* Timer Badge */}
-                  <div className="absolute top-4 right-4 z-20 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm border border-white/20">
+                  <div className="absolute top-4 right-4 z-20 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm opacity-100 group-hover:opacity-0 transition-opacity duration-300">
                     <Clock className="h-3 w-3 inline mr-1" />
                     {offer.timeLeft}
                   </div>
@@ -157,37 +151,40 @@ export function Offers() {
                   
                   {/* Default Content */}
                   <div className="absolute bottom-0 left-0 right-0 p-4 transition-opacity duration-300 group-hover:opacity-0">
-                    <h3 className="font-bold text-lg text-white truncate">{offer.title}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-green-400 font-bold text-lg">{offer.salePrice}</span>
-                      <span className="text-gray-400 text-sm line-through">{offer.originalPrice}</span>
+                    <h3 className="text-base font-semibold text-white mb-1 text-left truncate group-hover:text-primary transition-colors duration-300">{offer.title}</h3>
+                    <div className="flex items-center gap-2 text-left">
+                      <span className="text-blue-400 font-bold text-base">{offer.salePrice}</span>
+                      <span className="text-gray-400 text-base line-through">{offer.originalPrice}</span>
                     </div>
                   </div>
 
                   {/* Hover Content */}
-                  <div className="absolute inset-0 p-4 bg-black/70 backdrop-blur-sm flex flex-col justify-center items-center text-center opacity-0 group-hover:opacity-100 transition-all duration-500 ease-in-out">
-                    <h3 className="font-bold text-xl mb-2 text-white">{offer.title}</h3>
-                    <p className="text-sm text-gray-300 mb-4 line-clamp-2 leading-relaxed">{offer.description}</p>
+                  <div className="absolute inset-0 p-4 bg-black/70 backdrop-blur-sm flex flex-col justify-end text-left opacity-0 group-hover:opacity-100 transition-all duration-500 ease-in-out">
+
                     
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="text-green-400 font-bold text-xl">{offer.salePrice}</span>
-                      <span className="text-gray-400 text-sm line-through">{offer.originalPrice}</span>
-                      <span className="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold">
-                        SAVE {offer.discount}
-                      </span>
+                    {/* Content at bottom */}
+                    <div>
+                      
+                      <h3 className="text-lg font-semibold text-white mb-1 text-left group-hover:text-primary transition-colors duration-300">{offer.title}</h3>
+                      <p className="text-muted-foreground leading-relaxed text-xs mb-3 text-left line-clamp-2">{offer.description}</p>
+                      
+                      <div className="flex items-center gap-3 mb-3 text-left">
+                        <span className="text-blue-400 font-bold text-lg">{offer.salePrice}</span>
+                        <span className="text-gray-400 text-sm line-through">{offer.originalPrice}</span>
+                      </div>
+                      
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="group/btn bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-white transition-all duration-300 shadow-lg hover:shadow-xl border-0 relative overflow-hidden w-full"
+                      >
+                        <span className="relative z-10 flex items-center justify-center">
+                          <Sparkles className="mr-2 h-4 w-4 group-hover/btn:animate-spin" />
+                          Book Now
+                        </span>
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
+                      </Button>
                     </div>
-                    
-                    <Button 
-                      variant="default" 
-                      size="sm" 
-                      className="group/btn bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-white transition-all duration-300 shadow-lg hover:shadow-xl border-0 relative overflow-hidden"
-                    >
-                      <span className="relative z-10 flex items-center">
-                        <Sparkles className="mr-2 h-4 w-4 group-hover/btn:animate-spin" />
-                        Book Now
-                      </span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
-                    </Button>
                   </div>
                 </Card>
               </div>

@@ -16,6 +16,7 @@ import {
   Integrations,
   Blog,
   Services,
+  BentoGrid,
 } from "@/components/landing";
 import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
@@ -37,9 +38,10 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-background">
       <main className="flex-grow">
         <HeroSection /> 
+        <Offers />
+        <BentoGrid/>
         <PlatformFor />
         <FeaturedSalons />
-        <Offers />
         <HowItWorks />
         <FeaturedProducts />
         <Services />
@@ -52,11 +54,6 @@ export default function HomePage() {
             <div className="absolute bottom-10 right-10 w-80 h-80 bg-gradient-to-r from-secondary/15 to-transparent rounded-full blur-3xl animate-float-delayed"></div>
             
             <div className="text-center mb-16 md:mb-20">
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary/10 to-secondary/10 text-primary px-6 py-3 rounded-full text-sm font-medium mb-6 shadow-lg backdrop-blur-sm border border-primary/20">
-                <Award className="h-4 w-4" />
-                <span className="font-semibold">Real Results</span>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
-              </div>
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-headline mb-6 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
                 Unlock Your Salon's Full Potential
               </h2>

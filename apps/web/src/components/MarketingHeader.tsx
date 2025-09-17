@@ -30,17 +30,23 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: Marketin
             <Link href="/pricing">Pricing</Link>
           </Button>
           <Button variant="ghost" className="hover:bg-primary/10" asChild>
+            <Link href="/about">About Us</Link>
+          </Button>
+          <Button variant="ghost" className="hover:bg-primary/10" asChild>
+            <Link href="/contact">Contact</Link>
+          </Button>
+          <Button variant="ghost" className="hover:bg-primary/10" asChild>
             <Link href="/support">Support</Link>
           </Button>
           <ThemeToggle />
           <Button variant="ghost" className="hover:bg-primary/10" asChild>
-            <Link href="/login">Login</Link>
+            <Link href="/client-login">Login</Link>
           </Button>
           <Button
             className="shadow-lg hover:shadow-xl transition-shadow duration-300 group"
             asChild
           >
-            <Link href="/signup">
+            <Link href="/client-register">
               Sign Up{" "}
               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
             </Link>
@@ -61,9 +67,11 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: Marketin
           <nav className="flex flex-col items-center gap-2 p-4">
             <Button variant="ghost" className="w-full" asChild><Link href="/apps">App links</Link></Button>
             <Button variant="ghost" className="w-full" asChild><Link href="/pricing">Pricing</Link></Button>
+            <Button variant="ghost" className="w-full" asChild><Link href="/about">About Us</Link></Button>
+            <Button variant="ghost" className="w-full" asChild><Link href="/contact">Contact</Link></Button>
             <Button variant="ghost" className="w-full" asChild><Link href="/support">Support</Link></Button>
-            <Button variant="ghost" className="w-full" asChild><Link href="/login">Login</Link></Button>
-            <Button className="w-full mt-2" asChild><Link href="/signup">Sign Up</Link></Button>
+            <Button variant="ghost" className="w-full" asChild><Link href="/client-login">Login</Link></Button>
+            <Button className="w-full mt-2" asChild><Link href="/client-register">Sign Up</Link></Button>
           </nav>
         </div>
       )}

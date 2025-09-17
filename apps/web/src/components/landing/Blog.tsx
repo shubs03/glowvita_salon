@@ -76,9 +76,6 @@ export function Blog() {
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto space-y-5 mb-10 md:mb-16 text-center">
-          <Badge variant="secondary" className="bg-primary/10 text-primary border border-primary/20 shadow-sm">
-            Journal
-          </Badge>
           <h2 className="text-3xl lg:text-5xl font-bold font-headline bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
             Thoughts & Ideas
           </h2>
