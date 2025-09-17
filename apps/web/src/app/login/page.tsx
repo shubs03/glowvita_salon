@@ -36,16 +36,6 @@ export default function LoginPage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
-      {/* Back Button - Top Right */}
-      <button 
-        onClick={() => router.back()} 
-        className="absolute top-4 left-4 z-20 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 shadow-md transition-all duration-200"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-        </svg>
-      </button>
-
       {/* Left Side - Login Form */}
       <div className="flex-1 md:w-1/2 flex items-center justify-center p-4 sm:p-6 relative z-10 bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="w-full max-w-md self-center py-6">

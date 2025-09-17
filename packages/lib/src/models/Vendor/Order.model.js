@@ -1,3 +1,4 @@
+
 import mongoose from 'mongoose';
 
 const orderItemSchema = new mongoose.Schema({
@@ -45,7 +46,7 @@ const orderSchema = new mongoose.Schema({
 // Add initial status to history before saving
 orderSchema.pre('save', function(next) {
   if (this.isNew) {
-    this.statusHistory.push({ status: 'Pending', notes: 'Order created.' });
+    this.statusHistory.push({ status: 'Pending', notes: 'Order placed.' });
   }
   next();
 });

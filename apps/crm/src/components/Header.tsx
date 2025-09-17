@@ -4,9 +4,9 @@
 import { Button } from "@repo/ui/button";
 import Link from 'next/link';
 import { ThemeToggle } from "./ThemeToggle";
-import { Bell, Menu, LogOut, User, Settings, CheckCircle, XCircle, Search, ChevronRight, Calendar, Clock, TrendingUp } from "lucide-react";
+import { Bell, Menu, LogOut, User, Settings, CheckCircle, XCircle, Search, ChevronRight, Calendar, Clock, TrendingUp, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useAppDispatch } from "@repo/store/hooks";
+import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import Cookies from "js-cookie";
@@ -23,6 +23,7 @@ import { usePathname } from 'next/navigation';
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
+import { Cart } from "./cart/Cart";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
@@ -31,6 +32,9 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  
+  const cartItemCount = useAppSelector(state => state.cart.items.reduce((total, item) => total + item.quantity, 0));
 
   const getNavItemsForRole = () => {
     switch (role) {
@@ -127,6 +131,24 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
         
         <ThemeToggle />
         
+        {/* Cart for Vendors */}
+        {role === 'vendor' && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="flex-shrink-0 rounded-lg relative hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105"
+            onClick={() => setIsCartOpen(true)}
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {cartItemCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
+                {cartItemCount}
+              </span>
+            )}
+            <span className="sr-only">Open Cart</span>
+          </Button>
+        )}
+
         {/* Notifications */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -241,7 +263,10 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
           onConfirm={handleLogout}
           isLoading={isLoggingOut}
         />
+        <Cart isOpen={isCartOpen} onOpenChange={setIsCartOpen} />
       </div>
     </header>
   );
 }
+
+export default Header;

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -10,10 +11,10 @@ import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Search, FileDown, Truck, Package, ShoppingCart, User, CheckCircle, Clock } from 'lucide-react';
 import Image from 'next/image';
-import { useGetCrmOrdersQuery } from '@repo/store/api';
+import { useGetCrmOrdersQuery, useUpdateCrmOrderMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { OrderStatusTimeline } from '@/components/OrderStatusTimeline';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { toast } from 'sonner';
 
@@ -29,10 +30,10 @@ type Order = {
   _id: string;
   orderId: string;
   items: OrderItem[];
-  customerName?: string; // For B2C
+  customerName?: string; 
   customerEmail?: string;
-  vendorId?: string; // For B2B, the vendor who purchased
-  supplierId?: string; // For B2B, the supplier who is selling
+  vendorId?: string;
+  supplierId?: string;
   totalAmount: number;
   status: 'Pending' | 'Processing' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled';
   shippingAddress: string;
@@ -43,9 +44,10 @@ type Order = {
 
 export default function OrdersPage() {
   const { user, role } = useCrmAuth();
-  const [activeTab, setActiveTab] = useState(role === 'supplier' ? 'received-orders' : 'customer-orders');
+  const defaultTab = role === 'supplier' ? 'received-orders' : (role === 'vendor' ? 'customer-orders' : 'my-purchases');
+  const [activeTab, setActiveTab] = useState(defaultTab);
   
-  const { data: ordersData, isLoading, isError, refetch } = useGetCrmOrdersQuery(user?._id, { skip: !user });
+  const { data: ordersData = [], isLoading, isError, refetch } = useGetCrmOrdersQuery(user?._id, { skip: !user });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -53,6 +55,11 @@ export default function OrdersPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [updateOrder, { isLoading: isUpdatingStatus }] = useUpdateCrmOrderMutation();
+  const [trackingInfo, setTrackingInfo] = useState({ trackingNumber: '', courier: '' });
+  const [isShipModalOpen, setIsShipModalOpen] = useState(false);
+  const [orderToShip, setOrderToShip] = useState<Order | null>(null);
+
 
   useEffect(() => {
     if (user) {
@@ -63,13 +70,8 @@ export default function OrdersPage() {
   const { customerOrders, myPurchases, receivedOrders } = useMemo(() => {
     if (!ordersData) return { customerOrders: [], myPurchases: [], receivedOrders: [] };
     
-    // Vendor's orders from customers (B2C)
     const customerOrders = ordersData.filter((o: any) => o.vendorId === user?._id && o.customerName);
-    
-    // Vendor's purchases from suppliers (B2B)
     const myPurchases = ordersData.filter((o: any) => o.vendorId === user?._id && o.supplierId);
-    
-    // Supplier's received orders from vendors (B2B)
     const receivedOrders = ordersData.filter((o: any) => o.supplierId === user?._id);
 
     return { customerOrders, myPurchases, receivedOrders };
@@ -110,6 +112,47 @@ export default function OrdersPage() {
     setSelectedOrder(order);
     setIsDetailModalOpen(true);
   };
+
+  const handleUpdateStatus = async (orderId: string, status: Order['status']) => {
+    if (status === 'Shipped') {
+        const order = receivedOrders.find(o => o._id === orderId);
+        setOrderToShip(order || null);
+        setIsShipModalOpen(true);
+    } else {
+        try {
+            await updateOrder({ orderId, status }).unwrap();
+            toast.success(`Order status updated to ${status}.`);
+            refetch();
+        } catch (error) {
+            toast.error("Failed to update order status.");
+        }
+    }
+  };
+
+  const handleShipOrder = async () => {
+    if (!orderToShip) return;
+    try {
+        await updateOrder({ 
+            orderId: orderToShip._id, 
+            status: 'Shipped',
+            trackingNumber: trackingInfo.trackingNumber,
+            courier: trackingInfo.courier
+        }).unwrap();
+        toast.success(`Order ${orderToShip.orderId} marked as shipped.`);
+        refetch();
+        setIsShipModalOpen(false);
+        setOrderToShip(null);
+        setTrackingInfo({ trackingNumber: '', courier: '' });
+    } catch (error) {
+        toast.error("Failed to ship order.");
+    }
+  };
+
+  const getNextStatus = (currentStatus: Order['status']) => {
+    const statuses: Order['status'][] = ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered'];
+    const currentIndex = statuses.indexOf(currentStatus);
+    return currentIndex < statuses.length - 1 ? statuses[currentIndex + 1] : null;
+  };
   
   const renderOrderTable = (orders: Order[]) => (
     <>
@@ -127,7 +170,11 @@ export default function OrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.map((order) => (
+            {orders.length === 0 ? (
+                <TableRow>
+                    <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No orders found.</TableCell>
+                </TableRow>
+            ) : orders.map((order) => (
               <TableRow key={order._id}>
                 <TableCell className="font-mono text-xs">{order.orderId}</TableCell>
                 <TableCell>
@@ -148,7 +195,12 @@ export default function OrdersPage() {
                   </span>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="sm" onClick={() => handleViewDetails(order)}>View Details</Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleViewDetails(order)}>View Details</Button>
+                    {role === 'supplier' && getNextStatus(order.status) && (
+                        <Button size="sm" onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status)!)} disabled={isUpdatingStatus}>
+                            {isUpdatingStatus ? 'Updating...' : `Mark as ${getNextStatus(order.status)}`}
+                        </Button>
+                    )}
                 </TableCell>
               </TableRow>
             ))}
@@ -226,7 +278,6 @@ export default function OrdersPage() {
         </Card>
       </Tabs>
       
-      {/* Order Detail Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
@@ -256,13 +307,38 @@ export default function OrdersPage() {
                     <p className="text-sm">{selectedOrder.shippingAddress}</p>
                     
                     <h3 className="font-semibold mb-2 mt-4">Customer Information</h3>
-                    <p className="text-sm">{selectedOrder.customerName || selectedOrder.vendorId}</p>
+                    <p className="text-sm">{selectedOrder.customerName || `Vendor ID: ${selectedOrder.vendorId}`}</p>
                     <p className="text-sm text-muted-foreground">{selectedOrder.customerEmail || 'No email provided'}</p>
+
+                    {selectedOrder.trackingNumber && (
+                        <div className="mt-4">
+                            <h3 className="font-semibold mb-2">Tracking Information</h3>
+                            <p className="text-sm">Courier: {selectedOrder.courier}</p>
+                            <p className="text-sm">Tracking #: {selectedOrder.trackingNumber}</p>
+                        </div>
+                    )}
                   </div>
                 </div>
               </>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isShipModalOpen} onOpenChange={setIsShipModalOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Ship Order</DialogTitle>
+                <DialogDescription>Enter tracking information for order {orderToShip?.orderId}.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <Input placeholder="Tracking Number" value={trackingInfo.trackingNumber} onChange={e => setTrackingInfo(prev => ({...prev, trackingNumber: e.target.value}))} />
+                <Input placeholder="Courier Name" value={trackingInfo.courier} onChange={e => setTrackingInfo(prev => ({...prev, courier: e.target.value}))} />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsShipModalOpen(false)}>Cancel</Button>
+                <Button onClick={handleShipOrder} disabled={isUpdatingStatus}>Confirm Shipment</Button>
+            </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

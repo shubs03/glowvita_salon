@@ -1,9 +1,11 @@
+
 "use client";
 
 import { Check, Package, Send, Truck, Home } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
+import React from 'react';
 
-const statuses = ['Processing', 'Packed', 'Shipped', 'Delivered'];
+const statuses = ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered'];
 
 interface OrderStatusTimelineProps {
   currentStatus: 'Pending' | 'Processing' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled';
@@ -15,7 +17,6 @@ export function OrderStatusTimeline({ currentStatus }: OrderStatusTimelineProps)
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'Processing':
-        return <Package className="h-5 w-5" />;
       case 'Packed':
         return <Package className="h-5 w-5" />;
       case 'Shipped':
@@ -28,7 +29,7 @@ export function OrderStatusTimeline({ currentStatus }: OrderStatusTimelineProps)
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full py-4">
       <div className="flex items-center">
         {statuses.map((status, index) => (
           <React.Fragment key={status}>
