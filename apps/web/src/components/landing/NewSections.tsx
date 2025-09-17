@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from 'next/image';
@@ -17,57 +18,26 @@ export const AdvantageCard = ({
   description: string;
   icon: React.ReactNode;
 }) => (
-  <div className="flex-shrink-0 w-72 md:w-80 h-80 md:h-96 bg-gradient-to-br from-background via-background to-primary/5 rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden group hover:shadow-3xl hover:shadow-primary/20 transition-all duration-700 border border-border/30 hover:border-primary/30 hover-lift">
-    {/* Animated Background Elements */}
-    <div className="absolute -top-12 -right-12 text-primary/5 text-[140px] md:text-[160px] group-hover:text-primary/15 transition-all duration-700 group-hover:rotate-12 group-hover:scale-110">
+  <div className="flex-shrink-0 w-72 md:w-80 h-80 md:h-96 bg-gradient-to-br from-background via-background to-primary/5 rounded-2xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden group transition-shadow duration-300 border border-border/30 hover:shadow-xl">
+    <div className="absolute -top-12 -right-12 text-primary/5 text-[140px] md:text-[160px]">
       {icon}
     </div>
     
-    {/* Gradient Overlay */}
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/5 to-primary/15 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-    
-    {/* Floating Particles */}
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(6)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-1 h-1 bg-primary/30 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-float transition-all duration-700"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${i * 0.2}s`
-          }}
-        ></div>
-      ))}
-    </div>
-    
-    {/* Content */}
     <div className="relative z-10">
       <div className="mb-4">
-        <p className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent group-hover:from-primary group-hover:via-secondary group-hover:to-primary transition-all duration-500 leading-none">
+        <p className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent leading-none">
           {stat}
         </p>
-        <div className="h-1 w-16 bg-gradient-to-r from-primary to-primary/50 rounded-full mt-3 group-hover:w-24 transition-all duration-500"></div>
       </div>
-      <h3 className="text-xl md:text-2xl font-bold mt-4 group-hover:text-primary transition-colors duration-500 leading-tight">
+      <h3 className="text-xl md:text-2xl font-bold mt-2 leading-tight">
         {title}
       </h3>
     </div>
     
     <div className="relative z-10">
-      <p className="text-muted-foreground text-sm md:text-base group-hover:text-foreground transition-colors duration-500 leading-relaxed">
+      <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
         {description}
       </p>
-      
-      {/* Progress indicator */}
-      <div className="mt-4 flex items-center gap-2">
-        <div className="flex-grow h-1 bg-border rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-primary to-secondary w-0 group-hover:w-full transition-all duration-1000 ease-out"></div>
-        </div>
-        <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-          Proven
-        </span>
-      </div>
     </div>
   </div>
 );
