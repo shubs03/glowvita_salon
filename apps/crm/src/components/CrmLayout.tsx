@@ -69,37 +69,17 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     setSidebarOpen(!isSidebarOpen);
   };
 
-  // Enhanced loading progress and welcome screen management
-  if (isLoading || !isCrmAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center space-y-6">
-          <div className="relative">
-            <div className="w-12 h-12 border-4 border-primary/20 rounded-full animate-spin border-t-primary"></div>
-          </div>
-          
-          <div className="w-64">
-            <div className="flex justify-between items-center mb-2">
-              <p className="text-muted-foreground font-medium">Loading...</p>
-              <span className="text-primary font-semibold text-sm">{Math.round(loadingProgress)}%</span>
-            </div>
-            <div className="w-full bg-border/30 rounded-full h-2">
-              <div 
-                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${loadingProgress}%` }}
-              />
-            </div>
-          </div>
-          
-          <div className="text-center text-sm text-muted-foreground space-y-1">
-            <p>Initializing secure connection...</p>
-            <p>Verifying credentials...</p>
-            <p>Preparing dashboard...</p>
-          </div>
-        </div>
+ // Professional loading spinner
+if (isLoading || !isCrmAuthenticated) {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-primary/10 rounded-full animate-spin border-t-primary"></div>
+        <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin-slow border-t-primary/50"></div>
       </div>
-    );
-  }
+    </div>
+  );
+}
   
   // Enhanced welcome screen
   if (isWelcomeScreen && user) {

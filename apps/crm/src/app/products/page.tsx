@@ -84,13 +84,16 @@ export default function ProductsPage() {
     const [updateProduct, { isLoading: isUpdatingProduct }] = useUpdateCrmProductMutation();
     const [deleteProduct, { isLoading: isDeletingProduct }] = useDeleteCrmProductMutation();
     
-    const { data: categoriesData = [], isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetAdminProductCategoriesQuery({});
+    const { data: categoriesDatas = [], isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetAdminProductCategoriesQuery({});
+
+    const categoriesData = categoriesDatas?.data || [];
+
     const [createCategory, { isLoading: isCreatingCategory }] = useCreateAdminProductCategoryMutation();
     
     const { data: shippingConfig, isLoading: isShippingLoading } = useGetShippingConfigQuery({});
     const [updateShippingConfig, { isLoading: isUpdatingShipping }] = useUpdateShippingConfigMutation();
 
-    const { data: supplierProductsData = [], isLoading: isSupplierProductsLoading } = useGetSupplierProductsQuery();
+    const { data: supplierProductsData = [], isLoading: isSupplierProductsLoading } = useGetSupplierProductsQuery(undefined);
 
     // Component State
     const [currentPage, setCurrentPage] = useState(1);
