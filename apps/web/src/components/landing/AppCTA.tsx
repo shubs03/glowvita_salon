@@ -16,11 +16,11 @@ export function AppCTA() {
               Download our mobile app to manage bookings, discover new styles, and connect with your favorite salons on the go. Experience the full power of GlowVita in your pocket.
             </p>
             <div className="flex flex-col sm:flex-row justify-center md:justify-start gap-3 sm:gap-4 px-4 sm:px-0">
-              <Button size="lg" className="bg-black hover:bg-black/80 text-white rounded-full px-6 py-3 sm:px-8 sm:py-4 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+              <Button size="lg" className="bg-black hover:bg-black/80 text-white rounded-md px-6 py-3 sm:px-8 sm:py-4 text-base sm:text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
                 <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> 
                 <span>Download for iOS</span>
               </Button>
-              <Button size="lg" variant="outline" className="rounded-full px-6 py-3 sm:px-8 sm:py-4 text-base sm:text-lg font-semibold border-2 hover:bg-primary hover:text-white transition-all duration-300">
+              <Button size="lg" variant="outline" className="rounded-md px-6 py-3 sm:px-8 sm:py-4 text-base sm:text-sm font-semibold border-2 hover:bg-primary hover:text-white transition-all duration-300">
                 <Download className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> 
                 <span>Download for Android</span>
               </Button>
@@ -54,7 +54,7 @@ export function AppCTA() {
                 alt="Mobile App"
                 width={280}
                 height={280}
-                className="w-64 h-64 sm:w-72 sm:h-72 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-2xl shadow-2xl object-cover"
+                className="w-64 h-64 sm:w-72 sm:h-72 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-md shadow-2xl object-cover"
                 data-ai-hint="mobile app screenshot"
               />
               <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-2xl blur opacity-50"></div>
