@@ -24,6 +24,7 @@ export default function RootLayout({
     '/clients',
     '/services',
     '/products',
+    '/marketplace',
     '/sales',
     '/orders',
     '/shipping',
@@ -108,5 +109,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    
