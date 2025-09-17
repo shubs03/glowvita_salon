@@ -44,7 +44,7 @@ type Order = {
 
 export default function OrdersPage() {
   const { user, role } = useCrmAuth();
-  const defaultTab = role === 'supplier' ? 'received-orders' : 'customer-orders';
+  const defaultTab = role === 'supplier' ? 'received-orders' : (role === 'vendor' ? 'customer-orders' : 'my-purchases');
   const [activeTab, setActiveTab] = useState(defaultTab);
   
   const { data: ordersData = [], isLoading, isError, refetch } = useGetCrmOrdersQuery(user?._id, { skip: !user });
@@ -344,4 +344,3 @@ export default function OrdersPage() {
     </div>
   );
 }
-
