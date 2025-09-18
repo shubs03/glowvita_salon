@@ -111,7 +111,7 @@ export default function SalonDetailsPage() {
 
         {/* Compact Bento Grid Hero Gallery */}
         <section className="py-6">
-          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-64 md:h-[450px]">
+          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-64 md:h-80">
             <div className="col-span-6 md:col-span-4 row-span-2 rounded-lg overflow-hidden group cursor-pointer" onClick={() => openGalleryModal(salon.images[0])}>
               <Image 
                 src={salon.images[0]} 
@@ -164,54 +164,30 @@ export default function SalonDetailsPage() {
           </div>
         </section>
 
+        {/* About Section */}
+        <section className="py-8">
+            <Card className="bg-secondary/50 p-8 rounded-2xl">
+                <CardHeader>
+                    <h2 className="text-3xl font-bold font-headline leading-tight mb-4">About {salon.name}</h2>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground leading-relaxed mb-6">{salon.description}</p>
+                    <div className="flex flex-wrap justify-around gap-6 mt-8 pt-6 border-t">
+                        {salon.stats.map(stat => (
+                            <div key={stat.label} className="text-center">
+                            <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        </section>
+
         {/* Two-Column Layout Start */}
         <div className="grid lg:grid-cols-3 gap-12 pt-8">
           {/* Left Scrolling Column */}
           <div className="lg:col-span-2 space-y-16">
-            
-            {/* About Section */}
-            <section>
-              <Card className="bg-secondary/50 p-8 rounded-2xl">
-                <div className="grid md:grid-cols-5 gap-8 items-center">
-                  <div className="md:col-span-3">
-                    <Badge variant="secondary" className="mb-4">Our Story</Badge>
-                    <h2 className="text-3xl font-bold font-headline leading-tight mb-4">About {salon.name}</h2>
-                    <p className="text-muted-foreground leading-relaxed mb-6">{salon.description}</p>
-                    <div>
-                      <h3 className="font-semibold mb-3">Why Choose Us?</h3>
-                      <ul className="space-y-2">
-                        {salon.whyChooseUs.map((feature, i) => (
-                          <li key={i} className="flex items-center gap-2 text-sm">
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                  <div className="md:col-span-2 flex justify-center">
-                    <div className="relative w-full aspect-square max-w-[300px]">
-                      <Image 
-                        src="https://picsum.photos/seed/about-salon/400/400" 
-                        alt="Salon interior" 
-                        layout="fill" 
-                        className="object-cover rounded-xl shadow-lg"
-                        data-ai-hint="salon relaxing atmosphere"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap justify-around gap-6 mt-8 pt-6 border-t">
-                  {salon.stats.map(stat => (
-                    <div key={stat.label} className="text-center">
-                      <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </section>
-            
             <section>
               <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
               <Card>
@@ -439,4 +415,3 @@ export default function SalonDetailsPage() {
     </PageContainer>
   );
 }
-```
