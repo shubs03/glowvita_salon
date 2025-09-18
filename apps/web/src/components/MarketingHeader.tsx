@@ -1,10 +1,12 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { cn } from '@repo/ui/cn';
 
 interface MarketingHeaderProps {
   isMobileMenuOpen: boolean;
@@ -12,12 +14,31 @@ interface MarketingHeaderProps {
 }
 
 export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: MarketingHeaderProps) {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 bg-background/60 backdrop-blur-2xl border-b border-border/50 before:absolute before:inset-0 before:bg-background/10 before:backdrop-blur-xl before:backdrop-saturate-150 before:z-[-1] before:border-b before:border-white/10">
+    <header className={cn(
+      "sticky top-0 z-40 transition-all duration-300",
+      isScrolled 
+        ? "bg-background/80 backdrop-blur-lg border-b border-border/50" 
+        : "bg-transparent border-b border-transparent"
+    )}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between relative">
         <Link
           href="/"
-          className="font-bold text-lg sm:text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent after:absolute after:inset-0 after:bg-gradient-to-r after:from-primary/5 after:to-transparent after:blur-2xl after:z-[-1] hover:opacity-80 transition-opacity"
+          className="font-bold text-lg sm:text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
         >
           <span className="hidden sm:inline">GlowVita Salon</span>
           <span className="sm:hidden">GlowVita</span>
