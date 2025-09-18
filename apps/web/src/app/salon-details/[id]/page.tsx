@@ -72,38 +72,39 @@ export default function SalonDetailsPage() {
 
   return (
     <PageContainer padding="none">
-      {/* Section 1: Hero Image Gallery */}
-      <div className="container mx-auto px-4 mt-8">
-        <div className="grid grid-cols-4 gap-2 h-96">
-            <div className="col-span-4 lg:col-span-3 rounded-lg overflow-hidden">
-                <Image 
-                    src={mainImage} 
-                    alt={salon.name} 
-                    width={1200}
-                    height={800}
-                    className="w-full h-full object-cover"
-                    data-ai-hint="luxury salon interior"
-                />
-            </div>
-            <div className="hidden lg:grid grid-rows-4 gap-2">
-                {salon.images.slice(0, 4).map((img, index) => (
-                    <div key={index} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => setMainImage(img)}>
-                        <Image 
-                            src={img} 
-                            alt={`${salon.name} thumbnail ${index + 1}`} 
-                            width={300}
-                            height={200}
-                            className="w-full h-full object-cover"
-                            data-ai-hint="salon detail photo"
-                        />
-                    </div>
-                ))}
-            </div>
+      <div className="container mx-auto px-4">
+        {/* Section 1: Hero Image Gallery */}
+        <div className="mt-8">
+          <div className="grid grid-cols-4 gap-2 h-96">
+              <div className="col-span-4 lg:col-span-3 rounded-lg overflow-hidden">
+                  <Image 
+                      src={mainImage} 
+                      alt={salon.name} 
+                      width={1200}
+                      height={800}
+                      className="w-full h-full object-cover"
+                      data-ai-hint="luxury salon interior"
+                  />
+              </div>
+              <div className="hidden lg:grid grid-rows-4 gap-2">
+                  {salon.images.slice(0, 4).map((img, index) => (
+                      <div key={index} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => setMainImage(img)}>
+                          <Image 
+                              src={img} 
+                              alt={`${salon.name} thumbnail ${index + 1}`} 
+                              width={300}
+                              height={200}
+                              className="w-full h-full object-cover"
+                              data-ai-hint="salon detail photo"
+                          />
+                      </div>
+                  ))}
+              </div>
+          </div>
         </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid lg:grid-cols-3 gap-12">
+        {/* Main Content Grid */}
+        <div className="mt-12 grid lg:grid-cols-3 gap-12">
           {/* Left/Main Column (Scrollable) */}
           <div className="lg:col-span-2 space-y-16">
             {/* Salon Name and Basic Info */}
@@ -301,5 +302,6 @@ export default function SalonDetailsPage() {
     </PageContainer>
   );
 }
+
 
     
