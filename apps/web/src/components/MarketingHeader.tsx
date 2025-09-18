@@ -11,18 +11,21 @@ import { cn } from '@repo/ui/cn';
 interface MarketingHeaderProps {
   isMobileMenuOpen: boolean;
   toggleMobileMenu: () => void;
+  isHomePage?: boolean;
 }
 
-export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: MarketingHeaderProps) {
+export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage = false }: MarketingHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
+      // Set scrolled state if user scrolls down more than 10px
       setIsScrolled(window.scrollY > 10);
     };
 
     window.addEventListener('scroll', handleScroll);
 
+    // Cleanup function to remove the event listener
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
@@ -31,7 +34,8 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: Marketin
   return (
     <header className={cn(
       "sticky top-0 z-40 transition-all duration-300",
-      isScrolled 
+      // Apply blurred background if scrolled OR if it's not the home page
+      isScrolled || !isHomePage
         ? "bg-background/80 backdrop-blur-lg border-b border-border/50" 
         : "bg-transparent border-b border-transparent"
     )}>

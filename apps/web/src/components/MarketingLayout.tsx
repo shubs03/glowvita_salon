@@ -9,6 +9,7 @@ import { Footer } from '@/components/Footer';
 export function MarketingLayout({ children }: { children: ReactNode; }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const isHomePage = pathname === '/';
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -21,7 +22,11 @@ export function MarketingLayout({ children }: { children: ReactNode; }) {
      
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      <MarketingHeader isMobileMenuOpen={isMobileMenuOpen} toggleMobileMenu={toggleMobileMenu} />
+      <MarketingHeader 
+        isMobileMenuOpen={isMobileMenuOpen} 
+        toggleMobileMenu={toggleMobileMenu}
+        isHomePage={isHomePage}
+      />
       <main className="flex-grow">
         {children}
       </main>
