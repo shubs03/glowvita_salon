@@ -86,7 +86,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
             Dashboard
           </Link>
           <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
-          <span className="text-foreground font-semibold text-primary">
+          <span className="font-semibold text-primary">
             {currentPage}
           </span>
         </div>

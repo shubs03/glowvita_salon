@@ -18,6 +18,7 @@ import productReducer from './slices/productSlice';
 import serviceReducer from "./slices/CRM/serviceSlice.js";
 import staffReducer from "./slices/CRM/staffSlice.js";
 import smsTemplateReducer from './slices/smsTemplateSlice';
+import cartReducer from './slices/cartSlice';
 
 const rootReducer = combineReducers({
   [glowvitaApi.reducerPath]: glowvitaApi.reducer,
@@ -39,6 +40,7 @@ const rootReducer = combineReducers({
   service: serviceReducer,
   staff: staffReducer,
   smsTemplates: smsTemplateReducer,
+  cart: cartReducer,
 });
 
 export const makeStore = () => {
