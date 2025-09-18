@@ -11,6 +11,7 @@ import { PageContainer } from '@repo/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Badge } from '@repo/ui/badge';
 import { cn } from '@repo/ui/cn';
+import { SalonCard } from '@/components/landing/SalonCard';
 
 const salon = {
   id: '1',
@@ -48,10 +49,10 @@ const salon = {
     { name: 'Gel Nails', price: 60, duration: 60, category: 'Nails' },
   ],
   products: [
-    { id: 'p1', name: 'Revitalizing Serum', brand: 'Aura Skincare', price: 85, image: 'https://picsum.photos/seed/productA/400/400', hint: 'skincare serum', stock: 23 },
-    { id: 'p2', name: 'Hydrating Shampoo', brand: 'Luxe Hair', price: 40, image: 'https://picsum.photos/seed/productB/400/400', hint: 'shampoo bottle', stock: 50 },
-    { id: 'p3', name: 'Nourishing Hand Cream', brand: 'Zen Garden', price: 25, image: 'https://picsum.photos/seed/productC/400/400', hint: 'hand cream tube', stock: 0 },
-    { id: 'p4', name: 'Matte Lipstick', brand: 'Chroma Beauty', price: 30, image: 'https://picsum.photos/seed/productD/400/400', hint: 'lipstick tube', stock: 120 },
+    { id: 'p1', name: 'Revitalizing Serum', brand: 'Aura Skincare', price: 85, image: 'https://picsum.photos/seed/productA/400/400', hint: 'skincare serum', stock: 23, rating: 4.8 },
+    { id: 'p2', name: 'Hydrating Shampoo', brand: 'Luxe Hair', price: 40, image: 'https://picsum.photos/seed/productB/400/400', hint: 'shampoo bottle', stock: 50, rating: 4.5 },
+    { id: 'p3', name: 'Nourishing Hand Cream', brand: 'Zen Garden', price: 25, image: 'https://picsum.photos/seed/productC/400/400', hint: 'hand cream tube', stock: 0, rating: 4.9 },
+    { id: 'p4', name: 'Matte Lipstick', brand: 'Chroma Beauty', price: 30, image: 'https://picsum.photos/seed/productD/400/400', hint: 'lipstick tube', stock: 120, rating: 4.6 },
   ],
   staff: [
     { name: 'Jessica Miller', role: 'Lead Stylist', image: 'https://picsum.photos/seed/staff1/400/400', hint: 'female stylist portrait' },
@@ -63,9 +64,9 @@ const salon = {
     { quote: "An incredibly relaxing and professional atmosphere. Highly recommend the deep tissue massage.", author: "John D." },
   ],
   reviews: [
-    { author: "Ikbal Z.", rating: 5, date: '2025-09-14T19:03:00Z', text: "1st time datang potong sini , barber abg kamil mmg sangat profesional dari segi knowledge and skill..."},
     { author: "Amanda G.", rating: 5, date: '2024-08-20T10:00:00Z', text: 'Loved the experience! Will be back soon.' },
     { author: "Robert K.", rating: 4, date: '2024-08-18T14:30:00Z', text: 'Great service, but a bit pricey.' },
+    { author: "Ikbal Z.", rating: 5, date: '2025-09-14T19:03:00Z', text: "1st time datang potong sini , barber abg kamil mmg sangat profesional dari segi knowledge and skill..."},
   ],
   workingHours: [
     { day: 'Monday - Friday', hours: '9:00 AM - 8:00 PM' },
@@ -73,6 +74,13 @@ const salon = {
     { day: 'Sunday', hours: 'Closed' },
   ],
 };
+
+const nearbySalons = [
+  { name: 'Ethereal Beauty', rating: 4.8, location: 'Santa Monica', image: 'https://picsum.photos/seed/nearby1/600/400', hint: 'modern bright salon', services: ['Organic Facials', 'Aromatherapy'], price: '₹2,200+' },
+  { name: 'The Grooming Lounge', rating: 4.9, location: 'Downtown LA', image: 'https://picsum.photos/seed/nearby2/600/400', hint: 'classic barbershop interior', services: ['Hot Towel Shave', 'Classic Haircut'], price: '₹1,800+', topRated: true },
+  { name: 'Nail Nirvana', rating: 4.7, location: 'West Hollywood', image: 'https://picsum.photos/seed/nearby3/600/400', hint: 'chic nail art salon', services: ['Gel Manicure', 'Spa Pedicure'], price: '₹1,500+' },
+];
+
 
 const serviceCategories = ['All', 'Hair', 'Skin', 'Nails', 'Body'];
 
@@ -95,7 +103,7 @@ export default function SalonDetailsPage() {
   const StarRating = ({ rating }: { rating: number }) => (
     <div className="flex items-center gap-1">
       {[...Array(5)].map((_, i) => (
-          <Star key={i} className={`h-4 w-4 ${i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+          <Star key={i} className={`h-4 w-4 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
       ))}
     </div>
   );
@@ -121,7 +129,7 @@ export default function SalonDetailsPage() {
 
         {/* Compact Bento Grid Hero Gallery */}
         <section className="py-6">
-          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-40 md:h-[22rem]">
+          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-40 md:h-56">
             <div className="col-span-6 md:col-span-4 row-span-2 rounded-md overflow-hidden group cursor-pointer" onClick={() => openGalleryModal(salon.images[0])}>
               <Image 
                 src={salon.images[0]} 
@@ -132,9 +140,7 @@ export default function SalonDetailsPage() {
                 data-ai-hint="luxury salon interior main view"
               />
             </div>
-            
-            <div className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer" 
-                 onClick={() => openGalleryModal(salon.images[1])}>
+            <div className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer" onClick={() => openGalleryModal(salon.images[1])}>
               <Image 
                 src={salon.images[1]} 
                 alt={`${salon.name} view 2`} 
@@ -144,9 +150,7 @@ export default function SalonDetailsPage() {
                 data-ai-hint="salon detail photo"
               />
             </div>
-            
-            <div className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative" 
-                 onClick={() => openGalleryModal(salon.images[2])}>
+            <div className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative" onClick={() => openGalleryModal(salon.images[2])}>
               <Image 
                 src={salon.images[2]} 
                 alt={`${salon.name} view 3`} 
@@ -162,6 +166,35 @@ export default function SalonDetailsPage() {
               )}
             </div>
           </div>
+        </section>
+
+        <section id="about" className="py-8">
+          <Card className="bg-secondary/50">
+              <CardContent className="p-6">
+                  <div className="max-w-4xl mx-auto p-4 md:p-8">
+                    <div className="relative border-4 border-primary/20 rounded-lg p-2">
+                      <div className="relative border-2 border-primary/20 rounded-lg p-2">
+                        <div className="relative border border-primary/20 rounded-lg p-8 text-center bg-background">
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-4">
+                                <h2 className="text-2xl font-bold font-headline text-primary">About the Salon</h2>
+                            </div>
+                            <p className="text-muted-foreground leading-relaxed mt-4 mb-8">
+                                {salon.mission}
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                                {salon.stats.map(stat => (
+                                    <div key={stat.label} className="border-t-2 border-primary/20 pt-3">
+                                        <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                                        <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+              </CardContent>
+          </Card>
         </section>
         
         {/* Main Content Area */}
@@ -195,9 +228,9 @@ export default function SalonDetailsPage() {
               <Card>
                 <CardHeader>
                   <Tabs value={activeServiceTab} onValueChange={setActiveServiceTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 md:grid-cols-5">
+                    <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 bg-secondary/50 rounded-lg p-1">
                       {serviceCategories.map(cat => (
-                        <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
+                        <TabsTrigger key={cat} value={cat} className="text-xs sm:text-sm">{cat}</TabsTrigger>
                       ))}
                     </TabsList>
                   </Tabs>
@@ -224,7 +257,7 @@ export default function SalonDetailsPage() {
               <p className="text-muted-foreground mb-6">High-quality products available for purchase.</p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {salon.products.map(product => (
-                  <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
+                  <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left">
                     <div className="relative aspect-square bg-gray-100">
                       <Image 
                         src={product.image} 
@@ -237,12 +270,18 @@ export default function SalonDetailsPage() {
                           {product.stock > 0 ? `In Stock` : 'Out of Stock'}
                         </Badge>
                     </div>
-                    <div className="p-3 flex flex-col flex-grow text-left">
+                    <div className="p-3 flex flex-col flex-grow">
                       <p className="text-xs font-bold bg-black/80 text-blue-300 rounded-full mb-2 px-2 py-0.5 text-center items-center w-fit">{product.brand}</p>
                       <h4 className=" text-sm font-semibold flex-grow mb-1">{product.name}</h4>
 
-                      <p className="font-bold text-primary text-sm mb-2">₹{product.price.toFixed(2)}</p>
-                      <Button size="sm" variant="outline" className="w-full mt-auto text-xs">
+                      <div className="flex justify-between items-center">
+                        <p className="font-bold text-primary text-sm">₹{product.price.toFixed(2)}</p>
+                         <div className="flex items-center gap-1">
+                            <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                            <span className="text-xs font-medium text-muted-foreground">{product.rating}</span>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" className="w-full mt-2 text-xs">
                         <ShoppingCart className="h-3 w-3 mr-1" />
                         Add to Cart
                       </Button>
@@ -275,48 +314,58 @@ export default function SalonDetailsPage() {
             </section>
 
             <section id="reviews">
-              <h2 className="text-3xl font-bold mb-2">Reviews</h2>
-              <p className="text-muted-foreground mb-6">What our clients are saying about us.</p>
-              <Card>
-                <CardHeader>
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <h3 className="text-2xl font-semibold">Client Reviews</h3>
-                            <div className="flex items-center gap-4 mt-2">
-                                <div className="flex items-center gap-1">
-                                    <span className="text-2xl font-bold">{salon.rating}</span>
-                                    <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                                </div>
-                                <p className="text-sm text-muted-foreground">Based on {salon.reviewCount} reviews</p>
-                            </div>
-                        </div>
-                         <Button variant="outline">Write a Review</Button>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {salon.reviews.map(review => (
-                    <div key={review.author} className="border-b pb-4 last:border-b-0">
-                      <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
-                                {review.author.charAt(0)}
-                            </div>
+                <h2 className="text-3xl font-bold mb-2">Reviews</h2>
+                <p className="text-muted-foreground mb-6">What our clients are saying about us.</p>
+                <Card>
+                    <CardHeader>
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                                <p className="font-semibold">{review.author}</p>
-                                <p className="text-xs text-muted-foreground">
-                                    {new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                </p>
+                                <h3 className="text-2xl font-semibold">Client Reviews</h3>
+                                <div className="flex items-center gap-4 mt-2">
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-2xl font-bold">{salon.rating}</span>
+                                        <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">Based on {salon.reviewCount} reviews</p>
+                                </div>
                             </div>
+                            <Button variant="outline">Write a Review</Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {salon.reviews.map(review => (
+                        <div key={review.author} className="border-b pb-4 last:border-b-0">
+                          <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
+                                    {review.author.charAt(0)}
+                                </div>
+                                <div>
+                                    <p className="font-semibold">{review.author}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </p>
+                                </div>
+                              </div>
+                              <StarRating rating={review.rating} />
                           </div>
-                          <StarRating rating={review.rating} />
-                      </div>
-                      <p className="text-sm text-muted-foreground italic">"{review.text}"</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+                          <p className="text-sm text-muted-foreground italic">"{review.text}"</p>
+                        </div>
+                      ))}
+                    </CardContent>
+                </Card>
             </section>
-            
+
+            <section id="nearby-salons">
+                <h2 className="text-3xl font-bold mb-2">Nearby Salons</h2>
+                <p className="text-muted-foreground mb-6">Explore other top-rated salons in the area.</p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {nearbySalons.map((salon, index) => (
+                    <SalonCard key={index} {...salon} />
+                ))}
+                </div>
+            </section>
+
           </div>
 
           {/* Right Sticky Column */}
