@@ -73,36 +73,6 @@ export default function SalonDetailsPage() {
   return (
     <PageContainer padding="none">
       <div className="container mx-auto px-4">
-        {/* Section 1: Hero Image Gallery */}
-        <div className="mt-8">
-          <div className="grid grid-cols-4 gap-2 h-80 md:h-[22rem]">
-              <div className="col-span-4 lg:col-span-3 rounded-lg overflow-hidden">
-                  <Image 
-                      src={mainImage} 
-                      alt={salon.name} 
-                      width={1200}
-                      height={800}
-                      className="w-full h-full object-cover"
-                      data-ai-hint="luxury salon interior"
-                  />
-              </div>
-              <div className="hidden lg:grid grid-rows-4 gap-2">
-                  {salon.images.slice(0, 4).map((img, index) => (
-                      <div key={index} className="rounded-lg overflow-hidden cursor-pointer" onClick={() => setMainImage(img)}>
-                          <Image 
-                              src={img} 
-                              alt={`${salon.name} thumbnail ${index + 1}`} 
-                              width={300}
-                              height={200}
-                              className="w-full h-full object-cover"
-                              data-ai-hint="salon detail photo"
-                          />
-                      </div>
-                  ))}
-              </div>
-          </div>
-        </div>
-
         {/* Salon Name and Basic Info - Moved to the top */}
         <section className="py-8 border-b">
           <h1 className="text-4xl font-bold font-headline mb-4">{salon.name}</h1>
@@ -119,7 +89,66 @@ export default function SalonDetailsPage() {
           </div>
         </section>
 
-        {/* Main Content Grid */}
+        {/* Compact Bento Grid Hero Gallery */}
+        <section className="py-6">
+          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-64 md:h-80">
+            {/* Main large image - spans 4 columns and 2 rows */}
+            <div className="col-span-6 md:col-span-4 row-span-2 rounded-lg overflow-hidden group cursor-pointer">
+              <Image 
+                src={mainImage} 
+                alt={salon.name} 
+                width={800}
+                height={600}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                data-ai-hint="luxury salon interior main view"
+              />
+            </div>
+            
+            {/* Top right image */}
+            <div className="hidden md:block col-span-2 row-span-1 rounded-lg overflow-hidden group cursor-pointer" 
+                 onClick={() => setMainImage(salon.images[1])}>
+              <Image 
+                src={salon.images[1]} 
+                alt={`${salon.name} view 2`} 
+                width={400}
+                height={300}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                data-ai-hint="salon detail photo"
+              />
+            </div>
+            
+            {/* Bottom right image */}
+            <div className="hidden md:block col-span-2 row-span-1 rounded-lg overflow-hidden group cursor-pointer relative" 
+                 onClick={() => setMainImage(salon.images[2])}>
+              <Image 
+                src={salon.images[2]} 
+                alt={`${salon.name} view 3`} 
+                width={400}
+                height={300}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                data-ai-hint="salon detail photo"
+              />
+              {salon.images.length > 3 && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <span className="text-white font-semibold text-sm">+{salon.images.length - 3} more</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Mobile gallery indicators */}
+          <div className="md:hidden flex justify-center mt-4 space-x-2">
+            {salon.images.slice(0, 4).map((_, index) => (
+              <button
+                key={index}
+                className="w-2 h-2 rounded-full bg-gray-300 hover:bg-gray-500 transition-colors"
+                onClick={() => setMainImage(salon.images[index])}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Main Content Grid - Starting from About Section */}
         <div className="mt-8 grid lg:grid-cols-3 gap-12">
           {/* Left/Main Column (Scrollable) */}
           <div className="lg:col-span-2 space-y-16">
@@ -260,7 +289,7 @@ export default function SalonDetailsPage() {
           </div>
 
           {/* Right/Sticky Column */}
-          <div className="lg:sticky top-24 self-start space-y-8">
+          <div className="lg:sticky top-8 self-start space-y-8">
             <Card>
               <CardHeader>
                 <CardTitle>Book an Appointment</CardTitle>
