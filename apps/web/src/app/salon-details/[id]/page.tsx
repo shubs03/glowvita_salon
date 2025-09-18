@@ -154,37 +154,35 @@ export default function SalonDetailsPage() {
             </div>
           </div>
         </section>
-
-        {/* About Section - Full Width */}
-        <section>
-          <div className="py-8">
-            <div className="border-y-2 border-dashed border-gray-300 p-2">
-              <div className="border-y-2 border-dashed border-gray-300 p-8 text-center bg-secondary/30">
-                <div className="border inline-block px-4 py-2 mb-6 font-headline text-2xl tracking-widest uppercase">
-                  About
-                </div>
-                <p className="max-w-3xl mx-auto text-muted-foreground leading-relaxed mb-8">
-                  {salon.description}
-                </p>
-                <div className="flex flex-wrap justify-center gap-8">
-                  {salon.stats.map(stat => (
-                    <div key={stat.label}>
-                      <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Two-Column Layout Start */}
-        <div className="grid lg:grid-cols-3 gap-12 pt-8">
+        
+        {/* Main Content Area */}
+        <div className="lg:grid lg:grid-cols-3 lg:gap-12 lg:items-start py-8">
           {/* Left Scrolling Column */}
           <div className="lg:col-span-2 space-y-16">
+            
+            {/* About Section */}
+            <section id="about">
+              <div className="border-y-2 border-dashed border-gray-300 p-2">
+                <div className="border-y-2 border-dashed border-gray-300 p-8 text-center bg-secondary/30">
+                  <div className="border inline-block px-4 py-2 mb-6 font-headline text-2xl tracking-widest uppercase">
+                    About
+                  </div>
+                  <p className="max-w-3xl mx-auto text-muted-foreground leading-relaxed mb-8">
+                    {salon.description}
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-8">
+                    {salon.stats.map(stat => (
+                      <div key={stat.label}>
+                        <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </section>
 
-            <section>
+            <section id="services">
               <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
               <Card>
                 <CardHeader>
@@ -213,9 +211,9 @@ export default function SalonDetailsPage() {
               </Card>
             </section>
             
-            <section>
+            <section id="products">
               <h2 className="text-3xl font-bold mb-6">Products We Use & Sell</h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {salon.products.map(product => (
                   <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-center">
                     <div className="relative aspect-square bg-gray-100">
@@ -226,13 +224,16 @@ export default function SalonDetailsPage() {
                         className="object-cover group-hover:scale-105 transition-transform"
                         data-ai-hint={product.hint} 
                       />
+                      <Badge variant={product.stock > 0 ? "secondary" : "destructive"} className="absolute top-2 left-2 text-xs">
+                        {product.stock > 0 ? `${product.stock} in Stock` : 'Out of Stock'}
+                      </Badge>
                     </div>
-                    <div className="p-4 flex flex-col flex-grow">
+                    <div className="p-3 flex flex-col flex-grow">
                       <p className="text-xs text-muted-foreground">{product.brand}</p>
-                      <h4 className="font-semibold flex-grow my-2">{product.name}</h4>
-                      <p className="font-bold text-primary mb-3">₹{product.price.toFixed(2)}</p>
-                      <Button size="sm" variant="outline" className="w-full mt-auto">
-                        <ShoppingCart className="h-4 w-4 mr-2" />
+                      <h4 className="font-semibold text-sm flex-grow my-1">{product.name}</h4>
+                      <p className="font-bold text-primary text-base mb-2">₹{product.price.toFixed(2)}</p>
+                      <Button size="sm" variant="outline" className="w-full mt-auto text-xs">
+                        <ShoppingCart className="h-3 w-3 mr-1" />
                         Add to Cart
                       </Button>
                     </div>
@@ -241,7 +242,7 @@ export default function SalonDetailsPage() {
               </div>
             </section>
 
-            <section>
+            <section id="team">
               <h2 className="text-3xl font-bold mb-6">Meet Our Team</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {salon.staff.map(member => (
@@ -270,13 +271,18 @@ export default function SalonDetailsPage() {
               <h2 className="text-3xl font-bold mb-6">Reviews</h2>
               <Card>
                 <CardHeader>
-                    <h3 className="text-2xl font-semibold">Client Reviews</h3>
-                    <div className="flex items-center gap-4 mt-2">
-                        <div className="flex items-center gap-1">
-                            <span className="text-2xl font-bold">{salon.rating}</span>
-                            <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h3 className="text-2xl font-semibold">Client Reviews</h3>
+                            <div className="flex items-center gap-4 mt-2">
+                                <div className="flex items-center gap-1">
+                                    <span className="text-2xl font-bold">{salon.rating}</span>
+                                    <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                                </div>
+                                <p className="text-sm text-muted-foreground">Based on {salon.reviewCount} reviews</p>
+                            </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">Based on {salon.reviewCount} reviews</p>
+                         <Button variant="outline">Write a Review</Button>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -307,7 +313,7 @@ export default function SalonDetailsPage() {
               </Card>
             </section>
 
-            <section>
+            <section id="nearby-salons">
               <h2 className="text-3xl font-bold mb-6">Nearby Salons</h2>
               <div className="relative h-96 rounded-md overflow-hidden">
                 <iframe
@@ -324,7 +330,7 @@ export default function SalonDetailsPage() {
           </div>
 
           {/* Right Sticky Column */}
-          <div className="lg:sticky top-20 self-start space-y-4">
+          <div className="lg:sticky top-24 self-start space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Book an Appointment</CardTitle>
