@@ -30,6 +30,16 @@ import {
   Archive,
   Loader2,
   Store,
+  Eye,
+  TrendingUp,
+  ShoppingCart,
+  Star,
+  MoreVertical,
+  Filter,
+  SortAsc,
+  Grid3X3,
+  List,
+  Package,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@repo/ui/textarea';
@@ -87,6 +97,7 @@ export default function ProductsPage() {
     const [itemsPerPage, setItemsPerPage] = useState(8);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -184,65 +195,340 @@ export default function ProductsPage() {
     }
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8">
-            <h1 className="text-2xl font-bold font-headline mb-6">My Products</h1>
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle>My Product Catalog</CardTitle>
-                            <CardDescription>Manage the products you sell directly to customers.</CardDescription>
+        <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+            <div className="p-4 sm:p-6 lg:p-8">
+                {/* Header Section */}
+                <div className="mb-8">
+                    <h1 className="text-4xl font-bold font-headline mb-4 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                        Product Catalog
+                    </h1>
+                    <p className="text-muted-foreground text-lg">
+                        Manage your product inventory and track sales performance
+                    </p>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-blue-600 text-sm font-medium">Total Products</p>
+                                    <p className="text-3xl font-bold text-blue-900">{filteredProducts.length}</p>
+                                </div>
+                                <Package className="h-12 w-12 text-blue-500" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-green-600 text-sm font-medium">Active Products</p>
+                                    <p className="text-3xl font-bold text-green-900">
+                                        {filteredProducts.filter(p => p.isActive && p.status === 'approved').length}
+                                    </p>
+                                </div>
+                                <PackageCheck className="h-12 w-12 text-green-500" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-yellow-600 text-sm font-medium">Pending Approval</p>
+                                    <p className="text-3xl font-bold text-yellow-900">
+                                        {filteredProducts.filter(p => p.status === 'pending').length}
+                                    </p>
+                                </div>
+                                <Archive className="h-12 w-12 text-yellow-500" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-purple-600 text-sm font-medium">Revenue</p>
+                                    <p className="text-3xl font-bold text-purple-900">
+                                        ₹{filteredProducts.reduce((acc, p) => acc + (p.salePrice * (p.stock || 0)), 0).toFixed(0)}
+                                    </p>
+                                </div>
+                                <TrendingUp className="h-12 w-12 text-purple-500" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Card className="backdrop-blur-xl bg-background/95 border-border/50 shadow-xl">
+                    <CardHeader className="pb-6">
+                        <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-6">
+                            <div>
+                                <CardTitle className="text-2xl mb-2 flex items-center gap-3">
+                                    <Store className="h-6 w-6 text-primary" />
+                                    My Product Catalog
+                                </CardTitle>
+                                <CardDescription className="text-base">
+                                    Manage products you sell directly to customers. Add, edit, and track inventory.
+                                </CardDescription>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {/* Search */}
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                                    <Input
+                                        type="search"
+                                        placeholder="Search products..."
+                                        className="w-full lg:w-80 pl-12 pr-4 h-12 rounded-2xl border-border/30 focus:border-primary focus:ring-primary/20 bg-background/50"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+
+                                {/* Status Filter */}
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-[180px] h-12 rounded-xl border-border/30">
+                                        <SelectValue placeholder="Filter by status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Status</SelectItem>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="approved">Approved</SelectItem>
+                                        <SelectItem value="disapproved">Disapproved</SelectItem>
+                                    </SelectContent>
+                                </Select>
+
+                                {/* View Toggle */}
+                                <div className="flex items-center border border-border/30 rounded-xl p-1">
+                                    <Button
+                                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('grid')}
+                                        className="rounded-lg"
+                                    >
+                                        <Grid3X3 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant={viewMode === 'list' ? 'default' : 'ghost'}
+                                        size="sm"
+                                        onClick={() => setViewMode('list')}
+                                        className="rounded-lg"
+                                    >
+                                        <List className="h-4 w-4" />
+                                    </Button>
+                                </div>
+
+                                {/* Add Product Button */}
+                                <Button 
+                                    onClick={() => handleOpenProductModal()}
+                                    className="h-12 px-6 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                                >
+                                    <Plus className="mr-2 h-5 w-5" />
+                                    Add Product
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex gap-2">
-                            <Button onClick={() => handleOpenProductModal()}>
-                                <Plus className="mr-2 h-4 w-4" /> Add Product
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {paginatedProducts.map(product => (
-                            <Card key={product._id} className="group">
-                                <CardContent className="p-0">
-                                    <div className="relative aspect-square">
-                                        <Image src={product.productImage || 'https://placehold.co/400x400.png'} alt={product.productName} layout="fill" className="object-cover rounded-t-lg" />
-                                        <div className="absolute top-2 right-2">
-                                            {getStatusBadge(product.status)}
+                    </CardHeader>
+                    <CardContent>
+                        {paginatedProducts.length === 0 ? (
+                            <div className="text-center py-16">
+                                <div className="mx-auto w-32 h-32 mb-6 bg-gradient-to-br from-muted to-muted/50 rounded-full flex items-center justify-center">
+                                    <Package className="h-16 w-16 text-muted-foreground/50" />
+                                </div>
+                                <h3 className="text-xl font-semibold mb-2">No products found</h3>
+                                <p className="text-muted-foreground mb-6">Create your first product to start selling.</p>
+                                <Button onClick={() => handleOpenProductModal()}>
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Your First Product
+                                </Button>
+                            </div>
+                        ) : viewMode === 'grid' ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {paginatedProducts.map((product, index) => (
+                                    <Card 
+                                        key={product._id} 
+                                        className="group overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 border-border/30 hover:border-primary/30 bg-gradient-to-br from-background to-muted/20 hover:-translate-y-2"
+                                        style={{ animationDelay: `${index * 0.1}s` }}
+                                    >
+                                        <div className="relative aspect-square overflow-hidden">
+                                            <Image 
+                                                src={product.productImage || 'https://placehold.co/400x400.png'} 
+                                                alt={product.productName} 
+                                                fill
+                                                className="object-cover group-hover:scale-110 transition-transform duration-500" 
+                                            />
+                                            {/* Status Badge */}
+                                            <div className="absolute top-3 left-3">
+                                                {getStatusBadge(product.status)}
+                                            </div>
+                                            {/* Active/Inactive Badge */}
+                                            <div className="absolute top-3 right-3">
+                                                <Badge variant={product.isActive ? "secondary" : "destructive"} className="rounded-full">
+                                                    {product.isActive ? 'Active' : 'Inactive'}
+                                                </Badge>
+                                            </div>
+                                            {/* Quick Actions */}
+                                            <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        size="icon"
+                                                        variant="secondary"
+                                                        className="h-9 w-9 rounded-full bg-background/90 backdrop-blur-md shadow-lg"
+                                                        onClick={() => handleOpenProductModal(product)}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        size="icon"
+                                                        variant="secondary"
+                                                        className="h-9 w-9 rounded-full bg-background/90 backdrop-blur-md hover:bg-red-50 hover:text-red-600 shadow-lg"
+                                                        onClick={() => { setSelectedProduct(product); setIsDeleteModalOpen(true); }}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="p-4">
-                                        <h3 className="font-semibold truncate">{product.productName}</h3>
-                                        <p className="text-sm text-muted-foreground">{product.category}</p>
-                                        <div className="flex items-baseline gap-2 mt-2">
-                                            <p className="text-lg font-bold">₹{product.salePrice.toFixed(2)}</p>
-                                            {product.price > product.salePrice && <p className="text-sm line-through text-muted-foreground">₹{product.price.toFixed(2)}</p>}
+                                        
+                                        <div className="p-5 space-y-4">
+                                            <div>
+                                                <h3 className="font-bold text-lg mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+                                                    {product.productName}
+                                                </h3>
+                                                <Badge variant="outline" className="rounded-full text-xs">
+                                                    {product.category}
+                                                </Badge>
+                                            </div>
+
+                                            {/* Price Section */}
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <div className="flex items-baseline gap-2">
+                                                        <p className="text-2xl font-bold text-primary">₹{product.salePrice.toFixed(2)}</p>
+                                                        {product.price > product.salePrice && (
+                                                            <p className="text-sm line-through text-muted-foreground">₹{product.price.toFixed(2)}</p>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground">per unit</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-sm font-medium">Stock</p>
+                                                    <p className="text-lg font-bold">{product.stock}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Action Buttons */}
+                                            <div className="flex gap-2 pt-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="flex-1 rounded-xl border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                                                    onClick={() => handleOpenProductModal(product)}
+                                                >
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    Edit
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    className="rounded-xl"
+                                                    onClick={() => { setSelectedProduct(product); setIsDeleteModalOpen(true); }}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <p className="text-xs text-muted-foreground mt-1">Stock: {product.stock}</p>
-                                        <div className="mt-2 flex justify-end gap-2">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenProductModal(product)}>
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { setSelectedProduct(product); setIsDeleteModalOpen(true); }}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                    <Pagination
-                        className="mt-6"
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                        itemsPerPage={itemsPerPage}
-                        onItemsPerPageChange={setItemsPerPage}
-                        totalItems={filteredProducts.length}
-                    />
-                </CardContent>
-            </Card>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            /* List View */
+                            <div className="space-y-4">
+                                {paginatedProducts.map((product, index) => (
+                                    <Card 
+                                        key={product._id} 
+                                        className="overflow-hidden border-border/50 hover:shadow-lg transition-all duration-300 bg-gradient-to-r from-background to-muted/20"
+                                        style={{ animationDelay: `${index * 0.05}s` }}
+                                    >
+                                        <CardContent className="p-6">
+                                            <div className="flex items-center gap-6">
+                                                <Image 
+                                                    src={product.productImage || 'https://placehold.co/100x100.png'} 
+                                                    alt={product.productName} 
+                                                    width={100} 
+                                                    height={100} 
+                                                    className="rounded-xl object-cover border border-border/20" 
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="flex-1">
+                                                            <h3 className="font-bold text-xl mb-2">{product.productName}</h3>
+                                                            <div className="flex items-center gap-4 mb-3">
+                                                                <Badge variant="outline" className="rounded-full">
+                                                                    {product.category}
+                                                                </Badge>
+                                                                {getStatusBadge(product.status)}
+                                                                <Badge variant={product.isActive ? "secondary" : "destructive"} className="rounded-full">
+                                                                    {product.isActive ? 'Active' : 'Inactive'}
+                                                                </Badge>
+                                                            </div>
+                                                            {product.description && (
+                                                                <p className="text-muted-foreground text-sm line-clamp-2 mb-3">
+                                                                    {product.description}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-right ml-6">
+                                                            <div className="flex items-baseline gap-2 mb-1">
+                                                                <p className="text-2xl font-bold text-primary">₹{product.salePrice.toFixed(2)}</p>
+                                                                {product.price > product.salePrice && (
+                                                                    <p className="text-sm line-through text-muted-foreground">₹{product.price.toFixed(2)}</p>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-sm text-muted-foreground mb-3">Stock: {product.stock}</p>
+                                                            <div className="flex gap-2">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleOpenProductModal(product)}
+                                                                    className="rounded-lg"
+                                                                >
+                                                                    <Edit className="mr-2 h-4 w-4" />
+                                                                    Edit
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="destructive"
+                                                                    onClick={() => { setSelectedProduct(product); setIsDeleteModalOpen(true); }}
+                                                                    className="rounded-lg"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                        
+                        {paginatedProducts.length > 0 && (
+                            <Pagination
+                                className="mt-8"
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                                itemsPerPage={itemsPerPage}
+                                onItemsPerPageChange={setItemsPerPage}
+                                totalItems={filteredProducts.length}
+                            />
+                        )}
+                    </CardContent>
+                </Card>
 
             {/* Product Form Modal */}
             <Dialog open={isProductModalOpen} onOpenChange={setIsProductModalOpen}>
@@ -350,6 +636,7 @@ export default function ProductsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            </div>
         </div>
     );
 }
