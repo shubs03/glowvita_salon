@@ -14,7 +14,12 @@ import Link from 'next/link';
 const initialCartItems = [
   { id: 1, name: 'Aura Revitalizing Serum', price: 68.00, quantity: 1, image: 'https://picsum.photos/seed/cart1/200/200', hint: 'skincare product' },
   { id: 2, name: 'Chroma Hydrating Balm', price: 24.00, quantity: 2, image: 'https://picsum.photos/seed/cart2/200/200', hint: 'cosmetic balm' },
-  { id: 3, name: 'Terra Exfoliating Scrub', price: 48.00, quantity: 1, image: 'https://picsum.photos/seed/cart3/200/200', hint: 'cosmetic jar' },
+];
+
+const suggestedProducts = [
+  { id: 3, name: 'Terra Exfoliating Scrub', price: 48.00, image: 'https://picsum.photos/seed/cart3/200/200', hint: 'cosmetic jar' },
+  { id: 4, name: 'Zen Calming Moisturizer', price: 45.00, image: 'https://picsum.photos/seed/product-zen/200/200', hint: 'moisturizer bottle' },
+  { id: 5, name: 'Sol Sunscreen SPF 50', price: 32.00, image: 'https://picsum.photos/seed/product-sol/200/200', hint: 'sunscreen tube' },
 ];
 
 export default function CartPage() {
@@ -144,6 +149,29 @@ export default function CartPage() {
                     </div>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        )}
+
+        {/* You Might Also Like Section */}
+        {cartItems.length > 0 && (
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold text-center mb-8">You Might Also Like</h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {suggestedProducts.map(product => (
+                <Card key={product.id} className="group overflow-hidden">
+                  <div className="relative aspect-square">
+                    <Image src={product.image} alt={product.name} layout="fill" objectFit="cover" data-ai-hint={product.hint} className="group-hover:scale-105 transition-transform" />
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold truncate">{product.name}</h3>
+                    <div className="flex justify-between items-center mt-2">
+                      <p className="font-bold">₹{product.price.toFixed(2)}</p>
+                      <Button variant="outline" size="sm">Add to Cart</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         )}
