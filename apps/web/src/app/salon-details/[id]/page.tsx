@@ -412,11 +412,11 @@ export default function SalonDetailsPage() {
 
         {/* Nearby Salons Section - Outside 2-column layout */}
         <section id="nearby-salons" className="py-16">
-          <div className="text-center mb-12">
+          <div className="text-start mb-12">
             <h2 className="text-3xl font-bold mb-4">Nearby Salons</h2>
             <p className="text-muted-foreground text-lg">Explore other top-rated salons in the area.</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-8xl mx-auto">
             {nearbySalons.map((salon, index) => {
               const IconComponent = salon.icon;
               return (
