@@ -15,7 +15,7 @@ const salon = {
   id: '1',
   name: 'GlowVita Elite Spa',
   rating: 4.9,
-  reviews: 250,
+  reviewCount: 250,
   address: '123 Luxury Ave, Suite 100, Beverly Hills, CA 90210',
   description: 'An oasis of tranquility and relaxation, offering a wide range of beauty and wellness services. Our expert therapists and state-of-the-art facilities ensure an unparalleled experience. We are dedicated to providing the highest quality of service and care, making every visit a memorable one.',
   images: [
@@ -113,7 +113,7 @@ export default function SalonDetailsPage() {
                 <div className="flex items-center gap-1">
                   <Star className="h-5 w-5 text-yellow-400 fill-current" />
                   <span className="font-semibold">{salon.rating}</span>
-                  <span>({salon.reviews} reviews)</span>
+                  <span>({salon.reviewCount} reviews)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
