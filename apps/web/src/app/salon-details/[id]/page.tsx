@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
-import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
@@ -66,15 +66,21 @@ export default function SalonDetailsPage() {
   const { id } = params;
   const [mainImage, setMainImage] = useState(salon.images[0]);
   const [activeServiceTab, setActiveServiceTab] = useState('All');
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
 
   const filteredServices = activeServiceTab === 'All' 
     ? salon.services 
     : salon.services.filter(s => s.category === activeServiceTab);
 
+  const openGalleryModal = (image: string) => {
+    setMainImage(image);
+    setIsGalleryModalOpen(true);
+  };
+
   return (
     <PageContainer padding="none">
       <div className="container mx-auto px-4">
-        {/* Salon Name and Basic Info - Moved to the top */}
+        {/* Salon Name and Basic Info */}
         <section className="py-8 border-b">
           <h1 className="text-4xl font-bold font-headline mb-4">{salon.name}</h1>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
@@ -93,10 +99,9 @@ export default function SalonDetailsPage() {
         {/* Compact Bento Grid Hero Gallery */}
         <section className="py-6">
           <div className="grid grid-cols-6 grid-rows-2 gap-2 h-64 md:h-[450px]">
-            {/* Main large image - spans 4 columns and 2 rows */}
-            <div className="col-span-6 md:col-span-4 row-span-2 rounded-lg overflow-hidden group cursor-pointer">
+            <div className="col-span-6 md:col-span-4 row-span-2 rounded-lg overflow-hidden group cursor-pointer" onClick={() => openGalleryModal(salon.images[0])}>
               <Image 
-                src={mainImage} 
+                src={salon.images[0]} 
                 alt={salon.name} 
                 width={800}
                 height={600}
@@ -105,9 +110,8 @@ export default function SalonDetailsPage() {
               />
             </div>
             
-            {/* Top right image */}
             <div className="hidden md:block col-span-2 row-span-1 rounded-lg overflow-hidden group cursor-pointer" 
-                 onClick={() => setMainImage(salon.images[1])}>
+                 onClick={() => openGalleryModal(salon.images[1])}>
               <Image 
                 src={salon.images[1]} 
                 alt={`${salon.name} view 2`} 
@@ -118,9 +122,8 @@ export default function SalonDetailsPage() {
               />
             </div>
             
-            {/* Bottom right image */}
             <div className="hidden md:block col-span-2 row-span-1 rounded-lg overflow-hidden group cursor-pointer relative" 
-                 onClick={() => setMainImage(salon.images[2])}>
+                 onClick={() => openGalleryModal(salon.images[2])}>
               <Image 
                 src={salon.images[2]} 
                 alt={`${salon.name} view 3`} 
@@ -137,7 +140,6 @@ export default function SalonDetailsPage() {
             </div>
           </div>
           
-          {/* Mobile gallery indicators */}
           <div className="md:hidden flex justify-center mt-4 space-x-2">
             {salon.images.slice(0, 4).map((img, index) => (
               <button
@@ -149,34 +151,34 @@ export default function SalonDetailsPage() {
           </div>
         </section>
 
-        {/* Full-width "About" Section */}
-        <section className="my-8">
-            <h2 className="text-3xl font-bold mb-6">About the Salon</h2>
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-lg text-muted-foreground leading-relaxed">{salon.description}</p>
-                <div className="mt-6 grid grid-cols-2 gap-4 text-center">
-                  <div className="p-4 bg-secondary rounded-lg">
-                    <Award className="mx-auto h-8 w-8 text-primary mb-2" />
-                    <p className="font-semibold">Top Rated</p>
-                    <p className="text-sm text-muted-foreground">For customer satisfaction</p>
-                  </div>
-                  <div className="p-4 bg-secondary rounded-lg">
-                    <Shield className="mx-auto h-8 w-8 text-primary mb-2" />
-                    <p className="font-semibold">Health & Safety Certified</p>
-                    <p className="text-sm text-muted-foreground">Your well-being is our priority</p>
-                  </div>
+        {/* About Section */}
+        <section className="my-8 py-16 bg-secondary/50 rounded-lg">
+          <div className="grid md:grid-cols-2 gap-12 items-center px-8">
+            <div className="space-y-4">
+              <h2 className="text-3xl font-bold">About the Salon</h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">{salon.description}</p>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-background rounded-lg shadow-sm">
+                <Award className="h-8 w-8 text-primary" />
+                <div>
+                  <h4 className="font-semibold">Top Rated</h4>
+                  <p className="text-sm text-muted-foreground">For outstanding customer satisfaction.</p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-background rounded-lg shadow-sm">
+                <Shield className="h-8 w-8 text-primary" />
+                <div>
+                  <h4 className="font-semibold">Health & Safety Certified</h4>
+                  <p className="text-sm text-muted-foreground">Your well-being is our priority.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
-        {/* Main Content Grid - Starting from Services Section */}
         <div className="grid lg:grid-cols-3 gap-12">
-          {/* Left/Main Column (Scrollable) */}
           <div className="lg:col-span-2 space-y-16">
-            
-            {/* Services Section */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
               <Card>
@@ -206,16 +208,15 @@ export default function SalonDetailsPage() {
               </Card>
             </section>
             
-            {/* Products Section */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Products We Use & Sell</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {salon.products.map(product => (
-                  <Card key={product.name}>
-                    <Image src={product.image} alt={product.name} width={300} height={300} className="w-full h-40 object-cover rounded-t-lg" data-ai-hint={product.hint} />
+                  <Card key={product.name} className="group overflow-hidden hover:shadow-lg transition-shadow">
+                    <Image src={product.image} alt={product.name} width={300} height={300} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" data-ai-hint={product.hint} />
                     <CardContent className="p-4">
                       <p className="text-xs text-muted-foreground">{product.brand}</p>
-                      <h4 className="font-semibold">{product.name}</h4>
+                      <h4 className="font-semibold truncate">{product.name}</h4>
                       <p className="mt-2 font-bold text-primary">₹{product.price.toFixed(2)}</p>
                     </CardContent>
                   </Card>
@@ -223,23 +224,23 @@ export default function SalonDetailsPage() {
               </div>
             </section>
 
-            {/* Staff Section */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Meet Our Team</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {salon.staff.map(member => (
-                  <Card key={member.name} className="text-center">
-                    <CardContent className="p-4">
-                      <Image src={member.image} alt={member.name} width={120} height={120} className="w-32 h-32 rounded-full mx-auto mb-4 object-cover" data-ai-hint={member.hint} />
+                  <Card key={member.name} className="text-center group overflow-hidden">
+                    <div className="relative aspect-square">
+                      <Image src={member.image} alt={member.name} layout="fill" className="object-cover group-hover:scale-105 transition-transform" data-ai-hint={member.hint} />
+                    </div>
+                    <div className="p-4">
                       <h4 className="font-semibold">{member.name}</h4>
-                      <p className="text-primary">{member.role}</p>
-                    </CardContent>
+                      <p className="text-sm text-primary">{member.role}</p>
+                    </div>
                   </Card>
                 ))}
               </div>
             </section>
 
-            {/* Testimonials & Reviews */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Reviews</h2>
               <div className="mb-6 border-b pb-6">
@@ -281,7 +282,6 @@ export default function SalonDetailsPage() {
               <Button variant="outline" className="w-full mt-6">See all reviews</Button>
             </section>
 
-            {/* Nearby Salons */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Nearby Salons</h2>
               <div className="relative h-96 rounded-lg overflow-hidden">
@@ -299,7 +299,6 @@ export default function SalonDetailsPage() {
 
           </div>
 
-          {/* Right/Sticky Column */}
           <div className="lg:sticky top-8 self-start space-y-8">
             <Card>
               <CardHeader>
@@ -340,6 +339,40 @@ export default function SalonDetailsPage() {
           </div>
         </div>
       </div>
+
+      {isGalleryModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" 
+          onClick={() => setIsGalleryModalOpen(false)}
+        >
+          <div 
+            className="relative max-w-4xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+              <Image 
+                src={mainImage} 
+                alt="Gallery View" 
+                layout="fill" 
+                objectFit="contain"
+              />
+            </div>
+            <div className="flex justify-center gap-2 mt-4">
+              {salon.images.map((img, index) => (
+                <button key={index} onClick={() => setMainImage(img)}>
+                  <Image 
+                    src={img} 
+                    alt={`Thumbnail ${index + 1}`} 
+                    width={80} 
+                    height={60} 
+                    className={`rounded-md object-cover cursor-pointer border-2 transition-all ${mainImage === img ? 'border-primary' : 'border-transparent hover:border-primary/50'}`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </PageContainer>
   );
 }
