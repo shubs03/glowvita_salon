@@ -169,30 +169,26 @@ export default function SalonDetailsPage() {
           {/* Left Scrolling Column */}
           <div className="lg:col-span-2 space-y-16">
 
-            <section className="py-8">
-            <Card className="bg-secondary/50 p-8 rounded-2xl">
-                <CardHeader>
-                    <h2 className="text-3xl font-bold font-headline leading-tight mb-4">About {salon.name}</h2>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground leading-relaxed mb-6">{salon.description}</p>
-                    <div className="flex flex-wrap justify-around gap-6 mt-8 pt-6 border-t">
-                        {salon.stats.map(stat => (
-                            <div key={stat.label} className="text-center">
-                            <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                            <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+            {/* About Section */}
+        <section className="py-8">
+          <Card className="bg-secondary/50 p-8 rounded-2xl">
+              <CardHeader>
+                  <h2 className="text-3xl font-bold font-headline leading-tight mb-4">About {salon.name}</h2>
+              </CardHeader>
+              <CardContent>
+                  <p className="text-muted-foreground leading-relaxed mb-6">{salon.description}</p>
+                  <div className="flex flex-wrap justify-around gap-6 mt-8 pt-6 border-t">
+                      {salon.stats.map(stat => (
+                          <div key={stat.label} className="text-center">
+                          <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                          <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                          </div>
+                      ))}
+                  </div>
+              </CardContent>
+          </Card>
         </section>
 
-
-        {/* Two-Column Layout Start */}
-        <div className="grid lg:grid-cols-3 gap-12 pt-8">
-          {/* Left Scrolling Column */}
-          <div className="lg:col-span-2 space-y-16">
             <section>
               <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
               <Card>
@@ -231,7 +227,7 @@ export default function SalonDetailsPage() {
                       <Image 
                         src={product.image} 
                         alt={product.name} 
-                        layout="fill"
+                        fill
                         className="object-cover group-hover:scale-105 transition-transform"
                         data-ai-hint={product.hint} 
                       />
@@ -260,7 +256,7 @@ export default function SalonDetailsPage() {
                       <Image 
                         src={member.image} 
                         alt={member.name} 
-                        layout="fill" 
+                        fill 
                         className="object-cover group-hover:scale-105 transition-transform" 
                         data-ai-hint={member.hint} 
                       />
@@ -386,8 +382,8 @@ export default function SalonDetailsPage() {
               <Image 
                 src={mainImage} 
                 alt="Gallery View" 
-                layout="fill" 
-                objectFit="contain"
+                fill 
+                className="object-contain"
               />
             </div>
             <div className="flex justify-center gap-2 mt-4">
