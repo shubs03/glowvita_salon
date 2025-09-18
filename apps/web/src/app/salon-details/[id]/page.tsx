@@ -164,30 +164,41 @@ export default function SalonDetailsPage() {
           </div>
         </section>
 
+        {/* Full-width About Section */}
+        <section className="py-12">
+            <div className="relative p-2 border border-gray-200 rounded-lg">
+                <div className="relative p-2 border border-gray-300 rounded">
+                    <div className="p-8 border border-gray-200 rounded-sm bg-secondary/30">
+                        <div className="relative text-center">
+                            <div className="inline-block px-8 py-3 border bg-background border-gray-300 rounded-sm">
+                                <h2 className="text-3xl font-bold font-headline tracking-widest uppercase">
+                                    About
+                                </h2>
+                            </div>
+                        </div>
+
+                        <div className="mt-8 text-center max-w-3xl mx-auto">
+                            <p className="text-muted-foreground leading-relaxed">
+                                {salon.description}
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-8 mt-10 pt-8 border-t">
+                            {salon.stats.map(stat => (
+                                <div key={stat.label} className="text-center">
+                                    <p className="text-4xl font-bold text-primary">{stat.value}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         {/* Two-Column Layout Start */}
         <div className="grid lg:grid-cols-3 gap-12 pt-8">
           {/* Left Scrolling Column */}
           <div className="lg:col-span-2 space-y-16">
-
-            {/* About Section */}
-        <section className="py-8">
-          <Card className="bg-secondary/50 p-8 rounded-2xl">
-              <CardHeader>
-                  <h2 className="text-3xl font-bold font-headline leading-tight mb-4">About {salon.name}</h2>
-              </CardHeader>
-              <CardContent>
-                  <p className="text-muted-foreground leading-relaxed mb-6">{salon.description}</p>
-                  <div className="flex flex-wrap justify-around gap-6 mt-8 pt-6 border-t">
-                      {salon.stats.map(stat => (
-                          <div key={stat.label} className="text-center">
-                          <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                          <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-                          </div>
-                      ))}
-                  </div>
-              </CardContent>
-          </Card>
-        </section>
 
             <section>
               <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
@@ -405,3 +416,4 @@ export default function SalonDetailsPage() {
     </PageContainer>
   );
 }
+
