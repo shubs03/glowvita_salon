@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
-import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight, ShoppingCart } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
@@ -18,6 +18,19 @@ const salon = {
   reviewCount: 250,
   address: '123 Luxury Ave, Suite 100, Beverly Hills, CA 90210',
   description: 'An oasis of tranquility and relaxation, offering a wide range of beauty and wellness services. Our expert therapists and state-of-the-art facilities ensure an unparalleled experience. We are dedicated to providing the highest quality of service and care, making every visit a memorable one.',
+  mission: 'To enhance beauty and wellness through personalized care and high-quality services, creating a serene escape for every client.',
+  whyChooseUs: [
+    'Expert & Certified Staff',
+    'Premium & Organic Products',
+    'State-of-the-Art Equipment',
+    'Personalized Client Experience',
+    'Hygienic & Luxurious Ambiance',
+  ],
+  stats: [
+    { value: '10+', label: 'Years of Experience' },
+    { value: '5k+', label: 'Happy Clients' },
+    { value: '15+', label: 'Expert Staff' },
+  ],
   images: [
     'https://picsum.photos/seed/salon1/1200/800',
     'https://picsum.photos/seed/salon2/800/600',
@@ -34,14 +47,14 @@ const salon = {
     { name: 'Gel Nails', price: 60, duration: 60, category: 'Nails' },
   ],
   products: [
-    { name: 'Revitalizing Serum', brand: 'Aura Skincare', price: 85, image: 'https://picsum.photos/seed/productA/200/200', hint: 'skincare serum' },
-    { name: 'Hydrating Shampoo', brand: 'Luxe Hair', price: 40, image: 'https://picsum.photos/seed/productB/200/200', hint: 'shampoo bottle' },
-    { name: 'Nourishing Hand Cream', brand: 'Zen Garden', price: 25, image: 'https://picsum.photos/seed/productC/200/200', hint: 'hand cream tube' },
+    { name: 'Revitalizing Serum', brand: 'Aura Skincare', price: 85, image: 'https://picsum.photos/seed/productA/400/400', hint: 'skincare serum' },
+    { name: 'Hydrating Shampoo', brand: 'Luxe Hair', price: 40, image: 'https://picsum.photos/seed/productB/400/400', hint: 'shampoo bottle' },
+    { name: 'Nourishing Hand Cream', brand: 'Zen Garden', price: 25, image: 'https://picsum.photos/seed/productC/400/400', hint: 'hand cream tube' },
   ],
   staff: [
-    { name: 'Jessica Miller', role: 'Lead Stylist', image: 'https://picsum.photos/seed/staff1/200/200', hint: 'female stylist portrait' },
-    { name: 'Michael Chen', role: 'Massage Therapist', image: 'https://picsum.photos/seed/staff2/200/200', hint: 'male therapist portrait' },
-    { name: 'Emily White', role: 'Esthetician', image: 'https://picsum.photos/seed/staff3/200/200', hint: 'female esthetician portrait' },
+    { name: 'Jessica Miller', role: 'Lead Stylist', image: 'https://picsum.photos/seed/staff1/400/400', hint: 'female stylist portrait' },
+    { name: 'Michael Chen', role: 'Massage Therapist', image: 'https://picsum.photos/seed/staff2/400/400', hint: 'male therapist portrait' },
+    { name: 'Emily White', role: 'Esthetician', image: 'https://picsum.photos/seed/staff3/400/400', hint: 'female esthetician portrait' },
   ],
   testimonials: [
     { quote: "The best facial I've ever had. My skin is glowing!", author: "Sarah L." },
@@ -151,68 +164,54 @@ export default function SalonDetailsPage() {
           </div>
         </section>
 
-        {/* About Section */}
-        <section className="my-12 py-20 bg-secondary/50 rounded-2xl">
-          <div className="grid md:grid-cols-2 gap-16 items-center px-8 lg:px-12">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Badge variant="secondary" className="mb-2 px-3 py-1 text-sm font-medium">
-                  Our Story
-                </Badge>
-                <h2 className="text-4xl font-bold font-headline leading-tight">About the Salon</h2>
-                <div className="w-16 h-1 bg-primary rounded-full"></div>
-              </div>
-              <p className="text-lg text-muted-foreground leading-relaxed">{salon.description}</p>
-              <div className="pt-4">
-                <Button variant="outline">
-                  Learn More 
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-6">
-              <div className="grid gap-4">
-                <div className="flex items-center gap-4 p-6 bg-background rounded-lg shadow-sm border">
-                  <div className="flex-shrink-0 p-3 bg-primary/10 rounded-lg">
-                    <Award className="h-8 w-8 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-lg">Top Rated</h4>
-                    <p className="text-sm text-muted-foreground mt-1">For outstanding customer satisfaction.</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-4 p-6 bg-background rounded-lg shadow-sm border">
-                  <div className="flex-shrink-0 p-3 bg-primary/10 rounded-lg">
-                    <Shield className="h-8 w-8 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-lg">Health & Safety Certified</h4>
-                    <p className="text-sm text-muted-foreground mt-1">Your well-being is our priority.</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between pt-4 px-2">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">250+</div>
-                  <div className="text-sm text-muted-foreground">Happy Clients</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">4.9</div>
-                  <div className="text-sm text-muted-foreground">Average Rating</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">5+</div>
-                  <div className="text-sm text-muted-foreground">Years Experience</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div className="grid lg:grid-cols-3 gap-12">
+        {/* Two-Column Layout Start */}
+        <div className="grid lg:grid-cols-3 gap-12 pt-8">
+          {/* Left Scrolling Column */}
           <div className="lg:col-span-2 space-y-16">
+            
+            {/* About Section */}
+            <section>
+              <Card className="bg-secondary/50 p-8 rounded-2xl">
+                <div className="grid md:grid-cols-5 gap-8 items-center">
+                  <div className="md:col-span-3">
+                    <Badge variant="secondary" className="mb-4">Our Story</Badge>
+                    <h2 className="text-3xl font-bold font-headline leading-tight mb-4">About {salon.name}</h2>
+                    <p className="text-muted-foreground leading-relaxed mb-6">{salon.description}</p>
+                    <div>
+                      <h3 className="font-semibold mb-3">Why Choose Us?</h3>
+                      <ul className="space-y-2">
+                        {salon.whyChooseUs.map((feature, i) => (
+                          <li key={i} className="flex items-center gap-2 text-sm">
+                            <Check className="h-4 w-4 text-green-500" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="md:col-span-2 flex justify-center">
+                    <div className="relative w-full aspect-square max-w-[300px]">
+                      <Image 
+                        src="https://picsum.photos/seed/about-salon/400/400" 
+                        alt="Salon interior" 
+                        layout="fill" 
+                        className="object-cover rounded-xl shadow-lg"
+                        data-ai-hint="salon relaxing atmosphere"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-wrap justify-around gap-6 mt-8 pt-6 border-t">
+                  {salon.stats.map(stat => (
+                    <div key={stat.label} className="text-center">
+                      <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </section>
+            
             <section>
               <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
               <Card>
@@ -246,13 +245,26 @@ export default function SalonDetailsPage() {
               <h2 className="text-3xl font-bold mb-6">Products We Use & Sell</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {salon.products.map(product => (
-                  <Card key={product.name} className="group overflow-hidden hover:shadow-lg transition-shadow">
-                    <Image src={product.image} alt={product.name} width={300} height={300} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" data-ai-hint={product.hint} />
-                    <CardContent className="p-4">
+                  <Card key={product.name} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
+                    <div className="relative aspect-square bg-gray-100">
+                      <Image 
+                        src={product.image} 
+                        alt={product.name} 
+                        layout="fill"
+                        className="object-cover group-hover:scale-105 transition-transform"
+                        data-ai-hint={product.hint} 
+                      />
+                    </div>
+                    <div className="p-4 flex flex-col flex-grow">
                       <p className="text-xs text-muted-foreground">{product.brand}</p>
-                      <h4 className="font-semibold truncate">{product.name}</h4>
-                      <p className="mt-2 font-bold text-primary">₹{product.price.toFixed(2)}</p>
-                    </CardContent>
+                      <h4 className="font-semibold truncate flex-grow">{product.name}</h4>
+                      <div className="flex justify-between items-center mt-4">
+                        <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                          <ShoppingCart className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </Card>
                 ))}
               </div>
@@ -264,7 +276,13 @@ export default function SalonDetailsPage() {
                 {salon.staff.map(member => (
                   <Card key={member.name} className="text-center group overflow-hidden">
                     <div className="relative aspect-square">
-                      <Image src={member.image} alt={member.name} layout="fill" className="object-cover group-hover:scale-105 transition-transform" data-ai-hint={member.hint} />
+                      <Image 
+                        src={member.image} 
+                        alt={member.name} 
+                        layout="fill" 
+                        className="object-cover group-hover:scale-105 transition-transform" 
+                        data-ai-hint={member.hint} 
+                      />
                     </div>
                     <div className="p-4">
                       <h4 className="font-semibold">{member.name}</h4>
@@ -276,44 +294,54 @@ export default function SalonDetailsPage() {
             </section>
 
             <section>
-              <h2 className="text-3xl font-bold mb-6">Reviews</h2>
-              <div className="mb-6 border-b pb-6">
-                <div className="flex items-center gap-4">
-                  <span className="text-4xl font-bold">{salon.rating}</span>
-                  <div className="flex-col">
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`h-5 w-5 ${i < Math.floor(salon.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                      ))}
-                    </div>
-                    <p className="text-sm text-muted-foreground">Based on {salon.reviewCount} reviews</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                {salon.reviews.map(review => (
-                  <div key={review.author} className="flex gap-4">
-                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold">
-                      {review.author.charAt(0)}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold">{review.author}</p>
-                      <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                          ))}
-                        </div>
-                        <span>·</span>
-                        <span>{new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                      </div>
-                      <p className="text-muted-foreground">{review.text}</p>
-                    </div>
-                  </div>
+              <h2 className="text-3xl font-bold mb-6">Testimonials</h2>
+              <div className="grid md:grid-cols-2 gap-6">
+                {salon.testimonials.map((testimonial, index) => (
+                  <Card key={index} className="bg-secondary/50">
+                    <CardContent className="p-6">
+                      <p className="italic text-muted-foreground">"{testimonial.quote}"</p>
+                      <p className="font-semibold mt-4 text-right">- {testimonial.author}</p>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
-              <Button variant="outline" className="w-full mt-6">See all reviews</Button>
+            </section>
+
+            <section id="reviews">
+              <h2 className="text-3xl font-bold mb-6">Reviews</h2>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-bold">{salon.rating}</span>
+                      <div className="flex">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`h-5 w-5 ${i < Math.floor(salon.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{salon.reviewCount} reviews</p>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {salon.reviews.map(review => (
+                    <div key={review.author} className="border-b pb-4 last:border-b-0">
+                      <div className="flex items-center justify-between mb-1">
+                          <p className="font-semibold">{review.author}</p>
+                          <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                  <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                              ))}
+                          </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{review.text}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             </section>
 
             <section>
@@ -333,6 +361,7 @@ export default function SalonDetailsPage() {
 
           </div>
 
+          {/* Right Sticky Column */}
           <div className="lg:sticky top-20 self-start space-y-4">
             <Card>
               <CardHeader>
@@ -410,4 +439,4 @@ export default function SalonDetailsPage() {
     </PageContainer>
   );
 }
-
+```
