@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useParams } from "next/navigation";
@@ -243,7 +244,7 @@ const nearbySalons = [
   },
 ];
 
-const serviceCategories = ["All", "Hair", "Skin", "Nails", "Body"];
+const serviceCategories = ["All", "Hair", "Skin", "Nails", "Body", "Massage", "Waxing", "Specialty"];
 
 export default function SalonDetailsPage() {
   const params = useParams();
@@ -296,9 +297,9 @@ export default function SalonDetailsPage() {
 
         {/* Compact Bento Grid Hero Gallery */}
         <section className="py-6">
-          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-40 md:h-96">
+          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-40 md:h-64 lg:h-96">
             <div
-              className="col-span-6 md:col-span-3 row-span-2 rounded-md overflow-hidden group cursor-pointer"
+              className="col-span-4 md:col-span-3 row-span-2 rounded-md overflow-hidden group cursor-pointer"
               onClick={() => openGalleryModal(salon.images[0])}
             >
               <Image
@@ -311,20 +312,7 @@ export default function SalonDetailsPage() {
               />
             </div>
             <div
-              className="col-span-6 md:col-span-1 row-span-1 rounded-md overflow-hidden group cursor-pointer"
-              onClick={() => openGalleryModal(salon.images[0])}
-            >
-              <Image
-                src={salon.images[0]}
-                alt={salon.name}
-                width={800}
-                height={600}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="luxury salon interior main view"
-              />
-            </div>
-            <div
-              className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer"
+              className="col-span-2 md:col-span-1 row-span-1 rounded-md overflow-hidden group cursor-pointer"
               onClick={() => openGalleryModal(salon.images[1])}
             >
               <Image
@@ -346,28 +334,41 @@ export default function SalonDetailsPage() {
                 width={400}
                 height={300}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="salon detail photo"
+                data-ai-hint="salon treatment room"
               />
-              {salon.images.length > 3 && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <span className="text-white font-semibold text-sm">
-                    +{salon.images.length - 3} more
-                  </span>
-                </div>
-              )}
+            </div>
+             <div
+              className="col-span-2 md:col-span-1 row-span-1 rounded-md overflow-hidden group cursor-pointer"
+              onClick={() => openGalleryModal(salon.images[3])}
+            >
+              <Image
+                src={salon.images[3]}
+                alt={`${salon.name} view 4`}
+                width={400}
+                height={300}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                data-ai-hint="salon product display"
+              />
             </div>
             <div
-              className="col-span-6 md:col-span-1 row-span-1 rounded-md overflow-hidden group cursor-pointer"
+              className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
               onClick={() => openGalleryModal(salon.images[0])}
             >
               <Image
                 src={salon.images[0]}
-                alt={salon.name}
-                width={800}
-                height={600}
+                alt={`${salon.name} view 1`}
+                width={400}
+                height={300}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="luxury salon interior main view"
+                data-ai-hint="salon reception area"
               />
+              {salon.images.length > 4 && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <span className="text-white font-semibold text-sm">
+                    +{salon.images.length - 4} more
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -377,40 +378,31 @@ export default function SalonDetailsPage() {
           {/* Left Scrolling Column */}
           <div className="lg:col-span-2 space-y-16">
             {/* About Section */}
-            <section id="about" className="">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-3xl font-bold">
-                    About the Salon
-                  </CardTitle>
-                  <CardDescription className="text-muted-foreground pt-2">
-                    Discover the story and values behind our brand.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground leading-relaxed mb-6">
-                    {salon.description}
-                  </p>
-                  <div className="grid sm:grid-cols-3 gap-6 text-center">
-                    {salon.stats.map((stat) => (
-                      <div
-                        key={stat.label}
-                        className="bg-secondary/50 p-4 rounded-lg"
-                      >
-                        <p className="text-3xl font-bold text-primary">
-                          {stat.value}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {stat.label}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+            <section id="about">
+               <Card>
+                  <CardHeader>
+                    <CardTitle className="text-3xl font-bold">About {salon.name}</CardTitle>
+                     <CardDescription>
+                        Discover the story and values behind our brand.
+                     </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                     <p className="text-muted-foreground leading-relaxed">
+                        {salon.mission}
+                     </p>
+                     <div className="grid sm:grid-cols-3 gap-6 text-center">
+                        {salon.stats.map((stat) => (
+                           <div key={stat.label} className="bg-secondary/50 p-4 rounded-lg">
+                              <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                              <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                           </div>
+                        ))}
+                     </div>
+                  </CardContent>
+               </Card>
             </section>
 
-            {/* Offers Section  */}
+            {/* Offers Section */}
             <section id="offers">
               <h2 className="text-3xl font-bold mb-2">Offers Available</h2>
               <p className="text-muted-foreground mb-6">
@@ -429,7 +421,7 @@ export default function SalonDetailsPage() {
                       </CardHeader>
                       <CardContent className="flex-grow">
                         <p className="text-sm text-muted-foreground">
-                          {offer.description} Lorem, ipsum dolor sit amet consectetur adipisicing elit. Labore, in.
+                          {offer.description}
                         </p>
                       </CardContent>
                       <CardFooter>
@@ -442,7 +434,7 @@ export default function SalonDetailsPage() {
                 })}
               </div>
             </section>
-
+            
             <section id="services">
               <h2 className="text-3xl font-bold mb-2">Services Offered</h2>
               <p className="text-muted-foreground mb-6">
@@ -455,20 +447,22 @@ export default function SalonDetailsPage() {
                     onValueChange={setActiveServiceTab}
                     className="w-full"
                   >
-                    <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 bg-secondary/50 rounded-lg p-1">
-                      {serviceCategories.map((cat) => (
-                        <TabsTrigger
-                          key={cat}
-                          value={cat}
-                          className="text-xs sm:text-sm"
-                        >
-                          {cat}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
+                    <div className="relative">
+                      <TabsList className="relative flex w-full overflow-x-auto overflow-y-hidden no-scrollbar rounded-lg p-1">
+                        {serviceCategories.map((cat) => (
+                          <TabsTrigger
+                            key={cat}
+                            value={cat}
+                            className="flex-shrink-0 text-xs sm:text-sm"
+                          >
+                            {cat}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                    </div>
                   </Tabs>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 pt-0">
                   {filteredServices.map((service) => (
                     <div
                       key={service.name}
@@ -503,53 +497,35 @@ export default function SalonDetailsPage() {
               </p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {salon.products.map((product) => (
-                  <Card
-                    key={product.id}
-                    className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left"
-                  >
-                    <div className="relative aspect-square bg-gray-100">
-                      <Image
-                        src={product.image}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                        data-ai-hint={product.hint}
-                      />
-                      <Badge
-                        variant={product.stock > 0 ? "secondary" : "default"}
-                        className="absolute top-2 right-2 text-xs"
-                      >
-                        {product.stock > 0 ? `In Stock` : "Out of Stock"}
-                      </Badge>
-                    </div>
-                    <div className="p-3 flex flex-col flex-grow">
-                      <p className="text-xs font-bold text-primary mb-1">
-                        {product.brand}
-                      </p>
-                      <h4 className="text-sm font-semibold flex-grow mb-2">
-                        {product.name}
-                      </h4>
-                      <div className="flex justify-between items-center mt-auto">
-                        <p className="font-bold text-primary">
-                          ₹{product.price.toFixed(2)}
-                        </p>
-                        <div className="flex items-center gap-1">
-                          <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                          <span className="text-xs font-medium text-muted-foreground">
-                            {product.rating}
-                          </span>
+                    <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left">
+                        <div className="relative aspect-square bg-gray-100">
+                          <Image
+                            src={product.image}
+                            alt={product.name}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            data-ai-hint={product.hint}
+                          />
+                           <Badge variant={product.stock > 0 ? "secondary" : "default"} className="absolute top-2 right-2 text-xs">
+                              {product.stock > 0 ? `In Stock` : "Out of Stock"}
+                          </Badge>
                         </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full mt-2 text-xs"
-                      >
-                        <ShoppingCart className="h-3 w-3 mr-1" />
-                        Add to Cart
-                      </Button>
-                    </div>
-                  </Card>
+                        <div className="p-3 flex flex-col flex-grow">
+                          <p className="text-xs font-bold text-primary mb-1">{product.brand}</p>
+                          <h4 className="text-sm font-semibold flex-grow mb-2">{product.name}</h4>
+                          <div className="flex justify-between items-center mt-auto">
+                              <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>
+                              <div className="flex items-center gap-1">
+                                <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                                <span className="text-xs font-medium text-muted-foreground">{product.rating}</span>
+                              </div>
+                          </div>
+                           <Button size="sm" variant="outline" className="w-full mt-2 text-xs">
+                              <ShoppingCart className="h-3 w-3 mr-1" />
+                              Add to Cart
+                          </Button>
+                        </div>
+                    </Card>
                 ))}
               </div>
             </section>
@@ -584,66 +560,54 @@ export default function SalonDetailsPage() {
                 What our clients are saying about us.
               </p>
               <Card>
-                <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <h3 className="text-2xl font-semibold">Client Reviews</h3>
-                    <div className="flex items-center gap-4 mt-2">
-                      <div className="flex items-center gap-1">
-                        <span className="text-2xl font-bold">
-                          {salon.rating}
-                        </span>
-                        <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                      </div>
+                <CardHeader>
+                  <div className="flex items-center gap-4">
+                    <div className="text-4xl font-bold">{salon.rating}</div>
+                    <div>
+                      <StarRating rating={salon.rating} />
                       <p className="text-sm text-muted-foreground">
                         Based on {salon.reviewCount} reviews
                       </p>
                     </div>
                   </div>
-                  <Button variant="outline">Write a Review</Button>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-lg">
-                      {salon.rating.toFixed(1)}
-                    </span>
-                    <StarRating rating={salon.rating} />
-                    <p className="text-muted-foreground text-sm">
-                      ({salon.reviewCount} votes)
-                    </p>
-                  </div>
-                  <div className="space-y-4">
-                    {salon.reviews.map((review, index) => (
-                      <div key={index} className="border-t pt-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
-                              {review.author.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-sm">
-                                {review.author}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(review.date).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    day: "numeric",
-                                    month: "short",
-                                    year: "numeric",
-                                  }
-                                )}
-                              </p>
-                            </div>
+                  {salon.reviews.map((review, index) => (
+                    <div key={index} className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
+                            {review.author.charAt(0)}
                           </div>
-                          <StarRating rating={review.rating} />
+                          <div>
+                            <p className="font-semibold text-sm">
+                              {review.author}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(review.date).toLocaleDateString(
+                                "en-US",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                }
+                              )}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground italic">
-                          "{review.text}"
-                        </p>
+                        <StarRating rating={review.rating} />
                       </div>
-                    ))}
-                  </div>
+                      <p className="text-sm text-muted-foreground italic">
+                        "{review.text}"
+                      </p>
+                    </div>
+                  ))}
                 </CardContent>
+                <CardFooter>
+                  <Button variant="outline" className="w-full">
+                    Read All Reviews
+                  </Button>
+                </CardFooter>
               </Card>
             </section>
           </div>
@@ -698,8 +662,8 @@ export default function SalonDetailsPage() {
             </Card>
           </div>
         </div>
-
-        {/* Nearby Salons Section - Outside 2-column layout */}
+        
+         {/* Nearby Salons Section - Outside 2-column layout */}
         <section id="nearby-salons" className="py-16">
           <div className="text-start mb-12">
             <h2 className="text-3xl font-bold mb-4">Nearby Salons</h2>
@@ -722,8 +686,6 @@ export default function SalonDetailsPage() {
                       alt={salon.title}
                       fill
                       className="object-cover"
-                      placeholder="blur"
-                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+Wj2he"
                     />
                     <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <Star className="h-3 w-3 fill-yellow-300 text-yellow-300" />
