@@ -152,25 +152,59 @@ export default function SalonDetailsPage() {
         </section>
 
         {/* About Section */}
-        <section className="my-8 py-16 bg-secondary/50 rounded-lg">
-          <div className="grid md:grid-cols-2 gap-12 items-center px-8">
-            <div className="space-y-4">
-              <h2 className="text-3xl font-bold">About the Salon</h2>
+        <section className="my-12 py-20 bg-secondary/50 rounded-2xl">
+          <div className="grid md:grid-cols-2 gap-16 items-center px-8 lg:px-12">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Badge variant="secondary" className="mb-2 px-3 py-1 text-sm font-medium">
+                  Our Story
+                </Badge>
+                <h2 className="text-4xl font-bold font-headline leading-tight">About the Salon</h2>
+                <div className="w-16 h-1 bg-primary rounded-full"></div>
+              </div>
               <p className="text-lg text-muted-foreground leading-relaxed">{salon.description}</p>
+              <div className="pt-4">
+                <Button variant="outline">
+                  Learn More 
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 bg-background rounded-lg shadow-sm">
-                <Award className="h-8 w-8 text-primary" />
-                <div>
-                  <h4 className="font-semibold">Top Rated</h4>
-                  <p className="text-sm text-muted-foreground">For outstanding customer satisfaction.</p>
+            <div className="space-y-6">
+              <div className="grid gap-4">
+                <div className="flex items-center gap-4 p-6 bg-background rounded-lg shadow-sm border">
+                  <div className="flex-shrink-0 p-3 bg-primary/10 rounded-lg">
+                    <Award className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-lg">Top Rated</h4>
+                    <p className="text-sm text-muted-foreground mt-1">For outstanding customer satisfaction.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4 p-6 bg-background rounded-lg shadow-sm border">
+                  <div className="flex-shrink-0 p-3 bg-primary/10 rounded-lg">
+                    <Shield className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-lg">Health & Safety Certified</h4>
+                    <p className="text-sm text-muted-foreground mt-1">Your well-being is our priority.</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-4 bg-background rounded-lg shadow-sm">
-                <Shield className="h-8 w-8 text-primary" />
-                <div>
-                  <h4 className="font-semibold">Health & Safety Certified</h4>
-                  <p className="text-sm text-muted-foreground">Your well-being is our priority.</p>
+              
+              <div className="flex items-center justify-between pt-4 px-2">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">250+</div>
+                  <div className="text-sm text-muted-foreground">Happy Clients</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">4.9</div>
+                  <div className="text-sm text-muted-foreground">Average Rating</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary">5+</div>
+                  <div className="text-sm text-muted-foreground">Years Experience</div>
                 </div>
               </div>
             </div>
@@ -299,7 +333,7 @@ export default function SalonDetailsPage() {
 
           </div>
 
-          <div className="lg:sticky top-8 self-start space-y-8">
+          <div className="lg:sticky top-20 self-start space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Book an Appointment</CardTitle>
@@ -376,3 +410,4 @@ export default function SalonDetailsPage() {
     </PageContainer>
   );
 }
+
