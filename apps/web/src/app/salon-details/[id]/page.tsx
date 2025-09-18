@@ -37,6 +37,7 @@ import {
   Calendar,
   Gift,
   Percent,
+  Share,
 } from "lucide-react";
 import {
   Dialog,
@@ -59,7 +60,7 @@ const salon = {
   description:
     "An oasis of tranquility and relaxation, offering a wide range of beauty and wellness services. Our expert therapists and state-of-the-art facilities ensure an unparalleled experience.",
   mission:
-    "To enhance beauty and wellness through personalized care and high-quality services, creating a serene escape for every client.",
+    "To enhance beauty and wellness through personalized care and high-quality services, creating a serene escape for every client. Lorem, ipsum dolor sit amet consectetur adipisicing elit. Illo vel cumque consequuntur. Officiis similique exercitationem, ducimus doloribus nostrum recusandae rem esse ullam quae id laborum ad fugiat nihil amet. Corrupti quisquam vitae perspiciatis porro incidunt velit impedit cumque alias assumenda. Earum aliquid soluta neque, laboriosam ?",
   whyChooseUs: [
     "Expert & Certified Staff",
     "Premium & Organic Products",
@@ -70,6 +71,7 @@ const salon = {
   stats: [
     { value: "10+", label: "Years of Experience" },
     { value: "5k+", label: "Happy Clients" },
+    { value: "15+", label: "Services Available" },
     { value: "15+", label: "Expert Staff" },
   ],
   images: [
@@ -279,18 +281,32 @@ export default function SalonDetailsPage() {
       <div className="container mx-auto px-4">
         {/* Salon Name and Basic Info */}
         <section className="py-8 border-b">
-          <h1 className="text-4xl font-bold font-headline mb-4">
-            {salon.name}
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Star className="h-5 w-5 text-yellow-400 fill-current" />
-              <span className="font-semibold">{salon.rating}</span>
-              <span>({salon.reviewCount} reviews)</span>
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1">
+              <h1 className="text-5xl font-bold font-headline mb-4">
+                {salon.name}
+              </h1>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                  <span className="font-semibold">{salon.rating}</span>
+                  <span>({salon.reviewCount} reviews)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  <span>{salon.address}</span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5" />
-              <span>{salon.address}</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                Like
+              </Button>
+              <Button size="sm" variant="outline" className="flex items-center gap-2">
+                <Share className="h-4 w-4" />
+                Share
+              </Button>
             </div>
           </div>
         </section>
@@ -379,32 +395,30 @@ export default function SalonDetailsPage() {
           <div className="lg:col-span-2 space-y-16">
             {/* About Section */}
             <section id="about">
-               <Card>
-                  <CardHeader>
-                    <CardTitle className="text-3xl font-bold">About {salon.name}</CardTitle>
-                     <CardDescription>
+               
+                    <h2 className="text-4xl font-bold mb-2">About {salon.name}</h2>
+                     <p className="text-muted-foreground mb-6">
                         Discover the story and values behind our brand.
-                     </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
+                     </p>
+               
+                  <div className="space-y-8">
                      <p className="text-muted-foreground leading-relaxed">
                         {salon.mission}
                      </p>
-                     <div className="grid sm:grid-cols-3 gap-6 text-center">
+                     <div className="grid sm:grid-cols-4 gap-6 text-center">
                         {salon.stats.map((stat) => (
                            <div key={stat.label} className="bg-secondary/50 p-4 rounded-lg">
-                              <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                              <p className="text-4xl font-bold text-primary">{stat.value}</p>
                               <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
                            </div>
                         ))}
                      </div>
-                  </CardContent>
-               </Card>
+                  </div>
             </section>
 
             {/* Offers Section */}
             <section id="offers">
-              <h2 className="text-3xl font-bold mb-2">Offers Available</h2>
+              <h2 className="text-4xl font-bold mb-2">Offers Available</h2>
               <p className="text-muted-foreground mb-6">
                 Take advantage of our special offers and packages.
               </p>
@@ -436,7 +450,7 @@ export default function SalonDetailsPage() {
             </section>
             
             <section id="services">
-              <h2 className="text-3xl font-bold mb-2">Services Offered</h2>
+              <h2 className="text-4xl font-bold mb-2">Services Offered</h2>
               <p className="text-muted-foreground mb-6">
                 Explore our wide range of professional services.
               </p>
@@ -489,7 +503,7 @@ export default function SalonDetailsPage() {
             </section>
 
             <section id="products">
-              <h2 className="text-3xl font-bold mb-2">
+              <h2 className="text-4xl font-bold mb-2">
                 Products We Use & Sell
               </h2>
               <p className="text-muted-foreground mb-6">
@@ -498,12 +512,12 @@ export default function SalonDetailsPage() {
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {salon.products.map((product) => (
                     <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left">
-                        <div className="relative aspect-square bg-gray-100">
+                        <div className="relative aspect-square overflow-hidden rounded-md m-3">
                           <Image
                             src={product.image}
                             alt={product.name}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="group-hover:scale-105 transition-transform duration-300 object-cover"
                             data-ai-hint={product.hint}
                           />
                            <Badge variant={product.stock > 0 ? "secondary" : "default"} className="absolute top-2 right-2 text-xs">
@@ -531,7 +545,7 @@ export default function SalonDetailsPage() {
             </section>
 
             <section id="team">
-              <h2 className="text-3xl font-bold mb-2">Meet Our Team</h2>
+              <h2 className="text-4xl font-bold mb-2">Meet Our Team</h2>
               <p className="text-muted-foreground mb-6">
                 Our talented and experienced professionals.
               </p>
@@ -555,7 +569,7 @@ export default function SalonDetailsPage() {
             </section>
 
             <section id="reviews">
-              <h2 className="text-3xl font-bold mb-2">Reviews</h2>
+              <h2 className="text-4xl font-bold mb-2">Reviews</h2>
               <p className="text-muted-foreground mb-6">
                 What our clients are saying about us.
               </p>
@@ -666,7 +680,7 @@ export default function SalonDetailsPage() {
          {/* Nearby Salons Section - Outside 2-column layout */}
         <section id="nearby-salons" className="py-16">
           <div className="text-start mb-12">
-            <h2 className="text-3xl font-bold mb-4">Nearby Salons</h2>
+            <h2 className="text-4xl font-bold mb-4">Nearby Salons</h2>
             <p className="text-muted-foreground text-lg">
               Explore other top-rated salons in the area.
             </p>
