@@ -164,8 +164,12 @@ export default function SalonDetailsPage() {
           </div>
         </section>
 
-        {/* About Section */}
-        <section className="py-8">
+        {/* Two-Column Layout Start */}
+        <div className="grid lg:grid-cols-3 gap-12 pt-8">
+          {/* Left Scrolling Column */}
+          <div className="lg:col-span-2 space-y-16">
+
+            <section className="py-8">
             <Card className="bg-secondary/50 p-8 rounded-2xl">
                 <CardHeader>
                     <h2 className="text-3xl font-bold font-headline leading-tight mb-4">About {salon.name}</h2>
@@ -184,10 +188,6 @@ export default function SalonDetailsPage() {
             </Card>
         </section>
 
-        {/* Two-Column Layout Start */}
-        <div className="grid lg:grid-cols-3 gap-12 pt-8">
-          {/* Left Scrolling Column */}
-          <div className="lg:col-span-2 space-y-16">
             <section>
               <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
               <Card>
@@ -264,20 +264,6 @@ export default function SalonDetailsPage() {
                       <h4 className="font-semibold">{member.name}</h4>
                       <p className="text-sm text-primary">{member.role}</p>
                     </div>
-                  </Card>
-                ))}
-              </div>
-            </section>
-
-            <section>
-              <h2 className="text-3xl font-bold mb-6">Testimonials</h2>
-              <div className="grid md:grid-cols-2 gap-6">
-                {salon.testimonials.map((testimonial, index) => (
-                  <Card key={index} className="bg-secondary/50">
-                    <CardContent className="p-6">
-                      <p className="italic text-muted-foreground">"{testimonial.quote}"</p>
-                      <p className="font-semibold mt-4 text-right">- {testimonial.author}</p>
-                    </CardContent>
                   </Card>
                 ))}
               </div>
