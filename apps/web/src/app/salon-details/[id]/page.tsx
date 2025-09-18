@@ -5,11 +5,12 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
-import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight, ShoppingCart, Tag } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight, ShoppingCart, Tag, Edit, Trash2, Eye } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Badge } from '@repo/ui/badge';
+import { cn } from '@repo/ui/cn';
 
 const salon = {
   id: '1',
@@ -17,7 +18,7 @@ const salon = {
   rating: 4.9,
   reviewCount: 250,
   address: '123 Luxury Ave, Suite 100, Beverly Hills, CA 90210',
-  description: 'An oasis of tranquility and relaxation, offering a wide range of beauty and wellness services. Our expert therapists and state-of-the-art facilities ensure an unparalleled experience. We are dedicated to providing the highest quality of service and care, making every visit a memorable one.',
+  description: 'An oasis of tranquility and relaxation, offering a wide range of beauty and wellness services. Our expert therapists and state-of-the-art facilities ensure an unparalleled experience.',
   mission: 'To enhance beauty and wellness through personalized care and high-quality services, creating a serene escape for every client.',
   whyChooseUs: [
     'Expert & Certified Staff',
@@ -62,9 +63,9 @@ const salon = {
     { quote: "An incredibly relaxing and professional atmosphere. Highly recommend the deep tissue massage.", author: "John D." },
   ],
   reviews: [
-    { author: "Amanda G.", rating: 5, text: "Loved the experience! Will be back soon.", date: '2024-08-20T10:00:00Z' },
-    { author: "Robert K.", rating: 4, text: "Great service, but a bit pricey.", date: '2024-08-18T14:30:00Z' },
-    { author: "Ikbal Z.", rating: 5, text: "1st time datang potong sini , barber abg kamil mmg sangat profesional dari segi knowledge and skill...", date: '2024-08-15T19:03:00Z' },
+    { author: "Ikbal Z.", rating: 5, date: '2025-09-14T19:03:00Z', text: "1st time datang potong sini , barber abg kamil mmg sangat profesional dari segi knowledge and skill..."},
+    { author: "Amanda G.", rating: 5, date: '2024-08-20T10:00:00Z', text: 'Loved the experience! Will be back soon.' },
+    { author: "Robert K.", rating: 4, date: '2024-08-18T14:30:00Z', text: 'Great service, but a bit pricey.' },
   ],
   workingHours: [
     { day: 'Monday - Friday', hours: '9:00 AM - 8:00 PM' },
@@ -90,6 +91,14 @@ export default function SalonDetailsPage() {
     setMainImage(image);
     setIsGalleryModalOpen(true);
   };
+  
+  const StarRating = ({ rating }: { rating: number }) => (
+    <div className="flex items-center gap-1">
+      {[...Array(5)].map((_, i) => (
+          <Star key={i} className={`h-4 w-4 ${i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+      ))}
+    </div>
+  );
 
   return (
     <PageContainer padding="none">
@@ -112,7 +121,7 @@ export default function SalonDetailsPage() {
 
         {/* Compact Bento Grid Hero Gallery */}
         <section className="py-6">
-          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-40 md:h-56">
+          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-40 md:h-[22rem]">
             <div className="col-span-6 md:col-span-4 row-span-2 rounded-md overflow-hidden group cursor-pointer" onClick={() => openGalleryModal(salon.images[0])}>
               <Image 
                 src={salon.images[0]} 
@@ -160,17 +169,14 @@ export default function SalonDetailsPage() {
           {/* Left Scrolling Column */}
           <div className="lg:col-span-2 space-y-16">
             
-            {/* About Section */}
             <section id="about">
-              <div className="border-y-2 border-dashed border-gray-300 p-2">
-                <div className="border-y-2 border-dashed border-gray-300 p-8 text-center bg-secondary/30">
-                  <div className="border inline-block px-4 py-2 mb-6 font-headline text-2xl tracking-widest uppercase">
-                    About
-                  </div>
-                  <p className="max-w-3xl mx-auto text-muted-foreground leading-relaxed mb-8">
-                    {salon.description}
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-8">
+              <h2 className="text-3xl font-bold mb-2">About the Salon</h2>
+              <p className="text-muted-foreground mb-6">Discover the story and values behind our brand.</p>
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="text-xl font-semibold mb-3">Our Mission</h3>
+                  <p className="text-muted-foreground leading-relaxed mb-6">{salon.mission}</p>
+                  <div className="grid sm:grid-cols-3 gap-6 text-center">
                     {salon.stats.map(stat => (
                       <div key={stat.label}>
                         <p className="text-3xl font-bold text-primary">{stat.value}</p>
@@ -178,16 +184,17 @@ export default function SalonDetailsPage() {
                       </div>
                     ))}
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </section>
 
             <section id="services">
-              <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
+              <h2 className="text-3xl font-bold mb-2">Services Offered</h2>
+              <p className="text-muted-foreground mb-6">Explore our wide range of professional services.</p>
               <Card>
                 <CardHeader>
-                  <Tabs value={activeServiceTab} onValueChange={setActiveServiceTab}>
-                    <TabsList>
+                  <Tabs value={activeServiceTab} onValueChange={setActiveServiceTab} className="w-full">
+                    <TabsList className="grid w-full grid-cols-3 md:grid-cols-5">
                       {serviceCategories.map(cat => (
                         <TabsTrigger key={cat} value={cat}>{cat}</TabsTrigger>
                       ))}
@@ -212,10 +219,11 @@ export default function SalonDetailsPage() {
             </section>
             
             <section id="products">
-              <h2 className="text-3xl font-bold mb-6">Products We Use & Sell</h2>
+              <h2 className="text-3xl font-bold mb-2">Products We Use & Sell</h2>
+              <p className="text-muted-foreground mb-6">High-quality products available for purchase.</p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {salon.products.map(product => (
-                  <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-center">
+                  <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
                     <div className="relative aspect-square bg-gray-100">
                       <Image 
                         src={product.image} 
@@ -224,11 +232,11 @@ export default function SalonDetailsPage() {
                         className="object-cover group-hover:scale-105 transition-transform"
                         data-ai-hint={product.hint} 
                       />
-                      <Badge variant={product.stock > 0 ? "secondary" : "destructive"} className="absolute top-2 left-2 text-xs">
-                        {product.stock > 0 ? `${product.stock} in Stock` : 'Out of Stock'}
-                      </Badge>
+                       <Badge variant={product.stock > 0 ? "secondary" : "destructive"} className="absolute top-2 left-2 text-xs">
+                          {product.stock > 0 ? `In Stock` : 'Out of Stock'}
+                        </Badge>
                     </div>
-                    <div className="p-3 flex flex-col flex-grow">
+                    <div className="p-3 flex flex-col flex-grow text-left">
                       <p className="text-xs text-muted-foreground">{product.brand}</p>
                       <h4 className="font-semibold text-sm flex-grow my-1">{product.name}</h4>
                       <p className="font-bold text-primary text-base mb-2">₹{product.price.toFixed(2)}</p>
@@ -243,7 +251,8 @@ export default function SalonDetailsPage() {
             </section>
 
             <section id="team">
-              <h2 className="text-3xl font-bold mb-6">Meet Our Team</h2>
+              <h2 className="text-3xl font-bold mb-2">Meet Our Team</h2>
+              <p className="text-muted-foreground mb-6">Our talented and experienced professionals.</p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {salon.staff.map(member => (
                   <div key={member.name} className="text-center group">
@@ -255,12 +264,8 @@ export default function SalonDetailsPage() {
                         className="object-cover" 
                         data-ai-hint={member.hint} 
                       />
-                      <div className="absolute inset-0 rounded-full border-4 border-transparent group-hover:border-primary/50 transition-all"></div>
                     </div>
-                    <div className="relative inline-block">
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4/5 h-1 bg-primary blur opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
-                        <h4 className="font-semibold relative">{member.name}</h4>
-                    </div>
+                    <h4 className="font-semibold">{member.name}</h4>
                     <p className="text-sm text-primary">{member.role}</p>
                   </div>
                 ))}
@@ -268,10 +273,11 @@ export default function SalonDetailsPage() {
             </section>
 
             <section id="reviews">
-              <h2 className="text-3xl font-bold mb-6">Reviews</h2>
+              <h2 className="text-3xl font-bold mb-2">Reviews</h2>
+              <p className="text-muted-foreground mb-6">What our clients are saying about us.</p>
               <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
                             <h3 className="text-2xl font-semibold">Client Reviews</h3>
                             <div className="flex items-center gap-4 mt-2">
@@ -288,8 +294,8 @@ export default function SalonDetailsPage() {
                 <CardContent className="space-y-6">
                   {salon.reviews.map(review => (
                     <div key={review.author} className="border-b pb-4 last:border-b-0">
-                      <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
+                      <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
                                 {review.author.charAt(0)}
                             </div>
@@ -300,11 +306,7 @@ export default function SalonDetailsPage() {
                                 </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                              {[...Array(5)].map((_, i) => (
-                                  <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                              ))}
-                          </div>
+                          <StarRating rating={review.rating} />
                       </div>
                       <p className="text-sm text-muted-foreground italic">"{review.text}"</p>
                     </div>
@@ -312,21 +314,7 @@ export default function SalonDetailsPage() {
                 </CardContent>
               </Card>
             </section>
-
-            <section id="nearby-salons">
-              <h2 className="text-3xl font-bold mb-6">Nearby Salons</h2>
-              <div className="relative h-96 rounded-md overflow-hidden">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m16!1m12!1m3!1d241317.11609822!2d72.8776559!3d19.0759837!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!2m1!1ssalon!5e0!3m2!1sen!2sin!4v1672846875765!5m2!1sen!2sin"
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen={false}
-                  loading="lazy"
-                  title="Nearby Salons Map"
-                ></iframe>
-              </div>
-            </section>
+            
           </div>
 
           {/* Right Sticky Column */}
