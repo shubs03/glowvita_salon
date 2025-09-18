@@ -112,7 +112,7 @@ export default function SalonDetailsPage() {
         {/* Compact Bento Grid Hero Gallery */}
         <section className="py-6">
           <div className="grid grid-cols-6 grid-rows-2 gap-2 h-48 md:h-64">
-            <div className="col-span-6 md:col-span-4 row-span-2 rounded-lg overflow-hidden group cursor-pointer" onClick={() => openGalleryModal(salon.images[0])}>
+            <div className="col-span-6 md:col-span-4 row-span-2 rounded-md overflow-hidden group cursor-pointer" onClick={() => openGalleryModal(salon.images[0])}>
               <Image 
                 src={salon.images[0]} 
                 alt={salon.name} 
@@ -123,7 +123,7 @@ export default function SalonDetailsPage() {
               />
             </div>
             
-            <div className="hidden md:block col-span-2 row-span-1 rounded-lg overflow-hidden group cursor-pointer" 
+            <div className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer" 
                  onClick={() => openGalleryModal(salon.images[1])}>
               <Image 
                 src={salon.images[1]} 
@@ -135,7 +135,7 @@ export default function SalonDetailsPage() {
               />
             </div>
             
-            <div className="hidden md:block col-span-2 row-span-1 rounded-lg overflow-hidden group cursor-pointer relative" 
+            <div className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative" 
                  onClick={() => openGalleryModal(salon.images[2])}>
               <Image 
                 src={salon.images[2]} 
@@ -170,8 +170,8 @@ export default function SalonDetailsPage() {
           <div className="lg:col-span-2 space-y-16">
 
             {/* About Section */}
-        <section className="py-8">
-          <Card className="bg-secondary/50 p-8 rounded-2xl">
+        <section className="">
+          <Card className="bg-secondary/50 p-8 rounded-md">
               <CardHeader>
                   <h2 className="text-3xl font-bold font-headline leading-tight mb-4">About {salon.name}</h2>
               </CardHeader>
@@ -203,7 +203,7 @@ export default function SalonDetailsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {filteredServices.map(service => (
-                    <div key={service.name} className="flex justify-between items-center p-4 border rounded-lg hover:bg-secondary/50">
+                    <div key={service.name} className="flex justify-between items-center p-4 border rounded-md hover:bg-secondary/50">
                       <div>
                         <h3 className="font-semibold">{service.name}</h3>
                         <p className="text-sm text-muted-foreground">{service.duration} min</p>
@@ -313,7 +313,7 @@ export default function SalonDetailsPage() {
 
             <section>
               <h2 className="text-3xl font-bold mb-6">Nearby Salons</h2>
-              <div className="relative h-96 rounded-lg overflow-hidden">
+              <div className="relative h-96 rounded-md overflow-hidden">
                 <iframe
                   src="https://www.google.com/maps/embed?pb=!1m16!1m12!1m3!1d241317.11609822!2d72.8776559!3d19.0759837!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!2m1!1ssalon!5e0!3m2!1sen!2sin!4v1672846875765!5m2!1sen!2sin"
                   width="100%"
@@ -335,7 +335,7 @@ export default function SalonDetailsPage() {
                 <CardDescription>Choose your service and book online.</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button size="lg" className="w-full">Book Now</Button>
+                <Button size="lg" className="w-full rounded-sm">Book Now</Button>
                 <p className="text-xs text-center mt-2 text-muted-foreground">Instant confirmation</p>
               </CardContent>
             </Card>
@@ -378,7 +378,7 @@ export default function SalonDetailsPage() {
             className="relative max-w-4xl w-full"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+            <div className="relative aspect-video bg-black rounded-md overflow-hidden">
               <Image 
                 src={mainImage} 
                 alt="Gallery View" 
