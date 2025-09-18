@@ -57,7 +57,7 @@ export default function HomePage() {
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-headline mb-6 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
                 Unlock Your Salon's Full Potential
               </h2>
-              <p className="text-muted-foreground text-xl max-w-4xl mx-auto leading-relaxed">
+              <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
                 See the real-world impact of using our comprehensive salon management platform. These metrics represent actual improvements from our satisfied clients across the globe.
               </p>
             </div>
@@ -90,10 +90,16 @@ export default function HomePage() {
                 description="Automate appointment reminders, payment processing, and administrative tasks so you can focus on your craft and clients."
                 icon={<Clock />}
               />
+              <AdvantageCard
+                stat="50%"
+                title="Less Admin Time"
+                description="Automate appointment reminders, payment processing, and administrative tasks so you can focus on your craft and clients."
+                icon={<Clock />}
+              />
             </div>
             
-            <div className="flex justify-center mt-12">
-              <div className="flex gap-4 bg-background/80 backdrop-blur-sm p-3 rounded-2xl shadow-lg border border-border/50">
+            <div className="flex justify-start mt-12">
+              <div className="flex gap-4 justify-center">
                 <Button
                   variant="outline"
                   size="icon"

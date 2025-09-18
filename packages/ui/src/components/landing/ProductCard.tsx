@@ -27,7 +27,7 @@ export function ProductCard({
 }: ProductCardProps) {
   return (
     <CardContainer className="inter-var">
-      <CardBody className="bg-gray-50 relative group/card dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[20rem] h-auto rounded-xl p-6 border overflow-hidden">
+      <CardBody className="bg-gray-50 relative group/card dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[20rem] h-auto rounded-lg p-6 border overflow-hidden">
         
         {/* Vendor Info */}
         <CardItem
@@ -66,7 +66,7 @@ export function ProductCard({
 
         {/* Product Image */}
         <CardItem translateZ="100" className="w-full mb-4">
-          <div className="relative aspect-square w-full overflow-hidden rounded-xl">
+          <div className="relative aspect-square w-full overflow-hidden rounded-md">
             <img
               src={image}
               alt={name}
@@ -92,7 +92,7 @@ export function ProductCard({
           <CardItem
             translateZ={20}
             as="button"
-            className="px-4 py-2 rounded-xl bg-black dark:bg-white dark:text-black text-white text-xs font-bold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors duration-200"
+            className="px-4 py-2 rounded-md bg-black dark:bg-white dark:text-black text-white text-xs font-bold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors duration-200"
           >
             <ShoppingCart className="mr-2 h-4 w-4 inline" />
             Add

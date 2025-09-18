@@ -110,7 +110,7 @@ export function HeroSection() {
         >
           <Button
             size="lg"
-            className="relative px-8 py-4 text-base md:text-base font-semibold rounded-md min-w-[220px] group overflow-hidden border-0 shadow-2xl transition-all duration-300 hover:shadow-primary/30 hover:scale-105"
+            className="relative px-8 py-8 text-base md:text-base font-semibold rounded-md min-w-[220px] group overflow-hidden border-0 shadow-2xl transition-all duration-300 hover:shadow-primary/30 hover:scale-105"
             asChild
           >
             <Link href="/auth/register">
@@ -126,7 +126,7 @@ export function HeroSection() {
           <Button
             size="lg"
             variant="outline"
-            className="relative px-8 py-4 text-base md:text-base font-semibold rounded-md min-w-[220px] group overflow-hidden border-2 border-primary/20 hover:border-primary/40 bg-background/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            className="relative px-8 py-8 text-base md:text-base font-semibold rounded-md min-w-[220px] group overflow-hidden bg-background/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
             asChild
           >
             <Link href="#">
