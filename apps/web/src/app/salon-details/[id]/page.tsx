@@ -5,13 +5,12 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
-import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight, ShoppingCart, Tag, Edit, Trash2, Eye } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight, ShoppingCart, Tag, Edit, Trash2, Eye, Users, TrendingUp, Sparkles, Zap, Calendar } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Badge } from '@repo/ui/badge';
 import { cn } from '@repo/ui/cn';
-import { SalonCard } from '@/components/landing/SalonCard';
 
 const salon = {
   id: '1',
@@ -76,9 +75,50 @@ const salon = {
 };
 
 const nearbySalons = [
-  { name: 'Ethereal Beauty', rating: 4.8, location: 'Santa Monica', image: 'https://picsum.photos/seed/nearby1/600/400', hint: 'modern bright salon', services: ['Organic Facials', 'Aromatherapy'], price: '₹2,200+' },
-  { name: 'The Grooming Lounge', rating: 4.9, location: 'Downtown LA', image: 'https://picsum.photos/seed/nearby2/600/400', hint: 'classic barbershop interior', services: ['Hot Towel Shave', 'Classic Haircut'], price: '₹1,800+', topRated: true },
-  { name: 'Nail Nirvana', rating: 4.7, location: 'West Hollywood', image: 'https://picsum.photos/seed/nearby3/600/400', hint: 'chic nail art salon', services: ['Gel Manicure', 'Spa Pedicure'], price: '₹1,500+' },
+  {
+    icon: Sparkles,
+    title: "Luxe Hair Studio",
+    location: "Manhattan, NY",
+    rating: 4.9,
+    clients: "500+",
+    specialty: "Premium Hair Styling",
+    description: "Upscale salon specializing in color correction and luxury treatments",
+    growth: "+40% bookings",
+    image: "https://placehold.co/400x200/6366f1/ffffff?text=Luxe+Hair+Studio",
+  },
+  {
+    icon: Heart,
+    title: "Bella Vista Spa",
+    location: "Beverly Hills, CA",
+    rating: 5.0,
+    clients: "300+",
+    specialty: "Full-Service Day Spa",
+    description: "Award-winning spa with 15 treatment rooms and wellness packages",
+    growth: "+60% revenue",
+    image: "https://placehold.co/400x200/10b981/ffffff?text=Bella+Vista+Spa",
+  },
+  {
+    icon: Users,
+    title: "Modern Cuts Barbershop",
+    location: "Austin, TX (3 locations)",
+    rating: 4.8,
+    clients: "800+",
+    specialty: "Traditional & Modern Cuts",
+    description: "Local barbershop chain known for precision cuts and beard styling",
+    growth: "+25% client retention",
+    image: "https://placehold.co/400x200/475569/ffffff?text=Modern+Cuts",
+  },
+  {
+    icon: Star,
+    title: "Glamour Nails & Beauty",
+    location: "Miami, FL",
+    rating: 4.9,
+    clients: "450+",
+    specialty: "Nail Art & Extensions",
+    description: "Trendy nail salon featuring custom designs and gel treatments",
+    growth: "+35% revenue",
+    image: "https://placehold.co/400x200/ec4899/ffffff?text=Glamour+Nails",
+  },
 ];
 
 
@@ -326,17 +366,7 @@ export default function SalonDetailsPage() {
                     </CardContent>
                 </Card>
             </section>
-
-            <section id="nearby-salons">
-                <h2 className="text-3xl font-bold mb-2">Nearby Salons</h2>
-                <p className="text-muted-foreground mb-6">Explore other top-rated salons in the area.</p>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                {nearbySalons.map((salon, index) => (
-                    <SalonCard key={index} {...salon} />
-                ))}
-                </div>
-            </section>
-
+            
           </div>
 
           {/* Right Sticky Column */}
@@ -379,6 +409,78 @@ export default function SalonDetailsPage() {
             </Card>
           </div>
         </div>
+
+        {/* Nearby Salons Section - Outside 2-column layout */}
+        <section id="nearby-salons" className="py-16">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Nearby Salons</h2>
+            <p className="text-muted-foreground text-lg">Explore other top-rated salons in the area.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            {nearbySalons.map((salon, index) => {
+              const IconComponent = salon.icon;
+              return (
+                <div
+                  key={index}
+                  className="group rounded-md bg-background/30 hover:bg-background/50 border border-border/50 hover:border-border transition-all duration-300 hover:shadow-lg backdrop-blur-sm hover:-translate-y-1 overflow-hidden max-w-sm mx-auto"
+                >
+                  {/* Salon Image Header */}
+                  <div className="relative h-52 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+                    <Image
+                      src={salon.image}
+                      alt={salon.title}
+                      fill
+                      className="object-cover"
+                      placeholder="blur"
+                      blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+Wj2he"
+                    />
+                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <Star className="h-3 w-3 fill-yellow-300 text-yellow-300" />
+                      <span className="font-semibold text-white text-xs">
+                        {salon.rating}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card Content */}
+                  <div className="p-4">
+                    {/* Specialty Badge */}
+                    <div className="block px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-2 w-fit">
+                      {salon.specialty}
+                    </div>
+
+                    {/* Salon Title & Location */}
+                    <h3 className="text-lg font-semibold text-foreground mb-1 group-hover:text-primary transition-colors duration-300 text-left">
+                      {salon.title}
+                    </h3>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                      <MapPin className="h-3 w-3" />
+                      <span>{salon.location}</span>
+                    </div>
+
+                    {/* Description */}
+                    <p className="text-muted-foreground leading-relaxed text-xs mb-3 text-left">
+                      {salon.description}
+                    </p>
+
+                    {/* Stats Row */}
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3 text-primary" />
+                        <span className="text-muted-foreground">
+                          {salon.clients} clients
+                        </span>
+                      </div>
+                      <div className="text-green-600 font-medium">
+                        {salon.growth}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       </div>
 
       {isGalleryModalOpen && (
@@ -415,5 +517,7 @@ export default function SalonDetailsPage() {
         </div>
       )}
     </PageContainer>
+
+    
   );
 }
