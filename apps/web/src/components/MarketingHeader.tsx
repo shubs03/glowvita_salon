@@ -31,14 +31,28 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
     };
   }, []);
 
+  // Debug: log the current state
+  useEffect(() => {
+    console.log('Header state:', { isScrolled, isHomePage, shouldBeTransparent: !isScrolled && isHomePage });
+  }, [isScrolled, isHomePage]);
+
   return (
-    <header className={cn(
-      "sticky top-0 z-40 transition-all duration-300",
-      // Apply blurred background if scrolled OR if it's not the home page
-      isScrolled || !isHomePage
-        ? "bg-background/80 backdrop-blur-lg border-b border-border/50" 
-        : "bg-transparent border-b border-transparent"
-    )}>
+    <header 
+      className={cn(
+        "sticky top-0 z-40 transition-all duration-300",
+        // Apply blurred background if scrolled OR if it's not the home page
+        isScrolled || !isHomePage
+          ? " backdrop-blur-lg border-b border-border/50" 
+          : "bg-transparent border-b border-transparent",
+        // Ensure true transparency on home page when not scrolled
+        !isScrolled && isHomePage && "!bg-transparent backdrop-blur-none"
+      )}
+      style={
+        !isScrolled && isHomePage 
+          ? { backgroundColor: 'transparent', backdropFilter: 'none' }
+          : undefined
+      }
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between relative">
         <Link
           href="/"
