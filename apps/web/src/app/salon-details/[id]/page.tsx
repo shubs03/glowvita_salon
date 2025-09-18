@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
-import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight, Sparkles } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
@@ -97,8 +97,8 @@ export default function SalonDetailsPage() {
         </section>
 
         {/* Compact Bento Grid Hero Gallery */}
-        <section className="py-6 h-64 md:h-[400px]">
-          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-full">
+        <section className="py-6">
+          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-64 md:h-[450px]">
             <div className="col-span-6 md:col-span-4 row-span-2 rounded-lg overflow-hidden group cursor-pointer" onClick={() => openGalleryModal(salon.images[0])}>
               <Image 
                 src={salon.images[0]} 
@@ -139,62 +139,46 @@ export default function SalonDetailsPage() {
               )}
             </div>
           </div>
+          
+          <div className="md:hidden flex justify-center mt-4 space-x-2">
+            {salon.images.slice(0, 4).map((img, index) => (
+              <button
+                key={index}
+                className={`w-2 h-2 rounded-full transition-colors ${mainImage === img ? 'bg-primary' : 'bg-gray-300 hover:bg-gray-500'}`}
+                onClick={() => setMainImage(img)}
+              />
+            ))}
+          </div>
         </section>
 
         {/* About Section */}
-        <section className="my-8 py-16 bg-gradient-to-br from-secondary/30 via-secondary/10 to-background rounded-lg">
-          <div className="px-8">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold font-headline">About {salon.name}</h2>
-                <p className="text-lg text-muted-foreground leading-relaxed">{salon.description}</p>
-                <div className="grid grid-cols-2 gap-6 pt-4 border-t">
-                  <div>
-                    <h4 className="font-semibold mb-2">Why Choose Us?</h4>
-                    <ul className="space-y-2 text-muted-foreground">
-                      <li className="flex items-start gap-2"><Check className="h-5 w-5 text-primary mt-0.5" /><span>Expert & Certified Staff</span></li>
-                      <li className="flex items-start gap-2"><Check className="h-5 w-5 text-primary mt-0.5" /><span>Premium Quality Products</span></li>
-                      <li className="flex items-start gap-2"><Check className="h-5 w-5 text-primary mt-0.5" /><span>Luxurious & Hygienic Ambiance</span></li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold mb-2">Our Mission</h4>
-                    <p className="text-sm text-muted-foreground italic">
-                      "To provide an unparalleled sanctuary of beauty and wellness, where every client leaves feeling refreshed, confident, and utterly transformed."
-                    </p>
-                  </div>
+        <section className="my-8 py-16 bg-secondary/50 rounded-lg">
+          <div className="grid md:grid-cols-2 gap-12 items-center px-8">
+            <div className="space-y-4">
+              <h2 className="text-3xl font-bold">About the Salon</h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">{salon.description}</p>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-background rounded-lg shadow-sm">
+                <Award className="h-8 w-8 text-primary" />
+                <div>
+                  <h4 className="font-semibold">Top Rated</h4>
+                  <p className="text-sm text-muted-foreground">For outstanding customer satisfaction.</p>
                 </div>
               </div>
-              <div className="relative aspect-square rounded-xl overflow-hidden shadow-2xl">
-                <Image 
-                  src="https://picsum.photos/seed/about_salon/600/600" 
-                  alt="About the salon" 
-                  layout="fill" 
-                  objectFit="cover"
-                  data-ai-hint="calm salon atmosphere"
-                />
-              </div>
-            </div>
-            <div className="grid md:grid-cols-3 gap-8 text-center mt-16 pt-8 border-t">
-              <div>
-                <p className="text-4xl font-bold text-primary">10+</p>
-                <p className="text-muted-foreground mt-1">Years of Experience</p>
-              </div>
-              <div>
-                <p className="text-4xl font-bold text-primary">5k+</p>
-                <p className="text-muted-foreground mt-1">Happy Clients</p>
-              </div>
-              <div>
-                <p className="text-4xl font-bold text-primary">20+</p>
-                <p className="text-muted-foreground mt-1">Awards Won</p>
+              <div className="flex items-center gap-3 p-4 bg-background rounded-lg shadow-sm">
+                <Shield className="h-8 w-8 text-primary" />
+                <div>
+                  <h4 className="font-semibold">Health & Safety Certified</h4>
+                  <p className="text-sm text-muted-foreground">Your well-being is our priority.</p>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        <div className="grid lg:grid-cols-3 gap-12 mt-12">
+        <div className="grid lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-16">
-            {/* Services Section */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
               <Card>
@@ -224,7 +208,6 @@ export default function SalonDetailsPage() {
               </Card>
             </section>
             
-            {/* Products Section */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Products We Use & Sell</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -241,7 +224,6 @@ export default function SalonDetailsPage() {
               </div>
             </section>
 
-            {/* Meet Our Team Section */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Meet Our Team</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -259,70 +241,47 @@ export default function SalonDetailsPage() {
               </div>
             </section>
 
-            {/* Testimonials & Reviews Section */}
             <section>
-                <h2 className="text-3xl font-bold mb-6">Reviews</h2>
-                <Card className="p-6">
-                    <div className="flex flex-col sm:flex-row items-center gap-6 border-b pb-6 mb-6">
-                        <div className="text-center">
-                            <p className="text-5xl font-bold">{salon.rating}</p>
-                            <div className="flex justify-center mt-1">
-                                {[...Array(5)].map((_, i) => (
-                                    <Star key={i} className={`h-5 w-5 ${i < Math.floor(salon.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                                ))}
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-2">Based on {salon.reviewCount} reviews</p>
-                        </div>
-                        <div className="flex-1 w-full">
-                            <div className="flex items-center gap-2">
-                                <span className="w-12 text-sm">5 star</span>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5"><div className="bg-yellow-400 h-2.5 rounded-full" style={{width: '90%'}}></div></div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-12 text-sm">4 star</span>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5"><div className="bg-yellow-400 h-2.5 rounded-full" style={{width: '8%'}}></div></div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-12 text-sm">3 star</span>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5"><div className="bg-yellow-400 h-2.5 rounded-full" style={{width: '2%'}}></div></div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-12 text-sm">2 star</span>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5"><div className="bg-yellow-400 h-2.5 rounded-full" style={{width: '0%'}}></div></div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-12 text-sm">1 star</span>
-                                <div className="w-full bg-gray-200 rounded-full h-2.5"><div className="bg-yellow-400 h-2.5 rounded-full" style={{width: '0%'}}></div></div>
-                            </div>
-                        </div>
+              <h2 className="text-3xl font-bold mb-6">Reviews</h2>
+              <div className="mb-6 border-b pb-6">
+                <div className="flex items-center gap-4">
+                  <span className="text-4xl font-bold">{salon.rating}</span>
+                  <div className="flex-col">
+                    <div className="flex">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`h-5 w-5 ${i < Math.floor(salon.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                      ))}
                     </div>
-                    <div className="space-y-6">
-                        {salon.reviews.map(review => (
-                          <div key={review.author} className="flex gap-4">
-                              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold flex-shrink-0">
-                                  {review.author.charAt(0)}
-                              </div>
-                              <div className="flex-1">
-                                  <p className="font-semibold">{review.author}</p>
-                                  <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
-                                      <div className="flex">
-                                          {[...Array(5)].map((_, i) => (
-                                              <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                                          ))}
-                                      </div>
-                                      <span>·</span>
-                                      <span>{new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                                  </div>
-                                  <p className="text-muted-foreground">{review.text}</p>
-                              </div>
-                          </div>
-                        ))}
+                    <p className="text-sm text-muted-foreground">Based on {salon.reviewCount} reviews</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {salon.reviews.map(review => (
+                  <div key={review.author} className="flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold">
+                      {review.author.charAt(0)}
                     </div>
-                    <Button variant="outline" className="w-full mt-6">See all reviews</Button>
-                </Card>
+                    <div className="flex-1">
+                      <p className="font-semibold">{review.author}</p>
+                      <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                          ))}
+                        </div>
+                        <span>·</span>
+                        <span>{new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                      <p className="text-muted-foreground">{review.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" className="w-full mt-6">See all reviews</Button>
             </section>
 
-            {/* Nearby Salons Section */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Nearby Salons</h2>
               <div className="relative h-96 rounded-lg overflow-hidden">
