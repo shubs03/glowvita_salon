@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
-import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight, ShoppingCart, Tag, Edit, Trash2, Eye, Users, TrendingUp, Sparkles, Zap, Calendar } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight, ShoppingCart, Tag, Edit, Trash2, Eye, Users, TrendingUp, Sparkles, Zap, Calendar, Gift, Percent } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
@@ -58,20 +58,21 @@ const salon = {
     { name: 'Michael Chen', role: 'Massage Therapist', image: 'https://picsum.photos/seed/staff2/400/400', hint: 'male therapist portrait' },
     { name: 'Emily White', role: 'Esthetician', image: 'https://picsum.photos/seed/staff3/400/400', hint: 'female esthetician portrait' },
   ],
-  testimonials: [
-    { quote: "The best facial I've ever had. My skin is glowing!", author: "Sarah L." },
-    { quote: "An incredibly relaxing and professional atmosphere. Highly recommend the deep tissue massage.", author: "John D." },
-  ],
   reviews: [
-    { author: "Amanda G.", rating: 5, date: '2024-08-20T10:00:00Z', text: 'Loved the experience! Will be back soon.' },
-    { author: "Robert K.", rating: 4, date: '2024-08-18T14:30:00Z', text: 'Great service, but a bit pricey.' },
-    { author: "Ikbal Z.", rating: 5, date: '2025-09-14T19:03:00Z', text: "1st time datang potong sini , barber abg kamil mmg sangat profesional dari segi knowledge and skill..."},
+    { author: 'Amanda G.', rating: 5, date: '2024-08-20T10:00:00Z', text: 'Loved the experience! Will be back soon.' },
+    { author: 'Robert K.', rating: 4, date: '2024-08-18T14:30:00Z', text: 'Great service, but a bit pricey.' },
+    { author: 'Ikbal Z.', rating: 5, date: '2025-09-14T19:03:00Z', text: "1st time datang potong sini , barber abg kamil mmg sangat profesional dari segi knowledge and skill..."},
   ],
   workingHours: [
     { day: 'Monday - Friday', hours: '9:00 AM - 8:00 PM' },
     { day: 'Saturday', hours: '10:00 AM - 6:00 PM' },
     { day: 'Sunday', hours: 'Closed' },
   ],
+  offers: [
+    { title: 'Weekday Special', description: '20% off on all haircuts, Mon-Wed.', icon: Tag },
+    { title: 'First-Time Client', description: 'Get 15% off your first service with us.', icon: UserPlus },
+    { title: 'Bundle & Save', description: 'Book a facial and massage together and save 25%.', icon: Gift },
+  ]
 };
 
 const nearbySalons = [
@@ -207,30 +208,57 @@ export default function SalonDetailsPage() {
             </div>
           </div>
         </section>
+
+         {/* About Section */}
+        <section id="about" className="py-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-3xl font-bold">About the Salon</CardTitle>
+                    <CardDescription className="text-muted-foreground pt-2">Discover the story and values behind our brand.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground leading-relaxed mb-6">{salon.description}</p>
+                    <div className="grid sm:grid-cols-3 gap-6 text-center">
+                        {salon.stats.map(stat => (
+                        <div key={stat.label} className="bg-secondary/50 p-4 rounded-lg">
+                            <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                            <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                        </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        </section>
         
         {/* Main Content Area */}
         <div className="lg:grid lg:grid-cols-3 lg:gap-12 lg:items-start py-8">
           {/* Left Scrolling Column */}
           <div className="lg:col-span-2 space-y-16">
             
-            <section id="about">
-              <h2 className="text-3xl font-bold mb-2">About the Salon</h2>
-              <p className="text-muted-foreground mb-6">Discover the story and values behind our brand.</p>
-
-              <p className='text-muted-foreground text-lg mb-6'>Lorem ipsum dolor sit amet consectetur adipisicing elit. Aut possimus, asperiores, eos exercitationem molestiae deserunt doloremque laudantium quaerat cupiditate nostrum pariatur itaque temporibus veniam quam commodi voluptate praesentium quis aliquid! Velit, ipsam laboriosam quam porro cum alias maxime tenetur illo accusamus quaerat, eaque debitis doloremque sequi molestias aperiam veritatis ipsum! Soluta distinctio earum a in quam blanditiis exercitationem odio ducimus officia alias minus quae quod, laborum perspiciatis, ipsa accusantium molestiae expedita, numquam tenetur consequuntur voluptatibus! Expedita laborum quo ipsam quia repudiandae unde eaque minus veniam, quod tempora, delectus reprehenderit illo dicta maxime quaerat vitae ab quam eligendi ducimus totam voluptatum.</p>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="grid sm:grid-cols-3 gap-6 text-center">
-                    {salon.stats.map(stat => (
-                      <div key={stat.label}>
-                        <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                        <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+             <section id="offers">
+                <h2 className="text-3xl font-bold mb-2">Offers Available</h2>
+                <p className="text-muted-foreground mb-6">Take advantage of our special offers and packages.</p>
+                <div className="grid md:grid-cols-2 gap-6">
+                    {salon.offers.map((offer, index) => {
+                        const Icon = offer.icon;
+                        return (
+                            <Card key={index} className="flex flex-col">
+                                <CardHeader className="flex-row items-center gap-4">
+                                    <div className="bg-primary/10 text-primary p-3 rounded-full">
+                                        <Icon className="h-6 w-6" />
+                                    </div>
+                                    <CardTitle className="text-lg">{offer.title}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    <p className="text-sm text-muted-foreground">{offer.description}</p>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button variant="outline" size="sm">Claim Offer</Button>
+                                </CardFooter>
+                            </Card>
+                        );
+                    })}
+                </div>
             </section>
 
             <section id="services">
@@ -238,13 +266,13 @@ export default function SalonDetailsPage() {
               <p className="text-muted-foreground mb-6">Explore our wide range of professional services.</p>
               <Card>
                 <CardHeader>
-                  <Tabs value={activeServiceTab} onValueChange={setActiveServiceTab} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 bg-secondary/50 rounded-lg p-1">
-                      {serviceCategories.map(cat => (
-                        <TabsTrigger key={cat} value={cat} className="text-xs sm:text-sm">{cat}</TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </Tabs>
+                    <Tabs value={activeServiceTab} onValueChange={setActiveServiceTab} className="w-full">
+                        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 bg-secondary/50 rounded-lg p-1">
+                            {serviceCategories.map(cat => (
+                            <TabsTrigger key={cat} value={cat} className="text-xs sm:text-sm">{cat}</TabsTrigger>
+                            ))}
+                        </TabsList>
+                    </Tabs>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {filteredServices.map(service => (
@@ -268,36 +296,35 @@ export default function SalonDetailsPage() {
               <p className="text-muted-foreground mb-6">High-quality products available for purchase.</p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {salon.products.map(product => (
-                  <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left">
+                    <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left">
                     <div className="relative aspect-square bg-gray-100">
-                      <Image 
+                        <Image 
                         src={product.image} 
                         alt={product.name} 
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                         data-ai-hint={product.hint} 
-                      />
-                       <Badge variant={product.stock > 0 ? "secondary" : "default"} className="absolute top-2 right-2 text-xs">
-                          {product.stock > 0 ? `In Stock` : 'Out of Stock'}
+                        />
+                        <Badge variant={product.stock > 0 ? "secondary" : "default"} className="absolute top-2 right-2 text-xs">
+                            {product.stock > 0 ? `In Stock` : 'Out of Stock'}
                         </Badge>
                     </div>
                     <div className="p-3 flex flex-col flex-grow">
-                      <p className="text-xs font-bold bg-black/80 text-blue-300 rounded-full mb-2 px-2 py-0.5 text-center items-center w-fit">{product.brand}</p>
-                      <h4 className=" text-sm font-semibold flex-grow mb-1">{product.name}</h4>
-
-                      <div className="flex justify-between items-center">
-                        <p className="font-bold text-primary text-sm">₹{product.price.toFixed(2)}</p>
-                         <div className="flex items-center gap-1">
-                            <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                            <span className="text-xs font-medium text-muted-foreground">{product.rating}</span>
+                        <p className="text-xs font-bold text-primary mb-1">{product.brand}</p>
+                        <h4 className="text-sm font-semibold flex-grow mb-2">{product.name}</h4>
+                        <div className="flex justify-between items-center mt-auto">
+                            <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>
+                            <div className="flex items-center gap-1">
+                                <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                                <span className="text-xs font-medium text-muted-foreground">{product.rating}</span>
+                            </div>
                         </div>
-                      </div>
-                      <Button size="sm" variant="outline" className="w-full mt-2 text-xs">
+                        <Button size="sm" variant="outline" className="w-full mt-2 text-xs">
                         <ShoppingCart className="h-3 w-3 mr-1" />
                         Add to Cart
-                      </Button>
+                        </Button>
                     </div>
-                  </Card>
+                    </Card>
                 ))}
               </div>
             </section>
@@ -307,19 +334,19 @@ export default function SalonDetailsPage() {
               <p className="text-muted-foreground mb-6">Our talented and experienced professionals.</p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {salon.staff.map(member => (
-                  <div key={member.name} className="text-center group">
-                    <div className="relative w-32 h-32 mx-auto rounded-full overflow-hidden shadow-lg mb-4 transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/20">
-                      <Image 
-                        src={member.image} 
-                        alt={member.name} 
-                        layout="fill" 
-                        className="object-cover" 
-                        data-ai-hint={member.hint} 
-                      />
+                    <div key={member.name} className="text-center group">
+                        <div className="relative w-32 h-32 mx-auto rounded-full overflow-hidden shadow-lg mb-4 transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/20">
+                            <Image 
+                                src={member.image} 
+                                alt={member.name} 
+                                layout="fill" 
+                                className="object-cover" 
+                                data-ai-hint={member.hint} 
+                            />
+                        </div>
+                        <h4 className="font-semibold">{member.name}</h4>
+                        <p className="text-sm text-primary">{member.role}</p>
                     </div>
-                    <h4 className="font-semibold">{member.name}</h4>
-                    <p className="text-sm text-primary">{member.role}</p>
-                  </div>
                 ))}
               </div>
             </section>
@@ -328,41 +355,46 @@ export default function SalonDetailsPage() {
                 <h2 className="text-3xl font-bold mb-2">Reviews</h2>
                 <p className="text-muted-foreground mb-6">What our clients are saying about us.</p>
                 <Card>
-                    <CardHeader>
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <div>
-                                <h3 className="text-2xl font-semibold">Client Reviews</h3>
-                                <div className="flex items-center gap-4 mt-2">
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-2xl font-bold">{salon.rating}</span>
-                                        <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">Based on {salon.reviewCount} reviews</p>
+                    <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 className="text-2xl font-semibold">Client Reviews</h3>
+                            <div className="flex items-center gap-4 mt-2">
+                                <div className="flex items-center gap-1">
+                                    <span className="text-2xl font-bold">{salon.rating}</span>
+                                    <Star className="h-5 w-5 text-yellow-400 fill-current" />
                                 </div>
+                                <p className="text-sm text-muted-foreground">Based on {salon.reviewCount} reviews</p>
                             </div>
-                            <Button variant="outline">Write a Review</Button>
                         </div>
+                        <Button variant="outline">Write a Review</Button>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {salon.reviews.map(review => (
-                        <div key={review.author} className="border-b pb-4 last:border-b-0">
-                          <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
-                                    {review.author.charAt(0)}
-                                </div>
-                                <div>
-                                    <p className="font-semibold">{review.author}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                    </p>
-                                </div>
-                              </div>
-                              <StarRating rating={review.rating} />
-                          </div>
-                          <p className="text-sm text-muted-foreground italic">"{review.text}"</p>
+                        <div className="flex items-center gap-2">
+                            <span className="font-semibold text-lg">{salon.rating.toFixed(1)}</span>
+                            <StarRating rating={salon.rating} />
+                            <p className="text-muted-foreground text-sm">({salon.reviewCount} votes)</p>
                         </div>
-                      ))}
+                        <div className="space-y-4">
+                            {salon.reviews.map((review, index) => (
+                                <div key={index} className="border-t pt-4">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
+                                                {review.author.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-sm">{review.author}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <StarRating rating={review.rating} />
+                                    </div>
+                                    <p className="text-sm text-muted-foreground italic">"{review.text}"</p>
+                                </div>
+                            ))}
+                        </div>
                     </CardContent>
                 </Card>
             </section>
@@ -483,41 +515,33 @@ export default function SalonDetailsPage() {
         </section>
       </div>
 
-      {isGalleryModalOpen && (
-        <div 
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" 
-          onClick={() => setIsGalleryModalOpen(false)}
-        >
-          <div 
-            className="relative max-w-4xl w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative aspect-video bg-black rounded-md overflow-hidden">
-              <Image 
-                src={mainImage} 
-                alt="Gallery View" 
-                fill 
-                className="object-contain"
-              />
-            </div>
-            <div className="flex justify-center gap-2 mt-4">
-              {salon.images.map((img, index) => (
-                <button key={index} onClick={() => setMainImage(img)}>
-                  <Image 
-                    src={img} 
-                    alt={`Thumbnail ${index + 1}`} 
-                    width={80} 
-                    height={60} 
-                    className={`rounded-md object-cover cursor-pointer border-2 transition-all ${mainImage === img ? 'border-primary' : 'border-transparent hover:border-primary/50'}`}
-                  />
-                </button>
-              ))}
-            </div>
+      <Dialog open={isGalleryModalOpen} onOpenChange={setIsGalleryModalOpen}>
+        <DialogContent className="max-w-4xl p-0">
+          <div className="relative aspect-video bg-black">
+            <Image 
+              src={mainImage} 
+              alt="Gallery View" 
+              fill 
+              className="object-contain"
+            />
           </div>
-        </div>
-      )}
+          <div className="flex justify-center gap-2 p-4 bg-secondary">
+            {salon.images.map((img, index) => (
+              <button key={index} onClick={() => setMainImage(img)}>
+                <Image 
+                  src={img} 
+                  alt={`Thumbnail ${index + 1}`} 
+                  width={80} 
+                  height={60} 
+                  className={`rounded-md object-cover cursor-pointer border-2 transition-all ${mainImage === img ? 'border-primary' : 'border-transparent hover:border-primary/50'}`}
+                />
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
-
-    
   );
 }
+
+```
