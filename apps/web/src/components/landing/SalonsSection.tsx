@@ -150,7 +150,7 @@ export function SalonsSection() {
                   className="group rounded-md bg-background/30 hover:bg-background/50 border border-border/50 hover:border-border transition-all duration-300 hover:shadow-lg backdrop-blur-sm hover:-translate-y-1 overflow-hidden max-w-sm mx-auto"
                 >
                   {/* Salon Image Header */}
-                  <div className="relative h-80 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+                  <div className="relative h-52 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
                     <Image
                       src={salon.image}
                       alt={salon.title}

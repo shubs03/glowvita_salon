@@ -22,6 +22,8 @@ const product = {
     'https://picsum.photos/seed/product2/800/800',
     'https://picsum.photos/seed/product3/800/800',
     'https://picsum.photos/seed/product4/800/800',
+    'https://picsum.photos/seed/product6/800/800',
+    'https://picsum.photos/seed/product7/800/800',
   ],
   rating: 4.5,
   reviews: 120,
@@ -91,7 +93,7 @@ export default function ProductDetailsPage() {
             </div>
             
             {/* Main Image */}
-            <div className="flex-1 aspect-square relative rounded-lg overflow-hidden shadow-lg">
+            <div className="flex w-full h-auto relative rounded-lg overflow-hidden shadow-lg">
               <Image 
                 src={mainImage} 
                 alt={product.name} 

@@ -1,23 +1,62 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { cn } from '@repo/ui/cn';
 
 interface MarketingHeaderProps {
   isMobileMenuOpen: boolean;
   toggleMobileMenu: () => void;
+  isHomePage?: boolean;
 }
 
-export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: MarketingHeaderProps) {
+export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage = false }: MarketingHeaderProps) {
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Set scrolled state if user scrolls down more than 10px
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    // Cleanup function to remove the event listener
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // Debug: log the current state
+  useEffect(() => {
+    console.log('Header state:', { isScrolled, isHomePage, shouldBeTransparent: !isScrolled && isHomePage });
+  }, [isScrolled, isHomePage]);
+
   return (
-    <header className="sticky top-0 z-40 bg-background/60 backdrop-blur-2xl border-b border-border/50 before:absolute before:inset-0 before:bg-background/10 before:backdrop-blur-xl before:backdrop-saturate-150 before:z-[-1] before:border-b before:border-white/10">
+    <header 
+      className={cn(
+        "sticky top-0 z-40 transition-all duration-300",
+        // Apply blurred background if scrolled OR if it's not the home page
+        isScrolled || !isHomePage
+          ? " backdrop-blur-lg border-b border-border/50" 
+          : "bg-transparent border-b border-transparent",
+        // Ensure true transparency on home page when not scrolled
+        !isScrolled && isHomePage && "!bg-transparent backdrop-blur-none"
+      )}
+      style={
+        !isScrolled && isHomePage 
+          ? { backgroundColor: 'transparent', backdropFilter: 'none' }
+          : undefined
+      }
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between relative">
         <Link
           href="/"
-          className="font-bold text-lg sm:text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent after:absolute after:inset-0 after:bg-gradient-to-r after:from-primary/5 after:to-transparent after:blur-2xl after:z-[-1] hover:opacity-80 transition-opacity"
+          className="font-bold text-lg sm:text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
         >
           <span className="hidden sm:inline">GlowVita Salon</span>
           <span className="sm:hidden">GlowVita</span>
