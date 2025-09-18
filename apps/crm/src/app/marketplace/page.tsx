@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Button } from "@repo/ui/button";
 import { Input } from '@repo/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
-import { Search, ShoppingCart, Info, X, Heart, Eye, Minus, Plus, Building, Mail, MapPin, Star, Zap, Package, Truck, Tag } from 'lucide-react';
+import { Search, ShoppingCart, Info, X, Heart, Eye, Minus, Plus, Building, Mail, MapPin, Star, Zap, Package, Truck, Tag, ArrowRight, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { useGetSupplierProductsQuery, useGetSupplierProfileQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
@@ -96,40 +96,60 @@ export default function MarketplacePage() {
 
   if(isLoading) {
     return (
-        <div className="p-4 sm:p-6 lg:p-8">
-            <Skeleton className="h-8 w-64 mb-6" />
-            <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <Skeleton className="h-6 w-48 mb-2" />
-                            <Skeleton className="h-4 w-80" />
-                        </div>
-                        <div className="relative">
+        <div className="min-h-screen bg-background">
+            
+            <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+                <div className="mb-6">
+                    <div className="flex items-center gap-4 mb-6">
+                        <Skeleton className="h-20 w-20 rounded-2xl" />
+                        <div className="space-y-3">
                             <Skeleton className="h-10 w-64" />
+                            <Skeleton className="h-5 w-96" />
                         </div>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        {[...Array(8)].map((_, i) => (
-                            <Card key={i}>
-                                <CardContent className="p-0">
-                                    <div className="relative aspect-square">
-                                        <Skeleton className="h-full w-full rounded-t-lg" />
+                </div>
+                
+                <Card className="bg-card border border-border rounded-lg">
+                    <CardHeader className="pb-6">
+                        <div className="flex justify-between items-center">
+                            <div className="space-y-3">
+                                <Skeleton className="h-8 w-48" />
+                                <Skeleton className="h-4 w-80" />
+                            </div>
+                            <Skeleton className="h-10 w-32 rounded-full" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {[...Array(8)].map((_, i) => (
+                                <Card key={i} className="overflow-hidden rounded-2xl bg-card border border-border/30">
+                                    <div className="relative aspect-[4/3]">
+                                        <Skeleton className="h-full w-full rounded-t-2xl" />
                                     </div>
-                                    <div className="p-4 space-y-2">
-                                        <Skeleton className="h-5 w-3/4" />
-                                        <Skeleton className="h-4 w-1/2" />
-                                        <Skeleton className="h-6 w-1/4" />
-                                        <Skeleton className="h-9 w-full mt-2" />
+                                    <div className="p-5 space-y-4">
+                                        <Skeleton className="h-6 w-3/4" />
+                                        <div className="flex items-center gap-2">
+                                            <Skeleton className="h-4 w-4 rounded" />
+                                            <Skeleton className="h-4 w-1/2" />
+                                        </div>
+                                        <div className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
+                                            <Skeleton className="h-6 w-1/3" />
+                                            <div className="flex gap-2">
+                                                <Skeleton className="h-5 w-12 rounded-full" />
+                                                <Skeleton className="h-5 w-12 rounded-full" />
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Skeleton className="h-10 flex-1 rounded-xl" />
+                                            <Skeleton className="h-10 flex-1 rounded-xl" />
+                                        </div>
                                     </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
+                                </Card>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
   }
@@ -139,158 +159,205 @@ export default function MarketplacePage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Marketplace</h1>
-          <p className="text-muted-foreground">
-            Discover and order premium products from verified suppliers
-          </p>
+    <div className="min-h-screen bg-background">
+      
+      <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Enhanced Header Section */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 shadow-lg backdrop-blur-sm">
+              <ShoppingCart className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold font-headline mb-2 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
+                Marketplace
+              </h1>
+              <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
+                Discover and order premium products from verified suppliers worldwide
+              </p>
+            </div>
+          </div>
         </div>
         
         {/* Search and Filters */}
-        <Card>
+        <Card className="bg-card border border-border rounded-lg">
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search products, suppliers..."
-                  className="pl-10"
+                  placeholder="Search products, suppliers, categories..."
+                  className="pl-10 h-12 rounded-lg border border-border focus:border-primary text-base"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">
+              <div className="flex gap-3">
+                <Button variant="outline" size="default" className="rounded-lg border-border hover:border-primary h-12 px-6">
                   <Package className="h-4 w-4 mr-2" />
                   All Categories
                 </Button>
-                <Button variant="outline" size="sm">
-                  Verified Only
+                <Button variant="outline" size="default" className="rounded-lg border-border hover:border-primary h-12 px-6">
+                  ✓ Verified Only
                 </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
 
       {/* Products Section */}
-      <Card>
-        <CardHeader>
+      <Card className="bg-card border border-border rounded-lg">
+        <CardHeader className="pb-6 border-b border-border">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+              <CardTitle className="text-2xl font-bold text-foreground flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                  <Package className="h-6 w-6 text-primary" />
+                </div>
                 Featured Products
               </CardTitle>
-              <CardDescription className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {filteredProducts.length} products available from trusted suppliers
+              <CardDescription className="text-muted-foreground mt-2 text-base">
+                {filteredProducts.length} premium products from trusted suppliers
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-sm font-medium px-3 py-1 rounded-full">
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="text-sm font-medium px-4 py-2 rounded-full border-border bg-background">
+                <Package className="h-3 w-3 mr-1" />
                 {filteredProducts.length} Products
               </Badge>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {/* Products Grid */}
+        <CardContent className="p-6">
+          {/* Enhanced Products Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product: Product, index) => (
-              <Card 
-                key={product._id} 
-                className="group relative w-72 h-[28rem] overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 bg-white dark:bg-gray-900 border border-gray-200/50 dark:border-gray-800/50 hover:border-primary/30"
+            {filteredProducts.map((product: Product, index: number) => (
+              <Card
+                key={product._id}
+                className="group relative overflow-hidden rounded-2xl shadow-xl transition-all duration-700 hover:shadow-2xl hover:shadow-primary/25 transform hover:-translate-y-3 bg-gradient-to-b from-background to-secondary/10 cursor-pointer animate-fadeInUp flex flex-col h-96 w-full"
+                style={{ 
+                  animationDelay: `${index * 0.1}s`,
+                  backfaceVisibility: 'hidden',
+                  WebkitBackfaceVisibility: 'hidden',
+                  transformStyle: 'preserve-3d',
+                  willChange: 'transform'
+                }}
                 onClick={() => handleViewDetails(product)}
               >
-                {/* Gradient Overlay for Hover Effect */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10"></div>
-
-                {/* Product Image */}
-                <div className="relative h-48 w-full overflow-hidden">
+                {/* Image Section - 60% of card height */}
+                <div className="relative h-[60%] w-full overflow-hidden rounded-t-2xl" style={{ isolation: 'isolate' }}>
                   <Image 
                     src={product.productImage || 'https://placehold.co/288x192.png'} 
                     alt={product.productName} 
                     fill
-                    className="object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out"
+                    className="object-cover group-hover:scale-110 transition-transform duration-700 filter group-hover:brightness-110"
+                    style={{ 
+                      backfaceVisibility: 'hidden',
+                      WebkitBackfaceVisibility: 'hidden'
+                    }}
                   />
-                  {/* Stock Badge */}
-                  <div className="absolute top-4 left-4 z-20">
+                  
+                  {/* Animated Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-500" style={{ isolation: 'isolate' }}></div>
+                  
+                  {/* Shimmer Effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" style={{ isolation: 'isolate' }}></div>
+                  
+                  {/* Top Badges */}
+                  <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10">
+                    {/* Stock Badge */}
                     <Badge 
-                      variant={product.stock > 10 ? "success" : product.stock > 0 ? "warning" : "destructive"}
-                      className="px-3 py-1 text-sm font-semibold rounded-full bg-opacity-90 shadow-sm"
+                      variant={product.stock > 10 ? "secondary" : product.stock > 0 ? "outline" : "destructive"}
+                      className={`backdrop-blur-sm shadow-lg rounded-full border text-xs font-bold animate-pulse-glow ${
+                        product.stock > 10 
+                          ? 'bg-gradient-to-r from-green-400 to-green-500 text-white border-0' 
+                          : product.stock > 0 
+                            ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white border-0'
+                            : 'bg-gradient-to-r from-red-400 to-red-500 text-white border-0'
+                      }`}
                     >
-                      {product.stock > 0 ? `${product.stock} in Stock` : 'Out of Stock'}
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      {product.stock > 10 ? 'IN STOCK' : product.stock > 0 ? `${product.stock} LEFT` : 'OUT OF STOCK'}
                     </Badge>
-                  </div>
-                  {/* Discount Badge */}
-                  {product.discount && product.discount > 0 && (
-                    <div className="absolute top-4 right-4 z-20">
-                      <Badge variant="secondary" className="px-3 py-1 text-sm font-semibold rounded-full bg-red-500 text-white">
-                        <Tag className="h-4 w-4 mr-1" />
-                        {product.discount}% Off
-                      </Badge>
+                    
+                    <div className="flex gap-2 ml-auto">
+                      {/* Discount Badge */}
+                      {product.discount && product.discount > 0 && (
+                        <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-lg rounded-full font-bold">
+                          <Tag className="h-3 w-3 mr-1" />
+                          {product.discount}% OFF
+                        </Badge>
+                      )}
+                      
+                      {/* Action Buttons */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewSupplier(e, product.vendorId);
+                        }}
+                        className="p-2 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-2 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
+                      >
+                        <Heart className="h-4 w-4" />
+                      </button>
                     </div>
-                  )}
+                  </div>
+                  
+                  {/* Rating on Image - Bottom Right */}
+                  <div className="absolute bottom-3 right-3 z-10">
+                    <div className="flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
+                      <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                      <span className="text-white text-xs font-medium">4.5</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Product Info */}
-                <div className="p-6 space-y-4 flex flex-col h-[calc(100%-12rem)]">
-                  {/* Header: Category and Rating */}
-                  {/* <div className="flex justify-between items-center">
-                    <Badge 
-                      variant="outline" 
-                      className="text-xs font-semibold bg-primary/10 text-primary border-primary/30 rounded-full px-3 py-1"
+                {/* Details Section - 40% of card height */}
+                <div className="flex flex-col h-[40%] w-full bg-card border-t border-border/20 p-4">
+                  {/* Product Name & Price - Same Line */}
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-2 leading-tight flex-1 mr-3">
+                      {product.productName}
+                    </h3>
+                    <div className="flex flex-col items-end flex-shrink-0">
+                      <div className="text-xl font-bold text-primary leading-none">₹{product.price.toFixed(0)}</div>
+                    </div>
+                  </div>
+                  
+                  {/* Supplier Name & Category */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div 
+                      className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewSupplier(e, product.vendorId);
+                      }}
                     >
-                      {product.category.name}
-                    </Badge>
-                    <div className="flex items-center gap-1.5">
-                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-                      <span className="text-sm font-medium">4.8</span>
+                      <Building className="h-4 w-4" />
+                      <span className="text-sm font-medium">{product.supplierName || 'Supplier'}</span>
                     </div>
-                  </div> */}
-
-                  {/* Product Title */}
-                  <h3 className="text-lg font-semibold line-clamp-2 leading-6 text-gray-900 dark:text-gray-100 group-hover:text-primary transition-colors duration-300">
-                    {product.productName}
-                  </h3>
-
-                  {/* Supplier Info */}
-                  <div 
-                    className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors cursor-pointer"
-                    onClick={(e) => handleViewSupplier(e, product.vendorId)}
-                  >
-                    <Building className="h-4 w-4" />
-                    <span className="truncate font-medium">{product.supplierName || 'Supplier'}</span>
-                  </div>
-
-                  {/* Price and Features */}
-                  <div className="flex items-center justify-between mt-auto">
-                    <div>
-                      <div className="text-xl font-bold text-primary">₹{product.price.toFixed(0)}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">per unit</div>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs">
-                      <span className="flex items-center gap-1 text-green-600 font-medium">
-                        <Truck className="h-4 w-4" />
-                        Free
-                      </span>
-                      <span className="flex items-center gap-1 text-blue-600 font-medium">
-                        <Zap className="h-4 w-4" />
-                        Fast
-                      </span>
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Package className="h-3 w-3" />
+                      <span className="text-xs">{product.category.name}</span>
                     </div>
                   </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3 pt-3">
+                  
+                  {/* Action Buttons - Bottom */}
+                  <div className="flex gap-3 mt-auto">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 h-10 rounded-full text-sm font-semibold border-gray-300 dark:border-gray-700 hover:bg-primary/10 hover:border-primary/50 transition-all duration-300"
-                      onClick={(e) => handleQuickAddToCart(product, e)}
+                      className="flex-1 h-9 rounded-xl border-border/40 hover:border-primary/60 hover:bg-primary/10 hover:text-primary transition-all duration-300 text-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickAddToCart(product, e);
+                      }}
                       disabled={product.stock === 0}
                     >
                       <ShoppingCart className="h-4 w-4 mr-2" />
@@ -298,38 +365,15 @@ export default function MarketplacePage() {
                     </Button>
                     <Button
                       size="sm"
-                      className="flex-1 h-10 rounded-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-300"
+                      className="flex-1 h-9 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground transition-all duration-300 text-sm group/btn"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleBuyNow(product);
                       }}
                       disabled={product.stock === 0}
                     >
-                      <Zap className="h-4 w-4 mr-2" />
+                      <Zap className="h-4 w-4 mr-2 group-hover/btn:scale-110 transition-transform" />
                       Buy Now
-                    </Button>
-                  </div>
-
-                  {/* Quick Action Buttons (Hover) */}
-                  <div className="absolute top-48 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className="h-9 w-9 rounded-full bg-white/95 dark:bg-gray-800/95 shadow-md hover:bg-white dark:hover:bg-gray-800 hover:scale-110 transition-transform duration-200"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleViewSupplier(e, product.vendorId);
-                      }}
-                    >
-                      <Eye className="h-4 w-4 text-primary" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="secondary"
-                      className="h-9 w-9 rounded-full bg-white/95 dark:bg-gray-800/95 shadow-md hover:bg-white dark:hover:bg-gray-800 hover:scale-110 transition-transform duration-200"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Heart className="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
                 </div>
@@ -337,42 +381,56 @@ export default function MarketplacePage() {
             ))}
           </div>
           
-          {/* Empty State */}
+          {/* Enhanced Empty State */}
           {filteredProducts.length === 0 && !isLoading && (
-            <div className="text-center py-16">
-              <div className="mx-auto w-24 h-24 mb-6 bg-muted rounded-full flex items-center justify-center">
-                <Search className="h-12 w-12 text-muted-foreground" />
+            <div className="text-center py-20">
+              <div className="mx-auto w-32 h-32 mb-8 bg-muted/20 rounded-2xl flex items-center justify-center border border-border">
+                <Search className="h-16 w-16 text-muted-foreground/60" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No products found</h3>
-              <p className="text-muted-foreground mb-4">Try adjusting your search terms or browse all products.</p>
-              <Button 
-                variant="outline" 
-                onClick={() => setSearchTerm('')}
-              >
-                Clear Search
-              </Button>
+              <h3 className="text-2xl font-semibold mb-3 text-foreground">No products found</h3>
+              <p className="text-muted-foreground mb-8 text-lg max-w-md mx-auto leading-relaxed">
+                We couldn't find any products matching your search. Try adjusting your filters or browse all products.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setSearchTerm('')}
+                  className="rounded-lg bg-background hover:bg-muted border-border px-6 h-12"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Search
+                </Button>
+                <Button 
+                  variant="default" 
+                  className="rounded-lg px-6 h-12"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Browse All
+                </Button>
+              </div>
             </div>
           )}
           
-          {/* Load More */}
+          {/* Enhanced Load More */}
           {productsData.length > 20 && filteredProducts.length >= 20 && (
-            <div className="text-center mt-8">
+            <div className="text-center mt-12">
               <Button 
                 variant="outline" 
                 size="lg"
-                className="px-8 py-3 rounded-xl border-dashed border-2 hover:border-primary hover:bg-primary/5 transition-all duration-200"
+                className="px-10 py-4 rounded-lg border-dashed border-2 border-border hover:border-primary hover:bg-primary/5 transition-all duration-300 bg-background h-14 text-base"
                 onClick={() => {
                   // Logic to load more products
                   console.log('Loading more products...');
                 }}
               >
-                <RotateCcw className="h-4 w-4 mr-2" />
+                <Package className="h-5 w-5 mr-3" />
                 Load More Products
               </Button>
             </div>
           )}
         </CardContent>
       </Card>
+      </div>
 
       {/* Product Detail Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
@@ -659,57 +717,59 @@ export default function MarketplacePage() {
       
       {/* Supplier Profile Modal */}
       <Dialog open={isSupplierModalOpen} onOpenChange={setIsSupplierModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Supplier Profile</DialogTitle>
-            <DialogDescription>Verified supplier information</DialogDescription>
+        <DialogContent className="max-w-md max-h-[75vh] overflow-y-auto scrollbar-hide backdrop-blur-lg bg-background/95 border border-border/50 shadow-2xl">
+          <DialogHeader className="space-y-2 pb-3 border-b border-border/20">
+            <DialogTitle className="text-lg font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
+              Supplier Profile
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">Verified supplier information</DialogDescription>
           </DialogHeader>
           {isSupplierLoading ? (
-            <div className="space-y-4 py-6">
-              <Skeleton className="h-24 w-24 rounded-full mx-auto" />
-              <Skeleton className="h-6 w-3/4 mx-auto" />
+            <div className="space-y-4 py-4">
+              <Skeleton className="h-20 w-20 rounded-full mx-auto" />
+              <Skeleton className="h-5 w-3/4 mx-auto" />
               <Skeleton className="h-4 w-1/2 mx-auto" />
-              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-16 w-full" />
             </div>
           ) : supplierData && (
-            <div className="py-6">
+            <div className="py-4">
               {/* Supplier Header */}
-              <div className="text-center mb-6">
+              <div className="text-center mb-4">
                 <div className="relative inline-block">
                   <Image 
-                    src={supplierData.profileImage || 'https://placehold.co/100x100.png'} 
+                    src={supplierData.profileImage || 'https://placehold.co/80x80.png'} 
                     alt={supplierData.shopName} 
-                    width={100} 
-                    height={100} 
-                    className="rounded-full mx-auto border-4 border-primary/20 shadow-lg" 
+                    width={80} 
+                    height={80} 
+                    className="rounded-full mx-auto border-3 border-primary/20 shadow-lg" 
                   />
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full"></div>
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold mt-4 mb-2">{supplierData.shopName}</h3>
-                <Badge variant="secondary" className="rounded-full">
+                <h3 className="text-lg font-bold mt-3 mb-2">{supplierData.shopName}</h3>
+                <Badge variant="secondary" className="rounded-full text-xs">
                   Verified Supplier
                 </Badge>
               </div>
 
               {/* Contact Info */}
-              <div className="space-y-4 mb-6">
-                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+              <div className="space-y-3 mb-4">
+                <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{supplierData.email}</span>
                 </div>
-                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">{supplierData.city}, {supplierData.country}</span>
                 </div>
               </div>
 
               {/* Rating */}
-              <div className="flex items-center justify-center gap-2 mb-6">
+              <div className="flex items-center justify-center gap-2 mb-4">
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+                    <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
                 <span className="text-sm font-medium">4.8 (120 reviews)</span>
@@ -717,9 +777,9 @@ export default function MarketplacePage() {
 
               {/* Description */}
               {supplierData.description && (
-                <div className="bg-gradient-to-r from-muted/20 to-muted/10 rounded-xl p-4">
-                  <h4 className="font-semibold mb-2">About</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                <div className="bg-gradient-to-r from-muted/20 to-muted/10 rounded-lg p-3">
+                  <h4 className="font-semibold mb-2 text-sm">About</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
                     {supplierData.description}
                   </p>
                 </div>
