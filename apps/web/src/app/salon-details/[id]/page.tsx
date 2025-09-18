@@ -167,35 +167,6 @@ export default function SalonDetailsPage() {
             </div>
           </div>
         </section>
-
-        <section id="about" className="py-8">
-          <Card className="bg-secondary/50">
-              <CardContent className="p-6">
-                  <div className="max-w-4xl mx-auto p-4 md:p-8">
-                    <div className="relative border-4 border-primary/20 rounded-lg p-2">
-                      <div className="relative border-2 border-primary/20 rounded-lg p-2">
-                        <div className="relative border border-primary/20 rounded-lg p-8 text-center bg-background">
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-4">
-                                <h2 className="text-2xl font-bold font-headline text-primary">About the Salon</h2>
-                            </div>
-                            <p className="text-muted-foreground leading-relaxed mt-4 mb-8">
-                                {salon.mission}
-                            </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                {salon.stats.map(stat => (
-                                    <div key={stat.label} className="border-t-2 border-primary/20 pt-3">
-                                        <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                                        <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-              </CardContent>
-          </Card>
-        </section>
         
         {/* Main Content Area */}
         <div className="lg:grid lg:grid-cols-3 lg:gap-12 lg:items-start py-8">
