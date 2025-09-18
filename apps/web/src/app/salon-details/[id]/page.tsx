@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
-import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight, ShoppingCart } from 'lucide-react';
+import { Star, MapPin, Clock, Phone, Globe, Heart, Shield, Check, Award, ThumbsUp, ArrowRight, ShoppingCart, Tag } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
@@ -47,9 +47,10 @@ const salon = {
     { name: 'Gel Nails', price: 60, duration: 60, category: 'Nails' },
   ],
   products: [
-    { name: 'Revitalizing Serum', brand: 'Aura Skincare', price: 85, image: 'https://picsum.photos/seed/productA/400/400', hint: 'skincare serum' },
-    { name: 'Hydrating Shampoo', brand: 'Luxe Hair', price: 40, image: 'https://picsum.photos/seed/productB/400/400', hint: 'shampoo bottle' },
-    { name: 'Nourishing Hand Cream', brand: 'Zen Garden', price: 25, image: 'https://picsum.photos/seed/productC/400/400', hint: 'hand cream tube' },
+    { id: 'p1', name: 'Revitalizing Serum', brand: 'Aura Skincare', price: 85, image: 'https://picsum.photos/seed/productA/400/400', hint: 'skincare serum', stock: 23 },
+    { id: 'p2', name: 'Hydrating Shampoo', brand: 'Luxe Hair', price: 40, image: 'https://picsum.photos/seed/productB/400/400', hint: 'shampoo bottle', stock: 50 },
+    { id: 'p3', name: 'Nourishing Hand Cream', brand: 'Zen Garden', price: 25, image: 'https://picsum.photos/seed/productC/400/400', hint: 'hand cream tube', stock: 0 },
+    { id: 'p4', name: 'Matte Lipstick', brand: 'Chroma Beauty', price: 30, image: 'https://picsum.photos/seed/productD/400/400', hint: 'lipstick tube', stock: 120 },
   ],
   staff: [
     { name: 'Jessica Miller', role: 'Lead Stylist', image: 'https://picsum.photos/seed/staff1/400/400', hint: 'female stylist portrait' },
@@ -111,7 +112,7 @@ export default function SalonDetailsPage() {
 
         {/* Compact Bento Grid Hero Gallery */}
         <section className="py-6">
-          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-48 md:h-64">
+          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-40 md:h-56">
             <div className="col-span-6 md:col-span-4 row-span-2 rounded-md overflow-hidden group cursor-pointer" onClick={() => openGalleryModal(salon.images[0])}>
               <Image 
                 src={salon.images[0]} 
@@ -152,15 +153,29 @@ export default function SalonDetailsPage() {
               )}
             </div>
           </div>
-          
-          <div className="md:hidden flex justify-center mt-4 space-x-2">
-            {salon.images.slice(0, 4).map((img, index) => (
-              <button
-                key={index}
-                className={`w-2 h-2 rounded-full transition-colors ${mainImage === img ? 'bg-primary' : 'bg-gray-300 hover:bg-gray-500'}`}
-                onClick={() => setMainImage(img)}
-              />
-            ))}
+        </section>
+
+        {/* About Section - Full Width */}
+        <section>
+          <div className="py-8">
+            <div className="border-y-2 border-dashed border-gray-300 p-2">
+              <div className="border-y-2 border-dashed border-gray-300 p-8 text-center bg-secondary/30">
+                <div className="border inline-block px-4 py-2 mb-6 font-headline text-2xl tracking-widest uppercase">
+                  About
+                </div>
+                <p className="max-w-3xl mx-auto text-muted-foreground leading-relaxed mb-8">
+                  {salon.description}
+                </p>
+                <div className="flex flex-wrap justify-center gap-8">
+                  {salon.stats.map(stat => (
+                    <div key={stat.label}>
+                      <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -168,26 +183,6 @@ export default function SalonDetailsPage() {
         <div className="grid lg:grid-cols-3 gap-12 pt-8">
           {/* Left Scrolling Column */}
           <div className="lg:col-span-2 space-y-16">
-
-            {/* About Section */}
-        <section className="">
-          <Card className="bg-secondary/50 p-8 rounded-md">
-              <CardHeader>
-                  <h2 className="text-3xl font-bold font-headline leading-tight mb-4">About {salon.name}</h2>
-              </CardHeader>
-              <CardContent>
-                  <p className="text-muted-foreground leading-relaxed mb-6">{salon.description}</p>
-                  <div className="flex flex-wrap justify-around gap-6 mt-8 pt-6 border-t">
-                      {salon.stats.map(stat => (
-                          <div key={stat.label} className="text-center">
-                          <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                          <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-                          </div>
-                      ))}
-                  </div>
-              </CardContent>
-          </Card>
-        </section>
 
             <section>
               <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
@@ -222,7 +217,7 @@ export default function SalonDetailsPage() {
               <h2 className="text-3xl font-bold mb-6">Products We Use & Sell</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {salon.products.map(product => (
-                  <Card key={product.name} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
+                  <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-center">
                     <div className="relative aspect-square bg-gray-100">
                       <Image 
                         src={product.image} 
@@ -234,13 +229,12 @@ export default function SalonDetailsPage() {
                     </div>
                     <div className="p-4 flex flex-col flex-grow">
                       <p className="text-xs text-muted-foreground">{product.brand}</p>
-                      <h4 className="font-semibold truncate flex-grow">{product.name}</h4>
-                      <div className="flex justify-between items-center mt-4">
-                        <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                          <ShoppingCart className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <h4 className="font-semibold flex-grow my-2">{product.name}</h4>
+                      <p className="font-bold text-primary mb-3">₹{product.price.toFixed(2)}</p>
+                      <Button size="sm" variant="outline" className="w-full mt-auto">
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        Add to Cart
+                      </Button>
                     </div>
                   </Card>
                 ))}
@@ -249,23 +243,25 @@ export default function SalonDetailsPage() {
 
             <section>
               <h2 className="text-3xl font-bold mb-6">Meet Our Team</h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
                 {salon.staff.map(member => (
-                  <Card key={member.name} className="text-center group overflow-hidden">
-                    <div className="relative aspect-square">
+                  <div key={member.name} className="text-center group">
+                    <div className="relative w-32 h-32 mx-auto rounded-full overflow-hidden shadow-lg mb-4 transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/20">
                       <Image 
                         src={member.image} 
                         alt={member.name} 
-                        fill 
-                        className="object-cover group-hover:scale-105 transition-transform" 
+                        layout="fill" 
+                        className="object-cover" 
                         data-ai-hint={member.hint} 
                       />
+                      <div className="absolute inset-0 rounded-full border-4 border-transparent group-hover:border-primary/50 transition-all"></div>
                     </div>
-                    <div className="p-4">
-                      <h4 className="font-semibold">{member.name}</h4>
-                      <p className="text-sm text-primary">{member.role}</p>
+                    <div className="relative inline-block">
+                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4/5 h-1 bg-primary blur opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+                        <h4 className="font-semibold relative">{member.name}</h4>
                     </div>
-                  </Card>
+                    <p className="text-sm text-primary">{member.role}</p>
+                  </div>
                 ))}
               </div>
             </section>
