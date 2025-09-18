@@ -48,8 +48,9 @@ const salon = {
     { quote: "An incredibly relaxing and professional atmosphere. Highly recommend the deep tissue massage.", author: "John D." },
   ],
   reviews: [
-    { author: "Amanda G.", rating: 5, text: "Loved the experience! Will be back soon." },
-    { author: "Robert K.", rating: 4, text: "Great service, but a bit pricey." },
+    { author: "Amanda G.", rating: 5, text: "Loved the experience! Will be back soon.", date: '2024-08-20T10:00:00Z' },
+    { author: "Robert K.", rating: 4, text: "Great service, but a bit pricey.", date: '2024-08-18T14:30:00Z' },
+    { author: "Ikbal Z.", rating: 5, text: "1st time datang potong sini , barber abg kamil mmg sangat profesional dari segi knowledge and skill...", date: '2024-08-15T19:03:00Z' },
   ],
   workingHours: [
     { day: 'Monday - Friday', hours: '9:00 AM - 8:00 PM' },
@@ -91,7 +92,7 @@ export default function SalonDetailsPage() {
 
         {/* Compact Bento Grid Hero Gallery */}
         <section className="py-6">
-          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-64 md:h-80">
+          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-64 md:h-[450px]">
             {/* Main large image - spans 4 columns and 2 rows */}
             <div className="col-span-6 md:col-span-4 row-span-2 rounded-lg overflow-hidden group cursor-pointer">
               <Image 
@@ -138,43 +139,43 @@ export default function SalonDetailsPage() {
           
           {/* Mobile gallery indicators */}
           <div className="md:hidden flex justify-center mt-4 space-x-2">
-            {salon.images.slice(0, 4).map((_, index) => (
+            {salon.images.slice(0, 4).map((img, index) => (
               <button
                 key={index}
-                className="w-2 h-2 rounded-full bg-gray-300 hover:bg-gray-500 transition-colors"
-                onClick={() => setMainImage(salon.images[index])}
+                className={`w-2 h-2 rounded-full transition-colors ${mainImage === img ? 'bg-primary' : 'bg-gray-300 hover:bg-gray-500'}`}
+                onClick={() => setMainImage(img)}
               />
             ))}
           </div>
         </section>
 
-        {/* Main Content Grid - Starting from About Section */}
-        <div className="mt-8 grid lg:grid-cols-3 gap-12">
+        {/* Full-width "About" Section */}
+        <section className="my-8">
+            <h2 className="text-3xl font-bold mb-6">About the Salon</h2>
+            <Card>
+              <CardContent className="p-6">
+                <p className="text-lg text-muted-foreground leading-relaxed">{salon.description}</p>
+                <div className="mt-6 grid grid-cols-2 gap-4 text-center">
+                  <div className="p-4 bg-secondary rounded-lg">
+                    <Award className="mx-auto h-8 w-8 text-primary mb-2" />
+                    <p className="font-semibold">Top Rated</p>
+                    <p className="text-sm text-muted-foreground">For customer satisfaction</p>
+                  </div>
+                  <div className="p-4 bg-secondary rounded-lg">
+                    <Shield className="mx-auto h-8 w-8 text-primary mb-2" />
+                    <p className="font-semibold">Health & Safety Certified</p>
+                    <p className="text-sm text-muted-foreground">Your well-being is our priority</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+        </section>
+
+        {/* Main Content Grid - Starting from Services Section */}
+        <div className="grid lg:grid-cols-3 gap-12">
           {/* Left/Main Column (Scrollable) */}
           <div className="lg:col-span-2 space-y-16">
             
-            {/* About Section */}
-            <section>
-              <h2 className="text-3xl font-bold mb-6">About the Salon</h2>
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-lg text-muted-foreground leading-relaxed">{salon.description}</p>
-                  <div className="mt-6 grid grid-cols-2 gap-4 text-center">
-                    <div className="p-4 bg-secondary rounded-lg">
-                      <Award className="mx-auto h-8 w-8 text-primary mb-2" />
-                      <p className="font-semibold">Top Rated</p>
-                      <p className="text-sm text-muted-foreground">For customer satisfaction</p>
-                    </div>
-                    <div className="p-4 bg-secondary rounded-lg">
-                      <Shield className="mx-auto h-8 w-8 text-primary mb-2" />
-                      <p className="font-semibold">Health & Safety Certified</p>
-                      <p className="text-sm text-muted-foreground">Your well-being is our priority</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-
             {/* Services Section */}
             <section>
               <h2 className="text-3xl font-bold mb-6">Services Offered</h2>
@@ -240,34 +241,44 @@ export default function SalonDetailsPage() {
 
             {/* Testimonials & Reviews */}
             <section>
-              <h2 className="text-3xl font-bold mb-6">What Our Clients Say</h2>
-              <div className="grid md:grid-cols-2 gap-8">
-                {salon.testimonials.map((testimonial, i) => (
-                  <blockquote key={i} className="p-6 bg-secondary rounded-lg border-l-4 border-primary">
-                    <p className="text-lg italic">"{testimonial.quote}"</p>
-                    <footer className="mt-4 font-semibold">- {testimonial.author}</footer>
-                  </blockquote>
-                ))}
-              </div>
-              <div className="mt-8">
-                <h3 className="text-2xl font-bold mb-4">All Reviews</h3>
-                <div className="space-y-4">
-                  {salon.reviews.map(review => (
-                    <Card key={review.author}>
-                      <CardContent className="p-4 flex gap-4">
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                          <span className="font-bold">{review.rating}.0</span>
-                        </div>
-                        <div className="border-l pl-4">
-                          <p className="font-semibold">{review.author}</p>
-                          <p className="text-sm text-muted-foreground">{review.text}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+              <h2 className="text-3xl font-bold mb-6">Reviews</h2>
+              <div className="mb-6 border-b pb-6">
+                <div className="flex items-center gap-4">
+                  <span className="text-4xl font-bold">{salon.rating}</span>
+                  <div className="flex-col">
+                    <div className="flex">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`h-5 w-5 ${i < Math.floor(salon.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                      ))}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Based on {salon.reviewCount} reviews</p>
+                  </div>
                 </div>
               </div>
+
+              <div className="space-y-6">
+                {salon.reviews.map(review => (
+                  <div key={review.author} className="flex gap-4">
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center font-bold">
+                      {review.author.charAt(0)}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold">{review.author}</p>
+                      <div className="flex items-center gap-2 mb-1 text-sm text-muted-foreground">
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                          ))}
+                        </div>
+                        <span>·</span>
+                        <span>{new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                      <p className="text-muted-foreground">{review.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" className="w-full mt-6">See all reviews</Button>
             </section>
 
             {/* Nearby Salons */}
