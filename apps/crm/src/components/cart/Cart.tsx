@@ -14,6 +14,24 @@ import { useState } from 'react';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 
+interface CartItem {
+  _id: string;
+  productName: string;
+  price: number;
+  quantity: number;
+  productImage?: string;
+  vendorId: string;
+  supplierName?: string;
+}
+
+interface OrderItem {
+  productId: string;
+  productName: string;
+  productImage?: string;
+  quantity: number;
+  price: number;
+}
+
 interface CartProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -22,12 +40,12 @@ interface CartProps {
 export function Cart({ isOpen, onOpenChange }: CartProps) {
   const dispatch = useAppDispatch();
   const { user } = useCrmAuth();
-  const cartItems = useAppSelector(state => state.cart.items);
+  const cartItems = useAppSelector((state: any) => state.cart.items as CartItem[]);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [shippingAddress, setShippingAddress] = useState(user?.address || '');
   const [createOrder, { isLoading: isCreatingOrder }] = useCreateCrmOrderMutation();
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((acc: number, item: CartItem) => acc + item.price * item.quantity, 0);
 
   const handleUpdateQuantity = (_id: string, quantity: number) => {
     if (quantity > 0) {
@@ -47,7 +65,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
         return;
     }
 
-    const ordersBySupplier = cartItems.reduce((acc, item) => {
+    const ordersBySupplier = cartItems.reduce((acc: Record<string, OrderItem[]>, item: CartItem) => {
         const supplierId = item.vendorId;
         if (!acc[supplierId]) {
             acc[supplierId] = [];
@@ -60,11 +78,11 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             price: item.price,
         });
         return acc;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, OrderItem[]>);
 
     try {
         const orderPromises = Object.entries(ordersBySupplier).map(([supplierId, items]) => {
-            const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+            const totalAmount = items.reduce((sum: number, item: OrderItem) => sum + item.price * item.quantity, 0);
             const orderData = {
                 items,
                 supplierId,
@@ -140,7 +158,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             <>
               {/* Cart Items - Scrollable */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {cartItems.map((item, index) => (
+                {cartItems.map((item: CartItem, index: number) => (
                   <div 
                     key={item._id} 
                     className="bg-card rounded-xl p-4 border border-border/50 hover:shadow-lg transition-all duration-200 hover:border-primary/20"
@@ -262,7 +280,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             <div className="space-y-3">
               <h4 className="text-base font-semibold">Order Summary</h4>
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3 max-h-48 overflow-y-auto">
-                {Object.entries(cartItems.reduce((acc, item) => {
+                {Object.entries(cartItems.reduce((acc: Record<string, { items: CartItem[], total: number }>, item: CartItem) => {
                   const supplier = item.supplierName || 'Unknown Supplier';
                   if (!acc[supplier]) {
                     acc[supplier] = { items: [], total: 0 };
@@ -270,7 +288,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                   acc[supplier].items.push(item);
                   acc[supplier].total += item.price * item.quantity;
                   return acc;
-                }, {} as Record<string, { items: any[], total: number }>)).map(([supplier, data]) => (
+                }, {} as Record<string, { items: CartItem[], total: number }>)).map(([supplier, data]) => (
                   <div key={supplier} className="bg-white dark:bg-gray-700 rounded-lg p-3 border">
                     <div className="flex items-center gap-2 mb-2">
                       <Building className="h-4 w-4 text-blue-600" />
@@ -280,7 +298,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      {data.items.slice(0, 2).map((item: any) => (
+                      {data.items.slice(0, 2).map((item: CartItem) => (
                         <div key={item._id} className="flex justify-between items-center text-sm">
                           <span className="truncate">{item.productName} × {item.quantity}</span>
                           <span className="font-medium">₹{(item.price * item.quantity).toFixed(2)}</span>
