@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui/c
 import { X, Plus, Minus, Heart, Shield, Tag, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { PageContainer } from '@repo/ui/page-container';
 import Link from 'next/link';
+import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 
 const initialCartItems = [
   { id: 1, name: 'Aura Revitalizing Serum', price: 68.00, quantity: 1, image: 'https://picsum.photos/seed/cart1/200/200', hint: 'skincare product' },
@@ -17,9 +18,47 @@ const initialCartItems = [
 ];
 
 const suggestedProducts = [
-  { id: 3, name: 'Terra Exfoliating Scrub', price: 48.00, image: 'https://picsum.photos/seed/cart3/200/200', hint: 'cosmetic jar' },
-  { id: 4, name: 'Zen Calming Moisturizer', price: 45.00, image: 'https://picsum.photos/seed/product-zen/200/200', hint: 'moisturizer bottle' },
-  { id: 5, name: 'Sol Sunscreen SPF 50', price: 32.00, image: 'https://picsum.photos/seed/product-sol/200/200', hint: 'sunscreen tube' },
+  {
+    name: 'Terra Exfoliating Scrub',
+    description: 'A gentle scrub for a fresh look.',
+    price: 48.00,
+    image: 'https://picsum.photos/id/1031/400/400',
+    hint: 'cosmetic jar',
+    rating: 4.9,
+    reviewCount: 2310,
+    vendorName: 'Earthly Essentials',
+    isNew: true,
+  },
+  {
+    name: 'Zen Calming Moisturizer',
+    description: 'Soothe your skin with our calming moisturizer.',
+    price: 45.00,
+    image: 'https://picsum.photos/id/1029/400/400',
+    hint: 'moisturizer bottle',
+    rating: 4.7,
+    reviewCount: 987,
+    vendorName: 'Serenity Skincare',
+  },
+  {
+    name: 'Sol Sunscreen SPF 50',
+    description: 'Broad-spectrum protection from the sun.',
+    price: 32.00,
+    image: 'https://picsum.photos/seed/product-sol/400/400',
+    hint: 'sunscreen tube',
+    rating: 4.8,
+    reviewCount: 1543,
+    vendorName: 'SunCare Co.',
+  },
+  {
+    name: 'Luxe Gold Peel-Off Mask',
+    description: 'Indulgent peel-off mask for radiant skin.',
+    price: 55.00,
+    image: 'https://picsum.photos/seed/product-mask/400/400',
+    hint: 'face mask application',
+    rating: 4.6,
+    reviewCount: 750,
+    vendorName: 'Golden Beauty',
+  },
 ];
 
 export default function CartPage() {
@@ -64,39 +103,63 @@ export default function CartPage() {
             </Button>
           </div>
         ) : (
-          <div className="grid lg:grid-cols-3 gap-8 items-start">
-            {/* Cart Items List */}
-            <div className="lg:col-span-2 space-y-6">
-              {cartItems.map(item => (
-                <Card key={item.id} className="flex items-center p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="relative w-24 h-24 rounded-md overflow-hidden">
-                    <Image 
-                      src={item.image} 
-                      alt={item.name} 
-                      layout="fill"
-                      objectFit="cover"
-                      data-ai-hint={item.hint}
-                    />
-                  </div>
-                  <div className="flex-grow ml-4">
-                    <h3 className="font-semibold">{item.name}</h3>
-                    <p className="text-muted-foreground text-sm">Price: ₹{item.price.toFixed(2)}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(item.id, -1)}><Minus className="h-4 w-4" /></Button>
-                      <span className="font-semibold w-8 text-center">{item.quantity}</span>
-                      <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(item.id, 1)}><Plus className="h-4 w-4" /></Button>
+          <div className="grid grid-cols-12 gap-8 items-start">
+            {/* Main Content Area */}
+            <div className="col-span-12 lg:col-span-8 space-y-8">
+              {/* Cart Items List */}
+              <div className="space-y-6">
+                {cartItems.map(item => (
+                  <Card key={item.id} className="flex items-center p-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="relative w-24 h-24 rounded-md overflow-hidden">
+                      <Image 
+                        src={item.image} 
+                        alt={item.name} 
+                        layout="fill"
+                        objectFit="cover"
+                        data-ai-hint={item.hint}
+                      />
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</p>
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8 mt-2" onClick={() => handleRemoveItem(item.id)}><X className="h-4 w-4" /></Button>
-                  </div>
-                </Card>
-              ))}
+                    <div className="flex-grow ml-4">
+                      <h3 className="font-semibold">{item.name}</h3>
+                      <p className="text-muted-foreground text-sm">Price: ₹{item.price.toFixed(2)}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(item.id, -1)}><Minus className="h-4 w-4" /></Button>
+                        <span className="font-semibold w-8 text-center">{item.quantity}</span>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(item.id, 1)}><Plus className="h-4 w-4" /></Button>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</p>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8 mt-2" onClick={() => handleRemoveItem(item.id)}><X className="h-4 w-4" /></Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+
+              {/* You Might Also Like Section */}
+              <div className="mt-16">
+                <h2 className="text-2xl font-bold text-center mb-8">You Might Also Like</h2>
+                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {suggestedProducts.slice(0,3).map((product, index) => (
+                    <ProductCard 
+                      key={index} 
+                      name={product.name}
+                      description={product.description}
+                      price={product.price}
+                      image={product.image}
+                      hint={product.hint}
+                      rating={product.rating}
+                      reviewCount={product.reviewCount}
+                      vendorName={product.vendorName}
+                      isNew={product.isNew}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Order Summary */}
-            <div className="lg:col-span-1 lg:sticky top-24 space-y-6">
+            {/* Sidebar with Order Summary */}
+            <div className="col-span-12 lg:col-span-4 lg:sticky top-24 space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Order Summary</CardTitle>
@@ -149,29 +212,6 @@ export default function CartPage() {
                     </div>
                 </CardContent>
               </Card>
-            </div>
-          </div>
-        )}
-
-        {/* You Might Also Like Section */}
-        {cartItems.length > 0 && (
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold text-center mb-8">You Might Also Like</h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {suggestedProducts.map(product => (
-                <Card key={product.id} className="group overflow-hidden">
-                  <div className="relative aspect-square">
-                    <Image src={product.image} alt={product.name} layout="fill" objectFit="cover" data-ai-hint={product.hint} className="group-hover:scale-105 transition-transform" />
-                  </div>
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold truncate">{product.name}</h3>
-                    <div className="flex justify-between items-center mt-2">
-                      <p className="font-bold">₹{product.price.toFixed(2)}</p>
-                      <Button variant="outline" size="sm">Add to Cart</Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           </div>
         )}
