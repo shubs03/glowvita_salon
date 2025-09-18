@@ -172,10 +172,11 @@ export default function SalonDetailsPage() {
             <section id="about">
               <h2 className="text-3xl font-bold mb-2">About the Salon</h2>
               <p className="text-muted-foreground mb-6">Discover the story and values behind our brand.</p>
+
+              <p className='text-muted-foreground text-lg mb-6'>Lorem ipsum dolor sit amet consectetur adipisicing elit. Aut possimus, asperiores, eos exercitationem molestiae deserunt doloremque laudantium quaerat cupiditate nostrum pariatur itaque temporibus veniam quam commodi voluptate praesentium quis aliquid! Velit, ipsam laboriosam quam porro cum alias maxime tenetur illo accusamus quaerat, eaque debitis doloremque sequi molestias aperiam veritatis ipsum! Soluta distinctio earum a in quam blanditiis exercitationem odio ducimus officia alias minus quae quod, laborum perspiciatis, ipsa accusantium molestiae expedita, numquam tenetur consequuntur voluptatibus! Expedita laborum quo ipsam quia repudiandae unde eaque minus veniam, quod tempora, delectus reprehenderit illo dicta maxime quaerat vitae ab quam eligendi ducimus totam voluptatum.</p>
+
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-3">Our Mission</h3>
-                  <p className="text-muted-foreground leading-relaxed mb-6">{salon.mission}</p>
                   <div className="grid sm:grid-cols-3 gap-6 text-center">
                     {salon.stats.map(stat => (
                       <div key={stat.label}>
@@ -229,17 +230,18 @@ export default function SalonDetailsPage() {
                         src={product.image} 
                         alt={product.name} 
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
                         data-ai-hint={product.hint} 
                       />
-                       <Badge variant={product.stock > 0 ? "secondary" : "destructive"} className="absolute top-2 left-2 text-xs">
+                       <Badge variant={product.stock > 0 ? "secondary" : "default"} className="absolute top-2 right-2 text-xs">
                           {product.stock > 0 ? `In Stock` : 'Out of Stock'}
                         </Badge>
                     </div>
                     <div className="p-3 flex flex-col flex-grow text-left">
-                      <p className="text-xs text-muted-foreground">{product.brand}</p>
-                      <h4 className="font-semibold text-sm flex-grow my-1">{product.name}</h4>
-                      <p className="font-bold text-primary text-base mb-2">₹{product.price.toFixed(2)}</p>
+                      <p className="text-xs font-bold bg-black/80 text-blue-300 rounded-full mb-2 px-2 py-0.5 text-center items-center w-fit">{product.brand}</p>
+                      <h4 className=" text-sm font-semibold flex-grow mb-1">{product.name}</h4>
+
+                      <p className="font-bold text-primary text-sm mb-2">₹{product.price.toFixed(2)}</p>
                       <Button size="sm" variant="outline" className="w-full mt-auto text-xs">
                         <ShoppingCart className="h-3 w-3 mr-1" />
                         Add to Cart
