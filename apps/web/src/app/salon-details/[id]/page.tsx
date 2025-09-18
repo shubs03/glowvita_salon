@@ -75,7 +75,7 @@ export default function SalonDetailsPage() {
       <div className="container mx-auto px-4">
         {/* Section 1: Hero Image Gallery */}
         <div className="mt-8">
-          <div className="grid grid-cols-4 gap-2 h-96">
+          <div className="grid grid-cols-4 gap-2 h-80 md:h-[22rem]">
               <div className="col-span-4 lg:col-span-3 rounded-lg overflow-hidden">
                   <Image 
                       src={mainImage} 
@@ -103,25 +103,26 @@ export default function SalonDetailsPage() {
           </div>
         </div>
 
+        {/* Salon Name and Basic Info - Moved to the top */}
+        <section className="py-8 border-b">
+          <h1 className="text-4xl font-bold font-headline mb-4">{salon.name}</h1>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Star className="h-5 w-5 text-yellow-400 fill-current" />
+              <span className="font-semibold">{salon.rating}</span>
+              <span>({salon.reviewCount} reviews)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              <span>{salon.address}</span>
+            </div>
+          </div>
+        </section>
+
         {/* Main Content Grid */}
-        <div className="mt-12 grid lg:grid-cols-3 gap-12">
+        <div className="mt-8 grid lg:grid-cols-3 gap-12">
           {/* Left/Main Column (Scrollable) */}
           <div className="lg:col-span-2 space-y-16">
-            {/* Salon Name and Basic Info */}
-            <section>
-              <h1 className="text-4xl font-bold font-headline mb-4">{salon.name}</h1>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                  <span className="font-semibold">{salon.rating}</span>
-                  <span>({salon.reviewCount} reviews)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  <span>{salon.address}</span>
-                </div>
-              </div>
-            </section>
             
             {/* About Section */}
             <section>
@@ -302,6 +303,3 @@ export default function SalonDetailsPage() {
     </PageContainer>
   );
 }
-
-
-    
