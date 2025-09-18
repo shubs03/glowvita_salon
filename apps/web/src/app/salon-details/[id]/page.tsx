@@ -111,7 +111,7 @@ export default function SalonDetailsPage() {
 
         {/* Compact Bento Grid Hero Gallery */}
         <section className="py-6">
-          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-64 md:h-80">
+          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-48 md:h-64">
             <div className="col-span-6 md:col-span-4 row-span-2 rounded-lg overflow-hidden group cursor-pointer" onClick={() => openGalleryModal(salon.images[0])}>
               <Image 
                 src={salon.images[0]} 
@@ -166,23 +166,28 @@ export default function SalonDetailsPage() {
 
         {/* About Section */}
         <section className="py-8">
-            <Card className="bg-secondary/50 p-8 rounded-2xl">
-                <CardHeader>
-                    <h2 className="text-3xl font-bold font-headline leading-tight mb-4">About {salon.name}</h2>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-muted-foreground leading-relaxed mb-6">{salon.description}</p>
-                    <div className="flex flex-wrap justify-around gap-6 mt-8 pt-6 border-t">
-                        {salon.stats.map(stat => (
-                            <div key={stat.label} className="text-center">
-                            <p className="text-3xl font-bold text-primary">{stat.value}</p>
-                            <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+            <div className="p-4 border-2 border-gray-300 rounded-lg">
+                <div className="p-4 border-2 border-gray-300 rounded-lg">
+                    <div className="bg-white p-6 md:p-8 rounded-lg">
+                        <div className="text-center">
+                            <div className="inline-block border-2 border-gray-400 px-6 py-2 mb-6">
+                                <h2 className="text-3xl font-bold font-headline leading-tight">ABOUT</h2>
                             </div>
-                        ))}
+                            <p className="text-muted-foreground leading-relaxed mb-8 max-w-3xl mx-auto">{salon.description}</p>
+                            <div className="flex flex-wrap justify-center gap-8">
+                                {salon.stats.map(stat => (
+                                    <div key={stat.label} className="text-center">
+                                    <p className="text-3xl font-bold text-primary">{stat.value}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         </section>
+
 
         {/* Two-Column Layout Start */}
         <div className="grid lg:grid-cols-3 gap-12 pt-8">
@@ -287,33 +292,37 @@ export default function SalonDetailsPage() {
               <h2 className="text-3xl font-bold mb-6">Reviews</h2>
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold">{salon.rating}</span>
-                      <div className="flex">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className={`h-5 w-5 ${i < Math.floor(salon.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                        ))}
-                      </div>
+                    <h3 className="text-2xl font-semibold">Client Reviews</h3>
+                    <div className="flex items-center gap-4 mt-2">
+                        <div className="flex items-center gap-1">
+                            <span className="text-2xl font-bold">{salon.rating}</span>
+                            <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">Based on {salon.reviewCount} reviews</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{salon.reviewCount} reviews</p>
-                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {salon.reviews.map(review => (
                     <div key={review.author} className="border-b pb-4 last:border-b-0">
-                      <div className="flex items-center justify-between mb-1">
-                          <p className="font-semibold">{review.author}</p>
+                      <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
+                                {review.author.charAt(0)}
+                            </div>
+                            <div>
+                                <p className="font-semibold">{review.author}</p>
+                                <p className="text-xs text-muted-foreground">
+                                    {new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </p>
+                            </div>
+                          </div>
                           <div className="flex items-center gap-1">
                               {[...Array(5)].map((_, i) => (
                                   <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
                               ))}
                           </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {new Date(review.date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{review.text}</p>
+                      <p className="text-sm text-muted-foreground italic">"{review.text}"</p>
                     </div>
                   ))}
                 </CardContent>
@@ -334,7 +343,6 @@ export default function SalonDetailsPage() {
                 ></iframe>
               </div>
             </section>
-
           </div>
 
           {/* Right Sticky Column */}
