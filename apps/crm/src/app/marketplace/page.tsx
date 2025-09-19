@@ -434,7 +434,7 @@ export default function MarketplacePage() {
 
       {/* Product Detail Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] scrollbar-hidden overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">{selectedProduct?.productName}</DialogTitle>
             <DialogDescription>Product details and specifications</DialogDescription>
@@ -583,7 +583,7 @@ export default function MarketplacePage() {
       
       {/* Buy Now Modal */}
       <Dialog open={isBuyNowModalOpen} onOpenChange={setIsBuyNowModalOpen}>
-        <DialogContent className="max-w-md sm:max-w-lg lg:max-w-xl mx-4 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-md sm:max-w-lg lg:max-w-xl scrollbar-hidden mx-4 max-h-[90vh] overflow-y-auto">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl font-bold">Quick Checkout</DialogTitle>
             <DialogDescription className="text-sm">Complete your purchase in just a few clicks</DialogDescription>
@@ -717,75 +717,78 @@ export default function MarketplacePage() {
       
       {/* Supplier Profile Modal */}
       <Dialog open={isSupplierModalOpen} onOpenChange={setIsSupplierModalOpen}>
-        <DialogContent className="max-w-md max-h-[75vh] overflow-y-auto scrollbar-hide backdrop-blur-lg bg-background/95 border border-border/50 shadow-2xl">
-          <DialogHeader className="space-y-2 pb-3 border-b border-border/20">
-            <DialogTitle className="text-lg font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
-              Supplier Profile
-            </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">Verified supplier information</DialogDescription>
-          </DialogHeader>
-          {isSupplierLoading ? (
-            <div className="space-y-4 py-4">
-              <Skeleton className="h-20 w-20 rounded-full mx-auto" />
-              <Skeleton className="h-5 w-3/4 mx-auto" />
-              <Skeleton className="h-4 w-1/2 mx-auto" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          ) : supplierData && (
-            <div className="py-4">
-              {/* Supplier Header */}
-              <div className="text-center mb-4">
-                <div className="relative inline-block">
-                  <Image 
-                    src={supplierData.profileImage || 'https://placehold.co/80x80.png'} 
-                    alt={supplierData.shopName} 
-                    width={80} 
-                    height={80} 
-                    className="rounded-full mx-auto border-3 border-primary/20 shadow-lg" 
-                  />
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
+        <DialogContent className="max-w-sm w-[85vw] h-[70vh] p-0 gap-0 overflow-hidden">
+          <div className="flex flex-col h-full">
+            <DialogHeader className="px-4 py-3 border-b border-border/20 flex-shrink-0">
+              <DialogTitle className="text-base font-bold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">
+                Supplier Profile
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">Verified supplier information</DialogDescription>
+            </DialogHeader>
+            
+            {isSupplierLoading ? (
+              <div className="flex-1 p-4 space-y-3">
+                <Skeleton className="h-16 w-16 rounded-full mx-auto" />
+                <Skeleton className="h-4 w-3/4 mx-auto" />
+                <Skeleton className="h-3 w-1/2 mx-auto" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : supplierData && (
+              <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
+                {/* Supplier Header */}
+                <div className="text-center mb-4">
+                  <div className="relative inline-block">
+                    <Image 
+                      src={supplierData.profileImage || 'https://placehold.co/60x60.png'} 
+                      alt={supplierData.shopName} 
+                      width={60} 
+                      height={60} 
+                      className="rounded-full mx-auto border-2 border-primary/20 shadow-lg" 
+                    />
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                    </div>
+                  </div>
+                  <h3 className="text-base font-bold mt-2 mb-1">{supplierData.shopName}</h3>
+                  <Badge variant="secondary" className="rounded-full text-xs">
+                    Verified Supplier
+                  </Badge>
+                </div>
+
+                {/* Contact Info */}
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                    <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs truncate">{supplierData.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                    <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs truncate">{supplierData.city}, {supplierData.country}</span>
                   </div>
                 </div>
-                <h3 className="text-lg font-bold mt-3 mb-2">{supplierData.shopName}</h3>
-                <Badge variant="secondary" className="rounded-full text-xs">
-                  Verified Supplier
-                </Badge>
-              </div>
 
-              {/* Contact Info */}
-              <div className="space-y-3 mb-4">
-                <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{supplierData.email}</span>
+                {/* Rating */}
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <div className="flex items-center gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    ))}
+                  </div>
+                  <span className="text-xs font-medium">4.8 (120 reviews)</span>
                 </div>
-                <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-lg">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">{supplierData.city}, {supplierData.country}</span>
-                </div>
-              </div>
 
-              {/* Rating */}
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <div className="flex items-center gap-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <span className="text-sm font-medium">4.8 (120 reviews)</span>
+                {/* Description */}
+                {supplierData.description && (
+                  <div className="bg-gradient-to-r from-muted/20 to-muted/10 rounded-lg p-3">
+                    <h4 className="font-semibold mb-2 text-xs">About</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4">
+                      {supplierData.description}
+                    </p>
+                  </div>
+                )}
               </div>
-
-              {/* Description */}
-              {supplierData.description && (
-                <div className="bg-gradient-to-r from-muted/20 to-muted/10 rounded-lg p-3">
-                  <h4 className="font-semibold mb-2 text-sm">About</h4>
-                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
-                    {supplierData.description}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -383,12 +383,12 @@ export default function ProductsPage() {
                                 {paginatedProducts.map((product, index) => (
                                     <Card 
                                         key={product._id} 
-                                        className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-500 hover:shadow-xl hover:shadow-primary/10 transform hover:-translate-y-2 bg-card cursor-pointer animate-fadeInUp flex flex-col h-80"
+                                        className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-500 hover:shadow-xl hover:shadow-primary/10 transform hover:-translate-y-2 bg-card cursor-pointer animate-fadeInUp flex flex-col h-[21rem]"
                                         style={{ animationDelay: `${index * 0.1}s` }}
                                         onClick={() => handleOpenProductModal(product)}
                                     >
                                         {/* Image Section - 65% of card height */}
-                                        <div className="relative h-[65%] w-full overflow-hidden rounded-t-xl">
+                                        <div className="relative h-[60%] w-full overflow-hidden rounded-t-xl">
                                             <Image 
                                                 src={product.productImage || 'https://placehold.co/300x200.png'} 
                                                 alt={product.productName} 
@@ -425,7 +425,7 @@ export default function ProductsPage() {
                                         </div>
                                         
                                         {/* Content Section - 35% of card height */}
-                                        <div className="flex flex-col h-[35%] p-3 justify-between">
+                                        <div className="flex flex-col h-[40%] p-3 justify-between">
                                             {/* Product Name & Price - Same Line */}
                                             <div className="flex items-center justify-between mb-2">
                                                 <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-1 flex-1 mr-2">
