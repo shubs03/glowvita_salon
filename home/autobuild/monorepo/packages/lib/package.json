@@ -1,0 +1,35 @@
+{
+  "name": "@repo/lib",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./db": "./src/db.js",
+    "./auth": "./src/auth.js",
+    "./models/User": "./src/models/user/User.model.js",
+    "./models/user": "./src/models/user/User.model.js",
+    "./models/staffModel": "./src/models/vendor/Staff.model.js",
+    "./models/VendorWorkingHours": "./src/models/Vendor/VendorWorkingHours.model.js",
+    "./models": "./src/models",
+    "./stateCity": "./src/state-city.json",
+    "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",
+    "./models/Marketing/SmsPackage.model": "./src/models/Marketing/SmsPackage.model.js",
+    "./models/Marketing/Campaign.model": "./src/models/Marketing/Campaign.model.js",
+    "./models/Marketing/socialMediaTemplate.model": "./src/models/Marketing/socialMediaTemplate.model.js"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jose": "^5.4.0",
+    "mongoose": "^8.4.1"
+  },
+  "devDependencies": {
+    "@repo/eslint-config-custom": "*",
+    "@repo/typescript-config": "*",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5.4.5"
+  },
+  "type": "module"
+}

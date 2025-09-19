@@ -1,0 +1,70 @@
+{
+  "name": "@repo/ui",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./avtar": "./src/avatar.tsx",
+    "./button": "./src/button.tsx",
+    "./card": "./src/card.tsx",
+    "./input": "./src/input.tsx",
+    "./label": "./src/label.tsx",
+    "./table": "./src/table.tsx",
+    "./pagination": "./src/pagination.tsx",
+    "./select": "./src/select.tsx",
+    "./badge": "./src/badge.tsx",
+    "./tabs": "./src/tabs.tsx",
+    "./dialog": "./src/dialog.tsx",
+    "./textarea": "./src/textarea.tsx",
+    "./radio-group": "./src/radio-group.tsx",
+    "./switch": "./src/switch.tsx",
+    "./checkbox": "./src/checkbox.tsx",
+    "./skeleton": "./src/skeleton.tsx",
+    "./globals.css": "./src/globals.css",
+    "./tailwind.config": "./tailwind.config.ts",
+    "./cn": "./src/cn.ts",
+    "./dropdown-menu": "./src/dropdown-menu.tsx",
+    "./avatar": "./src/avatar.tsx",
+    "./logout-confirmation-modal": "./src/logout-confirmation-modal.tsx",
+    "./status-indicator": "./src/status-indicator.tsx",
+    "./floating-action-button": "./src/floating-action-button.tsx",
+    "./stats-card": "./src/stats-card.tsx",
+    "./modern-card": "./src/modern-card.tsx",
+    "./3d-card": "./src/3d-card.tsx",
+    "./page-container": "./src/page-container.tsx",
+    "./components/landing/ProductCard": "./src/components/landing/ProductCard.tsx",
+    "./separator": "./src/separator.tsx"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "clean": "rm -rf .turbo && rm -rf node_modules && rm -rf dist"
+  },
+  "dependencies": {
+    "@radix-ui/react-avatar": "^1.1.10",
+    "@radix-ui/react-checkbox": "^1.1.0",
+    "@radix-ui/react-dialog": "^1.1.1",
+    "@radix-ui/react-dropdown-menu": "^2.1.1",
+    "@radix-ui/react-label": "^2.0.2",
+    "@radix-ui/react-radio-group": "^1.2.0",
+    "@radix-ui/react-select": "^2.1.1",
+    "@radix-ui/react-slot": "^1.0.2",
+    "@radix-ui/react-switch": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.395.0",
+    "tailwind-merge": "^2.3.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "peerDependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@repo/eslint-config-custom": "*",
+    "@repo/typescript-config": "*",
+    "@types/react": "^18.3.3",
+    "react": "18.3.1",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.4.5"
+  }
+}
