@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@repo/ui/cn";
+import { PageContainer } from '@repo/ui/page-container';
 
 const FeatureCheck = ({ children }: { children: React.ReactNode }) => (
   <li className="flex items-start gap-3">
@@ -263,7 +264,7 @@ const HowItWorksStep = ({
 
 export default function AppsPage() {
   return (
-    <div className="bg-background">
+    <PageContainer padding="none">
       {/* Section 1: Hero */}
       <section className="py-20 md:py-28 text-center bg-secondary/50 overflow-hidden relative">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-slate-900/50 dark:via-background dark:to-purple-900/20 opacity-30"></div>
@@ -304,14 +305,17 @@ export default function AppsPage() {
         ]}
         images={[
           {
-            src: "https://placehold.co/375x812.png",
+            src: "https://picsum.photos/seed/app1/375/812",
             hint: "app booking screen",
           },
           {
-            src: "https://placehold.co/375x812.png",
+            src: "https://picsum.photos/seed/app2/375/812",
             hint: "app services list",
           },
-          { src: "https://placehold.co/375x812.png", hint: "app profile page" },
+          { 
+            src: "https://picsum.photos/seed/app3/375/812", 
+            hint: "app profile page" 
+          },
         ]}
       />
 
@@ -341,15 +345,15 @@ export default function AppsPage() {
         ]}
         images={[
           {
-            src: "https://placehold.co/375x812.png",
+            src: "https://picsum.photos/seed/crm1/375/812",
             hint: "app dashboard screen",
           },
           {
-            src: "https://placehold.co/375x812.png",
+            src: "https://picsum.photos/seed/crm2/375/812",
             hint: "app calendar view",
           },
           {
-            src: "https://placehold.co/375x812.png",
+            src: "https://picsum.photos/seed/crm3/375/812",
             hint: "app analytics chart",
           },
         ]}
@@ -512,7 +516,184 @@ export default function AppsPage() {
         </div>
       </section>
 
-      {/* Final CTA */}
+      {/* Section 7: Security */}
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="text-center md:text-left">
+              <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium mb-4">
+                <Shield size={16} />
+                Your Data is Safe
+              </div>
+              <h2 className="text-3xl md:text-5xl font-bold font-headline mb-4">
+                Security You Can Trust
+              </h2>
+              <p className="text-lg text-muted-foreground mb-6">
+                We prioritize the security of your business and client data with
+                enterprise-grade protection.
+              </p>
+              <ul className="space-y-3 text-left">
+                <FeatureCheck>
+                  <strong>Data Encryption:</strong> All data is encrypted in
+                  transit and at rest.
+                </FeatureCheck>
+                <FeatureCheck>
+                  <strong>Secure Payments:</strong> PCI-compliant payment
+                  processing to protect financial data.
+                </FeatureCheck>
+                <FeatureCheck>
+                  <strong>Regular Backups:</strong> Your data is backed up
+                  regularly to prevent loss.
+                </FeatureCheck>
+                <FeatureCheck>
+                  <strong>Access Control:</strong> Granular permissions to
+                  control what your staff can see and do.
+                </FeatureCheck>
+              </ul>
+            </div>
+            <div className="relative flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-200 via-blue-200 to-purple-200 rounded-full blur-3xl opacity-40"></div>
+              <Shield className="relative z-10 h-48 w-48 text-green-500 drop-shadow-lg" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Section 8: Feature Comparison */}
+      <section className="py-20 bg-secondary/50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-5xl font-bold font-headline">
+              App Features at a Glance
+            </h2>
+            <p className="text-muted-foreground mt-2 text-lg">
+              Compare the features of our client and vendor apps.
+            </p>
+          </div>
+          <Card className="max-w-4xl mx-auto shadow-lg border border-border/50">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm md:text-base">
+                  <thead className="bg-secondary/50">
+                    <tr className="border-b">
+                      <th className="text-left p-4 font-semibold">Feature</th>
+                      <th className="text-center p-4 font-semibold">
+                        Client App
+                      </th>
+                      <th className="text-center p-4 font-semibold">
+                        Vendor App
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b">
+                      <td className="p-4">Book Appointments</td>
+                      <td className="text-center p-4">
+                        <CheckCircle className="text-green-500 mx-auto" />
+                      </td>
+                      <td className="text-center p-4">
+                        <CheckCircle className="text-green-500 mx-auto" />
+                      </td>
+                    </tr>
+                    <tr className="border-b bg-secondary/30">
+                      <td className="p-4">Manage Calendar & Staff</td>
+                      <td className="text-center p-4 text-muted-foreground">
+                        -
+                      </td>
+                      <td className="text-center p-4">
+                        <CheckCircle className="text-green-500 mx-auto" />
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-4">View Service & Product Catalog</td>
+                      <td className="text-center p-4">
+                        <CheckCircle className="text-green-500 mx-auto" />
+                      </td>
+                      <td className="text-center p-4">
+                        <CheckCircle className="text-green-500 mx-auto" />
+                      </td>
+                    </tr>
+                    <tr className="border-b bg-secondary/30">
+                      <td className="p-4">Process Payments & Invoicing</td>
+                      <td className="text-center p-4 text-muted-foreground">
+                        -
+                      </td>
+                      <td className="text-center p-4">
+                        <CheckCircle className="text-green-500 mx-auto" />
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-4">Client Profiles & History</td>
+                      <td className="text-center p-4 text-muted-foreground">
+                        -
+                      </td>
+                      <td className="text-center p-4">
+                        <CheckCircle className="text-green-500 mx-auto" />
+                      </td>
+                    </tr>
+                    <tr className="border-b bg-secondary/30">
+                      <td className="p-4">Inventory Management</td>
+                      <td className="text-center p-4 text-muted-foreground">
+                        -
+                      </td>
+                      <td className="text-center p-4">
+                        <CheckCircle className="text-green-500 mx-auto" />
+                      </td>
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-4">Business Analytics & Reports</td>
+                      <td className="text-center p-4 text-muted-foreground">
+                        -
+                      </td>
+                      <td className="text-center p-4">
+                        <CheckCircle className="text-green-500 mx-auto" />
+                      </td>
+                    </tr>
+                    <tr className="bg-secondary/30">
+                      <td className="p-4">Marketing & Promotions</td>
+                      <td className="text-center p-4 text-muted-foreground">
+                        -
+                      </td>
+                      <td className="text-center p-4">
+                        <CheckCircle className="text-green-500 mx-auto" />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Section 9: FAQ */}
+      <section className="py-16 md:py-20 bg-background">
+        <div className="container mx-auto px-4 max-w-4xl">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold">Frequently Asked Questions</h2>
+            </div>
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Can I integrate this with my existing website?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">Yes, our booking widget can be easily embedded into any website, allowing clients to book directly from your own site.</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Is there a limit on the number of staff members I can add?</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">Our Pro plan supports unlimited staff members. The Basic plan has a limit, please check our pricing page for details.</p>
+                </CardContent>
+              </Card>
+            </div>
+        </div>
+      </section>
+
+      {/* Section 10: Final CTA */}
       <section className="py-20 text-center bg-background">
         <div className="container mx-auto px-4 max-w-4xl">
           <h2 className="text-4xl lg:text-6xl font-bold font-headline mb-6 bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent leading-tight">
@@ -525,6 +706,6 @@ export default function AppsPage() {
           <AppStoreButtons />
         </div>
       </section>
-    </div>
+    </PageContainer>
   );
 }

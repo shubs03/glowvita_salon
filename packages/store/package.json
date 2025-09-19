@@ -1,3 +1,4 @@
+
 {
   "name": "@repo/store",
   "version": "0.0.0",
@@ -31,7 +32,9 @@
     "./slices/vendorprofileSlice": "./src/slices/vendorprofileSlice.js",
     "./slices/workingHoursSlice": "./src/slices/workingHoursSlice.js",
     "./slices/vendorSlice": "./src/slices/vendorSlice.js",
-    "./slices/smsTemplateSlice": "./src/slices/smsTemplateSlice.js"
+    "./slices/smsTemplateSlice": "./src/slices/smsTemplateSlice.js",
+    "./slices/orderSlice": "./src/slices/orderSlice.js",
+    "./slices/cartSlice": "./src/slices/cartSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -48,7 +51,7 @@
   "devDependencies": {
     "@repo/eslint-config-custom": "*",
     "@repo/typescript-config": "*",
-    "react": "^18.3.1",
+    "react": "18.3.1",
     "typescript": "^5.4.5"
   }
 }

@@ -71,6 +71,7 @@ interface NewAppointmentFormProps {
   defaultValues?: Partial<Appointment>;
   defaultDate?: Date;
   isEditing?: boolean;
+  isRescheduling?: boolean;
   onSubmit?: (appointment: Appointment) => Promise<void>;
   onCancel?: () => void;
   onSuccess?: () => void;
@@ -81,6 +82,7 @@ export default function NewAppointmentForm({
   defaultValues,
   defaultDate,
   isEditing = false,
+  isRescheduling = false,
   onSubmit,
   onCancel = () => {},
   onSuccess,
@@ -190,58 +192,59 @@ export default function NewAppointmentForm({
   };
 
   const [appointmentData, setAppointmentData] = useState<Appointment>({
-    client: '',
-    clientName: '',
-    service: '',
-    serviceName: '',
-    staff: defaultValues?.staff || defaultStaff?._id || '',
-    staffName:
-      defaultValues?.staffName ||
-      (defaultValues?.staff
-        ? staffData.find((s) => s._id === defaultValues.staff)?.name
-        : defaultStaff?.name) ||
-      '',
-    date: defaultDate || new Date(),
-    startTime: getCurrentTimeWithBuffer(),
-    endTime: '', // Will be calculated when service is selected
-    duration: 0,
-    notes: '',
-    status: 'scheduled',
-    amount: 0,
-    discount: 0,
-    totalAmount: 0,
-    paymentStatus: 'unpaid',
-    tax: 0,
-    createdAt: '',
-    updatedAt: ''
+    _id: defaultValues?._id || defaultValues?.id || '',
+    id: defaultValues?.id || defaultValues?._id || '',
+    client: defaultValues?.client || '',
+    clientName: defaultValues?.clientName || '',
+    service: defaultValues?.service || '',
+    serviceName: defaultValues?.serviceName || '',
+    staff: defaultValues?.staff || '',
+    staffName: defaultValues?.staffName || '',
+    date: defaultValues?.date || defaultDate || new Date(),
+    startTime: defaultValues?.startTime || getCurrentTimeWithBuffer(),
+    endTime: defaultValues?.endTime || '',
+    duration: defaultValues?.duration || 60,
+    notes: defaultValues?.notes || '',
+    status: defaultValues?.status || 'scheduled',
+    amount: defaultValues?.amount || 0,
+    discount: defaultValues?.discount || 0,
+    tax: defaultValues?.tax || 0,
+    totalAmount: defaultValues?.totalAmount || 0,
+    paymentStatus: defaultValues?.paymentStatus || 'pending',
   });
 
+  // Track initial mount to prevent double-setting defaults
   const isInitialMount = useRef(true);
 
-  useEffect(() => {
-    console.log('Services data:', services);
-    console.log('Staff data:', staffData);
-    console.log('Appointment data:', appointmentData);
-  }, [services, staffData, appointmentData]);
-
+  // Handle default values on initial load
   useEffect(() => {
     if (!defaultValues || !isInitialMount.current) return;
     
     isInitialMount.current = false;
-    
     console.log('Default values received:', defaultValues);
     
     const updates: Partial<Appointment> = {};
     
+    // Handle ID mapping - this is crucial for editing
+    if (defaultValues._id || defaultValues.id) {
+      updates._id = defaultValues._id || defaultValues.id;
+      updates.id = defaultValues._id || defaultValues.id; // Ensure both are set
+    }
+    
     // Handle service mapping
     if (defaultValues.service || defaultValues.serviceName) {
+      // First try to find service by ID
       const serviceId = defaultValues.service || 
-        services.find(s => s.name === defaultValues.serviceName)?._id;
+        (defaultValues.serviceName && services.find(s => s.name === defaultValues.serviceName)?._id);
       
       if (serviceId) {
         updates.service = serviceId;
-        updates.serviceName = defaultValues.serviceName || 
-          services.find(s => s._id === serviceId)?.name || '';
+        // If we have the service in our services list, use its name
+        const service = services.find(s => s._id === serviceId);
+        updates.serviceName = service ? service.name : defaultValues.serviceName || '';
+      } else if (defaultValues.serviceName) {
+        // If we couldn't find by ID but have a name, just use the name
+        updates.serviceName = defaultValues.serviceName;
       }
     }
     
@@ -249,8 +252,8 @@ export default function NewAppointmentForm({
     if (defaultValues.staff) {
       if (typeof defaultValues.staff === 'object' && defaultValues.staff !== null) {
         // If staff is an object, extract the ID and name
-        updates.staff = defaultValues.staff._id;
-        updates.staffName = defaultValues.staff.fullName || defaultValues.staffName || '';
+        updates.staff = (defaultValues.staff as any)._id;
+        updates.staffName = (defaultValues.staff as any).fullName || defaultValues.staffName || '';
       } else if (typeof defaultValues.staff === 'string') {
         // If staff is a string ID, find the corresponding staff member
         const staff = staffData.find(s => s._id === defaultValues.staff);
@@ -278,6 +281,37 @@ export default function NewAppointmentForm({
       }));
     }
   }, [defaultValues, services, staffData]);
+
+  // Handle default values when services load
+  useEffect(() => {
+    if (isLoadingServices || services.length === 0) return;
+    
+    // If we have a default service ID but no name, try to find and set it
+    if (appointmentData.service && !appointmentData.serviceName) {
+      const defaultService = services.find(s => s.id === appointmentData.service);
+      if (defaultService) {
+        setAppointmentData(prev => ({
+          ...prev,
+          serviceName: defaultService.name,
+          duration: defaultService.duration || 60,
+          amount: defaultService.price || 0,
+          totalAmount: defaultService.price || 0
+        }));
+      }
+    }
+    // If no service is selected but we have services, select the first one
+    else if (!appointmentData.service && services.length > 0) {
+      const firstService = services[0];
+      setAppointmentData(prev => ({
+        ...prev,
+        service: firstService.id,
+        serviceName: firstService.name,
+        duration: firstService.duration || 60,
+        amount: firstService.price || 0,
+        totalAmount: firstService.price || 0
+      }));
+    }
+  }, [isLoadingServices, services, appointmentData.service, appointmentData.serviceName]);
 
   // Update the staff change handler
   const handleStaffChange = (staffId: string) => {
@@ -349,15 +383,21 @@ export default function NewAppointmentForm({
     const selectedService = services.find(s => s.id === serviceId);
     if (selectedService) {
       const now = new Date();
-      const currentTime = getMinTime(now); // Get current time with buffer
+      const currentTime = getMinTime(now);
+      
+      // Calculate total amount based on service price, discount and tax
+      const amount = selectedService.price || 0;
+      const discount = appointmentData.discount || 0;
+      const tax = appointmentData.tax || 0;
+      const totalAmount = Math.max(0, amount - discount + tax);
       
       setAppointmentData(prev => ({
         ...prev,
         service: selectedService.id,
         serviceName: selectedService.name,
         duration: selectedService.duration || 60,
-        amount: selectedService.price || 0,
-        // Don't update startTime here, keep the current time
+        amount: amount,
+        totalAmount: totalAmount,
         endTime: calculateEndTime(prev.startTime, selectedService.duration || 60)
       }));
     }
@@ -414,7 +454,12 @@ export default function NewAppointmentForm({
   // Handle form field changes
   const handleFieldChange = (field: keyof Appointment, value: any) => {
     setAppointmentData(prev => {
-      const updated = { ...prev, [field]: value };
+      // Convert string values to numbers for amount fields
+      const numericValue = typeof value === 'string' && ['amount', 'discount', 'tax', 'totalAmount'].includes(field)
+        ? parseFloat(value) || 0
+        : value;
+
+      const updated = { ...prev, [field]: numericValue };
 
       // Auto-calculate dependent fields
       if (field === 'startTime' || field === 'duration') {
@@ -424,15 +469,25 @@ export default function NewAppointmentForm({
         );
       }
 
+      // Recalculate total amount when amount, discount, or tax changes
       if (['amount', 'discount', 'tax'].includes(field)) {
-        const amount = field === 'amount' ? Number(value) : updated.amount || 0;
-        const discount = field === 'discount' ? Number(value) : updated.discount || 0;
-        const tax = field === 'tax' ? Number(value) : updated.tax || 0;
-        updated.totalAmount = calculateTotalAmount(amount, discount, tax);
+        const amount = field === 'amount' ? numericValue : updated.amount || 0;
+        const discount = field === 'discount' ? numericValue : updated.discount || 0;
+        const tax = field === 'tax' ? numericValue : updated.tax || 0;
+        updated.totalAmount = Math.max(0, amount - discount + tax);
       }
 
       return updated;
     });
+  };
+
+  // Helper function to format dates without timezone issues
+  const formatDateForForm = (date: Date | string): string => {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const formatDateForBackend = (date: Date | string): string => {
@@ -444,89 +499,71 @@ export default function NewAppointmentForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isLoadingStaff || isLoadingServices || isCreating || isUpdating || isDeleting) return;
-    
-    // Get the selected service and staff data
-    const selectedService = services.find(s => s.id === appointmentData.service);
-    const selectedStaff = staffData.find(s => s._id === appointmentData.staff);
-    
-    // Validate required fields with more specific error messages
-    if (!selectedService) {
-      toast.error('Error', 'Please select a valid service');
-      return;
-    }
-
-    if (!selectedStaff) {
-      toast.error('Error', 'Please select a staff member');
-      return;
-    }
-
-    if (!appointmentData.amount || Number(appointmentData.amount) <= 0) {
-      toast.error('Error', 'Please enter a valid amount');
-      return;
-    }
-
     try {
-      // Prepare the appointment data with all required fields
+      // Validate required fields
+      if (!appointmentData.clientName || !appointmentData.clientName.trim()) {
+        toast.error('Error', 'Please enter client name');
+        return;
+      }
+
+      if (!appointmentData.service) {
+        toast.error('Error', 'Please select a service');
+        return;
+      }
+
+      // Prepare the appointment payload
       const appointmentPayload = {
         ...appointmentData,
-        // Only include client if it's a valid ObjectId, otherwise let the backend handle it
-        client: isValidObjectId(appointmentData.client) ? appointmentData.client : undefined,
+        // Only include client ID if it's a valid ObjectId
+        ...(appointmentData.client && isValidObjectId(appointmentData.client) 
+          ? { client: appointmentData.client } 
+          : { client: undefined }),
+        // Always include clientName
         clientName: appointmentData.clientName,
-        // Ensure service details are included
-        service: selectedService.id,
-        serviceName: selectedService.name,
-        serviceDuration: selectedService.duration || 60,
-        servicePrice: selectedService.price || 0,
-        // Include staff details
-        staff: selectedStaff._id,
-        staffName: selectedStaff.name,
-        // Format dates properly
+        // Ensure staff is set
+        staff: appointmentData.staff || (staffData[0]?._id || ''),
+        staffName: appointmentData.staffName || staffData.find(s => s._id === appointmentData.staff)?.name || '',
+        // Ensure dates are properly formatted
         date: appointmentData.date instanceof Date 
-          ? appointmentData.date.toISOString() 
+          ? formatDateForBackend(appointmentData.date) 
           : appointmentData.date,
-        // Calculate end time if not provided
-        startTime: appointmentData.startTime,
-        endTime: appointmentData.endTime || calculateEndTime(appointmentData.startTime, selectedService.duration || 60),
-        duration: Number(selectedService.duration) || 60,
-        // Ensure all number fields are properly formatted
-        amount: Number(selectedService.price) || 0,
+        // Ensure numeric fields are numbers
+        amount: Number(appointmentData.amount) || 0,
         discount: Number(appointmentData.discount) || 0,
         tax: Number(appointmentData.tax) || 0,
-        totalAmount: calculateTotalAmount(
-          Number(selectedService.price) || 0,
-          Number(appointmentData.discount) || 0,
-          Number(appointmentData.tax) || 0
-        ),
-        // Set default values for optional fields
-        notes: appointmentData.notes || '',
-        status: (appointmentData.status as AppointmentStatus) || 'scheduled',
-        paymentStatus: appointmentData.paymentStatus || 'unpaid'
+        totalAmount: Number(appointmentData.totalAmount) || 0,
+        duration: Number(appointmentData.duration) || 60,
       };
 
-      // Call the parent's onSubmit handler if provided
-      if (onSubmit) {
-        await onSubmit(appointmentPayload);
-      } else {
-        // Otherwise use the default submission logic
-        if (isEditing && appointmentData.id) {
-          await updateAppointment({ 
-            _id: appointmentData.id, 
-            ...appointmentPayload 
-          }).unwrap();
-          toast.success('Appointment updated successfully');
-        } else {
-          await createAppointment(appointmentPayload).unwrap();
-          toast.success('Appointment created successfully');
+      // Remove empty or undefined fields
+      Object.keys(appointmentPayload).forEach(key => {
+        if (appointmentPayload[key as keyof typeof appointmentPayload] === undefined || 
+            appointmentPayload[key as keyof typeof appointmentPayload] === '') {
+          delete appointmentPayload[key as keyof typeof appointmentPayload];
         }
-        onSuccess?.();
+      });
+
+      if (onSubmit) {
+        await onSubmit(appointmentPayload as Appointment);
+      } else if (isEditing && (appointmentData.id || appointmentData._id)) {
+        await updateAppointment({
+          ...appointmentPayload,
+          _id: appointmentData._id || appointmentData.id
+        }).unwrap();
+        toast.success('Success', 'Appointment updated successfully');
+      } else {
+        // For new appointments, ensure we don't send an ID
+        const { _id, id, ...newAppointment } = appointmentPayload;
+        await createAppointment(newAppointment).unwrap();
+        toast.success('Success', 'Appointment created successfully');
       }
+      
+      onSuccess?.();
     } catch (error: any) {
       console.error('Error saving appointment:', error);
-      toast.error(
-        'Error',
-        error?.data?.message || error?.message || 'Failed to save appointment. Please check all fields and try again.'
-      );
+      const errorMessage = error?.data?.message || error?.message || 'Failed to save appointment. Please check all fields and try again.';
+      console.error('Detailed error:', error);
+      toast.error('Error', errorMessage);
     }
   };
 
@@ -539,12 +576,12 @@ export default function NewAppointmentForm({
           onDelete(appointmentData.id);
         } else {
           await deleteAppointment(appointmentData.id).unwrap();
-          toast.success('Appointment deleted successfully');
+          toast.success('Success', 'Appointment deleted successfully');
           if (onSuccess) onSuccess();
         }
       } catch (error: any) {
         console.error('Error deleting appointment:', error);
-        toast.error('Failed to delete appointment');
+        toast.error('Error', 'Failed to delete appointment');
       }
     }
   };
@@ -558,14 +595,27 @@ export default function NewAppointmentForm({
     return date < today;
   };
 
+  // Update the form title based on the mode
+  const formTitle = isRescheduling 
+    ? 'Reschedule Appointment' 
+    : isEditing 
+      ? 'Edit Appointment' 
+      : 'New Appointment';
+
+  const formDescription = isRescheduling
+    ? 'Update the date and time for this appointment'
+    : isEditing
+      ? 'Update the appointment details'
+      : 'Fill in the details to schedule a new appointment';
+
   return (
     <div className="space-y-6 p-4">
       <div className="space-y-1">
         <h2 className="text-xl font-semibold text-gray-900">
-          {isEditing ? 'Edit Appointment' : 'New Appointment'}
+          {formTitle}
         </h2>
         <p className="text-sm text-gray-500">
-          {isEditing ? 'Update the appointment details' : 'Fill in the details to schedule a new appointment'}
+          {formDescription}
         </p>
       </div>
 
@@ -582,6 +632,7 @@ export default function NewAppointmentForm({
               const name = e.target.value; 
               setAppointmentData(prev => ({
                 ...prev,
+                client: '', // Clear any existing client ID when typing a new name
                 clientName: name 
               }));
             }}
@@ -601,10 +652,7 @@ export default function NewAppointmentForm({
               <Input
                 id="date"
                 type="date"
-                value={appointmentData.date ? format(
-                  appointmentData.date instanceof Date ? appointmentData.date : new Date(appointmentData.date), 
-                  'yyyy-MM-dd'
-                ) : ''}
+                value={appointmentData.date ? formatDateForForm(appointmentData.date) : ''}
                 onChange={(e) => {
                   const selectedDate = new Date(e.target.value);
                   if (!isDateDisabled(selectedDate)) {
@@ -623,7 +671,7 @@ export default function NewAppointmentForm({
                     toast.error('Error', 'Cannot select past dates');
                   }
                 }}
-                min={format(new Date(), 'yyyy-MM-dd')} // Disable past dates in the date picker
+                min={formatDateForForm(new Date())}
                 className="pl-10 w-full"
                 required
               />
@@ -669,31 +717,38 @@ export default function NewAppointmentForm({
             <Label htmlFor="service" className="text-sm font-medium text-gray-700">
               Service <span className="text-red-500">*</span>
             </Label>
-            <Select
-              value={appointmentData.service}
-              onValueChange={handleServiceChange}
-              disabled={isLoadingServices || services.length === 0}
-              required
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={
-                  isLoadingServices ? 'Loading services...' : 
-                  services.length === 0 ? 'No services available' : 'Select a service'
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {services.map((service) => (
-                  <SelectItem key={service.id} value={service.id}>
-                    <div className="flex justify-between w-full">
-                      <span>{service.name}</span>
-                      <span className="ml-2 text-sm text-gray-500">
-                        ${service.price?.toFixed(2) || '0.00'}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isLoadingServices ? (
+              <div className="flex items-center justify-center p-2 bg-gray-100 rounded-md">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <span>Loading services...</span>
+              </div>
+            ) : (
+              <Select
+                value={appointmentData.service}
+                onValueChange={handleServiceChange}
+                disabled={isLoadingServices || services.length === 0}
+                required
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={
+                    isLoadingServices ? 'Loading services...' : 
+                    services.length === 0 ? 'No services available' : 'Select a service'
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      <div className="flex justify-between w-full">
+                        <span>{service.name}</span>
+                        <span className="ml-2 text-sm text-gray-500">
+                          ${service.price?.toFixed(2) || '0.00'}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {!isLoadingServices && services.length === 0 && (
               <p className="text-sm text-red-500">No services found. Please add services first.</p>
             )}
@@ -762,7 +817,7 @@ export default function NewAppointmentForm({
               step="0.01"
               min="0"
               value={appointmentData.amount || ''}
-              onChange={(e) => handleFieldChange('amount', parseFloat(e.target.value) || 0)}
+              onChange={(e) => handleFieldChange('amount', e.target.value)}
               placeholder="0.00"
               className="w-full"
             />
@@ -778,7 +833,7 @@ export default function NewAppointmentForm({
               min="0"
               step="0.01"
               value={appointmentData.discount || ''}
-              onChange={(e) => handleFieldChange('discount', parseFloat(e.target.value) || 0)}
+              onChange={(e) => handleFieldChange('discount', e.target.value)}
               placeholder="0.00"
               className="w-full"
             />
@@ -794,7 +849,7 @@ export default function NewAppointmentForm({
               step="0.01"
               min="0"
               value={appointmentData.tax || ''}
-              onChange={(e) => handleFieldChange('tax', parseFloat(e.target.value) || 0)}
+              onChange={(e) => handleFieldChange('tax', e.target.value)}
               placeholder="0.00"
               className="w-full"
             />
@@ -806,12 +861,10 @@ export default function NewAppointmentForm({
             </Label>
             <Input
               id="totalAmount"
-              type="number"
-              step="0.01"
-              value={appointmentData.totalAmount?.toFixed(2) || '0.00'}
-              onChange={(e) => handleFieldChange('totalAmount', parseFloat(e.target.value) || 0)}
-              placeholder="0.00"
-              className="w-full"
+              type="text"
+              value={appointmentData.totalAmount ? appointmentData.totalAmount.toFixed(2) : '0.00'}
+              readOnly
+              className="w-full bg-gray-50"
             />
           </div>
         </div>

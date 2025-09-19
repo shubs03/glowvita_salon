@@ -16,7 +16,7 @@ const PlatformForCard = ({
   hint: string;
 }) => (
   <a
-    className="relative inline-block h-48 w-72 md:h-56 md:w-80 shrink-0 overflow-hidden rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-primary/25 group border-2 border-border/30 hover:border-primary/50 hover-lift bg-gradient-to-br from-background to-primary/5"
+    className="relative inline-block h-48 w-72 md:h-56 md:w-80 shrink-0 overflow-hidden rounded-lg transition-all duration-500 hover:shadow-2xl hover:shadow-primary/25 group border-2 border-border/30 hover:border-primary/50 hover-lift bg-gradient-to-br from-background to-primary/5"
     href="#"
   >
     <Image
@@ -118,7 +118,7 @@ export function PlatformFor() {
   return (
     <section
       id="platform-for"
-      className="py-20 md:py-28 bg-gradient-to-br from-secondary/20 via-background to-primary/10 relative overflow-hidden"
+      className="py-20 md:py-28 bg-gradient-to-br from-secondary/20 via-primary/15 to-primary/10 relative overflow-hidden"
     >
       {/* Enhanced Background */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,white,transparent_70%)] opacity-20"></div>
@@ -132,22 +132,9 @@ export function PlatformFor() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           )}
         >
-          <div
-            className={`transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}
-          >
-            <Badge
-              variant="outline"
-              className=" bg-primary/10 text-primary border-primary/20 shadow-lg hover:shadow-primary/25 animate-pulse-glow backdrop-blur-sm"
-            >
-              <Sparkles className="h-3 w-3 mr-2 text-primary animate-spin-slow" />
-              <span className="font-semibold">
-                Perfect For Every Business
-              </span>
-            </Badge>
-          </div>
 
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-            One Platform, Every Beauty Business
+            Trusted by Top Salons
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
             From intimate boutique salons to large wellness centers, our

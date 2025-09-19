@@ -26,8 +26,8 @@ export function ProductCard({
   vendorName = 'Top Vendor'
 }: ProductCardProps) {
   return (
-    <CardContainer className="inter-var group">
-      <CardBody className="bg-card relative group/card border-border/50 w-auto sm:w-[20rem] h-auto rounded-2xl p-5 border overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+    <CardContainer className="inter-var">
+      <CardBody className="bg-gray-50 relative group/card dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[20rem] h-auto rounded-lg p-6 border overflow-hidden">
         
         {/* Vendor Info */}
         <CardItem
@@ -66,7 +66,7 @@ export function ProductCard({
 
         {/* Product Image */}
         <CardItem translateZ="100" className="w-full mb-4">
-          <div className="relative aspect-square w-full overflow-hidden rounded-xl">
+          <div className="relative aspect-square w-full overflow-hidden rounded-md">
             <img
               src={image}
               alt={name}
@@ -92,7 +92,11 @@ export function ProductCard({
           <CardItem
             translateZ={20}
             as="button"
+<<<<<<< HEAD
             className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-colors duration-200 flex items-center shadow-md hover:shadow-lg"
+=======
+            className="px-4 py-2 rounded-md bg-black dark:bg-white dark:text-black text-white text-xs font-bold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors duration-200"
+>>>>>>> 33ac4eb30574434a40d47edc1f716fc11499b05b
           >
             <ShoppingCart className="mr-2 h-4 w-4" />
             Add

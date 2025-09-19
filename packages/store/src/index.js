@@ -1,4 +1,3 @@
-
 export * from "./hooks";
 export * from "./provider";
 export * from "./store";
@@ -24,9 +23,11 @@ export * from "./slices/appointmentSlice";
 export * from "./slices/blockTimeSlice";
 export * from "./slices/vendorprofileSlice";
 export * from "./slices/workingHoursSlice";
+export * from "./slices/orderSlice";
 
 
 export * from "./slices/shippingSlice";
 
 export * from "./slices/productSlice";
 export * from "./slices/smsTemplateSlice";
+export * from "./slices/calendarAppointmentSlice";

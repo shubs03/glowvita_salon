@@ -1,10 +1,20 @@
 "use client";
 
-import Image from 'next/image';
-import { Star, PlayCircle, Shield, Lock, FileCheck, ShieldCheck, Check, CheckCircle2, Database } from 'lucide-react';
-import { Button } from '@repo/ui/button';
-import {Card, CardContent} from "@repo/ui/card";
-import { ModernCard } from '@repo/ui/modern-card';
+import Image from "next/image";
+import {
+  Star,
+  PlayCircle,
+  Shield,
+  Lock,
+  FileCheck,
+  ShieldCheck,
+  Check,
+  CheckCircle2,
+  Database,
+} from "lucide-react";
+import { Button } from "@repo/ui/button";
+import { Card, CardContent } from "@repo/ui/card";
+import { ModernCard } from "@repo/ui/modern-card";
 
 export const AdvantageCard = ({
   stat,
@@ -17,56 +27,25 @@ export const AdvantageCard = ({
   description: string;
   icon: React.ReactNode;
 }) => (
-  <div className="flex-shrink-0 w-72 md:w-80 h-80 md:h-96 bg-gradient-to-br from-background via-background to-primary/5 rounded-2xl shadow-2xl p-6 md:p-8 flex flex-col justify-between relative overflow-hidden group hover:shadow-3xl hover:shadow-primary/20 transition-all duration-700 border border-border/30 hover:border-primary/30 hover-lift">
-    {/* Animated Background Elements */}
-    <div className="absolute -top-12 -right-12 text-primary/5 text-[140px] md:text-[160px] group-hover:text-primary/15 transition-all duration-700 group-hover:rotate-12 group-hover:scale-110">
+  <div className="flex-shrink-0 w-72 md:w-80 h-fit md:h-80 bg-gradient-to-br from-background via-background to-primary/5 rounded-lg p-6 md:p-8 flex flex-col justify-between relative overflow-hidden group transition-shadow duration-300 border border-border/100 hover:shadow-xl">
+    <div className="absolute -top-12 -right-12 text-primary/5 text-[140px] md:text-[160px]">
       {icon}
     </div>
-    
-    {/* Gradient Overlay */}
-    <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/5 to-primary/15 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-    
-    {/* Floating Particles */}
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(6)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-1 h-1 bg-primary/30 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-float transition-all duration-700"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${i * 0.2}s`
-          }}
-        ></div>
-      ))}
-    </div>
-    
-    {/* Content */}
+
     <div className="relative z-10">
       <div className="mb-4">
-        <p className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent group-hover:from-primary group-hover:via-secondary group-hover:to-primary transition-all duration-500 leading-none">
+        <p className="text-5xl pb-2 md:text-7xl font-bold bg-gradient-to-r from-primary via-primary to-primary/80 bg-clip-text text-transparent leading-none">
           {stat}
         </p>
-        <div className="h-1 w-16 bg-gradient-to-r from-primary to-primary/50 rounded-full mt-3 group-hover:w-24 transition-all duration-500"></div>
       </div>
-      <h3 className="text-xl md:text-2xl font-bold mt-4 group-hover:text-primary transition-colors duration-500 leading-tight">
+      <h3 className="text-xl md:text-2xl font-bold mt-2 leading-tight">
         {title}
       </h3>
-    </div>
-    
-    <div className="relative z-10">
-      <p className="text-muted-foreground text-sm md:text-base group-hover:text-foreground transition-colors duration-500 leading-relaxed">
-        {description}
-      </p>
-      
-      {/* Progress indicator */}
-      <div className="mt-4 flex items-center gap-2">
-        <div className="flex-grow h-1 bg-border rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-primary to-secondary w-0 group-hover:w-full transition-all duration-1000 ease-out"></div>
-        </div>
-        <span className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-          Proven
-        </span>
+
+      <div className="mt-4 relative z-10">
+        <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
+          {description}
+        </p>
       </div>
     </div>
   </div>
@@ -113,28 +92,89 @@ const VideoTestimonialCard = () => (
 );
 
 export const VideoTestimonialSection = () => (
-    <section className="py-16 md:py-20 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
-        <div className="container mx-auto px-4 relative z-10">
-            <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16">
-                <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
-                    <Star className="h-4 w-4 fill-current" />
-                    Client Reviews
-                </div>
-                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight text-primary font-headline mb-6">
-                    Top-Rated by the Industry
-                </h2>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                    Our dedication to building the best-in-class booking software
-                    and delivering exceptional customer experience continues to be
-                    recognized time and time again.
-                </p>
-            </div>
-            <div className="flex justify-center">
-              <VideoTestimonialCard />
-            </div>
-        </div>
-    </section>
+  <section className="py-20 md:py-28 bg-gradient-to-br from-secondary/20 via-secondary/10 to-background relative overflow-hidden">
+    <div className="container mx-auto px-4 relative z-10">
+      <div className="max-w-4xl mx-auto text-center mb-12 md:mb-16">
+        <h2 className="text-4xl md:text-6xl font-bold font-headline pb-2 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-6">
+          Top-Rated by the Industry
+        </h2>
+        <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+          Our dedication to building the best-in-class booking software and
+          delivering exceptional customer experience continues to be recognized
+          time and time again.
+        </p>
+      </div>
+      <div className="flex justify-center">
+        <VideoTestimonialCard />
+      </div>
+    </div>
+  </section>
 );
+
+const TestimonialCard = ({
+  review,
+  author,
+  role,
+  rating,
+  image,
+  hint,
+}: {
+  review: string;
+  author: string;
+  role: string;
+  rating: number;
+  image: string;
+  hint: string;
+}) => (
+  <div className="shrink-0 snap-center mx-4" style={{ width: "358px" }}>
+    <ModernCard variant="elevated" padding="lg" hover className="h-full flex flex-col">
+      <div className="flex-grow flex flex-col">
+        <div className="flex h-5 gap-1 text-yellow-400 mb-4">
+          {[...Array(5)].map((_, i) => (
+            <Star
+              key={i}
+              className={`h-5 w-5 ${i < rating ? 'fill-current' : 'text-muted-foreground/30'}`}
+            />
+          ))}
+        </div>
+        
+        <div className="flex-1 mb-6">
+          <p className="text-lg leading-relaxed text-foreground/90">
+            "{review}"
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-4">
+        <div className="relative flex size-12 shrink-0 overflow-hidden rounded-full border-2 border-primary/20">
+          <Image
+            src={image}
+            alt={author}
+            width={48}
+            height={48}
+            data-ai-hint={hint}
+            className="object-cover"
+          />
+        </div>
+        <div className="flex-1">
+          <p className="font-semibold text-foreground">
+            {author}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {role}
+          </p>
+        </div>
+      </div>
+    </ModernCard>
+  </div>
+);
+
+const securityFeatures = [
+  { icon: Shield, title: "256-bit SSL", description: "Bank-level encryption for all data.", stat: "AES-256" },
+  { icon: Lock, title: "GDPR Compliant", description: "Full compliance with data privacy regulations.", stat: "Privacy First" },
+  { icon: FileCheck, title: "Daily Backups", description: "Automated data backups to prevent loss.", stat: "99.99% Uptime" },
+  { icon: Database, title: "PCI DSS Level 1", description: "Secure payment processing.", stat: "Service Provider" },
+];
 
 const SecurityFeature = ({ icon: Icon, title, description, stat }: { icon: React.ElementType, title: string, description: string, stat: string }) => {
   return (
@@ -161,42 +201,41 @@ const SecurityFeature = ({ icon: Icon, title, description, stat }: { icon: React
 };
 
 export const SecuritySection = () => (
-  <section className="py-16 bg-gradient-to-br from-background via-secondary/10 to-background relative">
+  <section className="py-20 md:py-28 bg-gradient-to-br from-background via-secondary/10 to-background relative">
     <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-[0.05]"></div>
     <div className="container mx-auto px-4">
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <div className="space-y-6">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-            <Shield size={16} />
-            Your Data is Safe
-          </div>
           <h2 className="text-3xl sm:text-4xl font-bold font-headline leading-tight">
             Enterprise-Grade Security You Can Trust
           </h2>
           <p className="text-muted-foreground text-lg leading-relaxed">
-            We prioritize the security of your business and client data with industry-leading protection, so you can focus on what matters most.
+            We prioritize the security of your business and client data with
+            industry-leading protection, so you can focus on what matters most.
           </p>
           <ul className="space-y-3">
-              {[
-                  "End-to-End Data Encryption",
-                  "PCI-Compliant Payment Processing",
-                  "Regular Security Audits & Updates",
-                  "Granular Staff Access Control",
-              ].map((feature, i) => (
-                  <li key={i} className="flex items-center gap-3 text-muted-foreground">
-                      <div className="flex-shrink-0 h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Check className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <span>{feature}</span>
-                  </li>
-              ))}
+            {[
+              "End-to-End Data Encryption",
+              "PCI-Compliant Payment Processing",
+              "Regular Security Audits & Updates",
+              "Granular Staff Access Control",
+            ].map((feature, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-3 text-muted-foreground"
+              >
+                <div className="flex-shrink-0 h-5 w-5 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Check className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <span>{feature}</span>
+              </li>
+            ))}
           </ul>
         </div>
         <div className="grid sm:grid-cols-2 gap-6 perspective-1000">
-          <SecurityFeature icon={Shield} title="256-bit SSL" description="Bank-level encryption for all data." stat="AES-256" />
-          <SecurityFeature icon={Lock} title="GDPR Compliant" description="Full compliance with data privacy regulations." stat="Privacy First" />
-          <SecurityFeature icon={FileCheck} title="Daily Backups" description="Automated data backups to prevent loss." stat="99.99% Uptime" />
-          <SecurityFeature icon={Database} title="PCI DSS Level 1" description="Secure payment processing." stat="Service Provider" />
+          {securityFeatures.map((feature, index) => (
+            <SecurityFeature key={index} {...feature} />
+          ))}
         </div>
       </div>
     </div>

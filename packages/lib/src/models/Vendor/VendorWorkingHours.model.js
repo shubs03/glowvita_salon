@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 
 const workingDaySchema = new mongoose.Schema(
@@ -10,16 +11,12 @@ const workingDaySchema = new mongoose.Schema(
       {
         openTime: {
           type: String,
-          required: true,
           trim: true,
-          match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](AM|PM)$/i,
           default: '09:00AM'
         },
         closeTime: {
           type: String,
-          required: true,
           trim: true,
-          match: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](AM|PM)$/i,
           default: '06:00PM'
         }
       }
@@ -51,54 +48,13 @@ const vendorWorkingHoursSchema = new mongoose.Schema(
     },
     // Standard working hours for each day
     workingHours: {
-      monday: {
-        ...workingDaySchema.obj,
-        hours: [{
-          openTime: { type: String, default: '09:00AM' },
-          closeTime: { type: String, default: '06:00PM' }
-        }]
-      },
-      tuesday: {
-        ...workingDaySchema.obj,
-        hours: [{
-          openTime: { type: String, default: '09:00AM' },
-          closeTime: { type: String, default: '06:00PM' }
-        }]
-      },
-      wednesday: {
-        ...workingDaySchema.obj,
-        hours: [{
-          openTime: { type: String, default: '09:00AM' },
-          closeTime: { type: String, default: '06:00PM' }
-        }]
-      },
-      thursday: {
-        ...workingDaySchema.obj,
-        hours: [{
-          openTime: { type: String, default: '09:00AM' },
-          closeTime: { type: String, default: '06:00PM' }
-        }]
-      },
-      friday: {
-        ...workingDaySchema.obj,
-        hours: [{
-          openTime: { type: String, default: '09:00AM' },
-          closeTime: { type: String, default: '06:00PM' }
-        }]
-      },
-      saturday: {
-        ...workingDaySchema.obj,
-        isOpen: { type: Boolean, default: false },
-        hours: [{
-          openTime: { type: String, default: '09:00AM' },
-          closeTime: { type: String, default: '06:00PM' }
-        }]
-      },
-      sunday: {
-        ...workingDaySchema.obj,
-        isOpen: { type: Boolean, default: false },
-        hours: []
-      }
+      monday: workingDaySchema,
+      tuesday: workingDaySchema,
+      wednesday: workingDaySchema,
+      thursday: workingDaySchema,
+      friday: workingDaySchema,
+      saturday: { ...workingDaySchema.obj, isOpen: { type: Boolean, default: false } },
+      sunday: { ...workingDaySchema.obj, isOpen: { type: Boolean, default: false }, hours: { type: [], default: [] } }
     },
     // Special working hours for specific dates
     specialHours: [

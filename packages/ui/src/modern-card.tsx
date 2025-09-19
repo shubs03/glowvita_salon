@@ -27,7 +27,7 @@ const ModernCard = React.forwardRef<HTMLDivElement, ModernCardProps>(
       <div
         ref={ref}
         className={cn(
-          "rounded-xl transition-all duration-300",
+          "rounded-md transition-all duration-300",
           variants[variant],
           paddings[padding],
           hover && "hover:shadow-lg hover:scale-[1.02] hover:border-primary/30",

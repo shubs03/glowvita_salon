@@ -78,7 +78,7 @@ export function SocialProofSection({ className }: SocialProofSectionProps) {
     <section 
       id="social-proof-section"
       className={cn(
-        "relative py-24 md:py-32 bg-gradient-to-br from-background via-primary/2 to-secondary/3 overflow-hidden",
+        "relative py-20 md:py-28 bg-gradient-to-br from-background via-primary/2 to-secondary/3 overflow-hidden",
         className
       )}
     >

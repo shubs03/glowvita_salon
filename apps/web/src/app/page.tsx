@@ -3,7 +3,6 @@
 import {
   HeroSection,
   AppCTA,
-  FeaturedSalons,
   HowItWorks,
   PlatformFor,
   Testimonials,
@@ -16,6 +15,8 @@ import {
   Integrations,
   Blog,
   Services,
+  BentoGrid,
+  SalonsSection,
 } from "@/components/landing";
 import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
@@ -37,10 +38,11 @@ export default function HomePage() {
     <div className="flex flex-col min-h-screen bg-background">
       <main className="flex-grow">
         <HeroSection /> 
-        <PlatformFor />
-        <FeaturedSalons />
+        <SalonsSection />
         <Offers />
-        <HowItWorks />
+        {/* <BentoGrid/> */}
+        <PlatformFor />
+        {/* <HowItWorks /> */}
         <FeaturedProducts />
         <Services />
         
@@ -52,15 +54,10 @@ export default function HomePage() {
             <div className="absolute bottom-10 right-10 w-80 h-80 bg-gradient-to-r from-secondary/15 to-transparent rounded-full blur-3xl animate-float-delayed"></div>
             
             <div className="text-center mb-16 md:mb-20">
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary/10 to-secondary/10 text-primary px-6 py-3 rounded-full text-sm font-medium mb-6 shadow-lg backdrop-blur-sm border border-primary/20">
-                <Award className="h-4 w-4" />
-                <span className="font-semibold">Real Results</span>
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
-              </div>
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold font-headline mb-6 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
                 Unlock Your Salon's Full Potential
               </h2>
-              <p className="text-muted-foreground text-xl max-w-4xl mx-auto leading-relaxed">
+              <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
                 See the real-world impact of using our comprehensive salon management platform. These metrics represent actual improvements from our satisfied clients across the globe.
               </p>
             </div>
@@ -93,10 +90,16 @@ export default function HomePage() {
                 description="Automate appointment reminders, payment processing, and administrative tasks so you can focus on your craft and clients."
                 icon={<Clock />}
               />
+              <AdvantageCard
+                stat="50%"
+                title="Less Admin Time"
+                description="Automate appointment reminders, payment processing, and administrative tasks so you can focus on your craft and clients."
+                icon={<Clock />}
+              />
             </div>
             
-            <div className="flex justify-center mt-12">
-              <div className="flex gap-4 bg-background/80 backdrop-blur-sm p-3 rounded-2xl shadow-lg border border-border/50">
+            <div className="flex justify-start mt-12">
+              <div className="flex gap-4 justify-center">
                 <Button
                   variant="outline"
                   size="icon"
@@ -120,9 +123,9 @@ export default function HomePage() {
 
         <VideoTestimonialSection />
         <Testimonials />
-        <SecuritySection />
-        <Integrations />
-        <Blog />
+        {/* <SecuritySection /> */}
+        {/* <Integrations /> */}
+        {/* <Blog /> */}
         <FAQ />
         <AppCTA />
 

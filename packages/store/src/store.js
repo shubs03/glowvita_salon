@@ -1,3 +1,4 @@
+
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice';
@@ -22,6 +23,9 @@ import appointmentReducer from './slices/appointmentSlice';
 import blockTimeReducer from './slices/blockTimeSlice';
 import vendorprofileReducer from './slices/vendorprofileSlice';
 import workingHoursReducer from './slices/workingHoursSlice';
+import orderReducer from './slices/orderSlice';
+import calendarAppointmentReducer from './slices/calendarAppointmentSlice';
+import cartReducer from './slices/cartSlice'; // Import the new cart reducer
   
 export const makeStore = () => {
   return configureStore({
@@ -50,7 +54,10 @@ export const makeStore = () => {
       appointments: appointmentReducer,  
       blockTime: blockTimeReducer,
       vendorprofile: vendorprofileReducer,
-      workingHours: workingHoursReducer
+      workingHours: workingHoursReducer,
+      order: orderReducer,
+      calendarAppointments: calendarAppointmentReducer,
+      cart: cartReducer, // Add the cart reducer
       
     },
     middleware: (getDefaultMiddleware) =>
