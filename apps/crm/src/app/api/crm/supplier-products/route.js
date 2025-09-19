@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import ProductModel from '../../../../../../../packages/lib/src/models/Vendor/Product.model.js';
 import SupplierModel from '../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js';
+import ProductCategoryModel from '../../../../../../../packages/lib/src/models/admin/ProductCategory.model.js';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 
 await _db();
