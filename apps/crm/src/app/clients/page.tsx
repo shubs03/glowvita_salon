@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -13,7 +12,7 @@ import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
 import { Select } from '@repo/ui/select';
 import { Plus, Search, FileDown, Eye, Edit, Trash2, Users, UserPlus, UserX, ShoppingBag, Calendar, User, Star, CreditCard, Package, PieChart, MessageCircle, Clock, Scissors, UserCheck, FileText, Timer, Briefcase, CheckCircle, AlertTriangle } from 'lucide-react';
-import { useGetClientsQuery, useCreateClientMutation, useUpdateClientMutation, useDeleteClientMutation } from '@repo/store/api';
+import { useGetClientsQuery, useCreateClientMutation, useUpdateClientMutation, useDeleteClientMutation, useGetAppointmentsQuery } from '@repo/store/api';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 
@@ -54,7 +53,9 @@ export function ClientsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [searchTerm, setSearchTerm] = useState('');
-
+    // Segment tabs: offline (existing data) and online (future data)
+    const [clientSegment, setClientSegment] = useState<'offline' | 'online'>('offline');
+    
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedClient, setSelectedClient] = useState<Client | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -104,19 +105,62 @@ export function ClientsPage() {
         preferences: ''
     });
 
-    const filteredClients = useMemo(() => {
+    // Segment clients by source; default unknown to offline
+    const segmentedClients = useMemo(() => {
         if (!clientList) return [];
-        return clientList.filter((client: Client) => 
+        return clientList.filter((client: any) => {
+            const src = (client?.source || '').toString().toLowerCase();
+            if (clientSegment === 'online') return src === 'online';
+            // offline: explicit 'offline' OR no source provided
+            return src === 'offline' || !src;
+        });
+    }, [clientList, clientSegment]);
+
+    const filteredClients = useMemo(() => {
+        if (!segmentedClients) return [];
+        return segmentedClients.filter((client: Client) => 
             client.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
             client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
             client.phone.includes(searchTerm)
         );
-    }, [clientList, searchTerm]);
+    }, [segmentedClients, searchTerm]);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
     const currentItems = filteredClients.slice(firstItemIndex, lastItemIndex);
     const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+
+    // Fetch appointments for this vendor (pass vendorId so backend can filter)
+    const vendorId = user?.vendorId || user?._id;
+    const { data: appointmentsResponse, isLoading: isLoadingAppointments } = useGetAppointmentsQuery({ vendorId });
+
+    // Normalize appointments into an array regardless of API shape
+    const appointments: any[] = useMemo(() => {
+        const r: any = appointmentsResponse;
+        if (Array.isArray(r)) return r;
+        if (Array.isArray(r?.data)) return r.data;
+        if (Array.isArray(r?.appointments)) return r.appointments;
+        if (Array.isArray(r?.data?.appointments)) return r.data.appointments;
+        return [];
+    }, [appointmentsResponse]);
+
+    // Compute bookings and totals per client strictly by client ID
+    const { bookingsById, totalsById } = useMemo(() => {
+        const countsById = new Map<string, number>();
+        const totalsById = new Map<string, number>();
+
+        (appointments || []).forEach((appt: any) => {
+            const rawClientId = appt?.client?._id ?? appt?.client ?? appt?.clientId ?? appt?.client_id;
+            const clientId = rawClientId != null ? String(rawClientId) : '';
+            if (!clientId) return; // count only when appointment has a client ID
+
+            const amount = Number(appt?.totalAmount ?? appt?.amount ?? appt?.price ?? 0) || 0;
+            countsById.set(clientId, (countsById.get(clientId) || 0) + 1);
+            totalsById.set(clientId, (totalsById.get(clientId) || 0) + amount);
+        });
+
+        return { bookingsById: countsById, totalsById };
+    }, [appointments]);
 
     const handleOpenModal = (client?: Client) => {
         if (client) {
@@ -152,6 +196,12 @@ export function ClientsPage() {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
+        if (name === 'phone') {
+            // Allow only digits and limit to 10 characters
+            const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+            setFormData(prev => ({ ...prev, phone: digitsOnly }));
+            return;
+        }
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -172,11 +222,17 @@ export function ClientsPage() {
 
     const handleSaveClient = async () => {
         try {
+            // Validate phone: exactly 10 digits
+            if (!formData.phone || formData.phone.trim().length !== 10) {
+                toast.error('Phone number must be exactly 10 digits.');
+                return;
+            }
             const gender = (formData.gender as 'Male' | 'Female' | 'Other') || 'Other';
             
             const clientData = {
                 fullName: formData.fullName.trim(),
-                email: formData.email.trim(),
+                // Email is optional; omit when empty
+                email: formData.email.trim() || undefined,
                 phone: formData.phone.trim(),
                 birthdayDate: formData.birthdayDate,
                 gender: gender,
@@ -460,7 +516,7 @@ export function ClientsPage() {
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-gray-900">{clientList.reduce((acc: number, c: Client) => acc + c.totalBookings, 0)}</div>
+                        <div className="text-2xl font-bold text-gray-900">{appointments.length}</div>
                         <p className="text-xs text-gray-500">All time bookings</p>
                     </CardContent>
                 </Card>
@@ -485,8 +541,25 @@ export function ClientsPage() {
                             <CardTitle className="text-xl font-bold text-gray-900">All Clients</CardTitle>
                             <CardDescription className="text-gray-600">View, add, and manage your client list.</CardDescription>
                         </div>
-                        <div className="flex gap-3 flex-wrap">
-                             <div className="relative">
+                        <div className="flex gap-3 flex-wrap items-center">
+                             {/* Segment Tabs */}
+                             <div className="flex items-center rounded-md border border-blue-200 overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => { setClientSegment('offline'); setCurrentPage(1); }}
+                                    className={`px-3 py-2 text-sm font-medium ${clientSegment === 'offline' ? 'bg-blue-600 text-white' : 'bg-white text-blue-700 hover:bg-blue-50'}`}
+                                >
+                                    Offline Clients
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setClientSegment('online'); setCurrentPage(1); }}
+                                    className={`px-3 py-2 text-sm font-medium border-l ${clientSegment === 'online' ? 'bg-blue-600 text-white' : 'bg-white text-blue-700 hover:bg-blue-50'}`}
+                                >
+                                    Online Customers
+                                </button>
+                            </div>
+                            <div className="relative">
                                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                                 <Input 
                                     type="search" 
@@ -549,12 +622,14 @@ export function ClientsPage() {
                                         <TableCell className="py-4 text-gray-700">{client.lastVisit}</TableCell>
                                         <TableCell className="py-4">
                                             <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-                                                {client.totalBookings}
+                                                {bookingsById.get(String(client._id)) || 0}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="py-4 font-semibold text-green-600">₹{client.totalSpent.toFixed(2)}</TableCell>
+                                        <TableCell className="py-4 font-semibold text-green-600">₹{(
+                                            totalsById.get(String(client._id)) || 0
+                                        ).toFixed(2)}</TableCell>
                                         <TableCell className="py-4">
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                                                 client.status === 'Active' 
                                                     ? 'bg-green-100 text-green-800 border border-green-200' 
                                                     : client.status === 'New'
@@ -672,7 +747,6 @@ export function ClientsPage() {
                                     type="email" 
                                     value={formData.email} 
                                     onChange={handleInputChange} 
-                                    required 
                                 />
                             </div>
                         </div>
@@ -680,13 +754,19 @@ export function ClientsPage() {
                         {/* Phone and Birthday */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="phone">Phone Number</Label>
+                                <Label htmlFor="phone">Phone Number <span className="text-red-500">*</span></Label>
                                 <Input 
                                     id="phone" 
                                     name="phone" 
                                     type="tel" 
                                     value={formData.phone} 
-                                    onChange={handleInputChange} 
+                                    onChange={handleInputChange}
+                                    inputMode="numeric"
+                                    pattern="\d{10}"
+                                    maxLength={10}
+                                    placeholder="Enter 10-digit phone number"
+                                    title="Phone number must be exactly 10 digits"
+                                    onKeyDown={(e) => { if (e.key === ' ') e.preventDefault(); }}
                                     required 
                                 />
                             </div>
@@ -711,7 +791,7 @@ export function ClientsPage() {
                                     name="gender" 
                                     value={formData.gender} 
                                     onChange={(e) => handleSelectChange('gender', e.target.value)}
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus:border-blue-500"
                                 >
                                     <option value="">Select Gender</option>
                                     <option value="Male">Male</option>
@@ -906,7 +986,7 @@ export function ClientsPage() {
                                         <div className="flex items-center mb-3">
                                             <div className="w-6 h-6 bg-orange-100 rounded-md flex items-center justify-center mr-2">
                                                 <svg className="w-3 h-3 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6m8 0H8" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2V6m8 0h8" />
                                                 </svg>
                                             </div>
                                             <h4 className="text-sm font-semibold text-gray-900">Business Details</h4>
@@ -942,11 +1022,13 @@ export function ClientsPage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="text-center p-3 bg-green-50 rounded-lg">
-                                            <p className="text-2xl font-bold text-green-600">{viewClient.totalBookings}</p>
+                                            <p className="text-2xl font-bold text-green-600">{bookingsById.get(String(viewClient._id)) || 0}</p>
                                             <p className="text-xs text-green-700 font-medium">Total Bookings</p>
                                         </div>
                                         <div className="text-center p-3 bg-blue-50 rounded-lg">
-                                            <p className="text-2xl font-bold text-blue-600">₹{viewClient.totalSpent.toFixed(2)}</p>
+                                            <p className="text-2xl font-bold text-blue-600">₹{(
+                                                totalsById.get(String(viewClient._id)) || 0
+                                            ).toFixed(2)}</p>
                                             <p className="text-xs text-blue-700 font-medium">Total Spent</p>
                                         </div>
                                     </div>
@@ -1259,10 +1341,12 @@ export function ClientsPage() {
                                             <p className="text-sm sm:text-base text-gray-600">{profileClient.email}</p>
                                         </div>
                                     </div>
-                                    <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base" onClick={() => handleAddAppointment(profileClient)}>
-                                        <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
-                                        Add Appointment
-                                    </Button>
+                                    {/* {activeTab !== 'payment-history' && (
+                                        <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-sm sm:text-base" onClick={() => handleAddAppointment(profileClient)}>
+                                            <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
+                                            Add Appointment
+                                        </Button>
+                                    )} */}
                                 </div>
                             </div>
 
@@ -1313,23 +1397,25 @@ export function ClientsPage() {
                                             <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">Overview</h3>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4 lg:gap-6">
                                                 <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border shadow-sm hover:shadow-md transition-shadow text-center">
-                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2">₹{profileClient.totalSpent}</div>
+                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2">₹{(
+                                                        totalsById.get(String(profileClient._id)) || 0
+                                                    ).toFixed(2)}</div>
                                                     <div className="text-xs sm:text-xs md:text-sm text-gray-500 font-medium">Total Sale</div>
                                                 </div>
                                                 <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border shadow-sm hover:shadow-md transition-shadow text-center">
-                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600 mb-1 sm:mb-2">{profileClient.totalBookings}</div>
+                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-blue-600 mb-1 sm:mb-2">{bookingsById.get(String(profileClient._id)) || 0}</div>
                                                     <div className="text-xs sm:text-xs md:text-sm text-gray-500 font-medium">Total Visits</div>
                                                 </div>
                                                 <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border shadow-sm hover:shadow-md transition-shadow text-center">
-                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2">{Math.floor(profileClient.totalBookings * 0.8)}</div>
+                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2">{Math.floor((bookingsById.get(String(profileClient._id)) || 0) * 0.8)}</div>
                                                     <div className="text-xs sm:text-xs md:text-sm text-gray-500 font-medium">Completed</div>
                                                 </div>
                                                 <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border shadow-sm hover:shadow-md transition-shadow text-center">
-                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600 mb-1 sm:mb-2">{Math.floor(profileClient.totalBookings * 0.1)}</div>
+                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600 mb-1 sm:mb-2">{Math.floor((bookingsById.get(String(profileClient._id)) || 0) * 0.1)}</div>
                                                     <div className="text-xs sm:text-xs md:text-sm text-gray-500 font-medium">Cancelled</div>
                                                 </div>
                                                 <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border shadow-sm hover:shadow-md transition-shadow text-center">
-                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-orange-600 mb-1 sm:mb-2">{Math.floor(profileClient.totalBookings * 0.1)}</div>
+                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-orange-600 mb-1 sm:mb-2">{Math.floor((bookingsById.get(String(profileClient._id)) || 0) * 0.1)}</div>
                                                     <div className="text-xs sm:text-xs md:text-sm text-gray-500 font-medium">No Show</div>
                                                 </div>
                                             </div>
@@ -1338,210 +1424,233 @@ export function ClientsPage() {
 
                                     {activeTab === 'client-details' && (
                                         <div className="space-y-3 sm:space-y-4 md:space-y-6 max-h-[60vh] overflow-y-auto pr-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9'}}>
-                                            <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">Client Details</h3>
-                                            
-                                            {/* Unified Client Information */}
-                                            <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-                                                    <div>
-                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Full Name</Label>
-                                                        <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.fullName}</p>
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Email ID</Label>
-                                                        <p className="text-sm md:text-base text-gray-900 mt-1 break-all">{profileClient.email}</p>
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Mobile Number</Label>
-                                                        <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.phone}</p>
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Gender</Label>
-                                                        <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.gender || 'Not specified'}</p>
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Country</Label>
-                                                        <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.country || 'Not provided'}</p>
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Occupation</Label>
-                                                        <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.occupation || 'Not provided'}</p>
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Online Booking</Label>
-                                                        <p className="text-sm md:text-base text-gray-900 mt-1">Allowed</p>
-                                                    </div>
-                                                    <div>
-                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Birthday Date</Label>
-                                                        <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.birthdayDate ? new Date(profileClient.birthdayDate).toLocaleDateString() : 'Not provided'}</p>
-                                                    </div>
-                                                    <div className="col-span-1 md:col-span-2">
-                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Address</Label>
-                                                        <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.address || 'Not provided'}</p>
-                                                    </div>
-                                                     <div className="col-span-1 md:col-span-2">
-                                                        <Label className="text-xs md:text-sm font-medium text-gray-500">Preferences</Label>
-                                                        <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.preferences || 'No preferences recorded.'}</p>
-                                                    </div>
+                                        <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">Client Details</h3>
+                                        
+                                        {/* Unified Client Information */}
+                                        <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+                                                <div>
+                                                    <Label className="text-xs md:text-sm font-medium text-gray-500">Full Name</Label>
+                                                    <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.fullName}</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs md:text-sm font-medium text-gray-500">Email ID</Label>
+                                                    <p className="text-sm md:text-base text-gray-900 mt-1 break-all">{profileClient.email}</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs md:text-sm font-medium text-gray-500">Mobile Number</Label>
+                                                    <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.phone}</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs md:text-sm font-medium text-gray-500">Gender</Label>
+                                                    <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.gender || 'Not specified'}</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs md:text-sm font-medium text-gray-500">Country</Label>
+                                                    <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.country || 'Not provided'}</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs md:text-sm font-medium text-gray-500">Occupation</Label>
+                                                    <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.occupation || 'Not provided'}</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs md:text-sm font-medium text-gray-500">Online Booking</Label>
+                                                    <p className="text-sm md:text-base text-gray-900 mt-1">Allowed</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs md:text-sm font-medium text-gray-500">Birthday Date</Label>
+                                                    <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.birthdayDate ? new Date(profileClient.birthdayDate).toLocaleDateString() : 'Not provided'}</p>
+                                                </div>
+                                                <div className="col-span-1 md:col-span-2">
+                                                    <Label className="text-xs md:text-sm font-medium text-gray-500">Address</Label>
+                                                    <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.address || 'Not provided'}</p>
+                                                </div>
+                                                 <div className="col-span-1 md:col-span-2">
+                                                    <Label className="text-xs md:text-sm font-medium text-gray-500">Preferences</Label>
+                                                    <p className="text-sm md:text-base text-gray-900 mt-1">{profileClient.preferences || 'No preferences recorded.'}</p>
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
                                     )}
 
                                     {activeTab === 'appointments' && (
                                         <div className="space-y-3 sm:space-y-4 md:space-y-6 max-h-[60vh] overflow-y-auto pr-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9'}}>
-                                            <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">Appointments</h3>
+                                        <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900">Appointments</h3>
+                                        
+                                        {/* Horizontal Tabs */}
+                                        <div className="bg-white rounded-lg border">
+                                            <div className="border-b border-gray-200">
+                                                <nav className="flex space-x-2 sm:space-x-4 md:space-x-8 px-2 sm:px-3 md:px-4" aria-label="Tabs">
+                                                    <button
+                                                        onClick={() => setAppointmentTab('upcoming')}
+                                                        className={`whitespace-nowrap py-2 sm:py-3 md:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${
+                                                            appointmentTab === 'upcoming'
+                                                                ? 'border-blue-500 text-blue-600'
+                                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                        }`}
+                                                    >
+                                                        Upcoming (0)
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setAppointmentTab('past')}
+                                                        className={`whitespace-nowrap py-2 sm:py-3 md:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${
+                                                            appointmentTab === 'past'
+                                                                ? 'border-blue-500 text-blue-600'
+                                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                                        }`}
+                                                    >
+                                                        Past ({bookingsById.get(String(profileClient._id)) || 0})
+                                                    </button>
+                                                </nav>
+                                            </div>
                                             
-                                            {/* Horizontal Tabs */}
-                                            <div className="bg-white rounded-lg border">
-                                                <div className="border-b border-gray-200">
-                                                    <nav className="flex space-x-2 sm:space-x-4 md:space-x-8 px-2 sm:px-3 md:px-4" aria-label="Tabs">
-                                                        <button
-                                                            onClick={() => setAppointmentTab('upcoming')}
-                                                            className={`whitespace-nowrap py-2 sm:py-3 md:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${
-                                                                appointmentTab === 'upcoming'
-                                                                    ? 'border-blue-500 text-blue-600'
-                                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                                            }`}
-                                                        >
-                                                            Upcoming (0)
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setAppointmentTab('past')}
-                                                            className={`whitespace-nowrap py-2 sm:py-3 md:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${
-                                                                appointmentTab === 'past'
-                                                                    ? 'border-blue-500 text-blue-600'
-                                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                                            }`}
-                                                        >
-                                                            Past ({profileClient.totalBookings})
-                                                        </button>
-                                                    </nav>
-                                                </div>
+                                            <div className="p-3 sm:p-4">
+                                                {appointmentTab === 'upcoming' && (
+                                                    <div>
+                                                        <p className="text-gray-500 text-center py-6 sm:py-8 text-sm">No upcoming appointments</p>
+                                                    </div>
+                                                )}
                                                 
-                                                <div className="p-3 sm:p-4">
-                                                    {appointmentTab === 'upcoming' && (
-                                                        <div>
-                                                            <p className="text-gray-500 text-center py-6 sm:py-8 text-sm">No upcoming appointments</p>
-                                                        </div>
-                                                    )}
-                                                    
-                                                    {appointmentTab === 'past' && (
-                                                        <div>
-                                                            {profileClient.totalBookings > 0 ? (
-                                                                <div className="space-y-2 sm:space-y-3">
-                                                                    {Array.from({ length: Math.min(profileClient.totalBookings, 3) }, (_, i) => (
-                                                                        <div key={i} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-gray-50 rounded gap-2 sm:gap-0">
-                                                                            <div>
-                                                                                <p className="font-medium text-sm sm:text-base">Haircut & Styling</p>
-                                                                                <p className="text-xs sm:text-sm text-gray-500">{new Date(Date.now() - (i + 1) * 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
-                                                                            </div>
-                                                                            <div className="text-left sm:text-right">
-                                                                                <p className="font-medium text-sm sm:text-base">₹{Math.floor(Math.random() * 500) + 200}</p>
-                                                                                <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
-                                                                            </div>
+                                                {appointmentTab === 'past' && (
+                                                    <div>
+                                                        {(bookingsById.get(String(profileClient._id)) || 0) > 0 ? (
+                                                            <div className="space-y-2 sm:space-y-3">
+                                                                {Array.from({ length: Math.min(bookingsById.get(String(profileClient._id)) || 0, 3) }, (_, i) => (
+                                                                    <div key={i} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-gray-50 rounded gap-2 sm:gap-0">
+                                                                        <div>
+                                                                            <p className="font-medium text-sm sm:text-base">Haircut & Styling</p>
+                                                                            <p className="text-xs sm:text-sm text-gray-500">{new Date(Date.now() - (i + 1) * 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
                                                                         </div>
-                                                                    ))}
-                                                                </div>
-                                                            ) : (
-                                                                <p className="text-gray-500 text-center py-6 sm:py-8 text-sm">No past appointments</p>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
+                                                                        <div className="text-left sm:text-right">
+                                                                            <p className="font-medium text-sm sm:text-base">₹{Math.floor(Math.random() * 500) + 200}</p>
+                                                                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completed</span>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-gray-500 text-center py-6 sm:py-8 text-sm">No past appointments</p>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
+                                    </div>
                                     )}
 
                                     {activeTab === 'orders' && (
                                         <div className="space-y-4 sm:space-y-6 max-h-[60vh] overflow-y-auto pr-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9'}}>
-                                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Orders</h3>
-                                            
-                                            <div className="space-y-3 sm:space-y-4">
-                                                <div className="bg-white p-3 sm:p-4 rounded-lg border">
-                                                    <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2 sm:gap-0">
-                                                        <div>
-                                                            <h4 className="font-medium text-gray-900 text-sm sm:text-base">Order #851</h4>
-                                                            <p className="text-xs sm:text-sm text-gray-500">23 Jun 2025 11:24AM</p>
-                                                        </div>
-                                                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs self-start sm:self-auto">Completed</span>
+                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Orders</h3>
+                                        
+                                        <div className="space-y-3 sm:space-y-4">
+                                            <div className="bg-white p-3 sm:p-4 rounded-lg border">
+                                                <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2 sm:gap-0">
+                                                    <div>
+                                                        <h4 className="font-medium text-gray-900 text-sm sm:text-base">Order #851</h4>
+                                                        <p className="text-xs sm:text-sm text-gray-500">23 Jun 2025 11:24AM</p>
                                                     </div>
-                                                    <div className="text-xs sm:text-sm text-gray-600">
-                                                        <p>Items Qty: 1</p>
-                                                        <p className="font-medium">Total: ₹120</p>
-                                                    </div>
+                                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs self-start sm:self-auto">Completed</span>
                                                 </div>
-                                                
-                                                <div className="bg-white p-3 sm:p-4 rounded-lg border">
-                                                    <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2 sm:gap-0">
-                                                        <div>
-                                                            <h4 className="font-medium text-gray-900 text-sm sm:text-base">Order #850</h4>
-                                                            <p className="text-xs sm:text-sm text-gray-500">23 Jun 2025 10:58AM</p>
-                                                        </div>
-                                                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs self-start sm:self-auto">Completed</span>
+                                                <div className="text-xs sm:text-sm text-gray-600">
+                                                    <p>Items Qty: 1</p>
+                                                    <p className="font-medium">Total: ₹120</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="bg-white p-3 sm:p-4 rounded-lg border">
+                                                <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2 sm:gap-0">
+                                                    <div>
+                                                        <h4 className="font-medium text-gray-900 text-sm sm:text-base">Order #850</h4>
+                                                        <p className="text-xs sm:text-sm text-gray-500">23 Jun 2025 10:58AM</p>
                                                     </div>
-                                                    <div className="text-xs sm:text-sm text-gray-600">
-                                                        <p>Items Qty: 1</p>
-                                                        <p className="font-medium">Total: ₹300</p>
-                                                    </div>
+                                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs self-start sm:self-auto">Completed</span>
+                                                </div>
+                                                <div className="text-xs sm:text-sm text-gray-600">
+                                                    <p>Items Qty: 1</p>
+                                                    <p className="font-medium">Total: ₹300</p>
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
                                     )}
 
                                     {activeTab === 'reviews' && (
                                         <div className="space-y-4 sm:space-y-6 max-h-[60vh] overflow-y-auto pr-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9'}}>
-                                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Reviews</h3>
-                                            
-                                            <div className="bg-white p-3 sm:p-4 rounded-lg border">
-                                                <div className="text-center py-6 sm:py-8">
-                                                    <div className="flex justify-center mb-3 sm:mb-4">
-                                                        <Star className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300" />
-                                                    </div>
-                                                    <p className="text-gray-500 text-sm sm:text-base">No reviews yet</p>
-                                                    <p className="text-xs sm:text-sm text-gray-400 mt-2">Reviews will appear here once the client leaves feedback</p>
+                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Reviews</h3>
+                                        
+                                        <div className="bg-white p-3 sm:p-4 rounded-lg border">
+                                            <div className="text-center py-6 sm:py-8">
+                                                <div className="flex justify-center mb-3 sm:mb-4">
+                                                    <Star className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300" />
                                                 </div>
+                                                <p className="text-gray-500 text-sm sm:text-base">No reviews yet</p>
+                                                <p className="text-xs sm:text-sm text-gray-400 mt-2">Reviews will appear here once the client leaves feedback</p>
                                             </div>
                                         </div>
+                                    </div>
                                     )}
 
                                     {activeTab === 'payment-history' && (
                                         <div className="space-y-4 sm:space-y-6 max-h-[60vh] overflow-y-auto pr-2" style={{scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9'}}>
-                                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Payment History</h3>
+                                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">Payment History</h3>
+                                        
+                                        <div className="bg-white p-3 sm:p-4 rounded-lg border">
+                                            <div className="mb-3 sm:mb-4">
+                                                <h4 className="text-base sm:text-lg font-semibold text-gray-900">Total Payment</h4>
+                                                <p className="text-xl sm:text-2xl font-bold text-green-600">₹{(
+                                                    totalsById.get(String(profileClient._id)) || 0
+                                                ).toFixed(2)}</p>
+                                            </div>
                                             
-                                            <div className="bg-white p-3 sm:p-4 rounded-lg border">
-                                                <div className="mb-3 sm:mb-4">
-                                                    <h4 className="text-base sm:text-lg font-semibold text-gray-900">Total Payment</h4>
-                                                    <p className="text-xl sm:text-2xl font-bold text-green-600">₹{profileClient.totalSpent.toFixed(2)}</p>
-                                                </div>
-                                                
-                                                <div className="space-y-2 sm:space-y-3">
-                                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2 sm:p-3 bg-gray-50 rounded gap-2 sm:gap-0">
-                                                        <div>
-                                                            <p className="text-xs sm:text-sm text-gray-500">23/06/2025</p>
-                                                            <p className="text-xs sm:text-sm text-gray-500">10:58AM</p>
-                                                            <p className="font-medium text-sm sm:text-base">Appointment</p>
-                                                        </div>
-                                                        <div className="text-left sm:text-right">
-                                                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">paid</span>
-                                                            <p className="font-bold text-green-600 mt-1 text-sm sm:text-base">₹300.00</p>
-                                                        </div>
-                                                    </div>
-                                                    
-                                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2 sm:p-3 bg-gray-50 rounded gap-2 sm:gap-0">
-                                                        <div>
-                                                            <p className="text-xs sm:text-sm text-gray-500">23/06/2025</p>
-                                                            <p className="text-xs sm:text-sm text-gray-500">11:24AM</p>
-                                                            <p className="font-medium text-sm sm:text-base">Appointment</p>
-                                                        </div>
-                                                        <div className="text-left sm:text-right">
-                                                            <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">paid</span>
-                                                            <p className="font-bold text-green-600 mt-1 text-sm sm:text-base">₹120.00</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                            <div className="space-y-2 sm:space-y-3">
+                                                {(() => {
+                                                    const items = (appointments || [])
+                                                        .filter((appt: any) => {
+                                                            const rawClientId = appt?.client?._id ?? appt?.client ?? appt?.clientId ?? appt?.client_id;
+                                                            return String(rawClientId || '') === String(profileClient._id);
+                                                        })
+                                                        .sort((a: any, b: any) => {
+                                                            const ad = new Date(a?.date || a?.createdAt || 0).getTime();
+                                                            const bd = new Date(b?.date || b?.createdAt || 0).getTime();
+                                                            return bd - ad; // newest first
+                                                        });
+
+                                                    if (items.length === 0) {
+                                                        return (
+                                                            <p className="text-gray-500 text-center py-6 sm:py-8 text-sm">No payment history</p>
+                                                        );
+                                                    }
+
+                                                    return items.map((appt: any, idx: number) => {
+                                                        const rawDate = appt?.date || appt?.createdAt || '';
+                                                        const d = rawDate ? new Date(rawDate) : null;
+                                                        const dateStr = d ? d.toLocaleDateString() : '';
+                                                        const timeStr = appt?.startTime || (d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
+                                                        const amount = Number(appt?.totalAmount ?? appt?.amount ?? appt?.price ?? 0) || 0;
+                                                        const statusRaw = (appt?.paymentStatus || (appt?.status === 'completed' ? 'paid' : appt?.status || 'pending')) + '';
+                                                        const status = statusRaw.toLowerCase();
+                                                        const isPaid = status === 'paid' || appt?.status === 'completed';
+                                                        const serviceName = appt?.serviceName || appt?.service?.name || 'Appointment';
+
+                                                        return (
+                                                            <div key={appt?._id || appt?.id || idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2 sm:p-3 bg-gray-50 rounded gap-2 sm:gap-0">
+                                                                <div>
+                                                                    <p className="text-xs sm:text-sm text-gray-500">{dateStr}</p>
+                                                                    {timeStr && <p className="text-xs sm:text-sm text-gray-500">{timeStr}</p>}
+                                                                    <p className="font-medium text-sm sm:text-base">{serviceName}</p>
+                                                                </div>
+                                                                <div className="text-left sm:text-right">
+                                                                    <span className={`${isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} px-2 py-1 rounded text-xs`}>{isPaid ? 'paid' : status || 'pending'}</span>
+                                                                    <p className={`font-bold mt-1 text-sm sm:text-base ${isPaid ? 'text-green-600' : 'text-gray-700'}`}>₹{amount.toFixed(2)}</p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
                                             </div>
                                         </div>
+                                    </div>
                                     )}
                                 </div>
                             </div>

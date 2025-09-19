@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import AppointmentModel from "../../../../../../../packages/lib/src/models/Appointment/Appointment.model";
 import _db from '@repo/lib/db';
+import ClientModel from '../../../../../../../packages/lib/src/models/Vendor/Client.model.js';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 
 await _db();
