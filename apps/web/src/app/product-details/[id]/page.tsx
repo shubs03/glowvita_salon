@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
-import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown, CheckCircle, Droplet, Sun, Leaf } from 'lucide-react';
+import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Input } from '@repo/ui/input';
@@ -153,80 +153,8 @@ export default function ProductDetailsPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      
-      {/* New Sections Added Below */}
-      <div className="space-y-16 py-16 border-t">
-          {/* Section: Why You'll Love It */}
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Why You'll Love It</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="text-center p-4">
-                    <Droplet className="mx-auto h-8 w-8 text-primary mb-2" />
-                    <h3 className="font-semibold">Deep Hydration</h3>
-                    <p className="text-sm text-muted-foreground">Locks in moisture for supple skin.</p>
-                </Card>
-                <Card className="text-center p-4">
-                    <Sun className="mx-auto h-8 w-8 text-primary mb-2" />
-                    <h3 className="font-semibold">Brightens Skin</h3>
-                    <p className="text-sm text-muted-foreground">Reduces dark spots and evens tone.</p>
-                </Card>
-                <Card className="text-center p-4">
-                    <CheckCircle className="mx-auto h-8 w-8 text-primary mb-2" />
-                    <h3 className="font-semibold">Reduces Fine Lines</h3>
-                    <p className="text-sm text-muted-foreground">Promotes collagen for a youthful look.</p>
-                </Card>
-                <Card className="text-center p-4">
-                    <Leaf className="mx-auto h-8 w-8 text-primary mb-2" />
-                    <h3 className="font-semibold">Natural Ingredients</h3>
-                    <p className="text-sm text-muted-foreground">Gentle, effective, and cruelty-free.</p>
-                </Card>
-            </div>
-          </div>
-
-          {/* Section: How to Use */}
-          <div>
-            <h2 className="text-2xl font-bold mb-4">How to Use</h2>
-            <Card>
-                <CardContent className="p-6 grid md:grid-cols-3 gap-6 text-center">
-                    <div>
-                        <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-lg mb-2">1</div>
-                        <h3 className="font-semibold">Cleanse</h3>
-                        <p className="text-sm text-muted-foreground">Start with a clean, dry face.</p>
-                    </div>
-                    <div>
-                        <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-lg mb-2">2</div>
-                        <h3 className="font-semibold">Apply</h3>
-                        <p className="text-sm text-muted-foreground">Gently massage a few drops onto your skin.</p>
-                    </div>
-                    <div>
-                        <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-lg mb-2">3</div>
-                        <h3 className="font-semibold">Moisturize</h3>
-                        <p className="text-sm text-muted-foreground">Follow with your favorite moisturizer.</p>
-                    </div>
-                </CardContent>
-            </Card>
-          </div>
-
-          {/* Section: From the Brand */}
-          <div>
-            <h2 className="text-2xl font-bold mb-4">From Aura Cosmetics</h2>
-            <Card className="overflow-hidden">
-                <div className="md:flex">
-                    <div className="md:w-1/3">
-                        <Image src="https://picsum.photos/seed/brand/400/400" alt="Aura Cosmetics" width={400} height={400} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="md:w-2/3 p-6">
-                        <h3 className="text-xl font-bold mb-2">Pure Ingredients, Radiant Results.</h3>
-                        <p className="text-muted-foreground">At Aura Cosmetics, we believe in the power of nature to reveal your inner glow. Our products are crafted with sustainably sourced ingredients and are always free from harsh chemicals. We're committed to creating effective, ethical skincare that you can feel good about.</p>
-                        <Button variant="outline" className="mt-4">Learn More</Button>
-                    </div>
-                </div>
-            </Card>
-          </div>
-
-          {/* Existing Sections */}
+          
+          {/* Section: Specifications */}
           <div>
             <h2 className="text-2xl font-bold mb-4">Specifications</h2>
             <Card>
@@ -242,6 +170,8 @@ export default function ProductDetailsPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Section: Frequently Bought Together */}
           <div>
             <h2 className="text-2xl font-bold mb-6">Frequently Bought Together</h2>
             <Card className="bg-gradient-to-br from-background via-secondary/10 to-background border-border/20 shadow-lg">
@@ -340,6 +270,8 @@ export default function ProductDetailsPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Section: Ratings & Reviews */}
           <div>
             <h2 className="text-2xl font-bold mb-4">Ratings & Reviews</h2>
             <Card>
@@ -361,6 +293,8 @@ export default function ProductDetailsPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Section: Questions & Answers */}
           <div>
             <h2 className="text-2xl font-bold mb-4">Questions & Answers</h2>
             <Card>
@@ -386,6 +320,7 @@ export default function ProductDetailsPage() {
               </CardContent>
             </Card>
           </div>
+        </div>
       </div>
     </PageContainer>
   );
