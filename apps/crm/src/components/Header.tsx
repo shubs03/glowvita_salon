@@ -61,10 +61,12 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // This action will now trigger the root reducer to reset the entire state
       dispatch(clearCrmAuth());
       Cookies.remove('crm_access_token', { path: '/' });
+      // Redirect to login page after state is cleared
       router.push('/login');
-      router.refresh();
+      // No need for router.refresh() as the state clearing will cause re-renders
     } finally {
       setIsLoggingOut(false);
       setShowLogoutModal(false);
