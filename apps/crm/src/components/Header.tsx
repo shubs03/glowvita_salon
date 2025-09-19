@@ -35,8 +35,8 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
-  const { data: cartData } = useGetCartQuery(undefined, {
-    skip: !isCrmAuthenticated, // Skip if not authenticated
+  const { data: cartData } = useGetCartQuery(user?._id, {
+    skip: !isCrmAuthenticated || !user?._id,
   });
 
   const cartItemCount = cartData?.data?.items?.reduce((total: number, item: any) => total + item.quantity, 0) || 0;

@@ -40,8 +40,8 @@ interface CartProps {
 export function Cart({ isOpen, onOpenChange }: CartProps) {
   const { user, isCrmAuthenticated } = useCrmAuth();
 
-  const { data: cartData, isLoading: isCartLoading } = useGetCartQuery(undefined, {
-    skip: !isCrmAuthenticated, // Skip query if user is not authenticated
+  const { data: cartData, isLoading: isCartLoading } = useGetCartQuery(user?._id, {
+    skip: !isCrmAuthenticated || !user?._id,
   });
   
   const cartItems: CartItem[] = cartData?.data?.items || [];
@@ -274,78 +274,115 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
       </div>
       
       <Dialog open={isCheckoutModalOpen} onOpenChange={setIsCheckoutModalOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Checkout</DialogTitle>
-            <DialogDescription>Review your order and complete purchase</DialogDescription>
+        <DialogContent className="max-w-md sm:max-w-lg lg:max-w-xl scrollbar-hidden mx-4 max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl font-bold">Quick Checkout</DialogTitle>
+            <DialogDescription className="text-sm">Review your order and complete purchase</DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="shippingAddress" className="text-base font-medium">Shipping Address</Label>
-              <Input
-                id="shippingAddress"
-                value={shippingAddress}
-                onChange={(e) => setShippingAddress(e.target.value)}
-                placeholder="Enter your complete address"
-                className="h-10 rounded-lg"
-              />
-            </div>
-            
-            <div className="space-y-3">
-              <h4 className="text-base font-semibold">Order Summary</h4>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3 max-h-48 overflow-y-auto">
-                {Object.entries(cartItems.reduce((acc: Record<string, { items: CartItem[], total: number }>, item: CartItem) => {
-                  const supplier = item.supplierName || 'Unknown Supplier';
-                  if (!acc[supplier]) {
-                    acc[supplier] = { items: [], total: 0 };
-                  }
-                  acc[supplier].items.push(item);
-                  acc[supplier].total += item.price * item.quantity;
-                  return acc;
-                }, {} as Record<string, { items: CartItem[], total: number }>)).map(([supplier, data]) => (
-                  <div key={supplier} className="bg-white dark:bg-gray-700 rounded-lg p-3 border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Building className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="font-medium text-sm">{supplier}</p>
-                        <p className="text-xs text-gray-500">{data.items.length} item(s)</p>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      {data.items.slice(0, 2).map((item: CartItem) => (
-                        <div key={item.productId} className="flex justify-between items-center text-sm">
-                          <span className="truncate">{item.productName} × {item.quantity}</span>
-                          <span className="font-medium">₹{(item.price * item.quantity).toFixed(2)}</span>
-                        </div>
-                      ))}
-                      {data.items.length > 2 && (
-                        <p className="text-xs text-gray-500">+{data.items.length - 2} more items</p>
-                      )}
-                    </div>
-                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <span className="font-medium text-sm">Subtotal</span>
-                      <span className="font-bold text-blue-600">₹{data.total.toFixed(2)}</span>
-                    </div>
+          {selectedProduct && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-muted/20 to-muted/5 rounded-lg">
+                <Image 
+                  src={selectedProduct.productImage || 'https://placehold.co/60x60.png'} 
+                  alt={selectedProduct.productName} 
+                  width={60} 
+                  height={60} 
+                  className="rounded-lg object-cover border border-border/20" 
+                />
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-base truncate">{selectedProduct.productName}</h4>
+                  <p className="text-xs text-muted-foreground truncate">By: {selectedProduct.supplierName}</p>
+                  <p className="text-lg font-bold text-primary">₹{selectedProduct.salePrice ? selectedProduct.salePrice.toFixed(0) : selectedProduct.price.toFixed(0)}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Quantity</Label>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center border border-border/30 rounded-lg overflow-hidden">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-9 w-9 rounded-none hover:bg-muted" 
+                      onClick={() => setBuyNowQuantity(q => Math.max(1, q-1))}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Input 
+                      type="number" 
+                      value={buyNowQuantity} 
+                      onChange={e => setBuyNowQuantity(Math.max(1, Number(e.target.value)))} 
+                      className="w-16 h-9 text-center border-0 focus-visible:ring-0 font-medium" 
+                      min="1"
+                      max={selectedProduct.stock}
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-9 w-9 rounded-none hover:bg-muted" 
+                      onClick={() => setBuyNowQuantity(q => Math.min(selectedProduct.stock, q+1))}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
-                ))}
-                
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold">Total</span>
-                    <span className="text-xl font-bold text-blue-600">₹{subtotal.toFixed(2)}</span>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-primary">₹{((selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity).toFixed(0)}</p>
+                    <p className="text-xs text-muted-foreground">Total</p>
                   </div>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Shipping Address</Label>
+                <Input
+                  value={shippingAddress}
+                  onChange={(e) => setShippingAddress(e.target.value)}
+                  placeholder="Enter your complete address"
+                  className="h-10 rounded-lg border-border/30 focus-visible:border-primary"
+                />
+              </div>
+
+              <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-4 space-y-2">
+                <h4 className="font-semibold text-base mb-3">Order Summary</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span>Subtotal ({buyNowQuantity} items)</span>
+                    <span>₹{((selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity).toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Shipping</span>
+                    <span className="text-green-600 font-medium">FREE</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax</span>
+                    <span>₹0</span>
+                  </div>
+                  <div className="border-t border-border/20 pt-2">
+                    <div className="flex justify-between font-bold">
+                      <span>Total</span>
+                      <span className="text-primary">₹{((selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity).toFixed(0)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <Truck className="h-4 w-4 text-green-600 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-green-800 dark:text-green-300">Fast Delivery</p>
+                  <p className="text-green-600 dark:text-green-400">3-5 business days</p>
+                </div>
+              </div>
             </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsCheckoutModalOpen(false)} className="px-4">
+          )}
+          <DialogFooter className="gap-2 pt-2">
+            <Button variant="outline" onClick={() => setIsCheckoutModalOpen(false)} className="px-4 h-9">
               Cancel
             </Button>
             <Button 
               onClick={handlePlaceOrder} 
               disabled={isCreatingOrder}
-              className="px-6 bg-blue-600 hover:bg-blue-700"
+              className="px-6 h-9 bg-blue-600 hover:bg-blue-700"
             >
                 {isCreatingOrder ? (
                   <>
