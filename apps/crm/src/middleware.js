@@ -99,7 +99,7 @@ export async function middleware(request) {
 
   if (!isPathAllowed) {
     // Redirect to a 'Not Found' page if access is denied
-    return NextResponse.rewrite(new URL('/not-found', request.url));
+    return NextResponse.redirect(new URL('/not-found', request.url));
   }
   
   return NextResponse.next();
