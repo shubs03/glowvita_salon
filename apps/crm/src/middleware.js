@@ -83,25 +83,17 @@ export async function middleware(request) {
   const navItems = getNavItemsForRole(role);
   const allowedPaths = [...navItems.map(item => item.href), ...alwaysAllowedPaths];
 
-  // More robust path checking
   const isPathAllowed = allowedPaths.some(allowedPath => {
-    // Exact match (e.g., /dashboard)
     if (pathname === allowedPath) return true;
-    // Match for dynamic routes (e.g., /calendar/[date])
-    if (allowedPath.includes('[') && new RegExp(`^${allowedPath.replace(/\[.*?\]/g, '[^/]+')}$`).test(pathname)) {
-        return true;
-    }
-    // Allow sub-paths only if the base path is not a direct page
-    if (pathname.startsWith(allowedPath + '/') && !allowedPaths.includes(pathname)) {
-      // This logic prevents /services from being accessible if /service is not defined as a base
+    if (allowedPath !== '/' && pathname.startsWith(allowedPath + '/')) {
       return true;
     }
     return false;
   });
 
   if (!isPathAllowed) {
-    // Using rewrite will show the not-found page content without changing the URL
-    return NextResponse.rewrite(new URL('/not-found', request.url));
+    // Redirect to the not-found page if the path is not authorized
+    return NextResponse.redirect(new URL('/not-found', request.url));
   }
 
   return NextResponse.next();
