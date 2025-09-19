@@ -8,13 +8,14 @@ import { Input } from '@repo/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Search, ShoppingCart, Info, X, Heart, Eye, Minus, Plus, Building, Mail, MapPin, Star, Zap, Package, Truck, Tag, ArrowRight, Sparkles } from 'lucide-react';
 import Image from 'next/image';
-import { useGetSupplierProductsQuery, useGetSupplierProfileQuery, useCreateCrmOrderMutation, useAddToCartMutation } from '@repo/store/api';
+import { useGetSupplierProductsQuery, useGetSupplierProfileQuery, useCreateCrmOrderMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 import { useAppDispatch } from '@repo/store/hooks';
 import { Skeleton } from '@repo/ui/skeleton';
 import { Label } from '@repo/ui/label';
 import { Badge } from '@repo/ui/badge';
+import { useAddToCartMutation } from '@repo/store/api';
 
 type Product = {
   _id: string;
@@ -85,7 +86,7 @@ export default function MarketplacePage() {
         price: product.salePrice || product.price,
         quantity: qty,
         productImage: product.productImage,
-        vendorId: product.vendorId,
+        vendorId: product.vendorId, // This is the supplier's ID
         supplierName: product.supplierName,
       }).unwrap();
       toast.success(`${qty} x ${product.productName} added to cart.`);
@@ -217,7 +218,6 @@ export default function MarketplacePage() {
     <div className="min-h-screen bg-background">
       
       <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Enhanced Header Section */}
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 shadow-lg backdrop-blur-sm">
@@ -234,7 +234,6 @@ export default function MarketplacePage() {
           </div>
         </div>
         
-        {/* Search and Filters */}
         <Card className="bg-card border border-border rounded-lg">
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
@@ -261,7 +260,6 @@ export default function MarketplacePage() {
           </CardContent>
         </Card>
 
-      {/* Products Section */}
       <Card className="bg-card border border-border rounded-lg">
         <CardHeader className="pb-6 border-b border-border">
           <div className="flex items-center justify-between">
@@ -285,7 +283,6 @@ export default function MarketplacePage() {
           </div>
         </CardHeader>
         <CardContent className="p-6">
-          {/* Enhanced Products Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product: Product, index: number) => (
               <Card
@@ -300,7 +297,6 @@ export default function MarketplacePage() {
                 }}
                 onClick={() => handleViewDetails(product)}
               >
-                {/* Image Section - 60% of card height */}
                 <div className="relative h-[60%] w-full overflow-hidden rounded-t-2xl" style={{ isolation: 'isolate' }}>
                   <Image 
                     src={product.productImage || 'https://placehold.co/288x192.png'} 
@@ -313,15 +309,11 @@ export default function MarketplacePage() {
                     }}
                   />
                   
-                  {/* Animated Gradient Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-500" style={{ isolation: 'isolate' }}></div>
                   
-                  {/* Shimmer Effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" style={{ isolation: 'isolate' }}></div>
                   
-                  {/* Top Badges */}
                   <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10">
-                    {/* Stock Badge */}
                     <Badge 
                       variant={product.stock > 10 ? "secondary" : product.stock > 0 ? "outline" : "destructive"}
                       className={`backdrop-blur-sm shadow-lg rounded-full border text-xs font-bold animate-pulse-glow ${
@@ -337,7 +329,6 @@ export default function MarketplacePage() {
                     </Badge>
                     
                     <div className="flex gap-2 ml-auto">
-                        {/* Action Buttons */}
                         <button
                             onClick={(e) => {
                             e.stopPropagation();
@@ -356,20 +347,25 @@ export default function MarketplacePage() {
                     </div>
                   </div>
                   
-                  {/* Rating on Image - Bottom Right */}
-                  <div className="absolute bottom-3 right-3 z-10">
-                    {product.salePrice && product.price > product.salePrice && (
+                  <div className="absolute bottom-3 right-3 z-10 flex items-center gap-1">
+                    <div className="flex">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`h-3 w-3 ${i < Math.floor(product.rating || 4) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+                      ))}
+                    </div>
+                  </div>
+
+                  {product.salePrice && product.price > product.salePrice && (
+                    <div className="absolute bottom-3 left-3 z-10">
                         <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-lg rounded-full font-bold">
                             <Tag className="h-3 w-3 mr-1" />
                             {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
                         </Badge>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Details Section - 40% of card height */}
                 <div className="flex flex-col h-[40%] w-full bg-card border-t border-border/20 p-4">
-                  {/* Product Name & Price - Same Line */}
                   <div className="flex items-start justify-between mb-3">
                     <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-2 leading-tight flex-1 mr-3">
                       {product.productName}
@@ -382,7 +378,6 @@ export default function MarketplacePage() {
                     </div>
                   </div>
                   
-                  {/* Supplier Name & Category */}
                   <div className="flex items-center justify-between mb-3">
                     <div 
                       className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
@@ -400,7 +395,6 @@ export default function MarketplacePage() {
                     </div>
                   </div>
                   
-                  {/* Action Buttons - Bottom */}
                   <div className="flex gap-3 mt-auto">
                     <Button
                       variant="outline"
@@ -430,7 +424,6 @@ export default function MarketplacePage() {
             ))}
           </div>
           
-          {/* Enhanced Empty State */}
           {filteredProducts.length === 0 && !isLoading && (
             <div className="text-center py-20">
               <div className="mx-auto w-32 h-32 mb-8 bg-muted/20 rounded-2xl flex items-center justify-center border border-border">
@@ -460,7 +453,6 @@ export default function MarketplacePage() {
             </div>
           )}
           
-          {/* Enhanced Load More */}
           {productsData.length > 20 && filteredProducts.length >= 20 && (
             <div className="text-center mt-12">
               <Button 
@@ -468,7 +460,6 @@ export default function MarketplacePage() {
                 size="lg"
                 className="px-10 py-4 rounded-lg border-dashed border-2 border-border hover:border-primary hover:bg-primary/5 transition-all duration-300 bg-background h-14 text-base"
                 onClick={() => {
-                  // Logic to load more products
                   console.log('Loading more products...');
                 }}
               >
@@ -490,7 +481,6 @@ export default function MarketplacePage() {
           </DialogHeader>
           {selectedProduct && (
             <div className="grid md:grid-cols-2 gap-8 py-6">
-              {/* Product Image */}
               <div className="relative">
                 <div className="aspect-square relative rounded-2xl overflow-hidden bg-gradient-to-br from-muted/30 to-muted/10">
                   <Image 
@@ -507,9 +497,7 @@ export default function MarketplacePage() {
                 </div>
               </div>
               
-              {/* Product Details */}
               <div className="space-y-6">
-                {/* Supplier Info */}
                 <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-muted/30 to-muted/10 rounded-xl">
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <Building className="h-5 w-5 text-primary" />
@@ -520,7 +508,6 @@ export default function MarketplacePage() {
                   </div>
                 </div>
 
-                {/* Description */}
                 {selectedProduct.description && (
                   <div>
                     <h4 className="font-semibold mb-2">Description</h4>
@@ -528,7 +515,6 @@ export default function MarketplacePage() {
                   </div>
                 )}
 
-                {/* Category & Price */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium text-muted-foreground">Category</Label>
@@ -547,7 +533,6 @@ export default function MarketplacePage() {
                   </div>
                 </div>
 
-                {/* Price */}
                 <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl">
                   <div className="flex items-center justify-between">
                     <div>
@@ -563,7 +548,6 @@ export default function MarketplacePage() {
                   </div>
                 </div>
                 
-                {/* Quantity Selector */}
                 <div className="space-y-3">
                   <Label htmlFor="quantity" className="text-base font-semibold">Quantity</Label>
                   <div className="flex items-center gap-4">
@@ -603,7 +587,6 @@ export default function MarketplacePage() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">
                   <Button 
                     variant="outline" 
@@ -632,7 +615,6 @@ export default function MarketplacePage() {
         </DialogContent>
       </Dialog>
       
-      {/* Buy Now Modal */}
       <Dialog open={isBuyNowModalOpen} onOpenChange={setIsBuyNowModalOpen}>
         <DialogContent className="max-w-md sm:max-w-lg lg:max-w-xl scrollbar-hidden mx-4 max-h-[90vh] overflow-y-auto">
           <DialogHeader className="space-y-2">
@@ -641,7 +623,6 @@ export default function MarketplacePage() {
           </DialogHeader>
           {selectedProduct && (
             <div className="space-y-4 py-2">
-              {/* Product Summary */}
               <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-muted/20 to-muted/5 rounded-lg">
                 <Image 
                   src={selectedProduct.productImage || 'https://placehold.co/60x60.png'} 
@@ -657,7 +638,6 @@ export default function MarketplacePage() {
                 </div>
               </div>
 
-              {/* Quantity Selection */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Quantity</Label>
                 <div className="flex items-center justify-between gap-3">
@@ -694,7 +674,6 @@ export default function MarketplacePage() {
                 </div>
               </div>
 
-              {/* Shipping Address */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Shipping Address</Label>
                 <Input
@@ -705,7 +684,6 @@ export default function MarketplacePage() {
                 />
               </div>
 
-              {/* Order Summary */}
               <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-4 space-y-2">
                 <h4 className="font-semibold text-base mb-3">Order Summary</h4>
                 <div className="space-y-2 text-sm">
@@ -730,7 +708,6 @@ export default function MarketplacePage() {
                 </div>
               </div>
 
-              {/* Delivery Info */}
               <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                 <Truck className="h-4 w-4 text-green-600 flex-shrink-0" />
                 <div className="text-sm">
@@ -747,7 +724,7 @@ export default function MarketplacePage() {
             <Button 
               onClick={handlePlaceOrder} 
               disabled={isCreatingOrder}
-              className="px-6 h-9 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+              className="px-6 h-9 bg-blue-600 hover:bg-blue-700"
             >
                 {isCreatingOrder ? (
                   <>
@@ -756,7 +733,7 @@ export default function MarketplacePage() {
                   </>
                 ) : (
                   <>
-                    <Package className="mr-2 h-4 w-4" />
+                    <ShoppingCart className="mr-2 h-4 w-4" />
                     Place Order
                   </>
                 )}
@@ -765,7 +742,6 @@ export default function MarketplacePage() {
         </DialogContent>
       </Dialog>
       
-      {/* Supplier Profile Modal */}
       <Dialog open={isSupplierModalOpen} onOpenChange={setIsSupplierModalOpen}>
         <DialogContent className="max-w-sm w-[85vw] h-[70vh] p-0 gap-0 overflow-hidden">
           <div className="flex flex-col h-full">
@@ -785,7 +761,6 @@ export default function MarketplacePage() {
               </div>
             ) : supplierData && (
               <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
-                {/* Supplier Header */}
                 <div className="text-center mb-4">
                   <div className="relative inline-block">
                     <Image 
@@ -805,7 +780,6 @@ export default function MarketplacePage() {
                   </Badge>
                 </div>
 
-                {/* Contact Info */}
                 <div className="space-y-2 mb-3">
                   <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
                     <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
@@ -817,7 +791,6 @@ export default function MarketplacePage() {
                   </div>
                 </div>
 
-                {/* Rating */}
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <div className="flex items-center gap-1">
                     {[...Array(5)].map((_, i) => (
@@ -827,7 +800,6 @@ export default function MarketplacePage() {
                   <span className="text-xs font-medium">4.8 (120 reviews)</span>
                 </div>
 
-                {/* Description */}
                 {supplierData.description && (
                   <div className="bg-gradient-to-r from-muted/20 to-muted/10 rounded-lg p-3">
                     <h4 className="font-semibold mb-2 text-xs">About</h4>

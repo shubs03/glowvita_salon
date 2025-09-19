@@ -5,17 +5,19 @@ import { Button } from '@repo/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { X, ShoppingCart, Plus, Minus, Trash2, Building } from 'lucide-react';
 import Image from 'next/image';
-import { useAppSelector, useAppDispatch } from '@repo/store/hooks';
-import { updateQuantity, removeFromCart, clearCart } from '@repo/store/slices/cartSlice';
-import { useCreateCrmOrderMutation } from '@repo/store/api';
+import { useAppDispatch } from '@repo/store/hooks';
+import { useCreateCrmOrderMutation, useGetCartQuery, useUpdateCartItemMutation, useRemoveFromCartMutation } from '@repo/store/api';
+import { clearCart } from '@repo/store/slices/cartSlice';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
+import { Skeleton } from '@repo/ui/skeleton';
 
 interface CartItem {
   _id: string;
+  productId: string;
   productName: string;
   price: number;
   quantity: number;
@@ -40,23 +42,33 @@ interface CartProps {
 export function Cart({ isOpen, onOpenChange }: CartProps) {
   const dispatch = useAppDispatch();
   const { user } = useCrmAuth();
-  const cartItems = useAppSelector((state: any) => state.cart.items as CartItem[]);
+
+  const { data: cartData, isLoading: isCartLoading } = useGetCartQuery(undefined, {
+    skip: !isOpen,
+    refetchOnFocus: true,
+  });
+  
+  const cartItems: CartItem[] = cartData?.data?.items || [];
+
+  const [updateCartItem] = useUpdateCartItemMutation();
+  const [removeFromCart] = useRemoveFromCartMutation();
+  
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [shippingAddress, setShippingAddress] = useState(user?.address || '');
   const [createOrder, { isLoading: isCreatingOrder }] = useCreateCrmOrderMutation();
 
   const subtotal = cartItems.reduce((acc: number, item: CartItem) => acc + item.price * item.quantity, 0);
 
-  const handleUpdateQuantity = (_id: string, quantity: number) => {
+  const handleUpdateQuantity = async (productId: string, quantity: number) => {
     if (quantity > 0) {
-        dispatch(updateQuantity({ _id, quantity }));
+        await updateCartItem({ productId, quantity });
     } else {
-        dispatch(removeFromCart(_id));
+        await removeFromCart(productId);
     }
   };
 
-  const handleRemoveFromCart = (_id: string) => {
-    dispatch(removeFromCart(_id));
+  const handleRemoveFromCart = async (productId: string) => {
+    await removeFromCart(productId);
   };
   
   const handlePlaceOrder = async () => {
@@ -71,7 +83,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             acc[supplierId] = [];
         }
         acc[supplierId].push({
-            productId: item._id,
+            productId: item.productId,
             productName: item.productName,
             productImage: item.productImage,
             quantity: item.quantity,
@@ -110,16 +122,13 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
 
   return (
     <>
-      {/* Backdrop with proper transparency */}
       <div 
         className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => onOpenChange(false)}
       />
       
-      {/* Cart Sidebar - Full Height */}
       <div className={`fixed top-0 right-0 h-screen w-full max-w-[420px] bg-background/95 backdrop-blur-md shadow-2xl z-50 transform transition-all duration-300 ease-in-out border-l border-border/20 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
         <div className="flex flex-col h-full">
-          {/* Header */}
           <div className="flex items-center justify-between p-5 border-b border-border/20 bg-gradient-to-r from-primary/5 to-primary/10">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-primary/10">
@@ -140,7 +149,11 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             </Button>
           </div>
 
-          {cartItems.length === 0 ? (
+          {isCartLoading ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <Skeleton className="h-12 w-12 rounded-full" />
+            </div>
+          ) : cartItems.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="p-6 bg-muted/50 rounded-full mb-6">
                 <ShoppingCart className="h-16 w-16 text-muted-foreground" />
@@ -157,11 +170,10 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             </div>
           ) : (
             <>
-              {/* Cart Items - Scrollable */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {cartItems.map((item: CartItem, index: number) => (
+                {cartItems.map((item: CartItem) => (
                   <div 
-                    key={item._id} 
+                    key={item.productId} 
                     className="bg-card rounded-xl p-4 border border-border/50 hover:shadow-lg transition-all duration-200 hover:border-primary/20"
                   >
                     <div className="flex items-center gap-4">
@@ -182,14 +194,13 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                         <h4 className="font-semibold text-base line-clamp-2 mb-1">{item.productName}</h4>
                         <p className="text-sm text-muted-foreground mb-3">₹{item.price.toFixed(2)} each</p>
                         
-                        {/* Quantity Controls */}
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
                             <Button 
                               variant="ghost" 
                               size="sm" 
                               className="h-8 w-8 p-0 rounded-md hover:bg-background" 
-                              onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)}
+                              onClick={() => handleUpdateQuantity(item.productId, item.quantity - 1)}
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
@@ -198,7 +209,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                               variant="ghost" 
                               size="sm" 
                               className="h-8 w-8 p-0 rounded-md hover:bg-background" 
-                              onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}
+                              onClick={() => handleUpdateQuantity(item.productId, item.quantity + 1)}
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
@@ -210,7 +221,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                               variant="ghost" 
                               size="sm" 
                               className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive rounded-md" 
-                              onClick={() => handleRemoveFromCart(item._id)}
+                              onClick={() => handleRemoveFromCart(item.productId)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -222,13 +233,11 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                 ))}
               </div>
 
-              {/* Footer - Order Summary & Checkout */}
               <div className="p-5 border-t border-border/20 bg-gradient-to-r from-primary/5 to-primary/10">
-                {/* Order Summary */}
                 <div className="bg-card rounded-xl p-4 mb-4 border border-border/20">
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Subtotal ({cartItems.length} items)</span>
+                      <span className="text-muted-foreground">Subtotal ({cartItems.reduce((acc, i) => acc + i.quantity, 0)} items)</span>
                       <span className="font-medium">₹{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm">
@@ -265,7 +274,6 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             <DialogDescription>Review your order and complete purchase</DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            {/* Shipping Address */}
             <div className="space-y-2">
               <Label htmlFor="shippingAddress" className="text-base font-medium">Shipping Address</Label>
               <Input
@@ -277,7 +285,6 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
               />
             </div>
             
-            {/* Compact Order Summary */}
             <div className="space-y-3">
               <h4 className="text-base font-semibold">Order Summary</h4>
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3 max-h-48 overflow-y-auto">
@@ -300,7 +307,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                     </div>
                     <div className="space-y-1">
                       {data.items.slice(0, 2).map((item: CartItem) => (
-                        <div key={item._id} className="flex justify-between items-center text-sm">
+                        <div key={item.productId} className="flex justify-between items-center text-sm">
                           <span className="truncate">{item.productName} × {item.quantity}</span>
                           <span className="font-medium">₹{(item.price * item.quantity).toFixed(2)}</span>
                         </div>
@@ -316,7 +323,6 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                   </div>
                 ))}
                 
-                {/* Grand Total */}
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold">Total</span>

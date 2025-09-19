@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ThemeToggle } from "./ThemeToggle";
 import { Bell, Menu, LogOut, User, Settings, CheckCircle, XCircle, Search, ChevronRight, Calendar, Clock, TrendingUp, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
+import { useAppDispatch } from "@repo/store/hooks";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import Cookies from "js-cookie";
@@ -24,6 +24,7 @@ import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
 import { Cart } from "./cart/Cart";
+import { useGetCartQuery } from "@repo/store/api";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
@@ -34,7 +35,10 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
-  const cartItemCount = useAppSelector(state => state.cart.items.reduce((total, item) => total + item.quantity, 0));
+  const { data: cartData } = useGetCartQuery(undefined, {
+    pollingInterval: 30000, // Refetch every 30 seconds
+  });
+  const cartItemCount = cartData?.data?.items?.reduce((total: number, item: any) => total + item.quantity, 0) || 0;
 
   const getNavItemsForRole = () => {
     switch (role) {
