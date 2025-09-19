@@ -1,6 +1,6 @@
 
 import { createSlice } from '@reduxjs/toolkit';
-import { glowvitaApi } from '../services/api';
+import { glowvitaApi } from '../services/api.js';
 
 const initialState = {
   isCrmAuthenticated: false,
@@ -57,21 +57,17 @@ const crmAuthSlice = createSlice({
       }
     },
     clearCrmAuth: (state) => {
-      state.isCrmAuthenticated = false;
-      state.user = null;
-      state.token = null;
-      state.role = null;
-      state.permissions = [];
-
+      Object.assign(state, initialState);
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('crmAuthState');
       }
     },
   },
   extraReducers: (builder) => {
-    // When clearCrmAuth is dispatched, also reset the API state to clear cached data like the cart.
-    builder.addCase(clearCrmAuth, (state, action) => {
-      // This is a special action that RTK Query provides to reset the API state
+    // When clearCrmAuth is dispatched, also reset the entire API slice's state.
+    // This will clear all cached data, including the cart.
+    builder.addCase(clearCrmAuth, (state) => {
+      // This special action is provided by RTK Query to reset the API state.
       return glowvitaApi.util.resetApiState();
     });
   },

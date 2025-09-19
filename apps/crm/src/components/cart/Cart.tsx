@@ -5,9 +5,7 @@ import { Button } from '@repo/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { X, ShoppingCart, Plus, Minus, Trash2, Building } from 'lucide-react';
 import Image from 'next/image';
-import { useAppDispatch } from '@repo/store/hooks';
-import { useCreateCrmOrderMutation, useGetCartQuery, useUpdateCartItemMutation, useRemoveFromCartMutation } from '@repo/store/api';
-import { clearCart } from '@repo/store/slices/cartSlice';
+import { useGetCartQuery, useUpdateCartItemMutation, useRemoveFromCartMutation, useCreateCrmOrderMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 import { useState } from 'react';
@@ -40,12 +38,10 @@ interface CartProps {
 }
 
 export function Cart({ isOpen, onOpenChange }: CartProps) {
-  const dispatch = useAppDispatch();
-  const { user } = useCrmAuth();
+  const { user, isCrmAuthenticated } = useCrmAuth();
 
   const { data: cartData, isLoading: isCartLoading } = useGetCartQuery(undefined, {
-    skip: !isOpen,
-    refetchOnFocus: true,
+    skip: !isCrmAuthenticated, // Skip query if user is not authenticated
   });
   
   const cartItems: CartItem[] = cartData?.data?.items || [];
@@ -60,15 +56,24 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
   const subtotal = cartItems.reduce((acc: number, item: CartItem) => acc + item.price * item.quantity, 0);
 
   const handleUpdateQuantity = async (productId: string, quantity: number) => {
-    if (quantity > 0) {
-        await updateCartItem({ productId, quantity });
-    } else {
-        await removeFromCart(productId);
+    try {
+      if (quantity > 0) {
+        await updateCartItem({ productId, quantity }).unwrap();
+      } else {
+        await removeFromCart({ productId }).unwrap();
+      }
+    } catch (error) {
+      toast.error('Failed to update quantity.');
     }
   };
 
   const handleRemoveFromCart = async (productId: string) => {
-    await removeFromCart(productId);
+    try {
+      await removeFromCart({ productId }).unwrap();
+      toast.success('Item removed from cart.');
+    } catch (error) {
+      toast.error('Failed to remove item.');
+    }
   };
   
   const handlePlaceOrder = async () => {
@@ -78,7 +83,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
     }
 
     const ordersBySupplier = cartItems.reduce((acc: Record<string, OrderItem[]>, item: CartItem) => {
-        const supplierId = item.vendorId;
+        const supplierId = item.vendorId; // `vendorId` on the cart item is actually the supplier ID
         if (!acc[supplierId]) {
             acc[supplierId] = [];
         }
@@ -100,7 +105,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                 supplierId,
                 totalAmount,
                 shippingAddress,
-                vendorId: user?._id
+                vendorId: user?._id // The logged-in vendor is the one placing the order
             };
             return createOrder(orderData).unwrap();
         });
@@ -111,7 +116,8 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             description: "Your orders have been sent to the respective suppliers."
         });
         
-        dispatch(clearCart());
+        // This will trigger a refetch of the cart, which should now be empty
+        // No need to dispatch clearCart manually if the backend clears it
         setIsCheckoutModalOpen(false);
         onOpenChange(false);
     } catch (error) {

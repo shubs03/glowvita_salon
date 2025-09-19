@@ -29,15 +29,16 @@ import { useGetCartQuery } from "@repo/store/api";
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { user, role } = useCrmAuth();
+  const { user, role, isCrmAuthenticated } = useCrmAuth();
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
   const { data: cartData } = useGetCartQuery(undefined, {
-    pollingInterval: 30000, // Refetch every 30 seconds
+    skip: !isCrmAuthenticated, // Skip if not authenticated
   });
+
   const cartItemCount = cartData?.data?.items?.reduce((total: number, item: any) => total + item.quantity, 0) || 0;
 
   const getNavItemsForRole = () => {
