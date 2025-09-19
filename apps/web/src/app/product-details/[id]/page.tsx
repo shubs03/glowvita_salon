@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
-import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown, Droplets, Leaf, FlaskConical } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Input } from '@repo/ui/input';
@@ -322,6 +322,81 @@ export default function ProductDetailsPage() {
           </div>
         </div>
       </div>
+      
+      {/* NEW SECTIONS ADDED BELOW */}
+      <div className="space-y-16 mt-16">
+        {/* Section: Why You'll Love It */}
+        <section>
+          <h2 className="text-3xl font-bold text-center mb-8">Why You'll Love It</h2>
+          <div className="grid md:grid-cols-3 gap-8 text-center">
+            <Card className="p-6">
+              <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
+                <Droplets className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold">Intense Hydration</h3>
+              <p className="text-muted-foreground mt-2">Hyaluronic Acid provides deep, lasting moisture for plump, supple skin.</p>
+            </Card>
+            <Card className="p-6">
+              <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
+                <Leaf className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold">Brightens Complexion</h3>
+              <p className="text-muted-foreground mt-2">Vitamin C works to fade dark spots and even out skin tone for a radiant look.</p>
+            </Card>
+            <Card className="p-6">
+              <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
+                <FlaskConical className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold">Fights Aging</h3>
+              <p className="text-muted-foreground mt-2">Powerful antioxidants combat free radicals and reduce the appearance of fine lines.</p>
+            </Card>
+          </div>
+        </section>
+
+        {/* Section: How to Use */}
+        <section>
+          <h2 className="text-3xl font-bold text-center mb-8">How to Use</h2>
+          <div className="max-w-2xl mx-auto space-y-4">
+            <Card className="flex items-center p-4">
+              <div className="bg-secondary text-secondary-foreground font-bold rounded-full w-8 h-8 flex items-center justify-center mr-4">1</div>
+              <div>
+                <h4 className="font-semibold">Cleanse</h4>
+                <p className="text-sm text-muted-foreground">Start with a clean, dry face.</p>
+              </div>
+            </Card>
+            <Card className="flex items-center p-4">
+              <div className="bg-secondary text-secondary-foreground font-bold rounded-full w-8 h-8 flex items-center justify-center mr-4">2</div>
+              <div>
+                <h4 className="font-semibold">Apply Serum</h4>
+                <p className="text-sm text-muted-foreground">Apply 2-3 drops of Aura Serum and gently massage into your skin.</p>
+              </div>
+            </Card>
+            <Card className="flex items-center p-4">
+              <div className="bg-secondary text-secondary-foreground font-bold rounded-full w-8 h-8 flex items-center justify-center mr-4">3</div>
+              <div>
+                <h4 className="font-semibold">Moisturize</h4>
+                <p className="text-sm text-muted-foreground">Follow up with your favorite moisturizer to lock in the hydration.</p>
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        {/* Section: From the Brand */}
+        <section>
+          <Card className="bg-secondary/50">
+            <CardContent className="p-8 grid md:grid-cols-3 gap-8 items-center">
+              <div className="md:col-span-1 text-center">
+                <h3 className="text-2xl font-bold font-headline">Aura Cosmetics</h3>
+                <p className="text-muted-foreground mt-1">Science-backed skincare</p>
+              </div>
+              <div className="md:col-span-2">
+                <p className="text-lg text-muted-foreground italic">"At Aura, we believe that radiant skin is a reflection of overall wellness. Our mission is to blend cutting-edge science with nature's finest ingredients to create products that not only beautify but also nourish."</p>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+
     </PageContainer>
   );
 }
