@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@repo/ui/button";
 import {
@@ -250,6 +250,7 @@ const serviceCategories = ["All", "Hair", "Skin", "Nails", "Body", "Massage", "W
 
 export default function SalonDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const { id } = params;
   const [mainImage, setMainImage] = useState(salon.images[0]);
   const [activeServiceTab, setActiveServiceTab] = useState("All");
@@ -263,6 +264,10 @@ export default function SalonDetailsPage() {
   const openGalleryModal = (image: string) => {
     setMainImage(image);
     setIsGalleryModalOpen(true);
+  };
+  
+  const handleBookNow = () => {
+    router.push(`/book/${id}`);
   };
 
   const StarRating = ({ rating }: { rating: number }) => (
@@ -415,8 +420,7 @@ export default function SalonDetailsPage() {
                      </div>
                   </div>
             </section>
-
-            {/* Offers Section */}
+            
             <section id="offers">
               <h2 className="text-4xl font-bold mb-2">Offers Available</h2>
               <p className="text-muted-foreground mb-6">
@@ -456,25 +460,25 @@ export default function SalonDetailsPage() {
               </p>
               <Card>
                 <CardHeader>
-                  <Tabs
-                    value={activeServiceTab}
-                    onValueChange={setActiveServiceTab}
-                    className="w-full"
-                  >
-                    <div className="relative">
-                      <TabsList className="relative flex w-full overflow-x-auto overflow-y-hidden no-scrollbar rounded-lg p-1">
-                        {serviceCategories.map((cat) => (
-                          <TabsTrigger
-                            key={cat}
-                            value={cat}
-                            className="flex-shrink-0 text-xs sm:text-sm"
-                          >
-                            {cat}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </div>
-                  </Tabs>
+                    <Tabs
+                        value={activeServiceTab}
+                        onValueChange={setActiveServiceTab}
+                        className="w-full"
+                    >
+                        <div className="relative">
+                            <TabsList className="relative flex w-full overflow-x-auto overflow-y-hidden no-scrollbar rounded-lg p-1">
+                                {serviceCategories.map((cat) => (
+                                <TabsTrigger
+                                    key={cat}
+                                    value={cat}
+                                    className="flex-shrink-0 text-xs sm:text-sm"
+                                >
+                                    {cat}
+                                </TabsTrigger>
+                                ))}
+                            </TabsList>
+                        </div>
+                    </Tabs>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-0">
                   {filteredServices.map((service) => (
@@ -492,7 +496,7 @@ export default function SalonDetailsPage() {
                         <p className="font-semibold">
                           ₹{service.price.toFixed(2)}
                         </p>
-                        <Button size="sm" variant="outline" className="mt-1">
+                        <Button size="sm" variant="outline" className="mt-1" onClick={handleBookNow}>
                           Book
                         </Button>
                       </div>
@@ -636,7 +640,7 @@ export default function SalonDetailsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button size="lg" className="w-full rounded-sm">
+                <Button size="lg" className="w-full rounded-sm" onClick={handleBookNow}>
                   Book Now
                 </Button>
                 <p className="text-xs text-center mt-2 text-muted-foreground">

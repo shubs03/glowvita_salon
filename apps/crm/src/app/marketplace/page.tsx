@@ -52,11 +52,11 @@ export default function MarketplacePage() {
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [buyNowQuantity, setBuyNowQuantity] = useState(1);
+  const { user } = useCrmAuth();
   const [shippingAddress, setShippingAddress] = useState(user?.address || '');
   
   const { data: supplierData, isLoading: isSupplierLoading } = useGetSupplierProfileQuery(selectedSupplierId, { skip: !selectedSupplierId });
   const dispatch = useAppDispatch();
-  const { user } = useCrmAuth();
   const [createOrder, { isLoading: isCreatingOrder }] = useCreateCrmOrderMutation();
   
   const filteredProducts = useMemo(() => {
@@ -314,30 +314,30 @@ export default function MarketplacePage() {
                     </Badge>
                     
                     <div className="flex gap-2 ml-auto">
-                      {/* Discount Badge */}
-                      {product.salePrice && product.price > product.salePrice && (
-                        <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-lg rounded-full font-bold">
-                          <Tag className="h-3 w-3 mr-1" />
-                          {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
-                        </Badge>
-                      )}
-                      
-                      {/* Action Buttons */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewSupplier(e, product.vendorId);
-                        }}
-                        className="p-2 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button 
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-2 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
-                      >
-                        <Heart className="h-4 w-4" />
-                      </button>
+                        {/* Discount Badge */}
+                        {product.salePrice && product.price > product.salePrice && (
+                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-lg rounded-full font-bold">
+                                <Tag className="h-3 w-3 mr-1" />
+                                {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
+                            </Badge>
+                        )}
+                        
+                        {/* Action Buttons */}
+                        <button
+                            onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewSupplier(e, product.vendorId);
+                            }}
+                            className="p-2 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
+                        >
+                            <Eye className="h-4 w-4" />
+                        </button>
+                        <button 
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-2 rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100"
+                        >
+                            <Heart className="h-4 w-4" />
+                        </button>
                     </div>
                   </div>
                   
