@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
-import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown, CheckCircle, Droplet, Sun, Leaf } from 'lucide-react';
+import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Input } from '@repo/ui/input';
@@ -153,78 +153,174 @@ export default function ProductDetailsPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      
-      {/* New Sections Added Below */}
-      <div className="space-y-16 py-16 border-t">
-          {/* Section: Why You'll Love It */}
+          
+          {/* Section: Specifications */}
           <div>
-            <h2 className="text-2xl font-bold mb-4">Why You'll Love It</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="text-center p-4">
-                    <Droplet className="mx-auto h-8 w-8 text-primary mb-2" />
-                    <h3 className="font-semibold">Deep Hydration</h3>
-                    <p className="text-sm text-muted-foreground">Locks in moisture for supple skin.</p>
-                </Card>
-                <Card className="text-center p-4">
-                    <Sun className="mx-auto h-8 w-8 text-primary mb-2" />
-                    <h3 className="font-semibold">Brightens Skin</h3>
-                    <p className="text-sm text-muted-foreground">Reduces dark spots and evens tone.</p>
-                </Card>
-                <Card className="text-center p-4">
-                    <CheckCircle className="mx-auto h-8 w-8 text-primary mb-2" />
-                    <h3 className="font-semibold">Reduces Fine Lines</h3>
-                    <p className="text-sm text-muted-foreground">Promotes collagen for a youthful look.</p>
-                </Card>
-                <Card className="text-center p-4">
-                    <Leaf className="mx-auto h-8 w-8 text-primary mb-2" />
-                    <h3 className="font-semibold">Natural Ingredients</h3>
-                    <p className="text-sm text-muted-foreground">Gentle, effective, and cruelty-free.</p>
-                </Card>
-            </div>
-          </div>
-
-          {/* Section: How to Use */}
-          <div>
-            <h2 className="text-2xl font-bold mb-4">How to Use</h2>
+            <h2 className="text-2xl font-bold mb-4">Specifications</h2>
             <Card>
-                <CardContent className="p-6 grid md:grid-cols-3 gap-6 text-center">
-                    <div>
-                        <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-lg mb-2">1</div>
-                        <h3 className="font-semibold">Cleanse</h3>
-                        <p className="text-sm text-muted-foreground">Start with a clean, dry face.</p>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                  {Object.entries(product.specifications).map(([key, value]) => (
+                    <div key={key} className="border-b pb-2">
+                      <p className="font-semibold text-gray-600">{key}</p>
+                      <p className="text-muted-foreground">{value}</p>
                     </div>
-                    <div>
-                        <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-lg mb-2">2</div>
-                        <h3 className="font-semibold">Apply</h3>
-                        <p className="text-sm text-muted-foreground">Gently massage a few drops onto your skin.</p>
-                    </div>
-                    <div>
-                        <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold text-lg mb-2">3</div>
-                        <h3 className="font-semibold">Moisturize</h3>
-                        <p className="text-sm text-muted-foreground">Follow with your favorite moisturizer.</p>
-                    </div>
-                </CardContent>
+                  ))}
+                </div>
+              </CardContent>
             </Card>
           </div>
 
-          {/* Section: From the Brand */}
+          {/* Section: Frequently Bought Together */}
           <div>
-            <h2 className="text-2xl font-bold mb-4">From Aura Cosmetics</h2>
-            <Card className="overflow-hidden">
-                <div className="md:flex">
-                    <div className="md:w-1/3">
-                        <Image src="https://picsum.photos/seed/brand/400/400" alt="Aura Cosmetics" width={400} height={400} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="md:w-2/3 p-6">
-                        <h3 className="text-xl font-bold mb-2">Pure Ingredients, Radiant Results.</h3>
-                        <p className="text-muted-foreground">At Aura Cosmetics, we believe in the power of nature to reveal your inner glow. Our products are crafted with sustainably sourced ingredients and are always free from harsh chemicals. We're committed to creating effective, ethical skincare that you can feel good about.</p>
-                        <Button variant="outline" className="mt-4">Learn More</Button>
-                    </div>
+            <h2 className="text-2xl font-bold mb-6">Frequently Bought Together</h2>
+            <Card className="bg-gradient-to-br from-background via-secondary/10 to-background border-border/20 shadow-lg">
+              <CardContent className="p-8">
+                {/* Product Cards Grid */}
+                <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-2">
+                  {broughtTogether.map((p, index) => (
+                    <React.Fragment key={p.id}>
+                      {/* Product Card */}
+                      <div className="group relative bg-background/50 backdrop-blur-sm border border-border/30 rounded-xl p-4 hover:shadow-xl hover:border-primary/30 transition-all duration-300 hover:-translate-y-1">
+                        {/* Product Image */}
+                        <div className="relative w-full aspect-square mb-4 overflow-hidden rounded-lg bg-gradient-to-br from-primary/5 to-secondary/10">
+                          <Image 
+                            src={p.image} 
+                            alt={p.name} 
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105" 
+                          />
+                          {/* Subtle overlay on hover */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                        
+                        {/* Product Info */}
+                        <div className="space-y-2">
+                          <h4 className="font-semibold text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors duration-200">
+                            {p.name}
+                          </h4>
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg font-bold text-primary">₹{p.price.toFixed(2)}</span>
+                          </div>
+                            {index === 0 && (
+                              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
+                                This item
+                              </span>
+                            )}
+                        </div>
+                        
+                        {/* Hover effect overlay */}
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/0 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                      </div>
+
+                      {/* Plus Icon Connector */}
+                      {index < broughtTogether.length - 1 && (
+                        <div className="flex justify-center items-center md:justify-center md:items-center">
+                          <div className="relative">
+                            {/* Animated Plus Icon */}
+                            <div className="w-8 h-8 bg-gradient-to-r from-primary/20 to-primary/30 rounded-full flex items-center justify-center border border-primary/40 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-110">
+                              <Plus className="h-4 w-4 text-primary" />
+                            </div>
+                            {/* Subtle glow effect */}
+                            <div className="absolute inset-0 w-8 h-8 bg-primary/20 rounded-full blur-sm opacity-50" />
+                          </div>
+                        </div>
+                      )}
+                    </React.Fragment>
+                  ))}
                 </div>
+
+                {/* Total Section */}
+                <div className="mt-8 pt-6 border-t border-border/30">
+                  <div className="space-y-4">                    
+                    {/* 2-Column Layout */}
+                    <div className="flex items-center justify-between gap-6">
+                      {/* Left Column - Text and Button */}
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-baseline justify-between">
+                          <p className="text-3xl font-bold text-foreground">Bundle Price</p>
+                          {/* Price Values on same line */}
+                          <div className="flex items-baseline gap-3">
+                            <span className="text-3xl font-bold text-foreground">
+                              ₹{(totalBoughtTogetherPrice * 0.95).toFixed(2)}
+                            </span>
+                            <span className="text-2xl text-muted-foreground line-through">
+                              ₹{totalBoughtTogetherPrice.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          className="w-full px-4 py-2 font-medium"
+                        >
+                          Add Bundle to Cart
+                        </Button>
+                      </div>
+                      
+                    </div>
+
+                    {/* Savings Badge */}
+                    <div className="flex justify-center">
+                      <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-700 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium border border-blue-500/20">
+                        Save<span className='font-extrabold'>₹{(broughtTogether.reduce((acc, p) => acc + p.price, 0) * 0.05).toFixed(2)}</span>when bought together
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
           </div>
+
+          {/* Section: Ratings & Reviews */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4">Ratings & Reviews</h2>
+            <Card>
+              <CardContent className="p-6 space-y-6">
+                {reviews.map(review => (
+                  <div key={review.id} className="border-b pb-4 last:border-b-0">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                                <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                            ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{review.date}</p>
+                    </div>
+                    <p className="font-semibold">{review.author}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{review.text}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Section: Questions & Answers */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4">Questions & Answers</h2>
+            <Card>
+              <CardContent className="p-6 space-y-6">
+                {qna.map(item => (
+                  <div key={item.id} className="border-b pb-4 last:border-b-0">
+                    <p className="font-semibold">Q: {item.question}</p>
+                    <p className="text-sm text-muted-foreground mt-2">A: {item.answer}</p>
+                     <div className="flex items-center gap-4 mt-2">
+                        <span className="text-xs text-muted-foreground">Was this helpful?</span>
+                        <Button variant="ghost" size="sm" className="flex items-center gap-1 text-xs h-auto p-1"><ThumbsUp className="h-3 w-3" /> Yes</Button>
+                        <Button variant="ghost" size="sm" className="flex items-center gap-1 text-xs h-auto p-1"><ThumbsDown className="h-3 w-3" /> No</Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="pt-4">
+                  <Label htmlFor="ask-question" className="font-semibold">Have a question?</Label>
+                  <div className="flex gap-2 mt-2">
+                    <Input id="ask-question" placeholder="Ask a question about this product..." />
+                    <Button>Submit</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </PageContainer>
   );
