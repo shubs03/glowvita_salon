@@ -5,7 +5,7 @@ import { Calendar, Clock, User, Plus, ChevronLeft, ChevronRight, X } from 'lucid
 import { Button } from '@repo/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import { format, addDays, subDays, isToday, isSameDay } from 'date-fns';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import NewAppointmentForm from './NewAppointmentForm';
 import { AppointmentDetailView } from '../../../components/AppointmentDetailView';
 
@@ -43,9 +43,14 @@ interface DayScheduleViewProps {
   appointments: Appointment[];
   timeSlots: TimeSlot[];
   staffList?: StaffMember[];
+  workingHours?: {
+    startHour: number;
+    endHour: number;
+  };
   isLoading?: boolean;
   error?: any;
   onAppointmentClick?: (appointment: Appointment) => void;
+  onTimeSlotClick?: (time: string) => void;
   onCreateAppointment?: (appointment: Omit<Appointment, 'id'>) => void;
   onDateChange?: (date: Date) => void;
 }
@@ -161,9 +166,11 @@ export default function DayScheduleView({
   appointments = [], 
   timeSlots = [],
   staffList = [],
+  workingHours = { startHour: 9, endHour: 18 }, // Default to 9 AM - 6 PM if not provided
   isLoading = false,
   error = null,
   onAppointmentClick: onAppointmentClickProp,
+  onTimeSlotClick,
   onCreateAppointment,
   onDateChange
 }: DayScheduleViewProps) {
@@ -177,7 +184,7 @@ export default function DayScheduleView({
   const [isClient, setIsClient] = useState(false);
 
   // Validate date after hooks
-  const safeSelectedDate = validateDate(selectedDate);
+  const safeSelectedDate = selectedDate && !isNaN(selectedDate.getTime()) ? selectedDate : new Date();
 
   useEffect(() => {
     setIsClient(true);
@@ -264,6 +271,11 @@ export default function DayScheduleView({
     }
   };
 
+  const handleTimeSlotClick = (time: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onTimeSlotClick?.(time);
+  };
+
   const visibleAppointments = appointments.filter(a => a.status !== 'cancelled');
   const sortedAppointments = [...visibleAppointments].sort((a, b) => {
     if (a.isBlocked && !b.isBlocked) return -1;
@@ -293,22 +305,51 @@ export default function DayScheduleView({
   // CHANGE 1: Use dynamic start hour from timeSlots
   const startHour = timeSlots.length > 0 
     ? parseInt(timeSlots[0].time.split(':')[0], 10) 
-    : 9; // Fallback to 9 AM if no time slots
+    : workingHours.startHour; // Fallback to workingHours.startHour if no time slots
 
   // Get hours for the header
   const hours = useMemo(() => {
     if (timeSlotsByHour) {
       return Object.keys(timeSlotsByHour).map(Number).sort((a, b) => a - b);
     }
-    // Default to 9 AM to 6 PM if no time slots
-    return Array.from({ length: 10 }, (_, i) => i + 9); // 9 AM to 6 PM (9 to 18)
-  }, [timeSlotsByHour]);
+    // Default to working hours if no time slots
+    return Array.from({ length: workingHours.endHour - workingHours.startHour + 1 }, (_, i) => i + workingHours.startHour); // workingHours.startHour to workingHours.endHour
+  }, [timeSlotsByHour, workingHours.startHour, workingHours.endHour]);
   
   const isCurrentDate = isToday(safeSelectedDate);
   // CHANGE 2: Adjust currentTopPosition to use startHour
   const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-  const isWithinWorkingHours = currentMinutes >= startHour * 60 && currentMinutes <= (startHour + 9) * 60;
-  const currentTimePosition = ((currentMinutes - startHour * 60) * (80 / 60)) + 64; // 64px for header
+  const isWithinWorkingHours = currentMinutes >= workingHours.startHour * 60 && currentMinutes <= workingHours.endHour * 60;
+  const currentTimePosition = ((currentMinutes - workingHours.startHour * 60) * (80 / 60)) + 64; // 64px for header
+
+  const getCurrentTimePosition = useCallback(() => {
+    if (!isToday(safeSelectedDate)) return null;
+    
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    // Calculate position in pixels (assuming each hour is 60px and each minute is 1px)
+    const position = (currentHour - workingHours.startHour) * 60 + currentMinute;
+    
+    // Only show if within the visible hours
+    if (position < 0 || position > (workingHours.endHour - workingHours.startHour) * 60) return null;
+    
+    return position;
+  }, [safeSelectedDate, workingHours.startHour, workingHours.endHour]);
+
+  useEffect(() => {
+    if (isToday(safeSelectedDate)) {
+      const currentTimePosition = getCurrentTimePosition();
+      if (currentTimePosition !== null) {
+        const scrollContainer = document.querySelector('.time-slots-container');
+        if (scrollContainer) {
+          // Scroll to show the current time indicator, with some padding
+          scrollContainer.scrollTop = Math.max(0, currentTimePosition - 60);
+        }
+      }
+    }
+  }, [safeSelectedDate, getCurrentTimePosition]);
 
   const renderAppointment = (appointment: Appointment, index: number, staffIndex: number) => {
     if (appointment.isBlocked) {
@@ -320,7 +361,7 @@ export default function DayScheduleView({
           key={`blocked-${index}`}
           className="absolute left-0 right-0 mx-1 p-2 rounded-lg border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/20 text-amber-800 dark:text-amber-200 text-xs shadow-sm"
           style={{
-            top: `${(timeToMinutes(appointment.startTime) - startHour * 60) * (80 / 60)}px`,
+            top: `${(timeToMinutes(appointment.startTime) - workingHours.startHour * 60) * (80 / 60)}px`,
             height: `${Math.max(60, (timeToMinutes(appointment.endTime) - timeToMinutes(appointment.startTime)) * (80 / 60))}px`,
           }}
         >
@@ -335,7 +376,7 @@ export default function DayScheduleView({
       );
     }
     
-    const top = (timeToMinutes(appointment.startTime) - startHour * 60) * (80 / 60);
+    const top = (timeToMinutes(appointment.startTime) - workingHours.startHour * 60) * (80 / 60);
     const height = Math.max(60, (timeToMinutes(appointment.endTime) - timeToMinutes(appointment.startTime)) * (80 / 60));
     
     // Get status configuration
@@ -444,7 +485,7 @@ export default function DayScheduleView({
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                {format(safeSelectedDate, 'EEEE, MMMM d, yyyy')}
               </h2>
               <div className="flex space-x-2">
                 <Button 
@@ -516,7 +557,7 @@ export default function DayScheduleView({
                 <ChevronLeft className="w-4 h-4" />
               </Button>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                {format(safeSelectedDate, 'EEEE, MMMM d, yyyy')}
               </h2>
               <Button 
                 variant="outline" 
@@ -606,6 +647,7 @@ export default function DayScheduleView({
                       <div 
                         key={`${staffName}-${hour}`}
                         className="h-20 border-b border-gray-100 dark:border-gray-800 relative"
+                        onClick={(e) => handleTimeSlotClick(`${hour.toString().padStart(2, '0')}:00`, e)}
                       >
                         <div className="absolute top-1/2 w-full border-t border-dashed border-gray-200 dark:border-gray-700"></div>
                       </div>
@@ -627,7 +669,7 @@ export default function DayScheduleView({
                 style={{ top: `${currentTimePosition}px` }}
               >
                 <div className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-r">
-                  {format(currentTime, 'h:mm a')}
+                  {format(new Date(), 'h:mm a')}
                 </div>
                 <div className="h-px bg-red-500 flex-1"></div>
               </div>
