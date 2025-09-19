@@ -63,7 +63,8 @@ export async function middleware(request) {
     return response;
   }
   
-  // Route protection logic is now handled client-side in CrmLayout.tsx
+  // The fine-grained route protection is now handled client-side in CrmLayout.tsx.
+  // The middleware's only job is to protect against unauthenticated access.
   return NextResponse.next();
 }
 

@@ -29,45 +29,47 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
+     
   useEffect(() => {
-    if (!isLoading) {
-      if (!isCrmAuthenticated) {
-        router.push('/login');
-        return;
-      }
+    if (isLoading) {
+      return; // Do nothing while auth state is loading
+    }
+    
+    if (!isCrmAuthenticated) {
+      router.push('/login');
+      return;
+    }
 
-      let allowedNavItems = [];
-      switch (role) {
-        case 'vendor':
-        case 'staff':
-          allowedNavItems = vendorNavItems;
-          break;
-        case 'doctor':
-          allowedNavItems = doctorNavItems;
-          break;
-        case 'supplier':
-          allowedNavItems = supplierNavItems;
-          break;
-      }
+    let allowedNavItems = [];
+    switch (role) {
+      case 'vendor':
+      case 'staff':
+        allowedNavItems = vendorNavItems;
+        break;
+      case 'doctor':
+        allowedNavItems = doctorNavItems;
+        break;
+      case 'supplier':
+        allowedNavItems = supplierNavItems;
+        break;
+    }
 
-      const alwaysAllowedPaths = ['/dashboard', '/salon-profile', '/not-found'];
-      const allowedPaths = [...allowedNavItems.map(item => item.href), ...alwaysAllowedPaths];
+    const alwaysAllowedPaths = ['/dashboard', '/salon-profile', '/not-found'];
+    const allowedPaths = [...allowedNavItems.map(item => item.href), ...alwaysAllowedPaths];
 
-      const isPathAllowed = allowedPaths.some(allowedPath => {
-        if (pathname === allowedPath) return true;
-        if (allowedPath !== '/' && pathname.startsWith(allowedPath + '/')) return true;
-        return false;
-      });
+    // Check if the current path is valid for the user's role
+    const isPathAllowed = allowedPaths.some(allowedPath => {
+      if (pathname === allowedPath) return true;
+      if (allowedPath !== '/' && pathname.startsWith(allowedPath + '/')) return true;
+      return false;
+    });
 
-      if (!isPathAllowed) {
-        // Instead of redirecting, push the user back to their previous valid page.
-        // This prevents the URL from changing to the unauthorized route.
-        router.push(previousPathname.current);
-      } else {
-        // If the path is allowed, update the previous valid path.
-        previousPathname.current = pathname;
-      }
+    if (!isPathAllowed) {
+      // If the current path is not allowed, push them back to the last known valid path
+      router.push(previousPathname.current);
+    } else {
+      // If the path is allowed, update the reference to the current valid path
+      previousPathname.current = pathname;
     }
   }, [isLoading, isCrmAuthenticated, router, pathname, role]);
      
