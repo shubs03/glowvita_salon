@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
 import * as jose from 'jose';
-import { vendorNavItems, doctorNavItems, supplierNavItems } from './lib/routes';
 
 const JWT_SECRET_VENDOR = process.env.JWT_SECRET_VENDOR;
 const JWT_SECRET_DOCTOR = process.env.JWT_SECRET_DOCTOR;
@@ -64,44 +63,7 @@ export async function middleware(request) {
     return response;
   }
   
-  // Role-based route protection
-  const { role } = payload;
-  let allowedNavItems = [];
-
-  switch (role) {
-    case 'vendor':
-    case 'staff':
-      allowedNavItems = vendorNavItems;
-      break;
-    case 'doctor':
-      allowedNavItems = doctorNavItems;
-      break;
-    case 'supplier':
-      allowedNavItems = supplierNavItems;
-      break;
-  }
-
-  // Always allow dashboard and profile pages for any authenticated user
-  const alwaysAllowedPaths = ['/dashboard', '/salon-profile'];
-  const allowedPaths = [...allowedNavItems.map(item => item.href), ...alwaysAllowedPaths];
-
-  // Check if the current path is allowed with a more precise check
-  const isPathAllowed = allowedPaths.some(allowedPath => {
-    if (pathname === allowedPath) {
-      return true; // Exact match
-    }
-    // Allow sub-paths like /calendar/2024-08-26 if /calendar is allowed
-    if (allowedPath !== '/' && pathname.startsWith(allowedPath + '/')) {
-      return true;
-    }
-    return false;
-  });
-
-  if (!isPathAllowed) {
-    // Redirect to a 'Not Found' page if access is denied
-    return NextResponse.redirect(new URL('/not-found', request.url));
-  }
-  
+  // Route protection logic is now handled client-side in CrmLayout.tsx
   return NextResponse.next();
 }
 

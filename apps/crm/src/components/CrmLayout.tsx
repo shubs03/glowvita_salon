@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { useRouter, usePathname } from 'next/navigation';
@@ -9,12 +9,15 @@ import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { cn } from '@repo/ui/cn';
 import { Button } from '@repo/ui/button';
 import { Sparkles, Zap, CheckCircle2, Clock } from 'lucide-react';
+import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const { isCrmAuthenticated, isLoading } = useCrmAuth();
+  const { isCrmAuthenticated, isLoading, role } = useCrmAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const previousPathname = useRef(pathname);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -28,10 +31,45 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !isCrmAuthenticated) {
-      router.push('/login');
+    if (!isLoading) {
+      if (!isCrmAuthenticated) {
+        router.push('/login');
+        return;
+      }
+
+      let allowedNavItems = [];
+      switch (role) {
+        case 'vendor':
+        case 'staff':
+          allowedNavItems = vendorNavItems;
+          break;
+        case 'doctor':
+          allowedNavItems = doctorNavItems;
+          break;
+        case 'supplier':
+          allowedNavItems = supplierNavItems;
+          break;
+      }
+
+      const alwaysAllowedPaths = ['/dashboard', '/salon-profile', '/not-found'];
+      const allowedPaths = [...allowedNavItems.map(item => item.href), ...alwaysAllowedPaths];
+
+      const isPathAllowed = allowedPaths.some(allowedPath => {
+        if (pathname === allowedPath) return true;
+        if (allowedPath !== '/' && pathname.startsWith(allowedPath + '/')) return true;
+        return false;
+      });
+
+      if (!isPathAllowed) {
+        // Instead of redirecting, push the user back to their previous valid page.
+        // This prevents the URL from changing to the unauthorized route.
+        router.push(previousPathname.current);
+      } else {
+        // If the path is allowed, update the previous valid path.
+        previousPathname.current = pathname;
+      }
     }
-  }, [isLoading, isCrmAuthenticated, router]);
+  }, [isLoading, isCrmAuthenticated, router, pathname, role]);
      
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
