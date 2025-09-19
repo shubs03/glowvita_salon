@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import * as jose from 'jose';
+import { vendorNavItems, doctorNavItems, supplierNavItems } from './lib/routes';
 
 const JWT_SECRET_VENDOR = process.env.JWT_SECRET_VENDOR;
 const JWT_SECRET_DOCTOR = process.env.JWT_SECRET_DOCTOR;
@@ -9,12 +10,10 @@ const JWT_SECRET_SUPPLIER = process.env.JWT_SECRET_SUPPLIER;
 async function verifyJwt(token) {
   if (!token) return null;
   
-  // Try to decode the token first to get the role
   try {
     const decoded = jose.decodeJwt(token);
     const role = decoded.role;
     
-    // Select the appropriate secret based on role
     let secret;
     switch (role) {
       case 'vendor':
@@ -28,7 +27,7 @@ async function verifyJwt(token) {
         secret = JWT_SECRET_SUPPLIER;
         break;
       default:
-        secret = JWT_SECRET_VENDOR; // fallback
+        return null;
     }
     
     if (!secret) {
@@ -40,7 +39,6 @@ async function verifyJwt(token) {
     const { payload } = await jose.jwtVerify(token, secretKey);
     return payload;
   } catch (error) {
-    // Catches expired tokens, invalid signatures etc.
     console.log("CRM JWT Verification Error in Middleware:", error.code);
     return null;
   }
@@ -52,25 +50,49 @@ export async function middleware(request) {
 
   const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support'];
   const isPublicPath = publicPaths.some(path => pathname === path);
-  const isPanelPage = !isPublicPath;
-  
-  const payload = await verifyJwt(token);
 
   if (isPublicPath) {
-    // If on a public page with a valid token, allow access but don't redirect.
-    // User might want to see marketing pages while logged in.
     return NextResponse.next();
   }
+
+  const payload = await verifyJwt(token);
+
+  // If on a protected page and token is invalid, redirect to login
+  if (!payload) {
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    response.cookies.set('crm_access_token', '', { expires: new Date(0) });
+    return response;
+  }
   
-  if (isPanelPage) {
-    // If on a panel page and token is invalid/expired, redirect to login
-    if (!payload) {
-      const response = NextResponse.redirect(new URL('/login', request.url));
-      response.cookies.set('crm_access_token', '', { expires: new Date(0) });
-      return response;
-    }
+  // Role-based route protection
+  const { role } = payload;
+  let allowedNavItems = [];
+
+  switch (role) {
+    case 'vendor':
+    case 'staff':
+      allowedNavItems = vendorNavItems;
+      break;
+    case 'doctor':
+      allowedNavItems = doctorNavItems;
+      break;
+    case 'supplier':
+      allowedNavItems = supplierNavItems;
+      break;
   }
 
+  // Always allow dashboard and profile pages for any authenticated user
+  const alwaysAllowedPaths = ['/dashboard', '/salon-profile'];
+  const allowedPaths = [...allowedNavItems.map(item => item.href), ...alwaysAllowedPaths];
+
+  // Check if the current path is allowed
+  const isPathAllowed = allowedPaths.some(allowedPath => pathname.startsWith(allowedPath));
+
+  if (!isPathAllowed) {
+    // Redirect to a 'Not Found' page if access is denied
+    return NextResponse.rewrite(new URL('/not-found', request.url));
+  }
+  
   return NextResponse.next();
 }
 

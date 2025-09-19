@@ -4,12 +4,11 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
-import { useRouter, usePathname, notFound } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { cn } from '@repo/ui/cn';
 import { Button } from '@repo/ui/button';
 import { Sparkles, Zap, CheckCircle2, Clock } from 'lucide-react';
-import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -62,37 +61,10 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   }, []);
 
   useEffect(() => {
-    if (isLoading) return;
-
-    if (!isCrmAuthenticated) {
+    if (!isLoading && !isCrmAuthenticated) {
       router.push('/login');
-      return;
     }
-
-    // Role-based route protection
-    let allowedPaths: string[] = [];
-    if (role === 'vendor' || role === 'staff') {
-      allowedPaths = vendorNavItems.map(item => item.href);
-    } else if (role === 'doctor') {
-      allowedPaths = doctorNavItems.map(item => item.href);
-    } else if (role === 'supplier') {
-      allowedPaths = supplierNavItems.map(item => item.href);
-    }
-    
-    // Always allow dashboard
-    if (!allowedPaths.includes('/dashboard')) {
-        allowedPaths.push('/dashboard');
-    }
-    
-    // Check if the current path is allowed for the user's role.
-    // We check `startsWith` to account for dynamic routes like /calendar/[date]
-    const isPathAllowed = allowedPaths.some(allowedPath => pathname.startsWith(allowedPath));
-
-    if (!isPathAllowed) {
-        notFound(); // This will render the not-found.tsx page
-    }
-    
-  }, [isLoading, isCrmAuthenticated, router, role, pathname]);
+  }, [isLoading, isCrmAuthenticated, router]);
      
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
