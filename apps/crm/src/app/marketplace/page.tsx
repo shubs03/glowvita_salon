@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -7,7 +8,7 @@ import { Input } from '@repo/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Search, ShoppingCart, Info, X, Heart, Eye, Minus, Plus, Building, Mail, MapPin, Star, Zap, Package, Truck, Tag, ArrowRight, Sparkles } from 'lucide-react';
 import Image from 'next/image';
-import { useGetSupplierProductsQuery, useGetSupplierProfileQuery } from '@repo/store/api';
+import { useGetSupplierProductsQuery, useGetSupplierProfileQuery, useCreateCrmOrderMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 import { useAppDispatch } from '@repo/store/hooks';
@@ -21,6 +22,7 @@ type Product = {
   productImage: string;
   productName: string;
   price: number;
+  salePrice?: number;
   category: { name: string };
   stock: number;
   vendorId: string;
@@ -50,11 +52,12 @@ export default function MarketplacePage() {
   const [selectedSupplierId, setSelectedSupplierId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [buyNowQuantity, setBuyNowQuantity] = useState(1);
-  const [shippingAddress, setShippingAddress] = useState('');
+  const [shippingAddress, setShippingAddress] = useState(user?.address || '');
   
   const { data: supplierData, isLoading: isSupplierLoading } = useGetSupplierProfileQuery(selectedSupplierId, { skip: !selectedSupplierId });
   const dispatch = useAppDispatch();
   const { user } = useCrmAuth();
+  const [createOrder, { isLoading: isCreatingOrder }] = useCreateCrmOrderMutation();
   
   const filteredProducts = useMemo(() => {
     return productsData.filter((product: any) =>
@@ -92,6 +95,35 @@ export default function MarketplacePage() {
     e.stopPropagation();
     dispatch(addToCart({ ...product, quantity: 1 }));
     toast.success(`${product.productName} added to cart!`);
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!shippingAddress.trim()) {
+        toast.error("Shipping address is required.");
+        return;
+    }
+
+    if (!selectedProduct) return;
+
+    const orderData = {
+      items: [{
+        productId: selectedProduct._id,
+        productName: selectedProduct.productName,
+        quantity: buyNowQuantity,
+        price: selectedProduct.salePrice || selectedProduct.price,
+      }],
+      supplierId: selectedProduct.vendorId,
+      totalAmount: (selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity,
+      shippingAddress
+    };
+
+    try {
+        await createOrder(orderData).unwrap();
+        toast.success("Order placed successfully!");
+        setIsBuyNowModalOpen(false);
+    } catch (error) {
+        toast.error("Failed to place order. Please try again.");
+    }
   };
 
   if(isLoading) {
@@ -283,10 +315,10 @@ export default function MarketplacePage() {
                     
                     <div className="flex gap-2 ml-auto">
                       {/* Discount Badge */}
-                      {product.discount && product.discount > 0 && (
+                      {product.salePrice && product.price > product.salePrice && (
                         <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-lg rounded-full font-bold">
                           <Tag className="h-3 w-3 mr-1" />
-                          {product.discount}% OFF
+                          {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
                         </Badge>
                       )}
                       
@@ -326,7 +358,10 @@ export default function MarketplacePage() {
                       {product.productName}
                     </h3>
                     <div className="flex flex-col items-end flex-shrink-0">
-                      <div className="text-xl font-bold text-primary leading-none">₹{product.price.toFixed(0)}</div>
+                      <div className="text-xl font-bold text-primary leading-none">₹{product.salePrice ? product.salePrice.toFixed(0) : product.price.toFixed(0)}</div>
+                      {product.salePrice && (
+                          <span className="text-xs line-through text-muted-foreground">₹{product.price.toFixed(0)}</span>
+                      )}
                     </div>
                   </div>
                   
@@ -502,8 +537,10 @@ export default function MarketplacePage() {
                 <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-3xl font-bold text-primary">₹{selectedProduct.price.toFixed(2)}</p>
-                      <p className="text-sm text-muted-foreground">per unit</p>
+                      <p className="text-3xl font-bold text-primary">₹{selectedProduct.salePrice ? selectedProduct.salePrice.toFixed(2) : selectedProduct.price.toFixed(2)}</p>
+                      {selectedProduct.salePrice && (
+                        <p className="text-sm text-muted-foreground line-through">₹{selectedProduct.price.toFixed(2)}</p>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground">Stock Available</p>
@@ -602,7 +639,7 @@ export default function MarketplacePage() {
                 <div className="flex-1 min-w-0">
                   <h4 className="font-semibold text-base truncate">{selectedProduct.productName}</h4>
                   <p className="text-xs text-muted-foreground truncate">By: {selectedProduct.supplierName}</p>
-                  <p className="text-lg font-bold text-primary">₹{selectedProduct.price.toFixed(0)}</p>
+                  <p className="text-lg font-bold text-primary">₹{selectedProduct.salePrice ? selectedProduct.salePrice.toFixed(0) : selectedProduct.price.toFixed(0)}</p>
                 </div>
               </div>
 
@@ -637,7 +674,7 @@ export default function MarketplacePage() {
                     </Button>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-primary">₹{(selectedProduct.price * buyNowQuantity).toFixed(0)}</p>
+                    <p className="text-lg font-bold text-primary">₹{((selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity).toFixed(0)}</p>
                     <p className="text-xs text-muted-foreground">Total</p>
                   </div>
                 </div>
@@ -660,7 +697,7 @@ export default function MarketplacePage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Subtotal ({buyNowQuantity} items)</span>
-                    <span>₹{(selectedProduct.price * buyNowQuantity).toFixed(0)}</span>
+                    <span>₹{((selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity).toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
@@ -673,7 +710,7 @@ export default function MarketplacePage() {
                   <div className="border-t border-border/20 pt-2">
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
-                      <span className="text-primary">₹{(selectedProduct.price * buyNowQuantity).toFixed(0)}</span>
+                      <span className="text-primary">₹{((selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity).toFixed(0)}</span>
                     </div>
                   </div>
                 </div>
@@ -694,22 +731,21 @@ export default function MarketplacePage() {
               Cancel
             </Button>
             <Button 
+              onClick={handlePlaceOrder} 
+              disabled={isCreatingOrder}
               className="px-6 h-9 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-              onClick={() => {
-                if (!shippingAddress.trim()) {
-                  toast.error("Please enter a shipping address");
-                  return;
-                }
-                // Add the product to cart and proceed to checkout
-                if (selectedProduct) {
-                  dispatch(addToCart({ ...selectedProduct, quantity: buyNowQuantity }));
-                  toast.success("Order placed successfully!");
-                  setIsBuyNowModalOpen(false);
-                }
-              }}
             >
-              <Package className="mr-2 h-4 w-4" />
-              Place Order
+                {isCreatingOrder ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Placing...
+                  </>
+                ) : (
+                  <>
+                    <Package className="mr-2 h-4 w-4" />
+                    Place Order
+                  </>
+                )}
             </Button>
           </DialogFooter>
         </DialogContent>

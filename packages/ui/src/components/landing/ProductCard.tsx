@@ -1,3 +1,4 @@
+
 import { Star, ShoppingCart } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
@@ -6,7 +7,9 @@ import { cn } from '../../cn';
 
 interface ProductCardProps {
   name: string;
+  description: string;
   price: number;
+  salePrice?: number;
   image: string;
   hint: string;
   rating: number;
@@ -17,7 +20,9 @@ interface ProductCardProps {
 
 export function ProductCard({ 
   name, 
+  description, 
   price, 
+  salePrice,
   image, 
   hint, 
   rating, 
@@ -85,9 +90,14 @@ export function ProductCard({
         <div className="flex justify-between items-center mt-auto pt-3 border-t border-border/50">
           <CardItem
             translateZ={20}
-            className="text-2xl font-bold text-foreground"
+            className="flex flex-col"
           >
-            ₹{price.toFixed(2)}
+            <span className={cn("text-2xl font-bold text-foreground", salePrice && "text-xl text-muted-foreground line-through")}>
+              ₹{price.toFixed(2)}
+            </span>
+            {salePrice && (
+              <span className="text-2xl font-bold text-primary">₹{salePrice.toFixed(2)}</span>
+            )}
           </CardItem>
           <CardItem
             translateZ={20}

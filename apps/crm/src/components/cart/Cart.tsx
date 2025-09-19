@@ -87,7 +87,8 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                 items,
                 supplierId,
                 totalAmount,
-                shippingAddress
+                shippingAddress,
+                vendorId: user?._id
             };
             return createOrder(orderData).unwrap();
         });
