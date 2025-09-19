@@ -279,59 +279,7 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
             <DialogTitle className="text-xl font-bold">Quick Checkout</DialogTitle>
             <DialogDescription className="text-sm">Review your order and complete purchase</DialogDescription>
           </DialogHeader>
-          {selectedProduct && (
-            <div className="space-y-4 py-2">
-              <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-muted/20 to-muted/5 rounded-lg">
-                <Image 
-                  src={selectedProduct.productImage || 'https://placehold.co/60x60.png'} 
-                  alt={selectedProduct.productName} 
-                  width={60} 
-                  height={60} 
-                  className="rounded-lg object-cover border border-border/20" 
-                />
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-base truncate">{selectedProduct.productName}</h4>
-                  <p className="text-xs text-muted-foreground truncate">By: {selectedProduct.supplierName}</p>
-                  <p className="text-lg font-bold text-primary">₹{selectedProduct.salePrice ? selectedProduct.salePrice.toFixed(0) : selectedProduct.price.toFixed(0)}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Quantity</Label>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center border border-border/30 rounded-lg overflow-hidden">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-9 w-9 rounded-none hover:bg-muted" 
-                      onClick={() => setBuyNowQuantity(q => Math.max(1, q-1))}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <Input 
-                      type="number" 
-                      value={buyNowQuantity} 
-                      onChange={e => setBuyNowQuantity(Math.max(1, Number(e.target.value)))} 
-                      className="w-16 h-9 text-center border-0 focus-visible:ring-0 font-medium" 
-                      min="1"
-                      max={selectedProduct.stock}
-                    />
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-9 w-9 rounded-none hover:bg-muted" 
-                      onClick={() => setBuyNowQuantity(q => Math.min(selectedProduct.stock, q+1))}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-primary">₹{((selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity).toFixed(0)}</p>
-                    <p className="text-xs text-muted-foreground">Total</p>
-                  </div>
-                </div>
-              </div>
-
+          <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Shipping Address</Label>
                 <Input
@@ -346,35 +294,22 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                 <h4 className="font-semibold text-base mb-3">Order Summary</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>Subtotal ({buyNowQuantity} items)</span>
-                    <span>₹{((selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity).toFixed(0)}</span>
+                    <span>Subtotal ({cartItems.reduce((acc, i) => acc + i.quantity, 0)} items)</span>
+                    <span>₹{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping</span>
                     <span className="text-green-600 font-medium">FREE</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Tax</span>
-                    <span>₹0</span>
-                  </div>
                   <div className="border-t border-border/20 pt-2">
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
-                      <span className="text-primary">₹{((selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity).toFixed(0)}</span>
+                      <span className="text-primary">₹{subtotal.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                <Truck className="h-4 w-4 text-green-600 flex-shrink-0" />
-                <div className="text-sm">
-                  <p className="font-medium text-green-800 dark:text-green-300">Fast Delivery</p>
-                  <p className="text-green-600 dark:text-green-400">3-5 business days</p>
-                </div>
-              </div>
             </div>
-          )}
           <DialogFooter className="gap-2 pt-2">
             <Button variant="outline" onClick={() => setIsCheckoutModalOpen(false)} className="px-4 h-9">
               Cancel
