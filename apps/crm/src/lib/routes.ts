@@ -35,6 +35,7 @@ export const vendorNavItems: NavItem[] = [
 
 export const doctorNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
+  { title: "Calendar", href: "/calendar", Icon: FaCalendarAlt, permission: 'calendar_view' },
   { title: "Appointments", href: "/appointments", Icon: FaClipboardList, permission: 'appointments_view' },
   { title: "Patients", href: "/patients", Icon: FaUserCircle, permission: 'patients_view' },
   { title: "Consultations", href: "/consultations", Icon: FaStethoscope, permission: 'consultations_view' },

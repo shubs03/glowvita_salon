@@ -4,19 +4,21 @@
 import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, notFound } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { cn } from '@repo/ui/cn';
 import { Button } from '@repo/ui/button';
 import { Sparkles, Zap, CheckCircle2, Clock } from 'lucide-react';
+import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [isWelcomeScreen, setIsWelcomeScreen] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const { isCrmAuthenticated, isLoading, user } = useCrmAuth();
+  const { isCrmAuthenticated, isLoading, user, role } = useCrmAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   // Enhanced loading progress simulation
   useEffect(() => {
@@ -60,28 +62,53 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && !isCrmAuthenticated) {
+    if (isLoading) return;
+
+    if (!isCrmAuthenticated) {
       router.push('/login');
+      return;
     }
-  }, [isLoading, isCrmAuthenticated, router]);
+
+    // Role-based route protection
+    let allowedPaths: string[] = [];
+    if (role === 'vendor' || role === 'staff') {
+      allowedPaths = vendorNavItems.map(item => item.href);
+    } else if (role === 'doctor') {
+      allowedPaths = doctorNavItems.map(item => item.href);
+    } else if (role === 'supplier') {
+      allowedPaths = supplierNavItems.map(item => item.href);
+    }
+    
+    // Always allow dashboard
+    if (!allowedPaths.includes('/dashboard')) {
+        allowedPaths.push('/dashboard');
+    }
+    
+    // Check if the current path is allowed for the user's role.
+    // We check `startsWith` to account for dynamic routes like /calendar/[date]
+    const isPathAllowed = allowedPaths.some(allowedPath => pathname.startsWith(allowedPath));
+
+    if (!isPathAllowed) {
+        notFound(); // This will render the not-found.tsx page
+    }
+    
+  }, [isLoading, isCrmAuthenticated, router, role, pathname]);
      
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
 
- // Professional loading spinner
-if (isLoading || !isCrmAuthenticated) {
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
-      <div className="relative">
-        <div className="w-16 h-16 border-4 border-primary/10 rounded-full animate-spin border-t-primary"></div>
-        <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin-slow border-t-primary/50"></div>
+  if (isLoading || !isCrmAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-primary/10 rounded-full animate-spin border-t-primary"></div>
+          <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin-slow border-t-primary/50"></div>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
   
-  // Enhanced welcome screen
   if (isWelcomeScreen && user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -138,7 +165,6 @@ if (isLoading || !isCrmAuthenticated) {
       )}>
         <Header toggleSidebar={toggleSidebar} />
                  
-        {/* Main content area */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden bg-muted/20">
           <div className="w-full max-w-none overflow-hidden min-h-full">
             {children}
