@@ -395,62 +395,8 @@ export default function ProductDetailsPage() {
             </CardContent>
           </Card>
         </section>
-        
-        {/* NEW SECTION: Customer Reviews & Q&A */}
-        <section>
-            <h2 className="text-3xl font-bold text-center mb-8">Customer Reviews & Q&A</h2>
-            <div className="grid lg:grid-cols-5 gap-8">
-              {/* Reviews */}
-              <div className="lg:col-span-3">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Customer Reviews</CardTitle>
-                    <div className="flex items-center gap-2">
-                      <StarRating rating={product.rating} />
-                      <span className="text-muted-foreground text-sm">{product.rating} out of 5</span>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {reviews.map(review => (
-                      <div key={review.id} className="border-t pt-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <p className="font-semibold">{review.author}</p>
-                          <StarRating rating={review.rating} />
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">{review.date}</p>
-                        <p>{review.text}</p>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </div>
-              {/* Q&A */}
-              <div className="lg:col-span-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Questions & Answers</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {qna.map(item => (
-                      <div key={item.id} className="border-t pt-4">
-                        <p className="font-semibold mb-2">Q: {item.question}</p>
-                        <p className="text-muted-foreground text-sm">A: {item.answer}</p>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-        </section>
       </div>
+
     </PageContainer>
   );
 }
-
-const StarRating = ({ rating }: { rating: number }) => (
-  <div className="flex items-center">
-    {[...Array(5)].map((_, i) => (
-      <Star key={i} className={`h-4 w-4 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-    ))}
-  </div>
-);
