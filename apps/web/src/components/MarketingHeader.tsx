@@ -27,6 +27,9 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: Marketin
             <Link href="/apps">App links</Link>
           </Button>
           <Button variant="ghost" className="hover:bg-primary/10" asChild>
+            <Link href="/products">Products</Link>
+          </Button>
+          <Button variant="ghost" className="hover:bg-primary/10" asChild>
             <Link href="/pricing">Pricing</Link>
           </Button>
           <Button variant="ghost" className="hover:bg-primary/10" asChild>
@@ -60,6 +63,7 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu }: Marketin
         <div className="md:hidden bg-background/95 backdrop-blur-md border-t border-border/50 absolute top-16 left-0 w-full z-30">
           <nav className="flex flex-col items-center gap-2 p-4">
             <Button variant="ghost" className="w-full" asChild><Link href="/apps">App links</Link></Button>
+            <Button variant="ghost" className="w-full" asChild><Link href="/products">Products</Link></Button>
             <Button variant="ghost" className="w-full" asChild><Link href="/pricing">Pricing</Link></Button>
             <Button variant="ghost" className="w-full" asChild><Link href="/support">Support</Link></Button>
             <Button variant="ghost" className="w-full" asChild><Link href="/login">Login</Link></Button>
