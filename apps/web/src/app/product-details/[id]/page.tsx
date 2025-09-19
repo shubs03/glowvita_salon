@@ -243,24 +243,99 @@ export default function ProductDetailsPage() {
             </Card>
           </div>
           <div>
-            <h2 className="text-2xl font-bold mb-4">Frequently Bought Together</h2>
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <h2 className="text-2xl font-bold mb-6">Frequently Bought Together</h2>
+            <Card className="bg-gradient-to-br from-background via-secondary/10 to-background border-border/20 shadow-lg">
+              <CardContent className="p-8">
+                {/* Product Cards Grid */}
+                <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-2">
                   {broughtTogether.map((p, index) => (
                     <React.Fragment key={p.id}>
-                      <div className="flex flex-col items-center text-center">
-                        <Image src={p.image} alt={p.name} width={100} height={100} className="rounded-lg shadow-md" />
-                        <p className="text-sm mt-2 max-w-[100px] truncate">{p.name}</p>
-                        <p className="text-xs font-bold">₹{p.price.toFixed(2)}</p>
+                      {/* Product Card */}
+                      <div className="group relative bg-background/50 backdrop-blur-sm border border-border/30 rounded-xl p-4 hover:shadow-xl hover:border-primary/30 transition-all duration-300 hover:-translate-y-1">
+                        {/* Product Image */}
+                        <div className="relative w-full aspect-square mb-4 overflow-hidden rounded-lg bg-gradient-to-br from-primary/5 to-secondary/10">
+                          <Image 
+                            src={p.image} 
+                            alt={p.name} 
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105" 
+                          />
+                          {/* Subtle overlay on hover */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                        </div>
+                        
+                        {/* Product Info */}
+                        <div className="space-y-2">
+                          <h4 className="font-semibold text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors duration-200">
+                            {p.name}
+                          </h4>
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg font-bold text-primary">₹{p.price.toFixed(2)}</span>
+                          </div>
+                            {index === 0 && (
+                              <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full font-medium">
+                                This item
+                              </span>
+                            )}
+                        </div>
+                        
+                        {/* Hover effect overlay */}
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/0 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                       </div>
-                      {index < broughtTogether.length - 1 && <Plus className="text-muted-foreground my-4 sm:my-0" />}
+
+                      {/* Plus Icon Connector */}
+                      {index < broughtTogether.length - 1 && (
+                        <div className="flex justify-center items-center md:justify-center md:items-center">
+                          <div className="relative">
+                            {/* Animated Plus Icon */}
+                            <div className="w-8 h-8 bg-gradient-to-r from-primary/20 to-primary/30 rounded-full flex items-center justify-center border border-primary/40 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-110">
+                              <Plus className="h-4 w-4 text-primary" />
+                            </div>
+                            {/* Subtle glow effect */}
+                            <div className="absolute inset-0 w-8 h-8 bg-primary/20 rounded-full blur-sm opacity-50" />
+                          </div>
+                        </div>
+                      )}
                     </React.Fragment>
                   ))}
                 </div>
-                <div className="mt-6 text-center border-t pt-4">
-                    <p className="text-lg">Total Price: <span className="font-bold">₹{totalBoughtTogetherPrice.toFixed(2)}</span></p>
-                    <Button className="mt-2">Add all three to cart</Button>
+
+                {/* Total Section */}
+                <div className="mt-8 pt-6 border-t border-border/30">
+                  <div className="space-y-4">                    
+                    {/* 2-Column Layout */}
+                    <div className="flex items-center justify-between gap-6">
+                      {/* Left Column - Text and Button */}
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-baseline justify-between">
+                          <p className="text-3xl font-bold text-foreground">Bundle Price</p>
+                          {/* Price Values on same line */}
+                          <div className="flex items-baseline gap-3">
+                            <span className="text-3xl font-bold text-foreground">
+                              ₹{(totalBoughtTogetherPrice * 0.95).toFixed(2)}
+                            </span>
+                            <span className="text-2xl text-muted-foreground line-through">
+                              ₹{totalBoughtTogetherPrice.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          className="w-full px-4 py-2 font-medium"
+                        >
+                          Add Bundle to Cart
+                        </Button>
+                      </div>
+                      
+                    </div>
+
+                    {/* Savings Badge */}
+                    <div className="flex justify-center">
+                      <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-700 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium border border-blue-500/20">
+                        Save<span className='font-extrabold'>₹{(broughtTogether.reduce((acc, p) => acc + p.price, 0) * 0.05).toFixed(2)}</span>when bought together
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
