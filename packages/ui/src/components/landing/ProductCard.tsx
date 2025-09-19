@@ -92,11 +92,7 @@ export function ProductCard({
           <CardItem
             translateZ={20}
             as="button"
-<<<<<<< HEAD
-            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-colors duration-200 flex items-center shadow-md hover:shadow-lg"
-=======
             className="px-4 py-2 rounded-md bg-black dark:bg-white dark:text-black text-white text-xs font-bold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors duration-200"
->>>>>>> 33ac4eb30574434a40d47edc1f716fc11499b05b
           >
             <ShoppingCart className="mr-2 h-4 w-4" />
             Add
