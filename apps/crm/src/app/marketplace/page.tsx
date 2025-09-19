@@ -8,11 +8,10 @@ import { Input } from '@repo/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Search, ShoppingCart, Info, X, Heart, Eye, Minus, Plus, Building, Mail, MapPin, Star, Zap, Package, Truck, Tag, ArrowRight, Sparkles } from 'lucide-react';
 import Image from 'next/image';
-import { useGetSupplierProductsQuery, useGetSupplierProfileQuery, useCreateCrmOrderMutation } from '@repo/store/api';
+import { useGetSupplierProductsQuery, useGetSupplierProfileQuery, useCreateCrmOrderMutation, useAddToCartMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 import { useAppDispatch } from '@repo/store/hooks';
-import { addToCart } from '@repo/store/slices/cartSlice';
 import { Skeleton } from '@repo/ui/skeleton';
 import { Label } from '@repo/ui/label';
 import { Badge } from '@repo/ui/badge';
@@ -43,7 +42,7 @@ type Supplier = {
 };
 
 export default function MarketplacePage() {
-  const { data: productsData = [], isLoading, isError } = useGetSupplierProductsQuery(undefined);
+  const { data: productsData = [], isLoading, isError, refetch } = useGetSupplierProductsQuery(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -56,7 +55,7 @@ export default function MarketplacePage() {
   const [shippingAddress, setShippingAddress] = useState(user?.address || '');
   
   const { data: supplierData, isLoading: isSupplierLoading } = useGetSupplierProfileQuery(selectedSupplierId, { skip: !selectedSupplierId });
-  const dispatch = useAppDispatch();
+  const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
   const [createOrder, { isLoading: isCreatingOrder }] = useCreateCrmOrderMutation();
   
   const filteredProducts = useMemo(() => {
@@ -78,10 +77,22 @@ export default function MarketplacePage() {
     setIsSupplierModalOpen(true);
   };
   
-  const handleAddToCart = (product: Product, qty: number) => {
-    dispatch(addToCart({ ...product, quantity: qty }));
-    toast.success(`${qty} x ${product.productName} added to cart.`);
-    setIsDetailModalOpen(false);
+  const handleAddToCart = async (product: Product, qty: number) => {
+    try {
+      await addToCart({
+        productId: product._id,
+        productName: product.productName,
+        price: product.salePrice || product.price,
+        quantity: qty,
+        productImage: product.productImage,
+        vendorId: product.vendorId,
+        supplierName: product.supplierName,
+      }).unwrap();
+      toast.success(`${qty} x ${product.productName} added to cart.`);
+      setIsDetailModalOpen(false);
+    } catch (error) {
+      toast.error("Failed to add to cart.");
+    }
   };
 
   const handleBuyNow = (product: Product) => {
@@ -91,10 +102,22 @@ export default function MarketplacePage() {
     setIsBuyNowModalOpen(true);
   };
 
-  const handleQuickAddToCart = (product: Product, e: React.MouseEvent) => {
+  const handleQuickAddToCart = async (product: Product, e: React.MouseEvent) => {
     e.stopPropagation();
-    dispatch(addToCart({ ...product, quantity: 1 }));
-    toast.success(`${product.productName} added to cart!`);
+    try {
+      await addToCart({
+        productId: product._id,
+        productName: product.productName,
+        price: product.salePrice || product.price,
+        quantity: 1,
+        productImage: product.productImage,
+        vendorId: product.vendorId,
+        supplierName: product.supplierName,
+      }).unwrap();
+      toast.success(`${product.productName} added to cart!`);
+    } catch (error) {
+       toast.error("Failed to add to cart.");
+    }
   };
 
   const handlePlaceOrder = async () => {
@@ -314,14 +337,6 @@ export default function MarketplacePage() {
                     </Badge>
                     
                     <div className="flex gap-2 ml-auto">
-                        {/* Discount Badge */}
-                        {product.salePrice && product.price > product.salePrice && (
-                            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-lg rounded-full font-bold">
-                                <Tag className="h-3 w-3 mr-1" />
-                                {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
-                            </Badge>
-                        )}
-                        
                         {/* Action Buttons */}
                         <button
                             onClick={(e) => {
@@ -343,10 +358,12 @@ export default function MarketplacePage() {
                   
                   {/* Rating on Image - Bottom Right */}
                   <div className="absolute bottom-3 right-3 z-10">
-                    <div className="flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
-                      <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                      <span className="text-white text-xs font-medium">4.5</span>
-                    </div>
+                    {product.salePrice && product.price > product.salePrice && (
+                        <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-lg rounded-full font-bold">
+                            <Tag className="h-3 w-3 mr-1" />
+                            {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
+                        </Badge>
+                    )}
                   </div>
                 </div>
 
@@ -389,11 +406,8 @@ export default function MarketplacePage() {
                       variant="outline"
                       size="sm"
                       className="flex-1 h-9 rounded-xl border-border/40 hover:border-primary/60 hover:bg-primary/10 hover:text-primary transition-all duration-300 text-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleQuickAddToCart(product, e);
-                      }}
-                      disabled={product.stock === 0}
+                      onClick={(e) => handleQuickAddToCart(product, e)}
+                      disabled={product.stock === 0 || isAddingToCart}
                     >
                       <ShoppingCart className="h-4 w-4 mr-2" />
                       Add to Cart
@@ -595,10 +609,10 @@ export default function MarketplacePage() {
                     variant="outline" 
                     className="flex-1 h-12 rounded-xl" 
                     onClick={() => handleAddToCart(selectedProduct, quantity)}
-                    disabled={selectedProduct.stock === 0}
+                    disabled={selectedProduct.stock === 0 || isAddingToCart}
                   >
                     <ShoppingCart className="mr-2 h-5 w-5" />
-                    Add to Cart
+                    {isAddingToCart ? 'Adding...' : 'Add to Cart'}
                   </Button>
                   <Button 
                     className="flex-1 h-12 rounded-xl bg-gradient-to-r from-primary to-primary/80" 
