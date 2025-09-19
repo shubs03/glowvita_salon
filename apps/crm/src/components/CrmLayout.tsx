@@ -16,8 +16,6 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isMobile, setIsMobile] = useState(false);
   const { isCrmAuthenticated, isLoading, role } = useCrmAuth();
   const router = useRouter();
-  const pathname = usePathname();
-  const previousPathname = useRef(pathname);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -39,39 +37,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
       router.push('/login');
       return;
     }
-
-    let allowedNavItems = [];
-    switch (role) {
-      case 'vendor':
-      case 'staff':
-        allowedNavItems = vendorNavItems;
-        break;
-      case 'doctor':
-        allowedNavItems = doctorNavItems;
-        break;
-      case 'supplier':
-        allowedNavItems = supplierNavItems;
-        break;
-    }
-
-    const alwaysAllowedPaths = ['/dashboard', '/salon-profile', '/not-found'];
-    const allowedPaths = [...allowedNavItems.map(item => item.href), ...alwaysAllowedPaths];
-
-    // Check if the current path is valid for the user's role
-    const isPathAllowed = allowedPaths.some(allowedPath => {
-      if (pathname === allowedPath) return true;
-      if (allowedPath !== '/' && pathname.startsWith(allowedPath + '/')) return true;
-      return false;
-    });
-
-    if (!isPathAllowed) {
-      // If the current path is not allowed, push them back to the last known valid path
-      router.push(previousPathname.current);
-    } else {
-      // If the path is allowed, update the reference to the current valid path
-      previousPathname.current = pathname;
-    }
-  }, [isLoading, isCrmAuthenticated, router, pathname, role]);
+  }, [isLoading, isCrmAuthenticated, router, role]);
      
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
