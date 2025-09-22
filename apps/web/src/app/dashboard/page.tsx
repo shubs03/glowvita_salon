@@ -2,8 +2,9 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useGetMeQuery } from '@/packages/store/src/services/api';
-import { useAppDispatch, setAuth, clearAuth } from '@repo/store/slices/auth';
+import { useGetMeQuery } from '@repo/store/api';
+import { setUserAuth, clearUserAuth } from '@repo/store/slices/userAuthSlice';
+import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 
@@ -14,17 +15,17 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (data) {
-      dispatch(setAuth(data.user));
+      dispatch(setUserAuth(data.user));
     }
-    if(error){
-      dispatch(clearAuth())
+    if(error){        
+      dispatch(clearUserAuth())
       router.push('/login');
     }
   }, [data, error, dispatch, router]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout');
-    dispatch(clearAuth());
+    dispatch(clearUserAuth());
     router.push('/login');
   };
 

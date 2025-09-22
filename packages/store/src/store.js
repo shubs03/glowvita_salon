@@ -1,8 +1,8 @@
-
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice';
 import crmAuthReducer from '@repo/store/slices/crmAuthSlice';
+import userAuthReducer from './slices/Web/userAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
@@ -37,6 +37,7 @@ export const makeStore = () => {
       crmAuth: crmAuthReducer,
       modal: modalReducer,
       customer: customerReducer,
+      user: userAuthReducer,
       salon: salonReducer,
       vendors: vendorReducer,
       marketing: marketingReducer,

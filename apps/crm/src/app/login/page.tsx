@@ -8,7 +8,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
 import { useVendorLoginMutation, useGetVendorsQuery } from '@repo/store/api';
-import { Eye, EyeOff, Scissors, Calendar, Users, CreditCard, Megaphone, Zap, Package } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { setCrmAuth } from '@repo/store/slices/crmAuthSlice';
 import Image from 'next/image';
@@ -50,41 +50,30 @@ export default function LoginPage() {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
-      {/* Left Side - Background Image - Now visible on md screens and up */}
-      <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
-        <button 
-          onClick={() => router.back()} 
-          className="absolute top-4 left-4 z-20 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 shadow-md transition-all duration-200"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
-        <div className="absolute inset-0 bg-black/30 z-10"></div>
-        <div className="absolute inset-0">
-          <Image
-            src={salonImage}
-            alt="Salon Professional"
-            fill
-            priority
-            className="object-cover"
-          />
-        </div>
-      </div>
+      {/* Back Button - Top Right */}
+      <button 
+        onClick={() => router.back()} 
+        className="absolute top-4 left-4 z-20 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 shadow-md transition-all duration-200"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
 
-      {/* Right Side - Login Form - Adjusted width for md screens */}
+      {/* Left Side - Login Form */}
       <div className="flex-1 md:w-1/2 flex items-center justify-center p-4 sm:p-6 relative z-10 bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="w-full max-w-md self-center py-6">
-          {/* Simplified Heading - Ensured text stays on single line */}
+          {/* Heading */}
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-extrabold text-gray-900 whitespace-nowrap">Glowvita Salon for professionals</h1>
-            <p className="text-gray-600 text-l mt-3 whitespace-nowrap">create an account or login to manage your business</p>
+            <h1 className="text-2xl font-extrabold text-gray-900 md:text-xl">Glowvita Salon for professionals</h1>
+            <p className="text-gray-600 text-l mt-3 lg:whitespace-nowrap md:whitespace-normal sm:whitespace-normal">Log in to access and manage your business anytime.</p>
           </div>
 
-          {/* Login Form - Reduced field sizes */}
+          {/* Login Form */}
           <div className="space-y-5">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-3">
+              {/* Email and Password Fields First */}
+              <div className="space-y-5">
                 <div>
                   <input
                     id="email"
@@ -92,7 +81,7 @@ export default function LoginPage() {
                     placeholder="Email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full h-12 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 md:text-base"
                   />
                 </div>
               </div>
@@ -106,7 +95,7 @@ export default function LoginPage() {
                       placeholder="Password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full h-12 text-sm p-5 font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                      className="w-full h-11 text-sm p-5 font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 md:text-base"
                     />
                     <button
                       type="button"
@@ -121,22 +110,6 @@ export default function LoginPage() {
                     </button>
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember"
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <label htmlFor="remember" className="ml-2 block text-md text-gray-700">
-                    Remember me
-                  </label>
-                </div>
-                <a href="#" className="text-md font-medium text-blue-600 hover:text-blue-500">
-                  Forgot password?
-                </a>
               </div>
 
               <Button
@@ -155,19 +128,36 @@ export default function LoginPage() {
                 ) : 'Continue'}
               </Button>
 
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="remember" className="ml-2 block text-md text-gray-700">
+                    Remember me
+                  </label>
+                </div>
+                <a href="#" className="text-md font-medium text-blue-600 hover:text-blue-500">
+                  Forgot password?
+                </a>
+              </div>
+
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-2 bg-gray-50 text-gray-500">OR CONTINUE WITH</span>
+                  <span className="px-2 bg-gray-50 text-gray-500">OR</span>
                 </div>
               </div>
 
+              {/* Continue with Google Button After OR Divider */}
               <Button 
                 type="button"
                 onClick={() => {/* Add Google OAuth handler */}}
-                className="w-full h-12 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                className="w-full h-11 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
               >
                 <div className="flex items-center justify-center w-5 h-5">
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -180,45 +170,59 @@ export default function LoginPage() {
                 <span>Continue with Google</span>
               </Button>
 
-              <div className="relative my-5">
+              {/* Divider for "NEW TO GLOWVITASALON?" section with reduced margin */}
+              <div className="relative my-2">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-2 bg-gray-50 text-gray-500">NEW TO GLOWVITASALON?</span>
+                  <span className="px-2 bg-gray-50 text-gray-500">NEW TO GLOWVITA SALON ?</span>
                 </div>
               </div>
 
-              <Button 
-                variant="outline" 
-                type="button"
-                className="w-full h-12 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-blue-600 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
-                onClick={() => router.push('/auth/register')}
-              >
-                Join Our Platform
-              </Button>
+              {/* Sign up button */}
+              <div className="text-center mt-2">
+                <Button 
+                  onClick={() => router.push('/auth/register')}
+                  className="w-full h-11 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  Join Our Platform
+                </Button>
+              </div>
+              
+              {/* Line separator */}
+              <div className="border-t border-gray-200 my-4"></div>
+              
+              {/* Customer link section */}
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-600">
+                  Log in to access and manage your appointments anytime?
+                </p>
+                <a 
+                  href="http://localhost:3000" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-blue-600 hover:text-blue-500 block mt-1"
+                >
+                  Go to GlowvitaSalon for customers
+                </a>
+              </div>
             </form>
           </div>
+        </div>
+      </div>
 
-          <div className="mt-6 pt-5 border-t border-gray-200 text-center">
-            <p className="text-sm font-medium text-gray-700 mb-2">
-              Are you a customer looking to book an appointment?
-            </p>
-            <a 
-              href="http://localhost:3000" 
-              className="inline-flex items-center text-blue-600 hover:text-blue-700 text-xs font-medium transition-colors duration-200 group"
-            >
-              <span>Go to GlowvitaSalon for customers</span>
-              <svg 
-                className="w-3 h-3 ml-1.5 mt-0.5 transition-transform duration-200 group-hover:translate-x-1" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </a>
-          </div>
+      {/* Right Side - Background Image with Backdrop */}
+      <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/30 z-10"></div>
+        <div className="absolute inset-0">
+          <Image
+            src={salonImage}
+            alt="Salon Professional"
+            fill
+            priority
+            className="object-cover"
+          />
         </div>
       </div>
     </div>

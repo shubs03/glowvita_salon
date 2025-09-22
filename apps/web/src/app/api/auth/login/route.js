@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import dbConnect from '@repo/lib/db';
 import User from '@repo/lib/models/user';
@@ -15,9 +14,14 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    // Fix: Use emailAddress field instead of email
+    const user = await User.findOne({ emailAddress: email }).select('+password');
 
-    if (!user || !user.password) {
+    if (!user) {
+      return NextResponse.json({ message: 'User not found. Please register first.' }, { status: 404 });
+    }
+
+    if (!user.password) {
       return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
     }
 
@@ -27,7 +31,7 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Invalid credentials' }, { status: 401 });
     }
 
-    const token = await createJwt({ userId: user._id.toString(), role: user.role, email: user.email });
+    const token = await createJwt({ userId: user._id.toString(), role: user.role, email: user.emailAddress });
     
     cookies().set('token', token, {
       httpOnly: true,
