@@ -4,7 +4,8 @@
 import { useState } from 'react';
 import { Button } from '@repo/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, addDays, subDays, startOfWeek, isToday } from 'date-fns';
+import { format, addDays, subDays, startOfWeek, isToday, isSameDay } from 'date-fns';
+import { cn } from '@repo/ui/cn';
 
 const timeSlots = [
     "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", 
@@ -53,14 +54,17 @@ export function Step3_TimeSlot() {
       <div className="relative no-scrollbar overflow-x-auto pb-4 mb-6">
         <div className="flex space-x-2">
             {weekDays.map(day => {
-                const isSelected = format(day, 'yyyy-MM-dd') === format(currentDate, 'yyyy-MM-dd');
+                const isSelected = isSameDay(day, currentDate);
                 const isTodayDate = isToday(day);
                 return (
                     <Button
                         key={day.toString()}
                         variant={isSelected ? 'default' : 'outline'}
                         onClick={() => handleDateChange(day)}
-                        className={`flex flex-col h-20 w-20 flex-shrink-0 rounded-lg transition-all duration-200 ${isTodayDate && !isSelected ? 'border-primary' : ''}`}
+                        className={cn(
+                          "flex flex-col h-20 w-20 flex-shrink-0 rounded-lg transition-all duration-200", 
+                          isTodayDate && !isSelected ? 'border-primary' : ''
+                        )}
                     >
                         <span className="text-xs">{format(day, 'E')}</span>
                         <span className="text-2xl font-bold">{format(day, 'd')}</span>
@@ -68,6 +72,8 @@ export function Step3_TimeSlot() {
                 )
             })}
         </div>
+        <div className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-background to-transparent pointer-events-none"></div>
+        <div className="absolute left-0 top-0 bottom-2 w-10 bg-gradient-to-r from-background to-transparent pointer-events-none"></div>
       </div>
       
       <div className="max-h-80 overflow-y-auto no-scrollbar pr-2">

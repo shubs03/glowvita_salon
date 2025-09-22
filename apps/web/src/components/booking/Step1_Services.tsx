@@ -6,6 +6,7 @@ import { Button } from '@repo/ui/button';
 import { Card, CardContent } from '@repo/ui/card';
 import { Input } from '@repo/ui/input';
 import { Search, Plus, Check } from 'lucide-react';
+import { cn } from '@repo/ui/cn';
 
 const serviceCategories = ["Featured", "Special Promos", "Hair", "Beard", "Kids", "Coloring", "Treatments"];
 const services = [
@@ -45,19 +46,20 @@ export function Step1_Services({ selectedServices, onSelectService }: Step1Servi
       </div>
 
       <div className="mb-6">
-        <div className="relative no-scrollbar overflow-x-auto pb-2">
-          <div className="flex space-x-2">
-            {serviceCategories.map((cat) => (
-              <Button
-                key={cat}
-                variant={activeCategory === cat ? 'default' : 'outline'}
-                onClick={() => setActiveCategory(cat)}
-                className="rounded-full flex-shrink-0"
-              >
-                {cat}
-              </Button>
-            ))}
-          </div>
+        <div className="relative">
+            <div className="no-scrollbar overflow-x-auto pb-2 flex space-x-2">
+                {serviceCategories.map((cat) => (
+                <Button
+                    key={cat}
+                    variant={activeCategory === cat ? 'default' : 'outline'}
+                    onClick={() => setActiveCategory(cat)}
+                    className="rounded-full flex-shrink-0"
+                >
+                    {cat}
+                </Button>
+                ))}
+            </div>
+            <div className="absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-background to-transparent pointer-events-none"></div>
         </div>
       </div>
 
@@ -67,7 +69,10 @@ export function Step1_Services({ selectedServices, onSelectService }: Step1Servi
             return (
                 <Card 
                     key={index} 
-                    className={`cursor-pointer transition-all duration-200 border-2 ${isSelected ? 'border-primary ring-2 ring-primary/20 shadow-lg' : 'hover:border-gray-300 hover:shadow-md'}`}
+                    className={cn(
+                        "cursor-pointer transition-all duration-200 border-2",
+                        isSelected ? 'border-primary ring-2 ring-primary/20 shadow-lg' : 'hover:border-primary/50 hover:shadow-md'
+                    )}
                     onClick={() => onSelectService(service)}
                 >
                     <CardContent className="p-4 flex items-center justify-between">
@@ -79,7 +84,10 @@ export function Step1_Services({ selectedServices, onSelectService }: Step1Servi
                             {service.discount && <span className="text-sm font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">{service.discount}</span>}
                         </div>
                     </div>
-                    <div className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-200 ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
+                    <div className={cn(
+                        "w-10 h-10 flex items-center justify-center rounded-full transition-all duration-200",
+                        isSelected ? 'bg-primary text-primary-foreground' : 'bg-secondary'
+                    )}>
                         {isSelected ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
                     </div>
                     </CardContent>

@@ -4,7 +4,8 @@
 import { useState } from 'react';
 import { Card, CardContent } from '@repo/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar';
-import { Check } from 'lucide-react';
+import { Check, User } from 'lucide-react';
+import { cn } from '@repo/ui/cn';
 
 const staffMembers = [
   { name: "Any Professional", image: "" },
@@ -27,13 +28,20 @@ export function Step2_Staff() {
             return (
                 <Card 
                     key={staff.name} 
-                    className={`cursor-pointer transition-all duration-200 text-center relative overflow-hidden ${isSelected ? 'border-primary ring-2 ring-primary/20 shadow-lg' : 'hover:border-gray-300 hover:shadow-md'}`}
+                    className={cn(
+                      "cursor-pointer transition-all duration-300 text-center relative overflow-hidden group",
+                      isSelected ? 'border-primary ring-2 ring-primary/20 shadow-lg' : 'hover:border-primary/50 hover:shadow-md'
+                    )}
                     onClick={() => setSelectedStaff(staff.name)}
                 >
                     <CardContent className="p-4 flex flex-col items-center justify-center">
-                        <Avatar className="w-24 h-24 mb-3 border-4 border-transparent group-hover:border-primary/20 transition-colors">
+                        <Avatar className="w-24 h-24 mb-3 border-4 transition-colors group-hover:border-primary/20",
+                          cn(isSelected ? 'border-primary' : 'border-transparent')
+                        >
                             <AvatarImage src={staff.image} />
-                            <AvatarFallback className="text-3xl">{staff.name.charAt(0)}</AvatarFallback>
+                            <AvatarFallback className="text-3xl bg-secondary">
+                              {staff.name === "Any Professional" ? <User /> : staff.name.charAt(0)}
+                            </AvatarFallback>
                         </Avatar>
                         <h3 className="font-semibold">{staff.name}</h3>
                         {isSelected && (
