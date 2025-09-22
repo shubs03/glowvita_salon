@@ -1,4 +1,3 @@
-
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 
 const products = [

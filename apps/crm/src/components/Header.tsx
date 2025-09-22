@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ThemeToggle } from "./ThemeToggle";
 import { Bell, Menu, LogOut, User, Settings, CheckCircle, XCircle, Search, ChevronRight, Calendar, Clock, TrendingUp, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
+import { useAppDispatch } from "@repo/store/hooks";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import Cookies from "js-cookie";
@@ -24,17 +24,22 @@ import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
 import { Cart } from "./cart/Cart";
+import { useGetCartQuery } from "@repo/store/api";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { user, role } = useCrmAuth();
+  const { user, role, isCrmAuthenticated } = useCrmAuth();
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
-  const cartItemCount = useAppSelector(state => state.cart.items.reduce((total, item) => total + item.quantity, 0));
+  const { data: cartData } = useGetCartQuery(user?._id, {
+    skip: !isCrmAuthenticated || !user?._id,
+  });
+
+  const cartItemCount = cartData?.data?.items?.reduce((total: number, item: any) => total + item.quantity, 0) || 0;
 
   const getNavItemsForRole = () => {
     switch (role) {
@@ -56,10 +61,12 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // This action will now trigger the root reducer to reset the entire state
       dispatch(clearCrmAuth());
       Cookies.remove('crm_access_token', { path: '/' });
+      // Redirect to login page after state is cleared
       router.push('/login');
-      router.refresh();
+      // No need for router.refresh() as the state clearing will cause re-renders
     } finally {
       setIsLoggingOut(false);
       setShowLogoutModal(false);
@@ -86,7 +93,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
             Dashboard
           </Link>
           <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
-          <span className="text-foreground font-semibold text-primary">
+          <span className="font-semibold text-primary">
             {currentPage}
           </span>
         </div>

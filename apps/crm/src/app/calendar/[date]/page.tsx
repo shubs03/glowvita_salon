@@ -83,6 +83,7 @@ export default function DailySchedulePage() {
   const [selectedStaff, setSelectedStaff] = useState('All Staff');
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{date: Date; time: string} | null>(null);
 
   // RTK Query hooks
   const [createAppointment] = glowvitaApi.useCreateAppointmentMutation();
@@ -270,6 +271,22 @@ export default function DailySchedulePage() {
   const handleBackClick = useCallback(() => {
     router.push('/calendar');
   }, [router]);
+
+  // Handle time slot click
+  const handleTimeSlotClick = (time: string) => {
+    if (!selectedDate) return;
+    
+    // Parse the time string to 24-hour format
+    const [hours, minutes] = parseTimeString(time);
+    const slotDate = new Date(selectedDate);
+    slotDate.setHours(hours, minutes, 0, 0);
+    
+    setSelectedTimeSlot({
+      date: slotDate,
+      time: time
+    });
+    setIsNewAppointmentOpen(true);
+  };
 
   // Fetch working hours
   const { data: workingHoursData, isLoading: isLoadingWorkingHours, error: workingHoursError } = glowvitaApi.useGetWorkingHoursQuery(
@@ -521,12 +538,13 @@ export default function DailySchedulePage() {
       </div>
 
       <DayScheduleView
-        selectedDate={selectedDate}
+        date={selectedDate}
         appointments={filteredAppointments}
         staffList={staffList}
-        isLoading={isLoadingStaff || isLoadingWorkingHours}
+        isLoading={isLoading || isLoadingStaff || isLoadingWorkingHours}
         error={staffError || workingHoursError}
         onAppointmentClick={handleAppointmentClick}
+        onTimeSlotClick={handleTimeSlotClick}
       />
 
       {/* New/Edit Appointment Dialog */}
@@ -535,6 +553,7 @@ export default function DailySchedulePage() {
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setIsNewAppointmentOpen(false);
+            setSelectedTimeSlot(null);
             setSelectedAppointment(null);
           }
         }}
@@ -546,22 +565,30 @@ export default function DailySchedulePage() {
             </DialogTitle>
           </DialogHeader>
           <NewAppointmentForm
-            defaultValues={selectedAppointment || { 
-              date: selectedDate, // Use the selected date from URL
-              status: 'scheduled',
-              paymentStatus: 'pending'
+            defaultDate={selectedTimeSlot?.date || selectedDate}
+            defaultValues={{
+              ...(selectedTimeSlot && {
+                startTime: selectedTimeSlot.time,
+                // Set end time to 1 hour after start time by default
+                endTime: format(addMinutes(selectedTimeSlot.date, 60), 'hh:mmaaa').toLowerCase(),
+              }),
+              ...(selectedAppointment && {
+                ...selectedAppointment,
+                date: selectedDate,
+              })
             }}
-            defaultDate={selectedDate} // Pass the selected date to the form
             isEditing={!!selectedAppointment}
             onSubmit={handleAppointmentSubmit}
             onCancel={() => {
               setIsNewAppointmentOpen(false);
+              setSelectedTimeSlot(null);
               setSelectedAppointment(null);
             }}
             onDelete={selectedAppointment?._id ? () => handleDeleteAppointment(selectedAppointment._id) : undefined}
             onSuccess={async () => {
               await refetchAppointments();
               setIsNewAppointmentOpen(false);
+              setSelectedTimeSlot(null);
               setSelectedAppointment(null);
             }}
           />

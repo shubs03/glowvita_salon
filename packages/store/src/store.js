@@ -1,8 +1,8 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice';
-import crmAuthReducer from '@repo/store/slices/crmAuthSlice';
 import userAuthReducer from './slices/Web/userAuthSlice';
+import crmAuthReducer, { clearCrmAuth } from '@repo/store/slices/crmAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
@@ -26,41 +26,50 @@ import workingHoursReducer from './slices/workingHoursSlice';
 import orderReducer from './slices/orderSlice';
 import calendarAppointmentReducer from './slices/calendarAppointmentSlice';
 import cartReducer from './slices/cartSlice'; // Import the new cart reducer
+
+const appReducer = combineReducers({
+  [glowvitaApi.reducerPath]: glowvitaApi.reducer,
+  adminAuth: adminAuthReducer,
+  crmAuth: crmAuthReducer,
+  modal: modalReducer,
+  customer: customerReducer,
+  salon: salonReducer,
+  vendors: vendorReducer,
+  marketing: marketingReducer,
+  suppliers: supplierReducer,
+  subscription: subscriptionReducer,
+  notification: notificationReducer,
+  geoFencing: geoFencingReducer,
+  refferal: refferalReducer,
+  shipping: shippingReducer,
+  products: productReducer,
+  staff: staffReducer, 
+  client: clientReducer,
+  faqs: faqReducer,
+  service: serviceReducer,
+  appointments: appointmentReducer,  
+  blockTime: blockTimeReducer,
+  vendorprofile: vendorprofileReducer,
+  workingHours: workingHoursReducer,
+  order: orderReducer,
+  calendarAppointments: calendarAppointmentReducer,
+  cart: cartReducer,
+});
   
+const rootReducer = (state, action) => {
+  // when a logout action is dispatched, it will reset the state to the initial state.
+  // This includes the API state, which will clear the cache.
+  if (action.type === 'crmAuth/clearCrmAuth') {
+    // Keep only the state that should persist across logouts.
+    // For now, we reset everything.
+    return appReducer(undefined, action);
+  }
+  return appReducer(state, action);
+};
+
 export const makeStore = () => {
   return configureStore({
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(glowvitaApi.middleware),
-    reducer: {
-      [glowvitaApi.reducerPath]: glowvitaApi.reducer,
-      adminAuth: adminAuthReducer,
-      crmAuth: crmAuthReducer,
-      modal: modalReducer,
-      customer: customerReducer,
-      user: userAuthReducer,
-      salon: salonReducer,
-      vendors: vendorReducer,
-      marketing: marketingReducer,
-      suppliers: supplierReducer,
-      subscription: subscriptionReducer,
-      notification: notificationReducer,
-      geoFencing: geoFencingReducer,
-      refferal: refferalReducer,
-      shipping: shippingReducer,
-      products: productReducer,
-      staff: staffReducer, 
-      client: clientReducer,
-      faqs: faqReducer,
-      service: serviceReducer,
-      appointments: appointmentReducer,  
-      blockTime: blockTimeReducer,
-      vendorprofile: vendorprofileReducer,
-      workingHours: workingHoursReducer,
-      order: orderReducer,
-      calendarAppointments: calendarAppointmentReducer,
-      cart: cartReducer, // Add the cart reducer
-      
-    },
+    reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {

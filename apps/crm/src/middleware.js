@@ -1,6 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import * as jose from 'jose';
+import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 
 const JWT_SECRET_VENDOR = process.env.JWT_SECRET_VENDOR;
 const JWT_SECRET_DOCTOR = process.env.JWT_SECRET_DOCTOR;
@@ -9,12 +10,10 @@ const JWT_SECRET_SUPPLIER = process.env.JWT_SECRET_SUPPLIER;
 async function verifyJwt(token) {
   if (!token) return null;
   
-  // Try to decode the token first to get the role
   try {
     const decoded = jose.decodeJwt(token);
     const role = decoded.role;
     
-    // Select the appropriate secret based on role
     let secret;
     switch (role) {
       case 'vendor':
@@ -28,7 +27,7 @@ async function verifyJwt(token) {
         secret = JWT_SECRET_SUPPLIER;
         break;
       default:
-        secret = JWT_SECRET_VENDOR; // fallback
+        return null;
     }
     
     if (!secret) {
@@ -40,11 +39,26 @@ async function verifyJwt(token) {
     const { payload } = await jose.jwtVerify(token, secretKey);
     return payload;
   } catch (error) {
-    // Catches expired tokens, invalid signatures etc.
     console.log("CRM JWT Verification Error in Middleware:", error.code);
     return null;
   }
 }
+
+const alwaysAllowedPaths = ['/dashboard', '/salon-profile', '/not-found'];
+
+const getNavItemsForRole = (role) => {
+    switch (role) {
+      case 'vendor':
+      case 'staff':
+        return vendorNavItems;
+      case 'doctor':
+        return doctorNavItems;
+      case 'supplier':
+        return supplierNavItems;
+      default:
+        return [];
+    }
+};
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
@@ -52,23 +66,34 @@ export async function middleware(request) {
 
   const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support'];
   const isPublicPath = publicPaths.some(path => pathname === path);
-  const isPanelPage = !isPublicPath;
-  
-  const payload = await verifyJwt(token);
 
   if (isPublicPath) {
-    // If on a public page with a valid token, allow access but don't redirect.
-    // User might want to see marketing pages while logged in.
     return NextResponse.next();
   }
-  
-  if (isPanelPage) {
-    // If on a panel page and token is invalid/expired, redirect to login
-    if (!payload) {
-      const response = NextResponse.redirect(new URL('/login', request.url));
-      response.cookies.set('crm_access_token', '', { expires: new Date(0) });
-      return response;
+
+  const payload = await verifyJwt(token);
+
+  if (!payload) {
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    response.cookies.set('crm_access_token', '', { expires: new Date(0) });
+    return response;
+  }
+
+  const role = payload.role;
+  const navItems = getNavItemsForRole(role);
+  const allowedPaths = [...navItems.map(item => item.href), ...alwaysAllowedPaths];
+
+  const isPathAllowed = allowedPaths.some(allowedPath => {
+    if (pathname === allowedPath) return true;
+    if (allowedPath !== '/' && pathname.startsWith(allowedPath + '/')) {
+      return true;
     }
+    return false;
+  });
+
+  if (!isPathAllowed) {
+    // Redirect to the not-found page if the path is not authorized
+    return NextResponse.redirect(new URL('/not-found', request.url));
   }
 
   return NextResponse.next();

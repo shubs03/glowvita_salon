@@ -76,7 +76,7 @@ const ServiceCard = ({ icon, title, description, className, gradient, color }: {
       <ModernCard 
         variant="elevated" 
         hover 
-        className="h-full flex flex-col p-8 relative overflow-hidden hover-lift transition-all duration-500 border-2 hover:border-primary/30"
+        className="h-96 flex flex-col p-8 relative overflow-hidden hover-lift transition-all duration-500 border-2 hover:border-primary/30"
       >
         {/* Background Gradient */}
         <div className={cn(
@@ -105,13 +105,13 @@ const ServiceCard = ({ icon, title, description, className, gradient, color }: {
         {/* Icon Container */}
         <div className="relative z-10">
           <div className={cn(
-            "w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg border border-primary/20 transition-all duration-500 relative overflow-hidden",
+            "w-16 h-16 rounded-md flex items-center justify-center mb-6 shadow-lg border border-primary/20 transition-all duration-500 relative overflow-hidden",
             "bg-gradient-to-br from-background to-primary/5",
-            "group-hover:scale-110 group-hover:rotate-3 group-hover:shadow-xl",
+            "group-hover:scale-105 group-hover:rotate-3 group-hover:shadow-lg",
             color
           )}>
             <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative z-10 transition-transform duration-300 group-hover:scale-110">
+            <div className="relative z-10 transition-transform duration-300 group-hover:scale-105">
               {icon}
             </div>
           </div>
@@ -131,7 +131,7 @@ const ServiceCard = ({ icon, title, description, className, gradient, color }: {
         <div className="relative z-10">
           <div className={cn(
             "inline-flex items-center gap-2 text-sm font-semibold transition-all duration-300 cursor-pointer",
-            "group-hover:bg-primary/10 group-hover:px-4 group-hover:py-2 group-hover:rounded-full",
+            "group-hover:bg-primary/10 group-hover:px-3 group-hover:py-1 group-hover:rounded-full",
             color
           )}>
             <span>Explore Feature</span>
@@ -208,8 +208,8 @@ export function Services() {
           "text-center mt-16 transition-all duration-1000 delay-500",
           isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
         )}>
-          <div className="inline-flex items-center gap-4 bg-gradient-to-r from-primary to-primary/80 text-white px-8 py-4 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer hover-lift">
-            <span className="text-lg font-semibold">Explore All Features</span>
+          <div className="inline-flex items-center gap-4 bg-gradient-to-r from-primary to-primary/80 text-white px-6 py-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer hover-lift">
+            <span className="text-base font-semibold">Explore All Features</span>
             <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>

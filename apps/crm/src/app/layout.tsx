@@ -50,33 +50,19 @@ export default function RootLayout({
   
   const showMarketingLayout = ['/', '/apps', '/pricing', '/support'].includes(pathname);
   const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/auth/register');
+  const isNotFoundPage = pathname === '/not-found';
 
-  if (isAuthPage) {
-    return (
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
-          <link href='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css' rel='stylesheet' />
-        </head>
-        <body>
-          <StoreProvider>
-            <CrmAuthInitializer>
-              <Toaster richColors />
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-                disableTransitionOnChange
-              >
-                {children}
-              </ThemeProvider>
-            </CrmAuthInitializer>
-          </StoreProvider>
-        </body>
-      </html>
-    )
+  let layoutContent: ReactNode;
+
+  if (isAuthPage || isNotFoundPage) {
+    // Auth and Not Found pages have no layout
+    layoutContent = children;
+  } else if (isPanelPage) {
+    // CRM panel pages get the CrmLayout
+    layoutContent = <CrmLayout>{children}</CrmLayout>;
+  } else {
+    // All other pages get the MarketingLayout
+    layoutContent = <MarketingLayout>{children}</MarketingLayout>;
   }
 
   return (
@@ -97,11 +83,7 @@ export default function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
-              {isPanelPage ? (
-                <CrmLayout>{children}</CrmLayout>
-              ) : (
-                <MarketingLayout>{children}</MarketingLayout>
-              )}
+              {layoutContent}
             </ThemeProvider>
           </CrmAuthInitializer>
         </StoreProvider>

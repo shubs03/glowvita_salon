@@ -81,7 +81,7 @@ export const glowvitaApi = createApi({
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign", 
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing", 
     "Appointment", "ShippingCharge", "Order", "CrmProducts", 
-    "SupplierProducts", "CrmOrder", "SupplierProfile"
+    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart"
   ],
 
   endpoints: (builder) => ({
@@ -1112,6 +1112,24 @@ export const glowvitaApi = createApi({
       query: (templateData) => ({ url: "/crm/social-media-templates", method: "POST", body: templateData }),
       invalidatesTags: ["CrmSocialMediaTemplate"],
     }),
+
+    // Cart Endpoints
+    getCart: builder.query({
+        query: () => ({ url: "/crm/cart", method: "GET" }),
+        providesTags: ["Cart"],
+    }),
+    addToCart: builder.mutation({
+        query: (item) => ({ url: "/crm/cart", method: "POST", body: item }),
+        invalidatesTags: ["Cart"],
+    }),
+    updateCartItem: builder.mutation({
+        query: ({ productId, quantity }) => ({ url: "/crm/cart", method: "PUT", body: { productId, quantity } }),
+        invalidatesTags: ["Cart"],
+    }),
+    removeFromCart: builder.mutation({
+        query: (productId) => ({ url: "/crm/cart", method: "DELETE", body: { productId } }),
+        invalidatesTags: ["Cart"],
+    }),
   }),
 });
 
@@ -1260,4 +1278,10 @@ export const {
   useCreateCrmCampaignMutation,
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
+
+  // Cart Endpoints
+  useGetCartQuery,
+  useAddToCartMutation,
+  useUpdateCartItemMutation,
+  useRemoveFromCartMutation,
 } = glowvitaApi;
