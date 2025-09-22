@@ -2,7 +2,6 @@
 "use client";
 
 import { useState } from 'react';
-import { Button } from '@repo/ui/button';
 import { Card, CardContent } from '@repo/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar';
 import { Check } from 'lucide-react';
@@ -19,23 +18,29 @@ export function Step2_Staff() {
 
   return (
     <div className="w-full">
-      <h2 className="text-xl font-semibold mb-6">Select a Professional</h2>
+      <h2 className="text-2xl font-bold mb-2">Select a Professional</h2>
+      <p className="text-muted-foreground mb-6">Choose your preferred stylist or select any professional.</p>
+      
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {staffMembers.map((staff) => {
             const isSelected = selectedStaff === staff.name;
             return (
                 <Card 
                     key={staff.name} 
-                    className={`cursor-pointer transition-all text-center ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'hover:border-gray-300'}`}
+                    className={`cursor-pointer transition-all duration-200 text-center relative overflow-hidden ${isSelected ? 'border-primary ring-2 ring-primary/20 shadow-lg' : 'hover:border-gray-300 hover:shadow-md'}`}
                     onClick={() => setSelectedStaff(staff.name)}
                 >
                     <CardContent className="p-4 flex flex-col items-center justify-center">
-                        <Avatar className="w-20 h-20 mb-3 border-2 border-transparent group-hover:border-primary transition-colors">
+                        <Avatar className="w-24 h-24 mb-3 border-4 border-transparent group-hover:border-primary/20 transition-colors">
                             <AvatarImage src={staff.image} />
-                            <AvatarFallback>{staff.name.charAt(0)}</AvatarFallback>
+                            <AvatarFallback className="text-3xl">{staff.name.charAt(0)}</AvatarFallback>
                         </Avatar>
-                        <h3 className="font-medium">{staff.name}</h3>
-                        {isSelected && <Check className="h-5 w-5 text-primary mt-2" />}
+                        <h3 className="font-semibold">{staff.name}</h3>
+                        {isSelected && (
+                            <div className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center bg-primary rounded-full text-primary-foreground">
+                                <Check className="h-4 w-4" />
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             );

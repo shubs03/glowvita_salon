@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import React from 'react';
 import { ChevronLeft, X, Scissors, Users, Calendar, CheckCircle } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { Step1_Services } from "@/components/booking/Step1_Services";
@@ -18,7 +19,7 @@ const steps = [
 ];
 
 const StepIndicator = ({ currentStep }: { currentStep: number }) => (
-    <div className="flex items-center justify-center space-x-2 md:space-x-4 lg:space-x-6 p-4 rounded-full bg-secondary/50 border">
+    <div className="flex items-center p-4 rounded-full bg-secondary/50 border">
         {steps.map((step, index) => {
             const isCompleted = currentStep > step.id;
             const isActive = currentStep === step.id;

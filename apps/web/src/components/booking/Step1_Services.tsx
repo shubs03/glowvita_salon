@@ -24,16 +24,24 @@ interface Step1ServicesProps {
 
 export function Step1_Services({ selectedServices, onSelectService }: Step1ServicesProps) {
   const [activeCategory, setActiveCategory] = useState("Featured");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const filteredServices = services.filter(
-    (service) => service.category === activeCategory || (activeCategory === 'Featured' && service.services)
+    (service) => 
+    (activeCategory === 'Featured' ? service.services : service.category === activeCategory) &&
+    service.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="w-full">
       <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        <Input placeholder="Search services" className="pl-10 h-12" />
+        <Input 
+            placeholder="Search services" 
+            className="pl-10 h-12" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
       <div className="mb-6">
@@ -59,7 +67,7 @@ export function Step1_Services({ selectedServices, onSelectService }: Step1Servi
             return (
                 <Card 
                     key={index} 
-                    className={`cursor-pointer transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'hover:border-gray-300'}`}
+                    className={`cursor-pointer transition-all duration-200 border-2 ${isSelected ? 'border-primary ring-2 ring-primary/20 shadow-lg' : 'hover:border-gray-300 hover:shadow-md'}`}
                     onClick={() => onSelectService(service)}
                 >
                     <CardContent className="p-4 flex items-center justify-between">
@@ -67,13 +75,13 @@ export function Step1_Services({ selectedServices, onSelectService }: Step1Servi
                         <h3 className="font-semibold">{service.name}</h3>
                         <p className="text-sm text-muted-foreground">{service.duration}{service.services ? ` • ${service.services} services` : ''}</p>
                         <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm font-medium">MYR {service.price}</span>
-                            {service.discount && <span className="text-sm text-green-600">{service.discount}</span>}
+                            <span className="text-sm font-bold text-primary">MYR {service.price}</span>
+                            {service.discount && <span className="text-sm font-semibold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">{service.discount}</span>}
                         </div>
                     </div>
-                    <Button variant={isSelected ? 'default' : 'outline'} size="icon">
-                        {isSelected ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                    </Button>
+                    <div className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-200 ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
+                        {isSelected ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                    </div>
                     </CardContent>
                 </Card>
             );
