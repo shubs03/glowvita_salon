@@ -1,3 +1,4 @@
+
 {
   "name": "@repo/ui",
   "version": "0.0.0",
@@ -31,8 +32,8 @@
     "./modern-card": "./src/modern-card.tsx",
     "./3d-card": "./src/3d-card.tsx",
     "./page-container": "./src/page-container.tsx",
-    "./separator": "./src/separator.tsx",
-    "./components/landing/ProductCard": "./src/components/landing/ProductCard.tsx"
+    "./components/landing/ProductCard": "./src/components/landing/ProductCard.tsx",
+    "./separator": "./src/separator.tsx"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
