@@ -29,15 +29,16 @@ import { useGetCartQuery } from "@repo/store/api";
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { user, role } = useCrmAuth();
+  const { user, role, isCrmAuthenticated } = useCrmAuth();
   const pathname = usePathname();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
-  const { data: cartData } = useGetCartQuery(undefined, {
-    pollingInterval: 30000, // Refetch every 30 seconds
+  const { data: cartData } = useGetCartQuery(user?._id, {
+    skip: !isCrmAuthenticated || !user?._id,
   });
+
   const cartItemCount = cartData?.data?.items?.reduce((total: number, item: any) => total + item.quantity, 0) || 0;
 
   const getNavItemsForRole = () => {
@@ -60,10 +61,12 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // This action will now trigger the root reducer to reset the entire state
       dispatch(clearCrmAuth());
       Cookies.remove('crm_access_token', { path: '/' });
+      // Redirect to login page after state is cleared
       router.push('/login');
-      router.refresh();
+      // No need for router.refresh() as the state clearing will cause re-renders
     } finally {
       setIsLoggingOut(false);
       setShowLogoutModal(false);

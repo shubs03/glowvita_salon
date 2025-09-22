@@ -5,11 +5,15 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('token')?.value;
 
+  // Public paths where authenticated users should not be redirected to dashboard
   const publicPaths = ['/', '/login', '/signup'];
+  // Paths where authenticated users should be redirected to dashboard
+  const redirectPaths = ['/login', '/signup'];
   
   const isPublicPath = publicPaths.some(path => pathname === path);
+  const shouldRedirectToDashboard = redirectPaths.some(path => pathname === path);
   
-  if (isPublicPath && token) {
+  if (shouldRedirectToDashboard && token) {
     const payload = await verifyJwt(token);
     if (payload) {
       return NextResponse.redirect(new URL('/dashboard', request.url));

@@ -24,6 +24,17 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
+  location: {
+    type: {
+      lat: {
+        type: Number,
+      },
+      lng: {
+        type: Number,
+      }
+    },
+    required: false,
+  },
   state: {
     type: String,
     required: true,
@@ -66,6 +77,10 @@ const userSchema = new mongoose.Schema({
     default: false,
   },
 });
+
+// Create indexes
+userSchema.index({ emailAddress: 1 }, { unique: true });
+userSchema.index({ mobileNo: 1 }, { unique: true });
 
 // Pre-save middleware to update timestamps
 userSchema.pre("save", function (next) {

@@ -23,7 +23,7 @@ export const GET = authMiddlewareCrm(async (req) => {
   }
 }, ['vendor']);
 
-// POST: Add an item to the cart or update quantity if it exists
+// POST: Add an item to the cart or update quantity if it exists (Optimized)
 export const POST = authMiddlewareCrm(async (req) => {
   try {
     const vendorId = req.user._id;
@@ -33,24 +33,33 @@ export const POST = authMiddlewareCrm(async (req) => {
       return NextResponse.json({ success: false, message: 'Product ID, quantity, and price are required' }, { status: 400 });
     }
 
-    let cart = await CartModel.findOne({ vendorId });
-
-    if (!cart) {
-      cart = new CartModel({ vendorId, items: [] });
+    // Use a single, efficient findOneAndUpdate operation
+    const updatedCart = await CartModel.findOneAndUpdate(
+      { 
+        vendorId, 
+        'items.productId': item.productId 
+      },
+      { 
+        $inc: { 'items.$.quantity': item.quantity }
+      },
+      { new: true }
+    );
+    
+    // If the item was not found in the cart, add it
+    if (!updatedCart) {
+      const cartWithNewItem = await CartModel.findOneAndUpdate(
+        { vendorId },
+        { 
+          $push: { items: item },
+          $setOnInsert: { vendorId: vendorId }
+        },
+        { upsert: true, new: true }
+      );
+      return NextResponse.json({ success: true, data: cartWithNewItem });
     }
+    
+    return NextResponse.json({ success: true, data: updatedCart });
 
-    const existingItemIndex = cart.items.findIndex(i => i.productId.toString() === item.productId);
-
-    if (existingItemIndex > -1) {
-      // Update quantity if item already exists
-      cart.items[existingItemIndex].quantity += item.quantity;
-    } else {
-      // Add new item to cart
-      cart.items.push(item);
-    }
-
-    await cart.save();
-    return NextResponse.json({ success: true, data: cart });
   } catch (error) {
     return NextResponse.json({ success: false, message: 'Failed to add item to cart', error: error.message }, { status: 500 });
   }
@@ -111,4 +120,3 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     return NextResponse.json({ success: false, message: 'Failed to remove item from cart', error: error.message }, { status: 500 });
   }
 }, ['vendor']);
-

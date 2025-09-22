@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -6,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import StoreProvider from '@repo/store/provider';
 import './globals.css';
 import { MarketingLayout } from '@/components/MarketingLayout';
+import { Toaster } from 'sonner';
 
 export default function RootLayout({
   children,
@@ -45,6 +45,7 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>{layoutContent}</StoreProvider>
+        <Toaster />
       </body>
     </html>
   );
