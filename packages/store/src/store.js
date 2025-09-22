@@ -1,7 +1,7 @@
-
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice';
+import userAuthReducer from './slices/Web/userAuthSlice';
 import crmAuthReducer, { clearCrmAuth } from '@repo/store/slices/crmAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';

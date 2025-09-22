@@ -7,9 +7,7 @@ export * from "./slices/customerSlice";
 export * from "./slices/crmAuthSlice";
 export * from "./slices/salonSlice";
 export * from "./slices/vendorSlice";
-export * from "./slices/marketingSlice";
-
-
+export * from "./slices/marketingslice";
 export * from "./slices/doctorsDermatsSlice";
 export * from "./slices/supplierSlice";
 export * from "./slices/subscriptionSlice";
@@ -24,10 +22,8 @@ export * from "./slices/blockTimeSlice";
 export * from "./slices/vendorprofileSlice";
 export * from "./slices/workingHoursSlice";
 export * from "./slices/orderSlice";
-
-
 export * from "./slices/shippingSlice";
-
 export * from "./slices/productSlice";
 export * from "./slices/smsTemplateSlice";
 export * from "./slices/calendarAppointmentSlice";
+export * from "./slices/Web/userAuthSlice";
