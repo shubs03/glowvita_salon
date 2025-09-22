@@ -21,7 +21,7 @@ export default function RootLayout({
   let layoutContent: ReactNode;
 
   if (isAuthPage || isDashboardPage || isBookingPage) {
-    // Auth, Dashboard, and Booking pages have their own layout (or none)
+    // Auth, Dashboard, and Booking pages have no shared layout
     layoutContent = children;
   } else {
     // All other pages get the MarketingLayout

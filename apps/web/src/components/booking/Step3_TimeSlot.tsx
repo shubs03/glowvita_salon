@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Button } from '@repo/ui/button';
 import { ChevronLeft, ChevronRight, Sun, Moon, Zap } from 'lucide-react';
-import { format, addDays, subDays, startOfWeek, isToday, isSameDay, startOfMonth } from 'date-fns';
+import { format, addDays, subDays, startOfWeek, isToday, isSameDay, startOfMonth, addMonths, subMonths } from 'date-fns';
 import { cn } from '@repo/ui/cn';
 
 const timeSlots = {
@@ -18,8 +18,6 @@ export function Step3_TimeSlot() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  const weekStart = startOfWeek(currentMonth, { weekStartsOn: 1 });
-  
   const daysInView = Array.from({ length: 35 }).map((_, i) => addDays(startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 }), i));
 
   const handleDateChange = (date: Date) => {
@@ -28,11 +26,11 @@ export function Step3_TimeSlot() {
   };
   
   const handlePrevMonth = () => {
-    setCurrentMonth(subDays(currentMonth, 30));
+    setCurrentMonth(subMonths(currentMonth, 1));
   };
   
   const handleNextMonth = () => {
-    setCurrentMonth(addDays(currentMonth, 30));
+    setCurrentMonth(addMonths(currentMonth, 1));
   };
 
   return (
@@ -42,11 +40,11 @@ export function Step3_TimeSlot() {
         <p className="text-muted-foreground">Choose an available slot that works for you.</p>
       </div>
       
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <Button variant="ghost" size="icon" onClick={handlePrevMonth}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <div className="font-semibold text-center text-lg">
+        <div className="font-semibold text-center text-xl">
             {format(currentMonth, 'MMMM yyyy')}
         </div>
         <Button variant="ghost" size="icon" onClick={handleNextMonth}>
@@ -58,24 +56,25 @@ export function Step3_TimeSlot() {
         <div className="no-scrollbar flex space-x-2 overflow-x-auto pb-4 -mx-4 px-4">
             {daysInView.map(day => {
                 const isSelected = isSameDay(day, selectedDate);
-                const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
-                const isDisabled = day < new Date() && !isToday(day);
+                const isCurrentMonthDay = day.getMonth() === currentMonth.getMonth();
+                const isPast = day < startOfDay(new Date());
 
                 return (
                     <Button
                         key={day.toString()}
                         variant={isSelected ? 'default' : 'outline'}
-                        onClick={() => !isDisabled && handleDateChange(day)}
-                        disabled={isDisabled}
+                        onClick={() => !isPast && handleDateChange(day)}
+                        disabled={isPast}
                         className={cn(
-                          "flex flex-col h-24 w-20 flex-shrink-0 rounded-xl transition-all duration-200 shadow-sm", 
+                          "flex flex-col h-28 w-20 flex-shrink-0 rounded-xl transition-all duration-200 shadow-sm", 
                           isSelected && 'shadow-lg shadow-primary/20',
-                          isCurrentMonth ? 'opacity-100' : 'opacity-40',
-                          isDisabled ? 'cursor-not-allowed bg-secondary/50' : 'hover:-translate-y-1'
+                          isCurrentMonthDay ? 'opacity-100' : 'opacity-40',
+                          isPast ? 'cursor-not-allowed bg-secondary/50' : 'hover:-translate-y-1'
                         )}
                     >
                         <span className="text-xs">{format(day, 'E')}</span>
-                        <span className="text-3xl font-bold">{format(day, 'd')}</span>
+                        <span className="text-4xl font-bold my-1">{format(day, 'd')}</span>
+                        {isToday(day) && <div className="h-1 w-4 bg-primary rounded-full mt-1"></div>}
                     </Button>
                 )
             })}
@@ -84,9 +83,9 @@ export function Step3_TimeSlot() {
         <div className="absolute left-0 top-0 bottom-2 w-16 bg-gradient-to-r from-background to-transparent pointer-events-none"></div>
       </div>
       
-      <div className="max-h-[40vh] overflow-y-auto no-scrollbar pr-2 space-y-6">
+      <div className="max-h-[40vh] overflow-y-auto no-scrollbar pr-2 space-y-8">
         <div>
-          <h3 className="font-semibold text-lg mb-3 flex items-center"><Sun className="mr-2 h-5 w-5 text-yellow-500"/>Morning</h3>
+          <h3 className="font-semibold text-lg mb-4 flex items-center"><Sun className="mr-2 h-5 w-5 text-yellow-500"/>Morning</h3>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
             {timeSlots.morning.map(time => {
               const isSelected = selectedTime === time;
@@ -95,7 +94,7 @@ export function Step3_TimeSlot() {
                   key={time}
                   variant={isSelected ? "default" : "outline"}
                   onClick={() => setSelectedTime(time)}
-                  className="h-12 text-base rounded-lg transition-all duration-200 hover:scale-105"
+                  className="h-14 text-base rounded-lg transition-all duration-200 hover:scale-105"
                 >
                   {time}
                 </Button>
@@ -104,7 +103,7 @@ export function Step3_TimeSlot() {
           </div>
         </div>
         <div>
-          <h3 className="font-semibold text-lg mb-3 flex items-center"><Zap className="mr-2 h-5 w-5 text-blue-500"/>Afternoon</h3>
+          <h3 className="font-semibold text-lg mb-4 flex items-center"><Zap className="mr-2 h-5 w-5 text-blue-500"/>Afternoon</h3>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
             {timeSlots.afternoon.map(time => {
               const isSelected = selectedTime === time;
@@ -113,7 +112,7 @@ export function Step3_TimeSlot() {
                   key={time}
                   variant={isSelected ? "default" : "outline"}
                   onClick={() => setSelectedTime(time)}
-                  className="h-12 text-base rounded-lg transition-all duration-200 hover:scale-105"
+                  className="h-14 text-base rounded-lg transition-all duration-200 hover:scale-105"
                 >
                   {time}
                 </Button>
@@ -122,7 +121,7 @@ export function Step3_TimeSlot() {
           </div>
         </div>
         <div>
-          <h3 className="font-semibold text-lg mb-3 flex items-center"><Moon className="mr-2 h-5 w-5 text-indigo-500"/>Evening</h3>
+          <h3 className="font-semibold text-lg mb-4 flex items-center"><Moon className="mr-2 h-5 w-5 text-indigo-500"/>Evening</h3>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
             {timeSlots.evening.map(time => {
               const isSelected = selectedTime === time;
@@ -131,7 +130,7 @@ export function Step3_TimeSlot() {
                   key={time}
                   variant={isSelected ? "default" : "outline"}
                   onClick={() => setSelectedTime(time)}
-                  className="h-12 text-base rounded-lg transition-all duration-200 hover:scale-105"
+                  className="h-14 text-base rounded-lg transition-all duration-200 hover:scale-105"
                 >
                   {time}
                 </Button>

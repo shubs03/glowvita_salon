@@ -5,8 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui/c
 import { Button } from '@repo/ui/button';
 import { Separator } from '@repo/ui/separator';
 import Image from 'next/image';
-import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star } from 'lucide-react';
-import { cn } from '@repo/ui/cn';
+import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, CheckCircle } from 'lucide-react';
 
 const salonInfo = {
   name: "Pedal Barbers",
@@ -19,12 +18,16 @@ const salonInfo = {
 interface BookingSummaryProps {
     selectedServices: any[];
     onNextStep: () => void;
+    currentStep: number;
 }
 
-export function BookingSummary({ selectedServices, onNextStep }: BookingSummaryProps) {
+export function BookingSummary({ selectedServices, onNextStep, currentStep }: BookingSummaryProps) {
     const subtotal = selectedServices.reduce((acc, service) => acc + parseFloat(service.price), 0);
     const serviceTax = subtotal * 0.06; // Example 6% tax
     const total = subtotal + serviceTax;
+    
+    const stepLabels = ["Select Staff", "Find a Time", "Confirm Booking", "Finish"];
+    const buttonText = stepLabels[currentStep - 1] || "Continue";
 
   return (
     <Card className="shadow-2xl shadow-primary/10 border-border/50 sticky top-24 bg-gradient-to-br from-background to-secondary/20 rounded-2xl">
@@ -62,6 +65,7 @@ export function BookingSummary({ selectedServices, onNextStep }: BookingSummaryP
         
         {selectedServices.length > 0 ? (
           <div className="space-y-4">
+            <h4 className="font-semibold text-sm">Selected Services</h4>
             {selectedServices.map((service, index) => (
               <div key={index} className="flex justify-between items-center text-sm">
                 <div className="flex-1">
@@ -104,8 +108,13 @@ export function BookingSummary({ selectedServices, onNextStep }: BookingSummaryP
         </div>
       </CardContent>
       <CardFooter className="p-6">
-        <Button className="w-full h-12 text-base group bg-primary hover:bg-primary/90" size="lg" disabled={selectedServices.length === 0} onClick={onNextStep}>
-            Continue
+        <Button 
+          className="w-full h-14 text-lg group bg-primary hover:bg-primary/90" 
+          size="lg" 
+          disabled={(selectedServices.length === 0 && currentStep === 1) || currentStep === 4} 
+          onClick={onNextStep}
+        >
+            {buttonText}
             <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
         </Button>
       </CardFooter>

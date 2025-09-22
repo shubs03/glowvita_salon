@@ -45,22 +45,20 @@ export function Step1_Services({ selectedServices, onSelectService }: Step1Servi
         />
       </div>
 
-      <div className="mb-8">
-        <div className="relative">
-            <div className="no-scrollbar flex space-x-3 overflow-x-auto pb-2 -mx-4 px-4">
-                {serviceCategories.map((cat) => (
-                <Button
-                    key={cat}
-                    variant={activeCategory === cat ? 'default' : 'outline'}
-                    onClick={() => setActiveCategory(cat)}
-                    className="rounded-full flex-shrink-0 h-10 px-5 shadow-sm hover:shadow-md transition-all duration-200 border-border/50 hover:-translate-y-0.5"
-                >
-                    {cat}
-                </Button>
-                ))}
-            </div>
-            <div className="absolute right-0 top-0 bottom-2 w-16 bg-gradient-to-l from-secondary/10 via-secondary/10 to-transparent pointer-events-none"></div>
+      <div className="mb-8 relative">
+        <div className="no-scrollbar flex space-x-3 overflow-x-auto pb-2 -mx-4 px-4">
+            {serviceCategories.map((cat) => (
+            <Button
+                key={cat}
+                variant={activeCategory === cat ? 'default' : 'outline'}
+                onClick={() => setActiveCategory(cat)}
+                className="rounded-full flex-shrink-0 h-10 px-5 shadow-sm hover:shadow-md transition-all duration-200 border-border/50 hover:-translate-y-0.5"
+            >
+                {cat}
+            </Button>
+            ))}
         </div>
+        <div className="absolute right-0 top-0 bottom-2 w-16 bg-gradient-to-l from-secondary/10 to-transparent pointer-events-none"></div>
       </div>
 
       <div className="space-y-4">
@@ -76,7 +74,7 @@ export function Step1_Services({ selectedServices, onSelectService }: Step1Servi
                     onClick={() => onSelectService(service)}
                 >
                     <CardContent className="p-4 flex items-center gap-4">
-                      <img src={service.image} alt={service.name} className="w-16 h-16 rounded-lg object-cover" data-ai-hint="salon service" />
+                      <img src={service.image} alt={service.name} className="w-20 h-20 rounded-lg object-cover" data-ai-hint="salon service" />
                       <div className="flex-1">
                           <h3 className="font-semibold text-foreground">{service.name}</h3>
                           <p className="text-sm text-muted-foreground">{service.duration}{service.services ? ` • ${service.services} services` : ''}</p>
@@ -86,10 +84,10 @@ export function Step1_Services({ selectedServices, onSelectService }: Step1Servi
                           </div>
                       </div>
                       <div className={cn(
-                          "w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 transform",
+                          "w-12 h-12 flex items-center justify-center rounded-full transition-all duration-300 transform",
                           isSelected ? 'bg-primary text-primary-foreground scale-100 rotate-0' : 'bg-secondary group-hover:scale-110'
                       )}>
-                          {isSelected ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                          {isSelected ? <Check className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
                       </div>
                     </CardContent>
                 </Card>

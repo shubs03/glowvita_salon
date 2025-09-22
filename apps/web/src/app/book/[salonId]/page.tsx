@@ -2,14 +2,12 @@
 "use client";
 
 import { useState } from "react";
-import React from 'react';
 import { ChevronLeft, X, Scissors, Users, Calendar, CheckCircle } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { Step1_Services } from "@/components/booking/Step1_Services";
 import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot } from "@/components/booking/Step3_TimeSlot";
 import { BookingSummary } from "@/components/booking/BookingSummary";
-import { cn } from "@repo/ui/cn";
 
 const steps = [
   { id: 1, name: "Services", icon: Scissors },
@@ -18,44 +16,6 @@ const steps = [
   { id: 4, name: "Confirm", icon: CheckCircle },
 ];
 
-const StepIndicator = ({ currentStep }: { currentStep: number }) => (
-    <div className="flex items-center w-full">
-        {steps.map((step, index) => {
-            const isCompleted = currentStep > step.id;
-            const isActive = currentStep === step.id;
-            return (
-                <React.Fragment key={step.id}>
-                    <div className="flex flex-col items-center text-center w-24">
-                        <div
-                            className={cn(
-                                "w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-500 transform",
-                                isCompleted
-                                ? "bg-primary border-primary text-primary-foreground scale-100"
-                                : isActive
-                                ? "bg-primary/10 border-primary text-primary scale-110 shadow-lg shadow-primary/20"
-                                : "bg-secondary border-border text-muted-foreground scale-90"
-                            )}
-                        >
-                            <step.icon className="h-6 w-6" />
-                        </div>
-                        <p className={cn(
-                            "text-sm mt-2 font-semibold transition-colors",
-                            isActive || isCompleted ? 'text-foreground' : 'text-muted-foreground'
-                        )}>{step.name}</p>
-                    </div>
-                    {index < steps.length - 1 && (
-                        <div className={cn(
-                            "flex-1 h-1 transition-all duration-500 ease-in-out",
-                            isCompleted ? "bg-primary" : "bg-border"
-                        )}></div>
-                    )}
-                </React.Fragment>
-            );
-        })}
-    </div>
-);
-
-
 export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<any[]>([]);
@@ -63,12 +23,17 @@ export default function BookingPage() {
   const handleNextStep = () => {
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
+    } else {
+      // Handle final confirmation logic
+      console.log("Booking confirmed!");
     }
   };
 
   const handlePrevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+    } else {
+      window.history.back();
     }
   };
 
@@ -91,7 +56,7 @@ export default function BookingPage() {
       case 3:
         return <Step3_TimeSlot />;
       case 4:
-        return (
+         return (
             <div className="text-center py-20">
                 <CheckCircle className="mx-auto h-16 w-16 text-green-500 mb-4" />
                 <h2 className="text-2xl font-bold">Booking Confirmed!</h2>
@@ -104,40 +69,54 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-background via-secondary/10 to-background">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-secondary/10 to-background">
       {/* Header */}
-      <header className="flex-shrink-0 flex items-center justify-between h-16 px-4 border-b z-20 bg-background/80 backdrop-blur-sm">
-        <Button variant="ghost" onClick={currentStep === 1 ? () => window.history.back() : handlePrevStep}>
-          <ChevronLeft className="mr-2 h-4 w-4" />
+      <header className="flex-shrink-0 flex items-center justify-between h-20 px-4 md:px-8 border-b z-20 bg-background/80 backdrop-blur-sm">
+        <Button variant="ghost" onClick={handlePrevStep} className="flex items-center gap-2">
+          <ChevronLeft className="mr-1 h-5 w-5" />
           {currentStep === 1 ? 'Back to Salon' : 'Previous Step'}
         </Button>
-        <h1 className="text-lg font-semibold">{steps.find(s => s.id === currentStep)?.name}</h1>
+        <div className="text-center">
+            <h1 className="text-xl font-bold tracking-tight">{steps.find(s => s.id === currentStep)?.name}</h1>
+            <p className="text-sm text-muted-foreground">Step {currentStep} of {steps.length}</p>
+        </div>
         <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </Button>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex-1 lg:grid lg:grid-cols-12 lg:gap-8 overflow-hidden">
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto p-4 sm:p-6 md:p-8 no-scrollbar">
             <div className="max-w-4xl mx-auto">
-                <div className="mb-8 p-4 bg-background/50 backdrop-blur-sm rounded-xl border">
-                    <StepIndicator currentStep={currentStep} />
-                </div>
                 {renderStepContent()}
             </div>
         </main>
         
-        {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-96 border-l overflow-y-auto p-6 bg-background/50 backdrop-blur-sm">
-          <BookingSummary selectedServices={selectedServices} onNextStep={handleNextStep} />
+        {/* Sidebar */}
+        <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 p-6 bg-background/50 border-l">
+          <div className="sticky top-24">
+            <BookingSummary 
+              selectedServices={selectedServices} 
+              onNextStep={handleNextStep}
+              currentStep={currentStep}
+            />
+          </div>
         </aside>
       </div>
 
        {/* Floating Bottom Bar for Mobile */}
-       <div className="lg:hidden p-4 border-t bg-background/80 backdrop-blur-sm">
-          <Button className="w-full" size="lg" onClick={handleNextStep} disabled={selectedServices.length === 0}>
-              Continue
+       <div className="lg:hidden p-4 border-t bg-background/80 backdrop-blur-sm sticky bottom-0 z-20">
+          <Button 
+            className="w-full h-14 text-lg" 
+            size="lg" 
+            onClick={handleNextStep} 
+            disabled={selectedServices.length === 0 && currentStep === 1}
+          >
+              {currentStep === 1 && "Select Staff"}
+              {currentStep === 2 && "Find a Time"}
+              {currentStep === 3 && "Confirm Booking"}
+              {currentStep === 4 && "Finish"}
           </Button>
        </div>
     </div>

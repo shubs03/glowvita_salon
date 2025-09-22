@@ -21,7 +21,7 @@ export function Step2_Staff() {
     <div className="w-full">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold font-headline mb-2">Select a Professional</h2>
-        <p className="text-muted-foreground">Choose your preferred stylist or select any professional for the next available slot.</p>
+        <p className="text-muted-foreground">Choose your preferred stylist or select any for the next available slot.</p>
       </div>
       
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -38,18 +38,18 @@ export function Step2_Staff() {
                 >
                     <CardContent className="p-6 flex flex-col items-center justify-center">
                         <Avatar className={cn(
-                          "w-28 h-28 mb-4 border-4 transition-colors group-hover:border-primary/20",
+                          "w-32 h-32 mb-4 border-4 transition-colors group-hover:border-primary/20",
                           isSelected ? 'border-primary' : 'border-border/20'
                         )}>
                             <AvatarImage src={staff.image} data-ai-hint={staff.hint} />
-                            <AvatarFallback className="text-3xl bg-secondary">
-                              {staff.name === "Any Professional" ? <User className="w-10 h-10"/> : staff.name.charAt(0)}
+                            <AvatarFallback className="text-4xl bg-secondary">
+                              {staff.name === "Any Professional" ? <User className="w-12 h-12"/> : staff.name.charAt(0)}
                             </AvatarFallback>
                         </Avatar>
                         <h3 className="font-semibold text-lg">{staff.name}</h3>
                         {isSelected && (
-                            <div className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center bg-primary rounded-full text-primary-foreground shadow-lg">
-                                <Check className="h-4 w-4" />
+                            <div className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center bg-primary rounded-full text-primary-foreground shadow-lg">
+                                <Check className="h-5 w-5" />
                             </div>
                         )}
                     </CardContent>
