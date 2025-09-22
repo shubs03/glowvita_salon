@@ -31,6 +31,7 @@
     "./modern-card": "./src/modern-card.tsx",
     "./3d-card": "./src/3d-card.tsx",
     "./page-container": "./src/page-container.tsx",
+    "./separator": "./src/separator.tsx",
     "./components/landing/ProductCard": "./src/components/landing/ProductCard.tsx"
   },
   "scripts": {
@@ -45,6 +46,7 @@
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-radio-group": "^1.2.0",
     "@radix-ui/react-select": "^2.1.1",
+    "@radix-ui/react-separator": "^1.1.0",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-switch": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.0",
