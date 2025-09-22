@@ -16,15 +16,16 @@ const salonInfo = {
 
 interface BookingSummaryProps {
     selectedServices: any[];
+    onNextStep: () => void;
 }
 
-export function BookingSummary({ selectedServices }: BookingSummaryProps) {
+export function BookingSummary({ selectedServices, onNextStep }: BookingSummaryProps) {
     const subtotal = selectedServices.reduce((acc, service) => acc + parseFloat(service.price), 0);
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center gap-4">
-        <Image src={salonInfo.image} alt={salonInfo.name} width={64} height={64} className="rounded-lg" />
+        <Image src={salonInfo.image} alt={salonInfo.name} width={64} height={64} className="rounded-lg" data-ai-hint="salon exterior" />
         <div>
           <CardTitle>{salonInfo.name}</CardTitle>
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -58,7 +59,7 @@ export function BookingSummary({ selectedServices }: BookingSummaryProps) {
         </div>
       </CardContent>
       <CardFooter>
-        <Button className="w-full" disabled={selectedServices.length === 0}>Continue</Button>
+        <Button className="w-full" disabled={selectedServices.length === 0} onClick={onNextStep}>Continue</Button>
       </CardFooter>
     </Card>
   );

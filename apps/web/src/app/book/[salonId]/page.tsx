@@ -2,20 +2,58 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, X } from "lucide-react";
+import { ChevronLeft, X, Scissors, Users, Calendar, CheckCircle } from "lucide-react";
 import { Button } from "@repo/ui/button";
-import { PageContainer } from "@repo/ui/page-container";
 import { Step1_Services } from "@/components/booking/Step1_Services";
 import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot } from "@/components/booking/Step3_TimeSlot";
 import { BookingSummary } from "@/components/booking/BookingSummary";
+import { cn } from "@repo/ui/cn";
 
 const steps = [
-  { id: 1, name: "Services" },
-  { id: 2, name: "Professional" },
-  { id: 3, name: "Time" },
-  { id: 4, name: "Confirm" },
+  { id: 1, name: "Services", icon: Scissors },
+  { id: 2, name: "Professional", icon: Users },
+  { id: 3, name: "Time", icon: Calendar },
+  { id: 4, name: "Confirm", icon: CheckCircle },
 ];
+
+const StepIndicator = ({ currentStep }: { currentStep: number }) => (
+    <div className="flex items-center justify-center space-x-2 md:space-x-4 lg:space-x-6 p-4 rounded-full bg-secondary/50 border">
+        {steps.map((step, index) => {
+            const isCompleted = currentStep > step.id;
+            const isActive = currentStep === step.id;
+            return (
+                <React.Fragment key={step.id}>
+                    <div className="flex flex-col items-center text-center">
+                        <div
+                            className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
+                                isCompleted
+                                ? "bg-primary border-primary text-primary-foreground"
+                                : isActive
+                                ? "bg-primary/10 border-primary text-primary font-bold"
+                                : "bg-secondary border-border text-muted-foreground"
+                            )}
+                        >
+                            <step.icon className="h-5 w-5" />
+                        </div>
+                        <p className={cn(
+                            "text-xs mt-2 font-medium transition-colors",
+                            isActive || isCompleted ? 'text-foreground' : 'text-muted-foreground'
+                        )}>{step.name}</p>
+                    </div>
+                    {index < steps.length - 1 && (
+                        <div className={cn(
+                            "flex-1 h-0.5 transition-all duration-500",
+                            currentStep > step.id ? "bg-primary" : "bg-border"
+                        )}></div>
+                    )}
+                </React.Fragment>
+            );
+        })}
+    </div>
+);
+
 
 export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -59,7 +97,7 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen bg-secondary/30">
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between h-16 px-4 border-b z-20 bg-background/80 backdrop-blur-sm">
         <Button variant="ghost" onClick={currentStep === 1 ? () => window.history.back() : handlePrevStep}>
@@ -73,28 +111,20 @@ export default function BookingPage() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-96 border-r overflow-y-auto p-6">
-          <div className="space-y-4 mb-8">
-            <h2 className="font-semibold text-xl">Booking Steps</h2>
-            <ul className="space-y-2">
-              {steps.map((step) => (
-                <li key={step.id} className={`flex items-center p-3 rounded-lg transition-colors ${currentStep === step.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 border-2 ${currentStep >= step.id ? 'bg-primary border-primary text-white' : 'border-gray-300'}`}>
-                    {currentStep > step.id ? '✔' : step.id}
-                  </div>
-                  <span className="font-medium">{step.name}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <BookingSummary selectedServices={selectedServices} />
-        </aside>
-
-        {/* Main Content */}
+        {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          {renderStepContent()}
+            <div className="max-w-4xl mx-auto">
+                <div className="mb-8">
+                    <StepIndicator currentStep={currentStep} />
+                </div>
+                {renderStepContent()}
+            </div>
         </main>
+        
+        {/* Desktop Sidebar */}
+        <aside className="hidden lg:block w-96 border-l overflow-y-auto p-6 bg-background">
+          <BookingSummary selectedServices={selectedServices} onNextStep={handleNextStep} />
+        </aside>
       </div>
 
        {/* Floating Bottom Bar for Mobile */}
