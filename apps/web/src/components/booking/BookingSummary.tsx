@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui/c
 import { Button } from '@repo/ui/button';
 import { Separator } from '@repo/ui/separator';
 import Image from 'next/image';
-import { ArrowRight, Tag } from 'lucide-react';
+import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star } from 'lucide-react';
+import { cn } from '@repo/ui/cn';
 
 const salonInfo = {
   name: "Pedal Barbers",
@@ -26,37 +27,59 @@ export function BookingSummary({ selectedServices, onNextStep }: BookingSummaryP
     const total = subtotal + serviceTax;
 
   return (
-    <Card className="shadow-lg border-border/50 sticky top-24">
-      <CardHeader className="flex flex-row items-center gap-4">
-        <Image src={salonInfo.image} alt={salonInfo.name} width={64} height={64} className="rounded-lg shadow-md" data-ai-hint="salon exterior" />
-        <div>
-          <CardTitle className="font-bold">{salonInfo.name}</CardTitle>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-            <span className="text-yellow-400">⭐</span>
-            <span>{salonInfo.rating} ({salonInfo.reviews} reviews)</span>
+    <Card className="shadow-2xl shadow-primary/10 border-border/50 sticky top-24 bg-gradient-to-br from-background to-secondary/20 rounded-2xl">
+      <CardHeader className="p-6">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Image src={salonInfo.image} alt={salonInfo.name} width={64} height={64} className="rounded-xl shadow-lg border-2 border-background" data-ai-hint="salon exterior" />
+            <div className="absolute -bottom-1 -right-1 bg-green-500 h-4 w-4 rounded-full border-2 border-background"></div>
+          </div>
+          <div>
+            <CardTitle className="font-bold text-lg">{salonInfo.name}</CardTitle>
+            <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+              <Star className="h-4 w-4 text-yellow-400 fill-current" />
+              <span>{salonInfo.rating} ({salonInfo.reviews} reviews)</span>
+            </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <h3 className="font-semibold text-lg">Your Booking</h3>
+      <CardContent className="p-6 space-y-5">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 text-muted-foreground">
+              <Calendar className="h-4 w-4"/>
+              <span className="text-sm">Wednesday, 28 Aug 2024</span>
+          </div>
+          <div className="flex items-center gap-3 text-muted-foreground">
+              <Clock className="h-4 w-4"/>
+              <span className="text-sm">11:30 AM</span>
+          </div>
+          <div className="flex items-center gap-3 text-muted-foreground">
+              <User className="h-4 w-4"/>
+              <span className="text-sm">Kamil</span>
+          </div>
+        </div>
+        <Separator className="bg-border/50"/>
+        
         {selectedServices.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {selectedServices.map((service, index) => (
-              <div key={index} className="flex justify-between items-center text-sm p-3 rounded-md bg-secondary/50">
-                <div>
-                  <p className="font-medium">{service.name}</p>
+              <div key={index} className="flex justify-between items-center text-sm">
+                <div className="flex-1">
+                  <p className="font-medium text-foreground line-clamp-1">{service.name}</p>
                   <p className="text-xs text-muted-foreground">{service.duration}</p>
                 </div>
-                <p className="font-semibold">MYR {service.price}</p>
+                <p className="font-semibold text-foreground">MYR {service.price}</p>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-8 bg-secondary/30 rounded-md">
-            Select services to see your booking summary.
-          </p>
+          <div className="text-sm text-center py-8 text-muted-foreground bg-secondary/30 rounded-lg">
+            <Scissors className="mx-auto h-8 w-8 mb-2"/>
+            <p>Your selected services will appear here.</p>
+          </div>
         )}
-        <Separator />
+        <Separator className="bg-border/50"/>
+
         <div className="space-y-2 text-sm">
             <div className="flex justify-between">
                 <p className="text-muted-foreground">Subtotal</p>
@@ -74,14 +97,14 @@ export function BookingSummary({ selectedServices, onNextStep }: BookingSummaryP
                 <p className="font-semibold">-MYR 0.00</p>
             </div>
         </div>
-        <Separator />
+        <Separator className="bg-border/50"/>
         <div className="flex justify-between font-bold text-lg">
-          <p>Total</p>
+          <p>Total Payable</p>
           <p>MYR {total.toFixed(2)}</p>
         </div>
       </CardContent>
-      <CardFooter>
-        <Button className="w-full h-12 text-base group" size="lg" disabled={selectedServices.length === 0} onClick={onNextStep}>
+      <CardFooter className="p-6">
+        <Button className="w-full h-12 text-base group bg-primary hover:bg-primary/90" size="lg" disabled={selectedServices.length === 0} onClick={onNextStep}>
             Continue
             <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
         </Button>
