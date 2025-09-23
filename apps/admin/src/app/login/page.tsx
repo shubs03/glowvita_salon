@@ -1,11 +1,11 @@
-
 "use client";
 
 import { useState } from 'react';
+import Image from 'next/image';
+import salonImage from '../../../public/images/salon_image.jpg';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
-import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { useAppDispatch } from '@repo/store/hooks';
 import { setAdminAuth } from '@repo/store/slices/adminAuthSlice';
@@ -64,59 +64,47 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/10 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-400/5 rounded-full blur-3xl"></div>
-      </div>
+    <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
+      {/* Back Button */}
+      <button 
+        onClick={() => router.back()} 
+        className="absolute top-4 left-4 z-20 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 shadow-md transition-all duration-200"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
 
-      {/* Main content */}
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo/Brand section */}
-        <div className="text-center mb-8">
-          {/* <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-lg mb-4">
-            <Shield className="h-8 w-8 text-white" />
-          </div> */}
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-            GlowVita Admin Portal
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
-            Secure access to your dashboard
-          </p>
-        </div>
+      {/* Left Side - Login Form */}
+      <div className="flex-1 md:w-1/2 flex items-center justify-center p-4 sm:p-6 relative z-10 bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="w-full max-w-md self-center py-6">
+          {/* Heading */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-extrabold text-gray-900 md:text-xl">GlowVita Admin Portal</h1>
+            <p className="text-gray-600 text-l mt-3 lg:whitespace-nowrap md:whitespace-normal sm:whitespace-normal">Manage bookings, clients, and operations seamlessly</p>
+          </div>
 
-        {/* Login Card */}
-        <Card className="backdrop-blur-sm bg-white/70 dark:bg-slate-900/70 border-white/20 shadow-2xl shadow-blue-500/10">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-2xl font-semibold text-gray-400 text-center">
-              Welcome Back
-            </CardTitle>
-            <CardDescription className="text-center text-slate-600 dark:text-slate-400">
-              Sign in to your admin account
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Login Form */}
+          <div className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email Field */}
               <div className="space-y-2">
                 <Label
                   htmlFor="email"
-                  className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  className="text-sm font-medium text-gray-700"
                 >
                   Email Address
                 </Label>
-                <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                  <Input
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
                     id="email"
                     type="email"
                     placeholder="admin@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="pl-11 h-12 bg-white/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500/20 transition-all duration-200"
+                    className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 md:text-base pl-11"
                   />
                 </div>
               </div>
@@ -125,44 +113,39 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <Label
                   htmlFor="password"
-                  className="text-sm font-medium text-slate-700 dark:text-slate-300"
+                  className="text-sm font-medium text-gray-700"
                 >
                   Password
                 </Label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                  <Input
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="pl-11 pr-12 h-12 bg-white/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500/20 transition-all duration-200"
+                    className="w-full h-11 text-sm p-5 font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400 md:text-base pl-11 pr-12"
                     placeholder="Enter your password"
                   />
-                  <Button
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                     onClick={togglePasswordVisibility}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
                     ) : (
                       <Eye className="h-4 w-4" />
                     )}
-                    <span className="sr-only">
-                      {showPassword ? "Hide password" : "Show password"}
-                    </span>
-                  </Button>
+                  </button>
                 </div>
               </div>
 
               {/* Error Message */}
               {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-sm text-red-600 dark:text-red-400 flex items-center">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600 flex items-center">
                     <div className="w-4 h-4 bg-red-500 rounded-full mr-2 flex-shrink-0"></div>
                     {error}
                   </p>
@@ -172,7 +155,7 @@ export default function LoginPage() {
               {/* Login Button */}
               <Button
                 type="submit"
-                className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-200 group"
+                className="w-full h-11 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border border-gray-300 rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -188,24 +171,24 @@ export default function LoginPage() {
                 )}
               </Button>
 
-              {/* Additional Links */}
-              <div className="text-center">
-                <button
-                  type="button"
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors underline-offset-4 hover:underline"
-                >
-                  Forgot your password?
-                </button>
-              </div>
+              
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+      </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8">
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Protected by enterprise-grade security
-          </p>
+      {/* Right Side - Salon Image */}
+      <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
+        <div className="absolute inset-0">
+          <Image
+            src={salonImage}
+            alt="Salon Interior"
+            fill
+            priority
+            className="object-cover"
+            quality={100}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-black/20"></div>
         </div>
       </div>
     </div>
