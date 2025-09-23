@@ -37,50 +37,55 @@ export function Step1_Services({ selectedServices, onSelectService }: { selected
 
   return (
     <div className="w-full">
-        <h2 className="text-2xl font-bold mb-6">Select Your Services</h2>
-        <div className="flex flex-col md:flex-row gap-8">
-            {/* Categories List */}
-            <div className="md:w-1/4 space-y-2">
+        <h2 className="text-2xl font-bold mb-4">Select Your Services</h2>
+        
+        {/* Tab-like navigation for categories */}
+        <div className="border-b border-gray-200 mb-6">
+            <div className="flex space-x-4">
                 {serviceCategories.map(category => (
-                    <Button 
+                    <button 
                         key={category.name}
-                        variant={activeCategory === category.name ? "default" : "outline"}
-                        className="w-full justify-start"
+                        className={`py-2 px-1 text-sm font-medium transition-colors duration-200 ${
+                            activeCategory === category.name 
+                                ? 'border-b-2 border-primary text-primary' 
+                                : 'border-b-2 border-transparent text-muted-foreground hover:text-foreground'
+                        }`}
                         onClick={() => setActiveCategory(category.name)}
                     >
                         {category.name}
-                    </Button>
+                    </button>
                 ))}
             </div>
+        </div>
 
-            {/* Services List */}
-            <div className="md:w-3/4 space-y-4">
-                {services[activeCategory].map(service => {
-                    const isSelected = selectedServices.some(s => s.name === service.name);
-                    return (
-                        <Card 
-                            key={service.name} 
-                            className={`p-4 flex justify-between items-center transition-all ${isSelected ? 'border-primary bg-primary/5' : ''}`}
-                        >
-                            <div>
-                                <h3 className="font-semibold">{service.name}</h3>
-                                <p className="text-sm text-muted-foreground">{service.duration}</p>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <span className="font-semibold">₹{service.price}</span>
-                                <Button 
-                                    size="sm"
-                                    variant={isSelected ? "default" : "secondary"}
-                                    onClick={() => onSelectService(service)}
-                                >
-                                    {isSelected ? <Check className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-                                    {isSelected ? 'Selected' : 'Add'}
-                                </Button>
-                            </div>
-                        </Card>
-                    );
-                })}
-            </div>
+        {/* Services List */}
+        <div className="space-y-4">
+            {services[activeCategory].map(service => {
+                const isSelected = selectedServices.some(s => s.name === service.name);
+                return (
+                    <Card 
+                        key={service.name} 
+                        className={`p-4 flex justify-between items-center transition-all duration-200 ${isSelected ? 'border-primary bg-primary/5' : 'hover:border-gray-300'}`}
+                    >
+                        <div>
+                            <h3 className="font-semibold">{service.name}</h3>
+                            <p className="text-sm text-muted-foreground">{service.duration}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <span className="font-semibold text-lg">₹{service.price}</span>
+                            <Button 
+                                size="sm"
+                                variant={isSelected ? "default" : "secondary"}
+                                onClick={() => onSelectService(service)}
+                                className="w-28"
+                            >
+                                {isSelected ? <Check className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                                {isSelected ? 'Selected' : 'Add'}
+                            </Button>
+                        </div>
+                    </Card>
+                );
+            })}
         </div>
     </div>
   );
