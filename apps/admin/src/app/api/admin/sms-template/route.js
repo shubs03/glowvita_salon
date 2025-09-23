@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import _db from "../../../../../../../packages/lib/src/db.js";
-import SmsTemplate from "../../../../../../../packages/lib/src/models/Marketing/SmsTemplate.model.js";
+import _db from "@repo/lib/db";
+import SmsTemplate from "@repo/lib/models/Marketing/SmsTemplate.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();

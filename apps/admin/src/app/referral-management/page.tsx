@@ -81,11 +81,11 @@ export default function ReferralManagementPage() {
   }, [c2cSettingsData, c2vSettingsData, v2vSettingsData, c2cSettingsLoading, c2vSettingsLoading, v2vSettingsLoading, dispatch]);
 
   const handleOpenModal = (type: string) => {
-    const currentSettings = type === 'C2C' ? c2cSettings : type === 'C2V' ? c2vSettings : v2vSettings;
+    const currentSettings: ReferralSettings | null = type === 'C2C' ? c2cSettings : type === 'C2V' ? c2vSettings : v2vSettings;
     // Merge with default settings to ensure all properties exist
     const settings = {
       ...getDefaultSettings(),
-      ...currentSettings,
+      ...(currentSettings || {}),
       referrerBonus: {
         ...getDefaultSettings().referrerBonus,
         ...(currentSettings?.referrerBonus || {}),

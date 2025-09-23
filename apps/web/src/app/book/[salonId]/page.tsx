@@ -1,6 +1,7 @@
 
 "use client";
 
+import React, { Fragment } from "react";
 import { useState } from "react";
 import { ChevronLeft, X, ArrowRight, Check } from "lucide-react";
 import { Button } from "@repo/ui/button";

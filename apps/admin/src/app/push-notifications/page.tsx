@@ -142,7 +142,7 @@ export default function PushNotificationsPage() {
     try {
       if (modalType === 'add') {
         await createNotification(formData).unwrap();
-      } else if (modalType === 'edit') {
+      } else if (modalType === 'edit' && notificationData) {
         await updateNotification({ ...formData, _id: (notificationData as Notification)._id }).unwrap();
       }
       handleCloseModal();
@@ -376,8 +376,8 @@ export default function PushNotificationsPage() {
                 {modalType === 'view' && 'View Notification'}
               </DialogTitle>
               <DialogDescription>
-                {modalType === 'view' 
-                  ? `Viewing notification: "${(notificationData as Notification)?.title}"`
+                {modalType === 'view' && notificationData
+                  ? `Viewing notification: "${(notificationData as Notification).title}"`
                   : "Compose and send a new notification to your audience."
                 }
               </DialogDescription>

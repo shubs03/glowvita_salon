@@ -1,4 +1,4 @@
-import { configureStore, getDefaultMiddleware, combineReducers } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice';
 import crmAuthReducer from './slices/crmAuthSlice';
@@ -53,5 +53,7 @@ export const makeStore = () => {
 };
 
 export type RootState = ReturnType<typeof rootReducer>;
+export type AppStore = ReturnType<typeof makeStore>;
+export type AppDispatch = AppStore['dispatch'];
 
 export const selectRootState = (state: RootState) => state;

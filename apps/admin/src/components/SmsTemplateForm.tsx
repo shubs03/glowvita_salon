@@ -19,7 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 
 export interface SmsTemplate {
-  id?: string;
+  id: string;
   _id?: string;
   name: string;
   content: string;
@@ -27,8 +27,8 @@ export interface SmsTemplate {
   status: string;
   variables?: Array<{ name: string; description: string }>;
   price?: number;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 interface SmsTemplateFormProps {

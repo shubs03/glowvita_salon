@@ -1,5 +1,5 @@
-import _db from "../../../../../../../../packages/lib/src/db.js";
-import VendorServicesModel from "../../../../../../../../packages/lib/src/models/Vendor/VendorServices.model.js";
+import _db from "@repo/lib/db";
+import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
 
 await _db();
 
