@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card } from '@repo/ui/card';
-import { addDays, format, isToday } from 'date-fns';
+import { addDays, format, isSameDay } from 'date-fns';
 
 export function Step3_TimeSlot() {
   const [selectedDate, setSelectedDate] = useState(new Date());
