@@ -1,6 +1,7 @@
 
 "use client";
 
+import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@repo/ui/button";
@@ -45,7 +46,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@repo/ui/dialog";
-import { useState } from "react";
 import { PageContainer } from "@repo/ui/page-container";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from "@repo/ui/badge";
@@ -430,23 +430,25 @@ export default function SalonDetailsPage() {
                 {salon.offers.map((offer, index) => {
                   const Icon = offer.icon;
                   return (
-                    <Card key={index} className="flex flex-col">
-                      <CardHeader className="flex-row items-center gap-4">
-                        <div className="bg-primary/10 text-primary p-3 rounded-full">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <CardTitle className="text-lg">{offer.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="flex-grow">
-                        <p className="text-sm text-muted-foreground">
-                          {offer.description}
-                        </p>
-                      </CardContent>
-                      <CardFooter>
-                        <Button variant="outline" size="sm">
-                          Claim Offer
-                        </Button>
-                      </CardFooter>
+                    <Card
+                      key={index}
+                      className="group flex flex-col p-6 text-center border-border/50 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-background to-primary/5"
+                    >
+                      <div className="mx-auto bg-gradient-to-br from-primary/10 to-primary/20 text-primary p-4 rounded-full w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
+                        <Icon className="h-8 w-8" />
+                      </div>
+                      <h3 className="text-lg font-bold mb-2 group-hover:text-primary transition-colors duration-300">
+                        {offer.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground flex-grow mb-4">
+                        {offer.description}
+                      </p>
+                      <Button
+                        variant="link"
+                        className="text-primary group-hover:underline"
+                      >
+                        Claim Offer <ArrowRight className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" />
+                      </Button>
                     </Card>
                   );
                 })}
