@@ -1,84 +1,150 @@
 
 "use client";
 
-import { useState } from 'react';
-import { Button } from '@repo/ui/button';
+import React, { useState } from 'react';
+import Image from 'next/image';
 import { Card, CardContent } from '@repo/ui/card';
-import { Input } from '@repo/ui/input';
-import { Search, Plus, Check } from 'lucide-react';
+import { Button } from '@repo/ui/button';
+import { Plus, Check, Scissors } from 'lucide-react';
+import { cn } from '@repo/ui/cn';
+import { ChevronRight } from 'lucide-react';
 
-const serviceCategories = ["Featured", "Special Promos", "Hair", "Beard", "Kids", "Coloring", "Treatments"];
-const services = [
-  { name: "Adult Haircut", duration: "35 mins", price: "35", category: "Hair" },
-  { name: "Kids Haircut (12yo and under)", duration: "35 mins", price: "25", category: "Kids" },
-  { name: "Father & Son Special", duration: "35 mins", price: "55", category: "Featured", services: 2, discount: "Save 8%" },
-  { name: "Student Haircut (18yo and under)", duration: "35 mins", price: "30", category: "Hair" },
-  { name: "Adult Haircut and Beard Trim", duration: "1 hr", price: "55", category: "Hair", services: 2, discount: "Save 15%" },
-  { name: "Adult Haircut & Wash", duration: "45 mins", price: "45", category: "Hair", services: 2, discount: "Save 10%" },
+const serviceCategories = [
+    { name: "All" },
+    { name: "Hair" },
+    { name: "Skin" },
+    { name: "Nails" },
+    { name: "Body" },
+    { name: "Massage" },
+    { name: "Waxing" },
+    { name: "Facials" }
 ];
 
-interface Step1ServicesProps {
-    selectedServices: any[];
-    onSelectService: (service: any) => void;
-}
+const services = {
+    "Hair": [
+        { name: "Signature Haircut", duration: "60 min", price: "120.00", image: 'https://picsum.photos/seed/haircut/200/200' },
+        { name: "Color & Highlights", duration: "120 min", price: "250.00", image: 'https://picsum.photos/seed/haircolor/200/200' },
+        { name: "Keratin Treatment", duration: "90 min", price: "180.00", image: 'https://picsum.photos/seed/keratin/200/200' }
+    ],
+    "Skin": [
+        { name: "GlowVita Facial", duration: "75 min", price: "150.00", image: 'https://picsum.photos/seed/facial/200/200' },
+        { name: "HydraFacial", duration: "60 min", price: "180.00", image: 'https://picsum.photos/seed/hydra/200/200' }
+    ],
+    "Nails": [
+        { name: "Classic Manicure", duration: "45 min", price: "60.00", image: 'https://picsum.photos/seed/manicure/200/200' },
+        { name: "Gel Pedicure", duration: "60 min", price: "80.00", image: 'https://picsum.photos/seed/pedicure/200/200' }
+    ],
+    "Body": [
+        { name: "Deep Tissue Massage", duration: "90 min", price: "200.00", image: 'https://picsum.photos/seed/massage/200/200' }
+    ],
+    "Massage": [
+        { name: "Swedish Massage", duration: "60 min", price: "180.00", image: 'https://picsum.photos/seed/swedish/200/200' }
+    ],
+    "Waxing": [
+        { name: "Full Body Wax", duration: "120 min", price: "300.00", image: 'https://picsum.photos/seed/waxing/200/200' }
+    ],
+    "Facials": [
+        { name: "Anti-Aging Facial", duration: "75 min", price: "160.00", image: 'https://picsum.photos/seed/antiaging/200/200' }
+    ]
+};
 
-export function Step1_Services({ selectedServices, onSelectService }: Step1ServicesProps) {
-  const [activeCategory, setActiveCategory] = useState("Featured");
+const allServices = Object.values(services).flat();
 
-  const filteredServices = services.filter(
-    (service) => service.category === activeCategory || (activeCategory === 'Featured' && service.services)
-  );
+const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
+    const steps = ['Services', 'Select Professional', 'Time Slot'];
+    return (
+        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
+            {steps.map((step, index) => (
+                <React.Fragment key={step}>
+                    <button
+                        onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+                        className={cn(
+                            "transition-colors",
+                            currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
+                            currentStep === index + 1 && "text-primary font-semibold"
+                        )}
+                    >
+                        {step}
+                    </button>
+                    {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
+                </React.Fragment>
+            ))}
+        </nav>
+    );
+};
+
+export function Step1_Services({ selectedServices, onSelectService, currentStep, setCurrentStep }: { selectedServices: any[], onSelectService: (service: any) => void; currentStep: number; setCurrentStep: (step: number) => void; }) {
+  const [activeCategory, setActiveCategory] = useState("All");
+
+  const servicesToDisplay = activeCategory === "All" ? allServices : (services[activeCategory] || []);
 
   return (
     <div className="w-full">
-      <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        <Input placeholder="Search services" className="pl-10 h-12" />
-      </div>
-
-      <div className="mb-6">
-        <div className="relative no-scrollbar overflow-x-auto pb-2">
-          <div className="flex space-x-2">
-            {serviceCategories.map((cat) => (
-              <Button
-                key={cat}
-                variant={activeCategory === cat ? 'default' : 'outline'}
-                onClick={() => setActiveCategory(cat)}
-                className="rounded-full flex-shrink-0"
-              >
-                {cat}
-              </Button>
-            ))}
-          </div>
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+        <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+                <div className="p-3 bg-primary/10 rounded-full text-primary">
+                    <Scissors className="h-6 w-6" />
+                </div>
+                <h2 className="text-3xl font-bold font-headline">Select Your Services</h2>
+            </div>
+            <p className="text-muted-foreground">Choose one or more services you'd like to book.</p>
         </div>
-      </div>
-
-      <div className="space-y-4">
-        {filteredServices.map((service, index) => {
-            const isSelected = selectedServices.some(s => s.name === service.name);
-            return (
-                <Card 
-                    key={index} 
-                    className={`cursor-pointer transition-all ${isSelected ? 'border-primary ring-2 ring-primary/20' : 'hover:border-gray-300'}`}
-                    onClick={() => onSelectService(service)}
-                >
-                    <CardContent className="p-4 flex items-center justify-between">
-                    <div className="flex-1">
-                        <h3 className="font-semibold">{service.name}</h3>
-                        <p className="text-sm text-muted-foreground">{service.duration}{service.services ? ` • ${service.services} services` : ''}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm font-medium">MYR {service.price}</span>
-                            {service.discount && <span className="text-sm text-green-600">{service.discount}</span>}
-                        </div>
-                    </div>
-                    <Button variant={isSelected ? 'default' : 'outline'} size="icon">
-                        {isSelected ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+        
+        {/* Tab-like navigation for categories */}
+        <div className="relative mb-8">
+            <div className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
+                {serviceCategories.map(category => (
+                    <Button 
+                        key={category.name}
+                        variant={activeCategory === category.name ? 'default' : 'outline'}
+                        className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${
+                            activeCategory === category.name ? 'shadow-lg' : 'hover:bg-primary/5 hover:border-primary/50'
+                        }`}
+                        onClick={() => setActiveCategory(category.name)}
+                    >
+                        {category.name}
                     </Button>
-                    </CardContent>
-                </Card>
-            );
-        })}
-      </div>
+                ))}
+            </div>
+            <div className="absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+        </div>
+
+        {/* Services List */}
+        <div className="space-y-4">
+            {servicesToDisplay.map(service => {
+                const isSelected = selectedServices.some(s => s.name === service.name);
+                return (
+                    <Card 
+                        key={service.name} 
+                        className={cn(
+                            'p-4 flex flex-col sm:flex-row items-center gap-4 transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-md',
+                            isSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-transparent bg-secondary/30'
+                        )}
+                        onClick={() => onSelectService(service)}
+                    >
+                        <div className="relative w-full sm:w-20 h-24 sm:h-20 rounded-md overflow-hidden flex-shrink-0">
+                            <Image src={service.image} alt={service.name} layout="fill" className="object-cover" data-ai-hint="beauty service" />
+                        </div>
+                        <div className="flex-1 text-center sm:text-left">
+                            <h3 className="font-semibold">{service.name}</h3>
+                            <p className="text-sm text-muted-foreground">{service.duration}</p>
+                        </div>
+                        <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-4 text-right">
+                            <span className="font-bold text-lg text-primary">₹{service.price}</span>
+                            <Button 
+                                size="sm"
+                                variant={isSelected ? "default" : "secondary"}
+                                className="w-28 shadow-sm transition-all"
+                            >
+                                {isSelected ? <Check className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                                {isSelected ? 'Selected' : 'Add'}
+                            </Button>
+                        </div>
+                    </Card>
+                );
+            })}
+        </div>
     </div>
   );
 }

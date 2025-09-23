@@ -1,9 +1,9 @@
 
 import jwt from "jsonwebtoken";
-import VendorModel from "../../../packages/lib/src/models/Vendor/Vendor.model.js";
-import DoctorModel from "../../../packages/lib/src/models/Vendor/Docters.model.js";
-import SupplierModel from "../../../packages/lib/src/models/Vendor/Supplier.model.js";
-import StaffModel from "../../../packages/lib/src/models/Vendor/Staff.model.js";
+import VendorModel from "../../../packages/lib/src/models/vendor/Vendor.model.js";
+import DoctorModel from "../../../packages/lib/src/models/vendor/Docters.model.js";
+import SupplierModel from "../../../packages/lib/src/models/vendor/Supplier.model.js";
+import StaffModel from "../../../packages/lib/src/models/vendor/Staff.model.js";
 import _db from "../../../packages/lib/src/db.js";
 import { 
   JWT_SECRET_VENDOR

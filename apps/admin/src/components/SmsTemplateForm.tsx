@@ -19,7 +19,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 
 export interface SmsTemplate {
-  id?: string;
+  id: string;
   _id?: string;
   name: string;
   content: string;
@@ -27,8 +27,8 @@ export interface SmsTemplate {
   status: string;
   variables?: Array<{ name: string; description: string }>;
   price?: number;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 interface SmsTemplateFormProps {
@@ -77,8 +77,8 @@ export function SmsTemplateForm({
         ? {
             ...getDefaultFormData(),
             ...templateData,
-            id: templateData.id || templateData._id,
-            _id: templateData._id || templateData.id
+            id: (templateData.id || templateData._id || ''),
+            _id: (templateData._id || templateData.id || '')
           }
         : getDefaultFormData();
       
@@ -122,8 +122,8 @@ export function SmsTemplateForm({
     try {
       const dataToSubmit = {
         ...formData,
-        id: formData.id || formData._id,
-        _id: formData._id || formData.id
+        id: formData.id || formData._id || '',
+        _id: formData._id || formData.id || ''
       };
       
       await onSubmit(dataToSubmit);

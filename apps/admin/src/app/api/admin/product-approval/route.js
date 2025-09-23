@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
-import ProductModel from '../../../../../../../packages/lib/src/models/Vendor/Product.model'; // Adjust path to your ProductModel
+import ProductModel from '@repo/lib/models/vendor/Product'; // Adjust path to your ProductModel
 import {authMiddlewareAdmin} from '../../../../middlewareAdmin'; // Adjust path to your middleware
-import VendorModel from '../../../../../../../packages/lib/src/models/Vendor/Vendor.model';
-import ProductCategoryModel from '../../../../../../../packages/lib/src/models/admin/ProductCategory.model';
+import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
+import ProductCategoryModel from '@repo/lib/models/admin/ProductCategory';
 // Get Products (with optional filtering by status)
 export const GET = authMiddlewareAdmin(async (req) => {
   try {

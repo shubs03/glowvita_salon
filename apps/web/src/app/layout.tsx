@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ReactNode } from 'react';
@@ -15,17 +16,20 @@ export default function RootLayout({
   const pathname = usePathname();
   const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
   const isDashboardPage = pathname.startsWith('/dashboard');
+  const isBookingPage = pathname.startsWith('/book/');
 
   let layoutContent: ReactNode;
 
-  if (isAuthPage || isDashboardPage) {
+  if (isAuthPage || isDashboardPage || isBookingPage) {
+    // Auth, Dashboard, and Booking pages have no shared layout
     layoutContent = children;
   } else {
+    // All other pages get the MarketingLayout
     layoutContent = <MarketingLayout>{children}</MarketingLayout>;
   }
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

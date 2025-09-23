@@ -1,6 +1,6 @@
-# Monorepo Maestro
+# GlowVita Salon
 
-Welcome to Monorepo Maestro, a Next.js 15 monorepo project built with Turborepo. This repository contains a suite of applications designed to work together seamlessly.
+Welcome to GlowVita Salon, a Next.js 15 monorepo project built with Turborepo. This repository contains a suite of applications designed to work together seamlessly.
 
 ## What's inside?
 

@@ -118,8 +118,8 @@ export function AppointmentDetailView({
     amount: appointment.amount,
     status: appointment.status,
     // Ensure these are always defined
-    _id: appointment._id || appointment.id,
-    id: appointment.id || appointment._id,
+    _id: appointment._id,
+    id: appointment._id,
     duration: appointment.duration || 60,
     totalAmount: appointment.totalAmount || appointment.amount || 0,
     discount: appointment.discount || 0,
@@ -239,7 +239,7 @@ export function AppointmentDetailView({
     } catch (error) {
       console.error('Error in handleFormSubmit:', error);
       toast.error('Failed to save appointment', {
-        description: error.message || 'Unknown error occurred'
+        description: typeof error === 'object' && error !== null && 'message' in error ? (error as { message?: string }).message || 'Unknown error occurred' : 'Unknown error occurred'
       });
     } finally {
       setIsSaving(false);

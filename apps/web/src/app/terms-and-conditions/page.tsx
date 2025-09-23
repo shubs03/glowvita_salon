@@ -5,9 +5,21 @@ import { PageContainer } from '@repo/ui/page-container';
 
 export default function TermsAndConditionsPage() {
   return (
-    <PageContainer>
-      <div className="prose dark:prose-invert max-w-4xl mx-auto py-12">
-        <h1>Terms and Conditions</h1>
+    <PageContainer padding="none">
+      {/* Section 1: Hero */}
+      <section className="py-20 md:py-24 text-center bg-secondary/50">
+        <div className="container mx-auto px-4">
+          <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">
+            Terms & Conditions
+          </h1>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
+            Please read these terms carefully before using our service.
+          </p>
+        </div>
+      </section>
+
+      {/* Section 2: Content */}
+      <div className="prose dark:prose-invert max-w-4xl mx-auto py-12 px-4">
         <p className="lead">Last updated: August 1, 2024</p>
         
         <h2>1. Agreement to Terms</h2>

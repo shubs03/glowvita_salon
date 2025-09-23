@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import _db from "../../../../../../../packages/lib/src/db.js";
-import TaxFeeSettings from "../../../../../../../packages/lib/src/models/admin/TaxFeeSettings.model.js";
+import _db from "@repo/lib/db";
+import TaxFeeSettings from "@repo/lib/models/admin/TaxFeeSettings";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import mongoose from 'mongoose';
 

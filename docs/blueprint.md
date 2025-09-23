@@ -1,4 +1,4 @@
-# **App Name**: Monorepo Maestro
+# **App Name**: GlowVita Salon
 
 ## Core Features:
 
