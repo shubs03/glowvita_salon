@@ -113,7 +113,7 @@ export default function BookingPage() {
         </Button>
       </header>
 
-      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 overflow-hidden">
+      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 overflow-hidden px-4 sm:px-6 lg:px-8">
         {/* Main Content Area (scrollable) */}
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto p-4 sm:p-6 md:p-8 no-scrollbar">
             <div className="max-w-4xl mx-auto">
@@ -122,7 +122,7 @@ export default function BookingPage() {
         </main>
         
         {/* Sidebar (sticky) */}
-        <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 p-6 bg-background/50 border-l">
+        <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 p-6">
           <div className="sticky top-24">
             <BookingSummary 
               selectedServices={selectedServices}
