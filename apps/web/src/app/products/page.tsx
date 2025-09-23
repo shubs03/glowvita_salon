@@ -882,6 +882,7 @@ export default function ProductsPage() {
                   <div key={product.id} className="group">
                     <ProductCard 
                       name={product.name}
+                      description={product.description || product.hint}
                       price={product.price}
                       image={product.image}
                       hint={product.hint}

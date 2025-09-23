@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import _db from "../../../../../../../packages/lib/src/db.js";
-import SupplierModel from "../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js";
+import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import { ReferralModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
 import SubscriptionPlan from "../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js";
 import { uploadBase64, deleteFile } from "../../../../../../../packages/utils/uploads.js";
@@ -117,8 +117,8 @@ export const POST = async (req) => {
     // 🎁 Handle referral if a code was provided
     if (referredByCode) {
       // Check if referral code belongs to any user (vendor, doctor, or supplier)
-      const VendorModel = (await import("../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js")).default;
-      const DoctorModel = (await import("../../../../../../../packages/lib/src/models/Vendor/Docters.model.js")).default;
+      const VendorModel = (await import("@repo/lib/models/Vendor/Vendor.model")).default;
+      const DoctorModel = (await import("@repo/lib/models/Vendor/Docters.model")).default;
       
       const referringVendor = await VendorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
       const referringDoctor = await DoctorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });

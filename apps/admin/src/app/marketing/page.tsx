@@ -253,7 +253,7 @@ export default function PlatformMarketingPage() {
       if (isEditMode && selectedPackage) {
         const id = selectedPackage._id || selectedPackage.id;
         if (id) {
-          await updateSmsPackage({ id, ...formData }).unwrap();
+          await updateSmsPackage({ ...formData, id }).unwrap();
           toast.success('Package updated successfully');
         }
       } else {
@@ -278,7 +278,7 @@ export default function PlatformMarketingPage() {
     try {
       if (isEditTemplateMode && (selectedTemplate?.id || selectedTemplate?._id)) {
         const id = selectedTemplate.id || selectedTemplate._id || '';
-        await updateSmsTemplate({ id, ...formData }).unwrap();
+        await updateSmsTemplate({ ...formData, id }).unwrap();
         toast.success('Template updated successfully');
       } else {
         await createSmsTemplate(formData).unwrap();

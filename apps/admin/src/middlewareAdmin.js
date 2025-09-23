@@ -1,7 +1,7 @@
 // middlewares/auth.js
 import jwt from "jsonwebtoken";
-import AdminUserModel from "../../../packages/lib/src/models/admin/AdminUser.model.js";
-import _db from "../../../packages/lib/src/db.js";
+import AdminUserModel from "@repo/lib/models/admin/AdminUser";
+import _db from "@repo/lib/db";
 import { JWT_SECRET_ADMIN } from "../../../packages/config/config.js";
 
 export function authMiddlewareAdmin(handler, allowedRoles = []) {

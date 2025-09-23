@@ -84,7 +84,7 @@ const DropdownManager = ({
   listDescription: string;
   items: DropdownItem[];
   type: string;
-  onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete' | 'move') => void;
+  onUpdate: (item: Partial<DropdownItem> & { newIndex?: number }, action: 'add' | 'edit' | 'delete' | 'move') => void;
   isLoading: boolean;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);

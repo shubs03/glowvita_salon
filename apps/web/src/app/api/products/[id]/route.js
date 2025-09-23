@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import _db from "../../../../../../packages/lib/src/db.js";
-import ProductModel from "../../../../../../packages/lib/src/models/Vendor/Product.model.js";
-import ProductCategoryModel from "../../../../../../packages/lib/src/models/admin/ProductCategory.model.js";
+import _db from "@repo/lib/db";
+import ProductModel from "@repo/lib/models/vendor/Product";
+import ProductCategoryModel from "@repo/lib/models/admin/ProductCategory";
 
 // GET - Fetch a single product by ID
 export async function GET(request, { params }) {

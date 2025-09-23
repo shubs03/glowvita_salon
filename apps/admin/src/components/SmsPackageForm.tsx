@@ -18,16 +18,17 @@ import { toast } from 'sonner';
 
 // Define SmsPackage interface locally since we're not importing it from the API
 export interface SmsPackage {
-  id?: string;
+  id: string;
   _id?: string;
   name: string;
   description: string;
-  smsCount: number | string;
-  price: number | string;
-  validityDays: number | string;
+  smsCount: number;
+  price: number;
+  validityDays: number;
   isPopular: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  features: string[];
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 interface SmsPackageFormProps {
@@ -39,12 +40,14 @@ interface SmsPackageFormProps {
 }
 
 const getDefaultFormData = (): SmsPackage => ({
+  id: '',
   name: '',
   description: '',
   smsCount: 1000,
   price: 0,
   validityDays: 30,
-  isPopular: false
+  isPopular: false,
+  features: []
 });
 
 export function SmsPackageForm({ 

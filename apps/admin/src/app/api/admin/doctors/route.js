@@ -1,7 +1,7 @@
 
 
 import _db from "../../../../../../../packages/lib/src/db.js";
-import DoctorModel from "../../../../../../../packages/lib/src/models/Vendor/Docters.model.js";
+import DoctorModel from "@repo/lib/models/Vendor/Docters.model";
 import { ReferralModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
 import SubscriptionPlan from "../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";

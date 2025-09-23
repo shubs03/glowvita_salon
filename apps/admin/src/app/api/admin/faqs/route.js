@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
-import _db from '../../../../../../../packages/lib/src/db.js';
-import Faq from '../../../../../../../packages/lib/src/models/admin/Faq.model.js';
+import { NextResponse } from "next/server";
+import _db from '@repo/lib/db';
+import Faq from '@repo/lib/models/admin/Faq';
 import { authMiddlewareAdmin } from '../../../../middlewareAdmin.js';
 
 await _db();

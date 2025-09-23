@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    "./store": "./src/store.js",
-    "./hooks": "./src/hooks.js",
-    "./provider": "./src/provider.jsx",
+    "./store": "./src/store.ts",
+    "./hooks": "./src/hooks.ts",
+    "./provider": "./src/provider.tsx",
+    "./provider.jsx": "./src/provider.jsx",
     "./api": "./src/services/api.js",
     "./services/api": "./src/services/api.js",
     "./apis/example": "./src/apis/example-api.js",
