@@ -92,26 +92,29 @@ export function Step1_Services({ selectedServices, onSelectService, currentStep,
         </div>
         
         {/* Tab-like navigation for categories */}
-        <div className="relative mb-8">
-            <div className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
-                {serviceCategories.map(category => (
-                    <Button 
-                        key={category.name}
-                        variant={activeCategory === category.name ? 'default' : 'outline'}
-                        className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${
-                            activeCategory === category.name ? 'shadow-lg' : 'hover:bg-primary/5 hover:border-primary/50'
-                        }`}
-                        onClick={() => setActiveCategory(category.name)}
-                    >
-                        {category.name}
-                    </Button>
-                ))}
+        <div className="sticky top-0 z-10 py-4 bg-background/80 backdrop-blur-sm -mx-6 px-6">
+            <div className="relative">
+                <div className="flex space-x-2 overflow-x-auto pb-2 no-scrollbar">
+                    {serviceCategories.map(category => (
+                        <Button 
+                            key={category.name}
+                            variant={activeCategory === category.name ? 'default' : 'outline'}
+                            className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${
+                                activeCategory === category.name ? 'shadow-lg' : 'hover:bg-primary/5 hover:border-primary/50'
+                            }`}
+                            onClick={() => setActiveCategory(category.name)}
+                        >
+                            {category.name}
+                        </Button>
+                    ))}
+                </div>
+                <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
             </div>
-            <div className="absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
         </div>
 
+
         {/* Services List */}
-        <div className="space-y-4">
+        <div className="space-y-4 pt-4">
             {servicesToDisplay.map(service => {
                 const isSelected = selectedServices.some(s => s.name === service.name);
                 return (
