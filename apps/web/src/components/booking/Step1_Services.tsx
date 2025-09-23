@@ -53,7 +53,7 @@ const allServices = Object.values(services).flat();
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
     return (
-        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4 pt-8">
+        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
             {steps.map((step, index) => (
                 <React.Fragment key={step}>
                     <button
