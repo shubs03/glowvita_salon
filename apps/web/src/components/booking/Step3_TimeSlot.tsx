@@ -108,7 +108,7 @@ export function Step3_TimeSlot({
                     </div>
                 </SelectTrigger>
                 <SelectContent>
-                    {staffMembers.map(staff => (
+                    {staffMembers && staffMembers.map(staff => (
                         <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
                     ))}
                 </SelectContent>
