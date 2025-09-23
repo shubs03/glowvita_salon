@@ -1,3 +1,4 @@
+
 @import "@repo/ui/globals.css";
 
 /* Font utility classes */
@@ -219,11 +220,11 @@ input, textarea, select, label {
 }
 
 .animate-slide {
-  animation: slide 20s linear infinite;
+  animation: slide 90s linear infinite;
 }
 
 .animate-slide-rtl {
-  animation: slide-rtl 20s linear infinite;
+  animation: slide-rtl 90s linear infinite;
 }
 
 /* Utility classes for enhanced interactions */
