@@ -45,7 +45,7 @@ function BookingPageContent() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
 
   useEffect(() => {
@@ -97,33 +97,31 @@ function BookingPageContent() {
     });
   };
 
-  const steps = [
-    { id: 1, component: Step1_Services },
-    { id: 2, component: Step2_Staff },
-    { id: 3, component: Step3_TimeSlot },
-  ];
-
   const renderStepContent = () => {
-    const CurrentStepComponent = steps.find(s => s.id === currentStep)?.component;
-
-    if (!CurrentStepComponent) return <div>Step not found</div>;
-
     const props = {
-      selectedServices,
-      onSelectService: handleSelectService,
-      selectedStaff,
-      onSelectStaff: setSelectedStaff,
-      selectedDate,
-      onSelectDate: setSelectedDate,
-      selectedTime,
-      onSelectTime: setSelectedTime,
-      currentStep,
-      setCurrentStep,
-      staffMembers: staffMembers
+        selectedServices,
+        onSelectService: handleSelectService,
+        selectedStaff,
+        onSelectStaff: setSelectedStaff,
+        selectedDate,
+        onSelectDate: setSelectedDate,
+        selectedTime,
+        onSelectTime: setSelectedTime,
+        currentStep,
+        setCurrentStep,
+        staffMembers
     };
     
-    // @ts-ignore
-    return <CurrentStepComponent {...props} />;
+    switch (currentStep) {
+        case 1:
+            return <Step1_Services {...props} />;
+        case 2:
+            return <Step2_Staff {...props} />;
+        case 3:
+            return <Step3_TimeSlot {...props} />;
+        default:
+            return <div>Step not found</div>;
+    }
   };
 
   return (
