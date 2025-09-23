@@ -77,8 +77,8 @@ export function SmsTemplateForm({
         ? {
             ...getDefaultFormData(),
             ...templateData,
-            id: templateData.id || templateData._id,
-            _id: templateData._id || templateData.id
+            id: (templateData.id || templateData._id || ''),
+            _id: (templateData._id || templateData.id || '')
           }
         : getDefaultFormData();
       
@@ -122,8 +122,8 @@ export function SmsTemplateForm({
     try {
       const dataToSubmit = {
         ...formData,
-        id: formData.id || formData._id,
-        _id: formData._id || formData.id
+        id: formData.id || formData._id || '',
+        _id: formData._id || formData.id || ''
       };
       
       await onSubmit(dataToSubmit);
