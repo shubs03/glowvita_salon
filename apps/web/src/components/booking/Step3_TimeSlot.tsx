@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card } from '@repo/ui/card';
+import { Label } from '@repo/ui/label';
 import { addDays, format, isSameDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Users, Clock } from 'lucide-react';
 import {
