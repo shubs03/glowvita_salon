@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card } from '@repo/ui/card';
-import { addDays, format, isSameDay } from 'date-fns';
+import { addDays, format, isSameDay, getMonth, getYear } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Users, Clock } from 'lucide-react';
 import {
   Select,
@@ -22,12 +22,38 @@ const staffMembers = [
     { id: '4', name: 'Emily White' },
 ];
 
-export function Step3_TimeSlot() {
+const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
+    const steps = ['Services', 'Select Professional', 'Time Slot'];
+    return (
+        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
+            {steps.map((step, index) => (
+                <React.Fragment key={step}>
+                    <button
+                        onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+                        className={cn(
+                            "transition-colors",
+                            currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
+                            currentStep === index + 1 && "text-primary font-semibold"
+                        )}
+                    >
+                        {step}
+                    </button>
+                    {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
+                </React.Fragment>
+            ))}
+        </nav>
+    );
+};
+
+export function Step3_TimeSlot({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedStaff, setSelectedStaff] = useState('1');
 
-  const dates = Array.from({ length: 14 }, (_, i) => addDays(new Date(), i));
+  const dates = useMemo(() => Array.from({ length: 365 }, (_, i) => addDays(new Date(), i)), []);
+  
+  const currentMonthYear = format(selectedDate, 'MMMM yyyy');
+
   const timeSlots = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "13:00", "13:30", "14:00", "14:30", "15:00", "16:00", "16:30", "17:00"];
 
   const handleDateScroll = (direction: 'left' | 'right') => {
@@ -40,6 +66,7 @@ export function Step3_TimeSlot() {
 
   return (
     <div className="w-full">
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
         <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
                 <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -68,23 +95,10 @@ export function Step3_TimeSlot() {
             </Select>
         </div>
         
-        {/* Date Scroller with Navigation */}
-        <div className="flex items-center gap-2 mb-6">
-            <div id="date-scroller" className="flex-1 flex space-x-2 overflow-x-auto pb-2 no-scrollbar">
-                {dates.map(date => (
-                    <Button
-                        key={date.toISOString()}
-                        variant={isSameDay(date, selectedDate) ? 'default' : 'outline'}
-                        className="flex flex-col h-auto px-4 py-3 flex-shrink-0 rounded-xl shadow-sm"
-                        onClick={() => setSelectedDate(date)}
-                    >
-                        <span className="font-semibold">{format(date, 'EEE')}</span>
-                        <span className="text-2xl font-bold my-1">{format(date, 'd')}</span>
-                        <span className="text-xs">{format(date, 'MMM')}</span>
-                    </Button>
-                ))}
-            </div>
-            <div className="flex flex-col gap-1">
+        {/* Date Scroller with Month and Navigation */}
+        <div className="flex items-center justify-between mb-2">
+            <h3 className="font-semibold text-lg">{currentMonthYear}</h3>
+            <div className="flex gap-1">
                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('left')}>
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -92,6 +106,20 @@ export function Step3_TimeSlot() {
                     <ChevronRight className="h-4 w-4" />
                 </Button>
             </div>
+        </div>
+        <div id="date-scroller" className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
+            {dates.map(date => (
+                <Button
+                    key={date.toISOString()}
+                    variant={isSameDay(date, selectedDate) ? 'default' : 'outline'}
+                    className="flex flex-col h-auto px-4 py-2 flex-shrink-0 rounded-xl shadow-sm"
+                    onClick={() => setSelectedDate(date)}
+                >
+                    <span className="font-semibold">{format(date, 'EEE')}</span>
+                    <span className="text-2xl font-bold my-1">{format(date, 'd')}</span>
+                    <span className="text-xs">{format(date, 'MMM')}</span>
+                </Button>
+            ))}
         </div>
 
         {/* Time Slots */}
