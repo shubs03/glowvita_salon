@@ -141,7 +141,7 @@ function BookingPageContent() {
           <X className="h-5 w-5" />
         </Button>
       </header>
-      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 px-8">
+      <div className="flex-1 grid lg:grid-cols-12 gap-8 px-8">
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto no-scrollbar">
             <div className="max-w-4xl mx-auto pb-24 lg:pb-8 pt-8">
                 {renderStepContent()}
@@ -175,66 +175,66 @@ function BookingPageContent() {
       </div>
 
       <Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
-        <DialogContent className="sm:max-w-lg bg-secondary/80 backdrop-blur-md border-border/30 rounded-2xl">
+        <DialogContent className="sm:max-w-4xl bg-secondary/80 backdrop-blur-md border-border/30 rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-center">Confirm Your Booking</DialogTitle>
             <DialogDescription className="text-center">
               Please review your appointment details before confirming.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-6">
-            <Card className="bg-background/80">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Scissors className="h-5 w-5 text-primary" />
-                  Selected Services
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
+          <div className="py-4 grid md:grid-cols-2 gap-6 max-h-[60vh] md:max-h-none md:overflow-y-visible">
+              <Card className="bg-background/80 flex flex-col">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Scissors className="h-5 w-5 text-primary" />
+                    Selected Services
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto space-y-2">
                   {selectedServices.map(s => (
-                    <li key={s.name} className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
+                    <div key={s.name} className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
                       <span className="text-muted-foreground">{s.name}</span>
                       <span className="font-semibold">₹{s.price}</span>
-                    </li>
+                    </div>
                   ))}
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-background/80">
-               <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  Appointment Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">With:</span> {selectedStaff?.name}
-                </div>
-                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">On:</span> {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-semibold">At:</span> {selectedTime}
-                </div>
-              </CardContent>
-            </Card>
-
-             <Card className="bg-primary/10 border-primary/20">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-primary">Total Amount</span>
-                    <span className="text-2xl font-bold text-primary">
-                      ₹{selectedServices.reduce((acc, s) => acc + parseFloat(s.price), 0).toFixed(2)}
-                    </span>
-                  </div>
                 </CardContent>
-             </Card>
+              </Card>
+
+              <div className="space-y-4">
+                  <Card className="bg-background/80">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-primary" />
+                        Appointment Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold">With:</span> {selectedStaff?.name}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold">On:</span> {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold">At:</span> {selectedTime}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-primary/10 border-primary/20">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-bold text-primary">Total Amount</span>
+                          <span className="text-2xl font-bold text-primary">
+                            ₹{selectedServices.reduce((acc, s) => acc + parseFloat(s.price), 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </CardContent>
+                  </Card>
+              </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)}>Edit Booking</Button>
