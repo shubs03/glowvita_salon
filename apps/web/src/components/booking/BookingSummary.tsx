@@ -70,7 +70,7 @@ export function BookingSummary({
                             <Separator />
                             {selectedServices.map(service => (
                                 <div key={service.name} className="flex justify-between items-center text-sm">
-                                    <span>{service.name}</span>
+                                    <span className="line-clamp-2">{service.name}</span>
                                     <span className="font-medium">₹{service.price}</span>
                                 </div>
                             ))}
@@ -101,8 +101,8 @@ export function BookingSummary({
     }
 
   return (
-    <Card className="shadow-2xl shadow-primary/10 border-border/50 bg-background rounded-2xl">
-      <CardHeader className="p-6 border-b">
+    <Card className="shadow-2xl shadow-primary/10 border-border/50 bg-background rounded-2xl flex flex-col max-h-[calc(100vh-8rem)]">
+      <CardHeader className="p-6 border-b flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="relative">
             <Image src={salonInfo.image} alt={salonInfo.name} width={64} height={64} className="rounded-lg shadow-md border-2 border-background" data-ai-hint="salon exterior" />
@@ -116,7 +116,7 @@ export function BookingSummary({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-6 space-y-4">
+      <CardContent className="p-6 space-y-4 flex-grow overflow-y-auto no-scrollbar">
         <div className="space-y-3">
           <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4" />Your Booking Details</h4>
           
@@ -174,7 +174,7 @@ export function BookingSummary({
           <p>₹{total.toFixed(2)}</p>
         </div>
       </CardContent>
-      <CardFooter className="p-6">
+      <CardFooter className="p-6 flex-shrink-0">
         <Button 
           className="w-full h-12 text-base group" 
           size="lg" 
