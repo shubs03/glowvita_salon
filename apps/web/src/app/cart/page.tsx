@@ -11,6 +11,7 @@ import { X, Plus, Minus, Heart, Shield, Tag, ShoppingCart, ArrowLeft } from 'luc
 import { PageContainer } from '@repo/ui/page-container';
 import Link from 'next/link';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
+import { useRouter } from 'next/navigation';
 
 const initialCartItems = [
   { id: 1, name: 'Aura Revitalizing Serum', price: 68.00, quantity: 1, image: 'https://picsum.photos/seed/cart1/200/200', hint: 'skincare product' },
@@ -19,6 +20,7 @@ const initialCartItems = [
 
 const suggestedProducts = [
   {
+    id: '5',
     name: 'Terra Exfoliating Scrub',
     description: 'A gentle scrub for a fresh look.',
     price: 48.00,
@@ -30,6 +32,7 @@ const suggestedProducts = [
     isNew: true,
   },
   {
+    id: '6',
     name: 'Zen Calming Moisturizer',
     description: 'Soothe your skin with our calming moisturizer.',
     price: 45.00,
@@ -40,6 +43,7 @@ const suggestedProducts = [
     vendorName: 'Serenity Skincare',
   },
   {
+    id: '7',
     name: 'Sol Sunscreen SPF 50',
     description: 'Broad-spectrum protection from the sun.',
     price: 32.00,
@@ -50,6 +54,7 @@ const suggestedProducts = [
     vendorName: 'SunCare Co.',
   },
   {
+    id: '8',
     name: 'Luxe Gold Peel-Off Mask',
     description: 'Indulgent peel-off mask for radiant skin.',
     price: 55.00,
@@ -63,6 +68,7 @@ const suggestedProducts = [
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState(initialCartItems);
+  const router = useRouter();
   
   const handleQuantityChange = (id: number, delta: number) => {
     setCartItems(cartItems.map(item => 
@@ -143,6 +149,7 @@ export default function CartPage() {
                   {suggestedProducts.slice(0,3).map((product, index) => (
                     <ProductCard 
                       key={index} 
+                      id={product.id}
                       name={product.name}
                       description={product.description}
                       price={product.price}
@@ -152,6 +159,7 @@ export default function CartPage() {
                       reviewCount={product.reviewCount}
                       vendorName={product.vendorName}
                       isNew={product.isNew}
+                      onClick={() => router.push(`/product-details/${product.id}`)}
                     />
                   ))}
                 </div>

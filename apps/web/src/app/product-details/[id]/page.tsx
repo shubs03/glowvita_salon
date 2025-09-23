@@ -1,18 +1,30 @@
-
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown } from 'lucide-react';
-import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 
-const product = {
+// Define product type
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  images: string[];
+  rating: number;
+  reviews: number;
+  details: { title: string; content: string }[];
+  specifications: Record<string, string>;
+}
+
+// Default product data
+const defaultProduct: Product = {
   id: '1',
   name: 'Aura Revitalizing Serum',
   price: 68.00,
@@ -62,10 +74,46 @@ const qna = [
 export default function ProductDetailsPage() {
   const params = useParams();
   const { id } = params;
+  const [product, setProduct] = useState<Product>(defaultProduct);
   const [quantity, setQuantity] = useState(1);
-  const [mainImage, setMainImage] = useState(product.images[0]);
+  const [mainImage, setMainImage] = useState('');
+  const [loading, setLoading] = useState(true);
+  
+  // Fetch product data based on ID
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        // In a real app, you would fetch from an API
+        // For now, we'll simulate with a timeout and use default product
+        // but update the ID to match the URL parameter
+        setTimeout(() => {
+          setProduct(prev => ({ ...prev, id: id as string }));
+          setMainImage(defaultProduct.images[0]);
+          setLoading(false);
+        }, 500);
+      } catch (error) {
+        console.error('Error fetching product:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
   
   const totalBoughtTogetherPrice = broughtTogether.reduce((acc, p) => acc + p.price, 0);
+
+  if (loading) {
+    return (
+      <PageContainer className='max-w-7xl'>
+        <div className="flex justify-center items-center h-96">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer className='max-w-7xl'>

@@ -1,7 +1,9 @@
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
+import { useRouter } from 'next/navigation';
 
 const products = [
   {
+    id: '1',
     name: 'Aura Serum',
     description: 'Revitalizing serum for a radiant glow.',
     price: 68.00,
@@ -13,6 +15,7 @@ const products = [
     isNew: true,
   },
   {
+    id: '2',
     name: 'Chroma Balm',
     description: 'Hydrating lip balm with a hint of color.',
     price: 24.00,
@@ -23,6 +26,7 @@ const products = [
     vendorName: 'Chroma Beauty',
   },
   {
+    id: '3',
     name: 'Zen Mist',
     description: 'Calming facial mist for instant hydration.',
     price: 35.00,
@@ -33,6 +37,7 @@ const products = [
     vendorName: 'Serenity Skincare',
   },
   {
+    id: '4',
     name: 'Terra Scrub',
     description: 'Exfoliating body scrub with natural minerals.',
     price: 48.00,
@@ -46,6 +51,8 @@ const products = [
 ];
 
 export function FeaturedProducts() {
+  const router = useRouter();
+
   return (
     <section className="py-20 md:py-28 bg-secondary/30">
       <div className="container mx-auto px-4">
@@ -57,7 +64,9 @@ export function FeaturedProducts() {
           {products.map((product, index) => (
             <ProductCard 
               key={index} 
+              id={product.id}
               name={product.name}
+              description={product.description}
               price={product.price}
               image={product.image}
               hint={product.hint}
@@ -65,6 +74,7 @@ export function FeaturedProducts() {
               reviewCount={product.reviewCount}
               vendorName={product.vendorName}
               isNew={product.isNew}
+              onClick={() => router.push(`/product-details/${product.id}`)}
             />
           ))}
         </div>

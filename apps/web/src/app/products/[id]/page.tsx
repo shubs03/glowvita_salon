@@ -22,9 +22,9 @@ import { cn } from '@repo/ui/cn';
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState('');
   const [selectedTab, setSelectedTab] = useState('description');
@@ -45,7 +45,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
           setError(data.message || 'Product not found');
         }
       } catch (err) {
-        setError('Failed to fetch product');
+        setError('Failed to fetch product details. Please try again later.');
         console.error('Error fetching product:', err);
       } finally {
         setLoading(false);
@@ -100,7 +100,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             <ShieldCheck className="h-8 w-8 text-red-500" />
           </div>
           <h2 className="text-2xl font-bold mb-2">Error Loading Product</h2>
-          <p className="text-muted-foreground mb-6">{error}</p>
+          <p className="text-muted-foreground mb-6">Failed to fetch product details. Please try again later.</p>
           <div className="flex gap-4 justify-center">
             <Button variant="outline" onClick={() => router.back()} className="rounded-xl">
               Go Back

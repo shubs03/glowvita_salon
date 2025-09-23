@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
@@ -42,6 +43,7 @@ const brands = [
 ];
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -881,6 +883,7 @@ export default function ProductsPage() {
                 {filteredProducts.map((product) => (
                   <div key={product.id} className="group">
                     <ProductCard 
+                      id={product.id}
                       name={product.name}
                       price={product.price}
                       image={product.image}
@@ -889,6 +892,7 @@ export default function ProductsPage() {
                       reviewCount={product.reviewCount}
                       vendorName={product.vendorName}
                       isNew={product.isNew}
+                      onClick={() => router.push(`/product-details/${product.id}`)}
                     />
                   </div>
                 ))}
