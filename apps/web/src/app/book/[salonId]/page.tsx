@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -60,7 +61,7 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-secondary/30">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-secondary/10 to-background">
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between h-20 px-4 md:px-8 border-b z-20 bg-background/80 backdrop-blur-sm">
         <Button variant="ghost" onClick={handlePrevStep} className="flex items-center gap-2">
@@ -68,13 +69,14 @@ export default function BookingPage() {
           {currentStep === 1 ? 'Back to Salon' : 'Back'}
         </Button>
         {/* Step Indicator */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
             {steps.map(step => (
                 <div key={step.id} className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${currentStep >= step.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                        {step.id}
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all duration-300 ${currentStep >= step.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                        {currentStep > step.id ? '✔' : step.id}
                     </div>
-                    <span className={`hidden md:inline ${currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'}`}>{step.name}</span>
+                    <span className={`hidden md:inline text-sm ${currentStep >= step.id ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>{step.name}</span>
+                    {step.id < steps.length && <div className={`hidden sm:block w-8 h-0.5 rounded-full ${currentStep > step.id ? 'bg-primary' : 'bg-muted'}`} />}
                 </div>
             ))}
         </div>
@@ -83,7 +85,7 @@ export default function BookingPage() {
         </Button>
       </header>
 
-      <div className="flex-1 lg:grid lg:grid-cols-12 lg:gap-8 overflow-hidden">
+      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 overflow-hidden">
         {/* Main Content Area */}
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto p-4 sm:p-6 md:p-8 no-scrollbar">
             <div className="max-w-4xl mx-auto">

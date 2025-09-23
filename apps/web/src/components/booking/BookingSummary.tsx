@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui/c
 import { Button } from '@repo/ui/button';
 import { Separator } from '@repo/ui/separator';
 import Image from 'next/image';
-import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, CheckCircle } from 'lucide-react';
+import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, CheckCircle, Gift } from 'lucide-react';
 
 const salonInfo = {
   name: "Pedal Barbers",
@@ -28,22 +28,22 @@ export function BookingSummary({ selectedServices, onNextStep, currentStep }: Bo
     
     const stepDetails = [
       { step: 1, label: 'Select Staff', enabled: selectedServices.length > 0 },
-      { step: 2, label: 'Find a Time', enabled: true }, // Assuming staff is selected
-      { step: 3, label: 'Confirm Booking', enabled: true }, // Assuming time is selected
+      { step: 2, label: 'Find a Time', enabled: true },
+      { step: 3, label: 'Confirm Booking', enabled: true },
       { step: 4, label: 'Finish', enabled: false },
     ];
     
     const nextStepInfo = stepDetails.find(s => s.step === currentStep);
 
   return (
-    <Card className="shadow-lg border-border/50 bg-background rounded-xl">
-      <CardHeader className="p-6">
+    <Card className="shadow-2xl shadow-primary/10 border-border/50 bg-background rounded-2xl">
+      <CardHeader className="p-6 border-b">
         <div className="flex items-center gap-4">
           <div className="relative">
             <Image src={salonInfo.image} alt={salonInfo.name} width={64} height={64} className="rounded-lg shadow-md border-2 border-background" data-ai-hint="salon exterior" />
           </div>
           <div>
-            <CardTitle className="font-semibold text-lg">{salonInfo.name}</CardTitle>
+            <CardTitle className="font-bold text-lg">{salonInfo.name}</CardTitle>
             <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
               <Star className="h-4 w-4 text-yellow-400 fill-current" />
               <span>{salonInfo.rating} ({salonInfo.reviews} reviews)</span>
@@ -52,19 +52,25 @@ export function BookingSummary({ selectedServices, onNextStep, currentStep }: Bo
         </div>
       </CardHeader>
       <CardContent className="p-6 space-y-4">
-        {selectedServices.length > 0 && (
+        {selectedServices.length > 0 ? (
           <div className="space-y-3">
-            <h4 className="font-medium text-sm text-muted-foreground">Your selections</h4>
+            <h4 className="font-semibold text-sm text-muted-foreground">Your selections</h4>
             {selectedServices.map((service, index) => (
-              <div key={index} className="flex justify-between items-center text-sm">
+              <div key={index} className="flex justify-between items-center text-sm bg-secondary/50 p-3 rounded-md">
                 <div className="flex-1">
-                  <p className="font-medium text-foreground">{service.name}</p>
+                  <p className="font-semibold text-foreground">{service.name}</p>
                   <p className="text-xs text-muted-foreground">{service.duration}</p>
                 </div>
-                <p className="font-semibold text-foreground">₹{service.price}</p>
+                <p className="font-bold text-foreground">₹{service.price}</p>
               </div>
             ))}
           </div>
+        ) : (
+            <div className="text-center py-8 text-muted-foreground">
+                <Scissors className="h-10 w-10 mx-auto mb-3" />
+                <p className="font-medium">Your cart is empty</p>
+                <p className="text-sm">Select a service to get started</p>
+            </div>
         )}
         
         <Separator className="my-4" />

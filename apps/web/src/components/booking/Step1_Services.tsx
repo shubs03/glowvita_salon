@@ -2,33 +2,47 @@
 "use client";
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Card, CardContent } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
-import { Plus, Check } from 'lucide-react';
+import { Plus, Check, Scissors } from 'lucide-react';
+import { cn } from '@repo/ui/cn';
 
 const serviceCategories = [
     { name: "Hair" },
     { name: "Skin" },
     { name: "Nails" },
-    { name: "Body" }
+    { name: "Body" },
+    { name: "Massage" },
+    { name: "Waxing" },
+    { name: "Facials" }
 ];
 
 const services = {
     "Hair": [
-        { name: "Signature Haircut", duration: "60 min", price: "120.00" },
-        { name: "Color & Highlights", duration: "120 min", price: "250.00" },
-        { name: "Keratin Treatment", duration: "90 min", price: "180.00" }
+        { name: "Signature Haircut", duration: "60 min", price: "120.00", image: 'https://picsum.photos/seed/haircut/200/200' },
+        { name: "Color & Highlights", duration: "120 min", price: "250.00", image: 'https://picsum.photos/seed/haircolor/200/200' },
+        { name: "Keratin Treatment", duration: "90 min", price: "180.00", image: 'https://picsum.photos/seed/keratin/200/200' }
     ],
     "Skin": [
-        { name: "GlowVita Facial", duration: "75 min", price: "150.00" },
-        { name: "HydraFacial", duration: "60 min", price: "180.00" }
+        { name: "GlowVita Facial", duration: "75 min", price: "150.00", image: 'https://picsum.photos/seed/facial/200/200' },
+        { name: "HydraFacial", duration: "60 min", price: "180.00", image: 'https://picsum.photos/seed/hydra/200/200' }
     ],
     "Nails": [
-        { name: "Classic Manicure", duration: "45 min", price: "60.00" },
-        { name: "Gel Pedicure", duration: "60 min", price: "80.00" }
+        { name: "Classic Manicure", duration: "45 min", price: "60.00", image: 'https://picsum.photos/seed/manicure/200/200' },
+        { name: "Gel Pedicure", duration: "60 min", price: "80.00", image: 'https://picsum.photos/seed/pedicure/200/200' }
     ],
     "Body": [
-        { name: "Deep Tissue Massage", duration: "90 min", price: "200.00" }
+        { name: "Deep Tissue Massage", duration: "90 min", price: "200.00", image: 'https://picsum.photos/seed/massage/200/200' }
+    ],
+    "Massage": [
+        { name: "Swedish Massage", duration: "60 min", price: "180.00", image: 'https://picsum.photos/seed/swedish/200/200' }
+    ],
+    "Waxing": [
+        { name: "Full Body Wax", duration: "120 min", price: "300.00", image: 'https://picsum.photos/seed/waxing/200/200' }
+    ],
+    "Facials": [
+        { name: "Anti-Aging Facial", duration: "75 min", price: "160.00", image: 'https://picsum.photos/seed/antiaging/200/200' }
     ]
 };
 
@@ -37,47 +51,61 @@ export function Step1_Services({ selectedServices, onSelectService }: { selected
 
   return (
     <div className="w-full">
-        <h2 className="text-2xl font-bold mb-4">Select Your Services</h2>
+        <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+                <div className="p-3 bg-primary/10 rounded-full text-primary">
+                    <Scissors className="h-6 w-6" />
+                </div>
+                <h2 className="text-3xl font-bold font-headline">Select Your Services</h2>
+            </div>
+            <p className="text-muted-foreground">Choose one or more services you'd like to book.</p>
+        </div>
         
         {/* Tab-like navigation for categories */}
-        <div className="border-b border-gray-200 mb-6">
-            <div className="flex space-x-4">
+        <div className="relative mb-8">
+            <div className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
                 {serviceCategories.map(category => (
-                    <button 
+                    <Button 
                         key={category.name}
-                        className={`py-2 px-1 text-sm font-medium transition-colors duration-200 ${
-                            activeCategory === category.name 
-                                ? 'border-b-2 border-primary text-primary' 
-                                : 'border-b-2 border-transparent text-muted-foreground hover:text-foreground'
+                        variant={activeCategory === category.name ? 'default' : 'outline'}
+                        className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${
+                            activeCategory === category.name ? 'shadow-lg' : 'hover:bg-primary/5 hover:border-primary/50'
                         }`}
                         onClick={() => setActiveCategory(category.name)}
                     >
                         {category.name}
-                    </button>
+                    </Button>
                 ))}
             </div>
+            <div className="absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
         </div>
 
         {/* Services List */}
         <div className="space-y-4">
-            {services[activeCategory].map(service => {
+            {(services[activeCategory] || []).map(service => {
                 const isSelected = selectedServices.some(s => s.name === service.name);
                 return (
                     <Card 
                         key={service.name} 
-                        className={`p-4 flex justify-between items-center transition-all duration-200 ${isSelected ? 'border-primary bg-primary/5' : 'hover:border-gray-300'}`}
+                        className={cn(
+                            'p-4 flex items-center gap-4 transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-md',
+                            isSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-transparent'
+                        )}
+                        onClick={() => onSelectService(service)}
                     >
-                        <div>
+                        <div className="relative w-20 h-20 rounded-md overflow-hidden flex-shrink-0">
+                            <Image src={service.image} alt={service.name} layout="fill" className="object-cover" />
+                        </div>
+                        <div className="flex-1">
                             <h3 className="font-semibold">{service.name}</h3>
                             <p className="text-sm text-muted-foreground">{service.duration}</p>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <span className="font-semibold text-lg">₹{service.price}</span>
+                        <div className="flex items-center gap-4 text-right">
+                            <span className="font-bold text-lg text-primary">₹{service.price}</span>
                             <Button 
                                 size="sm"
                                 variant={isSelected ? "default" : "secondary"}
-                                onClick={() => onSelectService(service)}
-                                className="w-28"
+                                className="w-28 shadow-sm transition-all"
                             >
                                 {isSelected ? <Check className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
                                 {isSelected ? 'Selected' : 'Add'}
