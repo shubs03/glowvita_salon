@@ -40,7 +40,7 @@ const staffMembers = [
 export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>({ id: '1', name: 'Any Professional', role: '', image: '' });
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   
@@ -83,7 +83,7 @@ export default function BookingPage() {
       onSelectService: handleSelectService,
       selectedStaff,
       onSelectStaff: setSelectedStaff,
-      staffMembers, // Pass staffMembers to Step 2 and 3
+      staffMembers,
       selectedDate,
       onSelectDate: setSelectedDate,
       selectedTime,
@@ -114,16 +114,16 @@ export default function BookingPage() {
         </Button>
       </header>
 
-      <div className="flex-1 grid lg:grid-cols-12 lg:gap-2 overflow-hidden px-4 md:px-12">
+      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 px-4 md:px-12">
         {/* Main Content Area (scrollable) */}
-        <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto p-4 sm:p-6 md:p-8 no-scrollbar">
+        <main className="lg:col-span-7 xl:col-span-8 py-8">
             <div className="max-w-4xl mx-auto pb-24 lg:pb-0">
                 {renderStepContent()}
             </div>
         </main>
         
         {/* Desktop Sidebar (sticky) */}
-        <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 p-6">
+        <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 py-8">
           <div className="sticky top-24">
             <BookingSummary 
               selectedServices={selectedServices}
@@ -152,3 +152,4 @@ export default function BookingPage() {
     </div>
   );
 }
+
