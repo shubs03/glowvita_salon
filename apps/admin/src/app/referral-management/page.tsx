@@ -106,7 +106,7 @@ export default function ReferralManagementPage() {
     dispatch(openModal({ type, settings }));
   };
 
-  const handleCloseModal = () => {
+  const _handleCloseModal = () => {
     dispatch(closeModal());
   };
 
@@ -136,13 +136,13 @@ export default function ReferralManagementPage() {
     dispatch(updateModalSettings({ [field]: value }));
   };
 
-  const handleSaveChanges = async () => {
+  const _handleSaveChanges = async () => {
     if (modal.modalType && modal.settings) {
       const result = await updateSettings({
         referralType: modal.modalType,
         settings: modal.settings,
       });
-      if (result.data) {
+      if ('data' in result && result.data) {
         switch (modal.modalType) {
           case 'C2C':
             dispatch(setC2CSettings(result.data.settings));
@@ -427,7 +427,7 @@ export default function ReferralManagementPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={modal.isOpen} onOpenChange={handleCloseModal}>
+      <Dialog open={modal.isOpen} onOpenChange={_handleCloseModal}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit {modal.modalType} Referral Settings</DialogTitle>
@@ -444,8 +444,8 @@ export default function ReferralManagementPage() {
                     <div className="space-y-2">
                       <Label>Bonus Type</Label>
                       <Select
-                        value={modal.settings.referrerBonus?.bonusType || 'amount'}
-                        onValueChange={(v) => handleReferrerBonusChange('bonusType', v)}
+                        value={modal.settings.referrerBonus?.bonusType}
+                        onValueChange={(v: 'amount' | 'discount') => handleReferrerBonusChange('bonusType', v)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select type" />
@@ -461,7 +461,7 @@ export default function ReferralManagementPage() {
                       <Input
                         id="bonus-value"
                         type="number"
-                        value={modal.settings.referrerBonus?.bonusValue || 0}
+                        value={modal.settings.referrerBonus?.bonusValue}
                         onChange={(e) => handleReferrerBonusChange('bonusValue', Number(e.target.value))}
                       />
                     </div>
@@ -471,7 +471,7 @@ export default function ReferralManagementPage() {
                     <Input
                       id="credit-time"
                       placeholder="e.g., 7"
-                      value={modal.settings.referrerBonus?.creditTime?.split(' ')[0] || '7'}
+                      value={modal.settings.referrerBonus?.creditTime?.split(' ')[0]}
                       onChange={(e) => handleReferrerBonusChange('creditTime', `${e.target.value} days`)}
                     />
                   </div>
@@ -481,8 +481,8 @@ export default function ReferralManagementPage() {
               <div className="space-y-2">
                 <Label>Usage Limit</Label>
                 <RadioGroup
-                  value={modal.settings.usageLimit || 'unlimited'}
-                  onValueChange={(v) => handleModalChange('usageLimit', v)}
+                  value={modal.settings.usageLimit}
+                  onValueChange={(v: 'unlimited' | 'manual') => handleModalChange('usageLimit', v)}
                   className="flex space-x-4"
                 >
                   <div className="flex items-center space-x-2">
@@ -513,7 +513,7 @@ export default function ReferralManagementPage() {
                   <Label className="text-base font-semibold">Referee Bonus</Label>
                   <Switch
                     id="referee-bonus-toggle"
-                    checked={modal.settings.refereeBonus?.enabled || false}
+                    checked={modal.settings.refereeBonus?.enabled}
                     onCheckedChange={(c) => handleRefereeBonusChange('enabled', c)}
                   />
                 </div>
@@ -523,8 +523,8 @@ export default function ReferralManagementPage() {
                       <div className="space-y-2">
                         <Label>Bonus Type</Label>
                         <Select
-                          value={modal.settings.refereeBonus?.bonusType || 'amount'}
-                          onValueChange={(v) => handleRefereeBonusChange('bonusType', v)}
+                          value={modal.settings.refereeBonus?.bonusType}
+                          onValueChange={(v: 'amount' | 'discount') => handleRefereeBonusChange('bonusType', v)}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select type" />
@@ -540,7 +540,7 @@ export default function ReferralManagementPage() {
                         <Input
                           id="referee-bonus-value"
                           type="number"
-                          value={modal.settings.refereeBonus?.bonusValue || 0}
+                          value={modal.settings.refereeBonus?.bonusValue}
                           onChange={(e) => handleRefereeBonusChange('bonusValue', Number(e.target.value))}
                         />
                       </div>
@@ -550,7 +550,7 @@ export default function ReferralManagementPage() {
                       <Input
                         id="referee-credit-time"
                         placeholder="e.g., 7"
-                        value={modal.settings.refereeBonus?.creditTime?.split(' ')[0] || '7'}
+                        value={modal.settings.refereeBonus?.creditTime?.split(' ')[0]}
                         onChange={(e) => handleRefereeBonusChange('creditTime', `${e.target.value} days`)}
                       />
                     </div>
@@ -560,8 +560,8 @@ export default function ReferralManagementPage() {
             </div>
           )}
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={handleCloseModal}>Cancel</Button>
-            <Button type="submit" onClick={handleSaveChanges}>Save Changes</Button>
+            <Button type="button" variant="secondary" onClick={_handleCloseModal}>Cancel</Button>
+            <Button type="submit" onClick={_handleSaveChanges}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
