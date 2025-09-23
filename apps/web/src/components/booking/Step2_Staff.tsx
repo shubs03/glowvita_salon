@@ -35,7 +35,7 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
     );
 };
 
-export function Step2_Staff({ selectedStaff, onSelectStaff, currentStep, setCurrentStep }: { selectedStaff: any, onSelectStaff: (staff: any) => void; currentStep: number; setCurrentStep: (step: number) => void; }) {
+export function Step2_Staff({ selectedStaff, onSelectStaff, currentStep, setCurrentStep }: { selectedStaff: any, onSelectStaff: (staff: any) => void; currentStep: number; setCurrentStep: (step: number) => void; }) => {
 
   return (
     <div className="w-full">
@@ -54,7 +54,7 @@ export function Step2_Staff({ selectedStaff, onSelectStaff, currentStep, setCurr
             <div 
                 className={cn(
                     'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',
-                    !selectedStaff || selectedStaff?.name === 'Any Professional' ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
+                    selectedStaff?.id === 'any' ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
                 )}
                 onClick={() => onSelectStaff({ id: 'any', name: 'Any Professional' })}
             >
@@ -63,7 +63,7 @@ export function Step2_Staff({ selectedStaff, onSelectStaff, currentStep, setCurr
                 </div>
                 <h3 className="font-semibold text-foreground">Any Professional</h3>
                 <p className="text-sm text-muted-foreground">We'll assign an available expert.</p>
-                {(!selectedStaff || selectedStaff?.name === 'Any Professional') && (
+                {selectedStaff?.id === 'any' && (
                     <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                         <CheckCircle className="h-4 w-4" />
                     </div>

@@ -27,10 +27,16 @@ interface Staff {
   image: string;
 }
 
+const staffMembers = [
+    { id: '1', name: 'Jessica Miller', role: 'Lead Stylist', image: 'https://picsum.photos/seed/staff1/400/400', hint: 'female stylist portrait' },
+    { id: '2', name: 'Michael Chen', role: 'Massage Therapist', image: 'https://picsum.photos/seed/staff2/400/400', hint: 'male therapist portrait' },
+    { id: '3', name: 'Emily White', role: 'Esthetician', image: 'https://picsum.photos/seed/staff3/400/400', hint: 'female esthetician portrait' },
+];
+
 export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>({ id: '1', name: 'Any Professional', role: '', image: '' });
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
@@ -102,6 +108,7 @@ export default function BookingPage() {
       onSelectTime: setSelectedTime,
       currentStep,
       setCurrentStep,
+      staffMembers: staffMembers
     };
     
     // @ts-ignore

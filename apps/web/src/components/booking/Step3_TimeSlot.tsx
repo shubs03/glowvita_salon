@@ -84,6 +84,8 @@ export function Step3_TimeSlot({
     }
   }, [selectedDate]);
 
+  const allProfessionals = [{ id: 'any', name: 'Any Professional' }, ...(staffMembers || [])];
+
   return (
     <div className="w-full">
         <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
@@ -100,7 +102,7 @@ export function Step3_TimeSlot({
         {/* Staff Selector */}
         <div className="mb-6 max-w-sm">
             <Label htmlFor="staff-select" className="text-sm font-medium">Professional</Label>
-            <Select value={selectedStaff?.id || '1'} onValueChange={(staffId) => onSelectStaff(staffMembers.find(s => s.id === staffId))}>
+            <Select value={selectedStaff?.id || 'any'} onValueChange={(staffId) => onSelectStaff(allProfessionals.find(s => s.id === staffId))}>
                 <SelectTrigger id="staff-select" className="mt-1">
                     <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-muted-foreground" />
@@ -108,7 +110,7 @@ export function Step3_TimeSlot({
                     </div>
                 </SelectTrigger>
                 <SelectContent>
-                    {staffMembers && staffMembers.map(staff => (
+                    {(allProfessionals || []).map(staff => (
                         <SelectItem key={staff.id} value={staff.id}>{staff.name}</SelectItem>
                     ))}
                 </SelectContent>
