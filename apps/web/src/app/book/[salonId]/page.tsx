@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -23,13 +24,19 @@ interface Staff {
   image: string;
 }
 
+const steps = [
+  { id: 1, component: Step1_Services, label: "Services" },
+  { id: 2, component: Step2_Staff, label: "Select Professional" },
+  { id: 3, component: Step3_TimeSlot, label: "Time Slot" },
+];
+
 export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-
+  
   const handleNextStep = () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
@@ -47,7 +54,7 @@ export default function BookingPage() {
       window.history.back();
     }
   };
-
+  
   const handleSelectService = (service: Service) => {
     setSelectedServices(prev => {
       const isSelected = prev.some(s => s.name === service.name);
@@ -60,39 +67,25 @@ export default function BookingPage() {
   };
 
   const renderStepContent = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <Step1_Services
-            selectedServices={selectedServices}
-            onSelectService={handleSelectService}
-            currentStep={currentStep}
-            setCurrentStep={setCurrentStep}
-          />
-        );
-      case 2:
-        return (
-          <Step2_Staff
-            selectedStaff={selectedStaff}
-            onSelectStaff={setSelectedStaff}
-            currentStep={currentStep}
-            setCurrentStep={setCurrentStep}
-          />
-        );
-      case 3:
-        return (
-          <Step3_TimeSlot
-            selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
-            selectedTime={selectedTime}
-            onSelectTime={setSelectedTime}
-            currentStep={currentStep}
-            setCurrentStep={setCurrentStep}
-          />
-        );
-      default:
-        return <div>Step not found</div>;
-    }
+    const CurrentStepComponent = steps.find(s => s.id === currentStep)?.component;
+
+    if (!CurrentStepComponent) return <div>Step not found</div>;
+
+    const props = {
+      selectedServices,
+      onSelectService: handleSelectService,
+      selectedStaff,
+      onSelectStaff: setSelectedStaff,
+      selectedDate,
+      onSelectDate: setSelectedDate,
+      selectedTime,
+      onSelectTime: setSelectedTime,
+      currentStep,
+      setCurrentStep,
+    };
+    
+    // @ts-ignore
+    return <CurrentStepComponent {...props} />;
   };
 
   return (
@@ -113,15 +106,15 @@ export default function BookingPage() {
         </Button>
       </header>
 
-      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 overflow-hidden px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 overflow-hidden">
         {/* Main Content Area (scrollable) */}
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto p-4 sm:p-6 md:p-8 no-scrollbar">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-4xl mx-auto pb-24 lg:pb-0">
                 {renderStepContent()}
             </div>
         </main>
         
-        {/* Sidebar (sticky) */}
+        {/* Desktop Sidebar (sticky) */}
         <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 p-6">
           <div className="sticky top-24">
             <BookingSummary 
@@ -134,6 +127,19 @@ export default function BookingPage() {
             />
           </div>
         </aside>
+      </div>
+
+      {/* Mobile & Tablet Footer (sticky) */}
+      <div className="block lg:hidden fixed bottom-0 left-0 right-0 z-30">
+        <BookingSummary 
+            selectedServices={selectedServices}
+            selectedStaff={selectedStaff}
+            selectedDate={selectedDate}
+            selectedTime={selectedTime}
+            onNextStep={handleNextStep}
+            currentStep={currentStep}
+            isMobileFooter={true}
+        />
       </div>
     </div>
   );

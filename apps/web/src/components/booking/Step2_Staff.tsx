@@ -1,9 +1,8 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
-import { Card } from '@repo/ui/card';
 import { cn } from '@repo/ui/cn';
 import { User, Users, CheckCircle, ChevronRight } from 'lucide-react';
 

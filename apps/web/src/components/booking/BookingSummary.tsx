@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui/c
 import { Button } from '@repo/ui/button';
 import { Separator } from '@repo/ui/separator';
 import Image from 'next/image';
-import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star } from 'lucide-react';
+import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
+import { useState } from 'react';
+import { cn } from '@repo/ui/cn';
 
 const salonInfo = {
   name: "Pedal Barbers",
@@ -23,6 +25,7 @@ interface BookingSummaryProps {
     selectedTime: string | null;
     onNextStep: () => void;
     currentStep: number;
+    isMobileFooter?: boolean;
 }
 
 export function BookingSummary({ 
@@ -31,8 +34,10 @@ export function BookingSummary({
   selectedDate, 
   selectedTime, 
   onNextStep, 
-  currentStep 
+  currentStep,
+  isMobileFooter = false
 }: BookingSummaryProps) {
+    const [isExpanded, setIsExpanded] = useState(false);
     const subtotal = selectedServices.reduce((acc, service) => acc + parseFloat(service.price), 0);
     const serviceTax = subtotal * 0.06; // Example 6% tax
     const total = subtotal + serviceTax;
@@ -45,6 +50,55 @@ export function BookingSummary({
     ];
     
     const nextStepInfo = stepDetails.find(s => s.step === currentStep);
+
+    if (isMobileFooter) {
+        return (
+            <div className={cn(
+                "bg-background/80 backdrop-blur-sm border-t transition-all duration-300",
+                isExpanded ? "h-96" : "h-24"
+            )}>
+                <div className="p-4 flex flex-col h-full">
+                    {isExpanded && (
+                         <div className="overflow-y-auto no-scrollbar flex-grow space-y-3 pb-4">
+                            <div className="flex items-center gap-4">
+                                <Image src={salonInfo.image} alt={salonInfo.name} width={48} height={48} className="rounded-lg shadow-md" data-ai-hint="salon exterior" />
+                                <div>
+                                    <h4 className="font-bold text-base">{salonInfo.name}</h4>
+                                    <p className="text-sm text-muted-foreground">{salonInfo.address}</p>
+                                </div>
+                            </div>
+                            <Separator />
+                            {selectedServices.map(service => (
+                                <div key={service.name} className="flex justify-between items-center text-sm">
+                                    <span>{service.name}</span>
+                                    <span className="font-medium">₹{service.price}</span>
+                                </div>
+                            ))}
+                            {selectedStaff && <p className="text-sm">With: <span className="font-medium">{selectedStaff.name}</span></p>}
+                            {selectedTime && <p className="text-sm">On: <span className="font-medium">{format(selectedDate, 'MMM d')} at {selectedTime}</span></p>}
+                         </div>
+                    )}
+                    <div className="flex items-center justify-between mt-auto">
+                        <div>
+                             <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-1">
+                                <span className="text-lg font-bold">₹{total.toFixed(2)}</span>
+                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                            </button>
+                            <p className="text-xs text-muted-foreground">Total (incl. tax)</p>
+                        </div>
+                        <Button 
+                            className="w-40 h-12" 
+                            size="lg" 
+                            disabled={!nextStepInfo?.enabled} 
+                            onClick={onNextStep}
+                        >
+                            {nextStepInfo?.label || "Continue"}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
   return (
     <Card className="shadow-2xl shadow-primary/10 border-border/50 bg-background rounded-2xl">

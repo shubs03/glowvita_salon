@@ -3,7 +3,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@repo/ui/button';
-import { Card } from '@repo/ui/card';
 import { Label } from '@repo/ui/label';
 import { addDays, format, isSameDay, getMonth, getYear } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Users, Clock } from 'lucide-react';
@@ -154,7 +153,7 @@ export function Step3_TimeSlot({
                 </div>
                 <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
             </div>
-            <div className="max-h-64 overflow-y-auto pr-2">
+            <div className="max-h-64 overflow-y-auto pr-2 no-scrollbar">
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                     {timeSlots.map(time => (
                         <Button
