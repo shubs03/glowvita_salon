@@ -39,7 +39,7 @@ function BookingPageContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const { id } = params;
+  const { salonId } = params;
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);

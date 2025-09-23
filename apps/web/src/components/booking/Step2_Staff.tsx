@@ -45,7 +45,7 @@ interface StaffMember {
 
 interface Step2StaffProps {
     selectedStaff: StaffMember | null;
-    onSelectStaff: (staff: StaffMember) => void;
+    onSelectStaff: (staff: StaffMember | null) => void;
     currentStep: number;
     setCurrentStep: (step: number) => void;
 }
@@ -69,16 +69,16 @@ export function Step2_Staff({ selectedStaff, onSelectStaff, currentStep, setCurr
             <div 
                 className={cn(
                     'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',
-                    selectedStaff?.id === 'any' ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
+                    !selectedStaff ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
                 )}
-                onClick={() => onSelectStaff({ id: 'any', name: 'Any Professional' })}
+                onClick={() => onSelectStaff(null)}
             >
                 <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
                     <Users className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
                 <h3 className="font-semibold text-foreground">Any Professional</h3>
                 <p className="text-sm text-muted-foreground">We'll assign an available expert.</p>
-                {selectedStaff?.id === 'any' && (
+                {!selectedStaff && (
                     <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                         <CheckCircle className="h-4 w-4" />
                     </div>
