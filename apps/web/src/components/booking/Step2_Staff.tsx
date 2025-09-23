@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import { Card } from '@repo/ui/card';
 import { cn } from '@repo/ui/cn';
-import { User, Users, CheckCircle } from 'lucide-react';
+import { User, Users, CheckCircle, ChevronRight } from 'lucide-react';
 
 const staffMembers = [
     { id: '1', name: 'Jessica Miller', role: 'Lead Stylist', image: 'https://picsum.photos/seed/staff1/400/400', hint: 'female stylist portrait' },
@@ -13,11 +13,35 @@ const staffMembers = [
     { id: '3', name: 'Emily White', role: 'Esthetician', image: 'https://picsum.photos/seed/staff3/400/400', hint: 'female esthetician portrait' },
 ];
 
-export function Step2_Staff() {
+const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
+    const steps = ['Services', 'Select Professional', 'Time Slot'];
+    return (
+        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
+            {steps.map((step, index) => (
+                <React.Fragment key={step}>
+                    <button
+                        onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+                        className={cn(
+                            "transition-colors",
+                            currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
+                            currentStep === index + 1 && "text-primary font-semibold"
+                        )}
+                    >
+                        {step}
+                    </button>
+                    {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
+                </React.Fragment>
+            ))}
+        </nav>
+    );
+};
+
+export function Step2_Staff({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) {
   const [selectedStaff, setSelectedStaff] = useState<string | null>('any');
 
   return (
     <div className="w-full">
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
         <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
                 <div className="p-3 bg-primary/10 rounded-full text-primary">

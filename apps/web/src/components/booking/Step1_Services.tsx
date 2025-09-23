@@ -7,6 +7,7 @@ import { Card, CardContent } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Plus, Check, Scissors } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
+import { ChevronRight } from 'lucide-react';
 
 const serviceCategories = [
     { name: "Hair" },
@@ -46,11 +47,35 @@ const services = {
     ]
 };
 
-export function Step1_Services({ selectedServices, onSelectService }: { selectedServices: any[], onSelectService: (service: any) => void; }) {
+const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
+    const steps = ['Services', 'Select Professional', 'Time Slot'];
+    return (
+        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
+            {steps.map((step, index) => (
+                <React.Fragment key={step}>
+                    <button
+                        onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+                        className={cn(
+                            "transition-colors",
+                            currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
+                            currentStep === index + 1 && "text-primary font-semibold"
+                        )}
+                    >
+                        {step}
+                    </button>
+                    {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
+                </React.Fragment>
+            ))}
+        </nav>
+    );
+};
+
+export function Step1_Services({ selectedServices, onSelectService, currentStep, setCurrentStep }: { selectedServices: any[], onSelectService: (service: any) => void; currentStep: number; setCurrentStep: (step: number) => void; }) {
   const [activeCategory, setActiveCategory] = useState("Hair");
 
   return (
     <div className="w-full">
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
         <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
                 <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -89,7 +114,7 @@ export function Step1_Services({ selectedServices, onSelectService }: { selected
                         key={service.name} 
                         className={cn(
                             'p-4 flex items-center gap-4 transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-md',
-                            isSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-transparent'
+                            isSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-transparent bg-secondary/30'
                         )}
                         onClick={() => onSelectService(service)}
                     >
