@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
-import { ChevronLeft, X } from "lucide-react";
+import { ChevronLeft, X, Scissors, User, Calendar, Clock } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { BookingSummary } from "@/components/booking/BookingSummary";
 import { Step1_Services } from "@/components/booking/Step1_Services";
@@ -10,6 +10,8 @@ import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot } from "@/components/booking/Step3_TimeSlot";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
+import { Card, CardHeader, CardTitle, CardContent } from '@repo/ui/card';
+import { Separator } from '@repo/ui/separator';
 import { format } from 'date-fns';
 
 // Define interfaces for our state
@@ -45,6 +47,7 @@ function BookingPageContent() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
+  // Set to `true` to test the modal, `false` to test the redirect
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
 
@@ -126,7 +129,7 @@ function BookingPageContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-      <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
+       <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
         <Button variant="ghost" onClick={handlePrevStep} className="flex items-center gap-2">
           <ChevronLeft className="mr-1 h-5 w-5" />
           {currentStep === 1 ? 'Back' : 'Back'}
@@ -138,8 +141,7 @@ function BookingPageContent() {
           <X className="h-5 w-5" />
         </Button>
       </header>
-
-      <div className="flex-1 grid lg:grid-cols-12 lg:gap-4">
+      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8">
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto no-scrollbar">
             <div className="max-w-4xl mx-auto pb-24 lg:pb-8 pt-8">
                 {renderStepContent()}
@@ -173,38 +175,69 @@ function BookingPageContent() {
       </div>
 
       <Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg bg-secondary/80 backdrop-blur-md border-border/30 rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Confirm Your Booking</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-2xl font-bold text-center">Confirm Your Booking</DialogTitle>
+            <DialogDescription className="text-center">
               Please review your appointment details before confirming.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4">
-            <div className="p-4 bg-muted/50 rounded-lg border">
-              <h4 className="font-semibold mb-2">Selected Services:</h4>
-              <ul className="space-y-1 text-sm">
-                {selectedServices.map(s => (
-                  <li key={s.name} className="flex justify-between">
-                    <span>{s.name}</span>
-                    <span className="font-medium">₹{s.price}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="p-4 bg-muted/50 rounded-lg border">
-                <p><span className="font-semibold">Professional:</span> {selectedStaff?.name}</p>
-                <p><span className="font-semibold">Date:</span> {format(selectedDate, 'EEEE, MMMM d, yyyy')}</p>
-                <p><span className="font-semibold">Time:</span> {selectedTime}</p>
-            </div>
-             <div className="p-4 bg-primary/10 rounded-lg border border-primary/20 text-right">
-                <p className="text-lg font-bold">
-                    Total: ₹{selectedServices.reduce((acc, s) => acc + parseFloat(s.price), 0).toFixed(2)}
-                </p>
-             </div>
+          <div className="py-4 space-y-6">
+            <Card className="bg-background/80">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Scissors className="h-5 w-5 text-primary" />
+                  Selected Services
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {selectedServices.map(s => (
+                    <li key={s.name} className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
+                      <span className="text-muted-foreground">{s.name}</span>
+                      <span className="font-semibold">₹{s.price}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-background/80">
+               <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Appointment Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">With:</span> {selectedStaff?.name}
+                </div>
+                 <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">On:</span> {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">At:</span> {selectedTime}
+                </div>
+              </CardContent>
+            </Card>
+
+             <Card className="bg-primary/10 border-primary/20">
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-bold text-primary">Total Amount</span>
+                    <span className="text-2xl font-bold text-primary">
+                      ₹{selectedServices.reduce((acc, s) => acc + parseFloat(s.price), 0).toFixed(2)}
+                    </span>
+                  </div>
+                </CardContent>
+             </Card>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)}>Edit</Button>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)}>Edit Booking</Button>
             <Button onClick={handleFinalBookingConfirmation}>Confirm & Pay</Button>
           </DialogFooter>
         </DialogContent>
