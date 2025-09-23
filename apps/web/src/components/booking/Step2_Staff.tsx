@@ -4,37 +4,77 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Card } from '@repo/ui/card';
+import { cn } from '@repo/ui/cn';
+import { User, Users, CheckCircle } from 'lucide-react';
 
 const staffMembers = [
-    { id: '1', name: 'Jessica Miller', role: 'Lead Stylist', image: 'https://picsum.photos/seed/staff1/200/200', hint: 'female stylist portrait' },
-    { id: '2', name: 'Michael Chen', role: 'Massage Therapist', image: 'https://picsum.photos/seed/staff2/200/200', hint: 'male therapist portrait' },
-    { id: '3', name: 'Emily White', role: 'Esthetician', image: 'https://picsum.photos/seed/staff3/200/200', hint: 'female esthetician portrait' },
+    { id: '1', name: 'Jessica Miller', role: 'Lead Stylist', image: 'https://picsum.photos/seed/staff1/400/400', hint: 'female stylist portrait' },
+    { id: '2', name: 'Michael Chen', role: 'Massage Therapist', image: 'https://picsum.photos/seed/staff2/400/400', hint: 'male therapist portrait' },
+    { id: '3', name: 'Emily White', role: 'Esthetician', image: 'https://picsum.photos/seed/staff3/400/400', hint: 'female esthetician portrait' },
 ];
 
 export function Step2_Staff() {
-  const [selectedStaff, setSelectedStaff] = useState<string | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<string | null>('any');
 
   return (
     <div className="w-full">
-        <h2 className="text-2xl font-bold mb-6">Select a Professional</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="mb-8">
+            <div className="flex items-center gap-3 mb-2">
+                <div className="p-3 bg-primary/10 rounded-full text-primary">
+                    <Users className="h-6 w-6" />
+                </div>
+                <h2 className="text-3xl font-bold font-headline">Select a Professional</h2>
+            </div>
+            <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {/* Any Professional Card */}
+            <div 
+                className={cn(
+                    'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',
+                    selectedStaff === 'any' ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
+                )}
+                onClick={() => setSelectedStaff('any')}
+            >
+                <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
+                    <Users className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <h3 className="font-semibold text-foreground">Any Professional</h3>
+                <p className="text-sm text-muted-foreground">We'll assign an available expert.</p>
+                {selectedStaff === 'any' && (
+                    <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+                        <CheckCircle className="h-4 w-4" />
+                    </div>
+                )}
+            </div>
+            {/* Staff Member Cards */}
             {staffMembers.map(staff => (
-                <Card 
+                <div 
                     key={staff.id}
-                    className={`p-4 text-center cursor-pointer transition-all ${selectedStaff === staff.id ? 'border-primary ring-2 ring-primary/20' : 'hover:border-primary/50'}`}
+                    className={cn(
+                        'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2 overflow-hidden',
+                        selectedStaff === staff.id ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
+                    )}
                     onClick={() => setSelectedStaff(staff.id)}
                 >
-                    <Image 
-                        src={staff.image} 
-                        alt={staff.name} 
-                        width={100} 
-                        height={100} 
-                        className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
-                        data-ai-hint={staff.hint}
-                    />
-                    <h3 className="font-semibold">{staff.name}</h3>
+                    <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
+                        <Image 
+                            src={staff.image} 
+                            alt={staff.name} 
+                            width={120} 
+                            height={120} 
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            data-ai-hint={staff.hint}
+                        />
+                    </div>
+                    <h3 className="font-semibold text-foreground">{staff.name}</h3>
                     <p className="text-sm text-muted-foreground">{staff.role}</p>
-                </Card>
+                    {selectedStaff === staff.id && (
+                         <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+                            <CheckCircle className="h-4 w-4" />
+                        </div>
+                    )}
+                </div>
             ))}
         </div>
     </div>

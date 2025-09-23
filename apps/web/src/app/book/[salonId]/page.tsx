@@ -10,9 +10,9 @@ import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot } from "@/components/booking/Step3_TimeSlot";
 
 const steps = [
-  { id: 1, name: 'Select Services' },
-  { id: 2, name: 'Select Professional' },
-  { id: 3, name: 'Select Time' },
+  { id: 1, name: 'Services' },
+  { id: 2, name: 'Professional' },
+  { id: 3, name: 'Time' },
 ];
 
 export default function BookingPage() {
@@ -68,17 +68,25 @@ export default function BookingPage() {
           <ChevronLeft className="mr-1 h-5 w-5" />
           {currentStep === 1 ? 'Back to Salon' : 'Back'}
         </Button>
-        {/* Step Indicator */}
-        <div className="flex items-center gap-2 sm:gap-4">
-            {steps.map(step => (
-                <div key={step.id} className="flex items-center gap-2">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold transition-all duration-300 ${currentStep >= step.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                        {currentStep > step.id ? '✔' : step.id}
-                    </div>
-                    <span className={`hidden md:inline text-sm ${currentStep >= step.id ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>{step.name}</span>
-                    {step.id < steps.length && <div className={`hidden sm:block w-8 h-0.5 rounded-full ${currentStep > step.id ? 'bg-primary' : 'bg-muted'}`} />}
+        
+        {/* Step Breadcrumbs for larger screens */}
+        <div className="hidden sm:flex items-center gap-2">
+          {steps.map((step, index) => (
+            <React.Fragment key={step.id}>
+              <div 
+                className={`flex items-center gap-2 cursor-pointer ${currentStep > step.id ? 'opacity-100 hover:opacity-80' : 'opacity-50'}`}
+                onClick={() => currentStep > step.id && setCurrentStep(step.id)}
+              >
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${currentStep >= step.id ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                  {currentStep > step.id ? '✔' : step.id}
                 </div>
-            ))}
+                <span className={`font-semibold ${currentStep >= step.id ? 'text-foreground' : 'text-muted-foreground'}`}>{step.name}</span>
+              </div>
+              {index < steps.length - 1 && (
+                <div className="w-8 h-px bg-border mx-2"></div>
+              )}
+            </React.Fragment>
+          ))}
         </div>
         <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
           <X className="h-5 w-5" />
