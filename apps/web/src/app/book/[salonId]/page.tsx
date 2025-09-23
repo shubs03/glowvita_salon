@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
-import { ChevronLeft, X, Scissors, User, Calendar, Clock } from "lucide-react";
+import { ChevronLeft, X, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown, Wallet, CreditCard, Hourglass } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { BookingSummary } from "@/components/booking/BookingSummary";
 import { Step1_Services } from "@/components/booking/Step1_Services";
@@ -50,6 +50,8 @@ function BookingPageContent() {
   // Set to `true` to test the modal, `false` to test the redirect
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+
 
   useEffect(() => {
     const serviceQuery = searchParams.get('service');
@@ -84,9 +86,15 @@ function BookingPageContent() {
   };
 
   const handleFinalBookingConfirmation = () => {
-    console.log("Booking Confirmed & Payment Initialized!");
     setIsConfirmationModalOpen(false);
-    alert("Booking Confirmed! (Simulated)");
+    setIsPaymentModalOpen(true);
+  };
+
+  const handlePaymentMethodSelection = (method: string) => {
+    console.log("Selected payment method:", method);
+    setIsPaymentModalOpen(false);
+    alert(`Booking Confirmed! Payment Method: ${method}`);
+    // Here you would proceed with the actual booking logic
   };
   
   const handleSelectService = (service: Service) => {
@@ -176,70 +184,104 @@ function BookingPageContent() {
 
       <Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
         <DialogContent className="sm:max-w-4xl bg-secondary/80 backdrop-blur-md border-border/30 rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center">Confirm Your Booking</DialogTitle>
-            <DialogDescription className="text-center">
-              Please review your appointment details before confirming.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 grid md:grid-cols-2 gap-6 max-h-[60vh] md:max-h-none md:overflow-y-visible">
-              <Card className="bg-background/80 flex flex-col">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Scissors className="h-5 w-5 text-primary" />
-                    Selected Services
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex-1 overflow-y-auto space-y-2">
-                  {selectedServices.map(s => (
-                    <div key={s.name} className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
-                      <span className="text-muted-foreground">{s.name}</span>
-                      <span className="font-semibold">₹{s.price}</span>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-center">Confirm Your Booking</DialogTitle>
+              <DialogDescription className="text-center">
+                Please review your appointment details before confirming.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 grid md:grid-cols-2 gap-6 max-h-[60vh] md:max-h-none overflow-y-auto">
+                <Card className="bg-background/80 flex flex-col">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Scissors className="h-5 w-5 text-primary" />
+                      Selected Services
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 overflow-y-auto space-y-2">
+                    {selectedServices.map(s => (
+                      <div key={s.name} className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
+                        <span className="text-muted-foreground">{s.name}</span>
+                        <span className="font-semibold">₹{s.price}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
 
-              <div className="space-y-4">
-                  <Card className="bg-background/80">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        Appointment Details
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 text-sm">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-semibold">With:</span> {selectedStaff?.name}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-semibold">On:</span> {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-semibold">At:</span> {selectedTime}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-primary/10 border-primary/20">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-lg font-bold text-primary">Total Amount</span>
-                          <span className="text-2xl font-bold text-primary">
-                            ₹{selectedServices.reduce((acc, s) => acc + parseFloat(s.price), 0).toFixed(2)}
-                          </span>
+                <div className="space-y-4">
+                    <Card className="bg-background/80">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Calendar className="h-5 w-5 text-primary" />
+                          Appointment Details
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3 text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-semibold">With:</span> {selectedStaff?.name}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-semibold">On:</span> {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-semibold">At:</span> {selectedTime}
                         </div>
                       </CardContent>
-                  </Card>
-              </div>
+                    </Card>
+
+                    <Card className="bg-primary/10 border-primary/20">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-bold text-primary">Total Amount</span>
+                            <span className="text-2xl font-bold text-primary">
+                              ₹{selectedServices.reduce((acc, s) => acc + parseFloat(s.price), 0).toFixed(2)}
+                            </span>
+                          </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)}>Edit Booking</Button>
+              <Button onClick={handleFinalBookingConfirmation}>Confirm & Pay</Button>
+            </DialogFooter>
+          </DialogContent>
+      </Dialog>
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center">Choose Payment Method</DialogTitle>
+            <DialogDescription className="text-center">Select how you'd like to pay for your appointment.</DialogDescription>
+          </DialogHeader>
+          <div className="py-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card 
+              className="text-center p-6 cursor-pointer hover:shadow-lg hover:border-primary transition-all duration-200"
+              onClick={() => handlePaymentMethodSelection('Pay at Salon')}
+            >
+              <Wallet className="h-10 w-10 mx-auto text-primary mb-3" />
+              <h3 className="font-semibold text-lg">Pay at Salon</h3>
+              <p className="text-sm text-muted-foreground">Pay with cash or card at your appointment.</p>
+            </Card>
+            <Card 
+              className="text-center p-6 cursor-pointer hover:shadow-lg hover:border-primary transition-all duration-200"
+              onClick={() => handlePaymentMethodSelection('Pay Online')}
+            >
+              <CreditCard className="h-10 w-10 mx-auto text-primary mb-3" />
+              <h3 className="font-semibold text-lg">Pay Online</h3>
+              <p className="text-sm text-muted-foreground">Pay now with our secure online gateway.</p>
+            </Card>
+            <Card 
+              className="text-center p-6 cursor-pointer hover:shadow-lg hover:border-primary transition-all duration-200"
+              onClick={() => handlePaymentMethodSelection('Pay Later')}
+            >
+              <Hourglass className="h-10 w-10 mx-auto text-primary mb-3" />
+              <h3 className="font-semibold text-lg">Pay Later</h3>
+              <p className="text-sm text-muted-foreground">Pay after your service is completed.</p>
+            </Card>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)}>Edit Booking</Button>
-            <Button onClick={handleFinalBookingConfirmation}>Confirm & Pay</Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
