@@ -35,7 +35,22 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
     );
 };
 
-export function Step2_Staff({ selectedStaff, onSelectStaff, currentStep, setCurrentStep }: { selectedStaff: any, onSelectStaff: (staff: any) => void; currentStep: number; setCurrentStep: (step: number) => void; }) => {
+interface StaffMember {
+    id: string;
+    name: string;
+    role?: string;
+    image?: string;
+    hint?: string;
+}
+
+interface Step2StaffProps {
+    selectedStaff: StaffMember | null;
+    onSelectStaff: (staff: StaffMember) => void;
+    currentStep: number;
+    setCurrentStep: (step: number) => void;
+}
+
+export function Step2_Staff({ selectedStaff, onSelectStaff, currentStep, setCurrentStep }: Step2StaffProps): JSX.Element {
 
   return (
     <div className="w-full">
