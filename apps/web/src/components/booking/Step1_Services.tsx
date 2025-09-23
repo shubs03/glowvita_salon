@@ -20,7 +20,14 @@ const serviceCategories = [
     { name: "Facials" }
 ];
 
-const services = {
+interface Service {
+    name: string;
+    duration: string;
+    price: string;
+    image: string;
+}
+
+const services: { [key: string]: Service[] } = {
     "Hair": [
         { name: "Signature Haircut", duration: "60 min", price: "120.00", image: 'https://picsum.photos/seed/haircut/200/200' },
         { name: "Color & Highlights", duration: "120 min", price: "250.00", image: 'https://picsum.photos/seed/haircolor/200/200' },
@@ -73,7 +80,7 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
     );
 };
 
-export function Step1_Services({ selectedServices, onSelectService, currentStep, setCurrentStep }: { selectedServices: any[], onSelectService: (service: any) => void; currentStep: number; setCurrentStep: (step: number) => void; }) {
+export function Step1_Services({ selectedServices, onSelectService, currentStep, setCurrentStep }: { selectedServices: any[], onSelectService: (service: Service) => void; currentStep: number; setCurrentStep: (step: number) => void; }) {
   const [activeCategory, setActiveCategory] = useState("All");
 
   const servicesToDisplay = activeCategory === "All" ? allServices : (services[activeCategory] || []);
@@ -92,7 +99,7 @@ export function Step1_Services({ selectedServices, onSelectService, currentStep,
         </div>
         
         {/* Tab-like navigation for categories */}
-        <div className="sticky top-20 z-10 py-4 bg-background/80 backdrop-blur-sm -mx-6 px-6">
+        <div className="sticky top-0 z-10 py-4 bg-background/80 backdrop-blur-sm -mx-6 px-6">
             <div className="relative">
                 <div className="flex space-x-2 overflow-x-auto pb-2 no-scrollbar">
                     {serviceCategories.map(category => (

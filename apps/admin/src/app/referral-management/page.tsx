@@ -436,8 +436,8 @@ export default function ReferralManagementPage() {
             </DialogDescription>
           </DialogHeader>
           {modal.settings && (
-                        value={typedModal.settings?.referrerBonus?.bonusType || 'amount'}
-                        onValueChange={(v) => handleReferrerBonusChange('bonusType', v)}
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
                 <Label className='text-base font-semibold'>Referrer Bonus</Label>
                 <div className="grid gap-4 mt-2">
                   <div className="grid grid-cols-2 gap-4">
