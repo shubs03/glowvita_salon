@@ -141,7 +141,7 @@ function BookingPageContent() {
           <X className="h-5 w-5" />
         </Button>
       </header>
-      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8">
+      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 px-8">
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto no-scrollbar">
             <div className="max-w-4xl mx-auto pb-24 lg:pb-8 pt-8">
                 {renderStepContent()}
