@@ -25,9 +25,9 @@ interface Staff {
 }
 
 const steps = [
-  { id: 1, component: Step1_Services, label: "Services" },
-  { id: 2, component: Step2_Staff, label: "Select Professional" },
-  { id: 3, component: Step3_TimeSlot, label: "Time Slot" },
+  { id: 1, component: Step1_Services },
+  { id: 2, component: Step2_Staff },
+  { id: 3, component: Step3_TimeSlot },
 ];
 
 export default function BookingPage() {
@@ -106,7 +106,7 @@ export default function BookingPage() {
         </Button>
       </header>
 
-      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 overflow-hidden">
+      <div className="flex-1 grid lg:grid-cols-12 lg:gap-6 overflow-hidden">
         {/* Main Content Area (scrollable) */}
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto p-4 sm:p-6 md:p-8 no-scrollbar">
             <div className="max-w-4xl mx-auto pb-24 lg:pb-0">
