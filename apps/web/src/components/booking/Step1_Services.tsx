@@ -10,6 +10,7 @@ import { cn } from '@repo/ui/cn';
 import { ChevronRight } from 'lucide-react';
 
 const serviceCategories = [
+    { name: "All" },
     { name: "Hair" },
     { name: "Skin" },
     { name: "Nails" },
@@ -47,6 +48,8 @@ const services = {
     ]
 };
 
+const allServices = Object.values(services).flat();
+
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
     return (
@@ -71,7 +74,9 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
 };
 
 export function Step1_Services({ selectedServices, onSelectService, currentStep, setCurrentStep }: { selectedServices: any[], onSelectService: (service: any) => void; currentStep: number; setCurrentStep: (step: number) => void; }) {
-  const [activeCategory, setActiveCategory] = useState("Hair");
+  const [activeCategory, setActiveCategory] = useState("All");
+
+  const servicesToDisplay = activeCategory === "All" ? allServices : (services[activeCategory] || []);
 
   return (
     <div className="w-full">
@@ -107,7 +112,7 @@ export function Step1_Services({ selectedServices, onSelectService, currentStep,
 
         {/* Services List */}
         <div className="space-y-4">
-            {(services[activeCategory] || []).map(service => {
+            {servicesToDisplay.map(service => {
                 const isSelected = selectedServices.some(s => s.name === service.name);
                 return (
                     <Card 
@@ -119,7 +124,7 @@ export function Step1_Services({ selectedServices, onSelectService, currentStep,
                         onClick={() => onSelectService(service)}
                     >
                         <div className="relative w-full sm:w-20 h-24 sm:h-20 rounded-md overflow-hidden flex-shrink-0">
-                            <Image src={service.image} alt={service.name} layout="fill" className="object-cover" />
+                            <Image src={service.image} alt={service.name} layout="fill" className="object-cover" data-ai-hint="beauty service" />
                         </div>
                         <div className="flex-1 text-center sm:text-left">
                             <h3 className="font-semibold">{service.name}</h3>

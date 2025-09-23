@@ -15,13 +15,6 @@ import {
 } from "@repo/ui/select";
 import { cn } from '@repo/ui/cn';
 
-const staffMembers = [
-    { id: '1', name: 'Any Professional' },
-    { id: '2', name: 'Jessica Miller' },
-    { id: '3', name: 'Michael Chen' },
-    { id: '4', name: 'Emily White' },
-];
-
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
     return (
@@ -51,21 +44,26 @@ export function Step3_TimeSlot({
   selectedTime,
   onSelectTime,
   currentStep,
-  setCurrentStep
+  setCurrentStep,
+  selectedStaff,
+  onSelectStaff,
+  staffMembers
 }: {
   selectedDate: Date,
   onSelectDate: (date: Date) => void,
   selectedTime: string | null,
   onSelectTime: (time: string | null) => void,
   currentStep: number,
-  setCurrentStep: (step: number) => void
+  setCurrentStep: (step: number) => void,
+  selectedStaff: any,
+  onSelectStaff: (staff: any) => void,
+  staffMembers: any[]
 }) {
-  const [selectedStaff, setSelectedStaff] = useState('1');
   const dateScrollerRef = useRef<HTMLDivElement>(null);
 
   const dates = useMemo(() => Array.from({ length: 365 }, (_, i) => addDays(new Date(), i)), []);
   
-  const currentMonthYear = format(selectedDate, 'MMMM yyyy');
+  const currentMonthYear = useMemo(() => format(selectedDate, 'MMMM yyyy'), [selectedDate]);
 
   const timeSlots = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "13:00", "13:30", "14:00", "14:30", "15:00", "16:00", "16:30", "17:00"];
 
@@ -102,7 +100,7 @@ export function Step3_TimeSlot({
         {/* Staff Selector */}
         <div className="mb-6 max-w-sm">
             <Label htmlFor="staff-select" className="text-sm font-medium">Professional</Label>
-            <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+            <Select value={selectedStaff?.id || '1'} onValueChange={(staffId) => onSelectStaff(staffMembers.find(s => s.id === staffId))}>
                 <SelectTrigger id="staff-select" className="mt-1">
                     <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-muted-foreground" />

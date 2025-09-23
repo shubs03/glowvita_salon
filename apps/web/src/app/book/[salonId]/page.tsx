@@ -30,6 +30,13 @@ const steps = [
   { id: 3, component: Step3_TimeSlot },
 ];
 
+const staffMembers = [
+    { id: '1', name: 'Any Professional' },
+    { id: '2', name: 'Jessica Miller' },
+    { id: '3', name: 'Michael Chen' },
+    { id: '4', name: 'Emily White' },
+];
+
 export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
@@ -76,6 +83,7 @@ export default function BookingPage() {
       onSelectService: handleSelectService,
       selectedStaff,
       onSelectStaff: setSelectedStaff,
+      staffMembers, // Pass staffMembers to Step 2 and 3
       selectedDate,
       onSelectDate: setSelectedDate,
       selectedTime,
@@ -91,7 +99,7 @@ export default function BookingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
       {/* Header */}
-      <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-4 md:px-8 border-b z-20 bg-background/80 backdrop-blur-sm">
+      <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-4 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
         <Button variant="ghost" onClick={handlePrevStep} className="flex items-center gap-2">
           <ChevronLeft className="mr-1 h-5 w-5" />
           {currentStep === 1 ? 'Back to Salon' : 'Back'}
@@ -106,7 +114,7 @@ export default function BookingPage() {
         </Button>
       </header>
 
-      <div className="flex-1 grid lg:grid-cols-12 lg:gap-6 overflow-hidden">
+      <div className="flex-1 grid lg:grid-cols-12 lg:gap-2 overflow-hidden px-4 md:px-12">
         {/* Main Content Area (scrollable) */}
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto p-4 sm:p-6 md:p-8 no-scrollbar">
             <div className="max-w-4xl mx-auto pb-24 lg:pb-0">
