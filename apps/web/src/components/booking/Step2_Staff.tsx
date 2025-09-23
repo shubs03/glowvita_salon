@@ -36,8 +36,7 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
     );
 };
 
-export function Step2_Staff({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) {
-  const [selectedStaff, setSelectedStaff] = useState<string | null>('any');
+export function Step2_Staff({ selectedStaff, onSelectStaff, currentStep, setCurrentStep }: { selectedStaff: any, onSelectStaff: (staff: any) => void; currentStep: number; setCurrentStep: (step: number) => void; }) {
 
   return (
     <div className="w-full">
@@ -56,16 +55,16 @@ export function Step2_Staff({ currentStep, setCurrentStep }: { currentStep: numb
             <div 
                 className={cn(
                     'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',
-                    selectedStaff === 'any' ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
+                    !selectedStaff || selectedStaff?.name === 'Any Professional' ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
                 )}
-                onClick={() => setSelectedStaff('any')}
+                onClick={() => onSelectStaff({ id: 'any', name: 'Any Professional' })}
             >
                 <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
                     <Users className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
                 <h3 className="font-semibold text-foreground">Any Professional</h3>
                 <p className="text-sm text-muted-foreground">We'll assign an available expert.</p>
-                {selectedStaff === 'any' && (
+                {(!selectedStaff || selectedStaff?.name === 'Any Professional') && (
                     <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                         <CheckCircle className="h-4 w-4" />
                     </div>
@@ -77,9 +76,9 @@ export function Step2_Staff({ currentStep, setCurrentStep }: { currentStep: numb
                     key={staff.id}
                     className={cn(
                         'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2 overflow-hidden',
-                        selectedStaff === staff.id ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
+                        selectedStaff?.id === staff.id ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
                     )}
-                    onClick={() => setSelectedStaff(staff.id)}
+                    onClick={() => onSelectStaff(staff)}
                 >
                     <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
                         <Image 
@@ -93,7 +92,7 @@ export function Step2_Staff({ currentStep, setCurrentStep }: { currentStep: numb
                     </div>
                     <h3 className="font-semibold text-foreground">{staff.name}</h3>
                     <p className="text-sm text-muted-foreground">{staff.role}</p>
-                    {selectedStaff === staff.id && (
+                    {selectedStaff?.id === staff.id && (
                          <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                             <CheckCircle className="h-4 w-4" />
                         </div>

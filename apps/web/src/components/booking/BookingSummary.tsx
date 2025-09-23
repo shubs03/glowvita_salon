@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui/c
 import { Button } from '@repo/ui/button';
 import { Separator } from '@repo/ui/separator';
 import Image from 'next/image';
-import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, CheckCircle, Gift } from 'lucide-react';
+import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star } from 'lucide-react';
+import { format } from 'date-fns';
 
 const salonInfo = {
   name: "Pedal Barbers",
@@ -17,19 +18,29 @@ const salonInfo = {
 
 interface BookingSummaryProps {
     selectedServices: any[];
+    selectedStaff: any;
+    selectedDate: Date;
+    selectedTime: string | null;
     onNextStep: () => void;
     currentStep: number;
 }
 
-export function BookingSummary({ selectedServices, onNextStep, currentStep }: BookingSummaryProps) {
+export function BookingSummary({ 
+  selectedServices, 
+  selectedStaff, 
+  selectedDate, 
+  selectedTime, 
+  onNextStep, 
+  currentStep 
+}: BookingSummaryProps) {
     const subtotal = selectedServices.reduce((acc, service) => acc + parseFloat(service.price), 0);
     const serviceTax = subtotal * 0.06; // Example 6% tax
     const total = subtotal + serviceTax;
     
     const stepDetails = [
       { step: 1, label: 'Select Staff', enabled: selectedServices.length > 0 },
-      { step: 2, label: 'Find a Time', enabled: true },
-      { step: 3, label: 'Confirm Booking', enabled: true },
+      { step: 2, label: 'Find a Time', enabled: !!selectedStaff },
+      { step: 3, label: 'Confirm Booking', enabled: !!selectedTime },
       { step: 4, label: 'Finish', enabled: false },
     ];
     
@@ -52,26 +63,44 @@ export function BookingSummary({ selectedServices, onNextStep, currentStep }: Bo
         </div>
       </CardHeader>
       <CardContent className="p-6 space-y-4">
-        {selectedServices.length > 0 ? (
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm text-muted-foreground">Your selections</h4>
-            {selectedServices.map((service, index) => (
-              <div key={index} className="flex justify-between items-center text-sm bg-secondary/50 p-3 rounded-md">
-                <div className="flex-1">
-                  <p className="font-semibold text-foreground">{service.name}</p>
-                  <p className="text-xs text-muted-foreground">{service.duration}</p>
+        <div className="space-y-3">
+          <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4" />Your Booking Details</h4>
+          
+          <div className="p-3 bg-secondary/50 rounded-md">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-md"><Scissors className="h-4 w-4 text-primary" /></div>
+                <div>
+                    <p className="text-xs text-muted-foreground">Services</p>
+                    <p className="font-medium text-sm">
+                        {selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : 'No services selected'}
+                    </p>
                 </div>
-                <p className="font-bold text-foreground">₹{service.price}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-            <div className="text-center py-8 text-muted-foreground">
-                <Scissors className="h-10 w-10 mx-auto mb-3" />
-                <p className="font-medium">Your cart is empty</p>
-                <p className="text-sm">Select a service to get started</p>
             </div>
-        )}
+          </div>
+          
+          <div className="p-3 bg-secondary/50 rounded-md">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-md"><User className="h-4 w-4 text-primary" /></div>
+                <div>
+                    <p className="text-xs text-muted-foreground">Professional</p>
+                    <p className="font-medium text-sm">{selectedStaff?.name || 'Any Professional'}</p>
+                </div>
+            </div>
+          </div>
+          
+          <div className="p-3 bg-secondary/50 rounded-md">
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-md"><Calendar className="h-4 w-4 text-primary" /></div>
+                <div>
+                    <p className="text-xs text-muted-foreground">Date & Time</p>
+                    <p className="font-medium text-sm">
+                        {format(selectedDate, 'EEEE, MMM d')}
+                        {selectedTime ? ` at ${selectedTime}` : ', no time selected'}
+                    </p>
+                </div>
+            </div>
+          </div>
+        </div>
         
         <Separator className="my-4" />
 

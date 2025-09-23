@@ -1,9 +1,8 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@repo/ui/button';
-import { Card } from '@repo/ui/card';
 import { addDays, format, isSameDay, getMonth, getYear } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Users, Clock } from 'lucide-react';
 import {
@@ -45,10 +44,23 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
     );
 };
 
-export function Step3_TimeSlot({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+export function Step3_TimeSlot({
+  selectedDate,
+  onSelectDate,
+  selectedTime,
+  onSelectTime,
+  currentStep,
+  setCurrentStep
+}: {
+  selectedDate: Date,
+  onSelectDate: (date: Date) => void,
+  selectedTime: string | null,
+  onSelectTime: (time: string | null) => void,
+  currentStep: number,
+  setCurrentStep: (step: number) => void
+}) {
   const [selectedStaff, setSelectedStaff] = useState('1');
+  const dateScrollerRef = useRef<HTMLDivElement>(null);
 
   const dates = useMemo(() => Array.from({ length: 365 }, (_, i) => addDays(new Date(), i)), []);
   
@@ -57,12 +69,21 @@ export function Step3_TimeSlot({ currentStep, setCurrentStep }: { currentStep: n
   const timeSlots = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "13:00", "13:30", "14:00", "14:30", "15:00", "16:00", "16:30", "17:00"];
 
   const handleDateScroll = (direction: 'left' | 'right') => {
-    const container = document.getElementById('date-scroller');
-    if (container) {
+    if (dateScrollerRef.current) {
       const scrollAmount = direction === 'left' ? -200 : 200;
-      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      dateScrollerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   };
+
+  useEffect(() => {
+    // Scroll the selected date into view
+    const selectedDateElement = document.getElementById(`date-${format(selectedDate, 'yyyy-MM-dd')}`);
+    if (selectedDateElement && dateScrollerRef.current) {
+        const container = dateScrollerRef.current;
+        const scrollLeft = selectedDateElement.offsetLeft - container.offsetLeft - (container.offsetWidth / 2) + (selectedDateElement.offsetWidth / 2);
+        container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+    }
+  }, [selectedDate]);
 
   return (
     <div className="w-full">
@@ -107,13 +128,14 @@ export function Step3_TimeSlot({ currentStep, setCurrentStep }: { currentStep: n
                 </Button>
             </div>
         </div>
-        <div id="date-scroller" className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
+        <div id="date-scroller" ref={dateScrollerRef} className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
             {dates.map(date => (
                 <Button
                     key={date.toISOString()}
+                    id={`date-${format(date, 'yyyy-MM-dd')}`}
                     variant={isSameDay(date, selectedDate) ? 'default' : 'outline'}
                     className="flex flex-col h-auto px-4 py-2 flex-shrink-0 rounded-xl shadow-sm"
-                    onClick={() => setSelectedDate(date)}
+                    onClick={() => onSelectDate(date)}
                 >
                     <span className="font-semibold">{format(date, 'EEE')}</span>
                     <span className="text-2xl font-bold my-1">{format(date, 'd')}</span>
@@ -137,7 +159,7 @@ export function Step3_TimeSlot({ currentStep, setCurrentStep }: { currentStep: n
                             key={time}
                             variant={selectedTime === time ? 'default' : 'outline'}
                             className="h-12 text-base font-semibold rounded-lg shadow-sm"
-                            onClick={() => setSelectedTime(time)}
+                            onClick={() => onSelectTime(time)}
                         >
                             {time}
                         </Button>

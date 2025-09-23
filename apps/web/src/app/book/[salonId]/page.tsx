@@ -1,25 +1,41 @@
-
 "use client";
 
-import React, { Fragment } from "react";
-import { useState } from "react";
-import { ChevronLeft, X, ArrowRight, Check } from "lucide-react";
+import React, { useState } from "react";
+import { ChevronLeft, X } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { BookingSummary } from "@/components/booking/BookingSummary";
 import { Step1_Services } from "@/components/booking/Step1_Services";
 import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot } from "@/components/booking/Step3_TimeSlot";
-import { cn } from "@repo/ui/cn";
+
+// Define interfaces for our state
+interface Service {
+  name: string;
+  duration: string;
+  price: string;
+  image: string;
+}
+
+interface Staff {
+  id: string;
+  name: string;
+  role: string;
+  image: string;
+}
 
 export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedServices, setSelectedServices] = useState<any[]>([]);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
   const handleNextStep = () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     } else {
       console.log("Booking Confirmed!");
+      // Here you would typically navigate to a confirmation page or show a success message.
     }
   };
 
@@ -27,29 +43,53 @@ export default function BookingPage() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     } else {
+      // If on the first step, go back to the previous page (e.g., salon details)
       window.history.back();
     }
   };
 
-  const handleSelectService = (service: any) => {
+  const handleSelectService = (service: Service) => {
     setSelectedServices(prev => {
-        const isSelected = prev.some(s => s.name === service.name);
-        if (isSelected) {
-            return prev.filter(s => s.name !== service.name);
-        } else {
-            return [...prev, service];
-        }
+      const isSelected = prev.some(s => s.name === service.name);
+      if (isSelected) {
+        return prev.filter(s => s.name !== service.name);
+      } else {
+        return [...prev, service];
+      }
     });
   };
 
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        return <Step1_Services selectedServices={selectedServices} onSelectService={handleSelectService} currentStep={currentStep} setCurrentStep={setCurrentStep} />;
+        return (
+          <Step1_Services
+            selectedServices={selectedServices}
+            onSelectService={handleSelectService}
+            currentStep={currentStep}
+            setCurrentStep={setCurrentStep}
+          />
+        );
       case 2:
-        return <Step2_Staff currentStep={currentStep} setCurrentStep={setCurrentStep} />;
+        return (
+          <Step2_Staff
+            selectedStaff={selectedStaff}
+            onSelectStaff={setSelectedStaff}
+            currentStep={currentStep}
+            setCurrentStep={setCurrentStep}
+          />
+        );
       case 3:
-        return <Step3_TimeSlot currentStep={currentStep} setCurrentStep={setCurrentStep} />;
+        return (
+          <Step3_TimeSlot
+            selectedDate={selectedDate}
+            onSelectDate={setSelectedDate}
+            selectedTime={selectedTime}
+            onSelectTime={setSelectedTime}
+            currentStep={currentStep}
+            setCurrentStep={setCurrentStep}
+          />
+        );
       default:
         return <div>Step not found</div>;
     }
@@ -58,7 +98,7 @@ export default function BookingPage() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
       {/* Header */}
-      <header className="flex-shrink-0 flex items-center justify-between h-20 px-4 md:px-8 border-b z-20 bg-background/80 backdrop-blur-sm">
+      <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-4 md:px-8 border-b z-20 bg-background/80 backdrop-blur-sm">
         <Button variant="ghost" onClick={handlePrevStep} className="flex items-center gap-2">
           <ChevronLeft className="mr-1 h-5 w-5" />
           {currentStep === 1 ? 'Back to Salon' : 'Back'}
@@ -74,18 +114,21 @@ export default function BookingPage() {
       </header>
 
       <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 overflow-hidden">
-        {/* Main Content Area */}
+        {/* Main Content Area (scrollable) */}
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto p-4 sm:p-6 md:p-8 no-scrollbar">
             <div className="max-w-4xl mx-auto">
                 {renderStepContent()}
             </div>
         </main>
         
-        {/* Sidebar */}
+        {/* Sidebar (sticky) */}
         <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 p-6 bg-background/50 border-l">
           <div className="sticky top-24">
             <BookingSummary 
-              selectedServices={selectedServices} 
+              selectedServices={selectedServices}
+              selectedStaff={selectedStaff}
+              selectedDate={selectedDate}
+              selectedTime={selectedTime}
               onNextStep={handleNextStep}
               currentStep={currentStep}
             />
