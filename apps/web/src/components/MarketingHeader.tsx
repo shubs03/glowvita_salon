@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X, User } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from '@repo/ui/cn';
 
@@ -83,7 +83,7 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
             <ThemeToggle />
           </div>
           <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-            <Link href="/client-login">Login</Link>
+            <Link href="/profile">My Profile</Link>
           </Button>
           <Button
             size="sm"
@@ -107,7 +107,7 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
           </Button>
           <ThemeToggle />
           <Button variant="ghost" size="sm" className="hover:bg-primary/10 text-xs px-2" asChild>
-            <Link href="/client-login">Login</Link>
+            <Link href="/profile">My Profile</Link>
           </Button>
           <Button
             size="sm"
@@ -170,6 +170,14 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
                   <span className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-primary rounded-full"></div>
                     Support
+                  </span>
+                </Link>
+              </Button>
+              <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                <Link href="/profile">
+                  <span className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    My Profile
                   </span>
                 </Link>
               </Button>
