@@ -3,6 +3,8 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@repo/ui/button';
+import { Card } from '@repo/ui/card';
+import { Label } from '@repo/ui/label';
 import { addDays, format, isSameDay, getMonth, getYear } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Users, Clock } from 'lucide-react';
 import {

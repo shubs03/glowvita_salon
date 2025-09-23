@@ -57,6 +57,14 @@ export default function ReferralManagementPage() {
   const { c2cSettings, c2vSettings, v2vSettings, modal, pagination } = useAppSelector(
       (state) => selectRootState(state).refferal
     );
+
+  // Explicitly type modal.settings as ReferralSettings | null
+  type ModalState = {
+    isOpen: boolean;
+    modalType: string | null;
+    settings: ReferralSettings | null;
+  };
+  const typedModal: ModalState = modal;
   const [updateSettings] = useUpdateSettingsMutation();
 
   const { data: c2cSettingsData, isLoading: c2cSettingsLoading } = useGetSettingsQuery('C2C');
@@ -81,7 +89,7 @@ export default function ReferralManagementPage() {
   }, [c2cSettingsData, c2vSettingsData, v2vSettingsData, c2cSettingsLoading, c2vSettingsLoading, v2vSettingsLoading, dispatch]);
 
   const handleOpenModal = (type: string) => {
-    const currentSettings: ReferralSettings | null = type === 'C2C' ? c2cSettings : type === 'C2V' ? c2vSettings : v2vSettings;
+    const currentSettings = (type === 'C2C' ? c2cSettings : type === 'C2V' ? c2vSettings : v2vSettings) as ReferralSettings | null;
     // Merge with default settings to ensure all properties exist
     const settings = {
       ...getDefaultSettings(),
@@ -103,18 +111,22 @@ export default function ReferralManagementPage() {
   };
 
   const handleReferrerBonusChange = (field: string, value: string | number) => {
+    if (!modal.settings) return;
+    const settings = modal.settings as ReferralSettings;
     dispatch(updateModalSettings({
       referrerBonus: {
-        ...modal.settings.referrerBonus,
+        ...settings.referrerBonus,
         [field]: value,
       },
     }));
   };
 
   const handleRefereeBonusChange = (field: string, value: string | number | boolean) => {
+    if (!modal.settings) return;
+    const settings = modal.settings as ReferralSettings;
     dispatch(updateModalSettings({
       refereeBonus: {
-        ...modal.settings.refereeBonus,
+        ...(settings?.refereeBonus || {}),
         [field]: value,
       },
     }));
@@ -424,8 +436,8 @@ export default function ReferralManagementPage() {
             </DialogDescription>
           </DialogHeader>
           {modal.settings && (
-            <div className="grid gap-6 py-4">
-              <div>
+                        value={typedModal.settings?.referrerBonus?.bonusType || 'amount'}
+                        onValueChange={(v) => handleReferrerBonusChange('bonusType', v)}
                 <Label className='text-base font-semibold'>Referrer Bonus</Label>
                 <div className="grid gap-4 mt-2">
                   <div className="grid grid-cols-2 gap-4">

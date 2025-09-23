@@ -16,6 +16,29 @@ import { toast } from 'sonner';
 import React from 'react';
 import { format, parseISO, isSameDay, addMinutes, parse, isWithinInterval, addDays, startOfDay, endOfDay } from 'date-fns';
 
+// Types
+type Appointment = {
+  id?: string;
+  _id?: string;
+  client?: string;
+  clientName?: string;
+  service?: string;
+  serviceName?: string;
+  staff?: string;
+  staffName?: string;
+  date: Date;
+  startTime: string;
+  endTime: string;
+  duration?: number;
+  notes?: string;
+  status?: string;
+  paymentStatus?: string;
+  amount?: number;
+  discount?: number;
+  tax?: number;
+  totalAmount?: number;
+};
+
 // Components
 import DayScheduleView from '../components/DayScheduleView';
 import NewAppointmentForm from '../components/NewAppointmentForm';
@@ -297,7 +320,7 @@ export default function DailySchedulePage() {
   );
 
   // Fetch staff list
-  const { data: staffData, isLoading: isLoadingStaff, error: staffError } = glowvitaApi.useGetStaffQuery();
+  const { data: staffData, isLoading: isLoadingStaff, error: staffError } = glowvitaApi.useGetStaffQuery(undefined);
 
   // Transform staff data for the schedule view
   const staffList = useMemo(() => {
@@ -342,7 +365,7 @@ export default function DailySchedulePage() {
     }
 
     // Find the day - convert dayName to match API format (Monday, Tuesday, etc.)
-    const targetDay = dayName?.charAt(0).toUpperCase() + dayName?.slice(1);
+    const targetDay = dayName ? dayName.charAt(0).toUpperCase() + dayName.slice(1) : '';
     
     const found = workingHoursArray.find(
       (dayData: any) => dayData.day === targetDay
@@ -357,7 +380,7 @@ export default function DailySchedulePage() {
   // Get blocked times for the selected date
   const blockedTimes = useSelector((state: any) => 
     (state.blockTime?.blockedTimes || []).filter((block: any) => {
-      if (!block?.date) return false;
+      if (!block?.date || !selectedDate) return false;
       const blockDate = new Date(block.date);
       return isSameDay(blockDate, selectedDate);
     })
@@ -394,17 +417,17 @@ export default function DailySchedulePage() {
   }, [selectedAppointment, updateAppointmentStatus]);
 
   // Handle collect payment
-  const handleCollectPayment = async (appointmentId: string, paymentDetails: any) => {
+  const handleCollectPayment = async (paymentData: { amount: number; paymentMethod: string; notes?: string }) => {
     try {
       // Here you would typically make an API call to process the payment
       // For now, we'll just show a success message
       toast.success('Payment collected successfully', {
-        description: `Payment of $${paymentDetails.amount} processed`
+        description: `Payment of $${paymentData.amount} processed`
       });
       
       // Optionally refresh the appointments list
       // await dispatch(refreshAppointments());
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing payment:', error);
       toast.error('Failed to process payment', {
         description: error.message
@@ -540,13 +563,46 @@ export default function DailySchedulePage() {
       </div>
 
       <DayScheduleView
-        date={selectedDate}
+        selectedDate={selectedDate}
         appointments={filteredAppointments}
         staffList={staffList}
         isLoading={isLoading || isLoadingStaff || isLoadingWorkingHours}
         error={staffError || workingHoursError}
         onAppointmentClick={handleAppointmentClick}
         onTimeSlotClick={handleTimeSlotClick}
+        timeSlots={
+          dayWorkingHours?.startTime && dayWorkingHours?.endTime
+            ? (() => {
+                // Generate time slots based on working hours (every 30 minutes)
+                const slots: string[] = [];
+                const [startHour, startMinute] = parseTimeString(dayWorkingHours.startTime);
+                const [endHour, endMinute] = parseTimeString(dayWorkingHours.endTime);
+                const start = new Date(selectedDate);
+                start.setHours(startHour, startMinute, 0, 0);
+                const end = new Date(selectedDate);
+                end.setHours(endHour, endMinute, 0, 0);
+                let current = new Date(start);
+                while (current <= end) {
+                  slots.push(format(current, 'hh:mmaaa').toLowerCase());
+                  current = addMinutes(current, 30);
+                }
+                return slots.map((time, idx) => ({
+                  id: `${formatDateForAPI(selectedDate)}-${time}-${idx}`,
+                  time,
+                  formattedTime: time
+                }));
+              })()
+            : [
+                "09:00am", "09:30am", "10:00am", "10:30am", "11:00am", "11:30am",
+                "12:00pm", "12:30pm", "01:00pm", "01:30pm", "02:00pm", "02:30pm",
+                "03:00pm", "03:30pm", "04:00pm", "04:30pm", "05:00pm", "05:30pm",
+                "06:00pm", "06:30pm", "07:00pm"
+              ].map((time, idx) => ({
+                id: `${formatDateForAPI(selectedDate)}-${time}-${idx}`,
+                time,
+                formattedTime: time
+              }))
+        }
       />
 
       {/* New/Edit Appointment Dialog */}
