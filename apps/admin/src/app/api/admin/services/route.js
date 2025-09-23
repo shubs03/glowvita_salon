@@ -1,6 +1,6 @@
-import _db from "../../../../../../../packages/lib/src/db.js";
-import ServiceModel from "../../../../../../../packages/lib/src/models/admin/Service.model.js";
-import CategoryModel from "../../../../../../../packages/lib/src/models/admin/Category.model.js";
+import _db from "@repo/lib/db";
+import ServiceModel from "@repo/lib/models/admin/Service";
+import CategoryModel from "@repo/lib/models/admin/Category";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();

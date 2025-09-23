@@ -1,10 +1,10 @@
 
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import VendorModel from "../../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js";
-import SubscriptionPlan from "../../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
+import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan.model";
 import { ReferralModel, V2VSettingsModel } from "../../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
-import _db from "../../../../../../../../packages/lib/src/db.js";
+import _db from "@repo/lib/db";
 import validator from "validator";
 
 await _db();

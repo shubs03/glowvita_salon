@@ -20,11 +20,30 @@ import {
 } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  fullDescription?: string;
+  price: number;
+  salePrice?: number;
+  image: string;
+  category: string;
+  vendorName: string;
+  rating: number;
+  reviewCount: number;
+  isNew?: boolean;
+  size?: string;
+  inStock?: boolean;
+  stockCount?: number;
+  ingredients?: string;
+}
+
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState('');
   const [selectedTab, setSelectedTab] = useState('description');

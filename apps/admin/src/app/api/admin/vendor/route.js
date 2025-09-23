@@ -1,6 +1,6 @@
-import _db from "../../../../../../../packages/lib/src/db";
-import VendorModel from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
-import PlanModel from "../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model";
+import _db from "@repo/lib/db";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
+import PlanModel from "@repo/lib/models/admin/SubscriptionPlan";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin";
 import bcrypt from "bcryptjs";
 

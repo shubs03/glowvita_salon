@@ -9,7 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/ui/dialo
 import { Card } from '@repo/ui/card';
 import { Badge } from '@repo/ui/badge';
 import { ChevronLeft, Loader2, Clock, Plus, X } from 'lucide-react';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, Label, Textarea } from '@repo/ui/select';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@repo/ui/select';
+import { Label } from '@repo/ui/label';
+import { Textarea } from '@repo/ui/textarea';
 import { toast } from 'sonner';
 import React from 'react';
 import { format, parseISO, isSameDay, addMinutes, parse, isWithinInterval, addDays, startOfDay, endOfDay } from 'date-fns';
