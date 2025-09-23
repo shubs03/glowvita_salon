@@ -46,10 +46,11 @@ export function BookingSummary({
       { step: 1, label: 'Select Staff', enabled: selectedServices.length > 0 },
       { step: 2, label: 'Find a Time', enabled: !!selectedStaff },
       { step: 3, label: 'Confirm Booking', enabled: !!selectedTime },
-      { step: 4, label: 'Finish', enabled: false },
+      { step: 4, label: 'Finish', enabled: false }, // Final step
     ];
     
     const nextStepInfo = stepDetails.find(s => s.step === currentStep);
+    const buttonLabel = currentStep === 3 ? 'Confirm Booking' : nextStepInfo?.label || 'Continue';
 
     if (isMobileFooter) {
         return (
@@ -92,7 +93,7 @@ export function BookingSummary({
                             disabled={!nextStepInfo?.enabled} 
                             onClick={onNextStep}
                         >
-                            {nextStepInfo?.label || "Continue"}
+                            {buttonLabel}
                         </Button>
                     </div>
                 </div>
@@ -181,7 +182,7 @@ export function BookingSummary({
           disabled={!nextStepInfo?.enabled} 
           onClick={onNextStep}
         >
-            {nextStepInfo?.label || "Continue"}
+            {buttonLabel}
             <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
         </Button>
       </CardFooter>
