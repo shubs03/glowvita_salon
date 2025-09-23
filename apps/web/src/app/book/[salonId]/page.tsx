@@ -2,19 +2,14 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, X, Scissors, Users, Calendar, CheckCircle } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { Step1_Services } from "@/components/booking/Step1_Services";
 import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot } from "@/components/booking/Step3_TimeSlot";
 import { BookingSummary } from "@/components/booking/BookingSummary";
+import { CheckCircle } from "lucide-react";
 
-const steps = [
-  { id: 1, name: "Services", icon: Scissors },
-  { id: 2, name: "Professional", icon: Users },
-  { id: 3, name: "Time", icon: Calendar },
-  { id: 4, name: "Confirm", icon: CheckCircle },
-];
 
 export default function BookingPage() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -76,10 +71,6 @@ export default function BookingPage() {
           <ChevronLeft className="mr-1 h-5 w-5" />
           {currentStep === 1 ? 'Back to Salon' : 'Previous Step'}
         </Button>
-        <div className="text-center">
-            <h1 className="text-xl font-bold tracking-tight">{steps.find(s => s.id === currentStep)?.name}</h1>
-            <p className="text-sm text-muted-foreground">Step {currentStep} of {steps.length}</p>
-        </div>
         <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
           <X className="h-5 w-5" />
         </Button>
