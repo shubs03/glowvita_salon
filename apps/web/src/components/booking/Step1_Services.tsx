@@ -53,7 +53,7 @@ const allServices = Object.values(services).flat();
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
     return (
-        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
+        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4 pt-8">
             {steps.map((step, index) => (
                 <React.Fragment key={step}>
                     <button
@@ -92,7 +92,7 @@ export function Step1_Services({ selectedServices, onSelectService, currentStep,
         </div>
         
         {/* Tab-like navigation for categories */}
-        <div className="sticky top-0 z-10 py-4 bg-background/80 backdrop-blur-sm -mx-6 px-6">
+        <div className="sticky top-20 z-10 py-4 bg-background/80 backdrop-blur-sm -mx-6 px-6">
             <div className="relative">
                 <div className="flex space-x-2 overflow-x-auto pb-2 no-scrollbar">
                     {serviceCategories.map(category => (

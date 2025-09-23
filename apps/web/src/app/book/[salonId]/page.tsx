@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from "react";
@@ -45,6 +44,7 @@ export default function BookingPage() {
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
 
   const router = useRouter();
+  const { id } = router.query || {};
   
   const handleNextStep = () => {
     if (currentStep < 3) {
@@ -133,10 +133,10 @@ export default function BookingPage() {
         </Button>
       </header>
 
-      <div className="flex-1 grid lg:grid-cols-12 lg:gap-4 px-6 md:px-12">
+      <div className="flex-1 grid lg:grid-cols-12 lg:gap-8 px-8 md:px-16 overflow-hidden">
         {/* Main Content Area (scrollable) */}
-        <main className="lg:col-span-7 xl:col-span-8 py-8 overflow-y-auto no-scrollbar">
-            <div className="max-w-4xl mx-auto pb-24 lg:pb-0">
+        <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto no-scrollbar">
+            <div className="max-w-4xl mx-auto pb-24 lg:pb-8">
                 {renderStepContent()}
             </div>
         </main>
