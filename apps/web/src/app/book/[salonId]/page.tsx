@@ -1,14 +1,14 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { ChevronLeft, X } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { BookingSummary } from "@/components/booking/BookingSummary";
 import { Step1_Services } from "@/components/booking/Step1_Services";
 import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot } from "@/components/booking/Step3_TimeSlot";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
 import { format } from 'date-fns';
 
@@ -33,24 +33,37 @@ const staffMembers = [
     { id: '3', name: 'Emily White', role: 'Esthetician', image: 'https://picsum.photos/seed/staff3/400/400', hint: 'female esthetician portrait' },
 ];
 
-export default function BookingPage() {
+function BookingPageContent() {
+  const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const { id } = params;
+
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // New state for auth check and confirmation modal
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // Simulate user not logged in
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
 
-  const router = useRouter();
-  
+  useEffect(() => {
+    const serviceQuery = searchParams.get('service');
+    if (serviceQuery) {
+      try {
+        const service = JSON.parse(decodeURIComponent(serviceQuery));
+        setSelectedServices([service]);
+      } catch (error) {
+        console.error("Failed to parse service from URL:", error);
+      }
+    }
+  }, [searchParams]);
+
   const handleNextStep = () => {
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Final step: Check auth status
       if (isAuthenticated) {
         setIsConfirmationModalOpen(true);
       } else {
@@ -69,8 +82,6 @@ export default function BookingPage() {
 
   const handleFinalBookingConfirmation = () => {
     console.log("Booking Confirmed & Payment Initialized!");
-    // Here you would typically handle the final API call to create the booking
-    // and then redirect to a success page or payment gateway.
     setIsConfirmationModalOpen(false);
     alert("Booking Confirmed! (Simulated)");
   };
@@ -117,33 +128,28 @@ export default function BookingPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-      {/* Header */}
       <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
         <Button variant="ghost" onClick={handlePrevStep} className="flex items-center gap-2">
           <ChevronLeft className="mr-1 h-5 w-5" />
           {currentStep === 1 ? 'Back' : 'Back'}
         </Button>
-        
         <div className="font-bold text-lg font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
             GlowVita
         </div>
-        
         <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
           <X className="h-5 w-5" />
         </Button>
       </header>
 
-      <div className="flex-1 grid lg:grid-cols-12 lg:gap-4 px-6 md:px-12">
-        {/* Main Content Area (scrollable) */}
-        <main className="lg:col-span-7 xl:col-span-8 py-8 overflow-y-auto no-scrollbar">
-            <div className="max-w-4xl mx-auto pb-24 lg:pb-0">
+      <div className="flex-1 grid lg:grid-cols-12 lg:gap-4">
+        <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto no-scrollbar">
+            <div className="max-w-4xl mx-auto pb-24 lg:pb-8 pt-8">
                 {renderStepContent()}
             </div>
         </main>
         
-        {/* Desktop Sidebar (sticky) */}
         <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 py-8">
-          <div className="sticky top-24">
+          <div className="sticky top-28">
             <BookingSummary 
               selectedServices={selectedServices}
               selectedStaff={selectedStaff}
@@ -156,7 +162,6 @@ export default function BookingPage() {
         </aside>
       </div>
 
-      {/* Mobile & Tablet Footer (sticky) */}
       <div className="block lg:hidden fixed bottom-0 left-0 right-0 z-30">
         <BookingSummary 
             selectedServices={selectedServices}
@@ -169,7 +174,6 @@ export default function BookingPage() {
         />
       </div>
 
-       {/* Final Confirmation Modal */}
       <Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -208,5 +212,13 @@ export default function BookingPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function BookingPageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <BookingPageContent />
+    </Suspense>
   );
 }
