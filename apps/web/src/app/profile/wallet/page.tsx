@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { StatCard } from '../../../components/profile/StatCard';
-import { Wallet, Gift, DollarSign, Plus, ArrowUp, ArrowDown } from 'lucide-react';
+import { Wallet, Gift, DollarSign, Plus, ArrowUp, ArrowDown, Send } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -19,24 +19,33 @@ const initialWallet = {
   ],
 };
 
+type Transaction = {
+  id: string;
+  date: string;
+  description: string;
+  amount: number;
+  type: 'credit' | 'debit';
+};
+
 export default function WalletPage() {
     const [wallet, setWallet] = useState(initialWallet);
     const [addAmount, setAddAmount] = useState('');
+    const [withdrawAmount, setWithdrawAmount] = useState('');
     const [filter, setFilter] = useState<'all' | 'credit' | 'debit'>('all');
 
     const handleAddMoney = () => {
         const amount = parseFloat(addAmount);
         if(isNaN(amount) || amount <= 0) {
-            toast.error("Please enter a valid amount.");
+            toast.error("Please enter a valid amount to add.");
             return;
         }
 
-        const newTransaction = {
-            id: `W-${Date.now()}`,
+        const newTransaction: Transaction = {
+            id: `W-ADD-${Date.now()}`,
             date: new Date().toISOString(),
             description: `Added money to wallet`,
             amount: amount,
-            type: 'credit' as const,
+            type: 'credit',
         };
 
         setWallet(prev => ({
@@ -48,44 +57,102 @@ export default function WalletPage() {
         setAddAmount('');
     };
 
+    const handleWithdraw = () => {
+        const amount = parseFloat(withdrawAmount);
+        if (isNaN(amount) || amount <= 0) {
+            toast.error("Please enter a valid amount to withdraw.");
+            return;
+        }
+        if (amount > wallet.balance) {
+            toast.error("Withdrawal amount cannot exceed your current balance.");
+            return;
+        }
+
+        const newTransaction: Transaction = {
+            id: `W-WDR-${Date.now()}`,
+            date: new Date().toISOString(),
+            description: 'Withdrawal to bank account',
+            amount: -amount,
+            type: 'debit',
+        };
+
+        setWallet(prev => ({
+            balance: prev.balance - amount,
+            transactions: [newTransaction, ...prev.transactions]
+        }));
+
+        toast.success(`Withdrawal request for ₹${amount.toFixed(2)} submitted.`);
+        setWithdrawAmount('');
+    };
+
     const filteredTransactions = wallet.transactions.filter(tx => {
         if (filter === 'all') return true;
         return tx.type === filter;
     });
 
-    const totalCredits = wallet.transactions.filter(t => t.type === 'credit').reduce((acc, t) => acc + t.amount, 0);
+    const totalDeposits = wallet.transactions.filter(t => t.type === 'credit').reduce((acc, t) => acc + t.amount, 0);
+    const totalWithdrawals = wallet.transactions.filter(t => t.type === 'debit' && t.description.includes('Withdrawal')).reduce((acc, t) => acc + Math.abs(t.amount), 0);
 
     return (
         <div className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-                <StatCard icon={Wallet} title="Current Balance" value={`₹${wallet.balance.toFixed(2)}`} change="Updated just now" />
-                <StatCard icon={Gift} title="Total Credits" value={`₹${totalCredits.toFixed(2)}`} change="From promotions & refunds" />
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <StatCard icon={Wallet} title="Current Balance" value={`₹${wallet.balance.toFixed(2)}`} change="Available to spend" />
+                <StatCard icon={Gift} title="Total Deposits" value={`₹${totalDeposits.toFixed(2)}`} change="From promotions & top-ups" />
+                <StatCard icon={Send} title="Total Withdrawn" value={`₹${totalWithdrawals.toFixed(2)}`} change="Transferred to your bank" />
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Add Money to Wallet</CardTitle>
-                    <CardDescription>Instantly add funds to your wallet for quick and easy payments.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col sm:flex-row items-end gap-4">
-                        <div className="w-full sm:w-auto flex-grow">
-                            <Label htmlFor="addAmount">Amount (₹)</Label>
-                            <Input 
-                                id="addAmount"
-                                type="number" 
-                                placeholder="Enter amount" 
-                                value={addAmount} 
-                                onChange={(e) => setAddAmount(e.target.value)}
-                                min="1"
-                            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Add Money to Wallet</CardTitle>
+                        <CardDescription>Instantly add funds for quick payments.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-col sm:flex-row items-end gap-4">
+                            <div className="w-full sm:w-auto flex-grow">
+                                <Label htmlFor="addAmount">Amount (₹)</Label>
+                                <Input 
+                                    id="addAmount"
+                                    type="number" 
+                                    placeholder="Enter amount" 
+                                    value={addAmount} 
+                                    onChange={(e) => setAddAmount(e.target.value)}
+                                    min="1"
+                                />
+                            </div>
+                            <Button onClick={handleAddMoney} className="w-full sm:w-auto">
+                                <Plus className="mr-2 h-4 w-4" /> Add Money
+                            </Button>
                         </div>
-                        <Button onClick={handleAddMoney} className="w-full sm:w-auto">
-                            <Plus className="mr-2 h-4 w-4" /> Add Money
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Withdraw Funds</CardTitle>
+                        <CardDescription>Transfer your wallet balance to your bank account.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-col sm:flex-row items-end gap-4">
+                            <div className="w-full sm:w-auto flex-grow">
+                                <Label htmlFor="withdrawAmount">Amount (₹)</Label>
+                                <Input 
+                                    id="withdrawAmount"
+                                    type="number" 
+                                    placeholder="Enter amount" 
+                                    value={withdrawAmount} 
+                                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                                    min="1"
+                                    max={wallet.balance}
+                                />
+                            </div>
+                            <Button onClick={handleWithdraw} variant="outline" className="w-full sm:w-auto">
+                                <Send className="mr-2 h-4 w-4" /> Request Withdrawal
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
 
             <Card>
                 <CardHeader>
@@ -108,7 +175,7 @@ export default function WalletPage() {
                                 <div key={tx.id} className="flex justify-between items-center p-3 bg-secondary rounded-md">
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-full ${tx.type === 'credit' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                            {tx.type === 'credit' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+                                            {tx.description.includes('Withdrawal') ? <Send className="h-4 w-4" /> : (tx.type === 'credit' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />)}
                                         </div>
                                         <div>
                                             <p>{tx.description}</p>
@@ -116,7 +183,7 @@ export default function WalletPage() {
                                         </div>
                                     </div>
                                     <p className={`font-semibold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {tx.type === 'credit' ? '+' : '-'}₹{Math.abs(tx.amount).toFixed(2)}
+                                        {tx.amount > 0 ? '+' : ''}₹{tx.amount.toFixed(2)}
                                     </p>
                                 </div>
                             ))
