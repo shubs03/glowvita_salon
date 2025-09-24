@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import Image from "next/image";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
@@ -63,6 +63,7 @@ import {
   DialogTitle,
 } from "@repo/ui/dialog";
 import { Separator } from "@repo/ui/separator";
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // Mock Data
 const userProfile = {
@@ -205,20 +206,26 @@ const newProducts = [
 ];
 
 const StatCard = ({ icon: Icon, title, value, change }) => (
-  <Card className="hover:shadow-sm transition-shadow duration-300 bg-white/50 backdrop-blur-md border">
-    <CardHeader className="flex flex-row items-center justify-between pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      <Icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-      <p className="text-xs text-muted-foreground">{change}</p>
+  <Card className="hover:shadow-lg transition-shadow duration-300 bg-white/50 backdrop-blur-md border rounded-xl overflow-hidden group">
+    <CardContent className="p-6">
+      <div className="flex items-center justify-between">
+        <div className="p-3 bg-primary/10 rounded-full text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:scale-110">
+          <Icon className="h-5 w-5" />
+        </div>
+        <p className="text-sm font-semibold text-green-600">{change}</p>
+      </div>
+      <div className="mt-4">
+        <p className="text-3xl font-bold">{value}</p>
+        <p className="text-sm text-muted-foreground">{title}</p>
+      </div>
     </CardContent>
   </Card>
 );
 
-export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState("overview");
+function ProfilePageComponent() {
+  const searchParams = useSearchParams();
+  const defaultTab = searchParams.get('tab') || 'overview';
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [isCancelOrderModalOpen, setIsCancelOrderModalOpen] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState<
     (typeof orderHistory)[0] | null
@@ -231,7 +238,6 @@ export default function ProfilePage() {
 
   const handleConfirmCancelOrder = () => {
     console.log("Cancelling order:", orderToCancel?.id);
-    // Add logic here to actually cancel the order via an API call
     setIsCancelOrderModalOpen(false);
     setOrderToCancel(null);
   };
@@ -250,14 +256,22 @@ export default function ProfilePage() {
     const apptDate = new Date(appointmentDate);
     const hoursDifference =
       (apptDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-    return hoursDifference > 24; // Allow cancellation if more than 24 hours away
+    return hoursDifference > 24;
+  };
+  
+  const isOrderCancellable = (orderDate: string) => {
+    const now = new Date();
+    const ordDate = new Date(orderDate);
+    const hoursDifference =
+      (now.getTime() - ordDate.getTime()) / (1000 * 60 * 60);
+    return hoursDifference < 1;
   };
 
   return (
     <PageContainer>
       <div className="lg:grid lg:grid-cols-12 lg:gap-8">
         {/* Left Sidebar */}
-        <aside className="lg:col-span-3 xl:col-span-2 mb-8 lg:mb-0 lg:sticky lg:top-24 self-start">
+        <aside className="lg:col-span-3 xl:col-span-2 mb-8 lg:mb-0 lg:sticky top-24 self-start">
           <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border-border/30">
             <CardHeader className="text-center p-6 border-b border-border/20">
               <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20 shadow-xl">
@@ -326,17 +340,16 @@ export default function ProfilePage() {
                     icon={Gift}
                     title="Loyalty Points"
                     value={stats.loyaltyPoints}
-                    change="+100 points this month"
+                    change="+100 points"
                   />
-                  <StatCard
+                   <StatCard
                     icon={Heart}
                     title="My Wishlist"
                     value={stats.wishlistItems}
                     change="+2 new items"
                   />
                 </div>
-
-                <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                 <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
                   <Card className="xl:col-span-1">
                     <CardHeader>
                       <CardTitle className="text-lg flex items-center gap-2">
@@ -516,37 +529,7 @@ export default function ProfilePage() {
                     </CardContent>
                   </Card>
                 </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Upcoming Appointments</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {upcomingAppointments.map((appt) => (
-                          <div
-                            key={appt.id}
-                            className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-secondary rounded-md"
-                          >
-                            <div>
-                              <p className="font-semibold">{appt.service}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {new Date(appt.date).toLocaleDateString()} with{" "}
-                                {appt.staff}
-                              </p>
-                            </div>
-                            <Badge className="mt-2 sm:mt-0">
-                              {appt.status}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card>
                     <CardHeader>
                       <CardTitle>Current Offers</CardTitle>
@@ -633,31 +616,10 @@ export default function ProfilePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid md:grid-cols-3 gap-6 mb-6">
-                    <StatCard
-                      icon={Calendar}
-                      title="Upcoming"
-                      value={upcomingAppointments.length}
-                      change="Next in 3 days"
-                    />
-                    <StatCard
-                      icon={CheckCircle}
-                      title="Completed"
-                      value={
-                        pastAppointments.filter((a) => a.status === "Completed")
-                          .length
-                      }
-                      change="All time"
-                    />
-                    <StatCard
-                      icon={X}
-                      title="Cancelled"
-                      value={
-                        pastAppointments.filter((a) => a.status === "Cancelled")
-                          .length
-                      }
-                      change="All time"
-                    />
+                   <div className="grid md:grid-cols-3 gap-6 mb-6">
+                    <StatCard icon={Calendar} title="Upcoming" value={upcomingAppointments.length} change="Next in 3 days" />
+                    <StatCard icon={CheckCircle} title="Completed" value={pastAppointments.filter(a => a.status === 'Completed').length} change="All time" />
+                    <StatCard icon={X} title="Cancelled" value={pastAppointments.filter(a => a.status === 'Cancelled').length} change="All time" />
                   </div>
                   <Table>
                     <TableHeader>
@@ -691,23 +653,13 @@ export default function ProfilePage() {
                                 {appt.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right">
-                              {isAppointmentCancellable(appt.date) &&
-                              appt.status === "Confirmed" ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                >
+                           <TableCell className="text-right">
+                              {isAppointmentCancellable(appt.date) && appt.status === 'Confirmed' ? (
+                                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50">
                                   <Trash className="h-4 w-4 mr-1" />
                                 </Button>
                               ) : (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled
-                                  className="text-gray-400"
-                                >
+                                <Button variant="ghost" size="sm" disabled className="text-gray-400">
                                   <Trash className="h-4 w-4 mr-1" />
                                 </Button>
                               )}
@@ -728,28 +680,10 @@ export default function ProfilePage() {
                   <CardDescription>Your product order history.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid md:grid-cols-3 gap-6 mb-6">
-                    <StatCard
-                      icon={ShoppingCart}
-                      title="Total Orders"
-                      value={orderHistory.length}
-                      change="All time"
-                    />
-                    <StatCard
-                      icon={TrendingUp}
-                      title="Total Spent"
-                      value={`₹${orderHistory.reduce((acc, o) => acc + o.total, 0).toFixed(2)}`}
-                      change="On products"
-                    />
-                    <StatCard
-                      icon={Package}
-                      title="Delivered"
-                      value={
-                        orderHistory.filter((o) => o.status === "Delivered")
-                          .length
-                      }
-                      change="All time"
-                    />
+                   <div className="grid md:grid-cols-3 gap-6 mb-6">
+                      <StatCard icon={ShoppingCart} title="Total Orders" value={orderHistory.length} change="All time" />
+                      <StatCard icon={TrendingUp} title="Total Spent" value={`₹${orderHistory.reduce((acc, o) => acc + o.total, 0).toFixed(2)}`} change="On products" />
+                      <StatCard icon={Package} title="Delivered" value={orderHistory.filter(o => o.status === 'Delivered').length} change="All time" />
                   </div>
                   <Table>
                     <TableHeader>
@@ -783,25 +717,15 @@ export default function ProfilePage() {
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            {order.status === "Processing" ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => handleCancelOrderClick(order)}
-                              >
-                                <Trash className="h-4 w-4 mr-1" />
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled
-                                className="text-gray-400"
-                              >
-                                <Trash className="h-4 w-4 mr-1" />
-                              </Button>
-                            )}
+                              {isOrderCancellable(order.date) && order.status === 'Processing' ? (
+                                  <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancelOrderClick(order)}>
+                                      <Trash className="h-4 w-4 mr-1"/>
+                                  </Button>
+                              ) : (
+                                  <Button variant="ghost" size="sm" disabled className="text-gray-400">
+                                      <Trash className="h-4 w-4 mr-1"/>
+                                  </Button>
+                              )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -857,21 +781,8 @@ export default function ProfilePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
-                    <StatCard
-                      icon={Wallet}
-                      title="Current Balance"
-                      value={`₹${wallet.balance.toFixed(2)}`}
-                      change="+₹50 last week"
-                    />
-                    <StatCard
-                      icon={Gift}
-                      title="Total Credits"
-                      value={`₹${wallet.transactions
-                        .filter((t) => t.amount > 0)
-                        .reduce((acc, t) => acc + t.amount, 0)
-                        .toFixed(2)}`}
-                      change="All time"
-                    />
+                    <StatCard icon={Wallet} title="Current Balance" value={`₹${wallet.balance.toFixed(2)}`} change="+₹50 last week" />
+                    <StatCard icon={Gift} title="Total Credits" value={`₹${wallet.transactions.filter(t => t.amount > 0).reduce((acc, t) => acc + t.amount, 0).toFixed(2)}`} change="All time" />
                   </div>
                   <h4 className="font-semibold mb-4">Transaction History</h4>
                   <div className="space-y-2">
@@ -896,7 +807,7 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="settings">
+             <TabsContent value="settings">
               <Card>
                 <CardHeader>
                   <CardTitle>Account Settings</CardTitle>
@@ -979,3 +890,14 @@ export default function ProfilePage() {
     </PageContainer>
   );
 }
+
+export default function ProfilePageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProfilePageComponent />
+    </Suspense>
+  );
+}
+```
+- packages/web/src/hooks/useAuth.ts
+- apps/web/src/components/AuthInitializer.tsx
