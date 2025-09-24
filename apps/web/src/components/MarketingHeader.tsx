@@ -68,17 +68,21 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
       setIsScrolled(window.scrollY > 10);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
+    if (isHomePage) {
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => {
+        window.removeEventListener('scroll', handleScroll);
+      };
+    } else {
+      setIsScrolled(true);
+    }
+  }, [isHomePage]);
 
   return (
     <header 
       className={cn(
         "sticky top-0 z-40 transition-all duration-300",
-        (isScrolled || !isHomePage)
+        isScrolled
           ? "bg-background/80 backdrop-blur-lg border-b border-border/50" 
           : "bg-transparent border-b border-transparent",
       )}
@@ -116,7 +120,7 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
             isAuthenticated && user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center gap-2 h-10 rounded-full hover:bg-primary/10 transition-all duration-300">
+                  <Button variant="ghost" className="group flex items-center gap-2 h-10 rounded-full hover:bg-primary/10 transition-all duration-300">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user?.avatarUrl} alt={user?.firstName || ''} />
                       <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
