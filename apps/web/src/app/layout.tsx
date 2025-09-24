@@ -28,15 +28,8 @@ export default function RootLayout({
     '/terms-and-conditions'
   ];
 
-  // Pages that have their own specific layout or no layout at all
-  const hasCustomLayout = [
-    '/client-login',
-    '/client-register',
-    '/profile',
-    '/book'
-  ].some(path => pathname.startsWith(path));
-
-  const showMarketingLayout = marketingPages.includes(pathname) && !hasCustomLayout;
+  // Check if the current page is one of the marketing pages
+  const showMarketingLayout = marketingPages.includes(pathname);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -63,7 +56,10 @@ export default function RootLayout({
             {showMarketingLayout ? (
               <MarketingLayout>{children}</MarketingLayout>
             ) : (
-              children
+              <>
+                {/* For non-marketing pages, we render the header separately and omit the footer */}
+                <MarketingLayout>{children}</MarketingLayout> 
+              </>
             )}
             <Toaster />
           </AuthInitializer>

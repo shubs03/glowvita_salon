@@ -11,22 +11,29 @@ export async function middleware(request) {
     return NextResponse.next();
   }
   
-  // Handle protected routes
-  if (pathname.startsWith('/profile')) {
+  // Define protected routes
+  const protectedPaths = ['/profile'];
+
+  // Check if the current path is a protected path or a sub-path of a protected path
+  const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path));
+
+  if (isProtectedPath) {
     if (!token) {
+      // If no token, redirect to login for any protected route
       return NextResponse.redirect(new URL('/client-login', request.url));
     }
 
     try {
       const payload = await verifyJwt(token);
       if (!payload) {
-        // Invalid token, clear it and redirect to login
+        // If token is invalid (e.g., tampered or failed verification), clear it and redirect to login
         const response = NextResponse.redirect(new URL('/client-login', request.url));
         response.cookies.set('token', '', { expires: new Date(0), path: '/' });
         return response;
       }
     } catch (error) {
-      // Error verifying token (e.g., expired), clear it and redirect
+      // If token verification throws an error (e.g., expired), clear it and redirect
+      console.log("Token verification error in middleware:", error.code);
       const response = NextResponse.redirect(new URL('/client-login', request.url));
       response.cookies.set('token', '', { expires: new Date(0), path: '/' });
       return response;
