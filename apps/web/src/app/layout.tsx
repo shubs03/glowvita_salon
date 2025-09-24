@@ -5,12 +5,11 @@ import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import StoreProvider from '@repo/store/provider';
 import './globals.css';
-import { MarketingLayout } from '@/components/MarketingLayout';
 import { Toaster } from 'sonner';
-import { AuthInitializer } from '@/components/AuthInitializer'; // Import the initializer
+import { AuthInitializer } from '@/components/AuthInitializer';
 import { MarketingHeader } from '@/components/MarketingHeader';
+import { Footer } from '@/components/Footer';
 import { useState } from 'react';
-import ProfileLayout from './profile/layout';
 
 export default function RootLayout({
   children,
@@ -24,7 +23,6 @@ export default function RootLayout({
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
   
-  // Pages that should use the full MarketingLayout (with footer)
   const marketingPages = [
     '/',
     '/apps',
@@ -39,35 +37,6 @@ export default function RootLayout({
 
   const isMarketingPage = marketingPages.includes(pathname);
   const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
-  const isProfilePage = pathname.startsWith('/profile');
-
-  let layoutContent: ReactNode;
-
-  if (isMarketingPage) {
-    // Full marketing layout with header and footer
-    layoutContent = <MarketingLayout>{children}</MarketingLayout>;
-  } else if (isAuthPage) {
-    // Auth pages have no layout
-    layoutContent = children;
-  } else if (isProfilePage) {
-    // Profile pages get the ProfileLayout
-    layoutContent = <ProfileLayout>{children}</ProfileLayout>;
-  }
-  else {
-    // For other pages (e.g., booking, product details), show the header but no footer
-    layoutContent = (
-       <div className="flex flex-col min-h-screen bg-background text-foreground">
-        <MarketingHeader 
-          isMobileMenuOpen={isMobileMenuOpen} 
-          toggleMobileMenu={toggleMobileMenu}
-          isHomePage={false}
-        />
-        <main className="flex-grow">
-          {children}
-        </main>
-      </div>
-    );
-  }
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -91,7 +60,19 @@ export default function RootLayout({
       <body>
         <StoreProvider>
           <AuthInitializer>
-            {layoutContent}
+            <div className="flex flex-col min-h-screen bg-background text-foreground">
+              {!isAuthPage && (
+                <MarketingHeader 
+                  isMobileMenuOpen={isMobileMenuOpen} 
+                  toggleMobileMenu={toggleMobileMenu}
+                  isHomePage={pathname === '/'}
+                />
+              )}
+              <main className="flex-grow">
+                {children}
+              </main>
+              {isMarketingPage && <Footer />}
+            </div>
             <Toaster />
           </AuthInitializer>
         </StoreProvider>

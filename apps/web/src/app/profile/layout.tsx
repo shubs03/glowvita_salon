@@ -26,7 +26,6 @@ import { useAppDispatch } from "@repo/store/hooks";
 import { clearUserAuth } from "@repo/store/slices/userAuthSlice";
 import Cookies from "js-cookie";
 import { toast } from 'sonner';
-import { MarketingHeader } from "@/components/MarketingHeader";
 
 const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
@@ -58,79 +57,75 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
 
   if (isAuthLoading || !isAuthenticated) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+      <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
   
   return (
-    <div className="flex flex-col min-h-screen bg-secondary/30">
-      {/* We are removing the MarketingHeader from here to avoid duplication as it is in the root layout */}
-      <PageContainer>
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-          {/* Left Sidebar */}
-          <aside className="lg:col-span-3 xl:col-span-2 mb-8 lg:mb-0">
-             <div className="lg:sticky lg:top-24">
-              <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border-border/30">
-                <CardHeader className="text-center p-6 border-b border-border/20">
-                  <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20 shadow-xl">
-                    <AvatarImage
-                      src={user?.profilePicture}
-                      alt={user?.firstName}
-                    />
-                    <AvatarFallback className="text-3xl">
-                      {user?.firstName?.charAt(0) || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <CardTitle className="text-xl font-bold">
-                    {user?.firstName} {user?.lastName}
-                  </CardTitle>
-                  <CardDescription className="text-sm">
-                    {user?.emailAddress}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-2">
-                  <nav className="flex flex-col space-y-1">
-                    {navItems.map((item) => (
-                      <Button
-                        key={item.id}
-                        variant={(pathname === item.href) ? "secondary" : "ghost"}
-                        className="justify-start gap-3 h-12 text-sm rounded-lg"
-                        asChild
-                      >
-                        <Link href={item.href}>
-                          <item.icon className="h-4 w-4" />
-                          {item.label}
-                        </Link>
-                      </Button>
-                    ))}
-                    <div className="pt-2 border-t border-border/20 mx-2 mt-2">
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start gap-3 h-12 text-sm text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={handleLogout}
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Logout
-                      </Button>
-                    </div>
-                  </nav>
-                </CardContent>
-              </Card>
-             </div>
-          </aside>
+    <PageContainer>
+      <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+        {/* Left Sidebar */}
+        <aside className="lg:col-span-3 xl:col-span-2 mb-8 lg:mb-0">
+           <div className="lg:sticky lg:top-24">
+            <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border-border/30">
+              <CardHeader className="text-center p-6 border-b border-border/20">
+                <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20 shadow-xl">
+                  <AvatarImage
+                    src={user?.profilePicture}
+                    alt={user?.firstName}
+                  />
+                  <AvatarFallback className="text-3xl">
+                    {user?.firstName?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <CardTitle className="text-xl font-bold">
+                  {user?.firstName} {user?.lastName}
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  {user?.emailAddress}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-2">
+                <nav className="flex flex-col space-y-1">
+                  {navItems.map((item) => (
+                    <Button
+                      key={item.id}
+                      variant={(pathname === item.href) ? "secondary" : "ghost"}
+                      className="justify-start gap-3 h-12 text-sm rounded-lg"
+                      asChild
+                    >
+                      <Link href={item.href}>
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                      </Link>
+                    </Button>
+                  ))}
+                  <div className="pt-2 border-t border-border/20 mx-2 mt-2">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 h-12 text-sm text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Logout
+                    </Button>
+                  </div>
+                </nav>
+              </CardContent>
+            </Card>
+           </div>
+        </aside>
 
-          {/* Main Content */}
-          <main className="lg:col-span-9 xl:col-span-10">
-            {children}
-          </main>
-        </div>
-      </PageContainer>
-    </div>
+        {/* Main Content */}
+        <main className="lg:col-span-9 xl:col-span-10">
+          {children}
+        </main>
+      </div>
+    </PageContainer>
   );
 }
-
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
     return (

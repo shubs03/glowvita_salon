@@ -3,8 +3,8 @@
 
 import { useState, useEffect, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
+import { MarketingHeader } from './MarketingHeader';
 
 export function MarketingLayout({ children }: { children: ReactNode; }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -21,16 +21,10 @@ export function MarketingLayout({ children }: { children: ReactNode; }) {
   };
      
   return (
-      <div className="flex flex-col min-h-screen bg-background text-foreground">
-        <MarketingHeader 
-          isMobileMenuOpen={isMobileMenuOpen} 
-          toggleMobileMenu={toggleMobileMenu}
-          isHomePage={isHomePage}
-        />
-        <main className="flex-grow">
-          {children}
-        </main>
-        <Footer />
-      </div>
+    <>
+      {/* The header is now rendered in the root layout, so it's removed from here */}
+      {children}
+      <Footer />
+    </>
   );
 }
