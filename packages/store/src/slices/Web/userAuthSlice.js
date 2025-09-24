@@ -8,28 +8,11 @@ const initialState = {
   permissions: [],
 };
 
-const loadUserAuthState = () => {
-  try {
-    if (typeof localStorage !== 'undefined') {
-      const serializedState = localStorage.getItem('userAuthState');
-      if (serializedState === null) {
-        return initialState;
-      }
-      const parsedState = JSON.parse(serializedState);
-      if (parsedState && typeof parsedState.isAuthenticated === 'boolean') {
-        return parsedState;
-      }
-    }
-    return initialState;
-  } catch (e) {
-    console.error("Could not load user auth state from localStorage", e);
-    return initialState;
-  }
-};
-
+// The slice should not be responsible for loading its own state from localStorage.
+// This is an external concern that should be handled by a component like AuthInitializer.
 const userAuthSlice = createSlice({
   name: 'userAuth',
-  initialState: loadUserAuthState(),
+  initialState,
   reducers: {
     setUserAuth: (state, action) => {
       const { user, token, role, permissions } = action.payload;
@@ -41,14 +24,14 @@ const userAuthSlice = createSlice({
 
       if (typeof localStorage !== 'undefined') {
         try {
-          const serializedState = JSON.stringify({
+          // Persist only the necessary parts, not the entire state.
+          const stateToPersist = {
             isAuthenticated: true,
             user,
-            token,
             role,
             permissions: permissions || [],
-          });
-          localStorage.setItem('userAuthState', serializedState);
+          };
+          localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
         } catch (e) {
           console.error("Could not save user auth state to localStorage", e);
         }

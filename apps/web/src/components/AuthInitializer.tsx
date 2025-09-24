@@ -10,30 +10,27 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    try {
-      const token = Cookies.get('token');
-      const storedState = localStorage.getItem('userAuthState');
-      
-      if (storedState && token) {
-        const { user, role } = JSON.parse(storedState);
-        const decodedToken: { exp: number } = jwtDecode(token);
+    const token = Cookies.get('token');
+    const storedState = localStorage.getItem('userAuthState');
 
-        if (user && token && decodedToken.exp * 1000 > Date.now()) {
-          dispatch(setUserAuth({ user, token, role }));
-        } else {
-          // If token is expired or state is malformed, clear everything
-          dispatch(clearUserAuth());
-          Cookies.remove('token', { path: '/' });
-          localStorage.removeItem('userAuthState');
+    if (token && storedState) {
+      try {
+        const decodedToken: { exp: number } = jwtDecode(token);
+        if (decodedToken.exp * 1000 > Date.now()) {
+          const { user, role } = JSON.parse(storedState);
+          if (user && token && role) {
+            dispatch(setUserAuth({ user, token, role }));
+            return;
+          }
         }
-      } else {
-        // If no token or stored state, ensure everything is cleared on the client side
-        dispatch(clearUserAuth());
+      } catch (error) {
+        console.error("AuthInitializer: Error decoding token or parsing state.", error);
       }
-    } catch (error) {
-      console.error("Failed to process auth state.", error);
-      dispatch(clearUserAuth());
     }
+
+    // If any of the above fails, ensure we are in a clean, logged-out state.
+    dispatch(clearUserAuth());
+    
   }, [dispatch]);
 
   return <>{children}</>;
