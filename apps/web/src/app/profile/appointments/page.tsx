@@ -7,7 +7,7 @@ import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
-import { Trash } from 'lucide-react';
+import { Calendar, CheckCircle, X, Trash } from 'lucide-react';
 import { StatCard } from '../../../components/profile/StatCard';
 import { AppointmentCard } from '../../../components/profile/AppointmentCard';
 
