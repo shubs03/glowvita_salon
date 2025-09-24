@@ -12,8 +12,10 @@ import { StatCard } from '../../../components/profile/StatCard';
 import { Pagination } from '@repo/ui/pagination';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Label } from '@repo/ui/label';
+import { Textarea } from '@repo/ui/textarea';
 
-const orderHistory = [
+const initialOrderHistory = [
   { id: "ORD-001", date: "2024-08-01T10:00:00Z", total: 120, items: 3, status: "Delivered" },
   { id: "ORD-002", date: "2024-07-15T15:30:00Z", total: 75, items: 2, status: "Processing" },
   { id: "ORD-003", date: "2024-06-10T11:00:00Z", total: 210, items: 5, status: "Cancelled" },
@@ -23,8 +25,10 @@ const orderHistory = [
 ];
 
 export default function OrdersPage() {
+    const [orderHistory, setOrderHistory] = useState(initialOrderHistory);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [orderToCancel, setOrderToCancel] = useState(null);
+    const [cancellationReason, setCancellationReason] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
     const [searchTerm, setSearchTerm] = useState('');
@@ -35,7 +39,7 @@ export default function OrdersPage() {
           (order.id.toLowerCase().includes(searchTerm.toLowerCase())) &&
           (statusFilter === 'all' || order.status === statusFilter)
         );
-    }, [searchTerm, statusFilter]);
+    }, [orderHistory, searchTerm, statusFilter]);
 
     const handleCancelClick = (order) => {
         setOrderToCancel(order);
@@ -43,16 +47,17 @@ export default function OrdersPage() {
     };
 
     const handleConfirmCancel = () => {
-        console.log("Cancelling order:", orderToCancel?.id);
+        console.log("Cancelling order:", orderToCancel?.id, "Reason:", cancellationReason);
+        setOrderHistory(orderHistory.map(order => 
+            order.id === orderToCancel.id ? { ...order, status: 'Cancelled' } : order
+        ));
         setIsCancelModalOpen(false);
         setOrderToCancel(null);
+        setCancellationReason('');
     };
     
-    const isOrderCancellable = (orderDate: string) => {
-        const now = new Date();
-        const ordDate = new Date(orderDate);
-        const hoursDifference = (now.getTime() - ordDate.getTime()) / (1000 * 60 * 60);
-        return hoursDifference < 1;
+    const isOrderCancellable = (status: string) => {
+        return status === 'Processing';
     };
 
     const lastItemIndex = currentPage * itemsPerPage;
@@ -125,7 +130,7 @@ export default function OrdersPage() {
                               </Badge>
                             </TableCell>
                              <TableCell className="text-right">
-                                {isOrderCancellable(order.date) && order.status === 'Processing' ? (
+                                {isOrderCancellable(order.status) ? (
                                     <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancelClick(order)}>
                                         <Trash className="h-4 w-4 mr-1"/>
                                     </Button>
@@ -157,12 +162,22 @@ export default function OrdersPage() {
                     <DialogHeader>
                         <DialogTitle>Cancel Order</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to cancel order {orderToCancel?.id}?
+                            Are you sure you want to cancel order {orderToCancel?.id}? Please provide a reason.
                         </DialogDescription>
                     </DialogHeader>
+                    <div className="py-4">
+                        <Label htmlFor="cancellation-reason">Reason for Cancellation</Label>
+                        <Textarea 
+                          id="cancellation-reason"
+                          value={cancellationReason}
+                          onChange={(e) => setCancellationReason(e.target.value)}
+                          placeholder="e.g., Ordered by mistake"
+                          className="mt-2"
+                        />
+                    </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsCancelModalOpen(false)}>No</Button>
-                        <Button variant="destructive" onClick={handleConfirmCancel}>Yes, Cancel Order</Button>
+                        <Button variant="destructive" onClick={handleConfirmCancel} disabled={!cancellationReason.trim()}>Yes, Cancel Order</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -12,8 +12,10 @@ import { StatCard } from '../../../components/profile/StatCard';
 import { Pagination } from '@repo/ui/pagination';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Textarea } from '@repo/ui/textarea';
+import { Label } from '@repo/ui/label';
 
-const pastAppointments = [
+const initialAppointments = [
   {
     id: "APP-024",
     service: "Signature Facial",
@@ -31,6 +33,14 @@ const pastAppointments = [
     price: 75.0,
   },
   {
+    id: "APP-027",
+    service: "Upcoming Haircut",
+    date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+    staff: "Jessica Miller",
+    status: "Confirmed",
+    price: 85.0,
+  },
+  {
     id: "APP-022",
     service: "Hot Stone Massage",
     date: "2024-06-25T13:00:00Z",
@@ -38,7 +48,6 @@ const pastAppointments = [
     status: "Cancelled",
     price: 130.0,
   },
-  // Add more mock data for pagination
   {
     id: "APP-021",
     service: "Gel Manicure",
@@ -66,20 +75,22 @@ const pastAppointments = [
 ];
 
 export default function AppointmentsPage() {
+  const [appointments, setAppointments] = useState(initialAppointments);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
+  const [cancellationReason, setCancellationReason] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
   const filteredAppointments = useMemo(() => {
-    return pastAppointments.filter(appointment =>
+    return appointments.filter(appointment =>
       (appointment.service.toLowerCase().includes(searchTerm.toLowerCase()) ||
        appointment.staff.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (statusFilter === 'all' || appointment.status === statusFilter)
     );
-  }, [searchTerm, statusFilter]);
+  }, [appointments, searchTerm, statusFilter]);
 
   const handleCancelClick = (appointment) => {
     setAppointmentToCancel(appointment);
@@ -87,9 +98,13 @@ export default function AppointmentsPage() {
   };
 
   const handleConfirmCancel = () => {
-    console.log("Cancelling appointment:", appointmentToCancel?.id);
+    console.log("Cancelling appointment:", appointmentToCancel?.id, "Reason:", cancellationReason);
+    setAppointments(appointments.map(appt => 
+      appt.id === appointmentToCancel.id ? { ...appt, status: 'Cancelled' } : appt
+    ));
     setIsCancelModalOpen(false);
     setAppointmentToCancel(null);
+    setCancellationReason('');
   };
 
   const isAppointmentCancellable = (appointmentDate: string) => {
@@ -107,9 +122,9 @@ export default function AppointmentsPage() {
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard icon={Calendar} title="Upcoming" value={2} change="Next in 3 days" />
-        <StatCard icon={CheckCircle} title="Completed" value={pastAppointments.filter(a => a.status === 'Completed').length} change="All time" />
-        <StatCard icon={X} title="Cancelled" value={pastAppointments.filter(a => a.status === 'Cancelled').length} change="All time" />
+        <StatCard icon={Calendar} title="Upcoming" value={appointments.filter(a => new Date(a.date) > new Date() && a.status === 'Confirmed').length} change="Next in 3 days" />
+        <StatCard icon={CheckCircle} title="Completed" value={appointments.filter(a => a.status === 'Completed').length} change="All time" />
+        <StatCard icon={X} title="Cancelled" value={appointments.filter(a => a.status === 'Cancelled').length} change="All time" />
       </div>
 
       <Card>
@@ -136,6 +151,7 @@ export default function AppointmentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="Confirmed">Upcoming</SelectItem>
                   <SelectItem value="Completed">Completed</SelectItem>
                   <SelectItem value="Cancelled">Cancelled</SelectItem>
                 </SelectContent>
@@ -164,7 +180,7 @@ export default function AppointmentsPage() {
                     <TableCell>{appt.staff}</TableCell>
                     <TableCell>₹{appt.price.toFixed(2)}</TableCell>
                     <TableCell>
-                      <Badge variant={appt.status === "Completed" ? "default" : "secondary"}>
+                      <Badge variant={appt.status === "Completed" ? "default" : appt.status === "Confirmed" ? "secondary" : "destructive"}>
                         {appt.status}
                       </Badge>
                     </TableCell>
@@ -201,12 +217,22 @@ export default function AppointmentsPage() {
           <DialogHeader>
             <DialogTitle>Cancel Appointment</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel your appointment for {appointmentToCancel?.service}?
+              Are you sure you want to cancel your appointment for {appointmentToCancel?.service}? Please provide a reason.
             </DialogDescription>
           </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="cancellation-reason">Reason for Cancellation</Label>
+            <Textarea 
+              id="cancellation-reason"
+              value={cancellationReason}
+              onChange={(e) => setCancellationReason(e.target.value)}
+              placeholder="e.g., Schedule conflict"
+              className="mt-2"
+            />
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCancelModalOpen(false)}>No</Button>
-            <Button variant="destructive" onClick={handleConfirmCancel}>Yes, Cancel</Button>
+            <Button variant="destructive" onClick={handleConfirmCancel} disabled={!cancellationReason.trim()}>Yes, Cancel</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

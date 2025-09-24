@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { StatCard } from '../../../components/profile/StatCard';
 import { Wallet, Gift, DollarSign, Plus, ArrowUp, ArrowDown, Send } from 'lucide-react';
@@ -9,6 +9,8 @@ import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
+import { Pagination } from '@repo/ui/pagination';
 
 const initialWallet = {
   balance: 250,
@@ -32,6 +34,8 @@ export default function WalletPage() {
     const [addAmount, setAddAmount] = useState('');
     const [withdrawAmount, setWithdrawAmount] = useState('');
     const [filter, setFilter] = useState<'all' | 'credit' | 'debit'>('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
 
     const handleAddMoney = () => {
         const amount = parseFloat(addAmount);
@@ -90,8 +94,13 @@ export default function WalletPage() {
         return tx.type === filter;
     });
 
+    const lastItemIndex = currentPage * itemsPerPage;
+    const firstItemIndex = lastItemIndex - itemsPerPage;
+    const currentTransactions = filteredTransactions.slice(firstItemIndex, lastItemIndex);
+    const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+
     const totalDeposits = wallet.transactions.filter(t => t.type === 'credit').reduce((acc, t) => acc + t.amount, 0);
-    const totalWithdrawals = wallet.transactions.filter(t => t.type === 'debit' && t.description.includes('Withdrawal')).reduce((acc, t) => acc + Math.abs(t.amount), 0);
+    const totalWithdrawals = wallet.transactions.filter(t => t.description.includes('Withdrawal')).reduce((acc, t) => acc + Math.abs(t.amount), 0);
 
     return (
         <div className="space-y-6">
@@ -169,28 +178,54 @@ export default function WalletPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-3">
-                        {filteredTransactions.length > 0 ? (
-                            filteredTransactions.map((tx) => (
-                                <div key={tx.id} className="flex justify-between items-center p-3 bg-secondary rounded-md">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-full ${tx.type === 'credit' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
-                                            {tx.description.includes('Withdrawal') ? <Send className="h-4 w-4" /> : (tx.type === 'credit' ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />)}
-                                        </div>
-                                        <div>
-                                            <p>{tx.description}</p>
-                                            <p className="text-xs text-muted-foreground">{new Date(tx.date).toLocaleString()}</p>
-                                        </div>
-                                    </div>
-                                    <p className={`font-semibold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-                                        {tx.amount > 0 ? '+' : ''}₹{tx.amount.toFixed(2)}
-                                    </p>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-center text-muted-foreground py-8">No transactions found for this filter.</p>
-                        )}
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Description</TableHead>
+                                    <TableHead className="text-right">Amount</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {currentTransactions.length > 0 ? (
+                                    currentTransactions.map((tx) => (
+                                        <TableRow key={tx.id}>
+                                            <TableCell>{new Date(tx.date).toLocaleDateString()}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`p-1.5 rounded-full ${tx.type === 'credit' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                                                        {tx.type === 'credit' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />}
+                                                    </div>
+                                                    {tx.description}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className={`text-right font-semibold ${tx.type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
+                                                {tx.amount > 0 ? '+' : ''}₹{tx.amount.toFixed(2)}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                                            No transactions found for this filter.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
                     </div>
+                    {filteredTransactions.length > itemsPerPage && (
+                        <Pagination
+                            className="mt-4"
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={setCurrentPage}
+                            itemsPerPage={itemsPerPage}
+                            onItemsPerPageChange={setItemsPerPage}
+                            totalItems={filteredTransactions.length}
+                        />
+                    )}
                 </CardContent>
             </Card>
         </div>
