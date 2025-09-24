@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAppDispatch } from '@repo/store/hooks';
@@ -28,7 +27,7 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
           localStorage.removeItem('userAuthState');
         }
       } else {
-        // If no token or stored state, ensure everything is cleared
+        // If no token or stored state, ensure everything is cleared on the client side
         dispatch(clearUserAuth());
       }
     } catch (error) {

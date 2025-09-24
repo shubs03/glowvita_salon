@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAppSelector } from '@repo/store/hooks';
@@ -13,7 +12,6 @@ export const useAuth = () => {
     // The AuthInitializer runs on first load. We can consider loading finished
     // once the Redux state has been populated (token is present) or it's clear
     // there is no session to restore (localStorage check is done and token is null).
-    // This logic is more robust than relying on a timeout.
     const hasChecked = !!token || localStorage.getItem('userAuthState') === null;
 
     if (hasChecked || isAuthenticated) {
