@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, Suspense } from "react";
+import { Button } from "@repo/ui/button";
 import {
   Card,
   CardContent,
@@ -10,6 +11,9 @@ import {
   CardDescription,
 } from "@repo/ui/card";
 import {
+  Tag,
+  UserPlus,
+  DollarSign,
   LayoutDashboard,
   Star,
   Gift,
