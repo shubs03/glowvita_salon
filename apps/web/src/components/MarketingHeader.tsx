@@ -209,7 +209,7 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
           open={showLogoutModal}
           onOpenChange={setShowLogoutModal}
           onConfirm={handleLogout}
-          isLoading={isLoggingOut}
+          isLoading={isLoading}
         />
     </header>
   );
