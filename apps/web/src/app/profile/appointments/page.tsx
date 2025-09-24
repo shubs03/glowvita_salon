@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -107,7 +106,10 @@ const AppointmentDetails = ({ appointment, onCancelClick }) => {
     if (!appointment) return (
         <Card className="sticky top-24">
             <CardContent className="h-96 flex items-center justify-center text-muted-foreground">
-                Select an appointment to see details.
+                <div className="text-center">
+                    <Calendar className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                    <p>Select an appointment to see details.</p>
+                </div>
             </CardContent>
         </Card>
     );
@@ -223,7 +225,6 @@ export default function AppointmentsPage() {
         setIsCancelModalOpen(false);
         setAppointmentToCancel(null);
         setCancellationReason('');
-        // Update selected appointment if it was the one cancelled
         if (selectedAppointment?.id === appointmentToCancel.id) {
             setSelectedAppointment(prev => ({ ...prev, status: 'Cancelled' }));
         }
@@ -237,14 +238,14 @@ export default function AppointmentsPage() {
                 <StatCard icon={X} title="Cancelled" value={appointments.filter(a => a.status === 'Cancelled').length} change="All time" />
             </div>
             
-            <div className="lg:grid lg:grid-cols-3 gap-6">
+            <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
                 {/* Left Column: Appointments List */}
-                <div className="lg:col-span-1 space-y-4 mb-6 lg:mb-0">
+                <div className="lg:col-span-1 space-y-4">
                     <Card>
                         <CardHeader>
                             <CardTitle>My Appointments</CardTitle>
                             <CardDescription>Select an appointment to view details.</CardDescription>
-                            <div className="pt-4">
+                            <div className="pt-4 space-y-4">
                                 <div className="relative">
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -255,9 +256,20 @@ export default function AppointmentsPage() {
                                       onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                 </div>
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Filter by status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Status</SelectItem>
+                                        <SelectItem value="Completed">Completed</SelectItem>
+                                        <SelectItem value="Confirmed">Confirmed</SelectItem>
+                                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </CardHeader>
-                        <CardContent className="space-y-3 max-h-[60vh] overflow-y-auto">
+                        <CardContent className="space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar">
                             {filteredAppointments.length > 0 ? (
                                 filteredAppointments.map(appt => (
                                     <AppointmentCard 
@@ -309,5 +321,3 @@ export default function AppointmentsPage() {
 }
 
 const Separator = () => <hr className="my-4 border-border/50" />;
-
-    
