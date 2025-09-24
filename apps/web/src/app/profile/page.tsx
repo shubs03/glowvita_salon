@@ -4,9 +4,12 @@
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
+import { Input } from '@repo/ui/input';
+import { Label } from '@repo/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar';
 import { Badge } from '@repo/ui/badge';
+import { DollarSign } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { 
