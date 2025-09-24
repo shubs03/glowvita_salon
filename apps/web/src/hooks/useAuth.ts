@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAppSelector } from '@repo/store/hooks';
@@ -12,6 +13,7 @@ export const useAuth = () => {
     const checkAuthStatus = () => {
       // The presence of a token in the redux state is a good indicator
       // that rehydration from localStorage has occurred.
+      // Or if local storage is explicitly null.
       if (token || localStorage.getItem('userAuthState') === null) {
         setIsLoading(false);
       }
