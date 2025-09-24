@@ -1,11 +1,13 @@
 
 "use client";
 
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Separator } from '@repo/ui/separator';
+import { Eye, EyeOff } from 'lucide-react';
 
 const userProfile = {
   name: "Sophia Davis",
@@ -15,6 +17,10 @@ const userProfile = {
 };
 
 export default function SettingsPage() {
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
     return (
         <Card>
             <CardHeader>
@@ -46,18 +52,45 @@ export default function SettingsPage() {
                 <Separator />
                 <form className="space-y-4">
                     <h3 className="font-semibold">Change Password</h3>
-                    <div className="space-y-2">
+                    <div className="space-y-2 relative">
                         <Label>Current Password</Label>
-                        <Input type="password" />
+                        <Input type={showCurrentPassword ? "text" : "password"} />
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-7 h-7 w-7"
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        >
+                            {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
+                        <div className="space-y-2 relative">
                             <Label>New Password</Label>
-                            <Input type="password" />
+                            <Input type={showNewPassword ? "text" : "password"} />
+                             <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-2 top-7 h-7 w-7"
+                                onClick={() => setShowNewPassword(!showNewPassword)}
+                            >
+                                {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 relative">
                             <Label>Confirm New Password</Label>
-                            <Input type="password" />
+                            <Input type={showConfirmPassword ? "text" : "password"} />
+                             <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-2 top-7 h-7 w-7"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            >
+                                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
                         </div>
                     </div>
                     <Button>Update Password</Button>
