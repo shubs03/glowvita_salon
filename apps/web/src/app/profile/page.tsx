@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
@@ -21,10 +21,20 @@ import {
   Gift,
   MapPin,
   Heart,
-  MessageSquare
+  MessageSquare,
+  X,
+  Edit,
+  Trash2,
+  Package,
+  TrendingUp,
+  DollarSign
 } from 'lucide-react';
 import { PageContainer } from '@repo/ui/page-container';
 import Link from 'next/link';
+import { Input } from '@repo/ui/input';
+import { Label } from '@repo/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
+import { Separator } from '@repo/ui/separator';
 
 // Mock Data
 const userProfile = {
@@ -40,21 +50,24 @@ const stats = {
   totalAppointments: 24,
   totalSpent: 4580,
   loyaltyPoints: 1250,
+  wishlistItems: 8,
 };
 
 const upcomingAppointments = [
-  { id: 'APP-025', service: 'Deep Tissue Massage', date: '2024-09-10T14:00:00Z', staff: 'Michael Chen', status: 'Confirmed' },
-  { id: 'APP-026', service: 'Deluxe Manicure', date: '2024-09-18T11:30:00Z', staff: 'Jessica Miller', status: 'Confirmed' },
+  { id: 'APP-025', service: 'Deep Tissue Massage', date: '2024-09-10T14:00:00Z', staff: 'Michael Chen', status: 'Confirmed', price: 120.00 },
+  { id: 'APP-026', service: 'Deluxe Manicure', date: '2024-09-18T11:30:00Z', staff: 'Jessica Miller', status: 'Confirmed', price: 80.00 },
 ];
 
 const pastAppointments = [
-  { id: 'APP-024', service: 'Signature Facial', date: '2024-08-15T16:00:00Z', staff: 'Emily White', status: 'Completed' },
-  { id: 'APP-023', service: 'Haircut & Style', date: '2024-07-20T10:00:00Z', staff: 'Jessica Miller', status: 'Completed' },
+  { id: 'APP-024', service: 'Signature Facial', date: '2024-08-15T16:00:00Z', staff: 'Emily White', status: 'Completed', price: 150.00 },
+  { id: 'APP-023', service: 'Haircut & Style', date: '2024-07-20T10:00:00Z', staff: 'Jessica Miller', status: 'Completed', price: 75.00 },
+  { id: 'APP-022', service: 'Hot Stone Massage', date: '2024-06-25T13:00:00Z', staff: 'Michael Chen', status: 'Cancelled', price: 130.00 },
 ];
 
 const orderHistory = [
   { id: 'ORD-001', date: '2024-08-01T10:00:00Z', total: 120, items: 3, status: 'Delivered' },
-  { id: 'ORD-002', date: '2024-07-15T15:30:00Z', total: 75, items: 2, status: 'Delivered' },
+  { id: 'ORD-002', date: '2024-07-15T15:30:00Z', total: 75, items: 2, status: 'Processing' },
+  { id: 'ORD-003', date: '2024-06-10T11:00:00Z', total: 210, items: 5, status: 'Cancelled' },
 ];
 
 const wallet = {
@@ -69,8 +82,35 @@ const reviews = [
   { id: 'REV-001', service: 'Signature Facial', rating: 5, review: 'Absolutely amazing experience. My skin has never felt better!' },
 ];
 
+const StatCard = ({ icon: Icon, title, value, change }) => (
+  <Card className="hover:shadow-lg transition-shadow duration-300 bg-white/50 backdrop-blur-md border border-border/20">
+    <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      <Icon className="h-4 w-4 text-muted-foreground" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold">{value}</div>
+      <p className="text-xs text-muted-foreground">{change}</p>
+    </CardContent>
+  </Card>
+);
+
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [isCancelOrderModalOpen, setIsCancelOrderModalOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState<typeof orderHistory[0] | null>(null);
+
+  const handleCancelOrderClick = (order) => {
+    setOrderToCancel(order);
+    setIsCancelOrderModalOpen(true);
+  };
+  
+  const handleConfirmCancelOrder = () => {
+    console.log('Cancelling order:', orderToCancel?.id);
+    // Add logic here to actually cancel the order via an API call
+    setIsCancelOrderModalOpen(false);
+    setOrderToCancel(null);
+  };
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -80,20 +120,27 @@ export default function ProfilePage() {
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'settings', label: 'Account Settings', icon: Settings },
   ];
+  
+  const isAppointmentCancellable = (appointmentDate: string) => {
+    const now = new Date();
+    const apptDate = new Date(appointmentDate);
+    const hoursDifference = (apptDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    return hoursDifference > 24; // Allow cancellation if more than 24 hours away
+  };
 
   return (
     <PageContainer>
       <div className="lg:grid lg:grid-cols-12 lg:gap-8">
         {/* Left Sidebar */}
         <aside className="lg:col-span-3 xl:col-span-2 mb-8 lg:mb-0">
-          <Card>
-            <CardHeader className="text-center p-4">
-              <Avatar className="w-24 h-24 mx-auto mb-3 border-4 border-primary/20">
+          <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border-border/30 shadow-lg">
+            <CardHeader className="text-center p-6 border-b border-border/20">
+              <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20 shadow-xl">
                 <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} data-ai-hint="woman portrait smiling" />
-                <AvatarFallback>{userProfile.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback className="text-3xl">{userProfile.name.charAt(0)}</AvatarFallback>
               </Avatar>
-              <CardTitle className="text-xl">{userProfile.name}</CardTitle>
-              <CardDescription>{userProfile.email}</CardDescription>
+              <CardTitle className="text-xl font-bold">{userProfile.name}</CardTitle>
+              <CardDescription className="text-sm">{userProfile.email}</CardDescription>
             </CardHeader>
             <CardContent className="p-2">
               <nav className="flex flex-col space-y-1">
@@ -101,15 +148,15 @@ export default function ProfilePage() {
                   <Button
                     key={item.id}
                     variant={activeTab === item.id ? 'secondary' : 'ghost'}
-                    className="justify-start gap-3"
+                    className="justify-start gap-3 h-12 text-sm rounded-lg"
                     onClick={() => setActiveTab(item.id)}
                   >
                     <item.icon className="h-4 w-4" />
                     {item.label}
                   </Button>
                 ))}
-                <div className="pt-2">
-                  <Button variant="ghost" className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10">
+                <div className="pt-2 border-t border-border/20 mx-2 mt-2">
+                  <Button variant="ghost" className="w-full justify-start gap-3 h-12 text-sm text-destructive hover:text-destructive hover:bg-destructive/10">
                     <LogOut className="h-4 w-4" />
                     Logout
                   </Button>
@@ -124,34 +171,11 @@ export default function ProfilePage() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsContent value="overview">
               <div className="space-y-6">
-                <div className="grid md:grid-cols-3 gap-6">
-                  <Card>
-                    <CardHeader className="flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stats.totalAppointments}</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">₹{stats.totalSpent.toLocaleString()}</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-sm font-medium">Loyalty Points</CardTitle>
-                      <Gift className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{stats.loyaltyPoints}</div>
-                    </CardContent>
-                  </Card>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <StatCard icon={Calendar} title="Total Appointments" value={stats.totalAppointments} change="+2 this month" />
+                  <StatCard icon={DollarSign} title="Total Spent" value={`₹${stats.totalSpent.toLocaleString()}`} change="+5% vs last month" />
+                  <StatCard icon={Gift} title="Loyalty Points" value={stats.loyaltyPoints} change="+100 points this month" />
+                  <StatCard icon={Heart} title="My Wishlist" value={stats.wishlistItems} change="+2 new items" />
                 </div>
 
                 <Card>
@@ -181,15 +205,23 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle>My Appointments</CardTitle>
+                  <CardDescription>View your upcoming and past appointments.</CardDescription>
                 </CardHeader>
                 <CardContent>
+                   <div className="grid md:grid-cols-3 gap-6 mb-6">
+                    <StatCard icon={Calendar} title="Upcoming" value={upcomingAppointments.length} change="Next in 3 days" />
+                    <StatCard icon={CheckCircle} title="Completed" value={pastAppointments.filter(a => a.status === 'Completed').length} change="Last month" />
+                    <StatCard icon={X} title="Cancelled" value={pastAppointments.filter(a => a.status === 'Cancelled').length} change="All time" />
+                  </div>
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Service</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Staff</TableHead>
+                        <TableHead>Price</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -198,7 +230,15 @@ export default function ProfilePage() {
                           <TableCell>{appt.service}</TableCell>
                           <TableCell>{new Date(appt.date).toLocaleDateString()}</TableCell>
                           <TableCell>{appt.staff}</TableCell>
+                          <TableCell>₹{appt.price.toFixed(2)}</TableCell>
                           <TableCell><Badge variant={appt.status === 'Completed' ? 'default' : 'secondary'}>{appt.status}</Badge></TableCell>
+                          <TableCell className="text-right">
+                            {isAppointmentCancellable(appt.date) && appt.status === 'Confirmed' ? (
+                                <Button variant="destructive" size="sm">Cancel</Button>
+                            ) : (
+                                <Button variant="destructive" size="sm" disabled>Cancel</Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -206,13 +246,19 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
             </TabsContent>
-
+            
             <TabsContent value="orders">
               <Card>
                 <CardHeader>
                   <CardTitle>My Orders</CardTitle>
+                  <CardDescription>Your product order history.</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  <div className="grid md:grid-cols-3 gap-6 mb-6">
+                    <StatCard icon={ShoppingCart} title="Total Orders" value={orderHistory.length} change="All time" />
+                    <StatCard icon={TrendingUp} title="Total Spent" value={`₹${orderHistory.reduce((acc, o) => acc + o.total, 0).toFixed(2)}`} change="On products" />
+                    <StatCard icon={Package} title="Delivered" value={orderHistory.filter(o => o.status === 'Delivered').length} change="All time" />
+                  </div>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -221,6 +267,7 @@ export default function ProfilePage() {
                         <TableHead>Items</TableHead>
                         <TableHead>Total</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -230,7 +277,14 @@ export default function ProfilePage() {
                           <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
                           <TableCell>{order.items}</TableCell>
                           <TableCell>₹{order.total.toFixed(2)}</TableCell>
-                          <TableCell><Badge>{order.status}</Badge></TableCell>
+                          <TableCell><Badge variant={order.status === 'Delivered' ? 'default' : 'secondary'}>{order.status}</Badge></TableCell>
+                          <TableCell className="text-right">
+                            {order.status === 'Processing' ? (
+                                <Button variant="destructive" size="sm" onClick={() => handleCancelOrderClick(order)}>Cancel</Button>
+                            ) : (
+                                <Button variant="destructive" size="sm" disabled>Cancel</Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -238,11 +292,12 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="reviews">
               <Card>
                 <CardHeader>
                   <CardTitle>My Reviews</CardTitle>
+                  <CardDescription>Your feedback on our services.</CardDescription>
                 </CardHeader>
                 <CardContent>
                    <div className="space-y-4">
@@ -267,11 +322,12 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle>My Wallet</CardTitle>
+                  <CardDescription>Your wallet balance and transaction history.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="p-6 bg-primary text-primary-foreground rounded-lg mb-6">
-                    <p className="text-sm">Current Balance</p>
-                    <p className="text-4xl font-bold">₹{wallet.balance.toFixed(2)}</p>
+                   <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    <StatCard icon={Wallet} title="Current Balance" value={`₹${wallet.balance.toFixed(2)}`} change="+₹50 last week" />
+                    <StatCard icon={Gift} title="Total Credits" value={`₹${wallet.transactions.filter(t=>t.amount > 0).reduce((acc, t) => acc + t.amount, 0).toFixed(2)}`} change="All time" />
                   </div>
                   <h4 className="font-semibold mb-4">Transaction History</h4>
                   <div className="space-y-2">
@@ -293,36 +349,70 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Account Settings</CardTitle>
-                  <CardDescription>Update your personal information.</CardDescription>
+                  <CardDescription>Update your personal information and password.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Name</Label>
-                            <Input defaultValue={userProfile.name} />
+                <CardContent className="space-y-8">
+                    <form className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Name</Label>
+                                <Input defaultValue={userProfile.name} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Email</Label>
+                                <Input defaultValue={userProfile.email} />
+                            </div>
                         </div>
                         <div className="space-y-2">
-                            <Label>Email</Label>
-                            <Input defaultValue={userProfile.email} />
+                            <Label>Phone</Label>
+                            <Input defaultValue={userProfile.phone} />
                         </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Phone</Label>
-                        <Input defaultValue={userProfile.phone} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Address</Label>
-                        <Input defaultValue={userProfile.address} />
-                    </div>
+                        <div className="space-y-2">
+                            <Label>Address</Label>
+                            <Input defaultValue={userProfile.address} />
+                        </div>
+                        <Button>Save Changes</Button>
+                    </form>
+                    <Separator />
+                    <form className="space-y-4">
+                        <h3 className="font-semibold">Change Password</h3>
+                        <div className="space-y-2">
+                            <Label>Current Password</Label>
+                            <Input type="password" />
+                        </div>
+                         <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>New Password</Label>
+                                <Input type="password" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Confirm New Password</Label>
+                                <Input type="password" />
+                            </div>
+                        </div>
+                        <Button>Update Password</Button>
+                    </form>
                 </CardContent>
-                <CardFooter>
-                    <Button>Save Changes</Button>
-                </CardFooter>
               </Card>
             </TabsContent>
           </Tabs>
         </main>
       </div>
+
+       <Dialog open={isCancelOrderModalOpen} onOpenChange={setIsCancelOrderModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cancel Order</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to cancel order {orderToCancel?.id}?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsCancelOrderModalOpen(false)}>No</Button>
+              <Button variant="destructive" onClick={handleConfirmCancelOrder}>Yes, Cancel Order</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </PageContainer>
   );
 }
