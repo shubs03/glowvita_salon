@@ -30,7 +30,11 @@ import {
   Trash2,
   Package,
   TrendingUp,
-  DollarSign
+  DollarSign,
+  PieChart,
+  BarChart,
+  Target,
+  ArrowRight
 } from 'lucide-react';
 import { PageContainer } from '@repo/ui/page-container';
 import Link from 'next/link';
@@ -81,6 +85,32 @@ const wallet = {
 
 const reviews = [
   { id: 'REV-001', service: 'Signature Facial', rating: 5, review: 'Absolutely amazing experience. My skin has never felt better!' },
+];
+
+const currentOffers = [
+    {
+      title: "Weekday Special",
+      description: "20% off on all haircuts, Mon-Wed.",
+      icon: Tag,
+    },
+    {
+      title: "First-Time Client",
+      description: "Get 15% off your first service with us.",
+      icon: UserPlus,
+    },
+];
+
+const newProducts = [
+    {
+        name: 'Aura Serum',
+        price: 68.00,
+        image: 'https://picsum.photos/id/1027/200/200',
+    },
+    {
+        name: 'Chroma Balm',
+        price: 24.00,
+        image: 'https://picsum.photos/id/1028/200/200',
+    }
 ];
 
 const StatCard = ({ icon: Icon, title, value, change }) => (
@@ -171,35 +201,95 @@ export default function ProfilePage() {
         <main className="lg:col-span-9 xl:col-span-10">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsContent value="overview">
-              <div className="space-y-6">
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <StatCard icon={Calendar} title="Total Appointments" value={stats.totalAppointments} change="+2 this month" />
-                  <StatCard icon={DollarSign} title="Total Spent" value={`₹${stats.totalSpent.toLocaleString()}`} change="+5% vs last month" />
-                  <StatCard icon={Gift} title="Loyalty Points" value={stats.loyaltyPoints} change="+100 points this month" />
-                  <StatCard icon={Heart} title="My Wishlist" value={stats.wishlistItems} change="+2 new items" />
-                </div>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Upcoming Appointments</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {upcomingAppointments.map(appt => (
-                        <div key={appt.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-secondary rounded-md">
-                          <div>
-                            <p className="font-semibold">{appt.service}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(appt.date).toLocaleDateString()} with {appt.staff}
-                            </p>
-                          </div>
-                          <Badge className="mt-2 sm:mt-0">{appt.status}</Badge>
-                        </div>
-                      ))}
+                <div className="space-y-6">
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatCard icon={Calendar} title="Total Appointments" value={stats.totalAppointments} change="+2 this month" />
+                        <StatCard icon={DollarSign} title="Total Spent" value={`₹${stats.totalSpent.toLocaleString()}`} change="+5% vs last month" />
+                        <StatCard icon={Gift} title="Loyalty Points" value={stats.loyaltyPoints} change="+100 points this month" />
+                        <StatCard icon={Heart} title="My Wishlist" value={stats.wishlistItems} change="+2 new items" />
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+
+                    <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                      <Card className="xl:col-span-1">
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2"><PieChart className="h-5 w-5" /> Appointments</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto text-blue-600 font-bold text-2xl">24</div>
+                          <div className="text-center text-sm text-muted-foreground mt-2">Total appointments</div>
+                        </CardContent>
+                      </Card>
+                      <Card className="xl:col-span-1">
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2"><BarChart className="h-5 w-5" /> Monthly Spend</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                           <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600 font-bold text-2xl">₹8k</div>
+                           <div className="text-center text-sm text-muted-foreground mt-2">Avg. per month</div>
+                        </CardContent>
+                      </Card>
+                       <Card className="xl:col-span-1">
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Service Mix</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto text-purple-600 font-bold text-lg">Hair</div>
+                          <div className="text-center text-sm text-muted-foreground mt-2">Top Category</div>
+                        </CardContent>
+                      </Card>
+                       <Card className="xl:col-span-1">
+                        <CardHeader>
+                          <CardTitle className="text-lg flex items-center gap-2"><Target className="h-5 w-5" /> Loyalty</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto text-yellow-600 font-bold text-lg">Pro</div>
+                          <div className="text-center text-sm text-muted-foreground mt-2">Current Tier</div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Current Offers</CardTitle>
+                                <CardDescription>Don't miss out on these special deals.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {currentOffers.map(offer => {
+                                    const Icon = offer.icon;
+                                    return (
+                                        <div key={offer.title} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
+                                            <div className="p-3 bg-primary/10 rounded-full text-primary"><Icon className="h-5 w-5" /></div>
+                                            <div>
+                                                <h4 className="font-semibold">{offer.title}</h4>
+                                                <p className="text-sm text-muted-foreground">{offer.description}</p>
+                                            </div>
+                                            <Button variant="outline" size="sm" className="ml-auto">Claim</Button>
+                                        </div>
+                                    );
+                                })}
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>New Products</CardTitle>
+                                <CardDescription>Check out the latest arrivals.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {newProducts.map(product => (
+                                    <div key={product.name} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
+                                        <Image src={product.image} alt={product.name} width={48} height={48} className="rounded-md" />
+                                        <div>
+                                            <h4 className="font-semibold">{product.name}</h4>
+                                            <p className="text-sm text-muted-foreground">₹{product.price.toFixed(2)}</p>
+                                        </div>
+                                        <Button variant="outline" size="sm" className="ml-auto">View</Button>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
             </TabsContent>
 
             <TabsContent value="appointments">
