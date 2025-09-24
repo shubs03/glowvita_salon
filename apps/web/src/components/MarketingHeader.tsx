@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -80,7 +81,10 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
   return (
     <header 
       className={cn(
-        "sticky top-0 z-40 transition-all duration-300 bg-gradient-to-r from-background via-secondary/10 to-background border-b border-border/50",
+        "sticky top-0 z-40 transition-all duration-300",
+        isHomePage && !isScrolled
+          ? "bg-transparent"
+          : "bg-background/80 backdrop-blur-lg border-b border-border/20"
       )}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between relative">

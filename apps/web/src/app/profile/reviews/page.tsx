@@ -1,15 +1,20 @@
 
 "use client";
 
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
-import { Star } from 'lucide-react';
+import { Star, Search } from 'lucide-react';
+import { Input } from '@repo/ui/input';
+import { Pagination } from '@repo/ui/pagination';
 
 const allReviews = [
   { id: "REV-001", type: "service", item: "Signature Facial", rating: 5, review: "Absolutely amazing experience. My skin has never felt better!" },
   { id: "REV-002", type: "product", item: "Aura Revitalizing Serum", rating: 4, review: "Great product, noticed a difference in a week. A bit pricey though." },
   { id: "REV-003", type: "service", item: "Haircut & Style", rating: 4, review: "Great haircut, but the wait was a bit long." },
   { id: "REV-004", type: "product", item: "Chroma Hydrating Balm", rating: 5, review: "Love this lip balm! So hydrating and the color is perfect." },
+  { id: "REV-005", type: "service", item: "Deep Tissue Massage", rating: 5, review: "Incredibly relaxing and professional." },
+  { id: "REV-006", type: "product", item: "Terra Scrub", rating: 3, review: "It's okay, but a bit too harsh for my sensitive skin." },
 ];
 
 const ReviewItem = ({ review }) => (
@@ -20,11 +25,8 @@ const ReviewItem = ({ review }) => (
         <p className="text-xs text-muted-foreground capitalize">{review.type} Review</p>
       </div>
       <div className="flex items-center">
-        {[...Array(review.rating)].map((_, i) => (
-          <Star key={i} className="h-4 w-4 text-blue-400 fill-current" />
-        ))}
-        {[...Array(5 - review.rating)].map((_, i) => (
-          <Star key={i} className="h-4 w-4 text-gray-300" />
+        {[...Array(5)].map((_, i) => (
+          <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-blue-400 fill-current' : 'text-gray-300'}`} />
         ))}
       </div>
     </div>
@@ -33,50 +35,83 @@ const ReviewItem = ({ review }) => (
 );
 
 export default function ReviewsPage() {
-  const productReviews = allReviews.filter(r => r.type === 'product');
-  const serviceReviews = allReviews.filter(r => r.type === 'service');
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+
+  const filteredReviews = useMemo(() => {
+    let reviews = allReviews;
+    if (activeTab === 'products') {
+      reviews = allReviews.filter(r => r.type === 'product');
+    } else if (activeTab === 'services') {
+      reviews = allReviews.filter(r => r.type === 'service');
+    }
+
+    return reviews.filter(review =>
+      review.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      review.review.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [activeTab, searchTerm]);
+
+  const lastItemIndex = currentPage * itemsPerPage;
+  const firstItemIndex = lastItemIndex - itemsPerPage;
+  const currentItems = filteredReviews.slice(firstItemIndex, lastItemIndex);
+  const totalPages = Math.ceil(filteredReviews.length / itemsPerPage);
+  
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setCurrentPage(1); // Reset to first page on tab change
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>My Reviews</CardTitle>
-        <CardDescription>Your feedback on our products and services.</CardDescription>
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <div>
+            <CardTitle>My Reviews</CardTitle>
+            <CardDescription>Your feedback on our products and services.</CardDescription>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search reviews..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="all">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="products">Product Reviews</TabsTrigger>
-            <TabsTrigger value="services">Service Reviews</TabsTrigger>
+            <TabsTrigger value="all">All ({allReviews.length})</TabsTrigger>
+            <TabsTrigger value="products">Product Reviews ({allReviews.filter(r => r.type === 'product').length})</TabsTrigger>
+            <TabsTrigger value="services">Service Reviews ({allReviews.filter(r => r.type === 'service').length})</TabsTrigger>
           </TabsList>
-          <TabsContent value="all" className="mt-4">
-            <div className="space-y-4">
-              {allReviews.map((review) => (
-                <ReviewItem key={review.id} review={review} />
-              ))}
-            </div>
-          </TabsContent>
-          <TabsContent value="products" className="mt-4">
-            <div className="space-y-4">
-              {productReviews.length > 0 ? (
-                productReviews.map((review) => (
+          <TabsContent value={activeTab} className="mt-4">
+            {currentItems.length > 0 ? (
+              <div className="space-y-4">
+                {currentItems.map((review) => (
                   <ReviewItem key={review.id} review={review} />
-                ))
-              ) : (
-                <p className="text-center text-muted-foreground py-8">No product reviews yet.</p>
-              )}
-            </div>
-          </TabsContent>
-          <TabsContent value="services" className="mt-4">
-            <div className="space-y-4">
-              {serviceReviews.length > 0 ? (
-                serviceReviews.map((review) => (
-                  <ReviewItem key={review.id} review={review} />
-                ))
-              ) : (
-                <p className="text-center text-muted-foreground py-8">No service reviews yet.</p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">No reviews found.</p>
+            )}
+            {filteredReviews.length > itemsPerPage && (
+              <Pagination
+                className="mt-6"
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={setItemsPerPage}
+                totalItems={filteredReviews.length}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>
