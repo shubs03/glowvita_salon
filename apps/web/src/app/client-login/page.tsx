@@ -10,7 +10,7 @@ import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
 import { toast } from 'sonner';
 import { useAppDispatch } from '@repo/store/hooks';
-import { setUserAuth } from '@repo/store/slices/Web/userAuthSlice';
+import { setUserAuth } from '@repo/store/slices/userAuthSlice';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
