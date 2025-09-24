@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
+import { Label } from '@repo/ui/label';
 import { Copy, Gift, UserPlus, Users, Search, Share2, Mail, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { StatCard } from '../../../components/profile/StatCard';
