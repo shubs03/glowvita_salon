@@ -6,7 +6,7 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('token')?.value;
 
-  // Public paths accessible to everyone
+  // Define public paths that do not require authentication
   const publicPaths = [
     '/client-login', 
     '/client-register', 
@@ -20,51 +20,46 @@ export async function middleware(request) {
     '/return-policy', 
     '/terms-and-conditions'
   ];
-  
-  // Check if the path is a public marketing page or an asset/API call
-  const isPublicMarketingPath = publicPaths.some(path => pathname === path) || 
-                                pathname.startsWith('/api/') || 
-                                pathname.startsWith('/_next/') || 
-                                pathname.includes('.');
-  
-  if (isPublicMarketingPath) {
+
+  // Allow Next.js assets and API routes to pass through
+  if (pathname.startsWith('/api/') || pathname.startsWith('/_next/') || pathname.includes('.')) {
     return NextResponse.next();
   }
-  
-  // Handle /login and /signup for authenticated users
-  if ((pathname === '/client-login' || pathname === '/client-register') && token) {
-    const payload = await verifyJwt(token);
-    if (payload) {
-      return NextResponse.redirect(new URL('/profile', request.url));
-    }
-  }
-  
-  // All other paths are considered protected
-  if (!token) {
-    return NextResponse.redirect(new URL('/client-login', request.url));
-  }
 
-  try {
-    const payload = await verifyJwt(token);
-    if (!payload) {
-      // If token is invalid or expired, redirect to login and clear the cookie
+  // Handle protected routes
+  if (pathname.startsWith('/profile')) {
+    if (!token) {
+      return NextResponse.redirect(new URL('/client-login', request.url));
+    }
+
+    try {
+      const payload = await verifyJwt(token);
+      if (!payload) {
+        const response = NextResponse.redirect(new URL('/client-login', request.url));
+        response.cookies.set('token', '', { expires: new Date(0), path: '/' });
+        return response;
+      }
+    } catch (error) {
       const response = NextResponse.redirect(new URL('/client-login', request.url));
-      response.cookies.set('token', '', { expires: new Date(0) });
+      response.cookies.set('token', '', { expires: new Date(0), path: '/' });
       return response;
     }
-    
-    // Protect all /profile routes
-    if (pathname.startsWith('/profile') && !payload.userId) {
-       const response = NextResponse.redirect(new URL('/client-login', request.url));
-       response.cookies.set('token', '', { expires: new Date(0) });
-       return response;
-    }
 
-  } catch (err) {
-    // If JWT verification fails, redirect to login
-    const response = NextResponse.redirect(new URL('/client-login', request.url));
-    response.cookies.set('token', '', { expires: new Date(0) });
-    return response;
+    return NextResponse.next();
+  }
+
+  // Handle auth pages for logged-in users
+  if (publicPaths.includes(pathname) && token) {
+    try {
+      const payload = await verifyJwt(token);
+      if (payload && (pathname === '/client-login' || pathname === '/client-register')) {
+        // If user is logged in and tries to access login/register, redirect to profile
+        return NextResponse.redirect(new URL('/profile', request.url));
+      }
+    } catch (error) {
+      // If token is invalid, let them stay on the public page
+      return NextResponse.next();
+    }
   }
 
   return NextResponse.next();
