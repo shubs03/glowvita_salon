@@ -7,6 +7,7 @@ import StoreProvider from '@repo/store/provider';
 import './globals.css';
 import { MarketingLayout } from '@/components/MarketingLayout';
 import { Toaster } from 'sonner';
+import { AuthInitializer } from '@/components/AuthInitializer'; // Import the initializer
 
 export default function RootLayout({
   children,
@@ -14,19 +15,28 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
-  const isDashboardPage = pathname.startsWith('/dashboard');
-  const isBookingPage = pathname.startsWith('/book/');
+  // Pages that should use the MarketingLayout
+  const marketingPages = [
+    '/',
+    '/apps',
+    '/pricing',
+    '/support',
+    '/about',
+    '/contact',
+    '/privacy-policy',
+    '/return-policy',
+    '/terms-and-conditions'
+  ];
 
-  let layoutContent: ReactNode;
+  // Pages that have their own specific layout or no layout at all
+  const hasCustomLayout = [
+    '/client-login',
+    '/client-register',
+    '/profile',
+    '/book'
+  ].some(path => pathname.startsWith(path));
 
-  if (isAuthPage || isDashboardPage || isBookingPage) {
-    // Auth, Dashboard, and Booking pages have no shared layout
-    layoutContent = children;
-  } else {
-    // All other pages get the MarketingLayout
-    layoutContent = <MarketingLayout>{children}</MarketingLayout>;
-  }
+  const showMarketingLayout = marketingPages.includes(pathname) && !hasCustomLayout;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -48,8 +58,16 @@ export default function RootLayout({
         }} />
       </head>
       <body>
-        <StoreProvider>{layoutContent}</StoreProvider>
-        <Toaster />
+        <StoreProvider>
+          <AuthInitializer>
+            {showMarketingLayout ? (
+              <MarketingLayout>{children}</MarketingLayout>
+            ) : (
+              children
+            )}
+            <Toaster />
+          </AuthInitializer>
+        </StoreProvider>
       </body>
     </html>
   );

@@ -12,8 +12,8 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const storedState = localStorage.getItem('userAuthState');
       const token = Cookies.get('token');
+      const storedState = localStorage.getItem('userAuthState');
       
       if (storedState && token) {
         const { user, role } = JSON.parse(storedState);
@@ -22,12 +22,17 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
         if (user && token && decodedToken.exp * 1000 > Date.now()) {
           dispatch(setUserAuth({ user, token, role }));
         } else {
+          // If token is expired or state is malformed, clear everything
           dispatch(clearUserAuth());
-          Cookies.remove('token');
+          Cookies.remove('token', { path: '/' });
+          localStorage.removeItem('userAuthState');
         }
+      } else {
+        // If no token or stored state, ensure everything is cleared
+        dispatch(clearUserAuth());
       }
     } catch (error) {
-      console.error("Failed to process auth state from localStorage.", error);
+      console.error("Failed to process auth state.", error);
       dispatch(clearUserAuth());
     }
   }, [dispatch]);

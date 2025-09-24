@@ -6,26 +6,11 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('token')?.value;
 
-  // Define public paths that do not require authentication
-  const publicPaths = [
-    '/client-login', 
-    '/client-register', 
-    '/', 
-    '/apps', 
-    '/pricing', 
-    '/support', 
-    '/about', 
-    '/contact', 
-    '/privacy-policy', 
-    '/return-policy', 
-    '/terms-and-conditions'
-  ];
-
   // Allow Next.js assets and API routes to pass through
   if (pathname.startsWith('/api/') || pathname.startsWith('/_next/') || pathname.includes('.')) {
     return NextResponse.next();
   }
-
+  
   // Handle protected routes
   if (pathname.startsWith('/profile')) {
     if (!token) {
@@ -35,33 +20,40 @@ export async function middleware(request) {
     try {
       const payload = await verifyJwt(token);
       if (!payload) {
+        // Invalid token, clear it and redirect to login
         const response = NextResponse.redirect(new URL('/client-login', request.url));
         response.cookies.set('token', '', { expires: new Date(0), path: '/' });
         return response;
       }
     } catch (error) {
+      // Error verifying token (e.g., expired), clear it and redirect
       const response = NextResponse.redirect(new URL('/client-login', request.url));
       response.cookies.set('token', '', { expires: new Date(0), path: '/' });
       return response;
     }
-
+    
+    // If we are here, the user is authenticated, allow access to profile pages
     return NextResponse.next();
   }
 
-  // Handle auth pages for logged-in users
-  if (publicPaths.includes(pathname) && token) {
-    try {
-      const payload = await verifyJwt(token);
-      if (payload && (pathname === '/client-login' || pathname === '/client-register')) {
-        // If user is logged in and tries to access login/register, redirect to profile
-        return NextResponse.redirect(new URL('/profile', request.url));
+  // Handle auth pages for already logged-in users
+  const authPaths = ['/client-login', '/client-register'];
+  if (authPaths.includes(pathname)) {
+    if (token) {
+      try {
+        const payload = await verifyJwt(token);
+        if (payload) {
+          // If user is logged in, redirect them from login/register to their profile
+          return NextResponse.redirect(new URL('/profile', request.url));
+        }
+      } catch (error) {
+        // If token is invalid, let them stay on the auth page
+        return NextResponse.next();
       }
-    } catch (error) {
-      // If token is invalid, let them stay on the public page
-      return NextResponse.next();
     }
   }
 
+  // Allow all other public pages
   return NextResponse.next();
 }
 
