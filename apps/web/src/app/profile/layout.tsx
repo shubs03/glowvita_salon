@@ -71,7 +71,7 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
         {/* Left Sidebar */}
         <aside className="lg:col-span-3 xl:col-span-2 mb-8 lg:mb-0">
            <div className="lg:sticky lg:top-24">
-            <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border-border/30">
+            <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border">
               <CardHeader className="text-center p-6 border-b border-border/20">
                 <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20 shadow-xl">
                   <AvatarImage
