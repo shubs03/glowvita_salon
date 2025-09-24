@@ -29,4 +29,10 @@ export function MarketingLayout({ children }: { children: ReactNode; }) {
           isHomePage={isHomePage}
         />
         <main className="flex-grow">
-          {
+          {children}
+        </main>
+        <Footer />
+      </div>
+    </AuthInitializer>
+  );
+}

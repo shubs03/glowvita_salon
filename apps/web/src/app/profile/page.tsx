@@ -898,6 +898,3 @@ export default function ProfilePageWrapper() {
     </Suspense>
   );
 }
-```
-- packages/web/src/hooks/useAuth.ts
-- apps/web/src/components/AuthInitializer.tsx

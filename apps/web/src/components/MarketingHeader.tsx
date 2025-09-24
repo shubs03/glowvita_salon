@@ -8,7 +8,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@repo/store/hooks';
-import { clearUserAuth } from '@repo/store/slices/Web/userAuthSlice';
+import { clearUserAuth } from '@repo/store/slices/userAuthSlice';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import {
@@ -189,4 +189,12 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
                       </span>
                     </Link>
                   </Button>
-                
+                </>
+              )}
+            </div>
+          </nav>
+        </div>
+      )}
+    </header>
+  );
+};
