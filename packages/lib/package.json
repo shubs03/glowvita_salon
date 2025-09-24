@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
+    "./*  ": "./src/*",
     "./db": "./src/db.js",
     "./auth": "./src/auth.js",
     "./models/user": "./src/models/user/User.model.js",
