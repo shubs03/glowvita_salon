@@ -54,8 +54,10 @@ export async function middleware(request) {
           return NextResponse.redirect(new URL('/profile', request.url));
         }
       } catch (error) {
-        // If token is invalid, let them stay on the auth page
-        return NextResponse.next();
+        // If token is invalid, let them stay on the auth page and clear the bad cookie
+         const response = NextResponse.next();
+         response.cookies.set('token', '', { expires: new Date(0) });
+         return response;
       }
     }
   }

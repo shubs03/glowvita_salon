@@ -10,21 +10,16 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuthStatus = () => {
-      // The presence of a token in the redux state is a good indicator
-      // that rehydration from localStorage has occurred.
-      // Or if local storage is explicitly null.
-      if (token || localStorage.getItem('userAuthState') === null) {
+    // The middleware handles redirection. This hook's loading state is for the client-side,
+    // to prevent rendering content for a logged-out user before a potential redirect.
+    if (typeof window !== 'undefined') {
+      const storedState = localStorage.getItem('userAuthState');
+      // Stop loading if auth state is confirmed (true or false), or if there's no stored state to wait for.
+      if (isAuthenticated || storedState === null) {
         setIsLoading(false);
       }
-    };
-    
-    // Check immediately and set a small timeout as a fallback.
-    checkAuthStatus();
-    const timer = setTimeout(checkAuthStatus, 250);
-
-    return () => clearTimeout(timer);
-  }, [isAuthenticated, token]);
+    }
+  }, [isAuthenticated]);
 
   return {
     user,

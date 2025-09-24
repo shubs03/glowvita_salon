@@ -57,12 +57,16 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   }, [isAuthLoading, isAuthenticated, router]);
 
   if (isAuthLoading || !isAuthenticated) {
-    return <div className="flex h-screen items-center justify-center">Loading profile...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
   
   return (
     <div className="flex flex-col min-h-screen bg-secondary/30">
-      <MarketingHeader isMobileMenuOpen={false} toggleMobileMenu={() => {}} isHomePage={false} />
+      {/* We are removing the MarketingHeader from here to avoid duplication as it is in the root layout */}
       <PageContainer>
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
           {/* Left Sidebar */}
