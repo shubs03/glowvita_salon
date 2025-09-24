@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import { verifyJwt } from '@repo/lib/auth';
 
@@ -5,39 +6,43 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('token')?.value;
 
-  // Public paths where authenticated users should not be redirected to dashboard
-  const publicPaths = ['/', '/login', '/signup'];
-  // Paths where authenticated users should be redirected to dashboard
-  const redirectPaths = ['/login', '/signup'];
+  // Public paths accessible to everyone
+  const publicPaths = ['/client-login', '/client-register', '/', '/apps', '/pricing', '/support', '/about', '/contact', '/privacy-policy', '/return-policy', '/terms-and-conditions'];
   
-  const isPublicPath = publicPaths.some(path => pathname === path);
-  const shouldRedirectToDashboard = redirectPaths.some(path => pathname === path);
+  // Check if the path is a public marketing page or an asset/API call
+  const isPublicMarketingPath = publicPaths.some(path => pathname === path) || pathname.startsWith('/api/') || pathname.startsWith('/_next/') || pathname.includes('.');
+  if (isPublicMarketingPath) {
+    return NextResponse.next();
+  }
   
-  if (shouldRedirectToDashboard && token) {
+  // Handle /login and /signup for authenticated users
+  if ((pathname === '/client-login' || pathname === '/client-register') && token) {
     const payload = await verifyJwt(token);
     if (payload) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/profile', request.url));
     }
   }
   
-  if (pathname.startsWith('/dashboard')) {
-    if (!token) {
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
+  // All other paths are considered protected
+  if (!token) {
+    return NextResponse.redirect(new URL('/client-login', request.url));
+  }
 
-    try {
-      const payload = await verifyJwt(token);
-      if (!payload) {
-        return NextResponse.redirect(new URL('/login', request.url));
-      }
-      // You can add role checks here if needed, e.g., for 'USER' role
-      if (payload.role !== 'USER' && payload.role !== 'ADMIN') { // ADMIN can access all
-         // For web app, we might allow multiple roles, but for now let's be strict
-         // return NextResponse.redirect(new URL('/login', request.url));
-      }
-    } catch (err) {
-      return NextResponse.redirect(new URL('/login', request.url));
+  try {
+    const payload = await verifyJwt(token);
+    if (!payload) {
+      // If token is invalid or expired, redirect to login and clear the cookie
+      const response = NextResponse.redirect(new URL('/client-login', request.url));
+      response.cookies.set('token', '', { expires: new Date(0) });
+      return response;
     }
+    // You can add role checks here if needed
+    // e.g., if (payload.role !== 'USER') { ... }
+  } catch (err) {
+    // If JWT verification fails, redirect to login
+    const response = NextResponse.redirect(new URL('/client-login', request.url));
+    response.cookies.set('token', '', { expires: new Date(0) });
+    return response;
   }
 
   return NextResponse.next();

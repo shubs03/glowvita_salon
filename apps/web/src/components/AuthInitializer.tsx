@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAppDispatch } from '@repo/store/hooks';
@@ -24,8 +25,6 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
           dispatch(clearUserAuth());
           Cookies.remove('token');
         }
-      } else {
-        dispatch(clearUserAuth());
       }
     } catch (error) {
       console.error("Failed to process auth state from localStorage.", error);
