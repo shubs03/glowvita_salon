@@ -258,8 +258,8 @@ export default function ProfilePage() {
       <div className="lg:grid lg:grid-cols-12 lg:gap-8">
         {/* Left Sidebar */}
         <aside className="lg:col-span-3 xl:col-span-2 mb-8 lg:mb-0 lg:sticky lg:top-24 self-start">
-          <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border-border/30">
-            <CardHeader className="text-center p-6 border-b border-border/20">
+          <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border">
+            <CardHeader className="text-center p-6 border-b">
               <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20 shadow-xl">
                 <AvatarImage
                   src={userProfile.avatarUrl}
@@ -307,7 +307,7 @@ export default function ProfilePage() {
         {/* Main Content */}
         <main className="lg:col-span-9 xl:col-span-10">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsContent value="overview">
+            <TabsContent className="mt-0" value="overview">
               <div className="space-y-6">
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <StatCard
@@ -624,7 +624,7 @@ export default function ProfilePage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="appointments">
+            <TabsContent className="mt-0" value="appointments">
               <Card>
                 <CardHeader>
                   <CardTitle>My Appointments</CardTitle>
@@ -721,7 +721,7 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="orders">
+            <TabsContent className="mt-0" value="orders">
               <Card>
                 <CardHeader>
                   <CardTitle>My Orders</CardTitle>
@@ -811,7 +811,7 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="reviews">
+            <TabsContent className="mt-0" value="reviews">
               <Card>
                 <CardHeader>
                   <CardTitle>My Reviews</CardTitle>
@@ -847,7 +847,7 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="wallet">
+            <TabsContent className="mt-0" value="wallet">
               <Card>
                 <CardHeader>
                   <CardTitle>My Wallet</CardTitle>
@@ -896,7 +896,7 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="settings">
+            <TabsContent className="mt-0" value="settings">
               <Card>
                 <CardHeader>
                   <CardTitle>Account Settings</CardTitle>
