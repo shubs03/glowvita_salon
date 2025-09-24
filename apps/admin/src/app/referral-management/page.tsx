@@ -56,15 +56,39 @@ export default function ReferralManagementPage() {
   const dispatch = useDispatch();
   const { c2cSettings, c2vSettings, v2vSettings, modal, pagination } = useAppSelector(
       (state) => selectRootState(state).refferal
-    );
+    ) as {
+      c2cSettings: ReferralSettings | null;
+      c2vSettings: ReferralSettings | null;
+      v2vSettings: ReferralSettings | null;
+      modal: ModalState;
+      pagination: { currentPage: number; itemsPerPage: number };
+    };
 
-  // Explicitly type modal.settings as ReferralSettings | null
-  type ModalState = {
+  // Explicitly type modal state for correct property access
+  interface ReferralSettings {
+    referrerBonus: {
+      bonusType: 'discount' | 'amount';
+      bonusValue: number;
+      creditTime: string;
+    };
+    refereeBonus: {
+      enabled: boolean;
+      bonusType: 'discount' | 'amount';
+      bonusValue: number;
+      creditTime: string;
+    };
+    usageLimit: 'unlimited' | 'manual';
+    usageCount?: number;
+    minOrders?: number;
+    minBookings?: number;
+    minPayoutCycle?: number;
+  }
+
+  interface ModalState {
     isOpen: boolean;
     modalType: string | null;
     settings: ReferralSettings | null;
-  };
-  const typedModal: ModalState = modal;
+  }
   const [updateSettings] = useUpdateSettingsMutation();
 
   const { data: c2cSettingsData, isLoading: c2cSettingsLoading } = useGetSettingsQuery('C2C');
