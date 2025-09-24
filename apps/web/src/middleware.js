@@ -7,10 +7,26 @@ export async function middleware(request) {
   const token = request.cookies.get('token')?.value;
 
   // Public paths accessible to everyone
-  const publicPaths = ['/client-login', '/client-register', '/', '/apps', '/pricing', '/support', '/about', '/contact', '/privacy-policy', '/return-policy', '/terms-and-conditions'];
+  const publicPaths = [
+    '/client-login', 
+    '/client-register', 
+    '/', 
+    '/apps', 
+    '/pricing', 
+    '/support', 
+    '/about', 
+    '/contact', 
+    '/privacy-policy', 
+    '/return-policy', 
+    '/terms-and-conditions'
+  ];
   
   // Check if the path is a public marketing page or an asset/API call
-  const isPublicMarketingPath = publicPaths.some(path => pathname === path) || pathname.startsWith('/api/') || pathname.startsWith('/_next/') || pathname.includes('.');
+  const isPublicMarketingPath = publicPaths.some(path => pathname === path) || 
+                                pathname.startsWith('/api/') || 
+                                pathname.startsWith('/_next/') || 
+                                pathname.includes('.');
+  
   if (isPublicMarketingPath) {
     return NextResponse.next();
   }
@@ -36,8 +52,14 @@ export async function middleware(request) {
       response.cookies.set('token', '', { expires: new Date(0) });
       return response;
     }
-    // You can add role checks here if needed
-    // e.g., if (payload.role !== 'USER') { ... }
+    
+    // Protect all /profile routes
+    if (pathname.startsWith('/profile') && !payload.userId) {
+       const response = NextResponse.redirect(new URL('/client-login', request.url));
+       response.cookies.set('token', '', { expires: new Date(0) });
+       return response;
+    }
+
   } catch (err) {
     // If JWT verification fails, redirect to login
     const response = NextResponse.redirect(new URL('/client-login', request.url));
