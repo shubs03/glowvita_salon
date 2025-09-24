@@ -191,6 +191,7 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {/* Right Side - Background Image with Backdrop */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
         <div className="absolute inset-0 bg-black/40 z-10"></div>
         <div className="absolute inset-0">

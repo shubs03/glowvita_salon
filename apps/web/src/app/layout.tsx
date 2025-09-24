@@ -10,6 +10,7 @@ import { Toaster } from 'sonner';
 import { AuthInitializer } from '@/components/AuthInitializer'; // Import the initializer
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { useState } from 'react';
+import ProfileLayout from './profile/layout';
 
 export default function RootLayout({
   children,
@@ -38,6 +39,7 @@ export default function RootLayout({
 
   const isMarketingPage = marketingPages.includes(pathname);
   const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
+  const isProfilePage = pathname.startsWith('/profile');
 
   let layoutContent: ReactNode;
 
@@ -47,9 +49,12 @@ export default function RootLayout({
   } else if (isAuthPage) {
     // Auth pages have no layout
     layoutContent = children;
+  } else if (isProfilePage) {
+    // Profile pages get the ProfileLayout
+    layoutContent = <ProfileLayout>{children}</ProfileLayout>;
   }
   else {
-    // For profile pages and other non-marketing pages, only show the header
+    // For other pages (e.g., booking, product details), show the header but no footer
     layoutContent = (
        <div className="flex flex-col min-h-screen bg-background text-foreground">
         <MarketingHeader 

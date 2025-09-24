@@ -10,16 +10,18 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // The middleware handles redirection. This hook's loading state is for the client-side,
-    // to prevent rendering content for a logged-out user before a potential redirect.
-    if (typeof window !== 'undefined') {
-      const storedState = localStorage.getItem('userAuthState');
-      // Stop loading if auth state is confirmed (true or false), or if there's no stored state to wait for.
-      if (isAuthenticated || storedState === null) {
+    // The initializer component handles the logic. This hook simply reflects the state.
+    // We can stop loading once the isAuthenticated flag is definitively set to true or false,
+    // which happens after the initializer runs. We use a small timeout to avoid race conditions on initial load.
+    const timer = setTimeout(() => {
+      // If isAuthenticated is determined, or if there's no token to check, we can stop loading.
+      if (isAuthenticated || !token) {
         setIsLoading(false);
       }
-    }
-  }, [isAuthenticated]);
+    }, 100); // A small delay can help ensure the initial state hydration is complete.
+
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, token]);
 
   return {
     user,
