@@ -5,7 +5,8 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
-import { Copy, Gift, UserPlus, Users, Search } from 'lucide-react';
+import { Label } from '@repo/ui/label';
+import { Copy, Gift, UserPlus, Users, Search, Share2, Mail, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { StatCard } from '../../../components/profile/StatCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
@@ -20,6 +21,18 @@ const referralHistory = [
   { id: 4, friend: 'Alice Johnson', date: '2024-06-18', status: 'Completed', reward: '₹100' },
   { id: 5, friend: 'Bob Brown', date: '2024-06-12', status: 'Pending', reward: '₹100' },
 ];
+
+const HowItWorksStep = ({ step, title, description }: { step: number, title: string, description: string }) => (
+    <div className="flex items-start gap-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg border-2 border-primary/20 flex-shrink-0">
+            {step}
+        </div>
+        <div>
+            <h4 className="font-semibold">{title}</h4>
+            <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+    </div>
+);
 
 export default function ReferralsPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -58,26 +71,68 @@ export default function ReferralsPage() {
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard icon={Gift} title="My Referral Code" value={referralCode} change="+ copy code" />
+        <StatCard icon={Gift} title="Total Earnings" value={`₹${referralHistory.filter(r => r.status === 'Completed').reduce((acc, r) => acc + parseFloat(r.reward.replace('₹', '')), 0)}`} change="from referrals" />
         <StatCard icon={UserPlus} title="Successful Referrals" value={referralHistory.filter(r => r.status === 'Completed').length} change="friends joined" />
-        <StatCard icon={Users} title="Total Earnings" value={`₹${referralHistory.filter(r => r.status === 'Completed').reduce((acc, r) => acc + parseFloat(r.reward.replace('₹', '')), 0)}`} change="from referrals" />
+        <StatCard icon={Users} title="Total Referrals" value={referralHistory.length} change="invites sent" />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Share Your Link</CardTitle>
-          <CardDescription>Share your unique link to invite friends and earn rewards.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center space-x-2">
-            <Input value={referralLink} readOnly />
-            <Button onClick={() => handleCopy(referralLink)}>
-              <Copy className="mr-2 h-4 w-4" />
-              Copy
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+            <CardHeader>
+                <CardTitle>How It Works</CardTitle>
+                <CardDescription>Follow these simple steps to invite friends and earn rewards.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <HowItWorksStep 
+                    step={1} 
+                    title="Share Your Link" 
+                    description="Copy your unique referral link or code and share it with your friends via social media, email, or messaging apps."
+                />
+                 <HowItWorksStep 
+                    step={2} 
+                    title="Friend Signs Up" 
+                    description="Your friend signs up using your link and makes their first booking. We'll automatically track the referral."
+                />
+                 <HowItWorksStep 
+                    step={3} 
+                    title="Earn Rewards" 
+                    description="Once their first appointment is completed, you'll both receive a reward in your wallet. It's that simple!"
+                />
+            </CardContent>
+        </Card>
+        
+        <Card>
+            <CardHeader>
+                <CardTitle>Share & Earn</CardTitle>
+                <CardDescription>Share your code to start earning rewards today.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div>
+                    <Label className="text-xs font-semibold">Your Referral Code</Label>
+                    <div className="flex items-center space-x-2">
+                        <Input value={referralCode} readOnly className="font-mono bg-secondary" />
+                        <Button variant="outline" size="icon" onClick={() => handleCopy(referralCode)}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+                <div>
+                    <Label className="text-xs font-semibold">Your Referral Link</Label>
+                     <div className="flex items-center space-x-2">
+                        <Input value={referralLink} readOnly className="text-xs bg-secondary" />
+                        <Button variant="outline" size="icon" onClick={() => handleCopy(referralLink)}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+                <div className="pt-2 flex justify-center gap-2">
+                    <Button variant="outline" size="icon"><Mail className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon"><MessageCircle className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon"><Share2 className="h-4 w-4" /></Button>
+                </div>
+            </CardContent>
+        </Card>
+      </div>
       
       <Card>
         <CardHeader>
