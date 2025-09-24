@@ -18,7 +18,8 @@ import {
   LayoutDashboard,
   Star,
   Heart,
-  MessageSquare
+  MessageSquare,
+  Gift
 } from "lucide-react";
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
@@ -32,6 +33,7 @@ const navItems = [
   { id: 'appointments', label: 'My Appointments', icon: Calendar, href: '/profile/appointments' },
   { id: 'orders', label: 'My Orders', icon: ShoppingCart, href: '/profile/orders' },
   { id: 'reviews', label: 'My Reviews', icon: Star, href: '/profile/reviews' },
+  { id: 'referrals', label: 'Refer & Earn', icon: Gift, href: '/profile/referrals' },
   { id: 'wallet', label: 'Wallet', icon: Wallet, href: '/profile/wallet' },
   { id: 'settings', label: 'Account Settings', icon: Settings, href: '/profile/settings' },
 ];

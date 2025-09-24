@@ -1,15 +1,17 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
-import { Trash, ShoppingCart, TrendingUp, Package } from 'lucide-react';
+import { Trash, ShoppingCart, TrendingUp, Package, Search } from 'lucide-react';
 import { StatCard } from '../../../components/profile/StatCard';
 import { Pagination } from '@repo/ui/pagination';
+import { Input } from '@repo/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 
 const orderHistory = [
   { id: "ORD-001", date: "2024-08-01T10:00:00Z", total: 120, items: 3, status: "Delivered" },
@@ -25,6 +27,15 @@ export default function OrdersPage() {
     const [orderToCancel, setOrderToCancel] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+
+    const filteredOrders = useMemo(() => {
+        return orderHistory.filter(order =>
+          (order.id.toLowerCase().includes(searchTerm.toLowerCase())) &&
+          (statusFilter === 'all' || order.status === statusFilter)
+        );
+    }, [searchTerm, statusFilter]);
 
     const handleCancelClick = (order) => {
         setOrderToCancel(order);
@@ -46,8 +57,8 @@ export default function OrdersPage() {
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
-    const currentItems = orderHistory.slice(firstItemIndex, lastItemIndex);
-    const totalPages = Math.ceil(orderHistory.length / itemsPerPage);
+    const currentItems = filteredOrders.slice(firstItemIndex, lastItemIndex);
+    const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
     
     return (
         <div className="space-y-6">
@@ -58,8 +69,35 @@ export default function OrdersPage() {
             </div>
             <Card>
                 <CardHeader>
-                  <CardTitle>My Orders</CardTitle>
-                  <CardDescription>Your product order history.</CardDescription>
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div>
+                      <CardTitle>My Orders</CardTitle>
+                      <CardDescription>Your product order history.</CardDescription>
+                    </div>
+                     <div className="flex gap-2">
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            type="search"
+                            placeholder="Search by Order ID..."
+                            className="pl-8"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                          />
+                        </div>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-[150px]">
+                                <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="Delivered">Delivered</SelectItem>
+                                <SelectItem value="Processing">Processing</SelectItem>
+                                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -109,7 +147,7 @@ export default function OrdersPage() {
                     onPageChange={setCurrentPage}
                     itemsPerPage={itemsPerPage}
                     onItemsPerPageChange={setItemsPerPage}
-                    totalItems={orderHistory.length}
+                    totalItems={filteredOrders.length}
                   />
                 </CardContent>
               </Card>
