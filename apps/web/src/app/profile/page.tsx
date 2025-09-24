@@ -84,17 +84,17 @@ const reviews = [
 ];
 
 const StatCard = ({ icon: Icon, title, value, change }) => (
-  <Card className="hover:shadow-lg transition-shadow duration-300 bg-white/50 backdrop-blur-md border border-border/20">
-    <CardHeader className="flex flex-row items-center justify-between pb-2">
-      <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      <Icon className="h-4 w-4 text-muted-foreground" />
-    </CardHeader>
-    <CardContent>
-      <div className="text-2xl font-bold">{value}</div>
-      <p className="text-xs text-muted-foreground">{change}</p>
-    </CardContent>
-  </Card>
-);
+    <Card className="hover:shadow-lg transition-shadow duration-300 bg-white/50 backdrop-blur-md border border-border/20">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        <p className="text-xs text-muted-foreground">{change}</p>
+      </CardContent>
+    </Card>
+  );
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -133,8 +133,8 @@ export default function ProfilePage() {
     <PageContainer>
       <div className="lg:grid lg:grid-cols-12 lg:gap-8">
         {/* Left Sidebar */}
-        <aside className="lg:col-span-3 xl:col-span-2 mb-8 lg:mb-0">
-          <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border-border/30 shadow-lg">
+        <aside className="lg:col-span-3 xl:col-span-2 mb-8 lg:mb-0 lg:sticky lg:top-24 self-start">
+          <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border-border/30">
             <CardHeader className="text-center p-6 border-b border-border/20">
               <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20 shadow-xl">
                 <AvatarImage src={userProfile.avatarUrl} alt={userProfile.name} data-ai-hint="woman portrait smiling" />
@@ -211,7 +211,7 @@ export default function ProfilePage() {
                 <CardContent>
                    <div className="grid md:grid-cols-3 gap-6 mb-6">
                     <StatCard icon={Calendar} title="Upcoming" value={upcomingAppointments.length} change="Next in 3 days" />
-                    <StatCard icon={CheckCircle} title="Completed" value={pastAppointments.filter(a => a.status === 'Completed').length} change="Last month" />
+                    <StatCard icon={CheckCircle} title="Completed" value={pastAppointments.filter(a => a.status === 'Completed').length} change="All time" />
                     <StatCard icon={X} title="Cancelled" value={pastAppointments.filter(a => a.status === 'Cancelled').length} change="All time" />
                   </div>
                   <Table>
