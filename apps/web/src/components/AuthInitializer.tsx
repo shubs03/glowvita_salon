@@ -2,7 +2,7 @@
 "use client";
 
 import { useAppDispatch } from '@repo/store/hooks';
-import { clearUserAuth, setUserAuth } from '@repo/store/slices/userAuthSlice';
+import { clearUserAuth, setUserAuth } from '@repo/store/slices/Web/userAuthSlice';
 import { useEffect, type ReactNode } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import Cookies from 'js-cookie';
@@ -19,7 +19,7 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
         const { user, role } = JSON.parse(storedState);
         const decodedToken: { exp: number } = jwtDecode(token);
 
-        if (decodedToken.exp * 1000 > Date.now()) {
+        if (user && token && decodedToken.exp * 1000 > Date.now()) {
           dispatch(setUserAuth({ user, token, role }));
         } else {
           dispatch(clearUserAuth());

@@ -9,9 +9,10 @@ import { ThemeToggle } from "./ThemeToggle";
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@repo/store/hooks';
-import { clearUserAuth } from '@repo/store/slices/userAuthSlice';
+import { clearUserAuth } from '@repo/store/slices/Web/userAuthSlice';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,21 +46,22 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
   const dispatch = useAppDispatch();
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = () => {
+    setIsLoggingOut(true);
     dispatch(clearUserAuth());
     Cookies.remove('token');
     router.push('/client-login');
     setShowLogoutModal(false);
     toast.success("You have been logged out.");
+    setIsLoggingOut(false);
   };
 
-  const getInitials = (name: string = '') => {
-    const names = name.split(' ');
-    if (names.length > 1) {
-      return `${names[0][0]}${names[1][0]}`.toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
+  const getInitials = (firstName: string = '', lastName: string = '') => {
+    const first = firstName ? firstName[0] : '';
+    const last = lastName ? lastName[0] : '';
+    return `${first}${last}`.toUpperCase() || 'U';
   };
 
   useEffect(() => {
@@ -118,7 +120,7 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={user?.avatarUrl} alt={user?.name || ''} />
-                      <AvatarFallback>{getInitials(user?.firstName + ' ' + user?.lastName)}</AvatarFallback>
+                      <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
