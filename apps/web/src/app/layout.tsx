@@ -8,6 +8,8 @@ import './globals.css';
 import { MarketingLayout } from '@/components/MarketingLayout';
 import { Toaster } from 'sonner';
 import { AuthInitializer } from '@/components/AuthInitializer'; // Import the initializer
+import { MarketingHeader } from '@/components/MarketingHeader';
+import { useState } from 'react';
 
 export default function RootLayout({
   children,
@@ -15,7 +17,13 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  // Pages that should use the MarketingLayout
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+  
+  // Pages that should use the full MarketingLayout (with footer)
   const marketingPages = [
     '/',
     '/apps',
@@ -28,8 +36,33 @@ export default function RootLayout({
     '/terms-and-conditions'
   ];
 
-  // Check if the current page is one of the marketing pages
-  const showMarketingLayout = marketingPages.includes(pathname);
+  const isMarketingPage = marketingPages.includes(pathname);
+  const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
+
+  let layoutContent: ReactNode;
+
+  if (isMarketingPage) {
+    // Full marketing layout with header and footer
+    layoutContent = <MarketingLayout>{children}</MarketingLayout>;
+  } else if (isAuthPage) {
+    // Auth pages have no layout
+    layoutContent = children;
+  }
+  else {
+    // For profile pages and other non-marketing pages, only show the header
+    layoutContent = (
+       <div className="flex flex-col min-h-screen bg-background text-foreground">
+        <MarketingHeader 
+          isMobileMenuOpen={isMobileMenuOpen} 
+          toggleMobileMenu={toggleMobileMenu}
+          isHomePage={false}
+        />
+        <main className="flex-grow">
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -53,14 +86,7 @@ export default function RootLayout({
       <body>
         <StoreProvider>
           <AuthInitializer>
-            {showMarketingLayout ? (
-              <MarketingLayout>{children}</MarketingLayout>
-            ) : (
-              <>
-                {/* For non-marketing pages, we render the header separately and omit the footer */}
-                <MarketingLayout>{children}</MarketingLayout> 
-              </>
-            )}
+            {layoutContent}
             <Toaster />
           </AuthInitializer>
         </StoreProvider>
