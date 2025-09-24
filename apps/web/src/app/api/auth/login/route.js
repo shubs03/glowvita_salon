@@ -14,7 +14,6 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Email and password are required' }, { status: 400 });
     }
 
-    // Fix: Use emailAddress field instead of email
     const user = await User.findOne({ emailAddress: email }).select('+password');
 
     if (!user) {
@@ -41,7 +40,15 @@ export async function POST(req) {
       maxAge: 60 * 60 * 24, // 1 day
     });
 
-    return NextResponse.json({ message: 'Logged in successfully' }, { status: 200 });
+    const { password: _, ...userWithoutPassword } = user.toObject();
+
+    return NextResponse.json({ 
+      message: 'Logged in successfully',
+      user: userWithoutPassword,
+      token: token,
+      role: user.role,
+    }, { status: 200 });
+
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });

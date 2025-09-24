@@ -1,6 +1,7 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice';
+import userAuthReducer from './slices/Web/userAuthSlice';
 import crmAuthReducer from './slices/crmAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
@@ -24,6 +25,7 @@ const rootReducer = combineReducers({
   [glowvitaApi.reducerPath]: glowvitaApi.reducer,
   adminAuth: adminAuthReducer,
   crmAuth: crmAuthReducer,
+  userAuth: userAuthReducer,
   modal: modalReducer,
   customer: customerReducer,
   salon: salonReducer,

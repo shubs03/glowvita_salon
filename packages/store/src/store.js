@@ -31,6 +31,7 @@ const appReducer = combineReducers({
   [glowvitaApi.reducerPath]: glowvitaApi.reducer,
   adminAuth: adminAuthReducer,
   crmAuth: crmAuthReducer,
+  userAuth: userAuthReducer,
   modal: modalReducer,
   customer: customerReducer,
   salon: salonReducer,
@@ -64,6 +65,9 @@ const rootReducer = (state, action) => {
     // For now, we reset everything.
     return appReducer(undefined, action);
   }
+  if (action.type === 'userAuth/clearUserAuth') {
+    return appReducer(undefined, action);
+  }
   return appReducer(state, action);
 };
 
@@ -94,5 +98,4 @@ export const makeStore = () => {
   });
 };
 
-// Export the root reducer state type for manual type checking
-export const selectRootState = (state) => state;
+// Export the root reducer state
