@@ -9,7 +9,6 @@ import { Label } from '@repo/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@repo/ui/avatar';
 import { Badge } from '@repo/ui/badge';
-import { DollarSign } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { 
@@ -17,7 +16,8 @@ import {
   Settings, 
   Wallet, 
   ShoppingCart, 
-  Calendar, 
+  Calendar,
+  CheckCircle, 
   LogOut, 
   LayoutDashboard, 
   Star,
@@ -34,8 +34,6 @@ import {
 } from 'lucide-react';
 import { PageContainer } from '@repo/ui/page-container';
 import Link from 'next/link';
-import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import { Separator } from '@repo/ui/separator';
 
