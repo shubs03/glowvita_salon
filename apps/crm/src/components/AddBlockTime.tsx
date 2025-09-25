@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { saveBlockTime } from '@repo/store/slices/blockTimeSlice';
 import { blockTimeActions } from '@repo/store/slices/blockTimeSlice';
 import { RootState } from '@repo/store';
 import { format } from 'date-fns';
@@ -10,240 +9,479 @@ import { Button } from '@repo/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { X, Clock, Calendar, User } from 'lucide-react';
+import { X, Clock, Calendar as CalendarIcon, User } from 'lucide-react';
 import { Textarea } from '@repo/ui/textarea';
+import toast from 'react-hot-toast';
+
+interface StaffMember {
+  _id: string;
+  fullName?: string;
+  staffName?: string;
+  firstName?: string;
+  lastName?: string;
+  position?: string;
+  mobileNo?: string;
+  emailAddress?: string;
+  photo?: string;
+  description?: string;
+  salary?: number;
+  startDate?: string;
+  endDate?: string;
+  yearOfExperience?: number;
+  clientsServed?: number;
+  commission?: boolean;
+  bankDetails?: object;
+  password?: string;
+  role?: string;
+  permissions?: string[];
+  status?: string;
+  lastLoginAt?: string;
+  mondayAvailable?: boolean;
+  mondaySlots?: any[];
+  tuesdayAvailable?: boolean;
+  tuesdaySlots?: any[];
+  wednesdayAvailable?: boolean;
+  wednesdaySlots?: any[];
+  thursdayAvailable?: boolean;
+  thursdaySlots?: any[];
+  fridayAvailable?: boolean;
+  fridaySlots?: any[];
+  saturdayAvailable?: boolean;
+  saturdaySlots?: any[];
+  sundayAvailable?: boolean;
+  sundaySlots?: any[];
+  hasWeekdayAvailability?: boolean;
+  hasWeekendAvailability?: boolean;
+  totalWeeklyHours?: number;
+  blockedTimes?: any[];
+  timezone?: string;
+  isCurrentlyAvailable?: boolean;
+  avgResponseTime?: number;
+  rating?: number;
+  totalRatings?: number;
+  tags?: any[];
+  lastAvailabilityUpdate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  searchText?: string;
+  __v?: number;
+  workingHours?: {
+    start: string;
+    end: string;
+    days: number[];
+  };
+}
 
 interface AddBlockTimeProps {
   open: boolean;
   onClose: () => void;
   initialDate?: string;
+  staffMembers: StaffMember[];
+  defaultStaffId?: string;
 }
 
-const staffMembers = [
-  { id: '1', name: 'John Doe' },
-  { id: '2', name: 'Jane Smith' },
-  { id: '3', name: 'Mike Johnson' },
-];
-
-const AddBlockTime: React.FC<AddBlockTimeProps> = ({ open, onClose, initialDate = '' }) => {
+const AddBlockTime: React.FC<AddBlockTimeProps> = ({ 
+  open, 
+  onClose, 
+  initialDate = '', 
+  staffMembers = [],
+  defaultStaffId = ''
+}) => {
   const dispatch = useDispatch();
   const blockTimeState = useSelector((state: RootState) => state.blockTime);
-  const { staffMember, startTime, endTime, description, date: blockTimeDate } = blockTimeState;
+  const { startTime, endTime, description } = blockTimeState;
+  
+  const [selectedStaff, setSelectedStaff] = useState(defaultStaffId);
   const [date, setDate] = useState(initialDate);
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  // Sync local date with Redux state when initialDate changes
+
+  // Generate available time slots when staff or date changes
   useEffect(() => {
-    if (initialDate) {
-      setDate(initialDate);
-      // Use the action creator from blockTimeActions
-      dispatch(blockTimeActions.setDate(initialDate));
-    }
-  }, [initialDate, dispatch]);
+    const generateAvailableSlots = () => {
+      if (!selectedStaff || !date) {
+        setAvailableSlots([]);
+        return;
+      }
+      
+      const staff = staffMembers.find(s => s._id === selectedStaff);
+      
+      if (!staff) {
+        setAvailableSlots([]);
+        return;
+      }
+      
+      if (!staff.workingHours) {
+        // Generate default slots if no working hours
+        const slots = [];
+        for (let hour = 9; hour < 17; hour++) {
+          for (let minute = 0; minute < 60; minute += 30) {
+            const timeSlot = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            slots.push(timeSlot);
+          }
+        }
+        setAvailableSlots(slots);
+        return;
+      }
+      
+      setIsLoadingSlots(true);
+      try {
+        const slots = [];
+        
+        // Handle different time formats
+        let startTime = staff.workingHours.start;
+        let endTime = staff.workingHours.end;
+        
+        // If time is in format like "09:00" or "9:00", ensure proper format
+        if (typeof startTime === 'string') {
+          const startParts = startTime.split(':');
+          if (startParts.length === 2) {
+            startTime = `${startParts[0].padStart(2, '0')}:${startParts[1].padStart(2, '0')}`;
+          }
+        }
+        
+        if (typeof endTime === 'string') {
+          const endParts = endTime.split(':');
+          if (endParts.length === 2) {
+            endTime = `${endParts[0].padStart(2, '0')}:${endParts[1].padStart(2, '0')}`;
+          }
+        }
+        
+        const start = new Date(`2000-01-01T${startTime}:00`);
+        const end = new Date(`2000-01-01T${endTime}:00`);
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+          // Fallback to manual parsing
+          const startHour = parseInt(staff.workingHours.start.split(':')[0]);
+          const startMinute = parseInt(staff.workingHours.start.split(':')[1] || '0');
+          const endHour = parseInt(staff.workingHours.end.split(':')[0]);
+          const endMinute = parseInt(staff.workingHours.end.split(':')[1] || '0');
+          
+          let currentHour = startHour;
+          let currentMinute = startMinute;
+          
+          while (currentHour < endHour || (currentHour === endHour && currentMinute < endMinute)) {
+            const timeSlot = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
+            slots.push(timeSlot);
+            
+            currentMinute += 30;
+            if (currentMinute >= 60) {
+              currentMinute = 0;
+              currentHour += 1;
+            }
+          }
+        } else {
+          // Generate 30-minute slots using Date objects
+          let current = new Date(start);
+          while (current < end) {
+            slots.push(format(current, 'HH:mm'));
+            current = new Date(current.getTime() + 30 * 60000);
+          }
+        }
+        
+        setAvailableSlots(slots);
+        
+      } catch (error) {
+        // Fallback: generate basic time slots
+        const fallbackSlots = [];
+        for (let hour = 9; hour < 17; hour++) {
+          for (let minute = 0; minute < 60; minute += 30) {
+            const timeSlot = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            fallbackSlots.push(timeSlot);
+          }
+        }
+        setAvailableSlots(fallbackSlots);
+        
+        toast.error('Using default time slots due to error');
+      } finally {
+        setIsLoadingSlots(false);
+      }
+    };
+    
+    generateAvailableSlots();
+  }, [selectedStaff, date, staffMembers]);
   
-  // Update local state when Redux state changes
+  // Sync date with Redux
   useEffect(() => {
-    if (blockTimeDate) {
-      setDate(blockTimeDate);
+    if (date) {
+      dispatch(blockTimeActions.setDate(date));
     }
-  }, [blockTimeDate]);
+  }, [date, dispatch]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!date) newErrors.date = 'Date is required';
-    if (!staffMember) newErrors.staffMember = 'Staff member is required';
-    if (!startTime) newErrors.startTime = 'Start time is required';
-    if (!endTime) newErrors.endTime = 'End time is required';
-    if (startTime && endTime && startTime >= endTime) {
+    
+    if (!selectedStaff) {
+      newErrors.staff = 'Please select a staff member';
+    }
+    if (!date) {
+      newErrors.date = 'Please select a date';
+    }
+    if (!startTime) {
+      newErrors.startTime = 'Please select start time';
+    }
+    if (!endTime) {
+      newErrors.endTime = 'Please select end time';
+    } else if (startTime && endTime <= startTime) {
       newErrors.endTime = 'End time must be after start time';
     }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = () => {
+    if (!validateForm()) {
+      return;
+    }
     
-    // Validate form
-    const formIsValid = validateForm();
-    if (!formIsValid) return;
+    const staff = staffMembers.find(s => s._id === selectedStaff);
     
-    try {
-      // Ensure dates are properly serialized
-      const blockTimeData = {
-        date: date, // The date is already in YYYY-MM-DD format from the date input
-        staffMember,
-        startTime,
-        endTime,
-        description,
-      };
-      
-      // Dispatch the save action
-      const result = await dispatch(saveBlockTime(blockTimeData)).unwrap();
-      
-      if (result && onClose) {
-        // Show success message
-        alert('Block time saved successfully!');
-        // Reset the form state using the reset action
-        dispatch(blockTimeActions.reset());
-        // Close the modal
-        onClose();
-      }
-    } catch (error) {
-      console.error('Failed to save block time:', error);
-      // Show error to user
-      alert(error || 'Failed to save block time. Please try again.');
+    if (!staff) {
+      return;
     }
+    
+    const staffName = staff.fullName || `${staff.firstName || ''} ${staff.lastName || ''}`.trim();
+    
+    const blockTimeData = {
+      staffId: selectedStaff,
+      staffName: staffName,
+      date,
+      startTime,
+      endTime,
+      description: description || 'Blocked time'
+    };
+    
+    dispatch(blockTimeActions.addBlockedTime(blockTimeData));
+
+    onClose();
+    toast.success('Time blocked successfully');
   };
 
-  const handleStaffMemberChange = (value: string) => {
-    dispatch(blockTimeActions.setStaffMember(value));
-    if (errors.staffMember) {
-      setErrors(prev => ({ ...prev, staffMember: '' }));
-    }
+  const handleClose = () => {
+    setSelectedStaff(defaultStaffId);
+    setDate(initialDate);
+    setAvailableSlots([]);
+    setErrors({});
+    dispatch(blockTimeActions.resetBlockTime());
+    onClose();
   };
-
-  const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    dispatch(blockTimeActions.setStartTime(e.target.value));
-    if (errors.startTime) {
-      setErrors(prev => ({ ...prev, startTime: '' }));
-    }
-  };
-
-  const handleEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    dispatch(blockTimeActions.setEndTime(e.target.value));
-    if (errors.endTime) {
-      setErrors(prev => ({ ...prev, endTime: '' }));
-    }
-  };
-
-  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    dispatch(blockTimeActions.setDescription(e.target.value));
-  };
-
-  const today = format(new Date(), 'yyyy-MM-dd');
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex justify-between items-center">
-            <DialogTitle className="text-xl">Add Block Time</DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
-            </Button>
-          </div>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            Block Staff Time
+          </DialogTitle>
+          <p className="text-sm text-gray-600">
+            Select a staff member and time slot to block their availability
+          </p>
         </DialogHeader>
         
-        <form onSubmit={handleSave} className="space-y-4 mt-4">
+        <div className="space-y-6 py-4">
+          {/* Staff Selection */}
           <div className="space-y-2">
-            <label className="text-sm font-medium leading-none">
-              Date <span className="text-destructive">*</span>
-            </label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="date"
-                min={today}
-                value={date || ''}
-                onChange={(e) => {
-                  const newDate = e.target.value;
-                  setDate(newDate);
-                  dispatch(setDate(newDate));
-                }}
-                className={`pl-10 ${errors.date ? 'border-destructive' : ''}`}
-                required
-              />
-            </div>
-            {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium leading-none">
-              Staff Member <span className="text-destructive">*</span>
+            <label htmlFor="staff" className="text-sm font-medium text-gray-700">
+              Staff Member *
             </label>
             <Select 
-              value={staffMember || ''} 
-              onValueChange={handleStaffMemberChange}
+              value={selectedStaff} 
+              onValueChange={(value) => {
+                setSelectedStaff(value);
+                dispatch(blockTimeActions.setStaffMember(value));
+              }}
+              disabled={isLoadingSlots}
             >
-              <SelectTrigger className={errors.staffMember ? 'border-destructive' : ''}>
-                <User className="h-4 w-4 text-muted-foreground mr-2" />
-                <SelectValue placeholder="Select a staff member" />
+              <SelectTrigger className="h-12">
+                <User className="h-4 w-4 mr-2 text-gray-500" />
+                <SelectValue placeholder="Choose a staff member" />
               </SelectTrigger>
               <SelectContent>
-                {staffMembers.map((member) => (
-                  <SelectItem key={member.id} value={member.id}>
-                    {member.name}
-                  </SelectItem>
-                ))}
+                {staffMembers.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-gray-500">
+                    No staff members available
+                  </div>
+                ) : (
+                  staffMembers.map((staff) => (
+                    <SelectItem key={staff._id} value={staff._id} className="cursor-pointer">
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {staff.staffName || staff.fullName}
+                        </span>
+                        {staff.position && (
+                          <span className="text-xs text-gray-500">
+                            {staff.position}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
-            {errors.staffMember && <p className="text-sm text-destructive">{errors.staffMember}</p>}
+            {errors.staff && (
+              <p className="text-sm text-red-600">{errors.staff}</p>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium leading-none">
-                Start Time <span className="text-destructive">*</span>
-              </label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="time"
-                  value={startTime || ''}
-                  onChange={handleStartTimeChange}
-                  className={`pl-10 ${errors.startTime ? 'border-destructive' : ''}`}
-                />
-              </div>
-              {errors.startTime && <p className="text-sm text-destructive">{errors.startTime}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium leading-none">
-                End Time <span className="text-destructive">*</span>
-              </label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="time"
-                  value={endTime || ''}
-                  onChange={handleEndTimeChange}
-                  className={`pl-10 ${errors.endTime ? 'border-destructive' : ''}`}
-                />
-              </div>
-              {errors.endTime && <p className="text-sm text-destructive">{errors.endTime}</p>}
-            </div>
-          </div>
-
+          {/* Date Selection */}
           <div className="space-y-2">
-            <label className="text-sm font-medium leading-none">
-              Description (Optional)
+            <label htmlFor="date" className="text-sm font-medium text-gray-700">
+              Date *
+            </label>
+            <div className="relative">
+              <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                min={format(new Date(), 'yyyy-MM-dd')}
+                className="h-12 pl-10"
+              />
+            </div>
+            {errors.date && (
+              <p className="text-sm text-red-600">{errors.date}</p>
+            )}
+          </div>
+
+          {/* Time Selection */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Start Time */}
+            <div className="space-y-2">
+              <label htmlFor="startTime" className="text-sm font-medium text-gray-700">
+                Start Time *
+              </label>
+              <Select
+                value={startTime}
+                onValueChange={(value) => {
+                  dispatch(blockTimeActions.setStartTime(value));
+                  if (endTime && value >= endTime) {
+                    dispatch(blockTimeActions.setEndTime(''));
+                  }
+                }}
+                disabled={!selectedStaff || isLoadingSlots || availableSlots.length === 0}
+              >
+                <SelectTrigger className="h-12">
+                  <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                  <SelectValue 
+                    placeholder={
+                      !selectedStaff ? "Select staff first" : 
+                      isLoadingSlots ? "Loading..." : 
+                      availableSlots.length === 0 ? "No slots available" : 
+                      "Start time"
+                    } 
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSlots.length === 0 ? (
+                    <SelectItem value="no-slots" disabled>
+                      {isLoadingSlots ? 'Loading time slots...' : 'No time slots available'}
+                    </SelectItem>
+                  ) : (
+                    availableSlots.map((slot) => (
+                      <SelectItem key={`start-${slot}`} value={slot}>
+                        {slot}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {errors.startTime && (
+                <p className="text-sm text-red-600">{errors.startTime}</p>
+              )}
+            </div>
+
+            {/* End Time */}
+            <div className="space-y-2">
+              <label htmlFor="endTime" className="text-sm font-medium text-gray-700">
+                End Time *
+              </label>
+              <Select
+                value={endTime}
+                onValueChange={(value) => dispatch(blockTimeActions.setEndTime(value))}
+                disabled={!startTime || isLoadingSlots}
+              >
+                <SelectTrigger className="h-12">
+                  <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                  <SelectValue 
+                    placeholder={
+                      !startTime ? "Select start time first" : 
+                      "End time"
+                    } 
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSlots.length === 0 ? (
+                    <SelectItem value="no-slots" disabled>
+                      No time slots available
+                    </SelectItem>
+                  ) : !startTime ? (
+                    <SelectItem value="no-start" disabled>
+                      Select start time first
+                    </SelectItem>
+                  ) : (
+                    availableSlots
+                      .filter(slot => slot > startTime)
+                      .map((slot) => (
+                        <SelectItem key={`end-${slot}`} value={slot}>
+                          {slot}
+                        </SelectItem>
+                      ))
+                  )}
+                </SelectContent>
+              </Select>
+              {errors.endTime && (
+                <p className="text-sm text-red-600">{errors.endTime}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <label htmlFor="description" className="text-sm font-medium text-gray-700">
+              Description
             </label>
             <Textarea
-              value={description || ''}
-              onChange={handleDescriptionChange}
-              placeholder="Add any notes or details about this block time"
-              className="min-h-[100px]"
+              id="description"
+              value={description}
+              onChange={(e) => dispatch(blockTimeActions.setDescription(e.target.value))}
+              placeholder="Optional: Add a reason for blocking this time..."
+              className="min-h-[100px] resize-none"
+              rows={3}
             />
           </div>
 
-          <div className="flex justify-end space-x-3 pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={handleClose}
+              className="px-6"
             >
               Cancel
             </Button>
-            <Button type="submit">
-              Save Block Time
+            <Button 
+              onClick={handleSave} 
+              disabled={isLoadingSlots}
+              className="px-6 bg-blue-600 hover:bg-blue-700"
+            >
+              {isLoadingSlots ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Blocking...
+                </div>
+              ) : (
+                'Block Time'
+              )}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
 };
 
-export default AddBlockTime; 
+export default AddBlockTime;

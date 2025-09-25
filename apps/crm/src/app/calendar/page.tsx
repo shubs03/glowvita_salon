@@ -119,6 +119,15 @@ export default function CalendarPage() {
     }
   );
 
+  const { data: staffData = [], isLoading: isLoadingStaff } = glowvitaApi.useGetStaffQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
+
+  const selectedStaffId = useMemo(() => {
+    if (!selectedStaff || selectedStaff === 'All Staff') return null;
+    return staffData.find(staff => staff.fullName === selectedStaff)?._id || null;
+  }, [selectedStaff, staffData]);
+
   const [createAppointment, { isLoading: isCreating }] = glowvitaApi.useCreateAppointmentMutation();
   const [updateAppointment, { isLoading: isUpdating }] = glowvitaApi.useUpdateAppointmentMutation();
   const [deleteAppointment, { isLoading: isDeleting }] = glowvitaApi.useDeleteAppointmentMutation();
@@ -665,6 +674,9 @@ export default function CalendarPage() {
               {staffMembers.map((staff) => (
                 <SelectItem key={staff} value={staff}>{staff}</SelectItem>
               ))}
+              {staffData.map((staff) => (
+                <SelectItem key={staff.fullName} value={staff.fullName}>{staff.fullName}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <div className="flex gap-2">
@@ -930,6 +942,8 @@ export default function CalendarPage() {
               open={isBlockTimeModalOpen}
               onClose={handleCloseBlockTimeModal}
               initialDate={selectedDateForBlock?.toISOString().split('T')[0]}
+              staffMembers={staffData}
+              defaultStaffId={selectedStaffId}
             />
           </div>
         </DialogContent>

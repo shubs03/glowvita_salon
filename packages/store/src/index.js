@@ -31,3 +31,4 @@ export * from "./slices/shippingSlice";
 export * from "./slices/productSlice";
 export * from "./slices/smsTemplateSlice";
 export * from "./slices/calendarAppointmentSlice";
+export * from "./slices/staffAvailabilityService";

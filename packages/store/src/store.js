@@ -26,6 +26,7 @@ import workingHoursReducer from './slices/workingHoursSlice';
 import orderReducer from './slices/orderSlice';
 import calendarAppointmentReducer from './slices/calendarAppointmentSlice';
 import cartReducer from './slices/cartSlice'; // Import the new cart reducer
+import staffAvailabilityServiceReducer from './slices/staffAvailabilityService';
   
 export const makeStore = () => {
   return configureStore({
@@ -58,7 +59,7 @@ export const makeStore = () => {
       order: orderReducer,
       calendarAppointments: calendarAppointmentReducer,
       cart: cartReducer, // Add the cart reducer
-      
+      staffAvailabilityService: staffAvailabilityServiceReducer,
     },
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
