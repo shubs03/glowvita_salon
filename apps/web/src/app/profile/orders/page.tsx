@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -7,27 +6,62 @@ import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
-import { Trash, ShoppingCart, TrendingUp, Package, Search } from 'lucide-react';
+import { Trash, ShoppingCart, TrendingUp, Package, Search, Eye, Calendar, DollarSign, MapPin, CreditCard } from 'lucide-react';
 import { StatCard } from '../../../components/profile/StatCard';
 import { Pagination } from '@repo/ui/pagination';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
+import Image from 'next/image';
 
 const initialOrderHistory = [
-  { id: "ORD-001", date: "2024-08-01T10:00:00Z", total: 120, items: 3, status: "Delivered" },
-  { id: "ORD-002", date: "2024-07-15T15:30:00Z", total: 75, items: 2, status: "Processing" },
-  { id: "ORD-003", date: "2024-06-10T11:00:00Z", total: 210, items: 5, status: "Cancelled" },
-  { id: "ORD-004", date: "2024-05-25T09:00:00Z", total: 95, items: 1, status: "Delivered" },
-  { id: "ORD-005", date: "2024-05-10T18:00:00Z", total: 150, items: 4, status: "Delivered" },
-  { id: "ORD-006", date: "2024-04-20T12:00:00Z", total: 50, items: 1, status: "Delivered" },
+  { 
+    id: "ORD-001", 
+    date: "2024-08-01T10:00:00Z", 
+    total: 120, 
+    items: [
+      { name: "Aura Serum", quantity: 1, price: 68.00, image: 'https://picsum.photos/seed/cart1/200/200' },
+      { name: "Chroma Balm", quantity: 1, price: 24.00, image: 'https://picsum.photos/seed/cart2/200/200' },
+      { name: "Zen Mist", quantity: 1, price: 28.00, image: 'https://picsum.photos/seed/product3/200/200' },
+    ], 
+    status: "Delivered",
+    shippingAddress: "123 Ocean View, Apt 4B, Miami, FL 33101",
+    paymentMethod: "Visa **** 4242"
+  },
+  { 
+    id: "ORD-002", 
+    date: "2024-07-15T15:30:00Z", 
+    total: 75, 
+    items: [
+        { name: "Terra Scrub", quantity: 1, price: 48.00, image: 'https://picsum.photos/seed/product4/200/200' },
+        { name: "Luxe Lip Oil", quantity: 1, price: 27.00, image: 'https://picsum.photos/seed/product5/200/200' },
+    ], 
+    status: "Processing",
+    shippingAddress: "456 Downtown Ave, New York, NY 10001",
+    paymentMethod: "PayPal"
+  },
+  { 
+    id: "ORD-003", 
+    date: "2024-06-10T11:00:00Z", 
+    total: 210, 
+    items: [
+        { name: "Aura Serum", quantity: 2, price: 68.00, image: 'https://picsum.photos/seed/cart1/200/200' },
+        { name: "Zen Mist", quantity: 1, price: 28.00, image: 'https://picsum.photos/seed/product3/200/200' },
+        { name: "Bloom Perfume", quantity: 1, price: 46.00, image: 'https://picsum.photos/seed/product6/200/200' },
+    ], 
+    status: "Cancelled",
+    shippingAddress: "789 Suburbia Lane, Chicago, IL 60611",
+    paymentMethod: "Visa **** 1234"
+  },
 ];
 
 export default function OrdersPage() {
     const [orderHistory, setOrderHistory] = useState(initialOrderHistory);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [orderToCancel, setOrderToCancel] = useState(null);
+    const [selectedOrder, setSelectedOrder] = useState(null);
     const [cancellationReason, setCancellationReason] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -44,6 +78,11 @@ export default function OrdersPage() {
     const handleCancelClick = (order) => {
         setOrderToCancel(order);
         setIsCancelModalOpen(true);
+    };
+
+    const handleViewClick = (order) => {
+        setSelectedOrder(order);
+        setIsViewModalOpen(true);
     };
 
     const handleConfirmCancel = () => {
@@ -120,9 +159,9 @@ export default function OrdersPage() {
                       <TableBody>
                         {currentItems.map((order) => (
                           <TableRow key={order.id}>
-                            <TableCell>{order.id}</TableCell>
+                            <TableCell className="font-mono">{order.id}</TableCell>
                             <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
-                            <TableCell>{order.items}</TableCell>
+                            <TableCell>{order.items.length}</TableCell>
                             <TableCell>₹{order.total.toFixed(2)}</TableCell>
                             <TableCell>
                               <Badge variant={order.status === "Delivered" ? "default" : "secondary"}>
@@ -130,13 +169,16 @@ export default function OrdersPage() {
                               </Badge>
                             </TableCell>
                              <TableCell className="text-right">
+                                <Button variant="ghost" size="sm" onClick={() => handleViewClick(order)}>
+                                    <Eye className="h-4 w-4"/>
+                                </Button>
                                 {isOrderCancellable(order.status) ? (
                                     <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancelClick(order)}>
-                                        <Trash className="h-4 w-4 mr-1"/>
+                                        <Trash className="h-4 w-4"/>
                                     </Button>
                                 ) : (
                                     <Button variant="ghost" size="sm" disabled className="text-gray-400">
-                                        <Trash className="h-4 w-4 mr-1"/>
+                                        <Trash className="h-4 w-4"/>
                                     </Button>
                                 )}
                             </TableCell>
@@ -176,8 +218,79 @@ export default function OrdersPage() {
                         />
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCancelModalOpen(false)}>No</Button>
+                        <Button variant="outline" onClick={() => setIsCancelModalOpen(false)}>No, Keep It</Button>
                         <Button variant="destructive" onClick={handleConfirmCancel} disabled={!cancellationReason.trim()}>Yes, Cancel Order</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+                <DialogContent className="max-w-3xl">
+                    <DialogHeader>
+                        <DialogTitle>Order Details: #{selectedOrder?.id}</DialogTitle>
+                        <DialogDescription>
+                            Placed on {selectedOrder ? new Date(selectedOrder.date).toLocaleDateString() : ''}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedOrder && (
+                        <div className="grid gap-6 py-4">
+                            <div>
+                                <h3 className="font-semibold mb-3">Items in this order</h3>
+                                <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                                    {selectedOrder.items.map((item, index) => (
+                                        <div key={index} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
+                                            <Image 
+                                                src={item.image} 
+                                                alt={item.name} 
+                                                width={60} 
+                                                height={60} 
+                                                className="rounded-md object-cover" 
+                                            />
+                                            <div className="flex-grow">
+                                                <p className="font-medium">{item.name}</p>
+                                                <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                                            </div>
+                                            <p className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 className="font-semibold mb-3">Shipping Details</h3>
+                                    <div className="p-4 bg-secondary rounded-lg space-y-2 text-sm">
+                                        <div className="flex items-start gap-2">
+                                            <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
+                                            <p>{selectedOrder.shippingAddress}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold mb-3">Payment Summary</h3>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Subtotal:</span>
+                                            <span>₹{selectedOrder.total.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Shipping:</span>
+                                            <span>Free</span>
+                                        </div>
+                                        <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
+                                            <span>Total:</span>
+                                            <span className="text-primary">₹{selectedOrder.total.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-muted-foreground">Payment Method:</span>
+                                            <span>{selectedOrder.paymentMethod}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>Close</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
