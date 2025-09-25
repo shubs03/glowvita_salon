@@ -11,25 +11,27 @@ export const useCrmAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // This effect now correctly handles the initial loading state.
-    // It will stop loading once the authentication state is either confirmed
-    // (isCrmAuthenticated is true) or it's clear that there's no session
-    // to restore (localStorage has been checked by the initializer).
-    const checkAuthStatus = () => {
-      // The presence of a token in the redux state is a good indicator
-      // that rehydration has occurred.
-      if (token || localStorage.getItem('crmAuthState') === null) {
-        setIsLoading(false);
-      }
-    };
+    // The loading state should resolve as soon as the authentication status is determined.
+    // This happens in two main scenarios:
+    // 1. On initial load/refresh, the AuthInitializer runs and sets the redux state.
+    // 2. After a login action, the login page dispatches setCrmAuth, updating the redux state.
+
+    // If the user is authenticated, we are no longer loading.
+    if (isCrmAuthenticated) {
+      setIsLoading(false);
+      return;
+    }
+
+    // If the user is NOT authenticated, we also need to determine when loading is finished.
+    // This happens when the initializer has checked localStorage and found nothing,
+    // leaving `token` as `null` (not its initial `undefined` state).
+    const hasAuthBeenChecked = state => state.crmAuth.token !== undefined;
+    const authChecked = hasAuthBeenChecked({ crmAuth: { token } });
+
+    if (!isCrmAuthenticated && authChecked) {
+      setIsLoading(false);
+    }
     
-    // Check immediately and also set a small timeout as a fallback
-    // to give the initializer time to run.
-    checkAuthStatus();
-    const timer = setTimeout(checkAuthStatus, 250);
-
-    return () => clearTimeout(timer);
-
   }, [isCrmAuthenticated, token]);
 
   return {
