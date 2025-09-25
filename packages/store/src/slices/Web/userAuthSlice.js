@@ -1,36 +1,30 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+// The slice should not be responsible for loading its own state from localStorage.
+// This is an external concern that should be handled by an initializer component.
 const initialState = {
   isAuthenticated: false,
   user: null,
-  token: null,
+  token: undefined, // Use `undefined` to indicate "not yet checked" state
   role: null,
   permissions: [],
 };
 
-// The slice should not be responsible for loading its own state from localStorage.
-// This is an external concern that should be handled by a component like AuthInitializer.
 const userAuthSlice = createSlice({
   name: 'userAuth',
   initialState,
   reducers: {
     setUserAuth: (state, action) => {
-      const { user, token, role, permissions } = action.payload;
+      const { user, token, role } = action.payload;
       state.isAuthenticated = true;
       state.user = user;
       state.token = token;
       state.role = role;
-      state.permissions = permissions || [];
+      state.permissions = user.permissions || [];
 
       if (typeof localStorage !== 'undefined') {
         try {
-          // Persist only the necessary parts, not the entire state.
-          const stateToPersist = {
-            isAuthenticated: true,
-            user,
-            role,
-            permissions: permissions || [],
-          };
+          const stateToPersist = { user, role, permissions: user.permissions || [] };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
         } catch (e) {
           console.error("Could not save user auth state to localStorage", e);
@@ -40,7 +34,7 @@ const userAuthSlice = createSlice({
     clearUserAuth: (state) => {
       state.isAuthenticated = false;
       state.user = null;
-      state.token = null;
+      state.token = null; // Set to null to indicate "checked and logged out"
       state.role = null;
       state.permissions = [];
 

@@ -9,14 +9,29 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // The AuthInitializer runs on first load. We can consider loading finished
-    // once the Redux state has been populated (token is present) or it's clear
-    // there is no session to restore (localStorage check is done and token is null).
-    const hasChecked = !!token || localStorage.getItem('userAuthState') === null;
+    // The AuthInitializer runs on first load. The loading state should resolve once
+    // the Redux state is either authenticated or it's certain there's no session
+    // to restore (localStorage has been checked and found empty).
+    
+    // We determine the loading is finished if the token in the redux store
+    // has been checked. If a token exists, the user is authenticated. If it's null,
+    // the initialization is also complete.
+    const checkAuthStatus = () => {
+      // The `token` in the Redux store is the source of truth after initialization.
+      // If it's not `undefined` (its initial-initial state before any action), it means
+      // either a session was restored or it was confirmed there's no session.
+      const hasChecked = state.userAuth.token !== undefined;
 
-    if (hasChecked || isAuthenticated) {
-      setIsLoading(false);
-    }
+      if(isCrmAuthenticated || hasChecked) {
+        setIsLoading(false);
+      }
+    };
+    
+    // A small timeout helps ensure the AuthInitializer has run.
+    const timer = setTimeout(checkAuthStatus, 150);
+
+    return () => clearTimeout(timer);
+
   }, [isAuthenticated, token]);
 
   return {

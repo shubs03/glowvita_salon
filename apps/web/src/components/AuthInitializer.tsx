@@ -17,18 +17,21 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
       try {
         const decodedToken: { exp: number } = jwtDecode(token);
         if (decodedToken.exp * 1000 > Date.now()) {
-          const { user, role } = JSON.parse(storedState);
+          // Token is valid and not expired, rehydrate the state
+          const { user, role, permissions } = JSON.parse(storedState);
           if (user && token && role) {
-            dispatch(setUserAuth({ user, token, role }));
-            return;
+            dispatch(setUserAuth({ user, token, role, permissions: permissions || [] }));
+            return; // Successful rehydration, stop here
           }
         }
       } catch (error) {
         console.error("AuthInitializer: Error decoding token or parsing state.", error);
+        // Fall through to clear auth if there's any error
       }
     }
 
-    // If any of the above fails, ensure we are in a clean, logged-out state.
+    // If there's no token, no stored state, or if the token is invalid/expired,
+    // ensure we are in a clean, logged-out state.
     dispatch(clearUserAuth());
     
   }, [dispatch]);
