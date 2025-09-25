@@ -11,25 +11,26 @@ export function CrmAuthInitializer({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
+    // This effect runs only once on the client-side after initial mount.
     try {
-      const storedState = localStorage.getItem('crmAuthState');
       const token = Cookies.get('crm_access_token');
+      const storedState = localStorage.getItem('crmAuthState');
       
-      if (storedState && token) {
-        const { user, role, permissions } = JSON.parse(storedState);
+      if (token && storedState) {
         const decodedToken: { exp: number } = jwtDecode(token);
 
         if (decodedToken.exp * 1000 > Date.now()) {
-          // Token is valid and not expired
-          dispatch(setCrmAuth({ user, token, role, permissions: permissions || [] }));
-        } else {
-          // Token is expired, clear auth state
-          dispatch(clearCrmAuth());
+          // Token is valid and not expired, rehydrate the state
+          const { user, role, permissions } = JSON.parse(storedState);
+          if (user && token && role) {
+            dispatch(setCrmAuth({ user, token, role, permissions: permissions || [] }));
+            return; // Successful rehydration
+          }
         }
       }
-      // IMPORTANT: No 'else' block here. If there's no stored state, we do nothing.
-      // The initial state of the slice (`isCrmAuthenticated: false`) is already correct.
-      // This prevents the initializer from clearing a valid state that just hasn't been set yet.
+      
+      // If token/state is missing or token is expired, ensure a clean state
+      dispatch(clearCrmAuth());
       
     } catch (error) {
       console.error("Failed to process CRM auth state. Clearing session.", error);

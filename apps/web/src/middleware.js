@@ -56,7 +56,7 @@ export async function middleware(request) {
       } catch (error) {
         // If token is invalid, let them stay on the auth page and clear the bad cookie
          const response = NextResponse.next();
-         response.cookies.set('token', '', { expires: new Date(0) });
+         response.cookies.set('token', '', { expires: new Date(0), path: '/' });
          return response;
       }
     }

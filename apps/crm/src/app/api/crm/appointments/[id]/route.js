@@ -90,7 +90,7 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
             },
             { new: true, runValidators: true }
         )
-        .populate('client', 'name email phone')
+        .populate('client', 'fullName email phone')
         .populate('service', 'name duration price')
         .populate('staff', 'name email phone');
 

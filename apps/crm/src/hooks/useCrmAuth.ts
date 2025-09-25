@@ -11,28 +11,13 @@ export const useCrmAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // The loading state should resolve as soon as the authentication status is determined.
-    // This happens in two main scenarios:
-    // 1. On initial load/refresh, the AuthInitializer runs and sets the redux state.
-    // 2. After a login action, the login page dispatches setCrmAuth, updating the redux state.
-
-    // If the user is authenticated, we are no longer loading.
-    if (isCrmAuthenticated) {
-      setIsLoading(false);
-      return;
-    }
-
-    // If the user is NOT authenticated, we also need to determine when loading is finished.
-    // This happens when the initializer has checked localStorage and found nothing,
-    // leaving `token` as `null` (not its initial `undefined` state).
-    const hasAuthBeenChecked = state => state.crmAuth.token !== undefined;
-    const authChecked = hasAuthBeenChecked({ crmAuth: { token } });
-
-    if (!isCrmAuthenticated && authChecked) {
+    // The loading state is finished when the token is no longer `undefined`.
+    // It will be `null` if not logged in, or a string if logged in.
+    // This covers both initial page load and post-login scenarios correctly.
+    if (token !== undefined) {
       setIsLoading(false);
     }
-    
-  }, [isCrmAuthenticated, token]);
+  }, [token]);
 
   return {
     user,

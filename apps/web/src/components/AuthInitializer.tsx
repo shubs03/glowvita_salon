@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAppDispatch } from '@repo/store/hooks';
@@ -10,12 +11,15 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    const token = Cookies.get('token');
-    const storedState = localStorage.getItem('userAuthState');
+    // This effect runs only once on the client-side after initial mount.
+    // It's the single source of truth for rehydrating state from storage.
+    try {
+      const token = Cookies.get('token');
+      const storedState = localStorage.getItem('userAuthState');
 
-    if (token && storedState) {
-      try {
+      if (token && storedState) {
         const decodedToken: { exp: number } = jwtDecode(token);
+
         if (decodedToken.exp * 1000 > Date.now()) {
           // Token is valid and not expired, rehydrate the state
           const { user, role, permissions } = JSON.parse(storedState);
@@ -24,16 +28,17 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
             return; // Successful rehydration, stop here
           }
         }
-      } catch (error) {
-        console.error("AuthInitializer: Error decoding token or parsing state.", error);
-        // Fall through to clear auth if there's any error
       }
-    }
+      
+      // If there's no token, no stored state, or if the token is invalid/expired,
+      // ensure we are in a clean, logged-out state.
+      dispatch(clearUserAuth());
 
-    // If there's no token, no stored state, or if the token is invalid/expired,
-    // ensure we are in a clean, logged-out state.
-    dispatch(clearUserAuth());
-    
+    } catch (error) {
+      console.error("AuthInitializer: Error processing auth state.", error);
+      // Fall through to clear auth if there's any error
+      dispatch(clearUserAuth());
+    }
   }, [dispatch]);
 
   return <>{children}</>;

@@ -15,16 +15,16 @@ const userAuthSlice = createSlice({
   initialState,
   reducers: {
     setUserAuth: (state, action) => {
-      const { user, token, role } = action.payload;
+      const { user, token, role, permissions } = action.payload;
       state.isAuthenticated = true;
       state.user = user;
       state.token = token;
       state.role = role;
-      state.permissions = user.permissions || [];
+      state.permissions = permissions || [];
 
       if (typeof localStorage !== 'undefined') {
         try {
-          const stateToPersist = { user, role, permissions: user.permissions || [] };
+          const stateToPersist = { user, role, permissions: permissions || [] };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
         } catch (e) {
           console.error("Could not save user auth state to localStorage", e);
