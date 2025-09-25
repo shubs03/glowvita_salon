@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAppDispatch } from '@repo/store/hooks';
@@ -12,11 +11,11 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // This effect runs only once on the client-side after initial mount.
-    // It's the single source of truth for rehydrating state from storage.
+    // It is the single source of truth for rehydrating state from storage.
     try {
       const token = Cookies.get('token');
       const storedState = localStorage.getItem('userAuthState');
-
+      
       if (token && storedState) {
         const decodedToken: { exp: number } = jwtDecode(token);
 
@@ -31,7 +30,8 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
       }
       
       // If there's no token, no stored state, or if the token is invalid/expired,
-      // ensure we are in a clean, logged-out state.
+      // dispatch clearUserAuth to ensure we are in a clean, logged-out state.
+      // This is safe because it only runs once and correctly handles invalid sessions.
       dispatch(clearUserAuth());
 
     } catch (error) {

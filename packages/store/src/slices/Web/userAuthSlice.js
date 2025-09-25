@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 // The slice should not be responsible for loading its own state from localStorage.
-// This is an external concern that should be handled by an initializer component.
+// This is an external concern that will be handled by the AuthInitializer component.
 const initialState = {
   isAuthenticated: false,
   user: null,
@@ -22,6 +22,7 @@ const userAuthSlice = createSlice({
       state.role = role;
       state.permissions = permissions || [];
 
+      // Persist state to localStorage only on the client-side
       if (typeof localStorage !== 'undefined') {
         try {
           const stateToPersist = { user, role, permissions: permissions || [] };
@@ -38,6 +39,7 @@ const userAuthSlice = createSlice({
       state.role = null;
       state.permissions = [];
 
+      // Clear localStorage only on the client-side
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('userAuthState');
       }
