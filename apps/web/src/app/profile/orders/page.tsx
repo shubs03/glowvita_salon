@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
-import { Trash, ShoppingCart, TrendingUp, Package, Search, Eye, Calendar, DollarSign, MapPin, CreditCard } from 'lucide-react';
+import { Trash, ShoppingCart, TrendingUp, Package, Search, Eye, Calendar, DollarSign, MapPin, CreditCard, Mail, Phone, User } from 'lucide-react';
 import { StatCard } from '../../../components/profile/StatCard';
 import { Pagination } from '@repo/ui/pagination';
 import { Input } from '@repo/ui/input';
@@ -27,7 +28,10 @@ const initialOrderHistory = [
     ], 
     status: "Delivered",
     shippingAddress: "123 Ocean View, Apt 4B, Miami, FL 33101",
-    paymentMethod: "Visa **** 4242"
+    paymentMethod: "Visa **** 4242",
+    customerName: 'Alice Johnson',
+    customerEmail: 'alice@example.com',
+    customerPhone: '555-123-4567'
   },
   { 
     id: "ORD-002", 
@@ -39,7 +43,10 @@ const initialOrderHistory = [
     ], 
     status: "Processing",
     shippingAddress: "456 Downtown Ave, New York, NY 10001",
-    paymentMethod: "PayPal"
+    paymentMethod: "PayPal",
+    customerName: 'Bob Williams',
+    customerEmail: 'bob@example.com',
+    customerPhone: '555-987-6543'
   },
   { 
     id: "ORD-003", 
@@ -52,7 +59,10 @@ const initialOrderHistory = [
     ], 
     status: "Cancelled",
     shippingAddress: "789 Suburbia Lane, Chicago, IL 60611",
-    paymentMethod: "Visa **** 1234"
+    paymentMethod: "Visa **** 1234",
+    customerName: 'Charlie Brown',
+    customerEmail: 'charlie@example.com',
+    customerPhone: '555-555-5555'
   },
 ];
 
@@ -225,49 +235,46 @@ export default function OrdersPage() {
             </Dialog>
 
             <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-                <DialogContent className="max-w-3xl">
-                    <DialogHeader>
-                        <DialogTitle>Order Details: #{selectedOrder?.id}</DialogTitle>
+                <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+                    <DialogHeader className="p-6 pb-4 border-b">
+                        <DialogTitle className="text-2xl font-bold">Order Details: #{selectedOrder?.id}</DialogTitle>
                         <DialogDescription>
                             Placed on {selectedOrder ? new Date(selectedOrder.date).toLocaleDateString() : ''}
                         </DialogDescription>
                     </DialogHeader>
                     {selectedOrder && (
-                        <div className="grid gap-6 py-4">
-                            <div>
-                                <h3 className="font-semibold mb-3">Items in this order</h3>
-                                <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
-                                    {selectedOrder.items.map((item, index) => (
-                                        <div key={index} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
-                                            <Image 
-                                                src={item.image} 
-                                                alt={item.name} 
-                                                width={60} 
-                                                height={60} 
-                                                className="rounded-md object-cover" 
-                                            />
-                                            <div className="flex-grow">
-                                                <p className="font-medium">{item.name}</p>
-                                                <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                                            </div>
-                                            <p className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="grid md:grid-cols-2 gap-6">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <h3 className="font-semibold mb-3">Shipping Details</h3>
-                                    <div className="p-4 bg-secondary rounded-lg space-y-2 text-sm">
-                                        <div className="flex items-start gap-2">
-                                            <MapPin className="h-4 w-4 mt-1 text-muted-foreground" />
-                                            <p>{selectedOrder.shippingAddress}</p>
-                                        </div>
+                                    <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
+                                      <User className="h-5 w-5 text-primary" />
+                                      Customer & Shipping
+                                    </h3>
+                                    <div className="p-4 bg-secondary rounded-lg space-y-3 text-sm">
+                                      <div className="flex items-start gap-3">
+                                        <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                        <p className="font-medium">{selectedOrder.customerName}</p>
+                                      </div>
+                                      <div className="flex items-start gap-3">
+                                        <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                        <p className="text-muted-foreground">{selectedOrder.customerEmail}</p>
+                                      </div>
+                                      <div className="flex items-start gap-3">
+                                        <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                        <p className="text-muted-foreground">{selectedOrder.customerPhone}</p>
+                                      </div>
+                                      <div className="flex items-start gap-3 pt-2 border-t border-border/50">
+                                        <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                        <p className="text-muted-foreground">{selectedOrder.shippingAddress}</p>
+                                      </div>
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold mb-3">Payment Summary</h3>
-                                    <div className="space-y-2 text-sm">
+                                    <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
+                                      <DollarSign className="h-5 w-5 text-primary" />
+                                      Payment Summary
+                                    </h3>
+                                    <div className="space-y-2 text-sm p-4 bg-secondary rounded-lg">
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Subtotal:</span>
                                             <span>₹{selectedOrder.total.toFixed(2)}</span>
@@ -280,16 +287,44 @@ export default function OrdersPage() {
                                             <span>Total:</span>
                                             <span className="text-primary">₹{selectedOrder.total.toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between text-xs">
+                                        <div className="flex justify-between text-xs pt-2 border-t">
                                             <span className="text-muted-foreground">Payment Method:</span>
-                                            <span>{selectedOrder.paymentMethod}</span>
+                                            <div className="flex items-center gap-1.5">
+                                              <CreditCard className="h-3 w-3"/>
+                                              <span>{selectedOrder.paymentMethod}</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                            
+                            <div>
+                                <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
+                                  <ShoppingCart className="h-5 w-5 text-primary" />
+                                  Items Ordered ({selectedOrder.items.length})
+                                </h3>
+                                <div className="space-y-4">
+                                    {selectedOrder.items.map((item, index) => (
+                                        <div key={index} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
+                                            <Image 
+                                                src={item.image} 
+                                                alt={item.name} 
+                                                width={64} 
+                                                height={64} 
+                                                className="rounded-md object-cover" 
+                                            />
+                                            <div className="flex-grow">
+                                                <p className="font-medium">{item.name}</p>
+                                                <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                                            </div>
+                                            <p className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     )}
-                    <DialogFooter>
+                    <DialogFooter className="p-6 pt-4 border-t">
                         <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>Close</Button>
                     </DialogFooter>
                 </DialogContent>
@@ -297,3 +332,4 @@ export default function OrdersPage() {
         </div>
     );
 }
+```
