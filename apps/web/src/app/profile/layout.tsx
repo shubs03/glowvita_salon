@@ -78,8 +78,8 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
                     src={user?.profilePicture}
                     alt={user?.firstName}
                   />
-                  <AvatarFallback className="text-3xl">
-                    {user?.firstName?.charAt(0) || 'U'}
+                  <AvatarFallback className="text-3xl bg-primary/10 text-primary font-bold">
+                    {(user?.firstName?.charAt(0) || '') + (user?.lastName?.charAt(0) || '')}
                   </AvatarFallback>
                 </Avatar>
                 <CardTitle className="text-xl font-bold">
