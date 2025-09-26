@@ -95,7 +95,7 @@ export default function AllProductsPage() {
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [priceRange, setPriceRange] = useState([0, 200]);
   const [sortBy, setSortBy] = useState('featured');
-  
+
   // Mock categories and brands
   const categories = [
     { id: 'all', name: 'All Categories' },
@@ -166,7 +166,7 @@ export default function AllProductsPage() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-float-delayed" />
         
         <div className="container mx-auto px-4 z-10 relative">
-          <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+           <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
             Our Marketplace
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
@@ -178,7 +178,7 @@ export default function AllProductsPage() {
               <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 placeholder="Search for products, brands, or categories..."
-                className="w-full h-14 text-lg pl-14 rounded-full shadow-2xl border-2 border-transparent focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-300 bg-background/80 backdrop-blur-sm"
+                className="w-full h-14 text-lg pl-14 rounded-2xl shadow-xl border-2 border-transparent focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-300 bg-background/80 backdrop-blur-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -317,26 +317,25 @@ export default function AllProductsPage() {
       </div>
       
       {/* Sticky Filter Strip */}
-      <div className="sticky bottom-6 z-50 flex justify-center">
+       <div className="sticky bottom-6 z-50 flex justify-center">
         <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-full blur opacity-20 group-hover:opacity-50 transition duration-500"></div>
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-full blur opacity-20 group-hover:opacity-50 transition-all duration-300"></div>
           
-          <div className="relative flex items-center justify-center p-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-lg transition-all duration-300 min-w-[200px] group-hover:min-w-[650px]">
-              
-            {/* Initial Pill View */}
-            <div className="flex items-center gap-3 px-4 py-2 cursor-pointer opacity-100 group-hover:opacity-0 group-hover:hidden transition-opacity duration-200">
+          <div className="relative flex items-center justify-center p-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-lg transition-all duration-300 w-auto group-hover:min-w-[650px]">
+            {/* Pill visible by default */}
+            <div className="flex items-center gap-2 px-3 py-1 cursor-pointer group-hover:hidden">
               <Filter className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Filters & Sorting</span>
               {activeFilterCount > 0 && (
-                <span className="text-muted-foreground text-xs bg-muted/50 px-2.5 py-0.5 rounded-full">
-                  {activeFilterCount} active
+                <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+                  {activeFilterCount}
                 </span>
               )}
             </div>
 
-            {/* Expanded Hover View */}
-            <div className="flex items-center gap-4 px-4 py-2 opacity-0 group-hover:opacity-100 group-hover:flex transition-opacity duration-300">
-                <div className="flex items-center gap-2">
+            {/* Expanded content visible on hover */}
+            <div className="hidden group-hover:flex items-center gap-4 px-3 py-1 transition-all duration-300">
+              <div className="flex items-center gap-2">
                   <Label htmlFor="category-filter" className="text-sm font-medium">Category</Label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                     <SelectTrigger className="w-36 rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
@@ -360,6 +359,7 @@ export default function AllProductsPage() {
                     <SelectTrigger className="w-36 rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="featured">Featured</SelectItem>
+                      <SelectItem value="newest">Newest</SelectItem>
                       <SelectItem value="price-low">Price: Low-High</SelectItem>
                       <SelectItem value="price-high">Price: High-Low</SelectItem>
                     </SelectContent>
@@ -369,7 +369,6 @@ export default function AllProductsPage() {
                   <X className="h-4 w-4 mr-1" /> Clear
                 </Button>
             </div>
-
           </div>
         </div>
       </div>
@@ -377,5 +376,3 @@ export default function AllProductsPage() {
     </PageContainer>
   );
 }
-
-  
