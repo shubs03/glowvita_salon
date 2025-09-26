@@ -423,12 +423,16 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
                   <SelectItem value="loading" disabled>
                     Loading...
                   </SelectItem>
-                ) : (
+                ) : servicesForCategory.length > 0 ? (
                   servicesForCategory.map((s) => (
                     <SelectItem key={s._id} value={s.name}>
                       {s.name}
                     </SelectItem>
                   ))
+                ) : (
+                  <SelectItem value="no-services" disabled>
+                    No service added
+                  </SelectItem>
                 )}
               </SelectContent>
             </Select>
