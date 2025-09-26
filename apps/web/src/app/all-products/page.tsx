@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -118,13 +119,13 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
 
   return (
     <div 
-      className={`relative rounded-2xl p-6 flex flex-col justify-between overflow-hidden group transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary/10 border border-border/20 ${className}`}
+      className={`relative rounded-2xl p-4 flex flex-col justify-between overflow-hidden group transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary/10 border border-border/20 ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
       <div className="relative z-10">
-        <h3 className="text-2xl font-bold mb-4">{title}</h3>
+        <h3 className={`font-bold mb-3 ${isLarge ? 'text-xl' : 'text-lg'}`}>{title}</h3>
         <div className="relative aspect-square w-full rounded-xl overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
           {products.map((product, index) => (
             <img
@@ -137,19 +138,19 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           
           <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <h4 className={`font-bold ${isLarge ? 'text-xl' : 'text-lg'}`}>{products[currentIndex].name}</h4>
-            <p className="text-sm">{products[currentIndex].vendorName}</p>
+            <h4 className={`font-bold ${isLarge ? 'text-lg' : 'text-base'}`}>{products[currentIndex].name}</h4>
+            <p className="text-xs">{products[currentIndex].vendorName}</p>
             <div className="flex justify-between items-center mt-2">
-              <p className={`font-bold ${isLarge ? 'text-lg' : 'text-base'}`}>₹{products[currentIndex].price.toFixed(2)}</p>
-              <Button size="sm" variant="secondary" className="rounded-full">View</Button>
+              <p className={`font-bold ${isLarge ? 'text-base' : 'text-sm'}`}>₹{products[currentIndex].price.toFixed(2)}</p>
+              <Button size="sm" variant="secondary" className="rounded-full h-7 px-3 text-xs">View</Button>
             </div>
           </div>
           
-          <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-8 w-8 hover:bg-white/30 backdrop-blur-sm" onClick={prevProduct}>
+          <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-7 w-7 hover:bg-white/30 backdrop-blur-sm" onClick={prevProduct}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-8 w-8 hover:bg-white/30 backdrop-blur-sm" onClick={nextProduct}>
+            <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-7 w-7 hover:bg-white/30 backdrop-blur-sm" onClick={nextProduct}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -244,7 +245,7 @@ export default function AllProductsPage() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-float-delayed" />
         
         <div className="container mx-auto px-4 z-10 relative">
-          <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+           <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
             Our Marketplace
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
@@ -285,12 +286,12 @@ export default function AllProductsPage() {
             {/* 3. Bento Grid Section */}
             <section className="mb-16">
                 <h2 className="text-3xl font-bold text-center mb-8">Highlights</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   {bentoGridProducts.newArrivals.length > 0 && (
                     <ProductHighlightCard 
                       title="New Arrivals"
                       products={bentoGridProducts.newArrivals}
-                      className="md:col-span-2 md:row-span-2"
+                      className="md:col-span-2 md:row-span-1 lg:col-span-2 lg:row-span-1"
                       isLarge={true}
                     />
                   )}
@@ -308,13 +309,7 @@ export default function AllProductsPage() {
                   )}
                   {bentoGridProducts.bestSellers.length > 0 && (
                     <ProductHighlightCard 
-                      title="Best Sellers"
-                      products={bentoGridProducts.bestSellers}
-                    />
-                  )}
-                  {bentoGridProducts.bestSellers.length > 0 && (
-                    <ProductHighlightCard 
-                      title="Best Sellers"
+                      title="Users Choice 2025"
                       products={bentoGridProducts.bestSellers}
                     />
                   )}
@@ -405,7 +400,7 @@ export default function AllProductsPage() {
       <div 
         className="group fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-in-out"
       >
-        <div className="flex items-center gap-4 bg-background/80 backdrop-blur-lg border border-border/50 rounded-full shadow-2xl p-2 transition-all duration-300 group-hover:px-6">
+        <div className="flex items-center gap-4 bg-background/80 backdrop-blur-lg border border-border/50 rounded-full shadow-2xl p-2 transition-all duration-300 hover:px-6">
           {/* Default Visible Pill */}
           <div className="flex items-center gap-2 px-3 py-1 cursor-pointer">
             <Filter className="h-4 w-4 text-primary" />
