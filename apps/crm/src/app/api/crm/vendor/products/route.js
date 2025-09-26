@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import _db from "../../../../../../../../packages/lib/src/db.js";
 import ProductModel from "../../../../../../../../packages/lib/src/models/Vendor/Product.model.js";
@@ -12,18 +13,12 @@ const getProducts = async (req) => {
     // Add CORS headers for web app access
     const headers = {
       "Access-Control-Allow-Origin": "*", // In production, specify the exact origin
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Methods": "GET",
+      "Access-Control-Allow-Headers": "Content-Type",
     };
 
-    // Handle preflight requests
-    if (req.method === "OPTIONS") {
-      return new NextResponse(null, { status: 204, headers });
-    }
-
-    // Remove user authentication requirement for public access
-    // Filter products by fixed origin 'Vendor' only (no vendorId filter to fetch all products)
-    const products = await ProductModel.find({ origin: 'Vendor' })
+    // Filter products by fixed origin 'Vendor' only and with status 'approved'
+    const products = await ProductModel.find({ origin: 'Vendor', status: 'approved' })
       .populate('category', 'name description')
       .sort({ createdAt: -1 })
       .lean();
@@ -52,22 +47,13 @@ const getProducts = async (req) => {
 // Export GET without auth middleware for public access
 export const GET = getProducts;
 
-// Add OPTIONS export for CORS preflight
-export const OPTIONS = async (req) => {
-  const headers = {
-    "Access-Control-Allow-Origin": "*", // In production, specify the exact origin
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  };
-  return new NextResponse(null, { status: 204, headers });
-};
 
-// ... existing code for POST, PUT, and DELETE endpoints (keeping them protected) ...
 // POST - Create new product with fixed origin 'Vendor'
 const createProduct = async (req) => {
     try {
         const body = await req.json();
         const { productName, description, category, categoryDescription, price, salePrice, stock, productImage, isActive, status } = body;
+        const userRole = req.user?.role;
 
         if (!productName || !category || price === undefined || stock === undefined) {
             return NextResponse.json(
@@ -215,6 +201,4 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     return NextResponse.json({ success: true, message: "Product deleted successfully" });
   } catch (error) {
     console.error("Error deleting product:", error);
-    return NextResponse.json({ success: false, message: "Error deleting product", error: error.message }, { status: 500 });
-  }
-}, ["vendor"]);
+    return NextResponse.json({ success: false, message: "Error deleting product", error: error

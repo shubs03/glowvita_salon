@@ -11,6 +11,7 @@ import { PageContainer } from '@repo/ui/page-container';
 import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent } from '@repo/ui/dialog';
 import { Label } from '@repo/ui/label';
+import { useGetAllVendorProductsQuery, useGetAdminProductCategoriesQuery } from '@repo/store/services/api';
 
 // Product type definition
 interface Product {
@@ -162,63 +163,73 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
 
 
 export default function AllProductsPage() {
+  const { data: apiProducts, isLoading: isProductsLoading, isError: isProductsError, error: productsApiError } = useGetAllVendorProductsQuery(undefined);
+  const { data: categoriesData, isLoading: isCategoriesLoading, isError: isCategoriesError, error: categoriesError } = useGetAdminProductCategoriesQuery(undefined);
+  
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([{ id: 'all', name: 'All Categories' }]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorState, setErrorState] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('grid');
-  
-  // New state for filters
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [priceRange, setPriceRange] = useState([0, 200]);
   const [sortBy, setSortBy] = useState('featured');
+  const [viewMode, setViewMode] = useState('grid');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Mock categories and brands
-  const categories = [
-    { id: 'all', name: 'All Categories' },
-    { id: 'skincare', name: 'Skincare' },
-    { id: 'cosmetics', name: 'Cosmetics' },
-    { id: 'bodycare', name: 'Body Care' },
-    { id: 'facecare', name: 'Face Care' },
-    { id: 'fragrance', name: 'Fragrance' },
-  ];
-  const brands = [
-    { id: 'all', name: 'All Brands' },
-    { id: 'aura', name: 'Aura Cosmetics' },
-    { id: 'chroma', name: 'Chroma Beauty' },
-    { id: 'serenity', name: 'Serenity Skincare' },
-    { id: 'earthly', name: 'Earthly Essentials' },
-  ];
+  // Carousel State
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch products from API
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/products');
-        const data = await response.json();
-        
-        if (data.success) {
-          setProducts(data.data);
-          setFilteredProducts(data.data);
-        } else {
-          setError(data.message || 'Failed to fetch products');
+    setLoading(isProductsLoading || isCategoriesLoading);
+    if (isProductsError) {
+      let errorMessage = 'Failed to fetch products';
+      if (productsApiError) {
+        if ('status' in productsApiError) {
+          const fetchError = productsApiError as { status: number; data?: any };
+          errorMessage = `Error ${fetchError.status}: ${JSON.stringify(fetchError.data || 'Unknown error')}`;
+        } else if ('message' in productsApiError) {
+          errorMessage = productsApiError.message || errorMessage;
         }
-      } catch (err) {
-        setError('Failed to fetch products');
-        console.error('Error fetching products:', err);
-      } finally {
-        setLoading(false);
       }
-    };
+      setErrorState(errorMessage);
+    } else if (productsData) {
+      const transformedProducts = productsData.map((product: any) => ({
+        id: product._id || product.id,
+        name: product.productName || product.name || 'Unnamed Product',
+        price: product.price || 0,
+        image: product.productImage || product.image || '/placeholder-product.jpg',
+        hint: product.categoryDescription || product.hint || '',
+        rating: product.rating || 4.5,
+        reviewCount: product.reviewCount || Math.floor(Math.random() * 100),
+        vendorName: product.vendorId?.name || product.vendorName || 'Unknown Vendor',
+        isNew: product.isNew || product.status === 'pending',
+        description: product.description || '',
+        category: product.category?.name || product.category || 'Uncategorized'
+      }));
+      
+      setProducts(transformedProducts);
+      setFilteredProducts(transformedProducts);
+    }
 
-    fetchProducts();
-  }, []);
+    if (isCategoriesError) {
+      console.error('Error fetching categories:', categoriesError);
+      setCategories([{ id: 'all', name: 'All Categories' }]);
+    } else if (categoriesData && categoriesData.success) {
+      const formattedCategories = categoriesData.data.map((category: any) => ({
+        id: category._id || category.id,
+        name: category.name
+      }));
+      setCategories([{ id: 'all', name: 'All Categories' }, ...formattedCategories]);
+    }
 
-  // Filter products
+  }, [productsData, categoriesData, isProductsLoading, isCategoriesLoading, isProductsError, isCategoriesError, productsApiError, categoriesError]);
+  
   useEffect(() => {
     let result = [...products];
     if (searchTerm) {
@@ -228,16 +239,79 @@ export default function AllProductsPage() {
     }
     setFilteredProducts(result);
   }, [searchTerm, products]);
-  
+
   const bentoGridProducts = {
     newArrivals: products.slice(0, 3),
     topRated: products.slice(3, 6),
     bestSellers: products.slice(6, 9)
   };
 
+  const startAutoPlay = () => {
+    if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+    if (isAutoPlaying && carouselRef.current) {
+      autoPlayRef.current = setInterval(() => {
+        if (carouselRef.current) {
+          carouselRef.current.scrollLeft += 1;
+          const slideIndex = Math.floor(carouselRef.current.scrollLeft / 300) % 6;
+          setCurrentSlide(slideIndex);
+          if (carouselRef.current.scrollLeft >= carouselRef.current.scrollWidth / 2) {
+            carouselRef.current.scrollLeft = 0;
+          }
+        }
+      }, 30);
+    }
+  };
+
+  useEffect(() => {
+    startAutoPlay();
+    return () => {
+      if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+    };
+  }, [isAutoPlaying]);
+  
+  const handleMouseEnter = () => setIsAutoPlaying(false);
+  const handleMouseLeave = () => setIsAutoPlaying(true);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="animate-pulse">
+            <div className="h-48 bg-muted rounded-2xl mb-8"></div>
+            <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+              <div className="lg:col-span-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                  {[...Array(8)].map((_, index) => (
+                    <div key={index} className="bg-card rounded-xl h-64 shadow-lg"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (errorState) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 flex items-center justify-center">
+        <div className="text-center bg-card p-8 rounded-2xl shadow-xl max-w-md mx-auto">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <TrendingUp className="h-8 w-8 text-red-500" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Error Loading Products</h2>
+          <p className="text-muted-foreground mb-6">{errorState}</p>
+          <Button onClick={() => window.location.reload()} className="w-full">
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <PageContainer padding="none">
-      {/* 1. Hero Section */}
       <section className="py-20 md:py-28 text-center bg-secondary/50 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_70%)] animate-pulse-slow" />
@@ -252,21 +326,14 @@ export default function AllProductsPage() {
             Explore a curated selection of premium beauty and wellness products from top-rated vendors.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground mb-12">
-            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Skincare</Badge>
-            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Haircare</Badge>
-            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Cosmetics</Badge>
-            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Body Care</Badge>
-          </div>
-
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
-              <p className="text-3xl font-bold text-primary">1,000+</p>
-              <p className="text-sm text-muted-foreground">Verified Vendors</p>
+              <p className="text-3xl font-bold text-primary">{products.length}</p>
+              <p className="text-sm text-muted-foreground">Products</p>
             </div>
             <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
-              <p className="text-3xl font-bold text-primary">50,000+</p>
-              <p className="text-sm text-muted-foreground">Products Listed</p>
+              <p className="text-3xl font-bold text-primary">{[...new Set(products.map(p => p.vendorName))].length}</p>
+              <p className="text-sm text-muted-foreground">Vendors</p>
             </div>
             <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
               <p className="text-3xl font-bold text-primary">4.9/5</p>
@@ -274,7 +341,7 @@ export default function AllProductsPage() {
             </div>
             <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
               <p className="text-3xl font-bold text-primary">Secure</p>
-              <p className="text-sm text-muted-foreground">Shopping Guarantee</p>
+              <p className="text-sm text-muted-foreground">Shopping</p>
             </div>
           </div>
         </div>
@@ -283,15 +350,14 @@ export default function AllProductsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
           <main className="lg:col-span-12">
-            {/* 3. Bento Grid Section */}
             <section className="mb-16">
                 <h2 className="text-3xl font-bold text-center mb-8">Highlights</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                   {bentoGridProducts.newArrivals.length > 0 && (
                     <ProductHighlightCard 
                       title="New Arrivals"
                       products={bentoGridProducts.newArrivals}
-                      className="md:col-span-2 md:row-span-1 lg:col-span-2 lg:row-span-1"
+                      className="md:col-span-2 md:row-span-1"
                       isLarge={true}
                     />
                   )}
@@ -315,99 +381,50 @@ export default function AllProductsPage() {
                   )}
                 </div>
             </section>
-
-            {/* 4. Categories Marquee */}
-            <section className="mb-16">
-                <h2 className="text-3xl font-bold text-center mb-8">Browse by Category</h2>
-                <PlatformForMarquee />
-            </section>
-
-            {/* 5. Product Grid */}
+            
             <section>
               <h2 className="text-3xl font-bold text-center mb-8">All Products</h2>
-              {loading ? (
-                <p>Loading products...</p>
-              ) : error ? (
-                <p className="text-red-500">{error}</p>
+              {filteredProducts.length === 0 ? (
+                <div className="text-center py-16 bg-card rounded-2xl shadow-lg border border-border/50">
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">No products found</h3>
+                  <p className="text-muted-foreground mb-6">Try adjusting your filters to see more products</p>
+                  <Button 
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedCategory('all');
+                      setSelectedBrand('all');
+                      setPriceRange([0, 200]);
+                    }}
+                    className="rounded-xl"
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                   {filteredProducts.map((product) => (
                     <ProductCard key={product.id} {...product} />
                   ))}
                 </div>
               )}
             </section>
-
-            {/* 6. Why Shop With Us Section */}
-            <section className="mt-20 py-16 bg-secondary/50 rounded-lg">
-                <h2 className="text-3xl font-bold text-center mb-8">Why Shop With Us?</h2>
-                <div className="grid md:grid-cols-3 gap-8 text-center">
-                    <div>
-                        <h3 className="font-semibold text-lg">Curated Selection</h3>
-                        <p className="text-muted-foreground">Only the best products from trusted vendors.</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg">Secure Shopping</h3>
-                        <p className="text-muted-foreground">Your data and payments are always safe.</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg">Fast Shipping</h3>
-                        <p className="text-muted-foreground">Get your favorite products delivered quickly.</p>
-                    </div>
-                </div>
-            </section>
-            
-            {/* 7. Featured Brand Section */}
-            <section className="mt-20">
-                <h2 className="text-3xl font-bold text-center mb-8">Featured Brand: Aura Cosmetics</h2>
-                <div className="grid md:grid-cols-2 items-center gap-8">
-                    <p className="text-muted-foreground text-lg leading-relaxed">Aura Cosmetics is dedicated to creating high-performance, cruelty-free makeup that empowers you to express your unique beauty. Discover their best-selling products loved by professionals and enthusiasts alike.</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1027/200/200" alt="Aura Product 1" className="w-full h-full object-cover" /></div>
-                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1028/200/200" alt="Aura Product 2" className="w-full h-full object-cover" /></div>
-                    </div>
-                </div>
-            </section>
-            
-            {/* 8. Customer Testimonials */}
-            <section className="mt-20">
-              <h2 className="text-3xl font-bold text-center mb-8">What Our Customers Say</h2>
-              <div className="grid md:grid-cols-3 gap-8">
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Amazing quality and fast delivery. Will definitely shop again!" - Sarah L.</blockquote>
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Found my new favorite serum here. The selection is fantastic." - Mark T.</blockquote>
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"A great marketplace for discovering new beauty brands." - Emily C.</blockquote>
-              </div>
-            </section>
-            
-            {/* 9. Shopping Guide */}
-            <section className="mt-20">
-              <h2 className="text-3xl font-bold text-center mb-8">Your Guide to Better Shopping</h2>
-              <p className="text-center max-w-2xl mx-auto text-muted-foreground">Use our filters to narrow down your search by brand, price, and category. Read reviews from other customers to make informed decisions and find the perfect products for your needs.</p>
-            </section>
-            
-            {/* 10. Call to Action */}
-            <section className="mt-20 text-center py-16 bg-primary text-primary-foreground rounded-lg">
-                <h2 className="text-3xl font-bold">Ready to Elevate Your Beauty Routine?</h2>
-                <p className="mt-2 mb-6">Join our community and get access to exclusive deals and new arrivals.</p>
-                <Button variant="secondary" size="lg">Sign Up Now</Button>
-            </section>
-
           </main>
         </div>
       </div>
       
-      {/* Sticky Filter Pill */}
+      {/* Enhanced Sticky Filter Strip */}
       <div 
         className="group fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-in-out"
       >
         <div className="flex items-center gap-4 bg-background/80 backdrop-blur-lg border border-border/50 rounded-full shadow-2xl p-2 transition-all duration-300 hover:px-6">
-          {/* Default Visible Pill */}
           <div className="flex items-center gap-2 px-3 py-1 cursor-pointer">
             <Filter className="h-4 w-4 text-primary" />
             <span className="font-semibold text-sm">Filters & Sorting</span>
           </div>
           
-          {/* Expanded Content */}
           <div className="flex items-center gap-4 w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 transition-all duration-300 overflow-hidden">
             <Separator orientation="vertical" className="h-6" />
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -459,3 +476,93 @@ export default function AllProductsPage() {
 const Separator = ({ orientation = 'horizontal', className = '' }: { orientation?: 'horizontal' | 'vertical', className?: string }) => (
   <div className={`bg-border ${orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px'} ${className}`} />
 );
+
+```
+- packages/utils/types.d.ts:
+```ts
+declare module "@repo/utils/types" {
+  // Define types here
+  interface User {
+    id: string;
+    name: string;
+    email: string;
+  }
+}
+```
+- README.md:
+```md
+# GlowVita Salon
+
+Welcome to GlowVita Salon, a Next.js 15 monorepo project built with Turborepo. This repository contains a suite of applications designed to work together seamlessly.
+
+## What's inside?
+
+This Turborepo includes the following packages and applications:
+
+### Apps
+g 
+- `web`: The main public-facing website.
+- `crm`: A customer relationship management portal for vendors.
+- `admin`: An internal administrative dashboard.
+
+### Packages
+
+- `ui`: A shared UI component library.
+- `store`: Shared Redux Toolkit store, slices, and RTK Query APIs.
+- `lib`: Shared utilities, constants, and database connection logic.
+- `typescript-config`: Shared `tsconfig.json`s used throughout the monorepo.
+- `eslint-config-custom`: Shared ESLint configurations.
+
+### Architecture
+
+- **Monorepo**: Turborepo for managing the multi-package/multi-app repository.
+- **Framework**: Next.js 15 (App Router).
+- **State Management**: Redux Toolkit with RTK Query.
+- **Authentication**: JWT-based authentication with roles, using httpOnly cookies.
+- **Database**: MongoDB with a shared connection utility.
+- **Styling**: Tailwind CSS with a shared, configurable theme.
+
+## Getting Started
+
+To get started with this monorepo, you'll need to have Node.js, npm/yarn/pnpm, and a MongoDB instance available.
+
+### 1. Install Dependencies
+
+From the root of the project, run:
+
+```bash
+npm install
+```
+
+### 2. Set up Environment Variables
+
+Each application in the `apps` directory requires its own `.env.local` file. You can copy the contents from `.env.local.example` in each app's directory and fill in the required values.
+
+A single `.env` file at the root of the project can also be used to share environment variables across all apps during development.
+
+**Required variables:**
+
+- `MONGO_URI`: Your MongoDB connection string.
+- `JWT_SECRET`: A secret key for signing JWTs.
+
+### 3. Run Development Servers
+
+To run all applications in development mode, execute the following command from the root directory:
+
+```bash
+npm run dev
+```
+
+This will start the development servers for `web`, `crm`, and `admin` concurrently.
+
+- **Web App**: `http://localhost:3000`
+- **CRM App**: `http://localhost:3001`
+- **Admin App**: `http://localhost:3002`
+
+## Building for Production
+
+To build all applications for production, run:
+
+```bash
+npm run build
+```
