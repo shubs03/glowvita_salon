@@ -1,12 +1,10 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 
-// The slice should not be responsible for loading its own state from localStorage.
-// This is an external concern that will be handled by the AuthInitializer component.
 const initialState = {
-  isAuthenticated: false,
+  isAuthenticated: false, // Changed from undefined to false
   user: null,
-  token: undefined, // Use `undefined` to indicate "not yet checked" state
+  token: null, // Use null to indicate "checked and not logged in"
   role: null,
   permissions: [],
 };
@@ -36,7 +34,7 @@ const userAuthSlice = createSlice({
     clearUserAuth: (state) => {
       state.isAuthenticated = false;
       state.user = null;
-      state.token = null; // Set to null to indicate "checked and logged out"
+      state.token = null;
       state.role = null;
       state.permissions = [];
 

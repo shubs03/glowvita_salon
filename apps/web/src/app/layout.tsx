@@ -9,6 +9,7 @@ import { Toaster } from 'sonner';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
 import { useState } from 'react';
+import { AuthInitializer } from '@/components/AuthInitializer'; // Import the corrected AuthInitializer
 
 export default function RootLayout({
   children,
@@ -58,20 +59,22 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          <div className="flex flex-col min-h-screen bg-background text-foreground">
-            {!isAuthPage && (
-              <MarketingHeader 
-                isMobileMenuOpen={isMobileMenuOpen} 
-                toggleMobileMenu={toggleMobileMenu}
-                isHomePage={pathname === '/'}
-              />
-            )}
-            <main className="flex-grow">
-              {children}
-            </main>
-            {isMarketingPage && <Footer />}
-          </div>
-          <Toaster />
+          <AuthInitializer>
+            <div className="flex flex-col min-h-screen bg-background text-foreground">
+              {!isAuthPage && (
+                <MarketingHeader 
+                  isMobileMenuOpen={isMobileMenuOpen} 
+                  toggleMobileMenu={toggleMobileMenu}
+                  isHomePage={pathname === '/'}
+                />
+              )}
+              <main className="flex-grow">
+                {children}
+              </main>
+              {isMarketingPage && <Footer />}
+            </div>
+            <Toaster />
+          </AuthInitializer>
         </StoreProvider>
       </body>
     </html>

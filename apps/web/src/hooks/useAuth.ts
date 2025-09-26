@@ -10,10 +10,10 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // The authentication check is complete only when we know for sure if the user
-    // is logged in or not. `token` starts as `undefined`, becomes `null` for logged-out
-    // users, or a string for logged-in users. This effect will set loading to false
-    // only when the final status is known.
+    // The loading is finished when we know for sure if the user is authenticated or not.
+    // `isAuthenticated` starts as `false` and becomes `true` after rehydration.
+    // `token` starts as `null` and becomes a string if logged in.
+    // The loading should stop once we have a definitive answer (either authenticated or confirmed not authenticated).
     if (isAuthenticated || token === null) {
       setIsLoading(false);
     }
