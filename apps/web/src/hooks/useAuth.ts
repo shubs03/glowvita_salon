@@ -11,7 +11,7 @@ export const useAuth = () => {
   useEffect(() => {
     // The loading is finished when the token is no longer `undefined`.
     // It will be `null` if not logged in, or a string if logged in.
-    // This covers both initial load and post-login scenarios correctly.
+    // This covers both initial page load and post-login scenarios correctly.
     if (token !== undefined) {
       setIsLoading(false);
     }

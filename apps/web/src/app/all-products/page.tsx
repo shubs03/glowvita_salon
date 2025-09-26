@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ArrowRight, ChevronLeft } from 'lucide-react';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { PageContainer } from '@repo/ui/page-container';
 import { Badge } from '@repo/ui/badge';
@@ -22,8 +22,8 @@ interface Product {
   reviewCount: number;
   vendorName: string;
   isNew?: boolean;
-  description?: string;
-  category?: string;
+  description: string;
+  category: string;
 }
 
 const PlatformForCard = ({
@@ -82,10 +82,20 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
 };
 
 // New Component for the Highlight Card with Carousel
-const ProductHighlightCard = ({ title, products, className, isLarge = false }) => {
+const ProductHighlightCard = ({ 
+  title, 
+  products, 
+  className = "", 
+  isLarge = false 
+}: {
+  title: string;
+  products: Product[];
+  className?: string;
+  isLarge?: boolean;
+}) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const timeoutRef = useRef(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const resetTimeout = () => {
     if (timeoutRef.current) {
@@ -126,7 +136,7 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
       <div className="relative z-10">
         <h3 className="text-2xl font-bold mb-4">{title}</h3>
         <div className="relative aspect-square w-full rounded-xl overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
-          {products.map((product, index) => (
+          {products.map((product: Product, index: number) => (
             <img
               key={product.id}
               src={product.image}
@@ -150,7 +160,7 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-8 w-8 hover:bg-white/30 backdrop-blur-sm" onClick={nextProduct}>
-              <ChevronRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -171,7 +181,7 @@ export default function AllProductsPage() {
   // New state for filters
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedBrand, setSelectedBrand] = useState('all');
-  const [priceRange, setPriceRange] = useState([0, 200]);
+  const [priceRange, setPriceRange] = useState([0, 100]);
   const [sortBy, setSortBy] = useState('featured');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
@@ -192,41 +202,224 @@ export default function AllProductsPage() {
     { id: 'earthly', name: 'Earthly Essentials' },
   ];
 
-  // Fetch products from API
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/products');
-        const data = await response.json();
-        
-        if (data.success) {
-          setProducts(data.data);
-          setFilteredProducts(data.data);
-        } else {
-          setError(data.message || 'Failed to fetch products');
-        }
-      } catch (err) {
-        setError('Failed to fetch products');
-        console.error('Error fetching products:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Mock products data
+  const mockProducts: Product[] = [
+    {
+      id: '1',
+      name: 'Radiant Glow Serum',
+      price: 45.99,
+      image: 'https://picsum.photos/id/1027/300/300',
+      hint: 'Brightening vitamin C serum',
+      rating: 4.8,
+      reviewCount: 324,
+      vendorName: 'Aura Cosmetics',
+      isNew: true,
+      description: 'A powerful vitamin C serum that brightens and evens skin tone',
+      category: 'skincare'
+    },
+    {
+      id: '2',
+      name: 'Luxury Face Cream',
+      price: 78.50,
+      image: 'https://picsum.photos/id/1028/300/300',
+      hint: 'Anti-aging moisturizer',
+      rating: 4.9,
+      reviewCount: 567,
+      vendorName: 'Serenity Skincare',
+      description: 'Rich anti-aging cream with peptides and hyaluronic acid',
+      category: 'skincare'
+    },
+    {
+      id: '3',
+      name: 'Matte Lipstick Set',
+      price: 32.00,
+      image: 'https://picsum.photos/id/1029/300/300',
+      hint: 'Long-lasting matte lipsticks',
+      rating: 4.7,
+      reviewCount: 892,
+      vendorName: 'Chroma Beauty',
+      isNew: true,
+      description: 'Set of 6 long-lasting matte lipsticks in trending shades',
+      category: 'cosmetics'
+    },
+    {
+      id: '4',
+      name: 'Gentle Cleansing Oil',
+      price: 28.75,
+      image: 'https://picsum.photos/id/1030/300/300',
+      hint: 'Removes makeup effortlessly',
+      rating: 4.6,
+      reviewCount: 445,
+      vendorName: 'Earthly Essentials',
+      description: 'Natural cleansing oil that removes makeup and impurities',
+      category: 'facecare'
+    },
+    {
+      id: '5',
+      name: 'Body Butter Trio',
+      price: 56.99,
+      image: 'https://picsum.photos/id/1031/300/300',
+      hint: 'Nourishing body care set',
+      rating: 4.8,
+      reviewCount: 234,
+      vendorName: 'Earthly Essentials',
+      description: 'Set of 3 rich body butters with natural ingredients',
+      category: 'bodycare'
+    },
+    {
+      id: '6',
+      name: 'Eye Shadow Palette',
+      price: 42.25,
+      image: 'https://picsum.photos/id/1032/300/300',
+      hint: '12 versatile shades',
+      rating: 4.9,
+      reviewCount: 678,
+      vendorName: 'Chroma Beauty',
+      description: 'Professional eyeshadow palette with 12 blendable shades',
+      category: 'cosmetics'
+    },
+    {
+      id: '7',
+      name: 'Hydrating Toner',
+      price: 24.50,
+      image: 'https://picsum.photos/id/1033/300/300',
+      hint: 'Balances and hydrates',
+      rating: 4.5,
+      reviewCount: 321,
+      vendorName: 'Serenity Skincare',
+      description: 'Alcohol-free toner that balances and hydrates skin',
+      category: 'skincare'
+    },
+    {
+      id: '8',
+      name: 'Floral Perfume',
+      price: 89.99,
+      image: 'https://picsum.photos/id/1034/300/300',
+      hint: 'Elegant floral fragrance',
+      rating: 4.7,
+      reviewCount: 156,
+      vendorName: 'Aura Cosmetics',
+      description: 'Sophisticated floral fragrance with notes of jasmine and rose',
+      category: 'fragrance'
+    },
+    {
+      id: '9',
+      name: 'Exfoliating Scrub',
+      price: 19.95,
+      image: 'https://picsum.photos/id/1035/300/300',
+      hint: 'Gentle face scrub',
+      rating: 4.4,
+      reviewCount: 289,
+      vendorName: 'Earthly Essentials',
+      description: 'Natural exfoliating scrub with bamboo particles',
+      category: 'facecare'
+    },
+    {
+      id: '10',
+      name: 'Foundation Stick',
+      price: 38.00,
+      image: 'https://picsum.photos/id/1036/300/300',
+      hint: 'Full coverage foundation',
+      rating: 4.6,
+      reviewCount: 445,
+      vendorName: 'Chroma Beauty',
+      description: 'Buildable full-coverage foundation stick',
+      category: 'cosmetics'
+    },
+    {
+      id: '11',
+      name: 'Night Repair Serum',
+      price: 65.00,
+      image: 'https://picsum.photos/id/1037/300/300',
+      hint: 'Overnight skin renewal',
+      rating: 4.8,
+      reviewCount: 512,
+      vendorName: 'Serenity Skincare',
+      isNew: true,
+      description: 'Advanced night serum with retinol and peptides',
+      category: 'skincare'
+    },
+    {
+      id: '12',
+      name: 'Lip Gloss Collection',
+      price: 25.50,
+      image: 'https://picsum.photos/id/1038/300/300',
+      hint: 'Shimmery lip glosses',
+      rating: 4.3,
+      reviewCount: 178,
+      vendorName: 'Aura Cosmetics',
+      description: 'Set of 4 high-shine lip glosses with mirror finish',
+      category: 'cosmetics'
+    }
+  ];
 
-    fetchProducts();
+  // Initialize products with mock data
+  useEffect(() => {
+    setLoading(true);
+    // Simulate loading delay
+    setTimeout(() => {
+      setProducts(mockProducts);
+      setFilteredProducts(mockProducts);
+      setLoading(false);
+    }, 500);
   }, []);
 
-  // Filter products
+  // Filter and sort products
   useEffect(() => {
     let result = [...products];
+    
+    // Apply search filter
     if (searchTerm) {
       result = result.filter(product => 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
+    
+    // Apply category filter
+    if (selectedCategory !== 'all') {
+      result = result.filter(product => product.category === selectedCategory);
+    }
+    
+    // Apply brand filter
+    if (selectedBrand !== 'all') {
+      const brandMap: { [key: string]: string } = {
+        'aura': 'Aura Cosmetics',
+        'chroma': 'Chroma Beauty',
+        'serenity': 'Serenity Skincare',
+        'earthly': 'Earthly Essentials'
+      };
+      result = result.filter(product => product.vendorName === brandMap[selectedBrand]);
+    }
+    
+    // Apply price range filter
+    result = result.filter(product => 
+      product.price >= priceRange[0] && product.price <= priceRange[1]
+    );
+    
+    // Apply sorting
+    switch (sortBy) {
+      case 'newest':
+        result = result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
+        break;
+      case 'price-low':
+        result = result.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-high':
+        result = result.sort((a, b) => b.price - a.price);
+        break;
+      case 'rating':
+        result = result.sort((a, b) => b.rating - a.rating);
+        break;
+      case 'featured':
+      default:
+        // Keep original order for featured
+        break;
+    }
+    
     setFilteredProducts(result);
-  }, [searchTerm, products]);
+  }, [searchTerm, products, selectedCategory, selectedBrand, priceRange, sortBy]);
   
   const bentoGridProducts = {
     newArrivals: products.slice(0, 3),
@@ -330,6 +523,44 @@ export default function AllProductsPage() {
             {/* 5. Product Grid */}
             <section>
               <h2 className="text-3xl font-bold text-center mb-8">All Products</h2>
+              
+              {/* Search Bar */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search products, brands, or descriptions..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <Grid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Results count */}
+              <div className="mb-6">
+                <p className="text-muted-foreground">
+                  Showing {filteredProducts.length} of {products.length} products
+                  {searchTerm && ` for "${searchTerm}"`}
+                </p>
+              </div>
+              
               {loading ? (
                 <p>Loading products...</p>
               ) : error ? (

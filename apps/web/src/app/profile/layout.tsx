@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, Suspense, useEffect } from "react";
@@ -131,7 +130,7 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div>Loading profile...</div>}>
             <ProfileLayoutContent>
                 {children}
             </ProfileLayoutContent>
