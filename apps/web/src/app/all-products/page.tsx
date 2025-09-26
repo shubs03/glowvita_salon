@@ -130,8 +130,8 @@ export default function AllProductsPage() {
       <section className="py-20 md:py-24 text-center bg-secondary/50 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_70%)]" />
         <div className="container mx-auto px-4 z-10 relative">
-          <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Our Products</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">Our Products</h1>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             Explore a curated selection of premium beauty and wellness products from top-rated vendors.
           </p>
 
