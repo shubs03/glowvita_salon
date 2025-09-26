@@ -222,48 +222,48 @@ export default function AllProductsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
           <main className="lg:col-span-12">
-            <section className="mb-16">
-                <h2 className="text-3xl font-bold text-center mb-8">Highlights</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[400px] md:h-[500px] lg:h-[600px]">
-                  {/* Large Image - Left */}
-                  <div className="lg:col-span-2 h-full rounded-2xl overflow-hidden group relative">
-                    {mockProducts.length > 0 && (
-                        <>
-                        <Image
-                            src={mockProducts[0].image}
-                            alt={mockProducts[0].name}
-                            layout="fill"
-                            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-                            data-ai-hint={mockProducts[0].hint}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                        <div className="absolute bottom-8 left-8 text-white">
-                            <h3 className="text-3xl font-bold">{mockProducts[0].name}</h3>
-                            <p className="mt-1 text-lg">{mockProducts[0].description}</p>
-                        </div>
-                        </>
-                    )}
-                  </div>
-
-                  {/* 4 Small Images - Right Column */}
-                  <div className="grid grid-cols-2 grid-rows-2 lg:grid-cols-1 lg:grid-rows-4 gap-4 h-full">
-                    {mockProducts.slice(1, 5).map((product, index) => (
-                      <div key={index} className="h-full rounded-2xl overflow-hidden group relative">
-                        <Image
-                          src={product.image}
-                          alt={product.name}
-                          layout="fill"
-                          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-                          data-ai-hint={product.hint}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                        <div className="absolute bottom-4 left-4 text-white">
-                          <h4 className="font-semibold">{product.name}</h4>
-                        </div>
+             <section className="mb-16">
+              <h2 className="text-3xl font-bold text-center mb-8">Highlights</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[400px] md:h-[500px] lg:h-[600px]">
+                {/* Large Image - Left */}
+                <div className="lg:col-span-2 h-full rounded-2xl overflow-hidden group relative">
+                  {mockProducts.length > 0 && (
+                    <>
+                      <Image
+                        src={mockProducts[0].image}
+                        alt={mockProducts[0].name}
+                        layout="fill"
+                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                        data-ai-hint={mockProducts[0].hint}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                      <div className="absolute bottom-8 left-8 text-white">
+                        <h3 className="text-3xl font-bold">{mockProducts[0].name}</h3>
+                        <p className="mt-1 text-lg">{mockProducts[0].description}</p>
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
                 </div>
+
+                {/* 4 Small Images - Right Column */}
+                <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full">
+                  {mockProducts.slice(1, 5).map((product, index) => (
+                    <div key={index} className="h-full rounded-2xl overflow-hidden group relative">
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        layout="fill"
+                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                        data-ai-hint={product.hint}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                      <div className="absolute bottom-4 left-4 text-white">
+                        <h4 className="font-semibold">{product.name}</h4>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </section>
             
             <section>
@@ -358,3 +358,5 @@ export default function AllProductsPage() {
 const Separator = ({ orientation = 'horizontal', className = '' }: { orientation?: 'horizontal' | 'vertical', className?: string }) => (
   <div className={`bg-border ${orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px'} ${className}`} />
 );
+
+    
