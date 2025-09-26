@@ -259,7 +259,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 pb-16">
+    <div className="min-h-screen bg-background">
       <style jsx>{`
       .scrollbar-hide::-webkit-scrollbar {
         display: none;
@@ -328,7 +328,7 @@ export default function ProductsPage() {
                 <h3 className="text-xl md:text-2xl font-bold mb-1 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Featured Product</h3>
                 <p className="text-muted-foreground text-xs md:text-sm">Discover our most popular beauty item</p>
               </div>
-              <div className="bg-gradient-to-r from-primary to-secondary text-primary-foreground px-2.5 py-1 md:px-3 md:py-1 rounded-full text-xs font-semibold animate-pulse shadow-lg whitespace-nowrap">
+              <div className="bg-gradient-to-r from-primary to-secondary text-primary-foreground px-2.5 py-1 md:px-3 md:py-1 rounded-full text-xs font-semibold shadow-lg whitespace-nowrap">
                 Popular
               </div>
             </div>
@@ -411,9 +411,9 @@ export default function ProductsPage() {
           </div>
           
           {/* Medium Item 1 - New Arrivals */}
-          <div className="bg-gradient-to-br from-secondary/10 to-primary/10 rounded-3xl p-4 md:p-5 shadow-xl border border-border/50 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 group overflow-hidden relative">
+          <div className="bg-gradient-to-br from-secondary/10 to-primary/10 rounded-3xl p-4 md:p-5 shadow-xl border border-border/50 flex flex-col transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 group overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-r from-secondary/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
-            <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 md:mb-4">
               <div>
                 <h3 className="text-base md:text-lg font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">New Arrivals</h3>
                 <p className="text-muted-foreground text-xs">Check out our latest products</p>
