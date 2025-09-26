@@ -60,7 +60,6 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   if (isAuthLoading || !isAuthenticated) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
-        <div>loading from the profile</div>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
@@ -132,7 +131,7 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div>Loading profile...</div>}>
             <ProfileLayoutContent>
                 {children}
             </ProfileLayoutContent>
