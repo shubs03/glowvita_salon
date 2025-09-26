@@ -12,6 +12,8 @@ import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent } from '@repo/ui/dialog';
 import { Label } from '@repo/ui/label';
 import { Skeleton } from '@repo/ui/skeleton';
+import Image from 'next/image';
+import { cn } from '@repo/ui/cn';
 
 // Product type definition
 interface Product {
@@ -30,7 +32,7 @@ interface Product {
 
 // MOCK DATA
 const mockProducts: Product[] = [
-  { id: '1', name: 'Aura Revitalizing Serum', price: 68.00, image: 'https://picsum.photos/seed/product1/400/400', hint: 'skincare serum', rating: 4.9, reviewCount: 125, vendorName: 'Aura Cosmetics', isNew: true, category: 'Skincare', description: 'A potent serum to restore youthful glow.' },
+  { id: '1', name: 'Aura Revitalizing Serum', price: 68.00, image: 'https://picsum.photos/seed/product1/800/600', hint: 'skincare serum', rating: 4.9, reviewCount: 125, vendorName: 'Aura Cosmetics', isNew: true, category: 'Skincare', description: 'A potent serum to restore youthful glow.' },
   { id: '2', name: 'Chroma Hydrating Balm', price: 24.00, image: 'https://picsum.photos/seed/product2/400/400', hint: 'cosmetic balm', rating: 4.7, reviewCount: 88, vendorName: 'Chroma Beauty', category: 'Makeup', description: 'Hydrating lip balm with a hint of color.' },
   { id: '3', name: 'Terra Exfoliating Scrub', price: 48.00, image: 'https://picsum.photos/seed/product3/400/400', hint: 'exfoliating scrub', rating: 4.8, reviewCount: 150, vendorName: 'Earthly Essentials', category: 'Skincare', description: 'Gentle scrub for a fresh and clean feel.' },
   { id: '4', name: 'Luxe Hair Oil', price: 55.00, image: 'https://picsum.photos/seed/product4/400/400', hint: 'hair oil bottle', rating: 4.9, reviewCount: 210, vendorName: 'Luxe Haircare', isNew: true, category: 'Haircare', description: 'Nourishing oil for shiny, healthy hair.' },
@@ -49,146 +51,11 @@ const mockCategories = [
     { id: 'haircare', name: 'Haircare' }
 ];
 
-const PlatformForCard = ({
-  title,
-  imageUrl,
-  hint,
-}: {
-  title: string;
-  imageUrl: string;
-  hint: string;
-}) => (
-  <a
-    className="relative inline-block h-48 w-72 md:h-56 md:w-80 shrink-0 overflow-hidden rounded-lg transition-all duration-500 hover:shadow-2xl hover:shadow-primary/25 group border-2 border-border/30 hover:border-primary/50 hover-lift bg-gradient-to-br from-background to-primary/5"
-    href="#"
-  >
-    <img
-      className="size-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110 filter group-hover:brightness-110"
-      src={imageUrl}
-      alt={title}
-      width={320}
-      height={224}
-    />
-    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 md:p-6">
-      <h3 className="text-base md:text-lg font-bold leading-tight text-white group-hover:text-primary transition-colors duration-300">
-        {title}
-      </h3>
-    </div>
-  </a>
-);
-
-const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
-  const items = [
-    { title: "Hair Salons", imageUrl: "https://placehold.co/320x224/6366f1/ffffff?text=Hair", hint: "modern hair salon interior" },
-    { title: "Nail Studios", imageUrl: "https://placehold.co/320x224/ec4899/ffffff?text=Nails", hint: "elegant nail salon" },
-    { title: "Barber Shops", imageUrl: "https://placehold.co/320x224/475569/ffffff?text=Barber", hint: "contemporary barber shop" },
-    { title: "Beauty Spas", imageUrl: "https://placehold.co/320x224/10b981/ffffff?text=Spa", hint: "luxury spa treatment room" },
-    { title: "Wellness Centers", imageUrl: "https://placehold.co/320x224/f97316/ffffff?text=Wellness", hint: "modern wellness center" },
-    { title: "Bridal Boutiques", imageUrl: "https://placehold.co/320x224/8b5cf6/ffffff?text=Bridal", hint: "bridal makeup studio" },
-  ];
-  return (
-    <div className="w-full overflow-hidden">
-      <div
-        className={`pt-5 flex w-fit items-start space-x-6 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
-      >
-        {[...items, ...items].map((item, index) => (
-          <PlatformForCard
-            key={`${item.title}-${index}`}
-            title={item.title}
-            imageUrl={item.imageUrl}
-            hint={item.hint}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const ProductHighlightCard = ({ title, products, className, isLarge = false }: { title: string, products: Product[], className?: string, isLarge?: boolean }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const resetTimeout = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-  };
-
-  useEffect(() => {
-    resetTimeout();
-    if (!isHovered) {
-      timeoutRef.current = setTimeout(
-        () => setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length),
-        3000
-      );
-    }
-    return () => resetTimeout();
-  }, [currentIndex, isHovered, products.length]);
-
-  const nextProduct = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length);
-  };
-
-  const prevProduct = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + products.length) % products.length);
-  };
-  
-  if (!products || products.length === 0) return null;
-
-  const currentProduct = products[currentIndex];
-
-  return (
-    <div 
-      className={`group relative rounded-2xl p-4 flex flex-col justify-between overflow-hidden transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary/10 border border-border/20 ${className}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-      <div className="relative z-10">
-        <h3 className={`font-bold mb-3 ${isLarge ? 'text-xl' : 'text-lg'}`}>{title}</h3>
-        <div className="relative aspect-square w-full rounded-xl overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
-          {products.map((product, index) => (
-            <img
-              key={product.id}
-              src={product.image}
-              alt={product.name}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-            />
-          ))}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          
-          <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <h4 className={`font-bold ${isLarge ? 'text-lg' : 'text-base'}`}>{currentProduct.name}</h4>
-            <p className="text-xs">{currentProduct.vendorName}</p>
-            <div className="flex justify-between items-center mt-2">
-              <p className={`font-bold ${isLarge ? 'text-base' : 'text-sm'}`}>₹{currentProduct.price.toFixed(2)}</p>
-              <Button size="sm" variant="secondary" className="rounded-full h-7 px-3 text-xs">View</Button>
-            </div>
-          </div>
-          
-          <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-7 w-7 hover:bg-white/30 backdrop-blur-sm" onClick={prevProduct}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-7 w-7 hover:bg-white/30 backdrop-blur-sm" onClick={nextProduct}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
 export default function AllProductsPage() {
   const [products, setProducts] = useState<Product[]>(mockProducts);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>(mockCategories);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>(mockProducts);
-  const [loading, setLoading] = useState(false); // Changed to false as we are using mock data
+  const [loading, setLoading] = useState(false);
   const [errorState, setErrorState] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -243,18 +110,12 @@ export default function AllProductsPage() {
     
     if (selectedCategory !== 'all') {
       result = result.filter(product => 
-        product.category && product.category.toLowerCase() === selectedCategory.toLowerCase()
+        product.category && product.category.toLowerCase() === selectedCategory
       );
     }
     
     setFilteredProducts(result);
   }, [searchTerm, selectedCategory, products]);
-
-  const bentoGridProducts = {
-    newArrivals: products.slice(0, 3),
-    topRated: products.slice(3, 6),
-    bestSellers: products.slice(6, 9)
-  };
   
   const brands = useMemo(() => [
     { id: 'all', name: 'All Brands' },
@@ -363,33 +224,45 @@ export default function AllProductsPage() {
           <main className="lg:col-span-12">
             <section className="mb-16">
                 <h2 className="text-3xl font-bold text-center mb-8">Highlights</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                  {bentoGridProducts.newArrivals.length > 0 && (
-                    <ProductHighlightCard 
-                      title="New Arrivals"
-                      products={bentoGridProducts.newArrivals}
-                      className="md:col-span-2 md:row-span-1"
-                      isLarge={true}
-                    />
-                  )}
-                  {bentoGridProducts.topRated.length > 0 && (
-                    <ProductHighlightCard 
-                      title="Top Rated"
-                      products={bentoGridProducts.topRated}
-                    />
-                  )}
-                  {bentoGridProducts.bestSellers.length > 0 && (
-                    <ProductHighlightCard 
-                      title="Best Sellers"
-                      products={bentoGridProducts.bestSellers}
-                    />
-                  )}
-                  {products.length > 3 && (
-                    <ProductHighlightCard 
-                      title="Trending Now"
-                      products={products.slice(3,6)}
-                    />
-                  )}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[400px] md:h-[500px] lg:h-[600px]">
+                  {/* Large Image - Left */}
+                  <div className="lg:col-span-2 h-full rounded-2xl overflow-hidden group relative">
+                    {mockProducts.length > 0 && (
+                        <>
+                        <Image
+                            src={mockProducts[0].image}
+                            alt={mockProducts[0].name}
+                            layout="fill"
+                            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                            data-ai-hint={mockProducts[0].hint}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                        <div className="absolute bottom-8 left-8 text-white">
+                            <h3 className="text-3xl font-bold">{mockProducts[0].name}</h3>
+                            <p className="mt-1 text-lg">{mockProducts[0].description}</p>
+                        </div>
+                        </>
+                    )}
+                  </div>
+
+                  {/* 4 Small Images - Right Column */}
+                  <div className="grid grid-cols-2 grid-rows-2 lg:grid-cols-1 lg:grid-rows-4 gap-4 h-full">
+                    {mockProducts.slice(1, 5).map((product, index) => (
+                      <div key={index} className="h-full rounded-2xl overflow-hidden group relative">
+                        <Image
+                          src={product.image}
+                          alt={product.name}
+                          layout="fill"
+                          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                          data-ai-hint={product.hint}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                        <div className="absolute bottom-4 left-4 text-white">
+                          <h4 className="font-semibold">{product.name}</h4>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
             </section>
             
