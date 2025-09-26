@@ -127,48 +127,52 @@ export default function AllProductsPage() {
   return (
     <PageContainer padding="none">
       {/* 1. Hero Section */}
-      <section className="py-20 md:py-24 text-center bg-secondary/50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_70%)]" />
+      <section className="py-20 md:py-28 text-center bg-secondary/50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
+        <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_70%)] animate-pulse-slow" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-50 animate-float" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-float-delayed" />
+        
         <div className="container mx-auto px-4 z-10 relative">
-          <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent">Our Products</h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+          <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+            Our Marketplace
+          </h1>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
             Explore a curated selection of premium beauty and wellness products from top-rated vendors.
           </p>
 
-          <div className="relative max-w-xl mx-auto mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <div className="relative max-w-2xl mx-auto mb-8">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               placeholder="Search for products, brands, or categories..."
-              className="w-full h-12 text-base pl-12 rounded-full shadow-lg"
+              className="w-full h-14 text-lg pl-14 rounded-full shadow-2xl border-2 border-transparent focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-300 bg-background/80 backdrop-blur-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="flex flex-wrap justify-center gap-2 text-sm text-muted-foreground mb-10">
-            <span>Popular:</span>
-            <button className="hover:text-primary transition-colors">Skincare</button>
-            <span>·</span>
-            <button className="hover:text-primary transition-colors">Haircare</button>
-            <span>·</span>
-            <button className="hover:text-primary transition-colors">Cosmetics</button>
+          <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground mb-12">
+            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Skincare</Badge>
+            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Haircare</Badge>
+            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Cosmetics</Badge>
+            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Body Care</Badge>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-primary">1,000+</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
+              <p className="text-3xl font-bold text-primary">1,000+</p>
               <p className="text-sm text-muted-foreground">Verified Vendors</p>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-primary">50,000+</p>
+            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
+              <p className="text-3xl font-bold text-primary">50,000+</p>
               <p className="text-sm text-muted-foreground">Products Listed</p>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-primary">4.9/5</p>
+            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
+              <p className="text-3xl font-bold text-primary">4.9/5</p>
               <p className="text-sm text-muted-foreground">Average Rating</p>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-primary">Secure</p>
+            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
+              <p className="text-3xl font-bold text-primary">Secure</p>
               <p className="text-sm text-muted-foreground">Shopping Guarantee</p>
             </div>
           </div>
