@@ -9,12 +9,14 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // The authentication check is complete when we are no longer in the initial `undefined` token state.
-    // It will be `null` if not logged in, or a string if logged in after rehydration.
-    if (token !== undefined) {
+    // The authentication check is complete once we know for sure if the user
+    // is authenticated OR if we know for sure they are not (token is null).
+    // The `undefined` state for the token means we are still waiting for the
+    // AuthInitializer/StoreProvider to do its work.
+    if (isAuthenticated || token === null) {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [isAuthenticated, token]);
 
   return {
     user,
