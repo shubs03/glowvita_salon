@@ -116,3 +116,5 @@ export const makeStore = () => {
       }).concat(glowvitaApi.middleware),
   });
 };
+
+export const selectRootState = (state) => state;

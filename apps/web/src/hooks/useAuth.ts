@@ -2,8 +2,8 @@
 "use client";
 
 import { useAppSelector } from '@repo/store/hooks';
-import { selectRootState } from '@repo/store/store';
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react'; 
+import { selectRootState } from '../../../../packages/store/src/store';
 
 export const useAuth = () => {
   const { user, isAuthenticated, token, role, permissions } = useAppSelector((state) => selectRootState(state).userAuth);
