@@ -49,7 +49,23 @@ export const makeStore = () => {
   return configureStore({
     reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware().concat(glowvitaApi.middleware),
+      getDefaultMiddleware({
+        serializableCheck: {
+          ignoredActions: [
+            'persist/PERSIST', 
+            'persist/REHYDRATE', 
+            'persist/REGISTER',
+            'glowvitaApi/executeQuery/fulfilled',
+            'glowvitaApi/executeMutation/fulfilled'
+          ],
+          ignoredPaths: [
+            'meta.baseQueryMeta.request', 
+            'meta.baseQueryMeta.response',
+            'meta.baseQueryMeta',
+            'meta.arg'
+          ],
+        },
+      }).concat(glowvitaApi.middleware),
     devTools: process.env.NODE_ENV !== 'production',
   });
 };

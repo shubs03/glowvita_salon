@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactNode } from 'react';
@@ -49,7 +48,7 @@ export default function RootLayout({
   ].some(path => pathname.startsWith(path));
   
   const showMarketingLayout = ['/', '/apps', '/pricing', '/support'].includes(pathname);
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/auth/register');
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/auth/register') || pathname.startsWith('/forgot-password') || pathname.startsWith('/reset-password');
   const isNotFoundPage = pathname === '/not-found';
 
   let layoutContent: ReactNode;

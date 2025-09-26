@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import * as jose from 'jose';
 import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
@@ -64,7 +63,7 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('crm_access_token')?.value;
 
-  const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support'];
+  const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support', '/forgot-password', '/reset-password'];
   const isPublicPath = publicPaths.some(path => pathname === path);
 
   if (isPublicPath) {

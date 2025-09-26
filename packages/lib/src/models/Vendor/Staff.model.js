@@ -128,6 +128,12 @@ const staffSchema = new mongoose.Schema(
       required: true,
       select: false, // Never select by default for security
     },
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
     role: {
       type: String,
       required: true,
@@ -320,135 +326,12 @@ staffSchema.methods.isAvailableAt = function (date, timeStr) {
       (slot) =>
         timeMinutes >= slot.startMinutes && timeMinutes <= slot.endMinutes
     );
-    if (!isInSlot) return false;
+    return isInSlot;
   }
 
-  // Check blocked times (optimized)
-  const dateStr = date.toISOString().split("T")[0];
-  const isBlocked = this.blockedTimes.some(
-    (blocked) =>
-      blocked.isActive &&
-      blocked.date.toISOString().split("T")[0] === dateStr &&
-      timeMinutes >= blocked.startMinutes &&
-      timeMinutes <= blocked.endMinutes
-  );
-
-  return !isBlocked;
+  // If no slots defined, assume available during business hours
+  return true;
 };
-
-// Batch availability check for multiple time slots
-staffSchema.methods.getAvailableSlots = function (date, requestedSlots = []) {
-  const dayNames = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-  ];
-  const dayName = dayNames[date.getDay()];
-  const dayField = `${dayName}Available`;
-  const slotsField = `${dayName}Slots`;
-
-  if (!this[dayField]) return [];
-
-  let availableSlots = this[slotsField].slice();
-
-  // Filter blocked times efficiently
-  const dateStr = date.toISOString().split("T")[0];
-  const blockedForDay = this.blockedTimes.filter(
-    (blocked) =>
-      blocked.isActive && blocked.date.toISOString().split("T")[0] === dateStr
-  );
-
-  if (blockedForDay.length === 0) return availableSlots;
-
-  // Remove blocked slots
-  return availableSlots.filter(
-    (slot) =>
-      !blockedForDay.some(
-        (blocked) =>
-          !(
-            slot.endMinutes <= blocked.startMinutes ||
-            slot.startMinutes >= blocked.endMinutes
-          )
-      )
-  );
-};
-
-// Update aggregate fields for optimization
-staffSchema.methods.updateAvailabilityCache = function () {
-  this.hasWeekdayAvailability =
-    this.mondayAvailable ||
-    this.tuesdayAvailable ||
-    this.wednesdayAvailable ||
-    this.thursdayAvailable ||
-    this.fridayAvailable;
-
-  this.hasWeekendAvailability = this.saturdayAvailable || this.sundayAvailable;
-
-  // Calculate total weekly hours
-  const daySlots = [
-    "mondaySlots",
-    "tuesdaySlots",
-    "wednesdaySlots",
-    "thursdaySlots",
-    "fridaySlots",
-    "saturdaySlots",
-    "sundaySlots",
-  ];
-
-  this.totalWeeklyHours = daySlots.reduce((total, daySlot) => {
-    return (
-      total +
-      this[daySlot].reduce((dayTotal, slot) => {
-        return dayTotal + (slot.endMinutes - slot.startMinutes) / 60;
-      }, 0)
-    );
-  }, 0);
-
-  this.lastAvailabilityUpdate = new Date();
-
-  // Update search text for full-text search
-  this.searchText = `${this.fullName} ${this.position} ${this.description} ${this.tags.join(" ")}`;
-};
-
-// Pre-save middleware to optimize data
-staffSchema.pre("save", function (next) {
-  // Convert time strings to minutes for time slots
-  const daySlots = [
-    "mondaySlots",
-    "tuesdaySlots",
-    "wednesdaySlots",
-    "thursdaySlots",
-    "fridaySlots",
-    "saturdaySlots",
-    "sundaySlots",
-  ];
-
-  daySlots.forEach((daySlot) => {
-    this[daySlot].forEach((slot) => {
-      if (!slot.startMinutes)
-        slot.startMinutes = this.constructor.timeToMinutes(slot.startTime);
-      if (!slot.endMinutes)
-        slot.endMinutes = this.constructor.timeToMinutes(slot.endTime);
-    });
-  });
-
-  // Convert blocked times
-  this.blockedTimes.forEach((blocked) => {
-    if (!blocked.startMinutes)
-      blocked.startMinutes = this.constructor.timeToMinutes(blocked.startTime);
-    if (!blocked.endMinutes)
-      blocked.endMinutes = this.constructor.timeToMinutes(blocked.endTime);
-  });
-
-  // Update cache fields
-  this.updateAvailabilityCache();
-
-  next();
-});
 
 // Static methods for optimized queries
 staffSchema.statics.findAvailableStaff = function (
