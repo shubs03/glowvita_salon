@@ -1,0 +1,276 @@
+
+"use client";
+
+import { useState, useEffect, useRef } from 'react';
+import { Button } from '@repo/ui/button';
+import { Input } from '@repo/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import { Search, Filter, Grid, List, Star, TrendingUp, X, Package } from 'lucide-react';
+import { ProductCard } from '@repo/ui/components/landing/ProductCard';
+import { PageContainer } from '@repo/ui/page-container';
+
+// Product type definition
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  hint: string;
+  rating: number;
+  reviewCount: number;
+  vendorName: string;
+  isNew?: boolean;
+  description?: string;
+  category?: string;
+}
+
+const PlatformForCard = ({
+  title,
+  imageUrl,
+  hint,
+}: {
+  title: string;
+  imageUrl: string;
+  hint: string;
+}) => (
+  <a
+    className="relative inline-block h-48 w-72 md:h-56 md:w-80 shrink-0 overflow-hidden rounded-lg transition-all duration-500 hover:shadow-2xl hover:shadow-primary/25 group border-2 border-border/30 hover:border-primary/50 hover-lift bg-gradient-to-br from-background to-primary/5"
+    href="#"
+  >
+    <img
+      className="size-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110 filter group-hover:brightness-110"
+      src={imageUrl}
+      alt={title}
+      width={320}
+      height={224}
+    />
+    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 md:p-6">
+      <h3 className="text-base md:text-lg font-bold leading-tight text-white group-hover:text-primary transition-colors duration-300">
+        {title}
+      </h3>
+    </div>
+  </a>
+);
+
+const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
+  const items = [
+    { title: "Hair Salons", imageUrl: "https://placehold.co/320x224/6366f1/ffffff?text=Hair", hint: "modern hair salon" },
+    { title: "Nail Studios", imageUrl: "https://placehold.co/320x224/ec4899/ffffff?text=Nails", hint: "elegant nail salon" },
+    { title: "Barber Shops", imageUrl: "https://placehold.co/320x224/475569/ffffff?text=Barber", hint: "contemporary barber shop" },
+    { title: "Beauty Spas", imageUrl: "https://placehold.co/320x224/10b981/ffffff?text=Spa", hint: "luxury spa room" },
+    { title: "Wellness Centers", imageUrl: "https://placehold.co/320x224/f97316/ffffff?text=Wellness", hint: "modern wellness center" },
+    { title: "Bridal Boutiques", imageUrl: "https://placehold.co/320x224/8b5cf6/ffffff?text=Bridal", hint: "bridal makeup studio" },
+  ];
+  return (
+    <div className="w-full overflow-hidden">
+      <div
+        className={`pt-5 flex w-fit items-start space-x-6 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
+      >
+        {[...items, ...items].map((item, index) => (
+          <PlatformForCard
+            key={`${item.title}-${index}`}
+            title={item.title}
+            imageUrl={item.imageUrl}
+            hint={item.hint}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default function AllProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/products');
+        const data = await response.json();
+        
+        if (data.success) {
+          setProducts(data.data);
+          setFilteredProducts(data.data);
+        } else {
+          setError(data.message || 'Failed to fetch products');
+        }
+      } catch (err) {
+        setError('Failed to fetch products');
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Filter products
+  useEffect(() => {
+    let result = [...products];
+    if (searchTerm) {
+      result = result.filter(product => 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    setFilteredProducts(result);
+  }, [searchTerm, products]);
+
+  return (
+    <PageContainer padding="none">
+      {/* 1. Hero Section */}
+      <section className="py-20 text-center bg-secondary/50">
+        <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Our Products</h1>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          Explore a curated selection of premium beauty and wellness products from top-rated vendors.
+        </p>
+      </section>
+
+      {/* 2. Fixed Filter Section */}
+      <div className="sticky top-16 z-30 bg-background/80 backdrop-blur-md border-b">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search products..."
+              className="pl-10 h-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Select>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="featured">Featured</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="price-low">Price: Low to High</SelectItem>
+                <SelectItem value="price-high">Price: High to Low</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
+              <Grid className="h-4 w-4" />
+            </Button>
+            <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+          <main className="lg:col-span-12">
+            {/* 3. Bento Grid Section */}
+            <section className="mb-16">
+                <h2 className="text-3xl font-bold text-center mb-8">Highlights</h2>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="md:col-span-2 md:row-span-2 rounded-lg bg-secondary p-6 flex flex-col justify-end">
+                        <h3 className="text-2xl font-bold">New Arrivals</h3>
+                        <p>Fresh picks, just for you.</p>
+                    </div>
+                    <div className="rounded-lg bg-secondary p-6">
+                        <h3 className="text-xl font-bold">Top Rated</h3>
+                    </div>
+                    <div className="rounded-lg bg-secondary p-6">
+                        <h3 className="text-xl font-bold">Best Sellers</h3>
+                    </div>
+                    <div className="md:col-span-2 rounded-lg bg-secondary p-6">
+                        <h3 className="text-xl font-bold">Special Offers</h3>
+                    </div>
+                </div>
+            </section>
+
+            {/* 4. Categories Marquee */}
+            <section className="mb-16">
+                <h2 className="text-3xl font-bold text-center mb-8">Browse by Category</h2>
+                <PlatformForMarquee />
+            </section>
+
+            {/* 5. Product Grid */}
+            <section>
+              <h2 className="text-3xl font-bold text-center mb-8">All Products</h2>
+              {loading ? (
+                <p>Loading products...</p>
+              ) : error ? (
+                <p className="text-red-500">{error}</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {filteredProducts.map((product) => (
+                    <ProductCard key={product.id} {...product} />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* 6. Why Shop With Us Section */}
+            <section className="mt-20 py-16 bg-secondary/50 rounded-lg">
+                <h2 className="text-3xl font-bold text-center mb-8">Why Shop With Us?</h2>
+                <div className="grid md:grid-cols-3 gap-8 text-center">
+                    <div>
+                        <h3 className="font-semibold text-lg">Curated Selection</h3>
+                        <p className="text-muted-foreground">Only the best products from trusted vendors.</p>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-lg">Secure Shopping</h3>
+                        <p className="text-muted-foreground">Your data and payments are always safe.</p>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-lg">Fast Shipping</h3>
+                        <p className="text-muted-foreground">Get your favorite products delivered quickly.</p>
+                    </div>
+                </div>
+            </section>
+            
+            {/* 7. Featured Brand Section */}
+            <section className="mt-20">
+                <h2 className="text-3xl font-bold text-center mb-8">Featured Brand: Aura Cosmetics</h2>
+                <div className="grid md:grid-cols-2 items-center gap-8">
+                    <p className="text-muted-foreground text-lg leading-relaxed">Aura Cosmetics is dedicated to creating high-performance, cruelty-free makeup that empowers you to express your unique beauty. Discover their best-selling products loved by professionals and enthusiasts alike.</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1027/200/200" alt="Aura Product 1" className="w-full h-full object-cover" /></div>
+                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1028/200/200" alt="Aura Product 2" className="w-full h-full object-cover" /></div>
+                    </div>
+                </div>
+            </section>
+            
+            {/* 8. Customer Testimonials */}
+            <section className="mt-20">
+              <h2 className="text-3xl font-bold text-center mb-8">What Our Customers Say</h2>
+              <div className="grid md:grid-cols-3 gap-8">
+                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Amazing quality and fast delivery. Will definitely shop again!" - Sarah L.</blockquote>
+                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Found my new favorite serum here. The selection is fantastic." - Mark T.</blockquote>
+                <blockquote className="p-6 bg-secondary/50 rounded-lg">"A great marketplace for discovering new beauty brands." - Emily C.</blockquote>
+              </div>
+            </section>
+            
+            {/* 9. Shopping Guide */}
+            <section className="mt-20">
+              <h2 className="text-3xl font-bold text-center mb-8">Your Guide to Better Shopping</h2>
+              <p className="text-center max-w-2xl mx-auto text-muted-foreground">Use our filters to narrow down your search by brand, price, and category. Read reviews from other customers to make informed decisions and find the perfect products for your needs.</p>
+            </section>
+            
+            {/* 10. Call to Action */}
+            <section className="mt-20 text-center py-16 bg-primary text-primary-foreground rounded-lg">
+                <h2 className="text-3xl font-bold">Ready to Elevate Your Beauty Routine?</h2>
+                <p className="mt-2 mb-6">Join our community and get access to exclusive deals and new arrivals.</p>
+                <Button variant="secondary" size="lg">Sign Up Now</Button>
+            </section>
+
+          </main>
+        </div>
+      </div>
+    </PageContainer>
+  );
+}
+
+    
