@@ -9,6 +9,8 @@ import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, Check
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { PageContainer } from '@repo/ui/page-container';
 import { Badge } from '@repo/ui/badge';
+import { Dialog, DialogContent } from '@repo/ui/dialog';
+import { Label } from '@repo/ui/label';
 
 // Product type definition
 interface Product {
@@ -88,6 +90,30 @@ export default function AllProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   
+  // New state for filters
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedBrand, setSelectedBrand] = useState('all');
+  const [priceRange, setPriceRange] = useState([0, 200]);
+  const [sortBy, setSortBy] = useState('featured');
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  // Mock categories and brands
+  const categories = [
+    { id: 'all', name: 'All Categories' },
+    { id: 'skincare', name: 'Skincare' },
+    { id: 'cosmetics', name: 'Cosmetics' },
+    { id: 'bodycare', name: 'Body Care' },
+    { id: 'facecare', name: 'Face Care' },
+    { id: 'fragrance', name: 'Fragrance' },
+  ];
+  const brands = [
+    { id: 'all', name: 'All Brands' },
+    { id: 'aura', name: 'Aura Cosmetics' },
+    { id: 'chroma', name: 'Chroma Beauty' },
+    { id: 'serenity', name: 'Serenity Skincare' },
+    { id: 'earthly', name: 'Earthly Essentials' },
+  ];
+
   // Fetch products from API
   useEffect(() => {
     const fetchProducts = async () => {
@@ -123,6 +149,13 @@ export default function AllProductsPage() {
     }
     setFilteredProducts(result);
   }, [searchTerm, products]);
+
+  const activeFilterCount = [
+    selectedCategory !== 'all' ? 1 : 0,
+    selectedBrand !== 'all' ? 1 : 0,
+    priceRange[0] > 0 || priceRange[1] < 200 ? 1 : 0,
+    sortBy !== 'featured' ? 1 : 0
+  ].reduce((a, b) => a + b, 0);
 
   return (
     <PageContainer padding="none">
@@ -178,40 +211,6 @@ export default function AllProductsPage() {
           </div>
         </div>
       </section>
-
-      {/* 2. Fixed Filter Section */}
-      <div className="sticky top-16 z-30 bg-background/80 backdrop-blur-md border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search products..."
-              className="pl-10 h-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Select>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="featured">Featured</SelectItem>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
 
       <div className="container mx-auto px-4 py-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
@@ -315,6 +314,170 @@ export default function AllProductsPage() {
           </main>
         </div>
       </div>
+      
+      {/* Sticky Filter Pill Button */}
+      <div className="sticky bottom-6 z-50 flex justify-center">
+        <Button 
+          onClick={() => setIsFilterModalOpen(true)}
+          className="w-auto py-3 px-5 rounded-full shadow-xl flex items-center justify-center gap-2.5 bg-background/80 backdrop-blur-sm border border-border/50 text-foreground hover:bg-muted transition-all duration-300 hover:shadow-2xl hover:-translate-y-0.5"
+        >
+          <Filter className="h-4 w-4 text-primary" />
+          <span className="font-semibold text-sm">Filters & Sorting</span>
+          {activeFilterCount > 0 && (
+             <span className="text-muted-foreground text-xs bg-muted/50 px-2.5 py-0.5 rounded-full">
+              {activeFilterCount} active
+            </span>
+          )}
+        </Button>
+      </div>
+
+      {/* Filter Modal */}
+      <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
+        <DialogContent className="sm:max-w-md p-0">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Filters</h2>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setIsFilterModalOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Category Filter */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  Category
+                </h3>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Brand Filter */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                  <Star className="h-4 w-4" />
+                  Brand
+                </h3>
+                <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Select brand" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands.map((brand) => (
+                      <SelectItem key={brand.id} value={brand.id}>
+                        {brand.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Price Range */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                  Price Range: ${priceRange[0]} - ${priceRange[1]}
+                </h3>
+                <div className="space-y-4">
+                  <label className="sr-only">Price range slider</label>
+                  <Input
+                    type="range"
+                    min="0"
+                    max="200"
+                    step="1"
+                    value={priceRange[1]}
+                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                    aria-label="Price range slider"
+                  />
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>$0</span>
+                    <span>$200</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Sort By */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Sort By</h3>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="featured">Featured</SelectItem>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="price-low">Price: Low to High</SelectItem>
+                    <SelectItem value="price-high">Price: High to Low</SelectItem>
+                    <SelectItem value="rating">Top Rated</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* View Mode Toggle */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">View</h3>
+                <div className="flex gap-2">
+                  <Button 
+                    variant={viewMode === 'grid' ? 'default' : 'outline'} 
+                    size="sm"
+                    className="flex-1 rounded-xl"
+                    onClick={() => setViewMode('grid')}
+                  >
+                    <Grid className="h-4 w-4 mr-2" />
+                    Grid
+                  </Button>
+                  <Button 
+                    variant={viewMode === 'list' ? 'default' : 'outline'} 
+                    size="sm"
+                    className="flex-1 rounded-xl"
+                    onClick={() => setViewMode('list')}
+                  >
+                    <List className="h-4 w-4 mr-2" />
+                    List
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Clear Filters */}
+              <Button 
+                variant="outline" 
+                className="w-full rounded-xl mb-4"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('all');
+                  setSelectedBrand('all');
+                  setPriceRange([0, 200]);
+                  setSortBy('featured');
+                }}
+              >
+                Clear All Filters
+              </Button>
+              
+              <Button 
+                className="w-full rounded-xl"
+                onClick={() => setIsFilterModalOpen(false)}
+              >
+                Apply Filters
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }
