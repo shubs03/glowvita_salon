@@ -84,6 +84,25 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
 // New Component for the Highlight Card with Carousel
 const ProductHighlightCard = ({ title, products, className, isLarge = false }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const timeoutRef = useRef(null);
+
+  const resetTimeout = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+  };
+
+  useEffect(() => {
+    resetTimeout();
+    if (!isHovered) {
+      timeoutRef.current = setTimeout(
+        () => setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length),
+        3000
+      );
+    }
+    return () => resetTimeout();
+  }, [currentIndex, isHovered, products.length]);
 
   const nextProduct = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -94,11 +113,15 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
     e.stopPropagation();
     setCurrentIndex((prevIndex) => (prevIndex - 1 + products.length) % products.length);
   };
-
-  const currentProduct = products[currentIndex];
+  
+  if (!products || products.length === 0) return null;
 
   return (
-    <div className={`relative rounded-2xl p-6 flex flex-col justify-between overflow-hidden group transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary/10 border border-border/20 ${className}`}>
+    <div 
+      className={`relative rounded-2xl p-6 flex flex-col justify-between overflow-hidden group transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary/10 border border-border/20 ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
       <div className="relative z-10">
         <h3 className="text-2xl font-bold mb-4">{title}</h3>
@@ -111,14 +134,18 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
             />
           ))}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-          {isLarge && (
-            <div className="absolute bottom-4 left-4 text-white">
-              <h4 className="font-bold text-xl">{currentProduct.name}</h4>
-              <p className="text-sm">{currentProduct.vendorName}</p>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          
+          <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <h4 className={`font-bold ${isLarge ? 'text-xl' : 'text-lg'}`}>{products[currentIndex].name}</h4>
+            <p className="text-sm">{products[currentIndex].vendorName}</p>
+            <div className="flex justify-between items-center mt-2">
+              <p className={`font-bold ${isLarge ? 'text-lg' : 'text-base'}`}>₹{products[currentIndex].price.toFixed(2)}</p>
+              <Button size="sm" variant="secondary" className="rounded-full">View</Button>
             </div>
-          )}
-          <div className="absolute top-4 right-4 flex gap-2">
+          </div>
+          
+          <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-8 w-8 hover:bg-white/30 backdrop-blur-sm" onClick={prevProduct}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -126,18 +153,6 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-        </div>
-      </div>
-      <div className="relative z-10 mt-4">
-        {!isLarge && (
-          <div>
-            <h4 className="font-semibold truncate">{currentProduct.name}</h4>
-            <p className="text-sm text-muted-foreground">{currentProduct.vendorName}</p>
-          </div>
-        )}
-        <div className="flex justify-between items-center mt-2">
-          <p className="text-lg font-bold text-primary">₹{currentProduct.price.toFixed(2)}</p>
-          <Button size="sm" variant="outline" className="rounded-full">View</Button>
         </div>
       </div>
     </div>
@@ -373,6 +388,67 @@ export default function AllProductsPage() {
           </main>
         </div>
       </div>
+      
+      {/* Sticky Filter Pill */}
+      <div 
+        className="group fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-in-out"
+      >
+        <div className="flex items-center gap-4 bg-background/80 backdrop-blur-lg border border-border/50 rounded-full shadow-2xl p-2 transition-all duration-300 group-hover:px-6">
+          {/* Default Visible Pill */}
+          <div className="flex items-center gap-2 px-3 py-1 cursor-pointer">
+            <Filter className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-sm">Filters & Sorting</span>
+          </div>
+          
+          {/* Expanded Content */}
+          <div className="flex items-center gap-4 w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 transition-all duration-300 overflow-hidden">
+            <Separator orientation="vertical" className="h-6" />
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-40 rounded-full border-0 bg-transparent focus:ring-0">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Separator orientation="vertical" className="h-6" />
+            
+            <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+              <SelectTrigger className="w-40 rounded-full border-0 bg-transparent focus:ring-0">
+                <SelectValue placeholder="Brand" />
+              </SelectTrigger>
+              <SelectContent>
+                {brands.map((brand) => (
+                  <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Separator orientation="vertical" className="h-6" />
+
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-40 rounded-full border-0 bg-transparent focus:ring-0">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="featured">Featured</SelectItem>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="price-low">Price: Low to High</SelectItem>
+                <SelectItem value="price-high">Price: High to Low</SelectItem>
+                <SelectItem value="rating">Top Rated</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
     </PageContainer>
   );
 }
+
+// Separator Component for local use
+const Separator = ({ orientation = 'horizontal', className = '' }: { orientation?: 'horizontal' | 'vertical', className?: string }) => (
+  <div className={`bg-border ${orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px'} ${className}`} />
+);
