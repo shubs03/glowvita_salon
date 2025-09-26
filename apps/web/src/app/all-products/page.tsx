@@ -5,9 +5,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Search, Filter, Grid, List, Star, TrendingUp, X, Package } from 'lucide-react';
+import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users } from 'lucide-react';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { PageContainer } from '@repo/ui/page-container';
+import { Badge } from '@repo/ui/badge';
 
 // Product type definition
 interface Product {
@@ -126,11 +127,52 @@ export default function AllProductsPage() {
   return (
     <PageContainer padding="none">
       {/* 1. Hero Section */}
-      <section className="py-20 text-center bg-secondary/50">
-        <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Our Products</h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Explore a curated selection of premium beauty and wellness products from top-rated vendors.
-        </p>
+      <section className="py-20 md:py-24 text-center bg-secondary/50 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_70%)]" />
+        <div className="container mx-auto px-4 z-10 relative">
+          <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Our Products</h1>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+            Explore a curated selection of premium beauty and wellness products from top-rated vendors.
+          </p>
+
+          <div className="relative max-w-xl mx-auto mb-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Search for products, brands, or categories..."
+              className="w-full h-12 text-base pl-12 rounded-full shadow-lg"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-2 text-sm text-muted-foreground mb-10">
+            <span>Popular:</span>
+            <button className="hover:text-primary transition-colors">Skincare</button>
+            <span>·</span>
+            <button className="hover:text-primary transition-colors">Haircare</button>
+            <span>·</span>
+            <button className="hover:text-primary transition-colors">Cosmetics</button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">1,000+</p>
+              <p className="text-sm text-muted-foreground">Verified Vendors</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">50,000+</p>
+              <p className="text-sm text-muted-foreground">Products Listed</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">4.9/5</p>
+              <p className="text-sm text-muted-foreground">Average Rating</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary">Secure</p>
+              <p className="text-sm text-muted-foreground">Shopping Guarantee</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* 2. Fixed Filter Section */}
@@ -272,5 +314,3 @@ export default function AllProductsPage() {
     </PageContainer>
   );
 }
-
-    
