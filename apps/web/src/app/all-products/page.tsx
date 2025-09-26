@@ -174,13 +174,15 @@ export default function AllProductsPage() {
           </p>
 
           <div className="relative max-w-2xl mx-auto mb-8">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Search for products, brands, or categories..."
-              className="w-full h-14 text-lg pl-14 rounded-full shadow-2xl border-2 border-transparent focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-300 bg-background/80 backdrop-blur-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+            <div className="relative">
+              <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                placeholder="Search for products, brands, or categories..."
+                className="w-full h-14 text-lg pl-14 rounded-full shadow-2xl border-2 border-transparent focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-300 bg-background/80 backdrop-blur-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground mb-12">
@@ -319,10 +321,10 @@ export default function AllProductsPage() {
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-full blur opacity-20 group-hover:opacity-50 transition duration-500"></div>
           
-          <div className="relative flex items-center justify-center p-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-lg transition-all duration-300 group-hover:shadow-2xl group-hover:w-auto min-w-[200px] group-hover:min-w-[650px]">
+          <div className="relative flex items-center justify-center p-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-lg transition-all duration-300 min-w-[200px] group-hover:min-w-[650px]">
               
             {/* Initial Pill View */}
-            <div className="flex items-center gap-3 px-4 py-2 cursor-pointer group-hover:hidden">
+            <div className="flex items-center gap-3 px-4 py-2 cursor-pointer opacity-100 group-hover:opacity-0 group-hover:hidden transition-opacity duration-200">
               <Filter className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Filters & Sorting</span>
               {activeFilterCount > 0 && (
@@ -333,7 +335,7 @@ export default function AllProductsPage() {
             </div>
 
             {/* Expanded Hover View */}
-            <div className="hidden group-hover:flex items-center gap-4 px-4 py-2 transition-all duration-300">
+            <div className="flex items-center gap-4 px-4 py-2 opacity-0 group-hover:opacity-100 group-hover:flex transition-opacity duration-300">
                 <div className="flex items-center gap-2">
                   <Label htmlFor="category-filter" className="text-sm font-medium">Category</Label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -375,4 +377,5 @@ export default function AllProductsPage() {
     </PageContainer>
   );
 }
-```
+
+  
