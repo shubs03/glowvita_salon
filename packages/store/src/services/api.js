@@ -35,9 +35,9 @@ const baseQuery = async (args, api, extraOptions) => {
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
-    prepareHeaders: (headers) => {
-      const state = api.getState();
-      let token = state.crmAuth?.token || state.adminAuth?.token;
+    prepareHeaders: (headers, { getState }) => {
+      const state = getState();
+      let token = state.crmAuth?.token || state.adminAuth?.token || state.userAuth?.token;
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -912,10 +912,10 @@ export const glowvitaApi = createApi({
     getAllVendorProducts: builder.query({
       query: () => ({ url: "/crm/vendor/products", method: "GET" }),
       providesTags: ["CrmProducts"],
-      transformResponse: (response) => response.data || [],
+      transformResponse: (response) => response, // Keep the full response to check structure
     }),
 
-    // New endpoints for updating and deleting vendor products
+    // New endpoints for vendor product operations
     updateVendorProduct: builder.mutation({
       query: (product) => ({ url: "/crm/vendor/products", method: "PUT", body: product }),
       invalidatesTags: ["CrmProducts"],
@@ -1152,24 +1152,21 @@ export const glowvitaApi = createApi({
         invalidatesTags: ["Cart"],
     }),
 
-
-
-
-
-
-    // Web Endpoints
-
-    // user endpoints
-    UserLogin: builder.mutation({
-      query: (credentials) => ({ url: "/auth/login", method: "POST", body: credentials }),
+    // Web App Login
+    userLogin: builder.mutation({
+      query: (credentials) => ({
+        url: '/auth/login',
+        method: 'POST',
+        body: credentials,
+      }),
     }),
-
   }),
 });
 
 export const {
   // Web App
   useGetMeQuery,
+  useUserLoginMutation,
   // Admin Panel
   useAdminLoginMutation,
   useRegisterAdminMutation,
@@ -1324,8 +1321,5 @@ export const {
   useAddToCartMutation,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
-
-  // User Enpoints 
-  useUserLoginMutation,
-
+  useUpdateAppointmentStatusMutation
 } = glowvitaApi;
