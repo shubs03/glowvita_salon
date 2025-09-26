@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from "next/image";
@@ -112,7 +113,11 @@ export function PlatformFor() {
     const element = document.getElementById("platform-for");
     if (element) observer.observe(element);
 
-    return () => observer.disconnect();
+    return () => {
+        if (element) {
+            observer.unobserve(element);
+        }
+    };
   }, []);
 
   return (
@@ -134,12 +139,12 @@ export function PlatformFor() {
         >
 
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-            Trusted by Top Salons
+            A Platform for Every Style
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-            From intimate boutique salons to large wellness centers, our
-            platform scales with your ambitions and adapts to your unique
-            business requirements.
+            Whether you're running a small boutique salon or managing
+            multiple locations, our platform scales with your ambitions and adapts to your unique business
+            needs.
           </p>
         </div>
 

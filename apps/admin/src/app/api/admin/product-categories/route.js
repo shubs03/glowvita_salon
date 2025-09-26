@@ -4,6 +4,22 @@ import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();
 
+// Add CORS headers - More permissive for development
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*", // Allow all origins in development
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Admin-Authorization, Vendor-Authorization",
+  "Access-Control-Allow-Credentials": "true"
+};
+
+// Handle CORS preflight requests
+export const OPTIONS = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders
+  });
+};
+
 // GET all product categories
 export const GET = async (req) => {
   try {
@@ -11,8 +27,11 @@ export const GET = async (req) => {
     return Response.json({
       success: true,
       data: categories,
-      count: categories.length
-    }, { status: 200 });
+      count: categories.length,
+    }, { 
+      status: 200,
+      headers: corsHeaders
+    });
   } catch (error) {
     console.error("Error fetching product categories:", error);
     return Response.json(
@@ -21,7 +40,10 @@ export const GET = async (req) => {
         message: "Error fetching product categories", 
         error: error.message 
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: corsHeaders
+      }
     );
   }
 };
@@ -37,7 +59,10 @@ export const POST = async (req) => {
       return Response.json({ 
         success: false,
         message: "Category name is required" 
-      }, { status: 400 });
+      }, { 
+        status: 400,
+        headers: corsHeaders
+      });
     }
 
     // Check if category already exists
@@ -49,7 +74,10 @@ export const POST = async (req) => {
       return Response.json({ 
         success: false,
         message: "Category with this name already exists" 
-      }, { status: 409 });
+      }, { 
+        status: 409,
+        headers: corsHeaders
+      });
     }
 
     // Create new category
@@ -62,7 +90,10 @@ export const POST = async (req) => {
       success: true,
       data: newCategory,
       message: "Product category created successfully"
-    }, { status: 201 });
+    }, { 
+      status: 201,
+      headers: corsHeaders
+    });
 
   } catch (error) {
     console.error("Error creating product category:", error);
@@ -74,7 +105,10 @@ export const POST = async (req) => {
         success: false,
         message: "Validation error",
         errors: validationErrors
-      }, { status: 400 });
+      }, { 
+        status: 400,
+        headers: corsHeaders
+      });
     }
 
     // Handle duplicate key error
@@ -82,7 +116,10 @@ export const POST = async (req) => {
       return Response.json({
         success: false,
         message: "Category with this name already exists"
-      }, { status: 409 });
+      }, { 
+        status: 409,
+        headers: corsHeaders
+      });
     }
 
     return Response.json(
@@ -91,7 +128,10 @@ export const POST = async (req) => {
         message: "Error creating product category", 
         error: error.message 
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: corsHeaders
+      }
     );
   }
 };
@@ -106,14 +146,20 @@ export const PUT = async (req) => {
       return Response.json({ 
         success: false,
         message: "Category ID is required" 
-      }, { status: 400 });
+      }, { 
+        status: 400,
+        headers: corsHeaders
+      });
     }
 
     if (!name || name.trim() === '') {
       return Response.json({ 
         success: false,
         message: "Category name is required" 
-      }, { status: 400 });
+      }, { 
+        status: 400,
+        headers: corsHeaders
+      });
     }
 
     // Check if another category with the same name exists (excluding current one)
@@ -126,7 +172,10 @@ export const PUT = async (req) => {
       return Response.json({ 
         success: false,
         message: "Another category with this name already exists" 
-      }, { status: 409 });
+      }, { 
+        status: 409,
+        headers: corsHeaders
+      });
     }
 
     // Update category
@@ -144,14 +193,20 @@ export const PUT = async (req) => {
       return Response.json({ 
         success: false,
         message: "Product category not found" 
-      }, { status: 404 });
+      }, { 
+        status: 404,
+        headers: corsHeaders
+      });
     }
 
     return Response.json({
       success: true,
       data: updatedCategory,
       message: "Product category updated successfully"
-    }, { status: 200 });
+    }, { 
+      status: 200,
+      headers: corsHeaders
+    });
 
   } catch (error) {
     console.error("Error updating product category:", error);
@@ -162,7 +217,10 @@ export const PUT = async (req) => {
         success: false,
         message: "Validation error",
         errors: validationErrors
-      }, { status: 400 });
+      }, { 
+        status: 400,
+        headers: corsHeaders
+      });
     }
 
     return Response.json(
@@ -171,7 +229,10 @@ export const PUT = async (req) => {
         message: "Error updating product category", 
         error: error.message 
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: corsHeaders
+      }
     );
   }
 };
@@ -186,7 +247,10 @@ export const DELETE = async (req) => {
       return Response.json({ 
         success: false,
         message: "Category ID is required" 
-      }, { status: 400 });
+      }, { 
+        status: 400,
+        headers: corsHeaders
+      });
     }
 
     // Check if category exists
@@ -195,7 +259,10 @@ export const DELETE = async (req) => {
       return Response.json({ 
         success: false,
         message: "Product category not found" 
-      }, { status: 404 });
+      }, { 
+        status: 404,
+        headers: corsHeaders
+      });
     }
 
     // TODO: Check if category is being used by any products
@@ -214,7 +281,10 @@ export const DELETE = async (req) => {
     return Response.json({
       success: true,
       message: "Product category deleted successfully"
-    }, { status: 200 });
+    }, { 
+      status: 200,
+      headers: corsHeaders
+    });
 
   } catch (error) {
     console.error("Error deleting product category:", error);
@@ -224,7 +294,10 @@ export const DELETE = async (req) => {
         message: "Error deleting product category", 
         error: error.message 
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: corsHeaders
+      }
     );
   }
 };
