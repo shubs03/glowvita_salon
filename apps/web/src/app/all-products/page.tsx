@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ArrowRight, ChevronLeft } from 'lucide-react';
+import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { PageContainer } from '@repo/ui/page-container';
 import { Badge } from '@repo/ui/badge';
@@ -298,6 +298,18 @@ export default function AllProductsPage() {
                     <ProductHighlightCard 
                       title="Top Rated"
                       products={bentoGridProducts.topRated}
+                    />
+                  )}
+                  {bentoGridProducts.bestSellers.length > 0 && (
+                    <ProductHighlightCard 
+                      title="Best Sellers"
+                      products={bentoGridProducts.bestSellers}
+                    />
+                  )}
+                  {bentoGridProducts.bestSellers.length > 0 && (
+                    <ProductHighlightCard 
+                      title="Best Sellers"
+                      products={bentoGridProducts.bestSellers}
                     />
                   )}
                   {bentoGridProducts.bestSellers.length > 0 && (
