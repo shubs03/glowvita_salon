@@ -315,61 +315,6 @@ export default function AllProductsPage() {
           </main>
         </div>
       </div>
-      
-      {/* Sticky Filter Strip */}
-      <div className="sticky bottom-6 z-50 flex justify-center">
-        <div className="group relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-full blur opacity-20 group-hover:opacity-50 transition-all duration-300"></div>
-          <div className="relative flex items-center justify-center p-1 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-lg w-auto min-w-[150px] group-hover:min-w-[650px] transition-all duration-300">
-            <div className="flex items-center gap-2 px-3 py-1 cursor-pointer transition-all duration-300 group-hover:opacity-0 group-hover:w-0 group-hover:p-0 overflow-hidden">
-                <Filter className="h-5 w-5 text-primary" />
-                <span className="font-semibold text-sm">Filters</span>
-                {activeFilterCount > 0 && (
-                <span className="ml-2 text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
-                    {activeFilterCount}
-                </span>
-                )}
-            </div>
-
-            <div className="flex items-center gap-4 px-3 py-1 transition-all duration-300 opacity-0 w-0 h-0 overflow-hidden group-hover:opacity-100 group-hover:w-auto group-hover:h-auto">
-              <div className="flex items-center gap-2">
-                  <Label htmlFor="category-filter" className="text-sm font-medium">Category</Label>
-                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-36 rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                 <div className="flex items-center gap-2">
-                  <Label htmlFor="brand-filter" className="text-sm font-medium">Brand</Label>
-                  <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                    <SelectTrigger className="w-36 rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                 <div className="flex items-center gap-2">
-                  <Label htmlFor="sort-by" className="text-sm font-medium">Sort By</Label>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-36 rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="featured">Featured</SelectItem>
-                      <SelectItem value="newest">Newest</SelectItem>
-                      <SelectItem value="price-low">Price: Low-High</SelectItem>
-                      <SelectItem value="price-high">Price: High-Low</SelectItem>
-                      <SelectItem value="rating">Top Rated</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                 <Button variant="ghost" size="sm" onClick={() => { setSelectedCategory('all'); setSelectedBrand('all'); setSortBy('featured'); }}>
-                  <X className="h-4 w-4 mr-1" /> Clear
-                </Button>
-            </div>
-          </div>
-        </div>
-      </div>
     </PageContainer>
   );
 }
