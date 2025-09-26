@@ -10,6 +10,7 @@ import { cn } from '@repo/ui/cn';
 import { ChevronRight } from 'lucide-react';
 
 const serviceCategories = [
+    { name: "All" },
     { name: "Hair" },
     { name: "Skin" },
     { name: "Nails" },
@@ -19,7 +20,14 @@ const serviceCategories = [
     { name: "Facials" }
 ];
 
-const services = {
+interface Service {
+    name: string;
+    duration: string;
+    price: string;
+    image: string;
+}
+
+const services: { [key: string]: Service[] } = {
     "Hair": [
         { name: "Signature Haircut", duration: "60 min", price: "120.00", image: 'https://picsum.photos/seed/haircut/200/200' },
         { name: "Color & Highlights", duration: "120 min", price: "250.00", image: 'https://picsum.photos/seed/haircolor/200/200' },
@@ -47,6 +55,8 @@ const services = {
     ]
 };
 
+const allServices = Object.values(services).flat();
+
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
     return (
@@ -70,8 +80,10 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
     );
 };
 
-export function Step1_Services({ selectedServices, onSelectService, currentStep, setCurrentStep }: { selectedServices: any[], onSelectService: (service: any) => void; currentStep: number; setCurrentStep: (step: number) => void; }) {
-  const [activeCategory, setActiveCategory] = useState("Hair");
+export function Step1_Services({ selectedServices, onSelectService, currentStep, setCurrentStep }: { selectedServices: any[], onSelectService: (service: Service) => void; currentStep: number; setCurrentStep: (step: number) => void; }) {
+  const [activeCategory, setActiveCategory] = useState("All");
+
+  const servicesToDisplay = activeCategory === "All" ? allServices : (services[activeCategory] || []);
 
   return (
     <div className="w-full">
@@ -87,45 +99,48 @@ export function Step1_Services({ selectedServices, onSelectService, currentStep,
         </div>
         
         {/* Tab-like navigation for categories */}
-        <div className="relative mb-8">
-            <div className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
-                {serviceCategories.map(category => (
-                    <Button 
-                        key={category.name}
-                        variant={activeCategory === category.name ? 'default' : 'outline'}
-                        className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${
-                            activeCategory === category.name ? 'shadow-lg' : 'hover:bg-primary/5 hover:border-primary/50'
-                        }`}
-                        onClick={() => setActiveCategory(category.name)}
-                    >
-                        {category.name}
-                    </Button>
-                ))}
+        <div className="sticky top-0 z-10 py-4 bg-background/80 backdrop-blur-sm -mx-6 px-6">
+            <div className="relative">
+                <div className="flex space-x-2 overflow-x-auto pb-2 no-scrollbar">
+                    {serviceCategories.map(category => (
+                        <Button 
+                            key={category.name}
+                            variant={activeCategory === category.name ? 'default' : 'outline'}
+                            className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${
+                                activeCategory === category.name ? 'shadow-lg' : 'hover:bg-primary/5 hover:border-primary/50'
+                            }`}
+                            onClick={() => setActiveCategory(category.name)}
+                        >
+                            {category.name}
+                        </Button>
+                    ))}
+                </div>
+                <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
             </div>
-            <div className="absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
         </div>
 
+
         {/* Services List */}
-        <div className="space-y-4">
-            {(services[activeCategory] || []).map(service => {
+        <div className="space-y-4 pt-4">
+            {servicesToDisplay.map(service => {
                 const isSelected = selectedServices.some(s => s.name === service.name);
                 return (
                     <Card 
                         key={service.name} 
                         className={cn(
-                            'p-4 flex items-center gap-4 transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-md',
+                            'p-4 flex flex-col sm:flex-row items-center gap-4 transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-md',
                             isSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-transparent bg-secondary/30'
                         )}
                         onClick={() => onSelectService(service)}
                     >
-                        <div className="relative w-20 h-20 rounded-md overflow-hidden flex-shrink-0">
-                            <Image src={service.image} alt={service.name} layout="fill" className="object-cover" />
+                        <div className="relative w-full sm:w-20 h-24 sm:h-20 rounded-md overflow-hidden flex-shrink-0">
+                            <Image src={service.image} alt={service.name} layout="fill" className="object-cover" data-ai-hint="beauty service" />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 text-center sm:text-left">
                             <h3 className="font-semibold">{service.name}</h3>
                             <p className="text-sm text-muted-foreground">{service.duration}</p>
                         </div>
-                        <div className="flex items-center gap-4 text-right">
+                        <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-4 text-right">
                             <span className="font-bold text-lg text-primary">₹{service.price}</span>
                             <Button 
                                 size="sm"

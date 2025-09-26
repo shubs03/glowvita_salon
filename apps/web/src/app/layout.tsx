@@ -5,8 +5,11 @@ import type { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import StoreProvider from '@repo/store/provider';
 import './globals.css';
-import { MarketingLayout } from '@/components/MarketingLayout';
 import { Toaster } from 'sonner';
+import { AuthInitializer } from '@/components/AuthInitializer';
+import { MarketingHeader } from '@/components/MarketingHeader';
+import { Footer } from '@/components/Footer';
+import { useState } from 'react';
 
 export default function RootLayout({
   children,
@@ -14,19 +17,26 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+  
+  const marketingPages = [
+    '/',
+    '/apps',
+    '/pricing',
+    '/support',
+    '/about',
+    '/contact',
+    '/privacy-policy',
+    '/return-policy',
+    '/terms-and-conditions'
+  ];
+
+  const isMarketingPage = marketingPages.includes(pathname);
   const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
-  const isDashboardPage = pathname.startsWith('/dashboard');
-  const isBookingPage = pathname.startsWith('/book/');
-
-  let layoutContent: ReactNode;
-
-  if (isAuthPage || isDashboardPage || isBookingPage) {
-    // Auth, Dashboard, and Booking pages have no shared layout
-    layoutContent = children;
-  } else {
-    // All other pages get the MarketingLayout
-    layoutContent = <MarketingLayout>{children}</MarketingLayout>;
-  }
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -48,8 +58,24 @@ export default function RootLayout({
         }} />
       </head>
       <body>
-        <StoreProvider>{layoutContent}</StoreProvider>
-        <Toaster />
+        <StoreProvider>
+          <AuthInitializer>
+            <div className="flex flex-col min-h-screen bg-background text-foreground">
+              {!isAuthPage && (
+                <MarketingHeader 
+                  isMobileMenuOpen={isMobileMenuOpen} 
+                  toggleMobileMenu={toggleMobileMenu}
+                  isHomePage={pathname === '/'}
+                />
+              )}
+              <main className="flex-grow">
+                {children}
+              </main>
+              {isMarketingPage && <Footer />}
+            </div>
+            <Toaster />
+          </AuthInitializer>
+        </StoreProvider>
       </body>
     </html>
   );

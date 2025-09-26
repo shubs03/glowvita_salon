@@ -907,6 +907,27 @@ export const glowvitaApi = createApi({
       query: (id) => ({ url: "/crm/products", method: "DELETE", body: { id } }),
       invalidatesTags: ["CrmProducts"],
     }),
+    
+    // New endpoint to fetch all vendor products with origin 'Vendor'
+    getAllVendorProducts: builder.query({
+      query: () => ({ url: "/crm/vendor/products", method: "GET" }),
+      providesTags: ["CrmProducts"],
+      transformResponse: (response) => response.data || [],
+    }),
+
+    // New endpoints for updating and deleting vendor products
+    updateVendorProduct: builder.mutation({
+      query: (product) => ({ url: "/crm/vendor/products", method: "PUT", body: product }),
+      invalidatesTags: ["CrmProducts"],
+    }),
+    deleteVendorProduct: builder.mutation({
+      query: (id) => ({ url: "/crm/vendor/products", method: "DELETE", body: { id } }),
+      invalidatesTags: ["CrmProducts"],
+    }),
+    createVendorProduct: builder.mutation({
+      query: (product) => ({ url: "/crm/vendor/products", method: "POST", body: product }),
+      invalidatesTags: ["CrmProducts"],
+    }),
 
     // Supplier Products & Profile
     getSupplierProducts: builder.query({
@@ -1130,6 +1151,19 @@ export const glowvitaApi = createApi({
         query: (productId) => ({ url: "/crm/cart", method: "DELETE", body: { productId } }),
         invalidatesTags: ["Cart"],
     }),
+
+
+
+
+
+
+    // Web Endpoints
+
+    // user endpoints
+    UserLogin: builder.mutation({
+      query: (credentials) => ({ url: "/auth/login", method: "POST", body: credentials }),
+    }),
+
   }),
 });
 
@@ -1278,10 +1312,20 @@ export const {
   useCreateCrmCampaignMutation,
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
+  // New endpoint for fetching all vendor products
+  useGetAllVendorProductsQuery,
+  // New endpoints for vendor product operations
+  useUpdateVendorProductMutation,
+  useDeleteVendorProductMutation,
+  useCreateVendorProductMutation,
 
   // Cart Endpoints
   useGetCartQuery,
   useAddToCartMutation,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
+
+  // User Enpoints 
+  useUserLoginMutation,
+
 } = glowvitaApi;

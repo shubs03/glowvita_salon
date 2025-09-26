@@ -2,7 +2,7 @@ import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice';
 import userAuthReducer from './slices/Web/userAuthSlice';
-import crmAuthReducer, { clearCrmAuth } from '@repo/store/slices/crmAuthSlice';
+import crmAuthReducer from '@repo/store/slices/crmAuthSlice';
 import modalReducer from './slices/modalSlice';
 import customerReducer from './slices/customerSlice';
 import salonReducer from './slices/salonSlice';
@@ -31,6 +31,7 @@ const appReducer = combineReducers({
   [glowvitaApi.reducerPath]: glowvitaApi.reducer,
   adminAuth: adminAuthReducer,
   crmAuth: crmAuthReducer,
+  userAuth: userAuthReducer,
   modal: modalReducer,
   customer: customerReducer,
   salon: salonReducer,
@@ -59,10 +60,10 @@ const appReducer = combineReducers({
 const rootReducer = (state, action) => {
   // when a logout action is dispatched, it will reset the state to the initial state.
   // This includes the API state, which will clear the cache.
-  if (action.type === 'crmAuth/clearCrmAuth') {
+  if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
     // Keep only the state that should persist across logouts.
-    // For now, we reset everything.
-    return appReducer(undefined, action);
+    // For now, we reset everything by passing `undefined`.
+    state = undefined;
   }
   return appReducer(state, action);
 };
@@ -93,6 +94,3 @@ export const makeStore = () => {
       }).concat(glowvitaApi.middleware),
   });
 };
-
-// Export the root reducer state type for manual type checking
-export const selectRootState = (state) => state;
