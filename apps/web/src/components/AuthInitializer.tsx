@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAppDispatch } from '@repo/store/hooks';
@@ -11,6 +10,7 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
+    // This effect should only run once on the client-side after initial mount.
     try {
       const token = Cookies.get('token');
       const storedState = localStorage.getItem('userAuthState');
@@ -23,15 +23,17 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
           const { user, role, permissions } = JSON.parse(storedState);
           if (user && token && role) {
             dispatch(setUserAuth({ user, token, role, permissions: permissions || [] }));
-            return; 
+            return; // Successful rehydration, exit the effect.
           }
         }
       }
       
+      // If we reach here, it means no valid token/state was found.
+      // We need to ensure the state is clean.
       dispatch(clearUserAuth());
       
     } catch (error) {
-      console.error("AuthInitializer: Error processing auth state.", error);
+      console.error("AuthInitializer: Error processing auth state. Clearing session.", error);
       dispatch(clearUserAuth());
     }
   }, [dispatch]);
