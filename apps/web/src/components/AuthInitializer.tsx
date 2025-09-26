@@ -13,28 +13,17 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
   useEffect(() => {
     // This effect runs only once on the client-side after initial mount.
     try {
-      const token = Cookies.get('token');
       const storedState = localStorage.getItem('userAuthState');
-      
-      if (token && storedState) {
-        const decodedToken: { exp: number } = jwtDecode(token);
-
-        if (decodedToken.exp * 1000 > Date.now()) {
-          // Token is valid and not expired, rehydrate the state
-          const { user, role, permissions } = JSON.parse(storedState);
-          if (user && token && role) {
-            dispatch(setUserAuth({ user, token, role, permissions: permissions || [] }));
-            return; // Successful rehydration
-          }
+      if (storedState) {
+        const { user, token, role, permissions } = JSON.parse(storedState);
+        if (user && token && role) {
+          // Rehydrate the state from localStorage if it exists
+          dispatch(setUserAuth({ user, token, role, permissions: permissions || [] }));
         }
       }
-      
-      // If any check fails, ensure we have a clean state
-      dispatch(clearUserAuth());
-      
     } catch (error) {
       console.error("AuthInitializer: Error processing auth state.", error);
-      dispatch(clearUserAuth());
+      // Don't clear state here, let other parts of the app handle invalid states
     }
   }, [dispatch]);
 
