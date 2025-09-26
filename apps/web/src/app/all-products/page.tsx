@@ -318,9 +318,11 @@ export default function AllProductsPage() {
       <div className="sticky bottom-6 z-50 flex justify-center">
         <div className="group relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-full blur opacity-20 group-hover:opacity-50 transition duration-500"></div>
-          <div className="relative flex items-center justify-center p-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-lg transition-all duration-300 group-hover:shadow-2xl">
-            {/* Pill button shown by default */}
-            <div className="flex items-center gap-3 px-4 py-2 cursor-pointer">
+          
+          <div className="relative flex items-center justify-center p-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-lg transition-all duration-300 group-hover:shadow-2xl group-hover:w-auto min-w-[200px] group-hover:min-w-[650px]">
+              
+            {/* Initial Pill View */}
+            <div className="flex items-center gap-3 px-4 py-2 cursor-pointer group-hover:hidden">
               <Filter className="h-5 w-5 text-primary" />
               <span className="font-semibold text-sm">Filters & Sorting</span>
               {activeFilterCount > 0 && (
@@ -329,52 +331,48 @@ export default function AllProductsPage() {
                 </span>
               )}
             </div>
-            
-            {/* Expanded filter options on hover */}
-            <div className="absolute bottom-full mb-4 w-[600px] p-4 bg-background/90 backdrop-blur-lg border border-border/50 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 origin-bottom scale-95 group-hover:scale-100">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Category Filter */}
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">Category</h3>
+
+            {/* Expanded Hover View */}
+            <div className="hidden group-hover:flex items-center gap-4 px-4 py-2 transition-all duration-300">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="category-filter" className="text-sm font-medium">Category</Label>
                   <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-36 rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                {/* Brand Filter */}
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-muted-foreground">Brand</h3>
+                 <div className="flex items-center gap-2">
+                  <Label htmlFor="brand-filter" className="text-sm font-medium">Brand</Label>
                   <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-36 rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}</h3>
-                <Input type="range" min="0" max="200" step="1" value={priceRange[1]} onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])} className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary" />
-              </div>
-              <div className="mt-4">
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Sort By</h3>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="featured">Featured</SelectItem>
-                    <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="rating">Top Rated</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                 <div className="flex items-center gap-2">
+                  <Label htmlFor="sort-by" className="text-sm font-medium">Sort By</Label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="w-36 rounded-xl h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="featured">Featured</SelectItem>
+                      <SelectItem value="price-low">Price: Low-High</SelectItem>
+                      <SelectItem value="price-high">Price: High-Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                 <Button variant="ghost" size="sm" onClick={() => { setSelectedCategory('all'); setSelectedBrand('all'); setSortBy('featured'); }}>
+                  <X className="h-4 w-4 mr-1" /> Clear
+                </Button>
             </div>
+
           </div>
         </div>
       </div>
+
     </PageContainer>
   );
 }
+```
