@@ -2,9 +2,9 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  isAuthenticated: false,
+  isAuthenticated: undefined, // Use `undefined` to signify "not yet determined"
   user: null,
-  token: undefined, // Changed from null to undefined
+  token: undefined, // Use `undefined` to signify "not yet determined"
   role: null,
   permissions: [],
 };
@@ -21,10 +21,9 @@ const userAuthSlice = createSlice({
       state.role = role;
       state.permissions = permissions || [];
 
-      // Persist state to localStorage only on the client-side
       if (typeof localStorage !== 'undefined') {
         try {
-          const stateToPersist = { user, role, permissions: permissions || [] };
+          const stateToPersist = { isAuthenticated: true, user, token, role, permissions: permissions || [] };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
         } catch (e) {
           console.error("Could not save user auth state to localStorage", e);
@@ -38,7 +37,6 @@ const userAuthSlice = createSlice({
       state.role = null;
       state.permissions = [];
 
-      // Clear localStorage only on the client-side
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('userAuthState');
       }

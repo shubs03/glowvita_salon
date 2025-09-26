@@ -60,38 +60,38 @@ const appReducer = combineReducers({
   
 const rootReducer = (state, action) => {
   if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
-    state = undefined;
+    // This will reset the entire state of the app
+    // Note: It's important that slices handle their own reset for logout if you want more granular control
+    // For a full logout, this is often the desired behavior.
+    return appReducer(undefined, action);
   }
   return appReducer(state, action);
 };
 
-// Function to load state from localStorage
-const loadState = (key) => {
+
+// Function to safely load state from localStorage, only on the client side
+const loadUserAuthState = () => {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
   try {
-    if (typeof localStorage === 'undefined') {
-      return undefined;
-    }
-    const serializedState = localStorage.getItem(key);
+    const serializedState = localStorage.getItem('userAuthState');
     if (serializedState === null) {
       return undefined;
     }
     return JSON.parse(serializedState);
   } catch (err) {
-    console.error("Could not load state from localStorage", err);
+    console.error("Could not load user auth state from localStorage", err);
     return undefined;
   }
 };
 
+
 export const makeStore = () => {
-  // On the client, we create the store with the preloaded state from localStorage.
-  const preloadedState =
-    typeof window !== 'undefined'
-      ? {
-          userAuth: loadState('userAuthState'),
-          crmAuth: loadState('crmAuthState'),
-          adminAuth: loadState('adminAuthState'),
-        }
-      : {};
+  const preloadedState = {
+    userAuth: loadUserAuthState(),
+    // You can add preloading for crmAuth and adminAuth here as well if needed
+  };
 
   return configureStore({
     reducer: rootReducer,
