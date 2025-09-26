@@ -50,10 +50,7 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
     router.push('/client-login');
   };
 
-
-
   useEffect(() => {
-      console.log("isAuthLoading from profile:", isAuthLoading, "isAuthenticated from profile:", isAuthenticated);
     if (!isAuthLoading && !isAuthenticated) {
       router.push('/client-login');
     }

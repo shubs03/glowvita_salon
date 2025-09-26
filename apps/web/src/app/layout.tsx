@@ -9,7 +9,7 @@ import { Toaster } from 'sonner';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
 import { useState } from 'react';
-import { AuthInitializer } from '@/components/AuthInitializer'; // Import the corrected AuthInitializer
+import { AuthInitializer } from '@/components/AuthInitializer';
 
 export default function RootLayout({
   children,

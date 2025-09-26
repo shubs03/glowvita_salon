@@ -2,9 +2,9 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  isAuthenticated: false, // Changed from undefined to false
+  isAuthenticated: false,
   user: null,
-  token: null, // Use null to indicate "checked and not logged in"
+  token: undefined, // Changed from null to undefined
   role: null,
   permissions: [],
 };
@@ -34,7 +34,7 @@ const userAuthSlice = createSlice({
     clearUserAuth: (state) => {
       state.isAuthenticated = false;
       state.user = null;
-      state.token = null;
+      state.token = null; // Set to null to indicate "checked and logged out"
       state.role = null;
       state.permissions = [];
 
