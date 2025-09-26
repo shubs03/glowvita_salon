@@ -20,6 +20,7 @@ const getProducts = async (req) => {
     // Filter products by fixed origin 'Vendor' only and with status 'approved'
     const products = await ProductModel.find({ origin: 'Vendor', status: 'approved' })
       .populate('category', 'name description')
+      .populate('vendorId', 'businessName')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -27,13 +28,11 @@ const getProducts = async (req) => {
       ...product,
       category: product.category?.name || '',
       categoryDescription: product.category?.description || product.categoryDescription || '',
+      vendorName: product.vendorId?.businessName || 'GlowVita',
       status: product.status === 'rejected' ? 'disapproved' : product.status,
     }));
 
-    return NextResponse.json({
-      success: true,
-      data: transformedProducts
-    }, { headers });
+    return NextResponse.json(transformedProducts, { headers });
   } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json({ 
@@ -201,4 +200,6 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     return NextResponse.json({ success: true, message: "Product deleted successfully" });
   } catch (error) {
     console.error("Error deleting product:", error);
-    return NextResponse.json({ success: false, message: "Error deleting product", error: error
+    return NextResponse.json({ success: false, message: "Error deleting product", error: error.message }, { status: 500 });
+  }
+}, ["vendor"]);

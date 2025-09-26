@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
@@ -11,7 +11,7 @@ import { PageContainer } from '@repo/ui/page-container';
 import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent } from '@repo/ui/dialog';
 import { Label } from '@repo/ui/label';
-import { useGetAllVendorProductsQuery, useGetAdminProductCategoriesQuery } from '@repo/store/services/api';
+import { Skeleton } from '@repo/ui/skeleton';
 
 // Product type definition
 interface Product {
@@ -27,6 +27,27 @@ interface Product {
   description?: string;
   category?: string;
 }
+
+// MOCK DATA
+const mockProducts: Product[] = [
+  { id: '1', name: 'Aura Revitalizing Serum', price: 68.00, image: 'https://picsum.photos/seed/product1/400/400', hint: 'skincare serum', rating: 4.9, reviewCount: 125, vendorName: 'Aura Cosmetics', isNew: true, category: 'Skincare', description: 'A potent serum to restore youthful glow.' },
+  { id: '2', name: 'Chroma Hydrating Balm', price: 24.00, image: 'https://picsum.photos/seed/product2/400/400', hint: 'cosmetic balm', rating: 4.7, reviewCount: 88, vendorName: 'Chroma Beauty', category: 'Makeup', description: 'Hydrating lip balm with a hint of color.' },
+  { id: '3', name: 'Terra Exfoliating Scrub', price: 48.00, image: 'https://picsum.photos/seed/product3/400/400', hint: 'exfoliating scrub', rating: 4.8, reviewCount: 150, vendorName: 'Earthly Essentials', category: 'Skincare', description: 'Gentle scrub for a fresh and clean feel.' },
+  { id: '4', name: 'Luxe Hair Oil', price: 55.00, image: 'https://picsum.photos/seed/product4/400/400', hint: 'hair oil bottle', rating: 4.9, reviewCount: 210, vendorName: 'Luxe Haircare', isNew: true, category: 'Haircare', description: 'Nourishing oil for shiny, healthy hair.' },
+  { id: '5', name: 'Matte Finish Foundation', price: 75.00, image: 'https://picsum.photos/seed/product5/400/400', hint: 'foundation bottle', rating: 4.6, reviewCount: 302, vendorName: 'Chroma Beauty', category: 'Makeup', description: 'Long-lasting foundation with a matte finish.' },
+  { id: '6', name: 'Deep Cleanse Shampoo', price: 32.00, image: 'https://picsum.photos/seed/product6/400/400', hint: 'shampoo bottle', rating: 4.7, reviewCount: 180, vendorName: 'Luxe Haircare', category: 'Haircare', description: 'A shampoo that cleanses deeply without stripping natural oils.' },
+  { id: '7', name: 'Rejuvenating Night Cream', price: 95.00, image: 'https://picsum.photos/seed/product7/400/400', hint: 'night cream jar', rating: 4.9, reviewCount: 450, vendorName: 'Aura Cosmetics', category: 'Skincare', isNew: true, description: 'Wake up to refreshed and rejuvenated skin.' },
+  { id: '8', name: 'Vibrant Eyeshadow Palette', price: 62.00, image: 'https://picsum.photos/seed/product8/400/400', hint: 'eyeshadow palette', rating: 4.8, reviewCount: 280, vendorName: 'Chroma Beauty', category: 'Makeup', description: 'A palette with vibrant colors for every occasion.' },
+  { id: '9', name: 'Herbal Hair Mask', price: 42.00, image: 'https://picsum.photos/seed/product9/400/400', hint: 'hair mask jar', rating: 4.7, reviewCount: 190, vendorName: 'Earthly Essentials', category: 'Haircare', description: 'An herbal mask to strengthen and nourish your hair.' },
+  { id: '10', name: 'Clay Face Mask', price: 38.00, image: 'https://picsum.photos/seed/product10/400/400', hint: 'clay mask', rating: 4.8, reviewCount: 320, vendorName: 'Serenity Skincare', category: 'Skincare', description: 'A detoxifying clay mask for clear skin.' },
+];
+
+const mockCategories = [
+    { id: 'all', name: 'All Categories' },
+    { id: 'skincare', name: 'Skincare' },
+    { id: 'makeup', name: 'Makeup' },
+    { id: 'haircare', name: 'Haircare' }
+];
 
 const PlatformForCard = ({
   title,
@@ -83,11 +104,10 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
   );
 };
 
-// New Component for the Highlight Card with Carousel
-const ProductHighlightCard = ({ title, products, className, isLarge = false }) => {
+const ProductHighlightCard = ({ title, products, className, isLarge = false }: { title: string, products: Product[], className?: string, isLarge?: boolean }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const timeoutRef = useRef(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const resetTimeout = () => {
     if (timeoutRef.current) {
@@ -118,9 +138,11 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
   
   if (!products || products.length === 0) return null;
 
+  const currentProduct = products[currentIndex];
+
   return (
     <div 
-      className={`relative rounded-2xl p-4 flex flex-col justify-between overflow-hidden group transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary/10 border border-border/20 ${className}`}
+      className={`group relative rounded-2xl p-4 flex flex-col justify-between overflow-hidden transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary/10 border border-border/20 ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -139,10 +161,10 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           
           <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <h4 className={`font-bold ${isLarge ? 'text-lg' : 'text-base'}`}>{products[currentIndex].name}</h4>
-            <p className="text-xs">{products[currentIndex].vendorName}</p>
+            <h4 className={`font-bold ${isLarge ? 'text-lg' : 'text-base'}`}>{currentProduct.name}</h4>
+            <p className="text-xs">{currentProduct.vendorName}</p>
             <div className="flex justify-between items-center mt-2">
-              <p className={`font-bold ${isLarge ? 'text-base' : 'text-sm'}`}>₹{products[currentIndex].price.toFixed(2)}</p>
+              <p className={`font-bold ${isLarge ? 'text-base' : 'text-sm'}`}>₹{currentProduct.price.toFixed(2)}</p>
               <Button size="sm" variant="secondary" className="rounded-full h-7 px-3 text-xs">View</Button>
             </div>
           </div>
@@ -163,13 +185,10 @@ const ProductHighlightCard = ({ title, products, className, isLarge = false }) =
 
 
 export default function AllProductsPage() {
-  const { data: apiProducts, isLoading: isProductsLoading, isError: isProductsError, error: productsApiError } = useGetAllVendorProductsQuery(undefined);
-  const { data: categoriesData, isLoading: isCategoriesLoading, isError: isCategoriesError, error: categoriesError } = useGetAdminProductCategoriesQuery(undefined);
-  
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([{ id: 'all', name: 'All Categories' }]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>(mockCategories);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>(mockProducts);
+  const [loading, setLoading] = useState(false); // Changed to false as we are using mock data
   const [errorState, setErrorState] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -185,66 +204,8 @@ export default function AllProductsPage() {
   const carouselRef = useRef<HTMLDivElement>(null);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    setLoading(isProductsLoading || isCategoriesLoading);
-    if (isProductsError) {
-      let errorMessage = 'Failed to fetch products';
-      if (productsApiError) {
-        if ('status' in productsApiError) {
-          const fetchError = productsApiError as { status: number; data?: any };
-          errorMessage = `Error ${fetchError.status}: ${JSON.stringify(fetchError.data || 'Unknown error')}`;
-        } else if ('message' in productsApiError) {
-          errorMessage = productsApiError.message || errorMessage;
-        }
-      }
-      setErrorState(errorMessage);
-    } else if (productsData) {
-      const transformedProducts = productsData.map((product: any) => ({
-        id: product._id || product.id,
-        name: product.productName || product.name || 'Unnamed Product',
-        price: product.price || 0,
-        image: product.productImage || product.image || '/placeholder-product.jpg',
-        hint: product.categoryDescription || product.hint || '',
-        rating: product.rating || 4.5,
-        reviewCount: product.reviewCount || Math.floor(Math.random() * 100),
-        vendorName: product.vendorId?.name || product.vendorName || 'Unknown Vendor',
-        isNew: product.isNew || product.status === 'pending',
-        description: product.description || '',
-        category: product.category?.name || product.category || 'Uncategorized'
-      }));
-      
-      setProducts(transformedProducts);
-      setFilteredProducts(transformedProducts);
-    }
-
-    if (isCategoriesError) {
-      console.error('Error fetching categories:', categoriesError);
-      setCategories([{ id: 'all', name: 'All Categories' }]);
-    } else if (categoriesData && categoriesData.success) {
-      const formattedCategories = categoriesData.data.map((category: any) => ({
-        id: category._id || category.id,
-        name: category.name
-      }));
-      setCategories([{ id: 'all', name: 'All Categories' }, ...formattedCategories]);
-    }
-
-  }, [productsData, categoriesData, isProductsLoading, isCategoriesLoading, isProductsError, isCategoriesError, productsApiError, categoriesError]);
-  
-  useEffect(() => {
-    let result = [...products];
-    if (searchTerm) {
-      result = result.filter(product => 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    setFilteredProducts(result);
-  }, [searchTerm, products]);
-
-  const bentoGridProducts = {
-    newArrivals: products.slice(0, 3),
-    topRated: products.slice(3, 6),
-    bestSellers: products.slice(6, 9)
-  };
+  const handleMouseEnter = () => setIsAutoPlaying(false);
+  const handleMouseLeave = () => setIsAutoPlaying(true);
 
   const startAutoPlay = () => {
     if (autoPlayRef.current) clearInterval(autoPlayRef.current);
@@ -269,8 +230,62 @@ export default function AllProductsPage() {
     };
   }, [isAutoPlaying]);
   
-  const handleMouseEnter = () => setIsAutoPlaying(false);
-  const handleMouseLeave = () => setIsAutoPlaying(true);
+  useEffect(() => {
+    let result = [...products];
+    
+    if (searchTerm) {
+      result = result.filter(product => 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        product.vendorName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (selectedCategory !== 'all') {
+      result = result.filter(product => 
+        product.category && product.category.toLowerCase() === selectedCategory.toLowerCase()
+      );
+    }
+    
+    setFilteredProducts(result);
+  }, [searchTerm, selectedCategory, products]);
+
+  const bentoGridProducts = {
+    newArrivals: products.slice(0, 3),
+    topRated: products.slice(3, 6),
+    bestSellers: products.slice(6, 9)
+  };
+  
+  const brands = useMemo(() => [
+    { id: 'all', name: 'All Brands' },
+    ...Array.from(new Set(products.map(p => p.vendorName))).map((brand, i) => ({ id: brand.toLowerCase(), name: brand }))
+  ], [products]);
+  
+  const renderCarouselIndicators = () => {
+    if (products.length === 0) return null;
+    const totalIndicators = Math.min(6, products.length);
+    const indicators = [];
+    for (let i = 0; i < totalIndicators; i++) {
+      indicators.push(
+        <button
+          key={i}
+          className={`w-3 h-3 rounded-full mx-1 transition-all duration-300 ${
+            currentSlide === i ? 'bg-primary scale-125' : 'bg-muted'
+          }`}
+          onClick={() => {
+            if (carouselRef.current) {
+              carouselRef.current.scrollTo({
+                left: i * 300,
+                behavior: 'smooth'
+              });
+            }
+          }}
+          aria-label={`Go to slide ${i + 1}`}
+        />
+      );
+    }
+    return <div className="flex justify-center mt-6">{indicators}</div>;
+  };
 
   if (loading) {
     return (
@@ -312,20 +327,16 @@ export default function AllProductsPage() {
 
   return (
     <PageContainer padding="none">
-      <section className="py-20 md:py-28 text-center bg-secondary/50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
-        <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_70%)] animate-pulse-slow" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-50 animate-float" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-float-delayed" />
-        
-        <div className="container mx-auto px-4 z-10 relative">
-           <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-            Our Marketplace
+      <section className="relative overflow-hidden bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 py-12 md:py-16 lg:py-20">
+        <div className="container mx-auto px-4 text-center relative z-10">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent animate-pulse">
+            Premium Beauty Products
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            Explore a curated selection of premium beauty and wellness products from top-rated vendors.
+          <p className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-3xl mx-auto mb-8 leading-relaxed">
+            Discover our curated collection of high-quality beauty products from top vendors worldwide. 
+            Elevate your beauty routine with our premium selection.
           </p>
-
+          
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
               <p className="text-3xl font-bold text-primary">{products.length}</p>
@@ -373,10 +384,10 @@ export default function AllProductsPage() {
                       products={bentoGridProducts.bestSellers}
                     />
                   )}
-                  {bentoGridProducts.bestSellers.length > 0 && (
+                  {products.length > 3 && (
                     <ProductHighlightCard 
-                      title="Users Choice 2025"
-                      products={bentoGridProducts.bestSellers}
+                      title="Trending Now"
+                      products={products.slice(3,6)}
                     />
                   )}
                 </div>
@@ -415,7 +426,6 @@ export default function AllProductsPage() {
         </div>
       </div>
       
-      {/* Enhanced Sticky Filter Strip */}
       <div 
         className="group fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-in-out"
       >
@@ -433,7 +443,7 @@ export default function AllProductsPage() {
               </SelectTrigger>
               <SelectContent>
                 {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
+                  <SelectItem key={category.id} value={category.name}>{category.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -472,97 +482,6 @@ export default function AllProductsPage() {
   );
 }
 
-// Separator Component for local use
 const Separator = ({ orientation = 'horizontal', className = '' }: { orientation?: 'horizontal' | 'vertical', className?: string }) => (
   <div className={`bg-border ${orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px'} ${className}`} />
 );
-
-```
-- packages/utils/types.d.ts:
-```ts
-declare module "@repo/utils/types" {
-  // Define types here
-  interface User {
-    id: string;
-    name: string;
-    email: string;
-  }
-}
-```
-- README.md:
-```md
-# GlowVita Salon
-
-Welcome to GlowVita Salon, a Next.js 15 monorepo project built with Turborepo. This repository contains a suite of applications designed to work together seamlessly.
-
-## What's inside?
-
-This Turborepo includes the following packages and applications:
-
-### Apps
-g 
-- `web`: The main public-facing website.
-- `crm`: A customer relationship management portal for vendors.
-- `admin`: An internal administrative dashboard.
-
-### Packages
-
-- `ui`: A shared UI component library.
-- `store`: Shared Redux Toolkit store, slices, and RTK Query APIs.
-- `lib`: Shared utilities, constants, and database connection logic.
-- `typescript-config`: Shared `tsconfig.json`s used throughout the monorepo.
-- `eslint-config-custom`: Shared ESLint configurations.
-
-### Architecture
-
-- **Monorepo**: Turborepo for managing the multi-package/multi-app repository.
-- **Framework**: Next.js 15 (App Router).
-- **State Management**: Redux Toolkit with RTK Query.
-- **Authentication**: JWT-based authentication with roles, using httpOnly cookies.
-- **Database**: MongoDB with a shared connection utility.
-- **Styling**: Tailwind CSS with a shared, configurable theme.
-
-## Getting Started
-
-To get started with this monorepo, you'll need to have Node.js, npm/yarn/pnpm, and a MongoDB instance available.
-
-### 1. Install Dependencies
-
-From the root of the project, run:
-
-```bash
-npm install
-```
-
-### 2. Set up Environment Variables
-
-Each application in the `apps` directory requires its own `.env.local` file. You can copy the contents from `.env.local.example` in each app's directory and fill in the required values.
-
-A single `.env` file at the root of the project can also be used to share environment variables across all apps during development.
-
-**Required variables:**
-
-- `MONGO_URI`: Your MongoDB connection string.
-- `JWT_SECRET`: A secret key for signing JWTs.
-
-### 3. Run Development Servers
-
-To run all applications in development mode, execute the following command from the root directory:
-
-```bash
-npm run dev
-```
-
-This will start the development servers for `web`, `crm`, and `admin` concurrently.
-
-- **Web App**: `http://localhost:3000`
-- **CRM App**: `http://localhost:3001`
-- **Admin App**: `http://localhost:3002`
-
-## Building for Production
-
-To build all applications for production, run:
-
-```bash
-npm run build
-```
