@@ -224,7 +224,7 @@ export default function AllProductsPage() {
           <main className="lg:col-span-12">
              <section className="mb-16">
               <h2 className="text-3xl font-bold text-center mb-8">Highlights</h2>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[400px] md:h-[500px] lg:h-[600px]">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[400px] md:h-[500px] lg:h-[600px]">
                 {/* Large Image - Left */}
                 <div className="lg:col-span-2 h-full rounded-2xl overflow-hidden group relative">
                   {mockProducts.length > 0 && (
@@ -246,7 +246,7 @@ export default function AllProductsPage() {
                 </div>
 
                 {/* 4 Small Images - Right Column */}
-                <div className="grid grid-cols-2 grid-rows-2 gap-4 h-full">
+                <div className="grid grid-cols-2 lg:col-span-2 grid-rows-2 gap-4 h-full">
                   {mockProducts.slice(1, 5).map((product, index) => (
                     <div key={index} className="h-full rounded-2xl overflow-hidden group relative">
                       <Image
