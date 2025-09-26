@@ -9,7 +9,6 @@ import { MarketingLayout } from '@/components/MarketingLayout';
 import { CrmLayout } from '@/components/CrmLayout';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from 'sonner';
-// REMOVED: CrmAuthInitializer is moved to CrmLayout to prevent it from running on marketing pages.
 
 export default function RootLayout({
   children,
