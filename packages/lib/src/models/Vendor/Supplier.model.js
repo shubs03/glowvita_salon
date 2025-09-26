@@ -31,6 +31,12 @@ const supplierSchema = new mongoose.Schema({
   supplierType: { type: String, required: true },
   licenseFiles: [{ type: String }], // Changed to array for multiple files
   password: { type: String, required: true, select: false },
+  resetPasswordToken: {
+    type: String,
+  },
+  resetPasswordExpires: {
+    type: Date,
+  },
   products: { type: Number, default: 0 },
   sales: { type: Number, default: 0 },
   status: {

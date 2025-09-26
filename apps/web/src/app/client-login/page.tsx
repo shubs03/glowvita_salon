@@ -11,7 +11,7 @@ import customerImage from '../../../public/images/web_login.jpg';
 import { toast } from 'sonner';
 import { useAppDispatch } from '@repo/store/hooks';
 import { setUserAuth } from '@repo/store/slices/userAuthSlice';
-import { useLoginMutation } from '@repo/store/api'; // Hypothetical login mutation
+import { glowvitaApi } from '@repo/store/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [login, { isLoading }] = useLoginMutation();
+  const [login, { isLoading }] = glowvitaApi.useUserLoginMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,9 +27,9 @@ export default function LoginPage() {
     try {
       const response = await login({ email, password }).unwrap();
 
-      if (response.success) {
+      if (response.user && response.token) {
         // Dispatch the action to set auth state in Redux and localStorage
-        dispatch(setUserAuth({ user: response.user, token: response.token, role: response.role }));
+        dispatch(setUserAuth({ user: response.user, token: response.token, role: response.role, permissions: response.permissions }));
         
         toast.success('Login successful!', {
           description: 'Welcome back!',
@@ -202,7 +202,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Side - Background Image with Backdrop */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
         <div className="absolute inset-0 bg-black/40 z-10"></div>
         <div className="absolute inset-0">
@@ -218,31 +217,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-// Added this to prevent a full page reload when navigating, which helps with toast messages persisting
-// and provides a smoother user experience.
-const useLoginMutation = () => {
-    // This would be a real RTK query hook in a real app
-    const [mutate, { isLoading }] = useState(false);
-    
-    const login = async ({ email, password }) => {
-        setIsLoading(true);
-        try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
-            });
-            const data = await res.json();
-            if (!res.ok) {
-                throw { data };
-            }
-            return { success: true, ...data };
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    return [login, { isLoading }];
-};
-
