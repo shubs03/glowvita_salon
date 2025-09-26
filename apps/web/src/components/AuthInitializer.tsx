@@ -29,8 +29,8 @@ export function AuthInitializer({ children }: { children: ReactNode }) {
       }
       
       // If we reach here, it means no valid token/state was found.
-      // We need to ensure the state is clean.
-      dispatch(clearUserAuth());
+      // The initial state is already "logged out", so no need to dispatch `clearUserAuth`.
+      // The useAuth hook will correctly determine the loading state is finished.
       
     } catch (error) {
       console.error("AuthInitializer: Error processing auth state. Clearing session.", error);
