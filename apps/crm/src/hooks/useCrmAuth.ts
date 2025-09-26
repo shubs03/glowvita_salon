@@ -2,7 +2,7 @@
 "use client";
 
 import { useAppSelector } from '@repo/store/hooks';
-import { selectRootState } from '@repo/store/store';
+import { selectRootState } from '@repo/store/store.js';
 import { useState, useEffect } from 'react';
 
 // This hook is now specifically for the CRM panel.

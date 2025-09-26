@@ -1,5 +1,6 @@
 // slices/blockTimeSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { glowvitaApi } from '../services/api';
 
 // Types
 const STATUS = {

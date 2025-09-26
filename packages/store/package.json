@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    "./store": "./src/store.ts",
+    "./store": "./src/store.js",
     "./hooks": "./src/hooks.ts",
     "./provider": "./src/provider.tsx",
     "./provider.jsx": "./src/provider.jsx",
@@ -34,10 +34,9 @@
     "./slices/workingHoursSlice": "./src/slices/workingHoursSlice.js",
     "./slices/vendorSlice": "./src/slices/vendorSlice.js",
     "./slices/smsTemplateSlice": "./src/slices/smsTemplateSlice.js",
-    "./slices/orderSlice": "./src/slices/orderSlice.js",
+    "../slices/orderSlice": "./src/slices/orderSlice.js",
     "./slices/cartSlice": "./src/slices/cartSlice.js",
     "./slices/userAuthSlice": "./src/slices/Web/userAuthSlice.js"
-
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
