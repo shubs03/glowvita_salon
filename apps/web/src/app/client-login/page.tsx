@@ -11,7 +11,7 @@ import customerImage from '../../../public/images/web_login.jpg';
 import { toast } from 'sonner';
 import { useAppDispatch } from '@repo/store/hooks';
 import { setUserAuth } from '@repo/store/slices/userAuthSlice';
-import { useLoginMutation } from '@repo/store/api'; // Hypothetical login mutation
+import { useUserLoginMutation } from '@repo/store/api'; // Hypothetical login mutation
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const [login, { isLoading }] = useLoginMutation();
+  const [login, { isLoading }] = useUserLoginMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

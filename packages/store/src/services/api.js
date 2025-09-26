@@ -1151,6 +1151,19 @@ export const glowvitaApi = createApi({
         query: (productId) => ({ url: "/crm/cart", method: "DELETE", body: { productId } }),
         invalidatesTags: ["Cart"],
     }),
+
+
+
+
+
+
+    // Web Endpoints
+
+    // user endpoints
+    UserLogin: builder.mutation({
+      query: (credentials) => ({ url: "/auth/login", method: "POST", body: credentials }),
+    }),
+
   }),
 });
 
@@ -1311,4 +1324,8 @@ export const {
   useAddToCartMutation,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
+
+  // User Enpoints 
+  useUserLoginMutation,
+
 } = glowvitaApi;
