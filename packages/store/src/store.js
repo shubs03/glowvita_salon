@@ -1,3 +1,4 @@
+
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice';
@@ -58,23 +59,46 @@ const appReducer = combineReducers({
 });
   
 const rootReducer = (state, action) => {
-  // when a logout action is dispatched, it will reset the state to the initial state.
-  // This includes the API state, which will clear the cache.
   if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
-    // Keep only the state that should persist across logouts.
-    // For now, we reset everything by passing `undefined`.
     state = undefined;
   }
   return appReducer(state, action);
 };
 
+// Function to load state from localStorage
+const loadState = (key) => {
+  try {
+    if (typeof localStorage === 'undefined') {
+      return undefined;
+    }
+    const serializedState = localStorage.getItem(key);
+    if (serializedState === null) {
+      return undefined;
+    }
+    return JSON.parse(serializedState);
+  } catch (err) {
+    console.error("Could not load state from localStorage", err);
+    return undefined;
+  }
+};
+
 export const makeStore = () => {
+  // On the client, we create the store with the preloaded state from localStorage.
+  const preloadedState =
+    typeof window !== 'undefined'
+      ? {
+          userAuth: loadState('userAuthState'),
+          crmAuth: loadState('crmAuthState'),
+          adminAuth: loadState('adminAuthState'),
+        }
+      : {};
+
   return configureStore({
     reducer: rootReducer,
+    preloadedState,
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
-          // Ignore these action types
           ignoredActions: [
             'blockTime/saveBlockTime/pending', 
             'blockTime/saveBlockTime/fulfilled', 
@@ -86,9 +110,7 @@ export const makeStore = () => {
             'blockTime/setDescription',
             'blockTime/reset'
           ],
-          // Ignore these field paths in all actions
           ignoredActionPaths: ['meta.arg', 'payload.timestamp', 'payload'],
-          // Ignore these paths in the state
           ignoredPaths: ['blockTime.date', 'blockTime']
         }
       }).concat(glowvitaApi.middleware),
