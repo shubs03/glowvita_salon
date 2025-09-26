@@ -166,24 +166,12 @@ export default function AllProductsPage() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-float-delayed" />
         
         <div className="container mx-auto px-4 z-10 relative">
-           <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
             Our Marketplace
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
             Explore a curated selection of premium beauty and wellness products from top-rated vendors.
           </p>
-
-          <div className="relative max-w-2xl mx-auto mb-8">
-            <div className="relative">
-              <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search for products, brands, or categories..."
-                className="w-full h-14 text-lg pl-14 rounded-2xl shadow-xl border-2 border-transparent focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all duration-300 bg-background/80 backdrop-blur-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
 
           <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground mb-12">
             <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Skincare</Badge>
