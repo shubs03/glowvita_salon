@@ -5,6 +5,7 @@
   "exports": {
     "./db": "./src/db.js",
     "./auth": "./src/auth.js",
+    "./emailService": "./src/emailService.js",
     "./models/user": "./src/models/user/User.model.js",
     "./models/staffModel": "./src/models/vendor/Staff.model.js",
     "./models/VendorWorkingHours": "./src/models/vendor/VendorWorkingHours.model.js",
@@ -35,7 +36,8 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "jose": "^5.4.0",
-    "mongoose": "^8.4.1"
+    "mongoose": "^8.4.1",
+    "nodemailer": "^6.9.0"
   },
   "devDependencies": {
     "@repo/eslint-config-custom": "*",

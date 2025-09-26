@@ -88,6 +88,12 @@ const vendorSchema = new mongoose.Schema({
     required: true,
     minlength: [8, "Password must be at least 8 characters"],
   },
+  resetPasswordToken: {
+    type: String,
+  },
+  resetPasswordExpires: {
+    type: Date,
+  },
   website: {
     type: String,
     trim: true,
