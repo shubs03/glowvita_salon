@@ -20,8 +20,12 @@ import {
 } from "@/components/landing";
 import { Award, Users, LineChart, Clock, ArrowRight } from 'lucide-react';
 import { Button } from '@repo/ui/button';
+import { useGetAdminProductCategoriesQuery } from "@repo/store/api";
 
 export default function HomePage() {
+
+  const {data : ProductCategoryData } = useGetAdminProductCategoriesQuery(undefined)
+  console.log("Product Category Data : " ,ProductCategoryData)
 
   const scrollAdvantages = (direction: "left" | "right") => {
     const container = document.getElementById("advantages-container");
