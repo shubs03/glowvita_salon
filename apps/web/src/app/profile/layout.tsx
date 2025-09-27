@@ -39,7 +39,7 @@ const navItems = [
 
 function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const dispatch = useAppDispatch();
   const router = useRouter();
 
@@ -51,15 +51,18 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push('/client-login');
     }
-  }, [isAuthLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router]);
 
-  if (isAuthLoading || !isAuthenticated) {
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-muted-foreground">Loading Profile...</p>
+        </div>
       </div>
     );
   }
