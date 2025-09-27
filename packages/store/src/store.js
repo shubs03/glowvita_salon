@@ -1,32 +1,32 @@
 
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
-import adminAuthReducer from './slices/Admin/adminAuthSlice';
-import userAuthReducer from './slices/Web/userAuthSlice';
-import crmAuthReducer from '@repo/store/slices/crmAuthSlice';
-import modalReducer from './slices/modalSlice';
-import customerReducer from './slices/customerSlice';
-import salonReducer from './slices/salonSlice';
-import vendorReducer from './slices/vendorSlice';
-import marketingReducer from './slices/marketingslice';
-import supplierReducer from './slices/supplierSlice';
-import subscriptionReducer from './slices/subscriptionSlice';
-import notificationReducer from './slices/notificationSlice';
-import geoFencingReducer from './slices/geoFencingSlice';
+import adminAuthReducer from './slices/Admin/adminAuthSlice.js';
+import userAuthReducer from './slices/Web/userAuthSlice.js';
+import crmAuthReducer from '@repo/store/slices/crmAuthSlice.js';
+import modalReducer from './slices/modalSlice.js';
+import customerReducer from './slices/customerSlice.js';
+import salonReducer from './slices/salonSlice.js';
+import vendorReducer from './slices/vendorSlice.js';
+import marketingReducer from './slices/marketingslice.js';
+import supplierReducer from './slices/supplierSlice.js';
+import subscriptionReducer from './slices/subscriptionSlice.js';
+import notificationReducer from './slices/notificationSlice.js';
+import geoFencingReducer from './slices/geoFencingSlice.js';
 import refferalReducer from './slices/Admin/refferalSlice.js';
-import faqReducer from './slices/faqSlice';
-import shippingReducer from './slices/shippingSlice';
-import productReducer from './slices/productSlice';
+import faqReducer from './slices/faqSlice.js';
+import shippingReducer from './slices/shippingSlice.js';
+import productReducer from './slices/productSlice.js';
 import serviceReducer from "./slices/CRM/serviceSlice.js";
 import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
 import clientReducer from "./slices/CRM/clientSlice.js"; // Import client slice
-import appointmentReducer from './slices/appointmentSlice';
-import blockTimeReducer from './slices/blockTimeSlice';
-import vendorprofileReducer from './slices/vendorprofileSlice';
-import workingHoursReducer from './slices/workingHoursSlice';
-import orderReducer from './slices/orderSlice';
-import calendarAppointmentReducer from './slices/calendarAppointmentSlice';
-import cartReducer from './slices/cartSlice'; // Import the new cart reducer
+import appointmentReducer from './slices/appointmentSlice.js';
+import blockTimeReducer from './slices/blockTimeSlice.js';
+import vendorprofileReducer from './slices/vendorprofileSlice.js';
+import workingHoursReducer from './slices/workingHoursSlice.js';
+import orderReducer from './slices/orderSlice.js';
+import calendarAppointmentReducer from './slices/calendarAppointmentSlice.js';
+import cartReducer from './slices/cartSlice.js'; // Import the new cart reducer
 import smsTemplateSlice from './slices/smsTemplateSlice.js';
 
 const appReducer = combineReducers({
@@ -62,54 +62,40 @@ const appReducer = combineReducers({
   
 const rootReducer = (state, action) => {
   if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
+    // This will reset all state to initial state
     return appReducer(undefined, action);
   }
   return appReducer(state, action);
 };
 
-// Function to safely load CRM auth state from localStorage
-const loadCrmAuthState = () => {
+// Function to safely load auth state from localStorage
+const loadAuthState = (key, initialState) => {
   if (typeof window === 'undefined') {
-    return undefined;
+    return initialState;
   }
   try {
-    const serializedState = localStorage.getItem('crmAuthState');
+    const serializedState = localStorage.getItem(key);
     if (serializedState === null) {
-      return { isCrmAuthenticated: false, user: null, token: null, role: null, permissions: [] };
+      return { ...initialState, isCrmAuthenticated: false, isAuthenticated: false }; // Explicitly set to false
     }
     const parsed = JSON.parse(serializedState);
-    // On initial load, we assume the token from the cookie is valid.
-    // Middleware will handle redirects if it's not.
-    return { ...parsed, isCrmAuthenticated: !!parsed.user, token: "pending" };
+    const isAuthenticated = !!parsed.user;
+    return { ...initialState, ...parsed, isCrmAuthenticated: isAuthenticated, isAuthenticated: isAuthenticated };
   } catch (err) {
-    console.error("Could not load CRM auth state from localStorage", err);
-    return { isCrmAuthenticated: false, user: null, token: null, role: null, permissions: [] };
+    console.error(`Could not load ${key} from localStorage`, err);
+    return { ...initialState, isCrmAuthenticated: false, isAuthenticated: false };
   }
 };
 
-// Function to safely load Web auth state from localStorage
-const loadUserAuthState = () => {
-  if (typeof window === 'undefined') {
-    return undefined;
-  }
-  try {
-    const serializedState = localStorage.getItem('userAuthState');
-    if (serializedState === null) {
-      return { isAuthenticated: false, user: null, token: null, role: null, permissions: [] };
-    }
-    const parsed = JSON.parse(serializedState);
-    return { ...parsed, isAuthenticated: !!parsed.user, token: "pending" };
-  } catch (err) {
-    console.error("Could not load user auth state from localStorage", err);
-    return { isAuthenticated: false, user: null, token: null, role: null, permissions: [] };
-  }
-};
 
 export const makeStore = () => {
   const preloadedState = {
-    userAuth: loadUserAuthState(),
-    crmAuth: loadCrmAuthState(),
-    // You can add preloading for adminAuth here as well if needed
+    crmAuth: loadAuthState('crmAuthState', {
+      isCrmAuthenticated: undefined, user: null, token: null, role: null, permissions: []
+    }),
+    userAuth: loadAuthState('userAuthState', {
+      isAuthenticated: undefined, user: null, token: null, role: null, permissions: []
+    }),
   };
 
   return configureStore({

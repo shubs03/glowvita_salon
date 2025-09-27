@@ -4,9 +4,9 @@ import { glowvitaApi } from '../services/api.js';
 import Cookies from 'js-cookie';
 
 const initialState = {
-  isCrmAuthenticated: false,
+  isCrmAuthenticated: undefined, // Start as undefined to indicate "not yet checked"
   user: null,
-  token: undefined, // Use `undefined` to indicate "not yet checked"
+  token: null,
   role: null,
   permissions: [],
 };
@@ -36,7 +36,7 @@ const crmAuthSlice = createSlice({
     clearCrmAuth: (state) => {
       state.isCrmAuthenticated = false;
       state.user = null;
-      state.token = null; // Set to null to indicate "checked and logged out"
+      state.token = null; 
       state.role = null;
       state.permissions = [];
 
