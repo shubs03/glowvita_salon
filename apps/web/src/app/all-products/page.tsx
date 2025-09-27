@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -26,65 +27,6 @@ interface Product {
   category: string;
 }
 
-const PlatformForCard = ({
-  title,
-  imageUrl,
-  hint,
-}: {
-  title: string;
-  imageUrl: string;
-  hint: string;
-}) => (
-  <a
-    className="relative inline-block h-36 w-56 md:h-40 md:w-64 shrink-0 overflow-hidden rounded-xl transition-all duration-500 hover:shadow-xl hover:shadow-primary/30 group border border-border/20 hover:border-primary/60 bg-gradient-to-br from-background via-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/20"
-    href="#"
-  >
-    <img
-      className="size-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105 filter group-hover:brightness-105 group-hover:saturate-110"
-      src={imageUrl}
-      alt={title}
-      width={256}
-      height={160}
-    />
-    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end">
-      <div className="bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 md:p-4">
-        <h3 className="text-sm md:text-base font-semibold leading-tight text-white group-hover:text-primary transition-all duration-300 transform group-hover:translate-y-[-2px]">
-          {title}
-        </h3>
-        <div className="w-8 h-0.5 bg-primary/60 group-hover:bg-primary group-hover:w-12 transition-all duration-300 mt-1"></div>
-      </div>
-    </div>
-  </a>
-);
-
-const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
-  const items = [
-    { title: "Skincare", imageUrl: "https://placehold.co/256x160/f1f5f9/6366f1?text=Skincare+", hint: "premium skincare essentials" },
-    { title: "Cosmetics", imageUrl: "https://placehold.co/256x160/fdf2f8/ec4899?text=Makeup+ Cosmetics", hint: "beauty cosmetics collection" },
-    { title: "Face Care", imageUrl: "https://placehold.co/256x160/f0fdf4/10b981?text=Face+Care+", hint: "facial care products" },
-    { title: "Body Care", imageUrl: "https://placehold.co/256x160/fff7ed/f97316?text=Body+Care+", hint: "luxurious body treatments" },
-    { title: "Fragrance", imageUrl: "https://placehold.co/256x160/faf5ff/8b5cf6?text=Fragrance+", hint: "signature scents collection" },
-    { title: "Nail Care", imageUrl: "https://placehold.co/256x160/fef2f2/ef4444?text=Nails+", hint: "nail care essentials" },
-  ];
-  return (
-    <div className="w-full overflow-hidden rounded-lg ">
-      <div
-        className={`pt-3 pb-2 flex w-fit items-start space-x-4 md:space-x-6 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
-      >
-        {[...items, ...items].map((item, index) => (
-          <PlatformForCard
-            key={`${item.title}-${index}`}
-            title={item.title}
-            imageUrl={item.imageUrl}
-            hint={item.hint}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// New Component for the Highlight Card with Carousel
 const ProductHighlightCard = ({ 
   title, 
   products, 
@@ -216,7 +158,7 @@ export default function AllProductsPage() {
   // New state for filters
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedBrand, setSelectedBrand] = useState('all');
-  const [priceRange, setPriceRange] = useState([0, 100]);
+  const [priceRange, setPriceRange] = useState([0, 200]);
   const [sortBy, setSortBy] = useState('featured');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
@@ -472,7 +414,7 @@ export default function AllProductsPage() {
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-float-delayed" />
         
         <div className="container mx-auto px-4 z-10 relative">
-          <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
             Our Marketplace
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
@@ -556,19 +498,6 @@ export default function AllProductsPage() {
                 </div>
             </section>
 
-            {/* 4. Categories Marquee */}
-            <section className="mb-12">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                    Browse by Category
-                  </h2>
-                  <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
-                    Discover our curated collection of beauty essentials across different categories
-                  </p>
-                </div>
-                <PlatformForMarquee />
-            </section>
-
             {/* 5. Product Grid */}
             <section>
               <h2 className="text-4xl font-bold mb-2">All Products</h2>
@@ -576,31 +505,33 @@ export default function AllProductsPage() {
                 Browse our complete collection of premium beauty and wellness products.
               </p>
               
-              {/* Search Bar */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              {/* Search Bar - New Design */}
+              <div className="mb-8 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 border border-border/20 rounded-2xl flex flex-col sm:flex-row gap-4 items-center shadow-sm">
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search products, brands, or descriptions..."
+                    placeholder="Search for products..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 h-11 rounded-lg w-full bg-background"
                   />
                 </div>
                 <div className="flex gap-2">
                   <Button
-                    variant={viewMode === 'grid' ? 'default' : 'outline'}
+                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                     size="icon"
                     onClick={() => setViewMode('grid')}
+                    className="rounded-lg"
                   >
-                    <Grid className="h-4 w-4" />
+                    <Grid className="h-5 w-5" />
                   </Button>
                   <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                     size="icon"
                     onClick={() => setViewMode('list')}
+                    className="rounded-lg"
                   >
-                    <List className="h-4 w-4" />
+                    <List className="h-5 w-5" />
                   </Button>
                 </div>
               </div>
@@ -703,3 +634,5 @@ export default function AllProductsPage() {
 const Separator = ({ orientation = 'horizontal', className = '' }: { orientation?: 'horizontal' | 'vertical', className?: string }) => (
   <div className={`bg-border ${orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px'} ${className}`} />
 );
+
+```
