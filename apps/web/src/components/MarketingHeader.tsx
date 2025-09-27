@@ -4,12 +4,12 @@
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
-import { ArrowRight, Menu, X, User, LayoutDashboard, Calendar, ShoppingCart, Star, Wallet, Settings, LogOut, ChevronDown } from "lucide-react";
+import { ArrowRight, Menu, X, User, LayoutDashboard, Calendar, ShoppingCart, Star, Wallet, Settings, LogOut, ChevronDown, Gift } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@repo/store/hooks';
-import { clearUserAuth } from '@repo/store/slices/Web/userAuthSlice';
+import { clearUserAuth } from '@repo/store/slices/userAuthSlice';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
