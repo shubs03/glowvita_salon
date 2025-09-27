@@ -27,9 +27,12 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   }, []);
      
   useEffect(() => {
-    // Only perform redirect logic once loading is complete
-    if (!isLoading && !isCrmAuthenticated) {
-      if (pathname !== '/login') {
+    // This effect runs whenever the auth state changes.
+    // It's the central point for protecting routes.
+    if (!isLoading) {
+      if (!isCrmAuthenticated) {
+        // If loading is finished and user is not authenticated,
+        // redirect to login.
         router.push('/login');
       }
     }
@@ -39,7 +42,8 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     setSidebarOpen(!isSidebarOpen);
   };
 
-  // While loading, show a full-page spinner to prevent layout flash
+  // While the auth state is being determined, show a loading screen.
+  // This prevents the "flash" of the login page on a refresh when logged in.
   if (isLoading) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
@@ -51,8 +55,8 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     )
   }
 
-  // If not authenticated and not loading, the redirect in the useEffect will handle it.
-  // Render children only if authenticated to prevent flashing protected content.
+  // If loading is done and we're still not authenticated, the redirect effect will
+  // have already fired. Rendering null here prevents a flash of the protected layout.
   if (!isCrmAuthenticated) {
     return null; 
   }
