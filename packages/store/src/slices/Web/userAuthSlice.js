@@ -1,10 +1,11 @@
 
 import { createSlice } from '@reduxjs/toolkit';
+import Cookies from 'js-cookie';
 
 const initialState = {
-  isAuthenticated: undefined, // Use `undefined` to signify "not yet determined"
+  isAuthenticated: false,
   user: null,
-  token: undefined, // Use `undefined` to signify "not yet determined"
+  token: null,
   role: null,
   permissions: [],
 };
@@ -15,30 +16,32 @@ const userAuthSlice = createSlice({
   reducers: {
     setUserAuth: (state, action) => {
       const { user, token, role, permissions } = action.payload;
-      state.isAuthenticated = true;
+      state.isAuthenticated = Boolean(user && token && role);
       state.user = user;
       state.token = token;
       state.role = role;
       state.permissions = permissions || [];
 
-      if (typeof localStorage !== 'undefined') {
+      if (typeof window !== 'undefined' && user && token && role) {
         try {
-          const stateToPersist = { isAuthenticated: true, user, token, role, permissions: permissions || [] };
+          const stateToPersist = { user, role, permissions: permissions || [] };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
+          Cookies.set('token', token);
         } catch (e) {
-          console.error("Could not save user auth state to localStorage", e);
+          console.error('Could not save auth state to storage:', e);
         }
       }
     },
     clearUserAuth: (state) => {
       state.isAuthenticated = false;
       state.user = null;
-      state.token = null; // Set to null to indicate "checked and logged out"
+      state.token = null;
       state.role = null;
       state.permissions = [];
 
-      if (typeof localStorage !== 'undefined') {
+      if (typeof window !== 'undefined') {
         localStorage.removeItem('userAuthState');
+        Cookies.remove('token');
       }
     },
   },
