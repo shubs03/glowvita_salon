@@ -23,12 +23,12 @@ const userAuthSlice = createSlice({
 
       if (typeof window !== 'undefined') {
         try {
-          const stateToPersist = {
-            isAuthenticated: true,
-            user,
-            token,
-            role: role || 'USER',
-            permissions: permissions || [],
+          const stateToPersist = { 
+            isAuthenticated: true, 
+            user, 
+            token, 
+            role: role || 'USER', 
+            permissions: permissions || [] 
           };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
         } catch (e) {
@@ -47,7 +47,7 @@ const userAuthSlice = createSlice({
         localStorage.removeItem('userAuthState');
         Cookies.remove('token', { path: '/' });
       }
-    },
+    }
   },
 });
 

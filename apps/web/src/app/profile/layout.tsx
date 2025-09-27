@@ -58,16 +58,12 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // This effect handles route protection.
-    // It runs whenever the loading or authentication status changes.
     if (!isLoading && !isAuthenticated) {
       router.push('/client-login');
     }
   }, [isLoading, isAuthenticated, router]);
 
   if (isLoading || !isAuthenticated) {
-    // Show a loading spinner while the auth state is being confirmed.
-    // This prevents a flash of unstyled/unprotected content.
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
         <div className="flex flex-col items-center">

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -9,7 +8,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@repo/store/hooks';
-import { clearUserAuth } from '@repo/store/slices/userAuthSlice';
+import { clearUserAuth } from '@repo/store/slices/Web/userAuthSlice';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -53,7 +52,7 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const { isAuthenticated, user, isLoading } = useAuth() as { isAuthenticated: boolean; user: User | null; isLoading: boolean };
+  const { isAuthenticated, user, isLoading } = useAuth();
   const dispatch = useAppDispatch();
   const router = useRouter();
 

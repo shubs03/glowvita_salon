@@ -63,7 +63,6 @@ const rootReducer = (state, action) => {
   if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
     // Keep the API state, reset everything else
     const { [glowvitaApi.reducerPath]: api, ...rest } = state;
-    const newState = { [glowvitaApi.reducerPath]: api };
     // This will pass `undefined` as the state to the appReducer, which will then return the initial state for each slice.
     return appReducer(undefined, action);
   }
@@ -80,7 +79,12 @@ const loadStateFromStorage = (key) => {
     if (serializedState === null) {
       return undefined;
     }
-    return JSON.parse(serializedState);
+    const parsedState = JSON.parse(serializedState);
+    // Ensure the loaded state marks user as authenticated if a token exists
+    if(parsedState.token) {
+        parsedState.isAuthenticated = true;
+    }
+    return parsedState;
   } catch (err) {
     console.warn(`Could not load ${key} state from localStorage`, err);
     return undefined;
@@ -111,7 +115,6 @@ export const makeStore = () => {
             'userAuth/setUserAuth',
             'crmAuth/setCrmAuth',
             'adminAuth/setAdminAuth',
-            // Add other actions with non-serializable payloads here if needed
           ],
           ignoredPaths: ['userAuth.user', 'crmAuth.user', 'adminAuth.admin'],
         }
