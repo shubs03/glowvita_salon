@@ -1,6 +1,7 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../services/api.js';
+import Cookies from 'js-cookie';
 
 const initialState = {
   isCrmAuthenticated: false,
@@ -42,6 +43,7 @@ const crmAuthSlice = createSlice({
       // Clear localStorage only on the client-side
       if (typeof window !== 'undefined') {
         localStorage.removeItem('crmAuthState');
+        Cookies.remove('crm_access_token', { path: '/' });
       }
     },
   },

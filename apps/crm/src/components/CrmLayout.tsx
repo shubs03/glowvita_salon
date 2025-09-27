@@ -7,16 +7,14 @@ import { Header } from '@/components/Header';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { cn } from '@repo/ui/cn';
-import { Button } from '@repo/ui/button';
-import { Sparkles, Zap, CheckCircle2, Clock } from 'lucide-react';
-import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
-import { CrmAuthInitializer } from '@/components/CrmAuthInitializer'; // Import the initializer here
+import { CrmAuthInitializer } from '@/components/CrmAuthInitializer';
 
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const { isCrmAuthenticated, isLoading, role } = useCrmAuth();
+  const { isCrmAuthenticated, isLoading } = useCrmAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -34,18 +32,17 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
       return; // Do nothing while auth state is loading
     }
     
-    if (!isCrmAuthenticated) {
+    if (!isCrmAuthenticated && pathname !== '/login') {
       router.push('/login');
-      return;
     }
-  }, [isLoading, isCrmAuthenticated, router, role]);
+  }, [isLoading, isCrmAuthenticated, router, pathname]);
      
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
 
   // The CrmAuthInitializer is now part of the layout, ensuring it runs only for CRM pages
-  if (isLoading || !isCrmAuthenticated) {
+  if (isLoading) {
     return (
       <CrmAuthInitializer>
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
@@ -56,6 +53,11 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
         </div>
       </CrmAuthInitializer>
     )
+  }
+
+  // Only render the full layout if authenticated
+  if (!isCrmAuthenticated) {
+    return null; // or you can return a more specific unauthorized component
   }
      
   return (

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { selectRootState } from '@repo/store';
+import { selectRootState } from '@repo/store/store.js';
 import { useAppSelector } from '@repo/store/hooks';
 import { useState, useEffect } from 'react';
 
