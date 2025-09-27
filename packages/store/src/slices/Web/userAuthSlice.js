@@ -16,19 +16,19 @@ const userAuthSlice = createSlice({
   reducers: {
     setUserAuth: (state, action) => {
       const { user, token, role, permissions } = action.payload;
-      state.isAuthenticated = Boolean(user && token && role);
+      state.isAuthenticated = !!(user && token && role);
       state.user = user;
       state.token = token;
       state.role = role;
       state.permissions = permissions || [];
 
-      if (typeof window !== 'undefined' && user && token && role) {
+      // Persist state to localStorage only on the client-side
+      if (typeof window !== 'undefined') {
         try {
-          const stateToPersist = { user, role, permissions: permissions || [] };
+          const stateToPersist = { user, token, role, permissions: permissions || [], isAuthenticated: true };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
-          Cookies.set('token', token);
         } catch (e) {
-          console.error('Could not save auth state to storage:', e);
+          console.error("Could not save auth state to localStorage", e);
         }
       }
     },
@@ -39,6 +39,7 @@ const userAuthSlice = createSlice({
       state.role = null;
       state.permissions = [];
 
+      // Clear localStorage and cookies only on the client-side
       if (typeof window !== 'undefined') {
         localStorage.removeItem('userAuthState');
         Cookies.remove('token');

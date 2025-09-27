@@ -9,7 +9,6 @@ import { Toaster } from 'sonner';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
 import { useState } from 'react';
-// AuthInitializer is no longer needed here, its logic is now in the store.
 
 export default function RootLayout({
   children,

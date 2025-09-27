@@ -62,45 +62,43 @@ const appReducer = combineReducers({
   
 const rootReducer = (state, action) => {
   if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
-    // This will reset all state to initial state
-    return appReducer(undefined, action);
+    // This will reset all state to initial state by passing undefined.
+    // It also triggers the API state reset.
+    state = undefined; 
   }
   return appReducer(state, action);
 };
 
-// Function to safely load auth state from localStorage
-const loadAuthState = (key, initialState) => {
+// Function to safely load state from localStorage
+const loadStateFromStorage = (key) => {
+  // We only want to load from localStorage on the client-side
   if (typeof window === 'undefined') {
-    return initialState;
+    return undefined;
   }
   try {
     const serializedState = localStorage.getItem(key);
     if (serializedState === null) {
-      return { ...initialState, isCrmAuthenticated: false, isAuthenticated: false }; // Explicitly set to false
+      return undefined;
     }
-    const parsed = JSON.parse(serializedState);
-    const isAuthenticated = !!parsed.user;
-    return { ...initialState, ...parsed, isCrmAuthenticated: isAuthenticated, isAuthenticated: isAuthenticated };
+    return JSON.parse(serializedState);
   } catch (err) {
     console.error(`Could not load ${key} from localStorage`, err);
-    return { ...initialState, isCrmAuthenticated: false, isAuthenticated: false };
+    return undefined;
   }
 };
 
 
 export const makeStore = () => {
   const preloadedState = {
-    crmAuth: loadAuthState('crmAuthState', {
-      isCrmAuthenticated: undefined, user: null, token: null, role: null, permissions: []
-    }),
-    userAuth: loadAuthState('userAuthState', {
-      isAuthenticated: undefined, user: null, token: null, role: null, permissions: []
-    }),
+    crmAuth: loadStateFromStorage('crmAuthState'),
+    userAuth: loadStateFromStorage('userAuthState'),
+    // Add any other slices you want to rehydrate from localStorage
   };
 
   return configureStore({
     reducer: rootReducer,
-    preloadedState,
+    // Conditionally add preloadedState only if it's not empty
+    preloadedState: Object.keys(preloadedState).length > 0 ? preloadedState : undefined,
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
@@ -123,3 +121,4 @@ export const makeStore = () => {
 };
 
 export const selectRootState = (state) => state;
+
