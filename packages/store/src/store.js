@@ -1,4 +1,3 @@
-
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice.js';
@@ -65,13 +64,14 @@ const rootReducer = (state, action) => {
     // Keep the API state, reset everything else
     const { [glowvitaApi.reducerPath]: api, ...rest } = state;
     const newState = { [glowvitaApi.reducerPath]: api };
-    return appReducer(newState, action);
+    // This will pass `undefined` as the state to the appReducer, which will then return the initial state for each slice.
+    return appReducer(undefined, action);
   }
   return appReducer(state, action);
 };
 
-// Safely load state from localStorage only on the client-side
-const loadState = (key) => {
+// Function to safely load state from localStorage, only on the client-side.
+const loadStateFromStorage = (key) => {
   if (typeof window === 'undefined') {
     return undefined;
   }
@@ -80,18 +80,7 @@ const loadState = (key) => {
     if (serializedState === null) {
       return undefined;
     }
-    const parsed = JSON.parse(serializedState);
-    
-    // Add validation for the state structure
-    const isValidCrmAuth = parsed && typeof parsed.isCrmAuthenticated === 'boolean' && 'user' in parsed;
-    const isValidUserAuth = parsed && typeof parsed.isAuthenticated === 'boolean' && 'user' in parsed;
-    const isValidAdminAuth = parsed && typeof parsed.isAdminAuthenticated === 'boolean' && 'admin' in parsed;
-
-    if (key === 'crmAuthState' && isValidCrmAuth) return parsed;
-    if (key === 'userAuthState' && isValidUserAuth) return parsed;
-    if (key === 'adminAuthState' && isValidAdminAuth) return parsed;
-    
-    return undefined;
+    return JSON.parse(serializedState);
   } catch (err) {
     console.warn(`Could not load ${key} state from localStorage`, err);
     return undefined;
@@ -100,12 +89,12 @@ const loadState = (key) => {
 
 export const makeStore = () => {
   const preloadedState = {
-    crmAuth: loadState('crmAuthState'),
-    userAuth: loadState('userAuthState'),
-    adminAuth: loadState('adminAuthState'),
+    crmAuth: loadStateFromStorage('crmAuthState'),
+    userAuth: loadStateFromStorage('userAuthState'),
+    adminAuth: loadStateFromStorage('adminAuthState'),
   };
 
-  // Remove undefined keys so Redux doesn't complain
+  // Remove undefined keys so Redux doesn't complain about slices receiving `undefined`.
   Object.keys(preloadedState).forEach(key => {
     if (preloadedState[key] === undefined) {
       delete preloadedState[key];
@@ -119,21 +108,12 @@ export const makeStore = () => {
       getDefaultMiddleware({
         serializableCheck: {
           ignoredActions: [
-            'blockTime/saveBlockTime/pending', 
-            'blockTime/saveBlockTime/fulfilled', 
-            'blockTime/saveBlockTime/rejected',
-            'blockTime/setDate',
-            'blockTime/setStaffMember',
-            'blockTime/setStartTime',
-            'blockTime/setEndTime',
-            'blockTime/setDescription',
-            'blockTime/reset',
-            'userAuth/setUserAuth', // These actions contain non-serializable data on purpose
+            'userAuth/setUserAuth',
             'crmAuth/setCrmAuth',
-            'adminAuth/setAdminAuth'
+            'adminAuth/setAdminAuth',
+            // Add other actions with non-serializable payloads here if needed
           ],
-          ignoredActionPaths: ['meta.arg', 'payload.timestamp', 'payload'],
-          ignoredPaths: ['blockTime.date', 'blockTime', 'userAuth.user', 'crmAuth.user', 'adminAuth.admin']
+          ignoredPaths: ['userAuth.user', 'crmAuth.user', 'adminAuth.admin'],
         }
       }).concat(glowvitaApi.middleware),
   });

@@ -1,4 +1,3 @@
-
 import { createSlice } from '@reduxjs/toolkit';
 import Cookies from 'js-cookie';
 
@@ -24,12 +23,12 @@ const userAuthSlice = createSlice({
 
       if (typeof window !== 'undefined') {
         try {
-          const stateToPersist = { 
-            isAuthenticated: true, 
-            user, 
-            token, 
-            role: role || 'USER', 
-            permissions: permissions || [] 
+          const stateToPersist = {
+            isAuthenticated: true,
+            user,
+            token,
+            role: role || 'USER',
+            permissions: permissions || [],
           };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
         } catch (e) {
@@ -49,21 +48,10 @@ const userAuthSlice = createSlice({
         Cookies.remove('token', { path: '/' });
       }
     },
-    rehydrateAuth: (state, action) => {
-      if (action.payload) {
-        state.isAuthenticated = action.payload.isAuthenticated;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
-        state.role = action.payload.role;
-        state.permissions = action.payload.permissions;
-      } else {
-        state.isAuthenticated = false;
-      }
-    }
   },
 });
 
-export const { setUserAuth, clearUserAuth, rehydrateAuth } = userAuthSlice.actions;
+export const { setUserAuth, clearUserAuth } = userAuthSlice.actions;
 
 export const selectUserAuth = (state) => ({
   isAuthenticated: state.userAuth.isAuthenticated,

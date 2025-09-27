@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -11,7 +10,7 @@ import { toast } from 'sonner';
 import { glowvitaApi } from '@repo/store/api';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch } from '@repo/store/hooks';
-import { setUserAuth } from '@repo/store/slices/userAuthSlice';
+import { setUserAuth } from '@repo/store/slices/Web/userAuthSlice';
 import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
@@ -24,7 +23,7 @@ export default function LoginPage() {
   const dispatch = useAppDispatch();
   
   const [login, { isLoading }] = glowvitaApi.useUserLoginMutation();
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isCrmAuthenticated: isAuthenticated, isLoading: isAuthLoading } = useAuth(); // Renamed to avoid conflict
 
   // This effect handles redirecting the user if they are already logged in
   useEffect(() => {
@@ -44,11 +43,14 @@ export default function LoginPage() {
         
         toast.success('Login successful!', {
           description: 'Redirecting to your profile...',
-          duration: 2000,
-          onAutoClose: () => {
-            router.push('/profile');
-          },
+          duration: 1000
         });
+        
+        // The redirect is now primarily handled by the useEffect in this component,
+        // which will trigger as soon as the `isAuthenticated` state updates.
+        // Pushing here as well ensures a fast redirect.
+        router.push('/profile');
+
       } else {
         toast.error(response.message || 'Failed to log in.');
       }
