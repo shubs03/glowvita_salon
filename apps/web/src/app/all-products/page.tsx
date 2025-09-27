@@ -1,15 +1,21 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ArrowRight, ChevronLeft } from 'lucide-react';
+import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ArrowRight, ChevronLeft, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { PageContainer } from '@repo/ui/page-container';
 import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent } from '@repo/ui/dialog';
 import { Label } from '@repo/ui/label';
+import { PlatformFor } from '@/components/landing';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@repo/ui/collapsible';
+import { Slider } from '@repo/ui/slider';
+import { cn } from '@repo/ui/cn';
 
 // Product type definition
 interface Product {
@@ -26,164 +32,125 @@ interface Product {
   category: string;
 }
 
-const PlatformForCard = ({
-  title,
-  imageUrl,
-  hint,
-}: {
-  title: string;
-  imageUrl: string;
-  hint: string;
+const FilterSidebar = ({
+  categories,
+  brands,
+  selectedCategory,
+  setSelectedCategory,
+  selectedBrand,
+  setSelectedBrand,
+  priceRange,
+  setPriceRange,
+  sortBy,
+  setSortBy,
+  clearFilters,
 }) => (
-  <a
-    className="relative inline-block h-48 w-72 md:h-56 md:w-80 shrink-0 overflow-hidden rounded-lg transition-all duration-500 hover:shadow-2xl hover:shadow-primary/25 group border-2 border-border/30 hover:border-primary/50 hover-lift bg-gradient-to-br from-background to-primary/5"
-    href="#"
-  >
-    <img
-      className="size-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110 filter group-hover:brightness-110"
-      src={imageUrl}
-      alt={title}
-      width={320}
-      height={224}
-    />
-    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 md:p-6">
-      <h3 className="text-base md:text-lg font-bold leading-tight text-white group-hover:text-primary transition-colors duration-300">
-        {title}
+  <div className="space-y-6">
+    {/* Category Filter */}
+    <div>
+      <h3 className="font-semibold mb-3 flex items-center gap-2">
+        <Package className="h-4 w-4 text-primary" />
+        Category
       </h3>
-    </div>
-  </a>
-);
-
-const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
-  const items = [
-    { title: "Hair Salons", imageUrl: "https://placehold.co/320x224/6366f1/ffffff?text=Hair", hint: "modern hair salon interior" },
-    { title: "Nail Studios", imageUrl: "https://placehold.co/320x224/ec4899/ffffff?text=Nails", hint: "elegant nail salon" },
-    { title: "Barber Shops", imageUrl: "https://placehold.co/320x224/475569/ffffff?text=Barber", hint: "contemporary barber shop" },
-    { title: "Beauty Spas", imageUrl: "https://placehold.co/320x224/10b981/ffffff?text=Spa", hint: "luxury spa treatment room" },
-    { title: "Wellness Centers", imageUrl: "https://placehold.co/320x224/f97316/ffffff?text=Wellness", hint: "modern wellness center" },
-    { title: "Bridal Boutiques", imageUrl: "https://placehold.co/320x224/8b5cf6/ffffff?text=Bridal", hint: "bridal makeup studio" },
-  ];
-  return (
-    <div className="w-full overflow-hidden">
-      <div
-        className={`pt-5 flex w-fit items-start space-x-6 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
-      >
-        {[...items, ...items].map((item, index) => (
-          <PlatformForCard
-            key={`${item.title}-${index}`}
-            title={item.title}
-            imageUrl={item.imageUrl}
-            hint={item.hint}
-          />
+      <div className="space-y-2">
+        {categories.map((category) => (
+          <button
+            key={category.id}
+            className={cn(
+              "w-full text-left text-sm p-2 rounded-md transition-colors",
+              selectedCategory === category.id
+                ? "bg-primary/10 text-primary font-semibold"
+                : "text-muted-foreground hover:bg-muted"
+            )}
+            onClick={() => setSelectedCategory(category.id)}
+          >
+            {category.name}
+          </button>
         ))}
       </div>
     </div>
-  );
-};
-
-// New Component for the Highlight Card with Carousel
-const ProductHighlightCard = ({ 
-  title, 
-  products, 
-  className = "", 
-  isLarge = false 
-}: {
-  title: string;
-  products: Product[];
-  className?: string;
-  isLarge?: boolean;
-}) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const resetTimeout = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-  };
-
-  useEffect(() => {
-    resetTimeout();
-    if (!isHovered) {
-      timeoutRef.current = setTimeout(
-        () => setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length),
-        3000
-      );
-    }
-    return () => resetTimeout();
-  }, [currentIndex, isHovered, products.length]);
-
-  const nextProduct = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length);
-  };
-
-  const prevProduct = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + products.length) % products.length);
-  };
-  
-  if (!products || products.length === 0) return null;
-
-  return (
-    <div 
-      className={`relative rounded-2xl p-6 flex flex-col justify-between overflow-hidden group transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary/10 border border-border/20 ${className}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-      <div className="relative z-10">
-        <h3 className="text-2xl font-bold mb-4">{title}</h3>
-        <div className="relative aspect-square w-full rounded-xl overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
-          {products.map((product: Product, index: number) => (
-            <img
-              key={product.id}
-              src={product.image}
-              alt={product.name}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-            />
+    
+    {/* Brand Filter */}
+    <div>
+      <h3 className="font-semibold mb-3 flex items-center gap-2">
+        <Star className="h-4 w-4 text-primary" />
+        Brand
+      </h3>
+      <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+        <SelectTrigger className="w-full rounded-md">
+          <SelectValue placeholder="Select Brand" />
+        </SelectTrigger>
+        <SelectContent>
+          {brands.map((brand) => (
+            <SelectItem key={brand.id} value={brand.id}>
+              {brand.name}
+            </SelectItem>
           ))}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          
-          <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <h4 className={`font-bold ${isLarge ? 'text-xl' : 'text-lg'}`}>{products[currentIndex].name}</h4>
-            <p className="text-sm">{products[currentIndex].vendorName}</p>
-            <div className="flex justify-between items-center mt-2">
-              <p className={`font-bold ${isLarge ? 'text-lg' : 'text-base'}`}>₹{products[currentIndex].price.toFixed(2)}</p>
-              <Button size="sm" variant="secondary" className="rounded-full">View</Button>
-            </div>
-          </div>
-          
-          <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-8 w-8 hover:bg-white/30 backdrop-blur-sm" onClick={prevProduct}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-8 w-8 hover:bg-white/30 backdrop-blur-sm" onClick={nextProduct}>
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
+        </SelectContent>
+      </Select>
     </div>
-  );
-};
+
+    {/* Price Range Filter */}
+    <div>
+      <h3 className="font-semibold mb-3">
+        Price Range: <span className="font-bold text-primary">₹{priceRange[0]} - ₹{priceRange[1]}</span>
+      </h3>
+      <Slider
+        defaultValue={priceRange}
+        min={0}
+        max={200}
+        step={10}
+        onValueChange={(value) => setPriceRange(value)}
+      />
+    </div>
+
+    {/* Sort By Filter */}
+    <div>
+      <h3 className="font-semibold mb-3 flex items-center gap-2">
+        <TrendingUp className="h-4 w-4 text-primary" />
+        Sort By
+      </h3>
+      <Select value={sortBy} onValueChange={setSortBy}>
+        <SelectTrigger className="w-full rounded-md">
+          <SelectValue placeholder="Sort by" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="featured">Featured</SelectItem>
+          <SelectItem value="newest">Newest</SelectItem>
+          <SelectItem value="price-low">Price: Low to High</SelectItem>
+          <SelectItem value="price-high">Price: High to Low</SelectItem>
+          <SelectItem value="rating">Top Rated</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+
+    {/* Clear Filters Button */}
+    <div>
+      <Button variant="outline" className="w-full" onClick={clearFilters}>
+        <X className="h-4 w-4 mr-2" />
+        Clear All Filters
+      </Button>
+    </div>
+  </div>
+);
 
 
 export default function AllProductsPage() {
+  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setErrorState] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   
   // New state for filters
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedBrand, setSelectedBrand] = useState('all');
-  const [priceRange, setPriceRange] = useState([0, 100]);
+  const [priceRange, setPriceRange] = useState([0, 200]);
   const [sortBy, setSortBy] = useState('featured');
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Mock categories and brands
   const categories = [
@@ -353,6 +320,14 @@ export default function AllProductsPage() {
     }
   ];
 
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedCategory('all');
+    setSelectedBrand('all');
+    setPriceRange([0, 200]);
+    setSortBy('featured');
+  };
+
   // Initialize products with mock data
   useEffect(() => {
     setLoading(true);
@@ -427,124 +402,127 @@ export default function AllProductsPage() {
     bestSellers: products.slice(6, 9)
   };
 
+  const getDefaultDescription = (productName: string) => {
+    return `An exquisite ${productName.toLowerCase()} designed to enhance your natural beauty.`;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background p-8">
+        <div className="animate-pulse space-y-8">
+          <div className="h-48 bg-muted rounded-2xl"></div>
+          <div className="flex gap-8">
+            <div className="w-1/4 bg-card rounded-xl h-96"></div>
+            <div className="w-3/4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="bg-card rounded-xl h-96"></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <PageContainer padding="none">
       {/* 1. Hero Section */}
-      <section className="py-20 md:py-28 text-center bg-secondary/50 relative overflow-hidden">
+      <section className="py-20 text-center bg-secondary/50 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_70%)] animate-pulse-slow" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-50 animate-float" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-float-delayed" />
-        
         <div className="container mx-auto px-4 z-10 relative">
           <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-            Our Marketplace
+            Marketplace
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
             Explore a curated selection of premium beauty and wellness products from top-rated vendors.
           </p>
-
-          <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground mb-12">
-            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Skincare</Badge>
-            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Haircare</Badge>
-            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Cosmetics</Badge>
-            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Body Care</Badge>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
-              <p className="text-3xl font-bold text-primary">1,000+</p>
-              <p className="text-sm text-muted-foreground">Verified Vendors</p>
-            </div>
-            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
-              <p className="text-3xl font-bold text-primary">50,000+</p>
-              <p className="text-sm text-muted-foreground">Products Listed</p>
-            </div>
-            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
-              <p className="text-3xl font-bold text-primary">4.9/5</p>
-              <p className="text-sm text-muted-foreground">Average Rating</p>
-            </div>
-            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
-              <p className="text-3xl font-bold text-primary">Secure</p>
-              <p className="text-sm text-muted-foreground">Shopping Guarantee</p>
-            </div>
-          </div>
         </div>
       </section>
 
+      {/* Categories Marquee */}
+      <PlatformFor />
+
       <div className="container mx-auto px-4 py-8">
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-          <main className="lg:col-span-12">
-            {/* 3. Bento Grid Section */}
-            <section className="mb-16">
-                <h2 className="text-3xl font-bold text-center mb-8">Highlights</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {bentoGridProducts.newArrivals.length > 0 && (
-                    <ProductHighlightCard 
-                      title="New Arrivals"
-                      products={bentoGridProducts.newArrivals}
-                      className="md:col-span-2 md:row-span-2"
-                      isLarge={true}
-                    />
-                  )}
-                  {bentoGridProducts.topRated.length > 0 && (
-                    <ProductHighlightCard 
-                      title="Top Rated"
-                      products={bentoGridProducts.topRated}
-                    />
-                  )}
-                  {bentoGridProducts.bestSellers.length > 0 && (
-                    <ProductHighlightCard 
-                      title="Best Sellers"
-                      products={bentoGridProducts.bestSellers}
-                    />
-                  )}
-                  {bentoGridProducts.bestSellers.length > 0 && (
-                    <ProductHighlightCard 
-                      title="Best Sellers"
-                      products={bentoGridProducts.bestSellers}
-                    />
-                  )}
-                  {bentoGridProducts.bestSellers.length > 0 && (
-                    <ProductHighlightCard 
-                      title="Best Sellers"
-                      products={bentoGridProducts.bestSellers}
-                    />
-                  )}
-                </div>
-            </section>
-
-            {/* 4. Categories Marquee */}
-            <section className="mb-16">
-                <h2 className="text-3xl font-bold text-center mb-8">Browse by Category</h2>
-                <PlatformForMarquee />
-            </section>
-
-            {/* 5. Product Grid */}
-            <section>
-              <h2 className="text-3xl font-bold text-center mb-8">All Products</h2>
-              
-              {/* Search Bar */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search products, brands, or descriptions..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="flex gap-2">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Filters Sidebar */}
+          <aside className={cn("lg:w-1/4 xl:w-1/5 hidden lg:block transition-all duration-300", isSidebarOpen ? "lg:w-1/4 xl:w-1/5" : "lg:w-0 overflow-hidden")}>
+             <div className="sticky top-24 space-y-8">
+               <div className="flex justify-between items-center">
+                 <h2 className="text-lg font-semibold">Filters</h2>
+                 <Button variant="ghost" size="sm" onClick={() => setIsSidebarOpen(false)} className="lg:hidden">
+                   <X className="h-4 w-4" />
+                 </Button>
+               </div>
+               <FilterSidebar 
+                 categories={categories}
+                 brands={brands}
+                 selectedCategory={selectedCategory}
+                 setSelectedCategory={setSelectedCategory}
+                 selectedBrand={selectedBrand}
+                 setSelectedBrand={setSelectedBrand}
+                 priceRange={priceRange}
+                 setPriceRange={setPriceRange}
+                 sortBy={sortBy}
+                 setSortBy={setSortBy}
+                 clearFilters={clearFilters}
+               />
+             </div>
+           </aside>
+          
+          <main className="flex-1">
+            {/* Search and View Controls */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <Button 
+                variant="outline" 
+                className="lg:hidden"
+                onClick={() => setIsMobileFilterOpen(true)}
+              >
+                <SlidersHorizontal className="h-4 w-4 mr-2" />
+                Filters
+              </Button>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search products, brands, or descriptions..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  className="hidden lg:flex"
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                >
+                  <SlidersHorizontal className="h-4 w-4 mr-2" />
+                  {isSidebarOpen ? 'Hide Filters' : 'Show Filters'}
+                </Button>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="featured">Featured</SelectItem>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="price-low">Price: Low to High</SelectItem>
+                    <SelectItem value="price-high">Price: High to Low</SelectItem>
+                    <SelectItem value="rating">Top Rated</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center border rounded-md p-1 bg-muted">
                   <Button
-                    variant={viewMode === 'grid' ? 'default' : 'outline'}
+                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
                     size="icon"
                     onClick={() => setViewMode('grid')}
                   >
                     <Grid className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                     size="icon"
                     onClick={() => setViewMode('list')}
                   >
@@ -552,146 +530,143 @@ export default function AllProductsPage() {
                   </Button>
                 </div>
               </div>
-              
-              {/* Results count */}
-              <div className="mb-6">
-                <p className="text-muted-foreground">
-                  Showing {filteredProducts.length} of {products.length} products
-                  {searchTerm && ` for "${searchTerm}"`}
-                </p>
-              </div>
-              
-              {loading ? (
-                <p>Loading products...</p>
-              ) : error ? (
-                <p className="text-red-500">{error}</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            </div>
+            
+            {/* Products Grid/List */}
+            <div>
+              <h2 className="text-2xl font-bold mb-4">
+                {selectedCategory === 'all' ? 'All Products' : categories.find(c => c.id === selectedCategory)?.name}
+                <span className="text-muted-foreground text-lg ml-2">({filteredProducts.length})</span>
+              </h2>
+
+              {filteredProducts.length === 0 ? (
+                <div className="text-center py-16">
+                  <p>No products found matching your criteria.</p>
+                </div>
+              ) : viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {filteredProducts.map((product) => (
                     <ProductCard key={product.id} {...product} />
                   ))}
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredProducts.map((product) => (
+                    <div key={product.id} className="bg-card rounded-lg p-4 shadow-sm border flex gap-4">
+                       <div className="relative w-24 h-24 flex-shrink-0">
+                         <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded-md" />
+                       </div>
+                       <div className="flex-grow">
+                         <div className="flex justify-between items-start">
+                           <div>
+                             <h3 className="text-lg font-semibold">{product.name}</h3>
+                             <p className="text-xs text-muted-foreground">{product.vendorName}</p>
+                           </div>
+                           <p className="text-lg font-bold">₹{product.price.toFixed(2)}</p>
+                         </div>
+                         <div className="flex items-center gap-1 mt-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`h-4 w-4 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+                          ))}
+                          <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
+                        </div>
+                         <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{product.description}</p>
+                         <div className="mt-2 flex gap-2">
+                           <Button size="sm">Add to Cart</Button>
+                           <Button variant="outline" size="sm">View Details</Button>
+                         </div>
+                       </div>
+                    </div>
+                  ))}
+                </div>
               )}
-            </section>
-
-            {/* 6. Why Shop With Us Section */}
-            <section className="mt-20 py-16 bg-secondary/50 rounded-lg">
-                <h2 className="text-3xl font-bold text-center mb-8">Why Shop With Us?</h2>
-                <div className="grid md:grid-cols-3 gap-8 text-center">
-                    <div>
-                        <h3 className="font-semibold text-lg">Curated Selection</h3>
-                        <p className="text-muted-foreground">Only the best products from trusted vendors.</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg">Secure Shopping</h3>
-                        <p className="text-muted-foreground">Your data and payments are always safe.</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg">Fast Shipping</h3>
-                        <p className="text-muted-foreground">Get your favorite products delivered quickly.</p>
-                    </div>
-                </div>
-            </section>
-            
-            {/* 7. Featured Brand Section */}
-            <section className="mt-20">
-                <h2 className="text-3xl font-bold text-center mb-8">Featured Brand: Aura Cosmetics</h2>
-                <div className="grid md:grid-cols-2 items-center gap-8">
-                    <p className="text-muted-foreground text-lg leading-relaxed">Aura Cosmetics is dedicated to creating high-performance, cruelty-free makeup that empowers you to express your unique beauty. Discover their best-selling products loved by professionals and enthusiasts alike.</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1027/200/200" alt="Aura Product 1" className="w-full h-full object-cover" /></div>
-                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1028/200/200" alt="Aura Product 2" className="w-full h-full object-cover" /></div>
-                    </div>
-                </div>
-            </section>
-            
-            {/* 8. Customer Testimonials */}
-            <section className="mt-20">
-              <h2 className="text-3xl font-bold text-center mb-8">What Our Customers Say</h2>
-              <div className="grid md:grid-cols-3 gap-8">
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Amazing quality and fast delivery. Will definitely shop again!" - Sarah L.</blockquote>
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Found my new favorite serum here. The selection is fantastic." - Mark T.</blockquote>
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"A great marketplace for discovering new beauty brands." - Emily C.</blockquote>
-              </div>
-            </section>
-            
-            {/* 9. Shopping Guide */}
-            <section className="mt-20">
-              <h2 className="text-3xl font-bold text-center mb-8">Your Guide to Better Shopping</h2>
-              <p className="text-center max-w-2xl mx-auto text-muted-foreground">Use our filters to narrow down your search by brand, price, and category. Read reviews from other customers to make informed decisions and find the perfect products for your needs.</p>
-            </section>
-            
-            {/* 10. Call to Action */}
-            <section className="mt-20 text-center py-16 bg-primary text-primary-foreground rounded-lg">
-                <h2 className="text-3xl font-bold">Ready to Elevate Your Beauty Routine?</h2>
-                <p className="mt-2 mb-6">Join our community and get access to exclusive deals and new arrivals.</p>
-                <Button variant="secondary" size="lg">Sign Up Now</Button>
-            </section>
-
+            </div>
           </main>
         </div>
       </div>
       
-      {/* Sticky Filter Pill */}
-      <div 
-        className="group fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-in-out"
-      >
-        <div className="flex items-center gap-4 bg-background/80 backdrop-blur-lg border border-border/50 rounded-full shadow-2xl p-2 transition-all duration-300 group-hover:px-6">
-          {/* Default Visible Pill */}
-          <div className="flex items-center gap-2 px-3 py-1 cursor-pointer">
-            <Filter className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-sm">Filters & Sorting</span>
+      {/* Mobile Filter Modal */}
+      <Dialog open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Filters</h2>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setIsMobileFilterOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <FilterSidebar 
+              categories={categories}
+              brands={brands}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              selectedBrand={selectedBrand}
+              setSelectedBrand={setSelectedBrand}
+              priceRange={priceRange}
+              setPriceRange={setPriceRange}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+              clearFilters={clearFilters}
+            />
+             <Button className="w-full mt-6" onClick={() => setIsMobileFilterOpen(false)}>Apply Filters</Button>
           </div>
-          
-          {/* Expanded Content */}
-          <div className="flex items-center gap-4 w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 transition-all duration-300 overflow-hidden">
-            <Separator orientation="vertical" className="h-6" />
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-40 rounded-full border-0 bg-transparent focus:ring-0">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Separator orientation="vertical" className="h-6" />
-            
-            <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-              <SelectTrigger className="w-40 rounded-full border-0 bg-transparent focus:ring-0">
-                <SelectValue placeholder="Brand" />
-              </SelectTrigger>
-              <SelectContent>
-                {brands.map((brand) => (
-                  <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Separator orientation="vertical" className="h-6" />
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-40 rounded-full border-0 bg-transparent focus:ring-0">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="featured">Featured</SelectItem>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-                <SelectItem value="rating">Top Rated</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }
 
-// Separator Component for local use
-const Separator = ({ orientation = 'horizontal', className = '' }: { orientation?: 'horizontal' | 'vertical', className?: string }) => (
-  <div className={`bg-border ${orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px'} ${className}`} />
-);
+```
+- packages/ui/src/collapsible.tsx:
+```tsx
+
+"use client";
+
+import * as CollapsiblePrimitive from "@radix-ui/react-collapsible";
+
+const Collapsible = CollapsiblePrimitive.Root;
+
+const CollapsibleTrigger = CollapsiblePrimitive.CollapsibleTrigger;
+
+const CollapsibleContent = CollapsiblePrimitive.CollapsibleContent;
+
+export { Collapsible, CollapsibleTrigger, CollapsibleContent };
+```
+- packages/ui/src/slider.tsx:
+```tsx
+
+"use client";
+
+import * as React from "react";
+import * as SliderPrimitive from "@radix-ui/react-slider";
+import { cn } from "./cn";
+
+const Slider = React.forwardRef<
+  React.ElementRef<typeof SliderPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <SliderPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative flex w-full touch-none select-none items-center",
+      className
+    )}
+    {...props}
+  >
+    <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary">
+      <SliderPrimitive.Range className="absolute h-full bg-primary" />
+    </SliderPrimitive.Track>
+    <SliderPrimitive.Thumb className="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
+    {props.defaultValue && props.defaultValue.length > 1 && (
+        <SliderPrimitive.Thumb className="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
+    )}
+  </SliderPrimitive.Root>
+));
+Slider.displayName = SliderPrimitive.Root.displayName;
+
+export { Slider };
+```
