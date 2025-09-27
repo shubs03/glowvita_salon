@@ -9,6 +9,7 @@ import { Toaster } from 'sonner';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
 import { useState } from 'react';
+import { AuthInitializer } from '@/components/AuthInitializer'; // Import the initializer
 
 export default function RootLayout({
   children,
@@ -58,6 +59,7 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
+          <AuthInitializer>
             <div className="flex flex-col min-h-screen bg-background text-foreground">
               {!isAuthPage && (
                 <MarketingHeader 
@@ -72,6 +74,7 @@ export default function RootLayout({
               {isMarketingPage && <Footer />}
             </div>
             <Toaster />
+          </AuthInitializer>
         </StoreProvider>
       </body>
     </html>

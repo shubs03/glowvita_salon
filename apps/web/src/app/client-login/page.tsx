@@ -1,18 +1,20 @@
+
 "use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Input } from '@repo/ui/input';
-import { Eye, EyeOff, Map } from 'lucide-react';
-import Image from 'next/image';
-import customerImage from '../../../public/images/web_login.jpg';
+import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
+import { glowvitaApi } from '@repo/store/api';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch } from '@repo/store/hooks';
 import { setUserAuth } from '@repo/store/slices/userAuthSlice';
-import { glowvitaApi } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
+import Image from 'next/image';
+import customerImage from '../../../public/images/web_login.jpg';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,9 +22,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const dispatch = useAppDispatch();
+  
   const [login, { isLoading }] = glowvitaApi.useUserLoginMutation();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
+  // Redirect if already authenticated
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
       router.push('/profile');
@@ -43,8 +47,8 @@ export default function LoginPage() {
           duration: 2000,
         });
         
-        // The useEffect hook above will now handle the redirect when isAuthenticated becomes true
-        router.push('/profile');
+        // The useEffect will handle the redirect now.
+        router.push('/profile'); 
 
       } else {
         toast.error(response.message || 'Failed to log in.');
