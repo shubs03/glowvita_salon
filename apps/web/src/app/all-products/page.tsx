@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -25,64 +26,6 @@ interface Product {
   description: string;
   category: string;
 }
-
-const PlatformForCard = ({
-  title,
-  imageUrl,
-  hint,
-}: {
-  title: string;
-  imageUrl: string;
-  hint: string;
-}) => (
-  <a
-    className="relative inline-block h-36 w-56 md:h-40 md:w-64 shrink-0 overflow-hidden rounded-xl transition-all duration-500 hover:shadow-xl hover:shadow-primary/30 group border border-border/20 hover:border-primary/60 bg-gradient-to-br from-background via-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/20"
-    href="#"
-  >
-    <img
-      className="size-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105 filter group-hover:brightness-105 group-hover:saturate-110"
-      src={imageUrl}
-      alt={title}
-      width={256}
-      height={160}
-    />
-    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end">
-      <div className="bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 md:p-4">
-        <h3 className="text-sm md:text-base font-semibold leading-tight text-white group-hover:text-primary transition-all duration-300 transform group-hover:translate-y-[-2px]">
-          {title}
-        </h3>
-        <div className="w-8 h-0.5 bg-primary/60 group-hover:bg-primary group-hover:w-12 transition-all duration-300 mt-1"></div>
-      </div>
-    </div>
-  </a>
-);
-
-const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
-  const items = [
-    { title: "Skincare", imageUrl: "https://placehold.co/256x160/f1f5f9/6366f1?text=Skincare+", hint: "premium skincare essentials" },
-    { title: "Cosmetics", imageUrl: "https://placehold.co/256x160/fdf2f8/ec4899?text=Makeup+ Cosmetics", hint: "beauty cosmetics collection" },
-    { title: "Face Care", imageUrl: "https://placehold.co/256x160/f0fdf4/10b981?text=Face+Care+", hint: "facial care products" },
-    { title: "Body Care", imageUrl: "https://placehold.co/256x160/fff7ed/f97316?text=Body+Care+", hint: "luxurious body treatments" },
-    { title: "Fragrance", imageUrl: "https://placehold.co/256x160/faf5ff/8b5cf6?text=Fragrance+", hint: "signature scents collection" },
-    { title: "Nail Care", imageUrl: "https://placehold.co/256x160/fef2f2/ef4444?text=Nails+", hint: "nail care essentials" },
-  ];
-  return (
-    <div className="w-full overflow-hidden rounded-lg ">
-      <div
-        className={`pt-3 pb-2 flex w-fit items-start space-x-4 md:space-x-6 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
-      >
-        {[...items, ...items].map((item, index) => (
-          <PlatformForCard
-            key={`${item.title}-${index}`}
-            title={item.title}
-            imageUrl={item.imageUrl}
-            hint={item.hint}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
 
 // New Component for the Highlight Card with Carousel
 const ProductHighlightCard = ({ 
@@ -209,7 +152,7 @@ export default function AllProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorState, setErrorState] = useState<string | null>(null); // Renamed from error to errorState
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   
@@ -509,13 +452,96 @@ export default function AllProductsPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-          <main className="lg:col-span-12">
-            {/* 3. Bento Grid Section */}
+          {/* Filter Sidebar */}
+          <aside className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-24 space-y-8">
+              {/* Category Filter */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4 flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  CATEGORY
+                </h3>
+                <div className="space-y-2">
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      className={`w-full text-left p-2 rounded-md text-sm transition-colors ${
+                        selectedCategory === category.id
+                          ? 'bg-primary/10 text-primary font-semibold'
+                          : 'hover:bg-muted'
+                      }`}
+                      onClick={() => setSelectedCategory(category.id)}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Brand Filter */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4 flex items-center gap-2">
+                  <Star className="h-4 w-4" />
+                  BRAND
+                </h3>
+                <div className="space-y-2">
+                  {brands.map((brand) => (
+                    <div key={brand.id} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`brand-${brand.id}`}
+                        checked={selectedBrand === brand.id}
+                        onChange={() => setSelectedBrand(brand.id)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label htmlFor={`brand-${brand.id}`} className="ml-3 text-sm">
+                        {brand.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground mb-4">
+                  PRICE RANGE: ₹{priceRange[0]} - ₹{priceRange[1]}
+                </h3>
+                <input
+                  type="range"
+                  min="0"
+                  max="200"
+                  step="1"
+                  value={priceRange[1]}
+                  onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                  <span>₹0</span>
+                  <span>₹200</span>
+                </div>
+              </div>
+              
+              {/* Clear Filters */}
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCategory('all');
+                  setSelectedBrand('all');
+                  setPriceRange([0, 200]);
+                  setSortBy('featured');
+                }}
+              >
+                Clear All Filters
+              </Button>
+            </div>
+          </aside>
+
+          <main className="lg:col-span-9">
+            {/* Bento Grid Section */}
             <section className="mb-16">
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">Highlights</h2>
-                <p className="text-muted-foreground mb-6 text-sm md:text-base">
-                  Discover our most popular and trending products curated just for you.
-                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 auto-rows-fr min-h-[320px] sm:min-h-[400px] lg:min-h-[480px]">
                   {bentoGridProducts.newArrivals.length > 0 && (
                     <ProductHighlightCard 
@@ -539,64 +565,26 @@ export default function AllProductsPage() {
                       className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
                     />
                   )}
-                  {products.filter(p => p.category === 'fragrance').length > 0 && (
-                    <ProductHighlightCard 
-                      title="Fragrances"
-                      products={products.filter(p => p.category === 'fragrance')}
-                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
-                    />
-                  )}
-                  {products.filter(p => p.category === 'cosmetics').length > 0 && (
-                    <ProductHighlightCard 
-                      title="Cosmetics"
-                      products={products.filter(p => p.category === 'cosmetics')}
-                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
-                    />
-                  )}
                 </div>
             </section>
 
-            {/* 4. Categories Marquee */}
-            <section className="mb-12">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                    Browse by Category
-                  </h2>
-                  <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
-                    Discover our curated collection of beauty essentials across different categories
-                  </p>
-                </div>
-                <PlatformForMarquee />
-            </section>
-
-            {/* 5. Product Grid */}
+            {/* Product Grid */}
             <section>
-              <h2 className="text-4xl font-bold mb-2">All Products</h2>
-              <p className="text-muted-foreground mb-6">
-                Browse our complete collection of premium beauty and wellness products.
-              </p>
-              
-              {/* Search Bar */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Search products, brands, or descriptions..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant={viewMode === 'grid' ? 'default' : 'outline'}
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">
+                  Products <span className="text-muted-foreground text-lg">({filteredProducts.length})</span>
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground text-sm">View:</span>
+                  <Button 
+                    variant={viewMode === 'grid' ? 'default' : 'outline'} 
                     size="icon"
                     onClick={() => setViewMode('grid')}
                   >
                     <Grid className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'outline'}
+                  <Button 
+                    variant={viewMode === 'list' ? 'default' : 'outline'} 
                     size="icon"
                     onClick={() => setViewMode('list')}
                   >
@@ -605,101 +593,89 @@ export default function AllProductsPage() {
                 </div>
               </div>
               
-              {/* Results count */}
-              <div className="mb-6">
-                <p className="text-muted-foreground">
-                  Showing {filteredProducts.length} of {products.length} products
-                  {searchTerm && ` for "${searchTerm}"`}
-                </p>
-              </div>
-              
               {loading ? (
                 <p>Loading products...</p>
-              ) : error ? (
-                <p className="text-red-500">{error}</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              ) : errorState ? (
+                <p className="text-red-500">{errorState}</p>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-16 bg-card rounded-2xl shadow-lg border border-border/50">
+                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">No products found</h3>
+                  <p className="text-muted-foreground mb-6">Try adjusting your filters to see more products</p>
+                  <Button 
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedCategory('all');
+                      setSelectedBrand('all');
+                      setPriceRange([0, 200]);
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              ) : viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
                   {filteredProducts.map((product) => (
                     <ProductCard key={product.id} {...product} />
                   ))}
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredProducts.map((product) => (
+                    <div key={product.id} className="bg-card rounded-lg p-4 shadow-sm border flex items-center gap-4">
+                      <div className="w-24 h-24 flex-shrink-0 bg-muted rounded-md overflow-hidden">
+                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-grow">
+                        <h3 className="font-semibold">{product.name}</h3>
+                        <p className="text-sm text-muted-foreground">{product.vendorName}</p>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                          <span className="text-sm">{product.rating}</span>
+                          <span className="text-sm text-muted-foreground">({product.reviewCount})</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold mb-2">₹{product.price.toFixed(2)}</div>
+                        <Button size="sm">Add to Cart</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </section>
-
-            {/* 6. Why Shop With Us Section */}
-            <section className="mt-20 py-16 bg-secondary/50 rounded-lg">
-                <h2 className="text-4xl font-bold text-center mb-2">Why Shop With Us?</h2>
-                <p className="text-muted-foreground text-center mb-8">
-                  Discover the benefits of choosing our marketplace for all your beauty needs.
-                </p>
-                <div className="grid md:grid-cols-3 gap-8 text-center">
-                    <div>
-                        <h3 className="font-semibold text-lg">Curated Selection</h3>
-                        <p className="text-muted-foreground">Only the best products from trusted vendors.</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg">Secure Shopping</h3>
-                        <p className="text-muted-foreground">Your data and payments are always safe.</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg">Fast Shipping</h3>
-                        <p className="text-muted-foreground">Get your favorite products delivered quickly.</p>
-                    </div>
-                </div>
-            </section>
-            
-            {/* 7. Featured Brand Section */}
-            <section className="mt-20">
-                <h2 className="text-4xl font-bold text-center mb-2">Featured Brand: Aura Cosmetics</h2>
-                <p className="text-muted-foreground text-center mb-8">
-                  Meet one of our top-rated brands creating high-performance, cruelty-free makeup.
-                </p>
-                <div className="grid md:grid-cols-2 items-center gap-8">
-                    <p className="text-muted-foreground text-lg leading-relaxed">Aura Cosmetics is dedicated to creating high-performance, cruelty-free makeup that empowers you to express your unique beauty. Discover their best-selling products loved by professionals and enthusiasts alike.</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1027/200/200" alt="Aura Product 1" className="w-full h-full object-cover" /></div>
-                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1028/200/200" alt="Aura Product 2" className="w-full h-full object-cover" /></div>
-                    </div>
-                </div>
-            </section>
-            
-            {/* 8. Customer Testimonials */}
-            <section className="mt-20">
-              <h2 className="text-4xl font-bold text-center mb-2">What Our Customers Say</h2>
-              <p className="text-muted-foreground text-center mb-6">
-                Read genuine reviews from our satisfied customers about their shopping experience.
-              </p>
-              <div className="grid md:grid-cols-3 gap-8">
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Amazing quality and fast delivery. Will definitely shop again!" - Sarah L.</blockquote>
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Found my new favorite serum here. The selection is fantastic." - Mark T.</blockquote>
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"A great marketplace for discovering new beauty brands." - Emily C.</blockquote>
-              </div>
-            </section>
-            
-            {/* 9. Shopping Guide */}
-            <section className="mt-20">
-              <h2 className="text-4xl font-bold text-center mb-2">Your Guide to Better Shopping</h2>
-              <p className="text-muted-foreground text-center mb-6">
-                Learn how to make the most of our marketplace features and find your perfect products.
-              </p>
-              <p className="text-center max-w-2xl mx-auto text-muted-foreground">Use our filters to narrow down your search by brand, price, and category. Read reviews from other customers to make informed decisions and find the perfect products for your needs.</p>
-            </section>
-            
-            {/* 10. Call to Action */}
-            <section className="mt-20 text-center py-16 bg-primary text-primary-foreground rounded-lg">
-                <h2 className="text-4xl font-bold mb-2">Ready to Elevate Your Beauty Routine?</h2>
-                <p className="text-primary-foreground/80 mb-6">Join our community and get access to exclusive deals and new arrivals.</p>
-                <Button variant="secondary" size="lg">Sign Up Now</Button>
-            </section>
-
           </main>
         </div>
       </div>
+      
+      {/* Sticky Filter Button for Mobile */}
+      <div className="lg:hidden sticky bottom-6 z-40 flex justify-center">
+        <Button 
+          onClick={() => setIsFilterModalOpen(true)}
+          className="w-auto py-3 px-5 rounded-full shadow-xl flex items-center gap-2.5 bg-background/80 backdrop-blur-md border border-border/50 text-foreground"
+        >
+          <Filter className="h-4 w-4" />
+          <span className="font-semibold text-sm">Filters & Sorting</span>
+          <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
+            {selectedCategory !== 'all' || selectedBrand !== 'all' || priceRange[0] > 0 || priceRange[1] < 200 || sortBy !== 'featured' ? 'Active' : ''}
+          </span>
+        </Button>
+      </div>
+
+      {/* Filter Modal for Mobile */}
+      <Dialog open={isFilterModalOpen} onOpenChange={setIsFilterModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          {/* ... Filter modal content ... */}
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }
 
-// Separator Component for local use
-const Separator = ({ orientation = 'horizontal', className = '' }: { orientation?: 'horizontal' | 'vertical', className?: string }) => (
-  <div className={`bg-border ${orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px'} ${className}`} />
-);
+// Default description provider
+function getDefaultDescription(productName: string): string {
+    return `Discover the amazing benefits of ${productName}. A must-have for your beauty routine.`;
+}
+```
