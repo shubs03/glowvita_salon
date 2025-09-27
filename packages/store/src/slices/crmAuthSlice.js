@@ -1,10 +1,8 @@
-
 import { createSlice } from '@reduxjs/toolkit';
-import { glowvitaApi } from '../services/api.js';
 import Cookies from 'js-cookie';
 
 const initialState = {
-  isCrmAuthenticated: undefined, // Start as undefined to indicate "not yet checked"
+  isCrmAuthenticated: undefined, // undefined: unchecked, false: not auth, true: auth
   user: null,
   token: null,
   role: null,
@@ -23,10 +21,15 @@ const crmAuthSlice = createSlice({
       state.role = role;
       state.permissions = permissions || [];
 
-      // Persist state to localStorage only on the client-side
       if (typeof window !== 'undefined') {
         try {
-          const stateToPersist = { user, role, permissions: permissions || [] };
+          const stateToPersist = { 
+            isCrmAuthenticated: true, 
+            user, 
+            token, 
+            role, 
+            permissions: permissions || [] 
+          };
           localStorage.setItem('crmAuthState', JSON.stringify(stateToPersist));
         } catch (e) {
           console.error("Could not save CRM auth state to localStorage", e);
@@ -40,25 +43,27 @@ const crmAuthSlice = createSlice({
       state.role = null;
       state.permissions = [];
 
-      // Clear localStorage only on the client-side
       if (typeof window !== 'undefined') {
         localStorage.removeItem('crmAuthState');
         Cookies.remove('crm_access_token', { path: '/' });
       }
     },
-  },
-  extraReducers: (builder) => {
-    // This extraReducer will listen for the `clearCrmAuth` action and trigger the API reset.
-    builder.addMatcher(
-        (action) => action.type === 'crmAuth/clearCrmAuth',
-        (state, action) => {
-          // This is a placeholder. The actual API reset will be done in the root store.
-        }
-      )
+    rehydrateAuth: (state, action) => {
+      if (action.payload) {
+        state.isCrmAuthenticated = action.payload.isCrmAuthenticated;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.role = action.payload.role;
+        state.permissions = action.payload.permissions;
+      } else {
+        // Explicitly set to false when nothing is found in storage
+        state.isCrmAuthenticated = false;
+      }
+    }
   },
 });
 
-export const { setCrmAuth, clearCrmAuth } = crmAuthSlice.actions;
+export const { setCrmAuth, clearCrmAuth, rehydrateAuth } = crmAuthSlice.actions;
 
 export const selectCrmAuth = (state) => ({
   isAuthenticated: state.crmAuth.isCrmAuthenticated,

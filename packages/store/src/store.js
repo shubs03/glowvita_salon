@@ -1,9 +1,8 @@
-
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice.js';
-import userAuthReducer from './slices/Web/userAuthSlice.js';
-import crmAuthReducer from './slices/crmAuthSlice.js';
+import userAuthReducer, { rehydrateAuth as rehydrateUserAuth } from './slices/Web/userAuthSlice.js';
+import crmAuthReducer, { rehydrateAuth as rehydrateCrmAuth } from './slices/crmAuthSlice.js';
 import modalReducer from './slices/modalSlice.js';
 import customerReducer from './slices/customerSlice.js';
 import salonReducer from './slices/salonSlice.js';
@@ -62,61 +61,61 @@ const appReducer = combineReducers({
   
 const rootReducer = (state, action) => {
   if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
-    const { [glowvitaApi.reducerPath]: api } = state;
-    const clearedState = {
-      ...appReducer(undefined, action),
-      [glowvitaApi.reducerPath]: api,
+    // Keep API state, reset everything else
+    const { [glowvitaApi.reducerPath]: api, ...restState } = state;
+    return {
+      ...appReducer(undefined, action), // Reset all slices to initial state
+      [glowvitaApi.reducerPath]: api,  // Preserve the API slice
     };
-    return clearedState;
   }
   return appReducer(state, action);
 };
 
-const loadStateFromStorage = (key, sliceInitialState) => {
-  if (typeof window === 'undefined') {
-    return sliceInitialState;
-  }
-  try {
-    const serializedState = localStorage.getItem(key);
-    if (serializedState === null) {
-      return sliceInitialState;
-    }
-    const parsed = JSON.parse(serializedState);
-    // Ensure isAuthenticated is explicitly false if not present, but only if it's not already undefined in initial state
-    if (parsed.isAuthenticated === undefined && sliceInitialState.isAuthenticated !== undefined) {
-      parsed.isAuthenticated = false;
-    }
-    return { ...sliceInitialState, ...parsed };
-  } catch (err) {
-    console.warn(`Could not load ${key} state from localStorage`, err);
-    return sliceInitialState;
-  }
-};
-
 export const makeStore = () => {
-  const preloadedState = {
-    crmAuth: loadStateFromStorage('crmAuthState', crmAuthReducer(undefined, { type: '' })),
-    userAuth: loadStateFromStorage('userAuthState', userAuthReducer(undefined, { type: '' })),
-    adminAuth: loadStateFromStorage('adminAuthState', adminAuthReducer(undefined, { type: '' })),
-  };
-
-  const store = configureStore({
+  return configureStore({
     reducer: rootReducer,
-    preloadedState,
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
           ignoredActions: [
-            'userAuth/setUserAuth',
-            'crmAuth/setCrmAuth',
-            'adminAuth/setAdminAuth',
+            'userAuth/setUserAuth', 'userAuth/rehydrateAuth',
+            'crmAuth/setCrmAuth', 'crmAuth/rehydrateAuth',
+            'adminAuth/setAdminAuth', 'adminAuth/rehydrateAuth',
           ],
           ignoredPaths: ['userAuth.user', 'crmAuth.user', 'adminAuth.admin'],
         }
       }).concat(glowvitaApi.middleware),
   });
+};
 
-  return store;
+// Function to handle client-side rehydration
+export const rehydrateStore = (store) => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const userAuthState = localStorage.getItem('userAuthState');
+    if (userAuthState) {
+      store.dispatch(rehydrateUserAuth(JSON.parse(userAuthState)));
+    } else {
+      // Explicitly set auth to false if nothing is in storage
+      store.dispatch(rehydrateUserAuth(null));
+    }
+  } catch (e) {
+    console.error("Could not rehydrate user auth state from localStorage", e);
+    store.dispatch(rehydrateUserAuth(null));
+  }
+
+  try {
+    const crmAuthState = localStorage.getItem('crmAuthState');
+    if (crmAuthState) {
+      store.dispatch(rehydrateCrmAuth(JSON.parse(crmAuthState)));
+    } else {
+      store.dispatch(rehydrateCrmAuth(null));
+    }
+  } catch (e) {
+    console.error("Could not rehydrate CRM auth state from localStorage", e);
+    store.dispatch(rehydrateCrmAuth(null));
+  }
 };
 
 export const selectRootState = (state) => state;

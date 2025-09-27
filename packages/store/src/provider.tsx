@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, ReactNode } from 'react';
+import { useRef, ReactNode, useEffect } from 'react';
 import { Provider } from 'react-redux';
-import { makeStore, RootState } from './store';
+import { makeStore, rehydrateStore } from './store';
 
 interface StoreProviderProps {
   children: ReactNode;
@@ -13,6 +13,8 @@ export function StoreProvider({ children }: StoreProviderProps) {
   
   if (!storeRef.current) {
     storeRef.current = makeStore();
+    // Rehydrate the store on the client side
+    rehydrateStore(storeRef.current);
   }
 
   return <Provider store={storeRef.current}>{children}</Provider>;

@@ -1,4 +1,3 @@
-
 import { createSlice } from '@reduxjs/toolkit';
 import Cookies from 'js-cookie';
 
@@ -57,6 +56,7 @@ const userAuthSlice = createSlice({
         state.role = action.payload.role;
         state.permissions = action.payload.permissions;
       } else {
+        // Explicitly set to false when nothing is found in storage
         state.isAuthenticated = false;
       }
     }
