@@ -37,7 +37,7 @@ export function NewProductCard({
   const [isLiked, setIsLiked] = useState(false);
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl shadow-md border border-border/20 bg-card transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+    <div className="group relative overflow-hidden rounded-md shadow-md border border-border/20 bg-card transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
       {/* Upper Half: Image */}
       <div className="aspect-[4/3] relative w-full overflow-hidden">
         <Image
@@ -64,7 +64,7 @@ export function NewProductCard({
       </div>
 
       {/* Lower Half: Details */}
-      <div className="p-4 flex flex-col justify-between h-48">
+      <div className="p-4 flex flex-col justify-between h-18">
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">{vendorName}</p>
           <h3 className="font-semibold text-foreground line-clamp-2 leading-snug mb-2 group-hover:text-primary transition-colors">
@@ -98,4 +98,3 @@ export function NewProductCard({
     </div>
   );
 }
-```

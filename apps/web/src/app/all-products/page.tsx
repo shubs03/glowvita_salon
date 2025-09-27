@@ -2,16 +2,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ChevronRight, ChevronLeft } from 'lucide-react';
-import { NewProductCard } from '@/components/landing/NewProductCard'; // Updated import
+import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { PageContainer } from '@repo/ui/page-container';
 import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent } from '@repo/ui/dialog';
 import { Label } from '@repo/ui/label';
+import { NewProductCard } from '@/components/landing/NewProductCard';
 
 // Product type definition
 interface Product {
@@ -152,7 +152,7 @@ export default function AllProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [errorState, setErrorState] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   
@@ -453,7 +453,52 @@ export default function AllProductsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
           <main className="lg:col-span-12">
-            
+            {/* 3. Bento Grid Section */}
+            <section className="mb-16">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">Highlights</h2>
+                <p className="text-muted-foreground mb-6 text-sm md:text-base">
+                  Discover our most popular and trending products curated just for you.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 auto-rows-fr min-h-[320px] sm:min-h-[400px] lg:min-h-[480px]">
+                  {bentoGridProducts.newArrivals.length > 0 && (
+                    <ProductHighlightCard 
+                      title="New Arrivals"
+                      products={bentoGridProducts.newArrivals}
+                      className="sm:col-span-2 sm:row-span-2 h-full min-h-[280px] sm:min-h-[400px] lg:min-h-[480px]"
+                      isLarge={true}
+                    />
+                  )}
+                  {bentoGridProducts.topRated.length > 0 && (
+                    <ProductHighlightCard 
+                      title="Top Rated"
+                      products={bentoGridProducts.topRated}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
+                    />
+                  )}
+                  {bentoGridProducts.bestSellers.length > 0 && (
+                    <ProductHighlightCard 
+                      title="Best Sellers"
+                      products={bentoGridProducts.bestSellers}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
+                    />
+                  )}
+                  {products.filter(p => p.category === 'fragrance').length > 0 && (
+                    <ProductHighlightCard 
+                      title="Fragrances"
+                      products={products.filter(p => p.category === 'fragrance')}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
+                    />
+                  )}
+                  {products.filter(p => p.category === 'cosmetics').length > 0 && (
+                    <ProductHighlightCard 
+                      title="Cosmetics"
+                      products={products.filter(p => p.category === 'cosmetics')}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
+                    />
+                  )}
+                </div>
+            </section>
+
             {/* 5. Product Grid */}
             <section>
               <h2 className="text-4xl font-bold mb-2">All Products</h2>
@@ -502,18 +547,81 @@ export default function AllProductsPage() {
               
               {loading ? (
                 <p>Loading products...</p>
-              ) : errorState ? (
-                <p className="text-red-500">{errorState}</p>
+              ) : error ? (
+                <p className="text-red-500">{error}</p>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {filteredProducts.map((product, index) => (
-                     <NewProductCard 
-                      key={`${product.id}-${index}`} 
-                      {...product} 
-                    />
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                  {filteredProducts.map((product) => (
+                    <NewProductCard key={product.id} {...product} />
                   ))}
                 </div>
               )}
+            </section>
+
+            {/* 6. Why Shop With Us Section */}
+            <section className="mt-20 py-16 bg-secondary/50 rounded-lg">
+                <h2 className="text-4xl font-bold text-center mb-2">Why Shop With Us?</h2>
+                <p className="text-muted-foreground text-center mb-8">
+                  Discover the benefits of choosing our marketplace for all your beauty needs.
+                </p>
+                <div className="grid md:grid-cols-3 gap-8 text-center">
+                    <div>
+                        <h3 className="font-semibold text-lg">Curated Selection</h3>
+                        <p className="text-muted-foreground">Only the best products from trusted vendors.</p>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-lg">Secure Shopping</h3>
+                        <p className="text-muted-foreground">Your data and payments are always safe.</p>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-lg">Fast Shipping</h3>
+                        <p className="text-muted-foreground">Get your favorite products delivered quickly.</p>
+                    </div>
+                </div>
+            </section>
+            
+            {/* 7. Featured Brand Section */}
+            <section className="mt-20">
+                <h2 className="text-4xl font-bold text-center mb-2">Featured Brand: Aura Cosmetics</h2>
+                <p className="text-muted-foreground text-center mb-8">
+                  Meet one of our top-rated brands creating high-performance, cruelty-free makeup.
+                </p>
+                <div className="grid md:grid-cols-2 items-center gap-8">
+                    <p className="text-muted-foreground text-lg leading-relaxed">Aura Cosmetics is dedicated to creating high-performance, cruelty-free makeup that empowers you to express your unique beauty. Discover their best-selling products loved by professionals and enthusiasts alike.</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1027/200/200" alt="Aura Product 1" className="w-full h-full object-cover" /></div>
+                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1028/200/200" alt="Aura Product 2" className="w-full h-full object-cover" /></div>
+                    </div>
+                </div>
+            </section>
+            
+            {/* 8. Customer Testimonials */}
+            <section className="mt-20">
+              <h2 className="text-4xl font-bold text-center mb-2">What Our Customers Say</h2>
+              <p className="text-muted-foreground text-center mb-6">
+                Read genuine reviews from our satisfied customers about their shopping experience.
+              </p>
+              <div className="grid md:grid-cols-3 gap-8">
+                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Amazing quality and fast delivery. Will definitely shop again!" - Sarah L.</blockquote>
+                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Found my new favorite serum here. The selection is fantastic." - Mark T.</blockquote>
+                <blockquote className="p-6 bg-secondary/50 rounded-lg">"A great marketplace for discovering new beauty brands." - Emily C.</blockquote>
+              </div>
+            </section>
+            
+            {/* 9. Shopping Guide */}
+            <section className="mt-20">
+              <h2 className="text-4xl font-bold text-center mb-2">Your Guide to Better Shopping</h2>
+              <p className="text-muted-foreground text-center mb-6">
+                Learn how to make the most of our marketplace features and find your perfect products.
+              </p>
+              <p className="text-center max-w-2xl mx-auto text-muted-foreground">Use our filters to narrow down your search by brand, price, and category. Read reviews from other customers to make informed decisions and find the perfect products for your needs.</p>
+            </section>
+            
+            {/* 10. Call to Action */}
+            <section className="mt-20 text-center py-16 bg-primary text-primary-foreground rounded-lg">
+                <h2 className="text-4xl font-bold mb-2">Ready to Elevate Your Beauty Routine?</h2>
+                <p className="text-primary-foreground/80 mb-6">Join our community and get access to exclusive deals and new arrivals.</p>
+                <Button variant="secondary" size="lg">Sign Up Now</Button>
             </section>
 
           </main>
@@ -527,5 +635,3 @@ export default function AllProductsPage() {
 const Separator = ({ orientation = 'horizontal', className = '' }: { orientation?: 'horizontal' | 'vertical', className?: string }) => (
   <div className={`bg-border ${orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px'} ${className}`} />
 );
-
-```
