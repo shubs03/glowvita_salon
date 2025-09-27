@@ -22,7 +22,8 @@ const crmAuthSlice = createSlice({
       state.role = role;
       state.permissions = permissions || [];
 
-      if (typeof localStorage !== 'undefined') {
+      // Persist state to localStorage only on the client-side
+      if (typeof window !== 'undefined') {
         try {
           const stateToPersist = { user, role, permissions: permissions || [] };
           localStorage.setItem('crmAuthState', JSON.stringify(stateToPersist));
@@ -38,7 +39,8 @@ const crmAuthSlice = createSlice({
       state.role = null;
       state.permissions = [];
 
-      if (typeof localStorage !== 'undefined') {
+      // Clear localStorage only on the client-side
+      if (typeof window !== 'undefined') {
         localStorage.removeItem('crmAuthState');
       }
     },
