@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ArrowRight, ChevronLeft } from 'lucide-react';
+import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ChevronRight, ChevronLeft } from 'lucide-react';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { PageContainer } from '@repo/ui/page-container';
 import { Badge } from '@repo/ui/badge';
@@ -36,37 +36,40 @@ const PlatformForCard = ({
   hint: string;
 }) => (
   <a
-    className="relative inline-block h-48 w-72 md:h-56 md:w-80 shrink-0 overflow-hidden rounded-lg transition-all duration-500 hover:shadow-2xl hover:shadow-primary/25 group border-2 border-border/30 hover:border-primary/50 hover-lift bg-gradient-to-br from-background to-primary/5"
+    className="relative inline-block h-36 w-56 md:h-40 md:w-64 shrink-0 overflow-hidden rounded-xl transition-all duration-500 hover:shadow-xl hover:shadow-primary/30 group border border-border/20 hover:border-primary/60 bg-gradient-to-br from-background via-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/20"
     href="#"
   >
     <img
-      className="size-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110 filter group-hover:brightness-110"
+      className="size-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105 filter group-hover:brightness-105 group-hover:saturate-110"
       src={imageUrl}
       alt={title}
-      width={320}
-      height={224}
+      width={256}
+      height={160}
     />
-    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end bg-gradient-to-t from-black/80 via-black/20 to-transparent p-4 md:p-6">
-      <h3 className="text-base md:text-lg font-bold leading-tight text-white group-hover:text-primary transition-colors duration-300">
-        {title}
-      </h3>
+    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end">
+      <div className="bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 md:p-4">
+        <h3 className="text-sm md:text-base font-semibold leading-tight text-white group-hover:text-primary transition-all duration-300 transform group-hover:translate-y-[-2px]">
+          {title}
+        </h3>
+        <div className="w-8 h-0.5 bg-primary/60 group-hover:bg-primary group-hover:w-12 transition-all duration-300 mt-1"></div>
+      </div>
     </div>
   </a>
 );
 
 const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
   const items = [
-    { title: "Hair Salons", imageUrl: "https://placehold.co/320x224/6366f1/ffffff?text=Hair", hint: "modern hair salon interior" },
-    { title: "Nail Studios", imageUrl: "https://placehold.co/320x224/ec4899/ffffff?text=Nails", hint: "elegant nail salon" },
-    { title: "Barber Shops", imageUrl: "https://placehold.co/320x224/475569/ffffff?text=Barber", hint: "contemporary barber shop" },
-    { title: "Beauty Spas", imageUrl: "https://placehold.co/320x224/10b981/ffffff?text=Spa", hint: "luxury spa treatment room" },
-    { title: "Wellness Centers", imageUrl: "https://placehold.co/320x224/f97316/ffffff?text=Wellness", hint: "modern wellness center" },
-    { title: "Bridal Boutiques", imageUrl: "https://placehold.co/320x224/8b5cf6/ffffff?text=Bridal", hint: "bridal makeup studio" },
+    { title: "Skincare", imageUrl: "https://placehold.co/256x160/f1f5f9/6366f1?text=Skincare+", hint: "premium skincare essentials" },
+    { title: "Cosmetics", imageUrl: "https://placehold.co/256x160/fdf2f8/ec4899?text=Makeup+ Cosmetics", hint: "beauty cosmetics collection" },
+    { title: "Face Care", imageUrl: "https://placehold.co/256x160/f0fdf4/10b981?text=Face+Care+", hint: "facial care products" },
+    { title: "Body Care", imageUrl: "https://placehold.co/256x160/fff7ed/f97316?text=Body+Care+", hint: "luxurious body treatments" },
+    { title: "Fragrance", imageUrl: "https://placehold.co/256x160/faf5ff/8b5cf6?text=Fragrance+", hint: "signature scents collection" },
+    { title: "Nail Care", imageUrl: "https://placehold.co/256x160/fef2f2/ef4444?text=Nails+", hint: "nail care essentials" },
   ];
   return (
-    <div className="w-full overflow-hidden">
+    <div className="w-full overflow-hidden rounded-lg ">
       <div
-        className={`pt-5 flex w-fit items-start space-x-6 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
+        className={`pt-3 pb-2 flex w-fit items-start space-x-4 md:space-x-6 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
       >
         {[...items, ...items].map((item, index) => (
           <PlatformForCard
@@ -128,14 +131,14 @@ const ProductHighlightCard = ({
 
   return (
     <div 
-      className={`relative rounded-2xl p-6 flex flex-col justify-between overflow-hidden group transition-all duration-300 ease-in-out hover:shadow-2xl hover:shadow-primary/10 border border-border/20 ${className}`}
+      className={`relative rounded-xl md:rounded-2xl flex flex-col justify-between group transition-all duration-300 ease-in-out bg-background/50 backdrop-blur-sm ${className}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-      <div className="relative z-10">
-        <h3 className="text-2xl font-bold mb-4">{title}</h3>
-        <div className="relative aspect-square w-full rounded-xl overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow">
+      <div className="relative z-10 h-full flex flex-col">
+        <h3 className={`font-bold mb-2 md:mb-3 ${isLarge ? 'text-xl sm:text-2xl lg:text-3xl' : 'text-base sm:text-lg md:text-xl'}`}>{title}</h3>
+        <div className="relative flex-1 rounded-lg md:rounded-xl overflow-hidden">
           {products.map((product: Product, index: number) => (
             <img
               key={product.id}
@@ -144,24 +147,56 @@ const ProductHighlightCard = ({
               className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
             />
           ))}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           
-          <div className="absolute bottom-0 left-0 right-0 p-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <h4 className={`font-bold ${isLarge ? 'text-xl' : 'text-lg'}`}>{products[currentIndex].name}</h4>
-            <p className="text-sm">{products[currentIndex].vendorName}</p>
-            <div className="flex justify-between items-center mt-2">
-              <p className={`font-bold ${isLarge ? 'text-lg' : 'text-base'}`}>₹{products[currentIndex].price.toFixed(2)}</p>
-              <Button size="sm" variant="secondary" className="rounded-full">View</Button>
+          <div className={`absolute bottom-0 left-0 right-0 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isLarge ? 'p-3 md:p-4 lg:p-5' : 'p-2 md:p-3'}`}>
+            <h4 className={`font-bold truncate ${isLarge ? 'text-base sm:text-lg md:text-xl' : 'text-sm md:text-base'}`}>
+              {products[currentIndex].name}
+            </h4>
+            <p className={`truncate opacity-90 ${isLarge ? 'text-sm md:text-base' : 'text-xs md:text-sm'}`}>
+              {products[currentIndex].vendorName}
+            </p>
+            <div className="flex justify-between items-center mt-1 md:mt-2">
+              <p className={`font-bold ${isLarge ? 'text-sm md:text-base lg:text-lg' : 'text-xs md:text-sm'}`}>
+                ₹{products[currentIndex].price.toFixed(2)}
+              </p>
+              {isLarge && (
+                <Button size="sm" variant="secondary" className="rounded-full text-xs md:text-sm px-3 py-1 md:px-4 md:py-2">
+                  View
+                </Button>
+              )}
             </div>
           </div>
           
-          <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-8 w-8 hover:bg-white/30 backdrop-blur-sm" onClick={prevProduct}>
-              <ChevronLeft className="h-4 w-4" />
+          <div className={`absolute flex gap-1 md:gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isLarge ? 'top-3 right-3 md:top-4 md:right-4' : 'top-2 right-2 md:top-3 md:right-3'}`}>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className={`bg-white/20 text-white rounded-full hover:bg-white/30 backdrop-blur-sm transition-all duration-200 ${isLarge ? 'h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9' : 'h-6 w-6 md:h-7 md:w-7'}`} 
+              onClick={prevProduct}
+            >
+              <ChevronLeft className={`${isLarge ? 'h-3 w-3 md:h-4 md:w-4' : 'h-3 w-3'}`} />
             </Button>
-            <Button size="icon" variant="ghost" className="bg-white/20 text-white rounded-full h-8 w-8 hover:bg-white/30 backdrop-blur-sm" onClick={nextProduct}>
-              <ArrowRight className="h-4 w-4" />
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className={`bg-white/20 text-white rounded-full hover:bg-white/30 backdrop-blur-sm transition-all duration-200 ${isLarge ? 'h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9' : 'h-6 w-6 md:h-7 md:w-7'}`} 
+              onClick={nextProduct}
+            >
+              <ChevronRight className={`${isLarge ? 'h-3 w-3 md:h-4 md:w-4' : 'h-3 w-3'}`} />
             </Button>
+          </div>
+
+          {/* Product indicators for mobile */}
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1 md:hidden">
+            {products.map((_, index) => (
+              <div
+                key={index}
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                  index === currentIndex ? 'bg-white' : 'bg-white/40'
+                }`}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -477,13 +512,16 @@ export default function AllProductsPage() {
           <main className="lg:col-span-12">
             {/* 3. Bento Grid Section */}
             <section className="mb-16">
-                <h2 className="text-3xl font-bold text-center mb-8">Highlights</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">Highlights</h2>
+                <p className="text-muted-foreground mb-6 text-sm md:text-base">
+                  Discover our most popular and trending products curated just for you.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 auto-rows-fr min-h-[320px] sm:min-h-[400px] lg:min-h-[480px]">
                   {bentoGridProducts.newArrivals.length > 0 && (
                     <ProductHighlightCard 
                       title="New Arrivals"
                       products={bentoGridProducts.newArrivals}
-                      className="md:col-span-2 md:row-span-2"
+                      className="sm:col-span-2 sm:row-span-2 h-full min-h-[280px] sm:min-h-[400px] lg:min-h-[480px]"
                       isLarge={true}
                     />
                   )}
@@ -491,38 +529,52 @@ export default function AllProductsPage() {
                     <ProductHighlightCard 
                       title="Top Rated"
                       products={bentoGridProducts.topRated}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
                     />
                   )}
                   {bentoGridProducts.bestSellers.length > 0 && (
                     <ProductHighlightCard 
                       title="Best Sellers"
                       products={bentoGridProducts.bestSellers}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
                     />
                   )}
-                  {bentoGridProducts.bestSellers.length > 0 && (
+                  {products.filter(p => p.category === 'fragrance').length > 0 && (
                     <ProductHighlightCard 
-                      title="Best Sellers"
-                      products={bentoGridProducts.bestSellers}
+                      title="Fragrances"
+                      products={products.filter(p => p.category === 'fragrance')}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
                     />
                   )}
-                  {bentoGridProducts.bestSellers.length > 0 && (
+                  {products.filter(p => p.category === 'cosmetics').length > 0 && (
                     <ProductHighlightCard 
-                      title="Best Sellers"
-                      products={bentoGridProducts.bestSellers}
+                      title="Cosmetics"
+                      products={products.filter(p => p.category === 'cosmetics')}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
                     />
                   )}
                 </div>
             </section>
 
             {/* 4. Categories Marquee */}
-            <section className="mb-16">
-                <h2 className="text-3xl font-bold text-center mb-8">Browse by Category</h2>
+            <section className="mb-12">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                    Browse by Category
+                  </h2>
+                  <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
+                    Discover our curated collection of beauty essentials across different categories
+                  </p>
+                </div>
                 <PlatformForMarquee />
             </section>
 
             {/* 5. Product Grid */}
             <section>
-              <h2 className="text-3xl font-bold text-center mb-8">All Products</h2>
+              <h2 className="text-4xl font-bold mb-2">All Products</h2>
+              <p className="text-muted-foreground mb-6">
+                Browse our complete collection of premium beauty and wellness products.
+              </p>
               
               {/* Search Bar */}
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -576,7 +628,10 @@ export default function AllProductsPage() {
 
             {/* 6. Why Shop With Us Section */}
             <section className="mt-20 py-16 bg-secondary/50 rounded-lg">
-                <h2 className="text-3xl font-bold text-center mb-8">Why Shop With Us?</h2>
+                <h2 className="text-4xl font-bold text-center mb-2">Why Shop With Us?</h2>
+                <p className="text-muted-foreground text-center mb-8">
+                  Discover the benefits of choosing our marketplace for all your beauty needs.
+                </p>
                 <div className="grid md:grid-cols-3 gap-8 text-center">
                     <div>
                         <h3 className="font-semibold text-lg">Curated Selection</h3>
@@ -595,7 +650,10 @@ export default function AllProductsPage() {
             
             {/* 7. Featured Brand Section */}
             <section className="mt-20">
-                <h2 className="text-3xl font-bold text-center mb-8">Featured Brand: Aura Cosmetics</h2>
+                <h2 className="text-4xl font-bold text-center mb-2">Featured Brand: Aura Cosmetics</h2>
+                <p className="text-muted-foreground text-center mb-8">
+                  Meet one of our top-rated brands creating high-performance, cruelty-free makeup.
+                </p>
                 <div className="grid md:grid-cols-2 items-center gap-8">
                     <p className="text-muted-foreground text-lg leading-relaxed">Aura Cosmetics is dedicated to creating high-performance, cruelty-free makeup that empowers you to express your unique beauty. Discover their best-selling products loved by professionals and enthusiasts alike.</p>
                     <div className="grid grid-cols-2 gap-4">
@@ -607,7 +665,10 @@ export default function AllProductsPage() {
             
             {/* 8. Customer Testimonials */}
             <section className="mt-20">
-              <h2 className="text-3xl font-bold text-center mb-8">What Our Customers Say</h2>
+              <h2 className="text-4xl font-bold text-center mb-2">What Our Customers Say</h2>
+              <p className="text-muted-foreground text-center mb-6">
+                Read genuine reviews from our satisfied customers about their shopping experience.
+              </p>
               <div className="grid md:grid-cols-3 gap-8">
                 <blockquote className="p-6 bg-secondary/50 rounded-lg">"Amazing quality and fast delivery. Will definitely shop again!" - Sarah L.</blockquote>
                 <blockquote className="p-6 bg-secondary/50 rounded-lg">"Found my new favorite serum here. The selection is fantastic." - Mark T.</blockquote>
@@ -617,74 +678,21 @@ export default function AllProductsPage() {
             
             {/* 9. Shopping Guide */}
             <section className="mt-20">
-              <h2 className="text-3xl font-bold text-center mb-8">Your Guide to Better Shopping</h2>
+              <h2 className="text-4xl font-bold text-center mb-2">Your Guide to Better Shopping</h2>
+              <p className="text-muted-foreground text-center mb-6">
+                Learn how to make the most of our marketplace features and find your perfect products.
+              </p>
               <p className="text-center max-w-2xl mx-auto text-muted-foreground">Use our filters to narrow down your search by brand, price, and category. Read reviews from other customers to make informed decisions and find the perfect products for your needs.</p>
             </section>
             
             {/* 10. Call to Action */}
             <section className="mt-20 text-center py-16 bg-primary text-primary-foreground rounded-lg">
-                <h2 className="text-3xl font-bold">Ready to Elevate Your Beauty Routine?</h2>
-                <p className="mt-2 mb-6">Join our community and get access to exclusive deals and new arrivals.</p>
+                <h2 className="text-4xl font-bold mb-2">Ready to Elevate Your Beauty Routine?</h2>
+                <p className="text-primary-foreground/80 mb-6">Join our community and get access to exclusive deals and new arrivals.</p>
                 <Button variant="secondary" size="lg">Sign Up Now</Button>
             </section>
 
           </main>
-        </div>
-      </div>
-      
-      {/* Sticky Filter Pill */}
-      <div 
-        className="group fixed bottom-6 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-in-out"
-      >
-        <div className="flex items-center gap-4 bg-background/80 backdrop-blur-lg border border-border/50 rounded-full shadow-2xl p-2 transition-all duration-300 group-hover:px-6">
-          {/* Default Visible Pill */}
-          <div className="flex items-center gap-2 px-3 py-1 cursor-pointer">
-            <Filter className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-sm">Filters & Sorting</span>
-          </div>
-          
-          {/* Expanded Content */}
-          <div className="flex items-center gap-4 w-0 opacity-0 group-hover:w-auto group-hover:opacity-100 transition-all duration-300 overflow-hidden">
-            <Separator orientation="vertical" className="h-6" />
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-40 rounded-full border-0 bg-transparent focus:ring-0">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Separator orientation="vertical" className="h-6" />
-            
-            <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-              <SelectTrigger className="w-40 rounded-full border-0 bg-transparent focus:ring-0">
-                <SelectValue placeholder="Brand" />
-              </SelectTrigger>
-              <SelectContent>
-                {brands.map((brand) => (
-                  <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Separator orientation="vertical" className="h-6" />
-
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-40 rounded-full border-0 bg-transparent focus:ring-0">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="featured">Featured</SelectItem>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-                <SelectItem value="rating">Top Rated</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
     </PageContainer>
