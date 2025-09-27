@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useRef } from 'react';
@@ -10,5 +11,9 @@ export default function StoreProvider({ children }) {
     storeRef.current = makeStore();
   }
 
-  return <Provider store={storeRef.current}>{children}</Provider>;
+  return (
+    <Provider store={storeRef.current}>
+      {children}
+    </Provider>
+  );
 }

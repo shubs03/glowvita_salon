@@ -1,5 +1,6 @@
+
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { glowvitaApi } from '../services/api';
+import { glowvitaApi } from '../services/api.js';
 
 // Initial state
 const initialState = {

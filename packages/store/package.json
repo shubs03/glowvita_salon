@@ -4,19 +4,18 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    "./store": "./src/store.ts",
+    "./store": "./src/store.js",
     "./hooks": "./src/hooks.ts",
     "./provider": "./src/provider.tsx",
     "./provider.jsx": "./src/provider.jsx",
     "./api": "./src/services/api.js",
     "./services/api": "./src/services/api.js",
-    "./apis/example": "./src/apis/example-api.js",
     "./slices/adminAuthSlice": "./src/slices/Admin/adminAuthSlice.js",
     "./slices/crmAuthSlice": "./src/slices/crmAuthSlice.js",
     "./slices/serviceSlice": "./src/slices/CRM/serviceSlice.js",
     "./slices/staffSlice": "./src/slices/CRM/staffSlice.js",
     "./slices/clientSlice": "./src/slices/CRM/clientSlice.js",
-    "./slices/modal": "./src/slices/modalSlice.js",
+    "./slices/modalSlice": "./src/slices/modalSlice.js",
     "./slices/customerSlice": "./src/slices/customerSlice.js",
     "./slices/salonSlice": "./src/slices/salonSlice.js",
     "./slices/supplierSlice": "./src/slices/supplierSlice.js",
@@ -25,7 +24,6 @@
     "./slices/geoFencingSlice": "./src/slices/geoFencingSlice.js",
     "./slices/marketingSlice": "./src/slices/marketingSlice.js",
     "./slices/blockTimeSlice": "./src/slices/blockTimeSlice.js",
-    "./slices/marketingslice": "./src/slices/marketingslice.js",
     "./slices/faqSlice": "./src/slices/faqSlice.js",
     "./slices/appointmentSlice": "./src/slices/appointmentSlice.js",
     "./slices/shippingSlice": "./src/slices/shippingSlice.js",
@@ -37,7 +35,6 @@
     "./slices/orderSlice": "./src/slices/orderSlice.js",
     "./slices/cartSlice": "./src/slices/cartSlice.js",
     "./slices/userAuthSlice": "./src/slices/Web/userAuthSlice.js"
-
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
