@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, Suspense, useEffect } from "react";
@@ -63,7 +64,7 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, isAuthenticated, router]);
 
-  if (isLoading) {
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
         <div className="flex flex-col items-center">
@@ -72,11 +73,6 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    // Return null while the redirect is happening to prevent flashing content
-    return null;
   }
   
   return (

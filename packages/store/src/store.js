@@ -1,3 +1,4 @@
+
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice.js';
@@ -61,53 +62,47 @@ const appReducer = combineReducers({
   
 const rootReducer = (state, action) => {
   if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
-    // Keep the API state, reset everything else
-    const { [glowvitaApi.reducerPath]: api, ...rest } = state;
-    // This will pass `undefined` as the state to the appReducer, which will then return the initial state for each slice.
-    return appReducer(undefined, action);
+    const { [glowvitaApi.reducerPath]: api } = state;
+    const clearedState = {
+      ...appReducer(undefined, action),
+      [glowvitaApi.reducerPath]: api,
+    };
+    return clearedState;
   }
   return appReducer(state, action);
 };
 
-// Function to safely load state from localStorage, only on the client-side.
-const loadStateFromStorage = (key) => {
+const loadStateFromStorage = (key, sliceInitialState) => {
   if (typeof window === 'undefined') {
-    return undefined;
+    return sliceInitialState;
   }
   try {
     const serializedState = localStorage.getItem(key);
     if (serializedState === null) {
-      return undefined;
+      return sliceInitialState;
     }
-    const parsedState = JSON.parse(serializedState);
-    // Ensure the loaded state marks user as authenticated if a token exists
-    if(parsedState.token) {
-        parsedState.isAuthenticated = true;
+    const parsed = JSON.parse(serializedState);
+    // Ensure isAuthenticated is explicitly false if not present, but only if it's not already undefined in initial state
+    if (parsed.isAuthenticated === undefined && sliceInitialState.isAuthenticated !== undefined) {
+      parsed.isAuthenticated = false;
     }
-    return parsedState;
+    return { ...sliceInitialState, ...parsed };
   } catch (err) {
     console.warn(`Could not load ${key} state from localStorage`, err);
-    return undefined;
+    return sliceInitialState;
   }
 };
 
 export const makeStore = () => {
   const preloadedState = {
-    crmAuth: loadStateFromStorage('crmAuthState'),
-    userAuth: loadStateFromStorage('userAuthState'),
-    adminAuth: loadStateFromStorage('adminAuthState'),
+    crmAuth: loadStateFromStorage('crmAuthState', crmAuthReducer(undefined, { type: '' })),
+    userAuth: loadStateFromStorage('userAuthState', userAuthReducer(undefined, { type: '' })),
+    adminAuth: loadStateFromStorage('adminAuthState', adminAuthReducer(undefined, { type: '' })),
   };
-
-  // Remove undefined keys so Redux doesn't complain about slices receiving `undefined`.
-  Object.keys(preloadedState).forEach(key => {
-    if (preloadedState[key] === undefined) {
-      delete preloadedState[key];
-    }
-  });
 
   const store = configureStore({
     reducer: rootReducer,
-    preloadedState: Object.keys(preloadedState).length > 0 ? preloadedState : undefined,
+    preloadedState,
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
@@ -115,9 +110,6 @@ export const makeStore = () => {
             'userAuth/setUserAuth',
             'crmAuth/setCrmAuth',
             'adminAuth/setAdminAuth',
-            'userAuth/rehydrateAuth',
-            'crmAuth/rehydrateAuth',
-            'adminAuth/rehydrateAuth',
           ],
           ignoredPaths: ['userAuth.user', 'crmAuth.user', 'adminAuth.admin'],
         }

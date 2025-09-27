@@ -1,3 +1,4 @@
+
 "use client";
 
 import { selectRootState } from '../../../../packages/store/src/store';
@@ -8,7 +9,7 @@ import { useState, useEffect } from 'react';
 export const useAuth = () => {
   const { user, isAuthenticated, token, role, permissions } = useAppSelector((state) => selectRootState(state).userAuth);
   
-  // The hook is loading if the store hasn't been checked for persisted state yet.
+  // The hook is loading if the store hasn't been rehydrated from localStorage yet.
   // `isAuthenticated` being `undefined` is our signal for this initial loading state.
   const isLoading = isAuthenticated === undefined;
 
