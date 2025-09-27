@@ -9,7 +9,6 @@ import { Toaster } from 'sonner';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
 import { useState, useEffect } from 'react';
-import { AuthInitializer } from '@/components/AuthInitializer';
 
 export default function RootLayout({
   children,
@@ -18,14 +17,6 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  // New state to manage layout visibility based on auth check
-  const [isAuthChecked, setIsAuthChecked] = useState(false);
-
-  useEffect(() => {
-    // This effect runs on the client and confirms that the auth check is complete.
-    setIsAuthChecked(true);
-  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -73,7 +64,6 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          <AuthInitializer />
           <div className="flex flex-col min-h-screen bg-background text-foreground">
             {showHeader && (
               <MarketingHeader 
