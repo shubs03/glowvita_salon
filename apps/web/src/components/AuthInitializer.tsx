@@ -2,7 +2,7 @@
 "use client";
 
 import { useAppDispatch } from '@repo/store/hooks';
-import { clearUserAuth, setUserAuth, rehydrateAuth } from "@repo/store/slices/Web/userAuthSlice";
+import { clearUserAuth, setUserAuth, rehydrateAuth } from "@repo/store/slices/userAuthSlice";
 import { useEffect, type ReactNode } from 'react';
 import Cookies from 'js-cookie';
 
