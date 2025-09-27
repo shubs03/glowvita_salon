@@ -10,7 +10,7 @@ import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
 import { glowvitaApi } from '@repo/store/api';
 import { Eye, EyeOff } from 'lucide-react';
-import { useAppDispatch } from '@repo/store/hooks';
+import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { setUserAuth } from '@repo/store/slices/userAuthSlice';
 import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
@@ -45,11 +45,8 @@ export default function LoginPage() {
         toast.success('Login successful!', {
           description: 'Redirecting to your profile...',
           duration: 2000,
+          onAutoClose: () => router.push('/profile')
         });
-        
-        // The useEffect will handle the redirect now.
-        router.push('/profile'); 
-
       } else {
         toast.error(response.message || 'Failed to log in.');
       }
@@ -169,7 +166,7 @@ export default function LoginPage() {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-2 bg-gray-50 text-gray-500">OR</span>
+                  <span className="px-2 bg-gray-50 text-gray-500">OR CONTINUE WITH</span>
                 </div>
               </div>
 

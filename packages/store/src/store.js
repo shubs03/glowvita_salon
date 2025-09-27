@@ -18,15 +18,15 @@ import faqReducer from './slices/faqSlice.js';
 import shippingReducer from './slices/shippingSlice.js';
 import productReducer from './slices/productSlice.js';
 import serviceReducer from "./slices/CRM/serviceSlice.js";
-import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
-import clientReducer from "./slices/CRM/clientSlice.js"; // Import client slice
+import staffReducer from "./slices/CRM/staffSlice.js";
+import clientReducer from "./slices/CRM/clientSlice.js";
 import appointmentReducer from './slices/appointmentSlice.js';
 import blockTimeReducer from './slices/blockTimeSlice.js';
 import vendorprofileReducer from './slices/vendorprofileSlice.js';
 import workingHoursReducer from './slices/workingHoursSlice.js';
 import orderReducer from './slices/orderSlice.js';
 import calendarAppointmentReducer from './slices/calendarAppointmentSlice.js';
-import cartReducer from './slices/cartSlice.js'; // Import the new cart reducer
+import cartReducer from './slices/cartSlice.js';
 import smsTemplateSlice from './slices/smsTemplateSlice.js';
 
 const appReducer = combineReducers({
@@ -62,16 +62,13 @@ const appReducer = combineReducers({
   
 const rootReducer = (state, action) => {
   if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
-    // This will reset all state to initial state by passing undefined.
-    // It also triggers the API state reset.
     state = undefined; 
   }
   return appReducer(state, action);
 };
 
-// Function to safely load state from localStorage
-const loadStateFromStorage = (key) => {
-  // We only want to load from localStorage on the client-side
+// Safely load state from localStorage only on the client-side
+const loadState = (key) => {
   if (typeof window === 'undefined') {
     return undefined;
   }
@@ -80,25 +77,28 @@ const loadStateFromStorage = (key) => {
     if (serializedState === null) {
       return undefined;
     }
-    return JSON.parse(serializedState);
+    const parsed = JSON.parse(serializedState);
+    // Basic validation to ensure we have a valid auth state
+    if (parsed && typeof parsed.isAuthenticated === 'boolean') {
+      return parsed;
+    }
+    return undefined;
   } catch (err) {
-    console.error(`Could not load ${key} from localStorage`, err);
+    console.warn(`Could not load ${key} state from localStorage`, err);
     return undefined;
   }
 };
 
-
 export const makeStore = () => {
   const preloadedState = {
-    crmAuth: loadStateFromStorage('crmAuthState'),
-    userAuth: loadStateFromStorage('userAuthState'),
-    // Add any other slices you want to rehydrate from localStorage
+    crmAuth: loadState('crmAuthState'),
+    userAuth: loadState('userAuthState'),
+    adminAuth: loadState('adminAuthState'),
   };
 
   return configureStore({
     reducer: rootReducer,
-    // Conditionally add preloadedState only if it's not empty
-    preloadedState: Object.keys(preloadedState).length > 0 ? preloadedState : undefined,
+    preloadedState: Object.values(preloadedState).some(Boolean) ? preloadedState : undefined,
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
@@ -121,4 +121,3 @@ export const makeStore = () => {
 };
 
 export const selectRootState = (state) => state;
-

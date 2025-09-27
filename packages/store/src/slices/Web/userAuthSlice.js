@@ -3,7 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import Cookies from 'js-cookie';
 
 const initialState = {
-  isAuthenticated: false,
+  isAuthenticated: undefined, // undefined means "not yet checked"
   user: null,
   token: null,
   role: null,
@@ -16,16 +16,21 @@ const userAuthSlice = createSlice({
   reducers: {
     setUserAuth: (state, action) => {
       const { user, token, role, permissions } = action.payload;
-      state.isAuthenticated = !!(user && token && role);
+      state.isAuthenticated = !!(user && token);
       state.user = user;
       state.token = token;
-      state.role = role;
+      state.role = role || 'USER';
       state.permissions = permissions || [];
 
-      // Persist state to localStorage only on the client-side
       if (typeof window !== 'undefined') {
         try {
-          const stateToPersist = { user, token, role, permissions: permissions || [], isAuthenticated: true };
+          const stateToPersist = { 
+            isAuthenticated: true, 
+            user, 
+            token, 
+            role: role || 'USER', 
+            permissions: permissions || [] 
+          };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
         } catch (e) {
           console.error("Could not save auth state to localStorage", e);
@@ -39,16 +44,20 @@ const userAuthSlice = createSlice({
       state.role = null;
       state.permissions = [];
 
-      // Clear localStorage and cookies only on the client-side
       if (typeof window !== 'undefined') {
         localStorage.removeItem('userAuthState');
         Cookies.remove('token');
       }
     },
+    setAuthChecked: (state, action) => {
+        if(state.isAuthenticated === undefined) {
+            state.isAuthenticated = action.payload;
+        }
+    }
   },
 });
 
-export const { setUserAuth, clearUserAuth } = userAuthSlice.actions;
+export const { setUserAuth, clearUserAuth, setAuthChecked } = userAuthSlice.actions;
 
 export const selectUserAuth = (state) => ({
   isAuthenticated: state.userAuth.isAuthenticated,
