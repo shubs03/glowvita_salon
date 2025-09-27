@@ -7,7 +7,6 @@ import { Header } from '@/components/Header';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { cn } from '@repo/ui/cn';
-import { CrmAuthInitializer } from '@/components/CrmAuthInitializer';
 
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -41,27 +40,25 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
     setSidebarOpen(!isSidebarOpen);
   };
 
-  // The CrmAuthInitializer is now part of the layout, ensuring it runs only for CRM pages
   if (isLoading) {
     return (
-      <CrmAuthInitializer>
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
           <div className="relative">
             <div className="w-16 h-16 border-4 border-primary/10 rounded-full animate-spin border-t-primary"></div>
             <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin-slow border-t-primary/50"></div>
           </div>
         </div>
-      </CrmAuthInitializer>
     )
   }
 
   // Only render the full layout if authenticated
   if (!isCrmAuthenticated) {
-    return null; // or you can return a more specific unauthorized component
+    // This prevents a brief flash of the layout before the redirect happens.
+    // The redirect is handled by the useEffect above.
+    return null; 
   }
      
   return (
-    <CrmAuthInitializer>
       <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar 
           isOpen={isSidebarOpen} 
@@ -82,6 +79,5 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
           </main>
         </div>
       </div>
-    </CrmAuthInitializer>
   );
 }

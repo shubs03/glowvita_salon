@@ -27,6 +27,7 @@ import workingHoursReducer from './slices/workingHoursSlice';
 import orderReducer from './slices/orderSlice';
 import calendarAppointmentReducer from './slices/calendarAppointmentSlice';
 import cartReducer from './slices/cartSlice'; // Import the new cart reducer
+import smsTemplateSlice from './slices/smsTemplateSlice.js';
 
 const appReducer = combineReducers({
   [glowvitaApi.reducerPath]: glowvitaApi.reducer,
@@ -56,20 +57,37 @@ const appReducer = combineReducers({
   order: orderReducer,
   calendarAppointments: calendarAppointmentReducer,
   cart: cartReducer,
+  smsTemplates: smsTemplateSlice,
 });
   
 const rootReducer = (state, action) => {
   if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
-    // This will reset the entire state of the app
-    // Note: It's important that slices handle their own reset for logout if you want more granular control
-    // For a full logout, this is often the desired behavior.
     return appReducer(undefined, action);
   }
   return appReducer(state, action);
 };
 
+// Function to safely load CRM auth state from localStorage
+const loadCrmAuthState = () => {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+  try {
+    const serializedState = localStorage.getItem('crmAuthState');
+    if (serializedState === null) {
+      return { isCrmAuthenticated: false, user: null, token: null, role: null, permissions: [] };
+    }
+    const parsed = JSON.parse(serializedState);
+    // On initial load, we assume the token from the cookie is valid.
+    // Middleware will handle redirects if it's not.
+    return { ...parsed, isCrmAuthenticated: !!parsed.user, token: "pending" };
+  } catch (err) {
+    console.error("Could not load CRM auth state from localStorage", err);
+    return { isCrmAuthenticated: false, user: null, token: null, role: null, permissions: [] };
+  }
+};
 
-// Function to safely load state from localStorage, only on the client side
+// Function to safely load Web auth state from localStorage
 const loadUserAuthState = () => {
   if (typeof window === 'undefined') {
     return undefined;
@@ -77,20 +95,21 @@ const loadUserAuthState = () => {
   try {
     const serializedState = localStorage.getItem('userAuthState');
     if (serializedState === null) {
-      return undefined;
+      return { isAuthenticated: false, user: null, token: null, role: null, permissions: [] };
     }
-    return JSON.parse(serializedState);
+    const parsed = JSON.parse(serializedState);
+    return { ...parsed, isAuthenticated: !!parsed.user, token: "pending" };
   } catch (err) {
     console.error("Could not load user auth state from localStorage", err);
-    return undefined;
+    return { isAuthenticated: false, user: null, token: null, role: null, permissions: [] };
   }
 };
-
 
 export const makeStore = () => {
   const preloadedState = {
     userAuth: loadUserAuthState(),
-    // You can add preloading for crmAuth and adminAuth here as well if needed
+    crmAuth: loadCrmAuthState(),
+    // You can add preloading for adminAuth here as well if needed
   };
 
   return configureStore({
