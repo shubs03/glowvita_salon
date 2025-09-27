@@ -1,37 +1,75 @@
-
-"use client";
-
-import { useAppDispatch } from '@repo/store/hooks';
-import { clearUserAuth, setUserAuth, rehydrateAuth } from "@repo/store/slices/userAuthSlice";
-import { useEffect, type ReactNode } from 'react';
+import { createSlice } from '@reduxjs/toolkit';
 import Cookies from 'js-cookie';
 
-// This component handles rehydrating the Redux state from localStorage
-export function AuthInitializer({ children }: { children: ReactNode }) {
-  const dispatch = useAppDispatch();
+const initialState = {
+  isAuthenticated: undefined, // undefined: unchecked, false: not auth, true: auth
+  user: null,
+  token: null,
+  role: null,
+  permissions: [],
+};
 
-  useEffect(() => {
-    try {
-      const storedState = localStorage.getItem('userAuthState');
-      const token = Cookies.get('token');
+const userAuthSlice = createSlice({
+  name: 'userAuth',
+  initialState,
+  reducers: {
+    setUserAuth: (state, action) => {
+      const { user, token, role, permissions } = action.payload;
+      state.isAuthenticated = true;
+      state.user = user;
+      state.token = token;
+      state.role = role || 'USER';
+      state.permissions = permissions || [];
 
-      if (storedState && token) {
-        const parsedState = JSON.parse(storedState);
-        if (parsedState && parsedState.user && parsedState.token) {
-            // Rehydrate the state from localStorage
-            dispatch(rehydrateAuth(parsedState));
-        } else {
-          dispatch(clearUserAuth());
+      if (typeof window !== 'undefined') {
+        try {
+          const stateToPersist = { 
+            isAuthenticated: true, 
+            user, 
+            token, 
+            role: role || 'USER', 
+            permissions: permissions || [] 
+          };
+          localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
+        } catch (e) {
+          console.error("Could not save user auth state to localStorage", e);
         }
-      } else {
-        // If there's no token or no stored state, ensure we are logged out.
-        dispatch(clearUserAuth());
       }
-    } catch (error) {
-      console.error("Failed to process auth state from localStorage. Clearing session.", error);
-      dispatch(clearUserAuth());
-    }
-  }, [dispatch]);
+    },
+    clearUserAuth: (state) => {
+      state.isAuthenticated = false;
+      state.user = null;
+      state.token = null;
+      state.role = null;
+      state.permissions = [];
 
-  return <>{children}</>;
-}
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('userAuthState');
+        Cookies.remove('token', { path: '/' });
+      }
+    },
+    rehydrateAuth: (state, action) => {
+      if (action.payload) {
+        state.isAuthenticated = action.payload.isAuthenticated;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.role = action.payload.role;
+        state.permissions = action.payload.permissions;
+      } else {
+        state.isAuthenticated = false;
+      }
+    }
+  },
+});
+
+export const { setUserAuth, clearUserAuth, rehydrateAuth } = userAuthSlice.actions;
+
+export const selectUserAuth = (state) => ({
+  isAuthenticated: state.userAuth.isAuthenticated,
+  user: state.userAuth.user,
+  token: state.userAuth.token,
+  role: state.userAuth.role,
+  permissions: state.userAuth.permissions || [],
+});
+
+export default userAuthSlice.reducer;

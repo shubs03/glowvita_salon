@@ -49,11 +49,6 @@ const userAuthSlice = createSlice({
         Cookies.remove('token', { path: '/' });
       }
     },
-    setAuthChecked: (state, action) => {
-        if(state.isAuthenticated === undefined) {
-            state.isAuthenticated = action.payload;
-        }
-    },
     rehydrateAuth: (state, action) => {
       if (action.payload) {
         state.isAuthenticated = action.payload.isAuthenticated;
@@ -68,7 +63,7 @@ const userAuthSlice = createSlice({
   },
 });
 
-export const { setUserAuth, clearUserAuth, setAuthChecked, rehydrateAuth } = userAuthSlice.actions;
+export const { setUserAuth, clearUserAuth, rehydrateAuth } = userAuthSlice.actions;
 
 export const selectUserAuth = (state) => ({
   isAuthenticated: state.userAuth.isAuthenticated,

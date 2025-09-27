@@ -2,7 +2,7 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice.js';
-import userAuthReducer, { rehydrateAuth as rehydrateUserAuth } from './slices/Web/userAuthSlice.js';
+import userAuthReducer from './slices/Web/userAuthSlice.js';
 import crmAuthReducer from './slices/crmAuthSlice.js';
 import modalReducer from './slices/modalSlice.js';
 import customerReducer from './slices/customerSlice.js';
@@ -81,12 +81,16 @@ const loadState = (key) => {
       return undefined;
     }
     const parsed = JSON.parse(serializedState);
-    if (parsed && typeof parsed.isAuthenticated === 'boolean') {
-      return parsed; // Valid auth state
-    }
-    if (parsed && typeof parsed.isCrmAuthenticated === 'boolean') {
-      return parsed; // Valid CRM auth state
-    }
+    
+    // Add validation for the state structure
+    const isValidCrmAuth = parsed && typeof parsed.isCrmAuthenticated === 'boolean' && 'user' in parsed;
+    const isValidUserAuth = parsed && typeof parsed.isAuthenticated === 'boolean' && 'user' in parsed;
+    const isValidAdminAuth = parsed && typeof parsed.isAdminAuthenticated === 'boolean' && 'admin' in parsed;
+
+    if (key === 'crmAuthState' && isValidCrmAuth) return parsed;
+    if (key === 'userAuthState' && isValidUserAuth) return parsed;
+    if (key === 'adminAuthState' && isValidAdminAuth) return parsed;
+    
     return undefined;
   } catch (err) {
     console.warn(`Could not load ${key} state from localStorage`, err);
@@ -123,20 +127,16 @@ export const makeStore = () => {
             'blockTime/setStartTime',
             'blockTime/setEndTime',
             'blockTime/setDescription',
-            'blockTime/reset'
+            'blockTime/reset',
+            'userAuth/setUserAuth', // These actions contain non-serializable data on purpose
+            'crmAuth/setCrmAuth',
+            'adminAuth/setAdminAuth'
           ],
           ignoredActionPaths: ['meta.arg', 'payload.timestamp', 'payload'],
-          ignoredPaths: ['blockTime.date', 'blockTime']
+          ignoredPaths: ['blockTime.date', 'blockTime', 'userAuth.user', 'crmAuth.user', 'adminAuth.admin']
         }
       }).concat(glowvitaApi.middleware),
   });
-
-  if (typeof window !== 'undefined') {
-    const userAuthState = loadState('userAuthState');
-    if(userAuthState) {
-      store.dispatch(rehydrateUserAuth(userAuthState));
-    }
-  }
 
   return store;
 };

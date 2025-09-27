@@ -59,14 +59,11 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // This effect runs whenever the auth state changes.
-    // It's the central point for protecting routes.
     if (!isLoading && !isAuthenticated) {
       router.push('/client-login');
     }
   }, [isLoading, isAuthenticated, router]);
 
-  // While the auth state is being determined, show a loading screen.
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
@@ -78,8 +75,6 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If loading is done and we're still not authenticated, the redirect effect will
-  // have already fired. Rendering null here prevents a flash of the protected layout.
   if (!isAuthenticated) {
     return null; 
   }
