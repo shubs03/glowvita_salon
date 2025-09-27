@@ -9,7 +9,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@repo/store/hooks';
-import { clearUserAuth } from '@repo/store/slices/userAuthSlice';
+import { clearUserAuth } from '@repo/store/slices/Web/userAuthSlice';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -23,7 +23,6 @@ import {
 } from "@repo/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
-import { useLogoutUserMutation } from "@repo/store/services/api";
 
 interface User {
   firstName?: string;
@@ -42,33 +41,31 @@ interface MarketingHeaderProps {
 const profileNavItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
   { id: 'appointments', label: 'My Appointments', icon: Calendar, href: '/profile/appointments' },
+  { id: 'orders', label: 'My Orders', icon: ShoppingCart, href: '/profile/orders' },
   { id: 'reviews', label: 'My Reviews', icon: Star, href: '/profile/reviews' },
+  { id: 'referrals', label: 'Refer & Earn', icon: Gift, href: '/profile/referrals' },
   { id: 'wallet', label: 'Wallet', icon: Wallet, href: '/profile/wallet' },
+  { id: 'settings', label: 'Account Settings', icon: Settings, href: '/profile/settings' },
 ];
 
 export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage = false }: MarketingHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
   const { isAuthenticated, user, isLoading } = useAuth() as { isAuthenticated: boolean; user: User | null; isLoading: boolean };
-  const [logoutUser, { isLoading: isLoggingOut }] = useLogoutUserMutation();
   const dispatch = useAppDispatch();
   const router = useRouter();
 
-  const handleLogout = async () => {
-    try {
-      setIsLoggingOut(true);
-      await logoutUser().unwrap();
-      dispatch(clearUserAuth()); // This will now correctly clear localStorage
-      setShowLogoutModal(false);
-      toast.success("You have been logged out successfully.");
-      router.push('/client-login');
-      // No need to call router.refresh(), the state change will handle it
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error("Error logging out. Please try again.");
-      setIsLoggingOut(false);
-    }
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    // Dispatch the client-side action to clear all auth state
+    dispatch(clearUserAuth());
+    toast.success("You have been logged out.");
+    // Redirect to login page
+    router.push('/client-login');
+    setIsLoggingOut(false);
+    setShowLogoutModal(false);
   };
 
   const getInitials = (firstName: string = '', lastName: string = '') => {

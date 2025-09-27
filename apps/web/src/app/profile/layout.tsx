@@ -24,9 +24,8 @@ import {
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from "@repo/store/hooks";
-import { clearUserAuth } from "@repo/store/slices/userAuthSlice";
+import { clearUserAuth } from "@repo/store/slices/Web/userAuthSlice";
 import { toast } from 'sonner';
-import { useLogoutUserMutation } from "@repo/store/services/api";
 
 const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
@@ -43,26 +42,31 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isAuthenticated } = useAuth();
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const [logoutUser, { isLoading: isLoggingOut }] = useLogoutUserMutation();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
+    setIsLoggingOut(true);
     try {
-      await logoutUser().unwrap();
       dispatch(clearUserAuth());
       toast.success("You have been logged out.");
       router.push('/client-login');
     } catch (error) {
       console.error('Logout error:', error);
       toast.error("Error logging out. Please try again.");
+    } finally {
+      setIsLoggingOut(false);
     }
   };
 
   useEffect(() => {
+    // This effect runs whenever the auth state changes.
+    // It's the central point for protecting routes.
     if (!isLoading && !isAuthenticated) {
       router.push('/client-login');
     }
   }, [isLoading, isAuthenticated, router]);
 
+  // While the auth state is being determined, show a loading screen.
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
@@ -74,8 +78,10 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // If loading is done and we're still not authenticated, the redirect effect will
+  // have already fired. Rendering null here prevents a flash of the protected layout.
   if (!isAuthenticated) {
-    return null; // Don't render anything if not authenticated, the effect will handle the redirect.
+    return null; 
   }
   
   return (
