@@ -10,9 +10,9 @@ export const useAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // The loading state should resolve once `isAuthenticated` has a definite value (true or false).
-    // The initial state from the server might be `false`, but the store rehydration from localStorage
-    // will update it on the client. This effect waits for that client-side update.
+    // The loading state is finished when `isAuthenticated` has a definite value (true or false),
+    // which happens after the store is rehydrated from localStorage by the AuthInitializer.
+    // We check specifically for boolean type to distinguish from the initial `undefined` value.
     if (typeof isAuthenticated === 'boolean') {
       setIsLoading(false);
     }
@@ -27,4 +27,3 @@ export const useAuth = () => {
     isLoading,
   };
 };
-
