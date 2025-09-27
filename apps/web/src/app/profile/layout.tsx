@@ -25,8 +25,8 @@ import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from "@repo/store/hooks";
 import { clearUserAuth } from "@repo/store/slices/userAuthSlice";
-import Cookies from "js-cookie";
 import { toast } from 'sonner';
+import { useLogoutUserMutation } from "@repo/store/services/api";
 
 const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
@@ -43,12 +43,18 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isAuthenticated } = useAuth();
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const [logoutUser, { isLoading: isLoggingOut }] = useLogoutUserMutation();
 
   const handleLogout = async () => {
-    dispatch(clearUserAuth());
-    Cookies.remove('token', { path: '/' });
-    toast.success("You have been logged out.");
-    router.push('/client-login');
+    try {
+      await logoutUser().unwrap();
+      dispatch(clearUserAuth());
+      toast.success("You have been logged out.");
+      router.push('/client-login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error("Error logging out. Please try again.");
+    }
   };
 
   useEffect(() => {
@@ -69,7 +75,7 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return null; // Prevent flash of content before redirect
+    return null; // Don't render anything if not authenticated, the effect will handle the redirect.
   }
   
   return (
@@ -116,9 +122,10 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
                       variant="ghost"
                       className="w-full justify-start gap-3 h-12 text-sm text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={handleLogout}
+                      disabled={isLoggingOut}
                     >
                       <LogOut className="h-4 w-4" />
-                      Logout
+                      {isLoggingOut ? "Logging out..." : "Logout"}
                     </Button>
                   </div>
                 </nav>

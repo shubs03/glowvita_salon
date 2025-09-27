@@ -2,7 +2,7 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice.js';
-import userAuthReducer from './slices/Web/userAuthSlice.js';
+import userAuthReducer, { rehydrateAuth as rehydrateUserAuth } from './slices/Web/userAuthSlice.js';
 import crmAuthReducer from './slices/crmAuthSlice.js';
 import modalReducer from './slices/modalSlice.js';
 import customerReducer from './slices/customerSlice.js';
@@ -62,7 +62,10 @@ const appReducer = combineReducers({
   
 const rootReducer = (state, action) => {
   if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
-    state = undefined; 
+    // Keep the API state, reset everything else
+    const { [glowvitaApi.reducerPath]: api, ...rest } = state;
+    const newState = { [glowvitaApi.reducerPath]: api };
+    return appReducer(newState, action);
   }
   return appReducer(state, action);
 };
@@ -78,9 +81,11 @@ const loadState = (key) => {
       return undefined;
     }
     const parsed = JSON.parse(serializedState);
-    // Basic validation to ensure we have a valid auth state
     if (parsed && typeof parsed.isAuthenticated === 'boolean') {
-      return parsed;
+      return parsed; // Valid auth state
+    }
+    if (parsed && typeof parsed.isCrmAuthenticated === 'boolean') {
+      return parsed; // Valid CRM auth state
     }
     return undefined;
   } catch (err) {
@@ -96,9 +101,16 @@ export const makeStore = () => {
     adminAuth: loadState('adminAuthState'),
   };
 
-  return configureStore({
+  // Remove undefined keys so Redux doesn't complain
+  Object.keys(preloadedState).forEach(key => {
+    if (preloadedState[key] === undefined) {
+      delete preloadedState[key];
+    }
+  });
+
+  const store = configureStore({
     reducer: rootReducer,
-    preloadedState: Object.values(preloadedState).some(Boolean) ? preloadedState : undefined,
+    preloadedState: Object.keys(preloadedState).length > 0 ? preloadedState : undefined,
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
@@ -118,6 +130,15 @@ export const makeStore = () => {
         }
       }).concat(glowvitaApi.middleware),
   });
+
+  if (typeof window !== 'undefined') {
+    const userAuthState = loadState('userAuthState');
+    if(userAuthState) {
+      store.dispatch(rehydrateUserAuth(userAuthState));
+    }
+  }
+
+  return store;
 };
 
 export const selectRootState = (state) => state;

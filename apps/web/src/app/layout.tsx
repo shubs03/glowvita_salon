@@ -8,7 +8,8 @@ import './globals.css';
 import { Toaster } from 'sonner';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { AuthInitializer } from '@/components/AuthInitializer';
 
 export default function RootLayout({
   children,
@@ -17,6 +18,14 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // New state to manage layout visibility based on auth check
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+
+  useEffect(() => {
+    // This effect runs on the client and confirms that the auth check is complete.
+    setIsAuthChecked(true);
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -36,6 +45,12 @@ export default function RootLayout({
 
   const isMarketingPage = marketingPages.includes(pathname);
   const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
+  const isProfilePage = pathname.startsWith('/profile');
+
+  // Show header on marketing and profile pages, but not on auth pages
+  const showHeader = isMarketingPage || isProfilePage;
+  // Show footer only on marketing pages
+  const showFooter = isMarketingPage;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -58,8 +73,9 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
+          <AuthInitializer />
           <div className="flex flex-col min-h-screen bg-background text-foreground">
-            {!isAuthPage && (
+            {showHeader && (
               <MarketingHeader 
                 isMobileMenuOpen={isMobileMenuOpen} 
                 toggleMobileMenu={toggleMobileMenu}
@@ -69,7 +85,7 @@ export default function RootLayout({
             <main className="flex-grow">
               {children}
             </main>
-            {isMarketingPage && <Footer />}
+            {showFooter && <Footer />}
           </div>
           <Toaster />
         </StoreProvider>

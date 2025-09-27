@@ -10,7 +10,7 @@ import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
 import { glowvitaApi } from '@repo/store/api';
 import { Eye, EyeOff } from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
+import { useAppDispatch } from '@repo/store/hooks';
 import { setUserAuth } from '@repo/store/slices/userAuthSlice';
 import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [login, { isLoading }] = glowvitaApi.useUserLoginMutation();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
-  // Redirect if already authenticated
+  // This effect handles redirecting the user if they are already logged in
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
       router.push('/profile');
@@ -45,7 +45,9 @@ export default function LoginPage() {
         toast.success('Login successful!', {
           description: 'Redirecting to your profile...',
           duration: 2000,
-          onAutoClose: () => router.push('/profile')
+          onAutoClose: () => {
+            router.push('/profile');
+          },
         });
       } else {
         toast.error(response.message || 'Failed to log in.');

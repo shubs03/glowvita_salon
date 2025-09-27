@@ -3,7 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import Cookies from 'js-cookie';
 
 const initialState = {
-  isAuthenticated: undefined, // undefined means "not yet checked"
+  isAuthenticated: undefined, // undefined: unchecked, false: not auth, true: auth
   user: null,
   token: null,
   role: null,
@@ -16,7 +16,7 @@ const userAuthSlice = createSlice({
   reducers: {
     setUserAuth: (state, action) => {
       const { user, token, role, permissions } = action.payload;
-      state.isAuthenticated = !!(user && token);
+      state.isAuthenticated = true;
       state.user = user;
       state.token = token;
       state.role = role || 'USER';
@@ -33,7 +33,7 @@ const userAuthSlice = createSlice({
           };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
         } catch (e) {
-          console.error("Could not save auth state to localStorage", e);
+          console.error("Could not save user auth state to localStorage", e);
         }
       }
     },
@@ -46,18 +46,29 @@ const userAuthSlice = createSlice({
 
       if (typeof window !== 'undefined') {
         localStorage.removeItem('userAuthState');
-        Cookies.remove('token');
+        Cookies.remove('token', { path: '/' });
       }
     },
     setAuthChecked: (state, action) => {
         if(state.isAuthenticated === undefined) {
             state.isAuthenticated = action.payload;
         }
+    },
+    rehydrateAuth: (state, action) => {
+      if (action.payload) {
+        state.isAuthenticated = action.payload.isAuthenticated;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.role = action.payload.role;
+        state.permissions = action.payload.permissions;
+      } else {
+        state.isAuthenticated = false;
+      }
     }
   },
 });
 
-export const { setUserAuth, clearUserAuth, setAuthChecked } = userAuthSlice.actions;
+export const { setUserAuth, clearUserAuth, setAuthChecked, rehydrateAuth } = userAuthSlice.actions;
 
 export const selectUserAuth = (state) => ({
   isAuthenticated: state.userAuth.isAuthenticated,
