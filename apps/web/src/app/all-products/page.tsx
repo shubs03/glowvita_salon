@@ -442,32 +442,32 @@ export default function AllProductsPage() {
             {/* Why Shop With Us Section - Redesigned */}
             <section className="mt-20 py-16 bg-secondary/50 rounded-2xl">
               <div className="text-center mb-12 px-4">
-                <h2 className="text-3xl font-bold font-headline mb-4">Why Shop With Us?</h2>
+                <h2 className="text-3xl font-bold font-headline mb-4">The GlowVita Advantage</h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Discover the benefits of choosing our marketplace for all your beauty needs.
+                  Experience a shopping journey that combines quality, trust, and convenience, designed for beauty lovers like you.
                 </p>
               </div>
               <div className="grid md:grid-cols-3 gap-8 px-8">
-                <div className="text-center p-6 bg-background rounded-xl shadow-md border border-border/20">
+                <div className="text-center p-6 bg-background rounded-xl shadow-md border border-border/20 transition-all duration-300 hover:shadow-primary/10 hover:-translate-y-1">
                   <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
                     <CheckCircle className="h-8 w-8" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Curated Selection</h3>
-                  <p className="text-sm text-muted-foreground">Only the best products from trusted vendors.</p>
+                  <h3 className="text-lg font-semibold mb-2">Curated Quality</h3>
+                  <p className="text-sm text-muted-foreground">Every product is handpicked and verified by beauty experts to ensure top-tier quality and performance.</p>
                 </div>
-                <div className="text-center p-6 bg-background rounded-xl shadow-md border border-border/20">
+                <div className="text-center p-6 bg-background rounded-xl shadow-md border border-border/20 transition-all duration-300 hover:shadow-primary/10 hover:-translate-y-1">
                   <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
                     <Shield className="h-8 w-8" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Secure Shopping</h3>
-                  <p className="text-sm text-muted-foreground">Your data and payments are always safe.</p>
+                  <h3 className="text-lg font-semibold mb-2">Secure & Seamless</h3>
+                  <p className="text-sm text-muted-foreground">Your transactions are protected with advanced security, ensuring a safe and smooth checkout experience.</p>
                 </div>
-                <div className="text-center p-6 bg-background rounded-xl shadow-md border border-border/20">
+                <div className="text-center p-6 bg-background rounded-xl shadow-md border border-border/20 transition-all duration-300 hover:shadow-primary/10 hover:-translate-y-1">
                   <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
                     <Truck className="h-8 w-8" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Fast Shipping</h3>
-                  <p className="text-sm text-muted-foreground">Get your favorite products delivered quickly.</p>
+                  <h3 className="text-lg font-semibold mb-2">Swift Delivery</h3>
+                  <p className="text-sm text-muted-foreground">Enjoy fast and reliable shipping, so your favorite beauty essentials arrive at your doorstep in no time.</p>
                 </div>
               </div>
             </section>
@@ -482,3 +482,5 @@ export default function AllProductsPage() {
 const Separator = ({ orientation = 'horizontal', className = '' }: { orientation?: 'horizontal' | 'vertical', className?: string }) => (
   <div className={`bg-border ${orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px'} ${className}`} />
 );
+
+    
