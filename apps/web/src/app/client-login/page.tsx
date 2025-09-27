@@ -9,7 +9,7 @@ import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
 import { glowvitaApi } from '@repo/store/api';
 import { Eye, EyeOff } from 'lucide-react';
-import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
+import { useAppDispatch } from '@repo/store/hooks';
 import { setUserAuth } from '@repo/store/slices/Web/userAuthSlice';
 import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
@@ -46,7 +46,6 @@ export default function LoginPage() {
         });
 
         // The useEffect will handle the redirect now.
-        // We can still push here to make it feel faster, but the layout guard is the source of truth.
         router.push('/profile');
 
       } else {

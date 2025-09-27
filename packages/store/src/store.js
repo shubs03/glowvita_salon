@@ -115,6 +115,9 @@ export const makeStore = () => {
             'userAuth/setUserAuth',
             'crmAuth/setCrmAuth',
             'adminAuth/setAdminAuth',
+            'userAuth/rehydrateAuth',
+            'crmAuth/rehydrateAuth',
+            'adminAuth/rehydrateAuth',
           ],
           ignoredPaths: ['userAuth.user', 'crmAuth.user', 'adminAuth.admin'],
         }

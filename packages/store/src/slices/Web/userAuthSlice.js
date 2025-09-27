@@ -47,11 +47,22 @@ const userAuthSlice = createSlice({
         localStorage.removeItem('userAuthState');
         Cookies.remove('token', { path: '/' });
       }
+    },
+    rehydrateAuth: (state, action) => {
+      if (action.payload) {
+        state.isAuthenticated = action.payload.isAuthenticated;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.role = action.payload.role;
+        state.permissions = action.payload.permissions;
+      } else {
+        state.isAuthenticated = false;
+      }
     }
   },
 });
 
-export const { setUserAuth, clearUserAuth } = userAuthSlice.actions;
+export const { setUserAuth, clearUserAuth, rehydrateAuth } = userAuthSlice.actions;
 
 export const selectUserAuth = (state) => ({
   isAuthenticated: state.userAuth.isAuthenticated,
