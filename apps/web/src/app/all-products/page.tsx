@@ -5,8 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ChevronRight, ChevronLeft } from 'lucide-react';
-import { ProductCard } from '@repo/ui/components/landing/ProductCard';
+import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle } from 'lucide-react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent } from '@repo/ui/dialog';
@@ -26,127 +25,8 @@ interface Product {
   isNew?: boolean;
   description: string;
   category: string;
+  salePrice?: number;
 }
-
-const ProductHighlightCard = ({ 
-  title, 
-  products, 
-  className = "", 
-  isLarge = false 
-}: {
-  title: string;
-  products: Product[];
-  className?: string;
-  isLarge?: boolean;
-}) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const resetTimeout = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-  };
-
-  useEffect(() => {
-    resetTimeout();
-    if (!isHovered) {
-      timeoutRef.current = setTimeout(
-        () => setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length),
-        3000
-      );
-    }
-    return () => resetTimeout();
-  }, [currentIndex, isHovered, products.length]);
-
-  const nextProduct = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length);
-  };
-
-  const prevProduct = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + products.length) % products.length);
-  };
-  
-  if (!products || products.length === 0) return null;
-
-  return (
-    <div 
-      className={`relative rounded-xl md:rounded-2xl flex flex-col justify-between group transition-all duration-300 ease-in-out bg-background/50 backdrop-blur-sm ${className}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-      <div className="relative z-10 h-full flex flex-col">
-        <h3 className={`font-bold mb-2 md:mb-3 ${isLarge ? 'text-xl sm:text-2xl lg:text-3xl' : 'text-base sm:text-lg md:text-xl'}`}>{title}</h3>
-        <div className="relative flex-1 rounded-lg md:rounded-xl overflow-hidden">
-          {products.map((product: Product, index: number) => (
-            <img
-              key={product.id}
-              src={product.image}
-              alt={product.name}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
-            />
-          ))}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          
-          <div className={`absolute bottom-0 left-0 right-0 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isLarge ? 'p-3 md:p-4 lg:p-5' : 'p-2 md:p-3'}`}>
-            <h4 className={`font-bold truncate ${isLarge ? 'text-base sm:text-lg md:text-xl' : 'text-sm md:text-base'}`}>
-              {products[currentIndex].name}
-            </h4>
-            <p className={`truncate opacity-90 ${isLarge ? 'text-sm md:text-base' : 'text-xs md:text-sm'}`}>
-              {products[currentIndex].vendorName}
-            </p>
-            <div className="flex justify-between items-center mt-1 md:mt-2">
-              <p className={`font-bold ${isLarge ? 'text-sm md:text-base lg:text-lg' : 'text-xs md:text-sm'}`}>
-                ₹{products[currentIndex].price.toFixed(2)}
-              </p>
-              {isLarge && (
-                <Button size="sm" variant="secondary" className="rounded-full text-xs md:text-sm px-3 py-1 md:px-4 md:py-2">
-                  View
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          <div className={`absolute flex gap-1 md:gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isLarge ? 'top-3 right-3 md:top-4 md:right-4' : 'top-2 right-2 md:top-3 md:right-3'}`}>
-            <Button 
-              size="icon" 
-              variant="ghost" 
-              className={`bg-white/20 text-white rounded-full hover:bg-white/30 backdrop-blur-sm transition-all duration-200 ${isLarge ? 'h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9' : 'h-6 w-6 md:h-7 md:w-7'}`} 
-              onClick={prevProduct}
-            >
-              <ChevronLeft className={`${isLarge ? 'h-3 w-3 md:h-4 md:w-4' : 'h-3 w-3'}`} />
-            </Button>
-            <Button 
-              size="icon" 
-              variant="ghost" 
-              className={`bg-white/20 text-white rounded-full hover:bg-white/30 backdrop-blur-sm transition-all duration-200 ${isLarge ? 'h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9' : 'h-6 w-6 md:h-7 md:w-7'}`} 
-              onClick={nextProduct}
-            >
-              <ChevronRight className={`${isLarge ? 'h-3 w-3 md:h-4 md:w-4' : 'h-3 w-3'}`} />
-            </Button>
-          </div>
-
-          {/* Product indicators for mobile */}
-          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1 md:hidden">
-            {products.map((_, index) => (
-              <div
-                key={index}
-                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                  index === currentIndex ? 'bg-white' : 'bg-white/40'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 
 export default function AllProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -186,6 +66,7 @@ export default function AllProductsPage() {
       id: '1',
       name: 'Radiant Glow Serum',
       price: 45.99,
+      salePrice: 39.99,
       image: 'https://picsum.photos/id/1027/300/300',
       hint: 'Brightening vitamin C serum',
       rating: 4.8,
@@ -399,12 +280,6 @@ export default function AllProductsPage() {
     setFilteredProducts(result);
   }, [searchTerm, products, selectedCategory, selectedBrand, priceRange, sortBy]);
   
-  const bentoGridProducts = {
-    newArrivals: products.slice(0, 3),
-    topRated: products.slice(3, 6),
-    bestSellers: products.slice(6, 9)
-  };
-
   return (
     <PageContainer padding="none">
       {/* 1. Hero Section */}
@@ -452,60 +327,66 @@ export default function AllProductsPage() {
 
       <div className="container mx-auto px-4 py-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-          <main className="lg:col-span-12">
-            {/* 3. Bento Grid Section */}
-            <section className="mb-16">
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">Highlights</h2>
-                <p className="text-muted-foreground mb-6 text-sm md:text-base">
-                  Discover our most popular and trending products curated just for you.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 auto-rows-fr min-h-[320px] sm:min-h-[400px] lg:min-h-[480px]">
-                  {bentoGridProducts.newArrivals.length > 0 && (
-                    <ProductHighlightCard 
-                      title="New Arrivals"
-                      products={bentoGridProducts.newArrivals}
-                      className="sm:col-span-2 sm:row-span-2 h-full min-h-[280px] sm:min-h-[400px] lg:min-h-[480px]"
-                      isLarge={true}
-                    />
-                  )}
-                  {bentoGridProducts.topRated.length > 0 && (
-                    <ProductHighlightCard 
-                      title="Top Rated"
-                      products={bentoGridProducts.topRated}
-                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
-                    />
-                  )}
-                  {bentoGridProducts.bestSellers.length > 0 && (
-                    <ProductHighlightCard 
-                      title="Best Sellers"
-                      products={bentoGridProducts.bestSellers}
-                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
-                    />
-                  )}
-                  {products.filter(p => p.category === 'fragrance').length > 0 && (
-                    <ProductHighlightCard 
-                      title="Fragrances"
-                      products={products.filter(p => p.category === 'fragrance')}
-                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
-                    />
-                  )}
-                  {products.filter(p => p.category === 'cosmetics').length > 0 && (
-                    <ProductHighlightCard 
-                      title="Cosmetics"
-                      products={products.filter(p => p.category === 'cosmetics')}
-                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
-                    />
-                  )}
+          {/* Filters Sidebar (Left) */}
+          <aside className="hidden lg:block lg:col-span-3">
+             <div className="sticky top-24 space-y-8">
+               <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filters
+                </h3>
+                {/* Category Filter */}
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="rounded-lg">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-            </section>
+                {/* Brand Filter */}
+                <div className="space-y-2">
+                  <Label>Brand</Label>
+                  <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                    <SelectTrigger className="rounded-lg">
+                      <SelectValue placeholder="Select brand" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {brands.map((brand) => (
+                        <SelectItem key={brand.id} value={brand.id}>
+                          {brand.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Price Range */}
+                <div className="space-y-2">
+                  <Label>Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}</Label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="200"
+                    step="1"
+                    value={priceRange[1]}
+                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                    className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                  />
+                </div>
+              </div>
+            </div>
+          </aside>
 
+          <main className="lg:col-span-9">
             {/* 5. Product Grid */}
             <section>
-              <h2 className="text-4xl font-bold mb-2">All Products</h2>
-              <p className="text-muted-foreground mb-6">
-                Browse our complete collection of premium beauty and wellness products.
-              </p>
-              
               {/* Search Bar - New Design */}
               <div className="mb-8 p-4 bg-gradient-to-r from-primary/5 to-secondary/5 border border-border/20 rounded-2xl flex flex-col sm:flex-row gap-4 items-center shadow-sm">
                 <div className="relative flex-1 w-full">
@@ -550,7 +431,7 @@ export default function AllProductsPage() {
               ) : error ? (
                 <p className="text-red-500">{error}</p>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                   {filteredProducts.map((product) => (
                     <NewProductCard key={product.id} {...product} />
                   ))}
@@ -558,72 +439,38 @@ export default function AllProductsPage() {
               )}
             </section>
 
-            {/* 6. Why Shop With Us Section */}
-            <section className="mt-20 py-16 bg-secondary/50 rounded-lg">
-                <h2 className="text-4xl font-bold text-center mb-2">Why Shop With Us?</h2>
-                <p className="text-muted-foreground text-center mb-8">
+            {/* Why Shop With Us Section - Redesigned */}
+            <section className="mt-20 py-16 bg-secondary/50 rounded-2xl">
+              <div className="text-center mb-12 px-4">
+                <h2 className="text-3xl font-bold font-headline mb-4">Why Shop With Us?</h2>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
                   Discover the benefits of choosing our marketplace for all your beauty needs.
                 </p>
-                <div className="grid md:grid-cols-3 gap-8 text-center">
-                    <div>
-                        <h3 className="font-semibold text-lg">Curated Selection</h3>
-                        <p className="text-muted-foreground">Only the best products from trusted vendors.</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg">Secure Shopping</h3>
-                        <p className="text-muted-foreground">Your data and payments are always safe.</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-lg">Fast Shipping</h3>
-                        <p className="text-muted-foreground">Get your favorite products delivered quickly.</p>
-                    </div>
+              </div>
+              <div className="grid md:grid-cols-3 gap-8 px-8">
+                <div className="text-center p-6 bg-background rounded-xl shadow-md border border-border/20">
+                  <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
+                    <CheckCircle className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Curated Selection</h3>
+                  <p className="text-sm text-muted-foreground">Only the best products from trusted vendors.</p>
                 </div>
-            </section>
-            
-            {/* 7. Featured Brand Section */}
-            <section className="mt-20">
-                <h2 className="text-4xl font-bold text-center mb-2">Featured Brand: Aura Cosmetics</h2>
-                <p className="text-muted-foreground text-center mb-8">
-                  Meet one of our top-rated brands creating high-performance, cruelty-free makeup.
-                </p>
-                <div className="grid md:grid-cols-2 items-center gap-8">
-                    <p className="text-muted-foreground text-lg leading-relaxed">Aura Cosmetics is dedicated to creating high-performance, cruelty-free makeup that empowers you to express your unique beauty. Discover their best-selling products loved by professionals and enthusiasts alike.</p>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1027/200/200" alt="Aura Product 1" className="w-full h-full object-cover" /></div>
-                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1028/200/200" alt="Aura Product 2" className="w-full h-full object-cover" /></div>
-                    </div>
+                <div className="text-center p-6 bg-background rounded-xl shadow-md border border-border/20">
+                  <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
+                    <Shield className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Secure Shopping</h3>
+                  <p className="text-sm text-muted-foreground">Your data and payments are always safe.</p>
                 </div>
-            </section>
-            
-            {/* 8. Customer Testimonials */}
-            <section className="mt-20">
-              <h2 className="text-4xl font-bold text-center mb-2">What Our Customers Say</h2>
-              <p className="text-muted-foreground text-center mb-6">
-                Read genuine reviews from our satisfied customers about their shopping experience.
-              </p>
-              <div className="grid md:grid-cols-3 gap-8">
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Amazing quality and fast delivery. Will definitely shop again!" - Sarah L.</blockquote>
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Found my new favorite serum here. The selection is fantastic." - Mark T.</blockquote>
-                <blockquote className="p-6 bg-secondary/50 rounded-lg">"A great marketplace for discovering new beauty brands." - Emily C.</blockquote>
+                <div className="text-center p-6 bg-background rounded-xl shadow-md border border-border/20">
+                  <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
+                    <Truck className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">Fast Shipping</h3>
+                  <p className="text-sm text-muted-foreground">Get your favorite products delivered quickly.</p>
+                </div>
               </div>
             </section>
-            
-            {/* 9. Shopping Guide */}
-            <section className="mt-20">
-              <h2 className="text-4xl font-bold text-center mb-2">Your Guide to Better Shopping</h2>
-              <p className="text-muted-foreground text-center mb-6">
-                Learn how to make the most of our marketplace features and find your perfect products.
-              </p>
-              <p className="text-center max-w-2xl mx-auto text-muted-foreground">Use our filters to narrow down your search by brand, price, and category. Read reviews from other customers to make informed decisions and find the perfect products for your needs.</p>
-            </section>
-            
-            {/* 10. Call to Action */}
-            <section className="mt-20 text-center py-16 bg-primary text-primary-foreground rounded-lg">
-                <h2 className="text-4xl font-bold mb-2">Ready to Elevate Your Beauty Routine?</h2>
-                <p className="text-primary-foreground/80 mb-6">Join our community and get access to exclusive deals and new arrivals.</p>
-                <Button variant="secondary" size="lg">Sign Up Now</Button>
-            </section>
-
           </main>
         </div>
       </div>
