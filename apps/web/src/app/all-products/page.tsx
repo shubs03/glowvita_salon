@@ -1,21 +1,15 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ChevronRight, ChevronLeft, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Search, Filter, Grid, List, Star, TrendingUp, X, Package, Shield, CheckCircle, Users, ChevronRight, ChevronLeft } from 'lucide-react';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { PageContainer } from '@repo/ui/page-container';
 import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent } from '@repo/ui/dialog';
 import { Label } from '@repo/ui/label';
-import { PlatformFor } from '@/components/landing';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@repo/ui/collapsible';
-import { Slider } from '@repo/ui/slider';
-import { cn } from '@repo/ui/cn';
 
 // Product type definition
 interface Product {
@@ -32,125 +26,199 @@ interface Product {
   category: string;
 }
 
-const FilterSidebar = ({
-  categories,
-  brands,
-  selectedCategory,
-  setSelectedCategory,
-  selectedBrand,
-  setSelectedBrand,
-  priceRange,
-  setPriceRange,
-  sortBy,
-  setSortBy,
-  clearFilters,
+const PlatformForCard = ({
+  title,
+  imageUrl,
+  hint,
+}: {
+  title: string;
+  imageUrl: string;
+  hint: string;
 }) => (
-  <div className="space-y-6">
-    {/* Category Filter */}
-    <div>
-      <h3 className="font-semibold mb-3 flex items-center gap-2">
-        <Package className="h-4 w-4 text-primary" />
-        Category
-      </h3>
-      <div className="space-y-2">
-        {categories.map((category) => (
-          <button
-            key={category.id}
-            className={cn(
-              "w-full text-left text-sm p-2 rounded-md transition-colors",
-              selectedCategory === category.id
-                ? "bg-primary/10 text-primary font-semibold"
-                : "text-muted-foreground hover:bg-muted"
-            )}
-            onClick={() => setSelectedCategory(category.id)}
-          >
-            {category.name}
-          </button>
+  <a
+    className="relative inline-block h-36 w-56 md:h-40 md:w-64 shrink-0 overflow-hidden rounded-xl transition-all duration-500 hover:shadow-xl hover:shadow-primary/30 group border border-border/20 hover:border-primary/60 bg-gradient-to-br from-background via-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/20"
+    href="#"
+  >
+    <img
+      className="size-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105 filter group-hover:brightness-105 group-hover:saturate-110"
+      src={imageUrl}
+      alt={title}
+      width={256}
+      height={160}
+    />
+    <div className="absolute inset-0 z-10 flex w-full flex-col justify-end">
+      <div className="bg-gradient-to-t from-black/90 via-black/50 to-transparent p-3 md:p-4">
+        <h3 className="text-sm md:text-base font-semibold leading-tight text-white group-hover:text-primary transition-all duration-300 transform group-hover:translate-y-[-2px]">
+          {title}
+        </h3>
+        <div className="w-8 h-0.5 bg-primary/60 group-hover:bg-primary group-hover:w-12 transition-all duration-300 mt-1"></div>
+      </div>
+    </div>
+  </a>
+);
+
+const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
+  const items = [
+    { title: "Skincare", imageUrl: "https://placehold.co/256x160/f1f5f9/6366f1?text=Skincare+", hint: "premium skincare essentials" },
+    { title: "Cosmetics", imageUrl: "https://placehold.co/256x160/fdf2f8/ec4899?text=Makeup+ Cosmetics", hint: "beauty cosmetics collection" },
+    { title: "Face Care", imageUrl: "https://placehold.co/256x160/f0fdf4/10b981?text=Face+Care+", hint: "facial care products" },
+    { title: "Body Care", imageUrl: "https://placehold.co/256x160/fff7ed/f97316?text=Body+Care+", hint: "luxurious body treatments" },
+    { title: "Fragrance", imageUrl: "https://placehold.co/256x160/faf5ff/8b5cf6?text=Fragrance+", hint: "signature scents collection" },
+    { title: "Nail Care", imageUrl: "https://placehold.co/256x160/fef2f2/ef4444?text=Nails+", hint: "nail care essentials" },
+  ];
+  return (
+    <div className="w-full overflow-hidden rounded-lg ">
+      <div
+        className={`pt-3 pb-2 flex w-fit items-start space-x-4 md:space-x-6 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
+      >
+        {[...items, ...items].map((item, index) => (
+          <PlatformForCard
+            key={`${item.title}-${index}`}
+            title={item.title}
+            imageUrl={item.imageUrl}
+            hint={item.hint}
+          />
         ))}
       </div>
     </div>
-    
-    {/* Brand Filter */}
-    <div>
-      <h3 className="font-semibold mb-3 flex items-center gap-2">
-        <Star className="h-4 w-4 text-primary" />
-        Brand
-      </h3>
-      <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-        <SelectTrigger className="w-full rounded-md">
-          <SelectValue placeholder="Select Brand" />
-        </SelectTrigger>
-        <SelectContent>
-          {brands.map((brand) => (
-            <SelectItem key={brand.id} value={brand.id}>
-              {brand.name}
-            </SelectItem>
+  );
+};
+
+// New Component for the Highlight Card with Carousel
+const ProductHighlightCard = ({ 
+  title, 
+  products, 
+  className = "", 
+  isLarge = false 
+}: {
+  title: string;
+  products: Product[];
+  className?: string;
+  isLarge?: boolean;
+}) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetTimeout = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+  };
+
+  useEffect(() => {
+    resetTimeout();
+    if (!isHovered) {
+      timeoutRef.current = setTimeout(
+        () => setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length),
+        3000
+      );
+    }
+    return () => resetTimeout();
+  }, [currentIndex, isHovered, products.length]);
+
+  const nextProduct = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % products.length);
+  };
+
+  const prevProduct = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + products.length) % products.length);
+  };
+  
+  if (!products || products.length === 0) return null;
+
+  return (
+    <div 
+      className={`relative rounded-xl md:rounded-2xl flex flex-col justify-between group transition-all duration-300 ease-in-out bg-background/50 backdrop-blur-sm ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      <div className="relative z-10 h-full flex flex-col">
+        <h3 className={`font-bold mb-2 md:mb-3 ${isLarge ? 'text-xl sm:text-2xl lg:text-3xl' : 'text-base sm:text-lg md:text-xl'}`}>{title}</h3>
+        <div className="relative flex-1 rounded-lg md:rounded-xl overflow-hidden">
+          {products.map((product: Product, index: number) => (
+            <img
+              key={product.id}
+              src={product.image}
+              alt={product.name}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+            />
           ))}
-        </SelectContent>
-      </Select>
-    </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          
+          <div className={`absolute bottom-0 left-0 right-0 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isLarge ? 'p-3 md:p-4 lg:p-5' : 'p-2 md:p-3'}`}>
+            <h4 className={`font-bold truncate ${isLarge ? 'text-base sm:text-lg md:text-xl' : 'text-sm md:text-base'}`}>
+              {products[currentIndex].name}
+            </h4>
+            <p className={`truncate opacity-90 ${isLarge ? 'text-sm md:text-base' : 'text-xs md:text-sm'}`}>
+              {products[currentIndex].vendorName}
+            </p>
+            <div className="flex justify-between items-center mt-1 md:mt-2">
+              <p className={`font-bold ${isLarge ? 'text-sm md:text-base lg:text-lg' : 'text-xs md:text-sm'}`}>
+                ₹{products[currentIndex].price.toFixed(2)}
+              </p>
+              {isLarge && (
+                <Button size="sm" variant="secondary" className="rounded-full text-xs md:text-sm px-3 py-1 md:px-4 md:py-2">
+                  View
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          <div className={`absolute flex gap-1 md:gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isLarge ? 'top-3 right-3 md:top-4 md:right-4' : 'top-2 right-2 md:top-3 md:right-3'}`}>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className={`bg-white/20 text-white rounded-full hover:bg-white/30 backdrop-blur-sm transition-all duration-200 ${isLarge ? 'h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9' : 'h-6 w-6 md:h-7 md:w-7'}`} 
+              onClick={prevProduct}
+            >
+              <ChevronLeft className={`${isLarge ? 'h-3 w-3 md:h-4 md:w-4' : 'h-3 w-3'}`} />
+            </Button>
+            <Button 
+              size="icon" 
+              variant="ghost" 
+              className={`bg-white/20 text-white rounded-full hover:bg-white/30 backdrop-blur-sm transition-all duration-200 ${isLarge ? 'h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9' : 'h-6 w-6 md:h-7 md:w-7'}`} 
+              onClick={nextProduct}
+            >
+              <ChevronRight className={`${isLarge ? 'h-3 w-3 md:h-4 md:w-4' : 'h-3 w-3'}`} />
+            </Button>
+          </div>
 
-    {/* Price Range Filter */}
-    <div>
-      <h3 className="font-semibold mb-3">
-        Price Range: <span className="font-bold text-primary">₹{priceRange[0]} - ₹{priceRange[1]}</span>
-      </h3>
-      <Slider
-        defaultValue={priceRange}
-        min={0}
-        max={200}
-        step={10}
-        onValueChange={(value) => setPriceRange(value)}
-      />
+          {/* Product indicators for mobile */}
+          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1 md:hidden">
+            {products.map((_, index) => (
+              <div
+                key={index}
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                  index === currentIndex ? 'bg-white' : 'bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
-
-    {/* Sort By Filter */}
-    <div>
-      <h3 className="font-semibold mb-3 flex items-center gap-2">
-        <TrendingUp className="h-4 w-4 text-primary" />
-        Sort By
-      </h3>
-      <Select value={sortBy} onValueChange={setSortBy}>
-        <SelectTrigger className="w-full rounded-md">
-          <SelectValue placeholder="Sort by" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="featured">Featured</SelectItem>
-          <SelectItem value="newest">Newest</SelectItem>
-          <SelectItem value="price-low">Price: Low to High</SelectItem>
-          <SelectItem value="price-high">Price: High to Low</SelectItem>
-          <SelectItem value="rating">Top Rated</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-
-    {/* Clear Filters Button */}
-    <div>
-      <Button variant="outline" className="w-full" onClick={clearFilters}>
-        <X className="h-4 w-4 mr-2" />
-        Clear All Filters
-      </Button>
-    </div>
-  </div>
-);
+  );
+};
 
 
 export default function AllProductsPage() {
-  const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setErrorState] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   
   // New state for filters
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedBrand, setSelectedBrand] = useState('all');
-  const [priceRange, setPriceRange] = useState([0, 200]);
+  const [priceRange, setPriceRange] = useState([0, 100]);
   const [sortBy, setSortBy] = useState('featured');
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // Mock categories and brands
   const categories = [
@@ -320,14 +388,6 @@ export default function AllProductsPage() {
     }
   ];
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedCategory('all');
-    setSelectedBrand('all');
-    setPriceRange([0, 200]);
-    setSortBy('featured');
-  };
-
   // Initialize products with mock data
   useEffect(() => {
     setLoading(true);
@@ -402,127 +462,141 @@ export default function AllProductsPage() {
     bestSellers: products.slice(6, 9)
   };
 
-  const getDefaultDescription = (productName: string) => {
-    return `An exquisite ${productName.toLowerCase()} designed to enhance your natural beauty.`;
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background p-8">
-        <div className="animate-pulse space-y-8">
-          <div className="h-48 bg-muted rounded-2xl"></div>
-          <div className="flex gap-8">
-            <div className="w-1/4 bg-card rounded-xl h-96"></div>
-            <div className="w-3/4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, i) => (
-                  <div key={i} className="bg-card rounded-xl h-96"></div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <PageContainer padding="none">
       {/* 1. Hero Section */}
-      <section className="py-20 text-center bg-secondary/50 relative overflow-hidden">
+      <section className="py-20 md:py-28 text-center bg-secondary/50 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_70%)] animate-pulse-slow" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-50 animate-float" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-float-delayed" />
+        
         <div className="container mx-auto px-4 z-10 relative">
           <h1 className="text-4xl md:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-            Marketplace
+            Our Marketplace
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
             Explore a curated selection of premium beauty and wellness products from top-rated vendors.
           </p>
+
+          <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground mb-12">
+            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Skincare</Badge>
+            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Haircare</Badge>
+            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Cosmetics</Badge>
+            <Badge variant="outline" className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors">Body Care</Badge>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
+              <p className="text-3xl font-bold text-primary">1,000+</p>
+              <p className="text-sm text-muted-foreground">Verified Vendors</p>
+            </div>
+            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
+              <p className="text-3xl font-bold text-primary">50,000+</p>
+              <p className="text-sm text-muted-foreground">Products Listed</p>
+            </div>
+            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
+              <p className="text-3xl font-bold text-primary">4.9/5</p>
+              <p className="text-sm text-muted-foreground">Average Rating</p>
+            </div>
+            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-xl border border-border/20">
+              <p className="text-3xl font-bold text-primary">Secure</p>
+              <p className="text-sm text-muted-foreground">Shopping Guarantee</p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Categories Marquee */}
-      <PlatformFor />
-
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Filters Sidebar */}
-          <aside className={cn("lg:w-1/4 xl:w-1/5 hidden lg:block transition-all duration-300", isSidebarOpen ? "lg:w-1/4 xl:w-1/5" : "lg:w-0 overflow-hidden")}>
-             <div className="sticky top-24 space-y-8">
-               <div className="flex justify-between items-center">
-                 <h2 className="text-lg font-semibold">Filters</h2>
-                 <Button variant="ghost" size="sm" onClick={() => setIsSidebarOpen(false)} className="lg:hidden">
-                   <X className="h-4 w-4" />
-                 </Button>
-               </div>
-               <FilterSidebar 
-                 categories={categories}
-                 brands={brands}
-                 selectedCategory={selectedCategory}
-                 setSelectedCategory={setSelectedCategory}
-                 selectedBrand={selectedBrand}
-                 setSelectedBrand={setSelectedBrand}
-                 priceRange={priceRange}
-                 setPriceRange={setPriceRange}
-                 sortBy={sortBy}
-                 setSortBy={setSortBy}
-                 clearFilters={clearFilters}
-               />
-             </div>
-           </aside>
-          
-          <main className="flex-1">
-            {/* Search and View Controls */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <Button 
-                variant="outline" 
-                className="lg:hidden"
-                onClick={() => setIsMobileFilterOpen(true)}
-              >
-                <SlidersHorizontal className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Search products, brands, or descriptions..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  className="hidden lg:flex"
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                >
-                  <SlidersHorizontal className="h-4 w-4 mr-2" />
-                  {isSidebarOpen ? 'Hide Filters' : 'Show Filters'}
-                </Button>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="featured">Featured</SelectItem>
-                    <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="rating">Top Rated</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="flex items-center border rounded-md p-1 bg-muted">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+          <main className="lg:col-span-12">
+            {/* 3. Bento Grid Section */}
+            <section className="mb-16">
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">Highlights</h2>
+                <p className="text-muted-foreground mb-6 text-sm md:text-base">
+                  Discover our most popular and trending products curated just for you.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 auto-rows-fr min-h-[320px] sm:min-h-[400px] lg:min-h-[480px]">
+                  {bentoGridProducts.newArrivals.length > 0 && (
+                    <ProductHighlightCard 
+                      title="New Arrivals"
+                      products={bentoGridProducts.newArrivals}
+                      className="sm:col-span-2 sm:row-span-2 h-full min-h-[280px] sm:min-h-[400px] lg:min-h-[480px]"
+                      isLarge={true}
+                    />
+                  )}
+                  {bentoGridProducts.topRated.length > 0 && (
+                    <ProductHighlightCard 
+                      title="Top Rated"
+                      products={bentoGridProducts.topRated}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
+                    />
+                  )}
+                  {bentoGridProducts.bestSellers.length > 0 && (
+                    <ProductHighlightCard 
+                      title="Best Sellers"
+                      products={bentoGridProducts.bestSellers}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
+                    />
+                  )}
+                  {products.filter(p => p.category === 'fragrance').length > 0 && (
+                    <ProductHighlightCard 
+                      title="Fragrances"
+                      products={products.filter(p => p.category === 'fragrance')}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
+                    />
+                  )}
+                  {products.filter(p => p.category === 'cosmetics').length > 0 && (
+                    <ProductHighlightCard 
+                      title="Cosmetics"
+                      products={products.filter(p => p.category === 'cosmetics')}
+                      className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
+                    />
+                  )}
+                </div>
+            </section>
+
+            {/* 4. Categories Marquee */}
+            <section className="mb-12">
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                    Browse by Category
+                  </h2>
+                  <p className="text-muted-foreground text-sm md:text-base max-w-2xl mx-auto">
+                    Discover our curated collection of beauty essentials across different categories
+                  </p>
+                </div>
+                <PlatformForMarquee />
+            </section>
+
+            {/* 5. Product Grid */}
+            <section>
+              <h2 className="text-4xl font-bold mb-2">All Products</h2>
+              <p className="text-muted-foreground mb-6">
+                Browse our complete collection of premium beauty and wellness products.
+              </p>
+              
+              {/* Search Bar */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search products, brands, or descriptions..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="flex gap-2">
                   <Button
-                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                    variant={viewMode === 'grid' ? 'default' : 'outline'}
                     size="icon"
                     onClick={() => setViewMode('grid')}
                   >
                     <Grid className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    variant={viewMode === 'list' ? 'default' : 'outline'}
                     size="icon"
                     onClick={() => setViewMode('list')}
                   >
@@ -530,143 +604,102 @@ export default function AllProductsPage() {
                   </Button>
                 </div>
               </div>
-            </div>
-            
-            {/* Products Grid/List */}
-            <div>
-              <h2 className="text-2xl font-bold mb-4">
-                {selectedCategory === 'all' ? 'All Products' : categories.find(c => c.id === selectedCategory)?.name}
-                <span className="text-muted-foreground text-lg ml-2">({filteredProducts.length})</span>
-              </h2>
-
-              {filteredProducts.length === 0 ? (
-                <div className="text-center py-16">
-                  <p>No products found matching your criteria.</p>
-                </div>
-              ) : viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              
+              {/* Results count */}
+              <div className="mb-6">
+                <p className="text-muted-foreground">
+                  Showing {filteredProducts.length} of {products.length} products
+                  {searchTerm && ` for "${searchTerm}"`}
+                </p>
+              </div>
+              
+              {loading ? (
+                <p>Loading products...</p>
+              ) : error ? (
+                <p className="text-red-500">{error}</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {filteredProducts.map((product) => (
                     <ProductCard key={product.id} {...product} />
                   ))}
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredProducts.map((product) => (
-                    <div key={product.id} className="bg-card rounded-lg p-4 shadow-sm border flex gap-4">
-                       <div className="relative w-24 h-24 flex-shrink-0">
-                         <img src={product.image} alt={product.name} className="w-full h-full object-cover rounded-md" />
-                       </div>
-                       <div className="flex-grow">
-                         <div className="flex justify-between items-start">
-                           <div>
-                             <h3 className="text-lg font-semibold">{product.name}</h3>
-                             <p className="text-xs text-muted-foreground">{product.vendorName}</p>
-                           </div>
-                           <p className="text-lg font-bold">₹{product.price.toFixed(2)}</p>
-                         </div>
-                         <div className="flex items-center gap-1 mt-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`h-4 w-4 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
-                          ))}
-                          <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
-                        </div>
-                         <p className="text-sm text-muted-foreground mt-2 line-clamp-2">{product.description}</p>
-                         <div className="mt-2 flex gap-2">
-                           <Button size="sm">Add to Cart</Button>
-                           <Button variant="outline" size="sm">View Details</Button>
-                         </div>
-                       </div>
-                    </div>
-                  ))}
-                </div>
               )}
-            </div>
+            </section>
+
+            {/* 6. Why Shop With Us Section */}
+            <section className="mt-20 py-16 bg-secondary/50 rounded-lg">
+                <h2 className="text-4xl font-bold text-center mb-2">Why Shop With Us?</h2>
+                <p className="text-muted-foreground text-center mb-8">
+                  Discover the benefits of choosing our marketplace for all your beauty needs.
+                </p>
+                <div className="grid md:grid-cols-3 gap-8 text-center">
+                    <div>
+                        <h3 className="font-semibold text-lg">Curated Selection</h3>
+                        <p className="text-muted-foreground">Only the best products from trusted vendors.</p>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-lg">Secure Shopping</h3>
+                        <p className="text-muted-foreground">Your data and payments are always safe.</p>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-lg">Fast Shipping</h3>
+                        <p className="text-muted-foreground">Get your favorite products delivered quickly.</p>
+                    </div>
+                </div>
+            </section>
+            
+            {/* 7. Featured Brand Section */}
+            <section className="mt-20">
+                <h2 className="text-4xl font-bold text-center mb-2">Featured Brand: Aura Cosmetics</h2>
+                <p className="text-muted-foreground text-center mb-8">
+                  Meet one of our top-rated brands creating high-performance, cruelty-free makeup.
+                </p>
+                <div className="grid md:grid-cols-2 items-center gap-8">
+                    <p className="text-muted-foreground text-lg leading-relaxed">Aura Cosmetics is dedicated to creating high-performance, cruelty-free makeup that empowers you to express your unique beauty. Discover their best-selling products loved by professionals and enthusiasts alike.</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1027/200/200" alt="Aura Product 1" className="w-full h-full object-cover" /></div>
+                        <div className="rounded-lg overflow-hidden aspect-square"><img src="https://picsum.photos/id/1028/200/200" alt="Aura Product 2" className="w-full h-full object-cover" /></div>
+                    </div>
+                </div>
+            </section>
+            
+            {/* 8. Customer Testimonials */}
+            <section className="mt-20">
+              <h2 className="text-4xl font-bold text-center mb-2">What Our Customers Say</h2>
+              <p className="text-muted-foreground text-center mb-6">
+                Read genuine reviews from our satisfied customers about their shopping experience.
+              </p>
+              <div className="grid md:grid-cols-3 gap-8">
+                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Amazing quality and fast delivery. Will definitely shop again!" - Sarah L.</blockquote>
+                <blockquote className="p-6 bg-secondary/50 rounded-lg">"Found my new favorite serum here. The selection is fantastic." - Mark T.</blockquote>
+                <blockquote className="p-6 bg-secondary/50 rounded-lg">"A great marketplace for discovering new beauty brands." - Emily C.</blockquote>
+              </div>
+            </section>
+            
+            {/* 9. Shopping Guide */}
+            <section className="mt-20">
+              <h2 className="text-4xl font-bold text-center mb-2">Your Guide to Better Shopping</h2>
+              <p className="text-muted-foreground text-center mb-6">
+                Learn how to make the most of our marketplace features and find your perfect products.
+              </p>
+              <p className="text-center max-w-2xl mx-auto text-muted-foreground">Use our filters to narrow down your search by brand, price, and category. Read reviews from other customers to make informed decisions and find the perfect products for your needs.</p>
+            </section>
+            
+            {/* 10. Call to Action */}
+            <section className="mt-20 text-center py-16 bg-primary text-primary-foreground rounded-lg">
+                <h2 className="text-4xl font-bold mb-2">Ready to Elevate Your Beauty Routine?</h2>
+                <p className="text-primary-foreground/80 mb-6">Join our community and get access to exclusive deals and new arrivals.</p>
+                <Button variant="secondary" size="lg">Sign Up Now</Button>
+            </section>
+
           </main>
         </div>
       </div>
-      
-      {/* Mobile Filter Modal */}
-      <Dialog open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Filters</h2>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => setIsMobileFilterOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            <FilterSidebar 
-              categories={categories}
-              brands={brands}
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-              selectedBrand={selectedBrand}
-              setSelectedBrand={setSelectedBrand}
-              priceRange={priceRange}
-              setPriceRange={setPriceRange}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              clearFilters={clearFilters}
-            />
-             <Button className="w-full mt-6" onClick={() => setIsMobileFilterOpen(false)}>Apply Filters</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </PageContainer>
   );
 }
 
-```
-- packages/ui/src/collapsible.tsx:
-```tsx
-
-"use client";
-
-import * as CollapsiblePrimitive from "@radix-ui/react-collapsible";
-
-const Collapsible = CollapsiblePrimitive.Root;
-
-const CollapsibleTrigger = CollapsiblePrimitive.CollapsibleTrigger;
-
-const CollapsibleContent = CollapsiblePrimitive.CollapsibleContent;
-
-export { Collapsible, CollapsibleTrigger, CollapsibleContent };
-```
-- packages/ui/src/slider.tsx:
-```tsx
-
-"use client";
-
-import * as React from "react";
-import * as SliderPrimitive from "@radix-ui/react-slider";
-import { cn } from "./cn";
-
-const Slider = React.forwardRef<
-  React.ElementRef<typeof SliderPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
->(({ className, ...props }, ref) => (
-  <SliderPrimitive.Root
-    ref={ref}
-    className={cn(
-      "relative flex w-full touch-none select-none items-center",
-      className
-    )}
-    {...props}
-  >
-    <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-secondary">
-      <SliderPrimitive.Range className="absolute h-full bg-primary" />
-    </SliderPrimitive.Track>
-    <SliderPrimitive.Thumb className="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
-    {props.defaultValue && props.defaultValue.length > 1 && (
-        <SliderPrimitive.Thumb className="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50" />
-    )}
-  </SliderPrimitive.Root>
-));
-Slider.displayName = SliderPrimitive.Root.displayName;
-
-export { Slider };
-```
+// Separator Component for local use
+const Separator = ({ orientation = 'horizontal', className = '' }: { orientation?: 'horizontal' | 'vertical', className?: string }) => (
+  <div className={`bg-border ${orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px'} ${className}`} />
+);
