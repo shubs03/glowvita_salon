@@ -9,7 +9,7 @@ import { Label } from "@repo/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Type, Image as ImageIcon, Download, Save, Trash2, Move } from 'lucide-react';
 import { toast } from 'sonner';
-import fabric from 'fabric';
+import { fabric } from 'fabric';
 
 interface CanvasTemplateEditorProps {
   initialImage?: string;
@@ -59,10 +59,10 @@ export default function CanvasTemplateEditor({
 
     // Load initial background image if provided
     if (initialImage) {
-      fabric.Image.fromURL(initialImage, (img: any) => {
+      fabric.Image.fromURL(initialImage, (img: fabric.Image) => {
         canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-          scaleX: canvas.width / (img.width || 1),
-          scaleY: canvas.height / (img.height || 1)
+          scaleX: (canvas.width || 1) / (img.width || 1),
+          scaleY: (canvas.height || 1) / (img.height || 1)
         });
       });
     }
@@ -102,28 +102,30 @@ export default function CanvasTemplateEditor({
 
     // Scale canvas to fit container
     const container = canvasContainerRef.current;
-    const containerWidth = container.clientWidth - 40;
-    const containerHeight = container.clientHeight - 40;
-    const scaleX = containerWidth / width;
-    const scaleY = containerHeight / height;
-    const scale = Math.min(scaleX, scaleY, 0.8);
-    
-    if (scale < 1) {
-      canvas.setZoom(scale);
+    if (container && container.clientWidth > 0 && container.clientHeight > 0) {
+      const containerWidth = container.clientWidth - 40;
+      const containerHeight = container.clientHeight - 40;
+      const scaleX = containerWidth / width;
+      const scaleY = containerHeight / height;
+      const scale = Math.min(scaleX, scaleY, 0.8);
+      
+      if (scale < 1) {
+        canvas.setZoom(scale);
+      }
     }
 
     // Set up event listeners
-    canvas.on('selection:created', (e: any) => {
+    canvas.on('selection:created', (e: fabric.IEvent) => {
       const selected = e.target;
-      setSelectedObject(selected);
+      setSelectedObject(selected || null);
       if (selected && selected.type === 'textbox') {
         updateTextControls(selected);
       }
     });
     
-    canvas.on('selection:updated', (e: any) => {
+    canvas.on('selection:updated', (e: fabric.IEvent) => {
       const selected = e.target;
-      setSelectedObject(selected);
+      setSelectedObject(selected || null);
       if (selected && selected.type === 'textbox') {
         updateTextControls(selected);
       }
@@ -137,13 +139,15 @@ export default function CanvasTemplateEditor({
     return canvas;
   }, [initialImage, width, height]);
 
-  const updateTextControls = (textbox: any) => {
-    setText(textbox.text || '');
-    setFontSize(textbox.fontSize || 24);
-    setFill(textbox.fill || '#000000');
-    setFontFamily(textbox.fontFamily || 'Arial');
-    setFontWeight(textbox.fontWeight || 'normal');
-    setTextAlign(textbox.textAlign || 'center');
+  const updateTextControls = (textbox: fabric.Object) => {
+    if (textbox instanceof fabric.Textbox) {
+      setText(textbox.text || '');
+      setFontSize(textbox.fontSize || 24);
+      setFill(textbox.fill as string || '#000000');
+      setFontFamily(textbox.fontFamily || 'Arial');
+      setFontWeight(textbox.fontWeight as string || 'normal');
+      setTextAlign(textbox.textAlign || 'center');
+    }
   };
 
   useEffect(() => {
@@ -182,11 +186,11 @@ export default function CanvasTemplateEditor({
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl, (img: any) => {
+        fabric.Image.fromURL(dataUrl, (img: fabric.Image) => {
           const maxWidth = 150;
           const maxHeight = 150;
           
-          if (img.width > maxWidth || img.height > maxHeight) {
+          if (img.width && img.height && (img.width > maxWidth || img.height > maxHeight)) {
             const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
             img.scale(scale);
           }
@@ -210,14 +214,14 @@ export default function CanvasTemplateEditor({
     const newText = e.target.value;
     setText(newText);
     if (selectedObject && selectedObject.type === 'textbox' && fabricCanvas) {
-      (selectedObject as any).set('text', newText);
+      (selectedObject as fabric.Textbox).set('text', newText);
       fabricCanvas.requestRenderAll();
     }
   };
 
   const handlePropertyChange = (property: string, value: any) => {
-    if (selectedObject && selectedObject.type === 'textbox' && fabricCanvas) {
-      (selectedObject as any).set(property, value);
+    if (selectedObject && fabricCanvas) {
+      selectedObject.set(property, value);
       fabricCanvas.requestRenderAll();
     }
   };

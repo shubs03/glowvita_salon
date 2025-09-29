@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -36,10 +37,10 @@ interface SmsPackageFormProps {
   onClose: () => void;
   packageData?: Partial<SmsPackage>;
   isEditMode?: boolean;
-  onSubmit: (data: SmsPackage) => Promise<void>;
+  onSubmit: (data: Partial<SmsPackage>) => Promise<void>;
 }
 
-const getDefaultFormData = (): SmsPackage => ({
+const getDefaultFormData = (): Partial<SmsPackage> => ({
   id: '',
   name: '',
   description: '',
@@ -57,7 +58,7 @@ export function SmsPackageForm({
   isEditMode = false,
   onSubmit 
 }: SmsPackageFormProps) {
-  const [formData, setFormData] = useState<SmsPackage>(getDefaultFormData());
+  const [formData, setFormData] = useState<Partial<SmsPackage>>(getDefaultFormData());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize form data when packageData changes or dialog opens
@@ -75,7 +76,7 @@ export function SmsPackageForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || formData.smsCount === '' || formData.price === '' || formData.validityDays === '') {
+    if (!formData.name || !formData.smsCount || !formData.price || !formData.validityDays) {
       toast.error('Please fill in all required fields');
       return;
     }

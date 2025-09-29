@@ -168,7 +168,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
           fetchAddress([lngLat.lng, lngLat.lat]);
         });
 
-        map.current.on('click', (e) => {
+        map.current.on('click', (e: mapboxgl.MapLayerMouseEvent) => {
           const { lng, lat } = e.lngLat;
           setFormData(prev => ({ 
             ...prev, 
@@ -185,7 +185,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
         });
       } catch (error) {
         console.error('Error initializing Mapbox:', error);
-        setFormData(prev => ({ ...prev, errors: { ...prev.errors, location: 'Failed to load map.' } }));
+        setFormData(prev => ({ ...prev, errors: { ...prev.errors, location: 'Failed to load map.' } } as Vendor));
       }
     };
 
@@ -622,16 +622,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
             </Button>
             <Button
               type="button"
-              onClick={() => {
-                if (formData.location) {
-                  setIsMapOpen(false);
-                  if (errors.location) {
-                    setErrors(prev => ({ ...prev, location: undefined }));
-                  }
-                } else {
-                  setErrors(prev => ({ ...prev, location: 'Please select a location on the map' }));
-                }
-              }}
+              onClick={() => setIsMapOpen(false)}
             >
               Confirm Location
             </Button>
@@ -653,6 +644,7 @@ interface VendorEditFormProps {
   onClose: () => void;
   vendor: Vendor | null;
   onSubmit: (vendor: Vendor) => void;
+  onSuccess: () => void; // Added onSuccess prop
 }
 
 const getInitialFormData = (): Vendor => ({
@@ -678,7 +670,7 @@ const getInitialFormData = (): Vendor => ({
     location: null
 });
 
-export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEditFormProps) {
+export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }: VendorEditFormProps) {
   const [formData, setFormData] = useState<Vendor>(getInitialFormData());
   const [errors, setErrors] = useState<Partial<Record<keyof Vendor, string>>>({});
   const isEditMode = !!vendor;
@@ -710,7 +702,7 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
     const newErrors: Partial<Record<keyof Vendor, string>> = {};
     let isValid = true;
     for (const field of requiredFields) {
-        if (!formData[field]) {
+        if (!formData[field as keyof typeof formData]) {
             newErrors[field] = 'This field is required';
             isValid = false;
         }
