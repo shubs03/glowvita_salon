@@ -120,20 +120,20 @@ export default function CanvasTemplateEditor({
 
 
     // Set up event listeners
-    canvas.on('selection:created', (e: TEvent<TPointerEvent> & { selected?: FabricObject[] }) => {
-        const selected = e.selected?.[0];
-        setSelectedObject(selected || null);
-        if (selected && selected.type === 'textbox') {
-            updateTextControls(selected);
-        }
+    canvas.on('selection:created', (e: TEvent<TPointerEvent>) => {
+      const selected = (e as any).selected[0];
+      setSelectedObject(selected || null);
+      if (selected && selected.type === 'textbox') {
+        updateTextControls(selected);
+      }
     });
     
-    canvas.on('selection:updated', (e: TEvent<TPointerEvent> & { selected?: FabricObject[] }) => {
-        const selected = e.selected?.[0];
-        setSelectedObject(selected || null);
-        if (selected && selected.type === 'textbox') {
-            updateTextControls(selected);
-        }
+    canvas.on('selection:updated', (e: TEvent<TPointerEvent>) => {
+      const selected = (e as any).selected[0];
+      setSelectedObject(selected || null);
+      if (selected && selected.type === 'textbox') {
+        updateTextControls(selected);
+      }
     });
     
     canvas.on('selection:cleared', () => {
