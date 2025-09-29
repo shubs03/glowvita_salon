@@ -3,14 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
 import { glowvitaApi } from '@repo/store/api';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch } from '@repo/store/hooks';
-import { setUserAuth } from '@repo/store/slices/Web/userAuthSlice';
+import { setUserAuth } from '@repo/store/slices/userAuthSlice';
 import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
@@ -22,9 +20,10 @@ export default function LoginPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   
-  const [login, { isLoading }] = glowvitaApi.useUserLoginMutation();
+  const [login, { isLoading: isLoggingIn }] = glowvitaApi.useUserLoginMutation();
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
+  // Redirect if already authenticated
   useEffect(() => {
     if (!isAuthLoading && isAuthenticated) {
       router.push('/profile');
@@ -43,11 +42,8 @@ export default function LoginPage() {
         toast.success('Login successful!', {
           description: 'Redirecting to your profile...',
           duration: 1000,
+          onAutoClose: () => router.push('/profile'),
         });
-
-        // The useEffect will handle the redirect now.
-        router.push('/profile');
-
       } else {
         toast.error(response.message || 'Failed to log in.');
       }
@@ -58,7 +54,9 @@ export default function LoginPage() {
     }
   };
   
-  if (isAuthLoading || isAuthenticated) {
+  // Only redirect if user is authenticated
+  if (!isAuthLoading && isAuthenticated) {
+    router.push('/profile');
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
           <div className="relative">
@@ -67,6 +65,11 @@ export default function LoginPage() {
           </div>
         </div>
     );
+  }
+
+  // If already authenticated, the useEffect will handle redirection, render nothing here to avoid flash.
+  if (isAuthenticated) {
+    return null;
   }
 
   return (
@@ -133,9 +136,9 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full h-12 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
-                disabled={isLoading}
+                disabled={isLoggingIn}
               >
-                {isLoading ? (
+                {isLoggingIn ? (
                   <span className="flex items-center justify-center">
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

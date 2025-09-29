@@ -8,7 +8,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@repo/store/hooks';
-import { clearUserAuth } from '@repo/store/slices/Web/userAuthSlice';
+import { clearUserAuth } from '@repo/store/slices/userAuthSlice';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -128,64 +128,66 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
               <ThemeToggle />
             </div>
             {!isLoading && (
-              isAuthenticated && user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      className="group flex items-center gap-2 h-10 rounded-full hover:bg-primary/10 transition-all duration-300"
-                      aria-label="User menu"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user?.profilePicture || user?.avatarUrl} alt={`${user?.firstName || 'User'} avatar`} />
-                        <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
-                      </Avatar>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-xl border border-border/30 shadow-lg rounded-lg">
-                    <DropdownMenuLabel className="p-4 border-b border-border/20">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
+              <>
+                {isAuthenticated && user ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        className="group flex items-center gap-2 h-10 rounded-full hover:bg-primary/10 transition-all duration-300"
+                        aria-label="User menu"
+                      >
+                        <Avatar className="h-8 w-8">
                           <AvatarImage src={user?.profilePicture || user?.avatarUrl} alt={`${user?.firstName || 'User'} avatar`} />
                           <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-foreground truncate">
-                            {user.firstName && user.lastName 
-                              ? `${user.firstName} ${user.lastName}` 
-                              : user.firstName || user.lastName || 'User'
-                            }
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">{user.emailAddress}</p>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-xl border border-border/30 shadow-lg rounded-lg">
+                      <DropdownMenuLabel className="p-4 border-b border-border/20">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user?.profilePicture || user?.avatarUrl} alt={`${user?.firstName || 'User'} avatar`} />
+                            <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-foreground truncate">
+                              {user.firstName && user.lastName 
+                                ? `${user.firstName} ${user.lastName}` 
+                                : user.firstName || user.lastName || 'User'
+                              }
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">{user.emailAddress}</p>
+                          </div>
                         </div>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuGroup className="p-2">
-                      {profileNavItems.map(item => (
-                        <DropdownMenuItem key={item.id} asChild className="rounded-md">
-                          <Link href={item.href} className="flex items-center gap-3">
-                            <item.icon className="h-4 w-4 text-muted-foreground" />
-                            <span>{item.label}</span>
-                          </Link>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={() => setShowLogoutModal(true)} 
-                      className="text-destructive m-2 rounded-md cursor-pointer"
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Logout</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/client-login">Login</Link>
-                </Button>
-              )
+                      </DropdownMenuLabel>
+                      <DropdownMenuGroup className="p-2">
+                        {profileNavItems.map(item => (
+                          <DropdownMenuItem key={item.id} asChild className="rounded-md">
+                            <Link href={item.href} className="flex items-center gap-3">
+                              <item.icon className="h-4 w-4 text-muted-foreground" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => setShowLogoutModal(true)} 
+                        className="text-destructive m-2 rounded-md cursor-pointer"
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Logout</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                    <Link href="/client-login">Login</Link>
+                  </Button>
+                )}
+              </>
             )}
           </nav>
           
