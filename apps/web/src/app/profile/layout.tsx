@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
@@ -44,6 +43,15 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  useEffect(() => {
+    // This effect handles route protection.
+    // It waits until the initial auth check is done (isLoading is false).
+    if (!isLoading && !isAuthenticated) {
+      router.push('/client-login');
+    }
+  }, [isLoading, isAuthenticated, router]);
+
+
   const handleLogout = () => {
     setIsLoggingOut(true);
     try {
@@ -58,13 +66,9 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
     }
   };
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/client-login');
-    }
-  }, [isLoading, isAuthenticated, router]);
-
-  if (isLoading || !isAuthenticated) {
+  // While isLoading, show a full-page loading spinner.
+  // This prevents any "flicker" of content or incorrect redirects.
+  if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
         <div className="flex flex-col items-center">
@@ -73,6 +77,12 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     );
+  }
+
+  // If loading is done and user is not authenticated, render nothing.
+  // The useEffect above will handle the redirection.
+  if (!isAuthenticated) {
+    return null;
   }
   
   return (
