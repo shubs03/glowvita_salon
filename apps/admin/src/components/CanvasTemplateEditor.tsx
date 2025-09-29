@@ -1,16 +1,29 @@
-
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Textarea } from "@repo/ui/textarea";
 import { Label } from "@repo/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
-import { Type, Image as ImageIcon, Download, Save, Trash2, Move } from 'lucide-react';
-import { toast } from 'sonner';
-import fabric from 'fabric';
-import type { TEvent, FabricImage, ImageProps, SerializedImageProps, ObjectEvents, TPointerEvent } from 'fabric';
+import {
+  Type,
+  Image as ImageIcon,
+  Download,
+  Save,
+  Trash2,
+  Move,
+} from "lucide-react";
+import { toast } from "sonner";
+import fabric from "fabric";
+import type {
+  TEvent,
+  FabricImage,
+  ImageProps,
+  SerializedImageProps,
+  ObjectEvents,
+  TPointerEvent,
+} from "fabric";
 
 interface CanvasTemplateEditorProps {
   initialImage?: string;
@@ -22,87 +35,93 @@ interface CanvasTemplateEditorProps {
   height?: number;
 }
 
-export default function CanvasTemplateEditor({ 
-  initialImage, 
-  onSaveTemplate, 
-  width = 900, 
-  height = 800 
+export default function CanvasTemplateEditor({
+  initialImage,
+  onSaveTemplate,
+  width = 900,
+  height = 800,
 }: CanvasTemplateEditorProps) {
   const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
-  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
-  
+  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(
+    null
+  );
+
   // This state will track if the component has mounted on the client
   const [isClient, setIsClient] = useState(false);
-  
+
   useEffect(() => {
     // This effect runs only once on the client-side after the component mounts
     setIsClient(true);
   }, []);
-  
+
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // Text editing states
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const [fontSize, setFontSize] = useState(24);
-  const [fill, setFill] = useState('#000000');
-  const [fontFamily, setFontFamily] = useState('Arial');
-  const [fontWeight, setFontWeight] = useState('normal');
-  const [textAlign, setTextAlign] = useState('center');
+  const [fill, setFill] = useState("#000000");
+  const [fontFamily, setFontFamily] = useState("Arial");
+  const [fontWeight, setFontWeight] = useState("normal");
+  const [textAlign, setTextAlign] = useState("center");
 
   const initCanvas = useCallback(() => {
     if (!canvasContainerRef.current) return;
-    
-    const canvasEl = document.createElement('canvas');
-    canvasContainerRef.current.innerHTML = '';
+
+    const canvasEl = document.createElement("canvas");
+    canvasContainerRef.current.innerHTML = "";
     canvasContainerRef.current.appendChild(canvasEl);
 
     // Use fabric.Canvas instead of new Canvas
     const canvas = new fabric.Canvas(canvasEl, {
       width: width,
       height: height,
-      backgroundColor: '#ffffff'
+      backgroundColor: "#ffffff",
     });
 
     // Load initial background image if provided
     if (initialImage) {
-      fabric.Image.fromURL(initialImage, (img: FabricImage) => {
-        canvas.backgroundImage = img;
-        canvas.renderAll();
-      }, {
-        scaleX: (canvas.width || 1) / (initialImage ? width : 1),
-        scaleY: (canvas.height || 1) / (initialImage ? height : 1)
-      });
+      fabric.Image.fromURL(
+        initialImage,
+        (img: FabricImage) => {
+          canvas.backgroundImage = img;
+          canvas.renderAll();
+        },
+        {
+          scaleX: (canvas.width || 1) / (initialImage ? width : 1),
+          scaleY: (canvas.height || 1) / (initialImage ? height : 1),
+        }
+      );
     }
 
     // Add default text elements
-    const titleText = new fabric.Textbox('Your Title Here', {
+    const titleText = new fabric.Textbox("Your Title Here", {
       left: width / 2,
       top: 100,
       fontSize: 48,
-      fill: '#000000',
+      fill: "#000000",
       width: 400,
-      textAlign: 'center',
-      fontFamily: 'Arial',
-      fontWeight: 'bold',
-      originX: 'center',
-      originY: 'center',
+      textAlign: "center",
+      fontFamily: "Arial",
+      fontWeight: "bold",
+      originX: "center",
+      originY: "center",
       selectable: true,
-      editable: true
+      editable: true,
     });
 
-    const subtitleText = new fabric.Textbox('Add your message here', {
+    const subtitleText = new fabric.Textbox("Add your message here", {
       left: width / 2,
       top: 200,
       fontSize: 24,
-      fill: '#333333',
+      fill: "#333333",
       width: 500,
-      textAlign: 'center',
-      fontFamily: 'Arial',
-      fontWeight: 'normal',
-      originX: 'center',
-      originY: 'center',
+      textAlign: "center",
+      fontFamily: "Arial",
+      fontWeight: "normal",
+      originX: "center",
+      originY: "center",
       selectable: true,
-      editable: true
+      editable: true,
     });
 
     canvas.add(titleText, subtitleText);
@@ -110,36 +129,32 @@ export default function CanvasTemplateEditor({
     // Scale canvas to fit container
     const container = canvasContainerRef.current;
     if (container.clientWidth > 0 && container.clientHeight > 0) {
-        const containerWidth = container.clientWidth - 40;
-        const containerHeight = container.clientHeight - 40;
-        const scaleX = containerWidth / width;
-        const scaleY = containerHeight / height;
-        const scale = Math.min(scaleX, scaleY, 0.8);
-        
-        if (scale < 1) {
-          canvas.setZoom(scale);
-        }
+      const containerWidth = container.clientWidth - 40;
+      const containerHeight = container.clientHeight - 40;
+      const scaleX = containerWidth / width;
+      const scaleY = containerHeight / height;
+      const scale = Math.min(scaleX, scaleY, 0.8);
+
+      if (scale < 1) {
+        canvas.setZoom(scale);
+      }
     }
 
-
     // Set up event listeners
-    canvas.on('selection:created', (e: TEvent<TPointerEvent>) => {
-      const selected = (e as any).selected[0];
+    canvas.on("selection:created", (e: { selected: any[] }) => {
+      const selected = e.selected[0];
       setSelectedObject(selected || null);
-      if (selected && selected.type === 'textbox') {
+      if (selected && selected.type === "textbox") {
         updateTextControls(selected);
       }
     });
-    
-    canvas.on('selection:updated', (e: TEvent<TPointerEvent>) => {
-      const selected = (e as any).selected[0];
+
+    canvas.on("selection:updated", (e: { selected: any[] }) => {
+      const selected = e.selected[0];
       setSelectedObject(selected || null);
-      if (selected && selected.type === 'textbox') {
-        updateTextControls(selected);
-      }
     });
-    
-    canvas.on('selection:cleared', () => {
+
+    canvas.on("selection:cleared", () => {
       setSelectedObject(null);
     });
 
@@ -149,19 +164,19 @@ export default function CanvasTemplateEditor({
 
   const updateTextControls = (textbox: fabric.Object) => {
     if (textbox instanceof fabric.Textbox) {
-      setText(textbox.text || '');
+      setText(textbox.text || "");
       setFontSize(textbox.fontSize || 24);
-      setFill(textbox.fill as string || '#000000');
-      setFontFamily(textbox.fontFamily || 'Arial');
-      setFontWeight(textbox.fontWeight as string || 'normal');
-      setTextAlign(textbox.textAlign || 'center');
+      setFill((textbox.fill as string) || "#000000");
+      setFontFamily(textbox.fontFamily || "Arial");
+      setFontWeight((textbox.fontWeight as string) || "normal");
+      setTextAlign(textbox.textAlign || "center");
     }
   };
 
   useEffect(() => {
     if (isClient) {
       const canvas = initCanvas();
-      
+
       return () => {
         if (canvas) {
           canvas.dispose();
@@ -172,19 +187,19 @@ export default function CanvasTemplateEditor({
 
   const addText = () => {
     if (!fabricCanvas) return;
-    
-    const newText = new fabric.Textbox('New Text', {
+
+    const newText = new fabric.Textbox("New Text", {
       left: 100,
       top: 100,
       fontSize: 30,
-      fill: '#000000',
+      fill: "#000000",
       width: 200,
-      textAlign: 'center',
-      fontFamily: 'Arial',
+      textAlign: "center",
+      fontFamily: "Arial",
       selectable: true,
-      editable: true
+      editable: true,
     });
-    
+
     fabricCanvas.add(newText);
     fabricCanvas.setActiveObject(newText);
     fabricCanvas.renderAll();
@@ -199,18 +214,25 @@ export default function CanvasTemplateEditor({
         fabric.Image.fromURL(dataUrl, (img: FabricImage) => {
           const maxWidth = 150;
           const maxHeight = 150;
-          
-          if (img.width && img.height && (img.width > maxWidth || img.height > maxHeight)) {
-            const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
+
+          if (
+            img.width &&
+            img.height &&
+            (img.width > maxWidth || img.height > maxHeight)
+          ) {
+            const scale = Math.min(
+              maxWidth / img.width,
+              maxHeight / img.height
+            );
             img.scale(scale);
           }
-          
+
           img.set({
             left: 50,
             top: 50,
-            selectable: true
+            selectable: true,
           });
-          
+
           fabricCanvas.add(img);
           fabricCanvas.setActiveObject(img);
           fabricCanvas.renderAll();
@@ -223,8 +245,8 @@ export default function CanvasTemplateEditor({
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setText(newText);
-    if (selectedObject && selectedObject.type === 'textbox' && fabricCanvas) {
-      (selectedObject as fabric.Textbox).set('text', newText);
+    if (selectedObject && selectedObject.type === "textbox" && fabricCanvas) {
+      (selectedObject as fabric.Textbox).set("text", newText);
       fabricCanvas.requestRenderAll();
     }
   };
@@ -247,48 +269,48 @@ export default function CanvasTemplateEditor({
 
   const saveTemplate = () => {
     if (!fabricCanvas) return;
-    
+
     // Deselect all objects for clean preview
     fabricCanvas.discardActiveObject();
     fabricCanvas.renderAll();
-    
+
     const jsonData = fabricCanvas.toJSON();
-    const previewImage = fabricCanvas.toDataURL({ 
-      format: 'jpeg', 
+    const previewImage = fabricCanvas.toDataURL({
+      format: "jpeg",
       quality: 0.8,
-      multiplier: 1
+      multiplier: 1,
     });
-    
-    console.log('Generated template JSON:', JSON.stringify(jsonData, null, 2));
-    
+
+    console.log("Generated template JSON:", JSON.stringify(jsonData, null, 2));
+
     onSaveTemplate({
       jsonData,
-      previewImage
+      previewImage,
     });
-    
-    toast.success('Template saved successfully!');
+
+    toast.success("Template saved successfully!");
   };
 
   const downloadPreview = () => {
     if (!fabricCanvas) return;
-    
+
     fabricCanvas.discardActiveObject();
     fabricCanvas.renderAll();
-    
-    const dataUrl = fabricCanvas.toDataURL({ 
-      format: 'jpeg', 
+
+    const dataUrl = fabricCanvas.toDataURL({
+      format: "jpeg",
       quality: 0.9,
-      multiplier: 2
+      multiplier: 2,
     });
-    
-    const link = document.createElement('a');
-    link.download = 'template-preview.jpg';
+
+    const link = document.createElement("a");
+    link.download = "template-preview.jpg";
     link.href = dataUrl;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    toast.success('Template downloaded!');
+
+    toast.success("Template downloaded!");
   };
 
   return (
@@ -301,17 +323,21 @@ export default function CanvasTemplateEditor({
             <CardTitle className="text-lg">Add Elements</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button onClick={addText} variant="outline" className="w-full justify-start">
+            <Button
+              onClick={addText}
+              variant="outline"
+              className="w-full justify-start"
+            >
               <Type className="h-4 w-4 mr-2" />
               Add Text
             </Button>
-            
+
             <div className="space-y-2">
               <Label htmlFor="logo-upload">Upload Image/Logo</Label>
-              <Input 
-                id="logo-upload" 
-                type="file" 
-                accept="image/*" 
+              <Input
+                id="logo-upload"
+                type="file"
+                accept="image/*"
                 onChange={handleLogoUpload}
               />
             </div>
@@ -329,58 +355,58 @@ export default function CanvasTemplateEditor({
                 <Move className="mx-auto h-8 w-8 mb-2" />
                 <p>Select an element to edit</p>
               </div>
-            ) : selectedObject.type === 'textbox' ? (
+            ) : selectedObject.type === "textbox" ? (
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="text-content">Content</Label>
-                  <Textarea 
+                  <Textarea
                     id="text-content"
                     value={text}
                     onChange={handleTextChange}
                     rows={3}
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label htmlFor="font-size">Size</Label>
-                    <Input 
+                    <Input
                       id="font-size"
                       type="number"
                       value={fontSize}
                       onChange={(e) => {
                         const size = parseInt(e.target.value);
                         setFontSize(size);
-                        handlePropertyChange('fontSize', size);
+                        handlePropertyChange("fontSize", size);
                       }}
                       min="8"
                       max="200"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="text-color">Color</Label>
-                    <Input 
+                    <Input
                       id="text-color"
                       type="color"
                       value={fill}
                       onChange={(e) => {
                         setFill(e.target.value);
-                        handlePropertyChange('fill', e.target.value);
+                        handlePropertyChange("fill", e.target.value);
                       }}
                     />
                   </div>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="font-family">Font</Label>
-                  <select 
+                  <select
                     id="font-family"
                     className="w-full px-3 py-2 border rounded-md"
                     value={fontFamily}
                     onChange={(e) => {
                       setFontFamily(e.target.value);
-                      handlePropertyChange('fontFamily', e.target.value);
+                      handlePropertyChange("fontFamily", e.target.value);
                     }}
                   >
                     <option value="Arial">Arial</option>
@@ -391,33 +417,33 @@ export default function CanvasTemplateEditor({
                     <option value="Impact">Impact</option>
                   </select>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label htmlFor="font-weight">Weight</Label>
-                    <select 
+                    <select
                       id="font-weight"
                       className="w-full px-3 py-2 border rounded-md"
                       value={fontWeight}
                       onChange={(e) => {
                         setFontWeight(e.target.value);
-                        handlePropertyChange('fontWeight', e.target.value);
+                        handlePropertyChange("fontWeight", e.target.value);
                       }}
                     >
                       <option value="normal">Normal</option>
                       <option value="bold">Bold</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="text-align">Align</Label>
-                    <select 
+                    <select
                       id="text-align"
                       className="w-full px-3 py-2 border rounded-md"
                       value={textAlign}
                       onChange={(e) => {
                         setTextAlign(e.target.value);
-                        handlePropertyChange('textAlign', e.target.value);
+                        handlePropertyChange("textAlign", e.target.value);
                       }}
                     >
                       <option value="left">Left</option>
@@ -426,8 +452,12 @@ export default function CanvasTemplateEditor({
                     </select>
                   </div>
                 </div>
-                
-                <Button onClick={deleteSelected} variant="destructive" className="w-full">
+
+                <Button
+                  onClick={deleteSelected}
+                  variant="destructive"
+                  className="w-full"
+                >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </Button>
@@ -435,8 +465,14 @@ export default function CanvasTemplateEditor({
             ) : (
               <div className="text-center py-4">
                 <ImageIcon className="mx-auto h-8 w-8 mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-4">Image selected</p>
-                <Button onClick={deleteSelected} variant="destructive" className="w-full">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Image selected
+                </p>
+                <Button
+                  onClick={deleteSelected}
+                  variant="destructive"
+                  className="w-full"
+                >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
                 </Button>
@@ -452,7 +488,11 @@ export default function CanvasTemplateEditor({
               <Save className="h-4 w-4 mr-2" />
               Save Template
             </Button>
-            <Button onClick={downloadPreview} variant="outline" className="w-full">
+            <Button
+              onClick={downloadPreview}
+              variant="outline"
+              className="w-full"
+            >
               <Download className="h-4 w-4 mr-2" />
               Download Preview
             </Button>
@@ -464,7 +504,7 @@ export default function CanvasTemplateEditor({
       <div className="lg:col-span-3">
         <Card className="h-full">
           <CardContent className="p-4">
-            <div 
+            <div
               ref={canvasContainerRef}
               className="w-full h-[600px] bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden"
             >
