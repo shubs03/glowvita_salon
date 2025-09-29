@@ -60,10 +60,11 @@ export default function CanvasTemplateEditor({
     // Load initial background image if provided
     if (initialImage) {
       fabric.Image.fromURL(initialImage, (img: fabric.Image) => {
-        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-          scaleX: (canvas.width || 1) / (img.width || 1),
-          scaleY: (canvas.height || 1) / (img.height || 1)
-        });
+        canvas.backgroundImage = img;
+        canvas.renderAll();
+      }, {
+        scaleX: (canvas.width || 1) / (initialImage ? width : 1),
+        scaleY: (canvas.height || 1) / (initialImage ? height : 1)
       });
     }
 
