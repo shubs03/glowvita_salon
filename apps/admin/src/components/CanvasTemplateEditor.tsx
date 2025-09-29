@@ -8,7 +8,7 @@ import { Label } from "@repo/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Type, Image as ImageIcon, Download, Save, Trash2, Move } from 'lucide-react';
 import { toast } from 'sonner';
-import { fabric } from 'fabric';
+import fabric from 'fabric';
 
 interface CanvasTemplateEditorProps {
   initialImage?: string;
