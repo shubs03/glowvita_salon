@@ -15,7 +15,7 @@ import { Label } from '@repo/ui/label';
 import { Checkbox } from '@repo/ui/checkbox';
 import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee, Upload, X } from "lucide-react";
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { openModal, closeModal } from '@repo/store/slices/modal';
+import { closeModal, openModal } from '../../../../../packages/store/src/slices/modalSlice.js';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { useForm } from 'react-hook-form';
 import { 

@@ -1,16 +1,19 @@
-import { Store } from '@reduxjs/toolkit';
-import { RootState } from './store';
+import { selectRootState } from "./store";
+import { Store } from "@reduxjs/toolkit";
+import { RootState } from "./store";
 
-declare module '@repo/store' {
+declare module "@repo/store" {
   interface DefaultRootState extends RootState {}
 }
 
-declare module 'react-redux' {
+declare module "react-redux" {
   interface DefaultRootState extends RootState {}
 }
 
-declare module 'next' {
+declare module "next" {
   interface NextPageContext {
     store: Store<RootState>;
   }
 }
+
+export type RootState = ReturnType<typeof selectRootState>;

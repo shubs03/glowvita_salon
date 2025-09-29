@@ -47,7 +47,7 @@ interface Document {
   notes?: string;
 }
 
-type SalonCategory = 'unisex' | 'men' | 'women';
+export type SalonCategory = 'unisex' | 'men' | 'women';
 type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
 
 export interface Vendor {

@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Skeleton } from "@repo/ui/skeleton";
 
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { openModal, closeModal } from '@repo/store/slices/modal';
+import { closeModal, openModal } from '../../../../../packages/store/src/slices/modalSlice.js';
 import {
   setCustomerFilter,
   setCurrentCustomerPage,
