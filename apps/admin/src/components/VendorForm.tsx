@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Building, Map, User, ArrowLeft, ArrowRight, Map as MapIcon } from 'lucide-react';
+import { Eye, EyeOff, Building, MapPin, User, ChevronRight, ArrowLeft, ArrowRight, Map as MapIcon } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -18,7 +18,6 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../packages/config/config';
 
-// Mapbox access token
 const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
 
 type SalonCategory = 'unisex' | 'men' | 'women';
@@ -57,7 +56,12 @@ interface MapboxFeature {
   }>;
 }
 
-const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep: (step: number) => void }) => {
+interface StepIndicatorProps {
+    currentStep: number;
+    setStep: (step: number) => void;
+}
+
+const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, setStep }) => {
   return (
     <div className="w-full mb-4 mt-2">
       <div className="flex space-x-2">
@@ -90,11 +94,15 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
   );
 };
 
-export function VendorForm({ onSuccess }: { onSuccess: () => void }) {
+
+interface VendorFormProps {
+    onSuccess: () => void;
+}
+
+export function VendorForm({ onSuccess }: VendorFormProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const refCode = searchParams?.get('ref');
-  
+  const refCode = searchParams.get('ref');
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
@@ -121,7 +129,6 @@ export function VendorForm({ onSuccess }: { onSuccess: () => void }) {
   const [showPassword, setShowPassword] = useState(false);
   const [createVendor, { isLoading }] = useCreateVendorMutation();
 
-  // Map functionality states
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
@@ -228,7 +235,7 @@ export function VendorForm({ onSuccess }: { onSuccess: () => void }) {
       toast.success(`${formData.businessName} vendor registration submitted successfully!`);
       onSuccess();
     } catch (err: any) {
-       toast.error(err.data?.message || "Registration failed. Please try again.");
+       toast.error(err.data?.error || 'Registration failed');
     }
   };
   
@@ -249,7 +256,6 @@ export function VendorForm({ onSuccess }: { onSuccess: () => void }) {
 
   const prevStep = () => setStep(s => s - 1);
 
-  // Initialize Mapbox when modal opens
   useEffect(() => {
     if (!isMapOpen || !MAPBOX_TOKEN) return;
     
@@ -321,7 +327,7 @@ export function VendorForm({ onSuccess }: { onSuccess: () => void }) {
       if (marker.current) marker.current.remove();
     };
   }, [isMapOpen]);
-  
+
   // Resize map when modal is fully opened
   useEffect(() => {
     if (isMapOpen && map.current) {
@@ -385,8 +391,8 @@ export function VendorForm({ onSuccess }: { onSuccess: () => void }) {
       ...prev,
       location: newLocation,
       address: result.place_name,
-      state: result.context?.find(c => c.id.includes('region'))?.text || prev.state,
-      city: result.context?.find(c => c.id.includes('place'))?.text || prev.city,
+      state: result.context?.find((c: any) => c.id.includes('region'))?.text || prev.state,
+      city: result.context?.find((c: any) => c.id.includes('place'))?.text || prev.city,
     }));
     
     if (map.current) {
@@ -688,24 +694,8 @@ export function VendorForm({ onSuccess }: { onSuccess: () => void }) {
 }
 
 export const VendorRegistrationFormWithSuspense = (props: { onSuccess: () => void }) => (
-  <Suspense fallback={<div>Loading...</div>}>
-    <VendorRegistrationForm {...props} />
+  <Suspense fallback={<div>Loading form...</div>}>
+    <VendorForm {...props} />
   </Suspense>
 );
-```
-- packages/utils/package.json:
-```json
-{
-  "name": "@repo/utils",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
-}
-
 ```
