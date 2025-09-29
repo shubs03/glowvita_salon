@@ -68,6 +68,7 @@ export default function VendorManagementPage() {
     data: vendors = [],
     isLoading,
     error,
+    refetch,
   } = useGetVendorsQuery(undefined);
   const [createVendor] = useCreateVendorMutation();
   const [updateVendor] = useUpdateVendorMutation();
@@ -98,8 +99,8 @@ export default function VendorManagementPage() {
         // Create mode
         await createVendor(vendorData).unwrap();
       }
-      setFormModalOpen(false);
-      setSelectedVendor(null);
+      refetch(); // Refetch data to show updates
+      handleCloseModal();
     } catch (err) {
       console.error("Failed to save vendor:", err);
     }
@@ -144,6 +145,7 @@ export default function VendorManagementPage() {
           await deleteVendor({ id: selectedVendor._id }).unwrap();
           break;
       }
+      refetch(); // Refetch data
       setIsActionModalOpen(false);
       setSelectedVendor(null);
     } catch (err) {
@@ -522,6 +524,10 @@ export default function VendorManagementPage() {
         onClose={handleCloseModal}
         vendor={selectedVendor}
         onSubmit={handleFormSubmit}
+        onSuccess={() => {
+          handleCloseModal();
+          refetch();
+        }}
       />
 
       <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
