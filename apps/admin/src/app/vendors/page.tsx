@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -36,7 +37,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { VendorEditForm } from "../../components/VendorEditForm";
+import { VendorEditForm, type Vendor } from "../../components/VendorEditForm";
 import {
   useCreateVendorMutation,
   useGetVendorsQuery,
@@ -52,34 +53,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@repo/ui/dialog";
-import type { SalonCategory } from "../../components/VendorEditForm"; // adjust path as needed
-
-export interface Vendor {
-  _id?: string;
-  id?: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  businessName: string;
-  businessType: string;
-  businessCategory: string;
-  businessEmail: string;
-  businessDescription: string;
-  profileImage?: string;
-  website?: string;
-  state: string;
-  city: string;
-  pincode: string;
-  address: string;
-  description: string; // <-- Add this line
-  category?: "" | SalonCategory;
-  subCategories?: string[];
-  serviceCategories?: string[];
-  status?: "Active" | "Disabled" | "Pending" | "Approved" | "Disapproved";
-  location?: { lat: number; lng: number };
-  [key: string]: any;
-}
 
 type ActionType = "enable" | "disable" | "delete" | "approve" | "disapprove";
 

@@ -82,6 +82,7 @@ export interface Vendor {
   status?: 'Active' | 'Disabled' | 'Pending' | 'Approved' | 'Disapproved';
 }
 
+
 interface Client {
   id: string;
   name: string;
@@ -129,7 +130,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
   // Initialize Mapbox when modal opens
   useEffect(() => {
     if (!isMapOpen || !MAPBOX_TOKEN) return;
-
+    
     const initMap = () => {
       if (!mapContainer.current) return;
 
@@ -560,7 +561,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               Search for a location, click on the map, or drag the marker to select the exact position.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 flex flex-col h-[60vh]">
+          <div className="space-y-4 flex flex-col max-h-[50vh] overflow-y-auto">
             <div className="relative">
               <Input
                 placeholder="Search for a location (e.g., Mumbai, Delhi, Bangalore)"
@@ -588,15 +589,14 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
             
             {formData.location && (
               <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                <strong>Selected Location:</strong> {formData.location.lat.toFixed(6)}, {formData.location.lng.toFixed(6)}
+                <strong>Selected Location:</strong> {formData.location?.lat.toFixed(6)}, {formData.location?.lng.toFixed(6)}
               </div>
             )}
             
-            <div className="flex-1 relative border rounded-lg overflow-hidden" style={{ minHeight: '400px' }}>
+            <div className="relative border rounded-lg overflow-hidden" style={{ height: '300px' }}>
               <div 
                 ref={mapContainer} 
                 className="w-full h-full"
-                style={{ minHeight: '400px' }}
               />
               
               {!MAPBOX_TOKEN && (
