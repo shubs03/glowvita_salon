@@ -1,11 +1,12 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../services/api.js';
+import Cookies from 'js-cookie';
 
 const initialState = {
-  isCrmAuthenticated: false,
+  isCrmAuthenticated: undefined, // Start as undefined to indicate "not yet checked"
   user: null,
-  token: undefined, // Use `undefined` to indicate "not yet checked"
+  token: null,
   role: null,
   permissions: [],
 };
@@ -22,7 +23,8 @@ const crmAuthSlice = createSlice({
       state.role = role;
       state.permissions = permissions || [];
 
-      if (typeof localStorage !== 'undefined') {
+      // Persist state to localStorage only on the client-side
+      if (typeof window !== 'undefined') {
         try {
           const stateToPersist = { user, role, permissions: permissions || [] };
           localStorage.setItem('crmAuthState', JSON.stringify(stateToPersist));
@@ -34,12 +36,14 @@ const crmAuthSlice = createSlice({
     clearCrmAuth: (state) => {
       state.isCrmAuthenticated = false;
       state.user = null;
-      state.token = null; // Set to null to indicate "checked and logged out"
+      state.token = null; 
       state.role = null;
       state.permissions = [];
 
-      if (typeof localStorage !== 'undefined') {
+      // Clear localStorage only on the client-side
+      if (typeof window !== 'undefined') {
         localStorage.removeItem('crmAuthState');
+        Cookies.remove('crm_access_token', { path: '/' });
       }
     },
   },

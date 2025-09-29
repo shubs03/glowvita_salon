@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, Suspense, useEffect } from "react";
@@ -23,8 +24,7 @@ import {
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from "@repo/store/hooks";
-import { clearUserAuth } from "@repo/store/slices/userAuthSlice";
-import Cookies from "js-cookie";
+import { clearUserAuth } from "@repo/store/slices/Web/userAuthSlice";
 import { toast } from 'sonner';
 
 const navItems = [
@@ -39,27 +39,38 @@ const navItems = [
 
 function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
-    dispatch(clearUserAuth());
-    Cookies.remove('token', { path: '/' });
-    toast.success("You have been logged out.");
-    router.push('/client-login');
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    try {
+      dispatch(clearUserAuth());
+      toast.success("You have been logged out.");
+      router.push('/client-login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error("Error logging out. Please try again.");
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.push('/client-login');
     }
-  }, [isAuthLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router]);
 
-  if (isAuthLoading || !isAuthenticated) {
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-muted-foreground">Loading Profile...</p>
+        </div>
       </div>
     );
   }
@@ -108,9 +119,10 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
                       variant="ghost"
                       className="w-full justify-start gap-3 h-12 text-sm text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={handleLogout}
+                      disabled={isLoggingOut}
                     >
                       <LogOut className="h-4 w-4" />
-                      Logout
+                      {isLoggingOut ? "Logging out..." : "Logout"}
                     </Button>
                   </div>
                 </nav>

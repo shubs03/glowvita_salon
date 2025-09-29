@@ -11,6 +11,7 @@ import { useVendorLoginMutation, useGetVendorsQuery } from '@repo/store/api';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { setCrmAuth } from '@repo/store/slices/crmAuthSlice';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 import Image from 'next/image';
 import salonImage from '../../../public/images/crm_registartion.jpg';
 
@@ -22,7 +23,14 @@ export default function LoginPage() {
   const dispatch = useAppDispatch();
   
   const [vendorLogin, { isLoading }] = useVendorLoginMutation();
-  const totalSalonsCount = 0; // Set to 0 or remove this if not used
+  const { isCrmAuthenticated } = useCrmAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isCrmAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isCrmAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +45,8 @@ export default function LoginPage() {
           description: 'Welcome back to your dashboard.',
           duration: 3000,
         });
-        router.push('/dashboard');
+        // The useEffect will handle the redirect now.
+        // router.push('/dashboard'); 
       }
     } catch (error: any) {
       toast.error('Login failed', {
@@ -46,6 +55,18 @@ export default function LoginPage() {
       });
     }
   };
+  
+  // Prevent rendering the form if the user is already logged in and is about to be redirected.
+  if (isCrmAuthenticated) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/10 rounded-full"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-t-primary"></div>
+          </div>
+        </div>
+    );
+  }
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
@@ -224,7 +245,7 @@ export default function LoginPage() {
 
       {/* Right Side - Background Image with Backdrop */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/30 z-10"></div>
+        <div className="absolute inset-0 bg-black/40 z-10"></div>
         <div className="absolute inset-0">
           <Image
             src={salonImage}

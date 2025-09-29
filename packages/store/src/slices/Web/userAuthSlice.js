@@ -3,7 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import Cookies from 'js-cookie';
 
 const initialState = {
-  isAuthenticated: false,
+  isAuthenticated: undefined, // undefined: unchecked, false: not auth, true: auth
   user: null,
   token: null,
   role: null,
@@ -16,19 +16,24 @@ const userAuthSlice = createSlice({
   reducers: {
     setUserAuth: (state, action) => {
       const { user, token, role, permissions } = action.payload;
-      state.isAuthenticated = Boolean(user && token && role);
+      state.isAuthenticated = true;
       state.user = user;
       state.token = token;
-      state.role = role;
+      state.role = role || 'USER';
       state.permissions = permissions || [];
 
-      if (typeof window !== 'undefined' && user && token && role) {
+      if (typeof window !== 'undefined') {
         try {
-          const stateToPersist = { user, role, permissions: permissions || [] };
+          const stateToPersist = { 
+            isAuthenticated: true, 
+            user, 
+            token, 
+            role: role || 'USER', 
+            permissions: permissions || [] 
+          };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
-          Cookies.set('token', token);
         } catch (e) {
-          console.error('Could not save auth state to storage:', e);
+          console.error("Could not save user auth state to localStorage", e);
         }
       }
     },
@@ -41,13 +46,24 @@ const userAuthSlice = createSlice({
 
       if (typeof window !== 'undefined') {
         localStorage.removeItem('userAuthState');
-        Cookies.remove('token');
+        Cookies.remove('token', { path: '/' });
       }
     },
+    rehydrateAuth: (state, action) => {
+      if (action.payload) {
+        state.isAuthenticated = action.payload.isAuthenticated;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.role = action.payload.role;
+        state.permissions = action.payload.permissions;
+      } else {
+        state.isAuthenticated = false;
+      }
+    }
   },
 });
 
-export const { setUserAuth, clearUserAuth } = userAuthSlice.actions;
+export const { setUserAuth, clearUserAuth, rehydrateAuth } = userAuthSlice.actions;
 
 export const selectUserAuth = (state) => ({
   isAuthenticated: state.userAuth.isAuthenticated,

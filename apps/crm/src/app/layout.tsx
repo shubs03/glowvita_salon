@@ -74,7 +74,6 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          {/* CrmAuthInitializer is now inside CrmLayout */}
           <Toaster richColors />
           <ThemeProvider
             attribute="class"

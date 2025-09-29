@@ -7,16 +7,13 @@ import { Header } from '@/components/Header';
 import { useRouter, usePathname } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { cn } from '@repo/ui/cn';
-import { Button } from '@repo/ui/button';
-import { Sparkles, Zap, CheckCircle2, Clock } from 'lucide-react';
-import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
-import { CrmAuthInitializer } from '@/components/CrmAuthInitializer'; // Import the initializer here
 
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const { isCrmAuthenticated, isLoading, role } = useCrmAuth();
+  const { isCrmAuthenticated, isLoading } = useCrmAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -30,36 +27,41 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   }, []);
      
   useEffect(() => {
-    if (isLoading) {
-      return; // Do nothing while auth state is loading
+    // This effect runs whenever the auth state changes.
+    // It's the central point for protecting routes.
+    if (!isLoading) {
+      if (!isCrmAuthenticated) {
+        // If loading is finished and user is not authenticated,
+        // redirect to login.
+        router.push('/login');
+      }
     }
-    
-    if (!isCrmAuthenticated) {
-      router.push('/login');
-      return;
-    }
-  }, [isLoading, isCrmAuthenticated, router, role]);
+  }, [isLoading, isCrmAuthenticated, router, pathname]);
      
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);
   };
 
-  // The CrmAuthInitializer is now part of the layout, ensuring it runs only for CRM pages
-  if (isLoading || !isCrmAuthenticated) {
+  // While the auth state is being determined, show a loading screen.
+  // This prevents the "flash" of the login page on a refresh when logged in.
+  if (isLoading) {
     return (
-      <CrmAuthInitializer>
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-primary/10 rounded-full animate-spin border-t-primary"></div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin-slow border-t-primary/50"></div>
+            <div className="w-16 h-16 border-4 border-primary/10 rounded-full"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-t-primary"></div>
           </div>
         </div>
-      </CrmAuthInitializer>
     )
+  }
+
+  // If loading is done and we're still not authenticated, the redirect effect will
+  // have already fired. Rendering null here prevents a flash of the protected layout.
+  if (!isCrmAuthenticated) {
+    return null; 
   }
      
   return (
-    <CrmAuthInitializer>
       <div className="flex h-screen overflow-hidden bg-background">
         <Sidebar 
           isOpen={isSidebarOpen} 
@@ -80,6 +82,5 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
           </main>
         </div>
       </div>
-    </CrmAuthInitializer>
   );
 }

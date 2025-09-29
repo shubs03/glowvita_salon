@@ -8,8 +8,7 @@ import './globals.css';
 import { Toaster } from 'sonner';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
-import { useState } from 'react';
-// AuthInitializer is no longer needed here, its logic is now in the store.
+import { useState, useEffect } from 'react';
 
 export default function RootLayout({
   children,
@@ -37,6 +36,12 @@ export default function RootLayout({
 
   const isMarketingPage = marketingPages.includes(pathname);
   const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
+  const isProfilePage = pathname.startsWith('/profile');
+
+  // Show header on marketing and profile pages, but not on auth pages
+  const showHeader = isMarketingPage || isProfilePage;
+  // Show footer only on marketing pages
+  const showFooter = isMarketingPage;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -59,20 +64,20 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-            <div className="flex flex-col min-h-screen bg-background text-foreground">
-              {!isAuthPage && (
-                <MarketingHeader 
-                  isMobileMenuOpen={isMobileMenuOpen} 
-                  toggleMobileMenu={toggleMobileMenu}
-                  isHomePage={pathname === '/'}
-                />
-              )}
-              <main className="flex-grow">
-                {children}
-              </main>
-              {isMarketingPage && <Footer />}
-            </div>
-            <Toaster />
+          <div className="flex flex-col min-h-screen bg-background text-foreground">
+            {showHeader && (
+              <MarketingHeader 
+                isMobileMenuOpen={isMobileMenuOpen} 
+                toggleMobileMenu={toggleMobileMenu}
+                isHomePage={pathname === '/'}
+              />
+            )}
+            <main className="flex-grow">
+              {children}
+            </main>
+            {showFooter && <Footer />}
+          </div>
+          <Toaster />
         </StoreProvider>
       </body>
     </html>

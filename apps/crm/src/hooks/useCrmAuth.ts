@@ -8,16 +8,18 @@ import { useState, useEffect } from 'react';
 // This hook is now specifically for the CRM panel.
 export const useCrmAuth = () => {
   const { user, isCrmAuthenticated, token, role, permissions } = useAppSelector((state) => selectRootState(state).crmAuth);
+  
+  // The hook is loading if the store hasn't been rehydrated from localStorage yet.
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // The loading state is finished when the token is no longer `undefined`.
-    // It will be `null` if not logged in, or a string if logged in.
-    // This covers both initial page load and post-login scenarios correctly.
-    if (token !== undefined) {
+    // The loading state is finished when `isCrmAuthenticated` is no longer in its initial `undefined` state.
+    // This correctly waits for the preloaded state from the store to be applied.
+    if (isCrmAuthenticated !== undefined) {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [isCrmAuthenticated]);
+
 
   return {
     user,

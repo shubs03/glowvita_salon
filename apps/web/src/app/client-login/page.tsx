@@ -1,17 +1,19 @@
 "use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Input } from '@repo/ui/input';
-import { Eye, EyeOff, Map } from 'lucide-react';
+import { Label } from '@repo/ui/label';
+import { toast } from 'sonner';
+import { glowvitaApi } from '@repo/store/api';
+import { Eye, EyeOff } from 'lucide-react';
+import { useAppDispatch } from '@repo/store/hooks';
+import { setUserAuth } from '@repo/store/slices/Web/userAuthSlice';
+import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
-import { toast } from 'sonner';
-import { useAppDispatch } from '@repo/store/hooks';
-import { setUserAuth } from '@repo/store/slices/userAuthSlice';
-import { glowvitaApi } from '@repo/store/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -19,7 +21,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const dispatch = useAppDispatch();
+  
   const [login, { isLoading }] = glowvitaApi.useUserLoginMutation();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated) {
+      router.push('/profile');
+    }
+  }, [isAuthLoading, isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,14 +38,16 @@ export default function LoginPage() {
       const response = await login({ email, password }).unwrap();
 
       if (response.user && response.token) {
-        // Dispatch the action to set auth state in Redux and localStorage
         dispatch(setUserAuth({ user: response.user, token: response.token, role: response.role, permissions: response.permissions }));
         
         toast.success('Login successful!', {
-          description: 'Welcome back!',
-          duration: 3000,
+          description: 'Redirecting to your profile...',
+          duration: 1000,
         });
-        router.push('/profile'); // Redirect to profile page
+
+        // The useEffect will handle the redirect now.
+        router.push('/profile');
+
       } else {
         toast.error(response.message || 'Failed to log in.');
       }
@@ -45,6 +57,17 @@ export default function LoginPage() {
       });
     }
   };
+  
+  if (isAuthLoading || isAuthenticated) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/10 rounded-full"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-t-primary"></div>
+          </div>
+        </div>
+    );
+  }
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
@@ -144,7 +167,7 @@ export default function LoginPage() {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-2 bg-gray-50 text-gray-500">OR</span>
+                  <span className="px-2 bg-gray-50 text-gray-500">OR CONTINUE WITH</span>
                 </div>
               </div>
 
