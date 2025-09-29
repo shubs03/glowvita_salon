@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Type, Image as ImageIcon, Download, Save, Trash2, Move } from 'lucide-react';
 import { toast } from 'sonner';
 import { fabric } from 'fabric';
-import type { TEvent, FabricImage, ImageProps, SerializedImageProps, ObjectEvents } from 'fabric';
+import type { TEvent, FabricImage, ImageProps, SerializedImageProps, ObjectEvents, TPointerEvent } from 'fabric';
 
 interface CanvasTemplateEditorProps {
   initialImage?: string;
@@ -65,7 +65,7 @@ export default function CanvasTemplateEditor({
 
     // Load initial background image if provided
     if (initialImage) {
-      fabric.Image.fromURL(initialImage, (img: FabricImage<Partial<ImageProps>, SerializedImageProps, ObjectEvents>) => {
+      fabric.Image.fromURL(initialImage, (img: FabricImage) => {
         canvas.backgroundImage = img;
         canvas.renderAll();
       }, {
@@ -123,16 +123,16 @@ export default function CanvasTemplateEditor({
 
 
     // Set up event listeners
-    canvas.on('selection:created', (e: TEvent) => {
-      const selected = e.target;
+    canvas.on('selection:created', (e: TEvent<TPointerEvent>) => {
+      const selected = (e as any).selected[0];
       setSelectedObject(selected || null);
       if (selected && selected.type === 'textbox') {
         updateTextControls(selected);
       }
     });
     
-    canvas.on('selection:updated', (e: TEvent) => {
-      const selected = e.target;
+    canvas.on('selection:updated', (e: TEvent<TPointerEvent>) => {
+      const selected = (e as any).selected[0];
       setSelectedObject(selected || null);
       if (selected && selected.type === 'textbox') {
         updateTextControls(selected);
@@ -196,7 +196,7 @@ export default function CanvasTemplateEditor({
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl, (img: FabricImage<Partial<ImageProps>, SerializedImageProps, ObjectEvents>) => {
+        fabric.Image.fromURL(dataUrl, (img: FabricImage) => {
           const maxWidth = 150;
           const maxHeight = 150;
           

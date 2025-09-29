@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Type, Image as ImageIcon, Download, Save, Trash2, Move } from 'lucide-react';
 import { toast } from 'sonner';
 import { fabric } from 'fabric';
+import type { TEvent, FabricImage, ImageProps, SerializedImageProps, ObjectEvents, TPointerEvent } from 'fabric';
 
 interface CanvasTemplateEditorProps {
   initialImage?: string;
@@ -64,11 +65,12 @@ export default function CanvasTemplateEditor({
 
     // Load initial background image if provided
     if (initialImage) {
-      fabric.Image.fromURL(initialImage, (img: any) => {
-        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas), {
-          scaleX: canvas.width / (img.width || 1),
-          scaleY: canvas.height / (img.height || 1)
-        });
+      fabric.Image.fromURL(initialImage, (img: FabricImage) => {
+        canvas.backgroundImage = img;
+        canvas.renderAll();
+      }, {
+        scaleX: (canvas.width || 1) / (initialImage ? width : 1),
+        scaleY: (canvas.height || 1) / (initialImage ? height : 1)
       });
     }
 
@@ -121,17 +123,17 @@ export default function CanvasTemplateEditor({
 
 
     // Set up event listeners
-    canvas.on('selection:created', (e: any) => {
-      const selected = e.target;
-      setSelectedObject(selected);
+    canvas.on('selection:created', (e: TEvent<TPointerEvent>) => {
+      const selected = (e as any).selected[0];
+      setSelectedObject(selected || null);
       if (selected && selected.type === 'textbox') {
         updateTextControls(selected);
       }
     });
     
-    canvas.on('selection:updated', (e: any) => {
-      const selected = e.target;
-      setSelectedObject(selected);
+    canvas.on('selection:updated', (e: TEvent<TPointerEvent>) => {
+      const selected = (e as any).selected[0];
+      setSelectedObject(selected || null);
       if (selected && selected.type === 'textbox') {
         updateTextControls(selected);
       }
@@ -145,13 +147,15 @@ export default function CanvasTemplateEditor({
     return canvas;
   }, [initialImage, width, height]);
 
-  const updateTextControls = (textbox: any) => {
-    setText(textbox.text || '');
-    setFontSize(textbox.fontSize || 24);
-    setFill(textbox.fill || '#000000');
-    setFontFamily(textbox.fontFamily || 'Arial');
-    setFontWeight(textbox.fontWeight || 'normal');
-    setTextAlign(textbox.textAlign || 'center');
+  const updateTextControls = (textbox: fabric.Object) => {
+    if (textbox instanceof fabric.Textbox) {
+      setText(textbox.text || '');
+      setFontSize(textbox.fontSize || 24);
+      setFill(textbox.fill as string || '#000000');
+      setFontFamily(textbox.fontFamily || 'Arial');
+      setFontWeight(textbox.fontWeight as string || 'normal');
+      setTextAlign(textbox.textAlign || 'center');
+    }
   };
 
   useEffect(() => {
@@ -192,11 +196,11 @@ export default function CanvasTemplateEditor({
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl, (img: any) => {
+        fabric.Image.fromURL(dataUrl, (img: FabricImage) => {
           const maxWidth = 150;
           const maxHeight = 150;
           
-          if (img.width > maxWidth || img.height > maxHeight) {
+          if (img.width && img.height && (img.width > maxWidth || img.height > maxHeight)) {
             const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
             img.scale(scale);
           }
@@ -220,14 +224,14 @@ export default function CanvasTemplateEditor({
     const newText = e.target.value;
     setText(newText);
     if (selectedObject && selectedObject.type === 'textbox' && fabricCanvas) {
-      (selectedObject as any).set('text', newText);
+      (selectedObject as fabric.Textbox).set('text', newText);
       fabricCanvas.requestRenderAll();
     }
   };
 
   const handlePropertyChange = (property: string, value: any) => {
-    if (selectedObject && selectedObject.type === 'textbox' && fabricCanvas) {
-      (selectedObject as any).set(property, value);
+    if (selectedObject && fabricCanvas) {
+      selectedObject.set(property, value);
       fabricCanvas.requestRenderAll();
     }
   };
@@ -248,7 +252,7 @@ export default function CanvasTemplateEditor({
     fabricCanvas.discardActiveObject();
     fabricCanvas.renderAll();
     
-    const jsonData = fabricCanvas.toJSON(['selectable', 'editable']);
+    const jsonData = fabricCanvas.toJSON();
     const previewImage = fabricCanvas.toDataURL({ 
       format: 'jpeg', 
       quality: 0.8,
