@@ -8,7 +8,7 @@ import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
-import { useCreateSupplierMutation, useCreateVendorMutation } from '@repo/store/api';
+import { useCreateVendorMutation } from '@repo/store/api';
 import { cn } from '@repo/ui/cn';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Checkbox } from '@repo/ui/checkbox';
@@ -61,6 +61,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
   return (
     <div className="w-full mb-4 mt-2">
       <div className="flex space-x-2">
+        {/* Step 1 Line */}
         <div 
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
@@ -68,6 +69,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
           )}
           onClick={() => currentStep > 1 && setStep(1)}
         />
+        {/* Step 2 Line */}
         <div 
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
@@ -75,6 +77,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
           )}
           onClick={() => currentStep > 2 && setStep(2)}
         />
+        {/* Step 3 Line */}
         <div 
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
@@ -87,11 +90,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
   );
 };
 
-interface VendorFormProps {
-    onSuccess: () => void;
-}
-
-export function VendorForm({ onSuccess }: VendorFormProps) {
+export function VendorForm({ onSuccess }: { onSuccess: () => void }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const refCode = searchParams?.get('ref');
@@ -122,6 +121,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [createVendor, { isLoading }] = useCreateVendorMutation();
 
+  // Map functionality states
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
@@ -218,11 +218,17 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     }
 
     try {
-      await createVendor(formData).unwrap();
+      // Prepare form data with proper location format
+      const submissionData = {
+        ...formData,
+        location: formData.location ? JSON.stringify(formData.location) : ''
+      };
+      
+      await createVendor(submissionData).unwrap();
       toast.success(`${formData.businessName} vendor registration submitted successfully!`);
       onSuccess();
     } catch (err: any) {
-       toast.error(err.data?.error || 'Registration failed');
+       toast.error(err.data?.message || "Registration failed. Please try again.");
     }
   };
   
@@ -232,6 +238,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     } else if (step === 2 && validateStep2()) {
         setStep(3);
     } else {
+      // Show error toast if validation fails
       if ((step === 1 && !validateStep1()) || 
           (step === 2 && !validateStep2()) || 
           (step === 3 && !validateStep3())) {
@@ -242,10 +249,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
 
   const prevStep = () => setStep(s => s - 1);
 
-  const backToRoleSelection = () => {
-    router.push('/auth/register');
-  };
-
+  // Initialize Mapbox when modal opens
   useEffect(() => {
     if (!isMapOpen || !MAPBOX_TOKEN) return;
     
@@ -254,8 +258,10 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
       
       mapboxgl.accessToken = MAPBOX_TOKEN;
       
+      // Clean up existing map
       if (map.current) map.current.remove();
       
+      // Create new map
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v11',
@@ -263,30 +269,52 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
         zoom: formData.location ? 15 : 5
       });
       
+      // Remove existing marker
       if (marker.current) marker.current.remove();
       
-      marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
-        .setLngLat(formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599])
-        .addTo(map.current);
-        
-      marker.current.on('dragend', () => {
-        const lngLat = marker.current!.getLngLat();
-        setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
-        fetchAddress([lngLat.lng, lngLat.lat]);
-      });
+      // Add marker if location exists
+      if (formData.location) {
+        marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
+          .setLngLat([formData.location.lng, formData.location.lat])
+          .addTo(map.current);
+          
+        marker.current.on('dragend', () => {
+          const lngLat = marker.current!.getLngLat();
+          setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
+          fetchAddress([lngLat.lng, lngLat.lat]);
+        });
+      }
       
+      // Handle map clicks
       map.current.on('click', (e: mapboxgl.MapLayerMouseEvent) => {
         const { lng, lat } = e.lngLat;
         setFormData(prev => ({ ...prev, location: { lat, lng } }));
-        marker.current!.setLngLat([lng, lat]);
+        
+        // Remove existing marker and add new one
+        if (marker.current) marker.current.remove();
+        if (map.current) {
+          marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
+            .setLngLat([lng, lat])
+            .addTo(map.current);
+            
+          marker.current.on('dragend', () => {
+            const lngLat = marker.current!.getLngLat();
+            setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
+            fetchAddress([lngLat.lng, lngLat.lat]);
+          });
+        }
+        
         fetchAddress([lng, lat]);
       });
       
+      // Resize map after load
       map.current.on('load', () => setTimeout(() => map.current?.resize(), 100));
     };
     
+    // Initialize with a small delay to ensure DOM is ready
     const timeoutId = setTimeout(initMap, 100);
     
+    // Cleanup function
     return () => {
       clearTimeout(timeoutId);
       if (map.current) map.current.remove();
@@ -294,6 +322,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     };
   }, [isMapOpen]);
   
+  // Resize map when modal is fully opened
   useEffect(() => {
     if (isMapOpen && map.current) {
       setTimeout(() => {
@@ -304,6 +333,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     }
   }, [isMapOpen]);
 
+  // Search for locations using Mapbox Geocoding API
   const handleSearch = async (query: string) => {
     if (!query || !MAPBOX_TOKEN) {
       setSearchResults([]);
@@ -320,6 +350,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     }
   };
   
+  // Fetch address details based on coordinates
   const fetchAddress = async (coordinates: [number, number]) => {
     if (!MAPBOX_TOKEN) return;
     
@@ -345,6 +376,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     }
   };
   
+  // Handle selection of a search result
   const handleSearchResultSelect = (result: MapboxFeature) => {
     const coordinates = result.geometry.coordinates;
     const newLocation = { lat: coordinates[1], lng: coordinates[0] };
@@ -353,8 +385,8 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
       ...prev,
       location: newLocation,
       address: result.place_name,
-      state: result.context?.find((c: any) => c.id.includes('region'))?.text || prev.state,
-      city: result.context?.find((c: any) => c.id.includes('place'))?.text || prev.city,
+      state: result.context?.find(c => c.id.includes('region'))?.text || prev.state,
+      city: result.context?.find(c => c.id.includes('place'))?.text || prev.city,
     }));
     
     if (map.current) {
@@ -363,7 +395,9 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
       setTimeout(() => map.current?.resize(), 100);
     }
     
-    if (marker.current) marker.current.setLngLat(coordinates);
+    if (marker.current) {
+      marker.current.setLngLat(coordinates);
+    }
     
     setSearchResults([]);
     setSearchQuery('');
@@ -383,10 +417,10 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
           <Button 
             type="button" 
             variant="outline" 
-            onClick={step === 1 ? () => window.history.back() : prevStep} 
+            onClick={step === 1 ? () => router.back() : prevStep} 
             className="px-3 sm:px-4 py-2 text-base sm:text-lg text-gray-600 border-gray-300 hover:bg-gray-50 h-10 sm:h-auto"
           >
-            ← {step === 1 ? 'Back to Role Selection' : 'Back'}
+            ← {step === 1 ? 'Back' : 'Back'}
           </Button>
           {step < 3 ? (
             <Button 
@@ -654,7 +688,24 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
 }
 
 export const VendorRegistrationFormWithSuspense = (props: { onSuccess: () => void }) => (
-    <Suspense fallback={<div>Loading form...</div>}>
-        <VendorRegistrationForm {...props} />
-    </Suspense>
+  <Suspense fallback={<div>Loading...</div>}>
+    <VendorRegistrationForm {...props} />
+  </Suspense>
 );
+```
+- packages/utils/package.json:
+```json
+{
+  "name": "@repo/utils",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
+
+```
