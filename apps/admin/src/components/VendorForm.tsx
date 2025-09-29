@@ -658,4 +658,3 @@ export const VendorRegistrationFormWithSuspense = (props: { onSuccess: () => voi
         <VendorRegistrationForm {...props} />
     </Suspense>
 );
-```
