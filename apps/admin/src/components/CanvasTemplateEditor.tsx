@@ -9,7 +9,8 @@ import { Label } from "@repo/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Type, Image as ImageIcon, Download, Save, Trash2, Move } from 'lucide-react';
 import { toast } from 'sonner';
-import fabric from 'fabric';
+import { fabric } from 'fabric';
+import type { TEvent, FabricImage, ImageProps, SerializedImageProps, ObjectEvents } from 'fabric';
 
 interface CanvasTemplateEditorProps {
   initialImage?: string;
@@ -30,8 +31,15 @@ export default function CanvasTemplateEditor({
   const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
   const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
   
+  // This state will track if the component has mounted on the client
+  const [isClient, setIsClient] = useState(false);
+  
+  useEffect(() => {
+    // This effect runs only once on the client-side after the component mounts
+    setIsClient(true);
+  }, []);
+  
   const canvasContainerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   
   // Text editing states
   const [text, setText] = useState('');
@@ -45,12 +53,10 @@ export default function CanvasTemplateEditor({
     if (!canvasContainerRef.current) return;
     
     const canvasEl = document.createElement('canvas');
-    if (canvasRef.current) {
-      canvasRef.current = canvasEl;
-    }
     canvasContainerRef.current.innerHTML = '';
     canvasContainerRef.current.appendChild(canvasEl);
 
+    // Use fabric.Canvas instead of new Canvas
     const canvas = new fabric.Canvas(canvasEl, {
       width: width,
       height: height,
@@ -59,7 +65,7 @@ export default function CanvasTemplateEditor({
 
     // Load initial background image if provided
     if (initialImage) {
-      fabric.Image.fromURL(initialImage, (img: fabric.Image) => {
+      fabric.Image.fromURL(initialImage, (img: FabricImage<Partial<ImageProps>, SerializedImageProps, ObjectEvents>) => {
         canvas.backgroundImage = img;
         canvas.renderAll();
       }, {
@@ -103,20 +109,21 @@ export default function CanvasTemplateEditor({
 
     // Scale canvas to fit container
     const container = canvasContainerRef.current;
-    if (container && container.clientWidth > 0 && container.clientHeight > 0) {
-      const containerWidth = container.clientWidth - 40;
-      const containerHeight = container.clientHeight - 40;
-      const scaleX = containerWidth / width;
-      const scaleY = containerHeight / height;
-      const scale = Math.min(scaleX, scaleY, 0.8);
-      
-      if (scale < 1) {
-        canvas.setZoom(scale);
-      }
+    if (container.clientWidth > 0 && container.clientHeight > 0) {
+        const containerWidth = container.clientWidth - 40;
+        const containerHeight = container.clientHeight - 40;
+        const scaleX = containerWidth / width;
+        const scaleY = containerHeight / height;
+        const scale = Math.min(scaleX, scaleY, 0.8);
+        
+        if (scale < 1) {
+          canvas.setZoom(scale);
+        }
     }
 
+
     // Set up event listeners
-    canvas.on('selection:created', (e: fabric.IEvent) => {
+    canvas.on('selection:created', (e: TEvent) => {
       const selected = e.target;
       setSelectedObject(selected || null);
       if (selected && selected.type === 'textbox') {
@@ -124,7 +131,7 @@ export default function CanvasTemplateEditor({
       }
     });
     
-    canvas.on('selection:updated', (e: fabric.IEvent) => {
+    canvas.on('selection:updated', (e: TEvent) => {
       const selected = e.target;
       setSelectedObject(selected || null);
       if (selected && selected.type === 'textbox') {
@@ -152,14 +159,16 @@ export default function CanvasTemplateEditor({
   };
 
   useEffect(() => {
-    const canvas = initCanvas();
-    
-    return () => {
-      if (canvas) {
-        canvas.dispose();
-      }
-    };
-  }, [initCanvas]);
+    if (isClient) {
+      const canvas = initCanvas();
+      
+      return () => {
+        if (canvas) {
+          canvas.dispose();
+        }
+      };
+    }
+  }, [isClient, initCanvas]);
 
   const addText = () => {
     if (!fabricCanvas) return;
@@ -187,7 +196,7 @@ export default function CanvasTemplateEditor({
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl, (img: fabric.Image) => {
+        fabric.Image.fromURL(dataUrl, (img: FabricImage<Partial<ImageProps>, SerializedImageProps, ObjectEvents>) => {
           const maxWidth = 150;
           const maxHeight = 150;
           
@@ -243,7 +252,7 @@ export default function CanvasTemplateEditor({
     fabricCanvas.discardActiveObject();
     fabricCanvas.renderAll();
     
-    const jsonData = fabricCanvas.toJSON(['selectable', 'editable']);
+    const jsonData = fabricCanvas.toJSON();
     const previewImage = fabricCanvas.toDataURL({ 
       format: 'jpeg', 
       quality: 0.8,
