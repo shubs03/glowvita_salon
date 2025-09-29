@@ -24,7 +24,7 @@ import {
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from "@repo/store/hooks";
-import { clearUserAuth } from "@repo/store/slices/Web/userAuthSlice";
+import { clearUserAuth } from "@repo/store/slices/userAuthSlice";
 import { toast } from 'sonner';
 
 const navItems = [

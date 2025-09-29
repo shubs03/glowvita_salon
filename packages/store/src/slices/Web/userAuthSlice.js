@@ -2,13 +2,28 @@
 import { createSlice } from '@reduxjs/toolkit';
 import Cookies from 'js-cookie';
 
-const initialState = {
-  isAuthenticated: undefined, // undefined: unchecked, false: not auth, true: auth
-  user: null,
-  token: null,
-  role: null,
-  permissions: [],
+// Load initial state from localStorage if available
+const loadInitialState = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const savedState = localStorage.getItem('userAuthState');
+      if (savedState) {
+        return JSON.parse(savedState);
+      }
+    } catch (e) {
+      console.error("Could not load auth state from localStorage", e);
+    }
+  }
+  return {
+    isAuthenticated: false,
+    user: null,
+    token: null,
+    role: null,
+    permissions: [],
+  };
 };
+
+const initialState = loadInitialState();
 
 const userAuthSlice = createSlice({
   name: 'userAuth',

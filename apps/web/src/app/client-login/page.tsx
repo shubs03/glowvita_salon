@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { glowvitaApi } from '@repo/store/api';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch } from '@repo/store/hooks';
-import { setUserAuth } from '@repo/store/slices/Web/userAuthSlice';
+import { setUserAuth } from '@repo/store/slices/userAuthSlice';
 import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
@@ -58,7 +58,9 @@ export default function LoginPage() {
     }
   };
   
-  if (isAuthLoading || isAuthenticated) {
+  // Only redirect if user is authenticated
+  if (!isAuthLoading && isAuthenticated) {
+    router.push('/profile');
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
           <div className="relative">
