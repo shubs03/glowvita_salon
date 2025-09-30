@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import VendorWorkingHours from '../../../../../../../packages/lib/src/models/Vendor/VendorWorkingHours.model.js';
+import VendorWorkingHours from '@repo/lib/models/Vendor/VendorWorkingHours.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 

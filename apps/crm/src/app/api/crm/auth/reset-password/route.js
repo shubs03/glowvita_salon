@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import DoctorModel from '@repo/lib/models/Vendor/Docters.model';
 import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
-import StaffModel from '@repo/lib/models/staffModel';
+import StaffModel from '@repo/lib/models/Vendor/Staff.model';
 import _db from '@repo/lib/db';
 import bcrypt from 'bcryptjs';
 

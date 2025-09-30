@@ -2,9 +2,9 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import validator from "validator";
-import generateTokens from "../../../../../../../../packages/lib/src/generateTokens.js"; // generates access & refresh tokens
-import AdminUserModel from "../../../../../../../../packages/lib/src/models/admin/AdminUser.model"; // your new model
-import _db from "../../../../../../../../packages/lib/src/db.js";
+import generateTokens from "@repo/lib/generateTokens"; // generates access & refresh tokens
+import AdminUserModel from "@repo/lib/models/admin/AdminUser"; // your new model
+import _db from "@repo/lib/db";
 
 await _db();
 

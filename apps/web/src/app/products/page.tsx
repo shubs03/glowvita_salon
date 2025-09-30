@@ -1,4 +1,5 @@
 "use client";
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -55,6 +56,12 @@ export default function ProductsPage() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const carouselRef = useRef<HTMLDivElement>(null);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
+  const router = useRouter();
+
+  // Helper function to get default description
+  const getDefaultDescription = (productName: string): string => {
+    return `Premium ${productName.toLowerCase()} with exceptional quality and results.`;
+  };
 
   // Handle hover to pause autoplay
   const handleMouseEnter = () => {
@@ -517,7 +524,7 @@ export default function ProductsPage() {
             </div>
             {products.length > 1 && (
               <div className="mt-auto relative">
-                <div className="relative bg-card rounded-xl p-3 md:p-4 shadow-md border border-border/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative z-10 overflow-hidden">
+                <div className="bg-card rounded-xl p-3 md:p-4 shadow-md border border-border/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative z-10 overflow-hidden">
                   <div className="bg-gradient-to-br from-primary/20 to-secondary/20 w-full h-48 md:h-80 rounded-xl flex items-center justify-center mb-3 md:mb-4 overflow-hidden transform transition-transform duration-500 group-hover:scale-105 mx-auto">
                     <img 
                       src={products[1].image} 
@@ -560,7 +567,7 @@ export default function ProductsPage() {
             </div>
             {products.length > 2 && (
               <div className="mt-auto relative">
-                <div className="relative bg-card rounded-xl p-3 md:p-4 shadow-md border border-border/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative z-10 overflow-hidden">
+                <div className="bg-card rounded-xl p-3 md:p-4 shadow-md border border-border/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative z-10 overflow-hidden">
                   <div className="bg-gradient-to-br from-secondary/20 to-primary/20 w-full h-32 md:h-36 rounded-full flex items-center justify-center mb-3 md:mb-4 overflow-hidden transform transition-transform duration-500 group-hover:scale-105 mx-auto">
                     <img 
                       src={products[2].image} 

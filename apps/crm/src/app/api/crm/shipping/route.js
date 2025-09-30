@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import _db from '../../../../../../../packages/lib/src/db.js';
-import ShippingConfigModel from '../../../../../../../packages/lib/src/models/Vendor/Shipping.model.js';
+import ShippingConfigModel from '@repo/lib/models/Vendor/Shipping.model';
 import { authMiddlewareCrm } from '../../../../middlewareCrm.js';
 await _db();
 

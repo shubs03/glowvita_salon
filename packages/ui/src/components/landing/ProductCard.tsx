@@ -6,6 +6,7 @@ import { CardBody, CardContainer, CardItem } from '../../3d-card';
 import { cn } from '../../cn';
 
 interface ProductCardProps {
+  id?: string;
   name: string;
   description: string;
   price: number;
@@ -16,6 +17,7 @@ interface ProductCardProps {
   reviewCount: number;
   isNew?: boolean;
   vendorName?: string;
+  onClick?: () => void;
 }
 
 export function ProductCard({ 

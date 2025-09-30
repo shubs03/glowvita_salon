@@ -2,7 +2,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
+import { useAppSelector } from '@repo/store/hooks';
 import { useGetSubscriptionPlansQuery, useGetVendorProfileQuery, useUpdateVendorProfileMutation, useChangePlanMutation, useRenewPlanMutation } from '@repo/store/api';
 import { selectVendor, selectVendorLoading, selectVendorError, selectVendorMessage, clearVendorMessage, clearVendorError } from '@repo/store/slices/vendorSlice';
 import { toast } from 'sonner';
@@ -217,12 +218,12 @@ const ProfileTab = ({ vendor, setVendor }: any) => {
   );
 };
 
-const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: Subscription; userType?: UserType }) => {
+const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription?: Subscription; userType?: UserType }) => {
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const isExpired = subscription?.endDate ? new Date(subscription.endDate) < new Date() : true;
-  const daysLeft = !isExpired ? Math.ceil((new Date(subscription?.endDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0;
+  const daysLeft = !isExpired && subscription?.endDate ? Math.ceil((new Date(subscription.endDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0;
   
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -249,7 +250,7 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: 
             <div className="mb-6">
               <h3 className="text-2xl font-bold">{subscription?.plan?.name || 'No Active Plan'}</h3>
               <p className="text-muted-foreground">
-                {isExpired ? 'Expired' : `Expires on ${new Date(subscription?.endDate).toLocaleDateString()}`}
+                {isExpired ? 'Expired' : `Expires on ${subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'Unknown'}`}
               </p>
             </div>
             <div className="grid sm:grid-cols-3 gap-6">
@@ -263,13 +264,13 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: 
               <div>
                 <p className="text-sm text-muted-foreground">Start Date</p>
                 <p className="mt-1 font-semibold">
-                  {new Date(subscription?.startDate).toLocaleDateString()}
+                  {subscription?.startDate ? new Date(subscription.startDate).toLocaleDateString() : 'Unknown'}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">End Date</p>
                 <p className="mt-1 font-semibold">
-                  {new Date(subscription?.endDate).toLocaleDateString()}
+                  {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'Unknown'}
                 </p>
               </div>
             </div>
@@ -299,12 +300,14 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: 
         </CardContent>
       </Card>
 
-      <SubscriptionPlansDialog
-        open={showPlansModal}
-        onOpenChange={setShowPlansModal}
-        subscription={subscription}
-        userType={userType}
-      />
+      {subscription && (
+        <SubscriptionPlansDialog
+          open={showPlansModal}
+          onOpenChange={setShowPlansModal}
+          subscription={subscription}
+          userType={userType}
+        />
+      )}
       
       <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
         <DialogContent className="sm:max-w-[600px]">
@@ -754,7 +757,7 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
 
 const OpeningHoursTab = () => {
   // Get the token from Redux store
-  const token = useSelector((state) => state.crmAuth?.token);
+  const token = useAppSelector((state) => state.crmAuth?.token);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hours, setHours] = useState<OpeningHour[]>([
@@ -928,42 +931,80 @@ const OpeningHoursWithPropsTab = ({
 }: {
   hours: OpeningHour[];
   setHours: any;
-}) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Opening Hours</CardTitle>
-      <CardDescription>Set your weekly business hours.</CardDescription>
-    </CardHeader>
+}) => {
+  const token = useAppSelector((state) => state.crmAuth?.token);
+  const [saving, setSaving] = useState(false);
 
-    <CardContent className="space-y-4">
-      {hours &&
-        hours.map((hour, index) => (
-          <div key={hour.day} className="grid grid-cols-4 items-center gap-4">
-            <div className="col-span-1 flex items-center">
-              <Checkbox
-                id={hour.day}
-                checked={hour.isOpen}
-                onCheckedChange={(checked) => {
-                  const newHours = [...hours];
-                  newHours[index].isOpen = !!checked;
-                  setHours(newHours);
-                }}
-              />
-              <Label htmlFor={hour.day} className="ml-2 font-medium">
-                {hour.day}
-              </Label>
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+
+      const response = await fetch('/api/crm/workinghours', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          workingHours: hours,
+          timezone: 'Asia/Kolkata',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save working hours');
+      }
+
+      // Show success message
+      toast.success('Working hours saved successfully!');
+    } catch (error) {
+      console.error('Error saving working hours:', error);
+      toast.error('Failed to save working hours. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Opening Hours</CardTitle>
+        <CardDescription>Set your weekly business hours.</CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {hours &&
+          hours.map((hour, index) => (
+            <div key={hour.day} className="grid grid-cols-4 items-center gap-4">
+              <div className="col-span-1 flex items-center">
+                <Checkbox
+                  id={hour.day}
+                  checked={hour.isOpen}
+                  onCheckedChange={(checked) => {
+                    const newHours = [...hours];
+                    newHours[index].isOpen = !!checked;
+                    setHours(newHours);
+                  }}
+                />
+                <Label htmlFor={hour.day} className="ml-2 font-medium">
+                  {hour.day}
+                </Label>
+              </div>
             </div>
-          </div>
-        ))}
-    </CardContent>
+          ))}
+      </CardContent>
 
-    <CardFooter>
-      <Button onClick={handleSave} disabled={saving}>
-        {saving ? "Saving..." : "Save Hours"}
-      </Button>
-    </CardFooter>
-  </Card>
-);
+      <CardFooter>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? "Saving..." : "Save Hours"}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
 
 
 const CategoriesTab = () => (
@@ -985,10 +1026,10 @@ const CategoriesTab = () => (
 export default function SalonProfilePage() {
   // Remove unused state since OpeningHoursTab manages its own state now
   const dispatch = useDispatch();
-  const vendor = useSelector(selectVendor);
-  const loading = useSelector(selectVendorLoading);
-  const error = useSelector(selectVendorError);
-  const message = useSelector(selectVendorMessage);
+  const vendor = useAppSelector(selectVendor);
+  const loading = useAppSelector(selectVendorLoading);
+  const error = useAppSelector(selectVendorError);
+  const message = useAppSelector(selectVendorMessage);
   
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
   const { data: vendorData, isLoading, isError } = useGetVendorProfileQuery(void 0);

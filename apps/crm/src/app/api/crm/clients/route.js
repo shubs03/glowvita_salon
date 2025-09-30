@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import ClientModel from '../../../../../../../packages/lib/src/models/Vendor/Client.model.js';
+import ClientModel from '@repo/lib/models/Vendor/Client.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 

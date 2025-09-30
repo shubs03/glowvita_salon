@@ -1,6 +1,6 @@
 // app/api/geo-fences/route.js
-import _db from "../../../../../../../packages/lib/src/db.js";
-import GeoFenceModel from "../../../../../../../packages/lib/src/models/admin/GeoFence.model";
+import _db from "@repo/lib/db";
+import GeoFenceModel from "@repo/lib/models/admin/GeoFence";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();

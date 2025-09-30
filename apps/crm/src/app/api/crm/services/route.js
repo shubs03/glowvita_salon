@@ -1,5 +1,5 @@
 import _db from "../../../../../../../packages/lib/src/db.js";
-import VendorServicesModel from "../../../../../../../packages/lib/src/models/Vendor/VendorServices.model.js";
+import VendorServicesModel from '@repo/lib/models/Vendor/VendorServices.model';
 import CategoryModel from "../../../../../../../packages/lib/src/models/admin/Category.model.js";
 import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
 

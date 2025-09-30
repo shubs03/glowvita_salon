@@ -1,11 +1,11 @@
 // route.js
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import _db from "../../../../../../../packages/lib/src/db.js";
+import _db from "@repo/lib/db";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
-import { ReferralModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
-import SubscriptionPlan from "../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js";
-import { uploadBase64, deleteFile } from "../../../../../../../packages/utils/uploads.js";
+import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer";
+import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
+import { uploadBase64, deleteFile } from "@repo/utils/uploads";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 // Initialize database connection (assuming _db is a promise-based connection function)

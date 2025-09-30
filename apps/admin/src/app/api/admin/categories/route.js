@@ -1,5 +1,5 @@
-import _db from "../../../../../../../packages/lib/src/db.js";
-import CategoryModel from "../../../../../../../packages/lib/src/models/admin/Category.model.js";
+import _db from "@repo/lib/db";
+import CategoryModel from "@repo/lib/models/admin/Category";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();

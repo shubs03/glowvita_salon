@@ -119,3 +119,6 @@ export const rehydrateStore = (store) => {
 };
 
 export const selectRootState = (state) => state;
+
+// Create and export store instance
+export const store = makeStore();

@@ -19,7 +19,7 @@ type Appointment = {
   startTime: string;
   endTime: string;
   notes?: string;
-  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending';
   isBlocked?: boolean;
   description?: string;
 };
@@ -62,11 +62,23 @@ const timeToMinutes = (time: string) => {
 
 const getStatusConfig = (status: Appointment['status']) => {
   switch (status) {
+    case 'scheduled':
+      return {
+        label: 'Scheduled',
+        icon: '📅',
+        className: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+      };
     case 'confirmed': 
       return { 
         label: 'Confirmed',
         icon: '✓',
         className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+      };
+    case 'in_progress':
+      return {
+        label: 'In Progress',
+        icon: '🔄',
+        className: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800'
       };
     case 'completed': 
       return { 
@@ -85,6 +97,12 @@ const getStatusConfig = (status: Appointment['status']) => {
         label: 'Cancelled',
         icon: '✕',
         className: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+      };
+    case 'no_show':
+      return {
+        label: 'No Show',
+        icon: '👻',
+        className: 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
       };
     default: 
       return { 
@@ -226,16 +244,27 @@ export default function DayScheduleView({
     setSelectedAppointment(null);
   };
 
-  const handleCreateNewAppointment = (appointment: Omit<Appointment, 'id'>) => {
+  const handleCreateNewAppointment = async (appointment: import('./NewAppointmentForm').Appointment) => {
     if (onCreateAppointment) {
       const appointmentDate = newAppointmentDate && !isNaN(newAppointmentDate.getTime())
         ? newAppointmentDate
         : new Date();
       
-      onCreateAppointment({
-        ...appointment,
-        date: appointmentDate,
-      });
+      // Convert the NewAppointmentForm Appointment type to DayScheduleView Appointment type
+      const convertedAppointment: Omit<Appointment, 'id'> = {
+        clientName: appointment.clientName,
+        service: appointment.service,
+        serviceName: appointment.serviceName,
+        staffName: appointment.staffName,
+        date: typeof appointment.date === 'string' ? new Date(appointment.date) : appointmentDate,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+        notes: appointment.notes,
+        status: appointment.status as Appointment['status'], // Type assertion since we've aligned the status types
+        description: ''
+      };
+      
+      onCreateAppointment(convertedAppointment);
     }
     setIsNewAppointmentOpen(false);
   };
@@ -264,9 +293,9 @@ export default function DayScheduleView({
     }
   };
 
-  const handleCollectPayment = (amount: number, paymentMethod: string) => {
+  const handleCollectPayment = (paymentData: { amount: number; paymentMethod: string; notes?: string }) => {
     if (selectedAppointment) {
-      console.log('Payment collected:', { amount, paymentMethod, appointmentId: selectedAppointment.id });
+      console.log('Payment collected:', { ...paymentData, appointmentId: selectedAppointment.id });
       handleUpdateStatus('completed');
     }
   };
@@ -282,11 +311,11 @@ export default function DayScheduleView({
     if (!a.isBlocked && b.isBlocked) return 1;
     return 0;
   });
-  const staffAppointments = staffList && staffList.length > 0 
+  const staffAppointments: [string, Appointment[]][] = staffList && staffList.length > 0 
     ? staffList.filter(staff => staff.isActive).map(staff => [
         staff.name,
         appointments.filter(appt => appt.staffName === staff.name)
-      ])
+      ] as [string, Appointment[]])
     : groupAppointmentsByStaff(appointments);
 
   const timeSlotsByHour = useMemo(() => {
@@ -688,7 +717,7 @@ export default function DayScheduleView({
           </DialogHeader>
           <NewAppointmentForm 
             onSubmit={handleCreateNewAppointment}
-            defaultDate={newAppointmentDate}
+            defaultDate={newAppointmentDate || undefined}
           />
         </DialogContent>
       </Dialog>
@@ -724,6 +753,7 @@ export default function DayScheduleView({
                 totalAmount: 0,
                 status: selectedAppointment.status,
                 notes: selectedAppointment.notes,
+                vendorId: '', // Add vendorId property
               }}
               onClose={handleCloseDetailView}
               onStatusChange={(status, reason) => {

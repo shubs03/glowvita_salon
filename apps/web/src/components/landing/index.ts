@@ -9,6 +9,7 @@ export * from './Testimonials';
 export * from './Offers';
 export * from './FAQ';
 export * from './NewSections';
+export { FeaturedProducts } from './FeaturedProducts';
 export * from './Integrations';
 export * from './Blog';
 export * from './Services';

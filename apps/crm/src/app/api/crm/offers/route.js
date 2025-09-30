@@ -2,7 +2,7 @@
 // crm/api/offers/route.js
 
 import _db from "../../../../../../../packages/lib/src/db.js";
-import CRMOfferModel from "../../../../../../../packages/lib/src/models/Vendor/CRMOffer.model.js";
+import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model';
 import {
   authMiddlewareCrm,
   authMiddlewareCRM,
