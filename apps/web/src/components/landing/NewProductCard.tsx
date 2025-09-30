@@ -49,21 +49,21 @@ export function NewProductCard({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity"></div>
         {isNew && (
-          <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground border-none text-xs py-1 px-3 rounded-full font-bold shadow-lg">
+          <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground border-none text-xs py-0.5 px-2 rounded-full font-bold shadow-lg">
             NEW
           </Badge>
         )}
         <Button
           size="icon"
           variant="ghost"
-          className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100"
+          className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 text-blue-500 backdrop-blur-sm hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100"
           onClick={(e) => {
             e.stopPropagation();
             setIsLiked(!isLiked);
           }}
         >
           <Heart
-            className={cn("h-4 w-4", isLiked && "fill-current text-red-500")}
+            className={cn("h-4 w-4", isLiked && "fill-current text-blue-500")}
           />
         </Button>
       </div>
@@ -78,7 +78,7 @@ export function NewProductCard({
             {name}
           </h3>
 
-          <p className="text-xs text-muted-foreground mb-1">
+          <p className="text-xs text-muted-foreground mb-1 line-clamp-1">
             {description}
           </p>
         </div>
