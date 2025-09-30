@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import _db from "../../../../../../../packages/lib/src/db.js";
-import SubscriptionPlan from "../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js";
+import _db from "@repo/lib/db";
+import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();

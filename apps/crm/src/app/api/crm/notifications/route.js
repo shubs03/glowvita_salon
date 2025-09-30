@@ -2,7 +2,7 @@
 // crm/api/notifications/route.js
 
 import _db from "../../../../../../../packages/lib/src/db.js";
-import VendorNotificationsModel from "../../../../../../../packages/lib/src/models/Vendor/VendorNotification.model.js";
+import VendorNotificationsModel from '@repo/lib/models/Vendor/VendorNotification.model';
 import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
 
 await _db();

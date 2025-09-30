@@ -2,9 +2,9 @@
 
 import _db from "../../../../../../../packages/lib/src/db.js";
 import { ReferralModel, V2VSettingsModel, D2DSettingsModel, S2SSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
-import VendorModel from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js";
-import DoctorModel from "../../../../../../../packages/lib/src/models/Vendor/Docters.model.js";
-import SupplierModel from "../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js";
+import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
+import DoctorModel from '@repo/lib/models/Vendor/Docters.model';
+import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
 
 await _db();

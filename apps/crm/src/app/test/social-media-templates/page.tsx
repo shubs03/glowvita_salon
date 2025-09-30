@@ -4,8 +4,15 @@ import { useState } from 'react';
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 
+// Interface for the result object
+interface TestResult {
+  success?: boolean;
+  error?: string;
+  [key: string]: any; // Allow additional properties from API response
+}
+
 export default function TestSocialMediaTemplates() {
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<TestResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   const testTemplates = async () => {
@@ -14,7 +21,7 @@ export default function TestSocialMediaTemplates() {
       const response = await fetch('/api/test/social-media-templates');
       const data = await response.json();
       setResult(data);
-    } catch (error) {
+    } catch (error: any) {
       setResult({ success: false, error: error.message });
     } finally {
       setLoading(false);

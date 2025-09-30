@@ -30,6 +30,7 @@ type Product = {
   supplierEmail: string;
   description: string;
   discount?: number;
+  rating?: number;
 };
 
 type Supplier = {

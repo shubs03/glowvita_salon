@@ -1,15 +1,15 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Calendar, Clock, Scissors, User, DollarSign, Info, X, Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 type Appointment = {
-  _id: string;
+  _id?: string;
   clientName: string;
   serviceName: string;
   staffName: string;
-  date: string;
+  date: Date | string;
   startTime: string;
   endTime: string;
   duration: number;

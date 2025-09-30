@@ -9,7 +9,28 @@ import { format } from 'date-fns';
 import { Separator } from '@repo/ui/separator';
 import { cn } from "@repo/ui/cn";
 
-export const AppointmentDetails = ({ appointment, onCancelClick }) => {
+interface Salon {
+  name: string;
+  address: string;
+}
+
+interface Appointment {
+  id: string;
+  service: string;
+  date: string;
+  staff: string;
+  status: 'Completed' | 'Confirmed' | 'Cancelled';
+  price: number;
+  duration: number;
+  salon: Salon;
+}
+
+interface AppointmentDetailsProps {
+  appointment: Appointment | null;
+  onCancelClick: (appointment: Appointment) => void;
+}
+
+export const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsProps) => {
     if (!appointment) return (
         <div className="sticky top-24">
             <Card className="min-h-[500px] flex items-center justify-center bg-secondary/30 border-2 border-dashed">
@@ -22,7 +43,7 @@ export const AppointmentDetails = ({ appointment, onCancelClick }) => {
         </div>
     );
 
-    const statusConfig = {
+    const statusConfig: Record<Appointment['status'], { color: string }> = {
         Completed: { color: 'bg-green-100 text-green-800' },
         Confirmed: { color: 'bg-blue-100 text-blue-800' },
         Cancelled: { color: 'bg-red-100 text-red-800' },

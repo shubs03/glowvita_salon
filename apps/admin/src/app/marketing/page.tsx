@@ -248,16 +248,37 @@ export default function PlatformMarketingPage() {
     setIsPackageFormOpen(true);
   }, []);
 
-  const handlePackageSubmit = useCallback(async (formData: SmsPackage) => {
+  const handlePackageSubmit = useCallback(async (formData: Partial<SmsPackage>) => {
     try {
+      // Validate required fields
+      if (!formData.name || !formData.smsCount || formData.price === undefined || !formData.validityDays) {
+        toast.error('Please fill in all required fields');
+        return;
+      }
+
+      // Convert to complete SmsPackage object
+      const packageData: SmsPackage = {
+        name: formData.name,
+        description: formData.description || '',
+        smsCount: formData.smsCount,
+        price: formData.price,
+        validityDays: formData.validityDays,
+        isPopular: formData.isPopular || false,
+        features: formData.features || [],
+        id: formData.id || formData._id || '',
+        _id: formData._id || formData.id,
+        createdAt: formData.createdAt,
+        updatedAt: formData.updatedAt
+      };
+
       if (isEditMode && selectedPackage) {
         const id = selectedPackage._id || selectedPackage.id;
         if (id) {
-          await updateSmsPackage({ ...formData, id }).unwrap();
+          await updateSmsPackage({ ...packageData, id }).unwrap();
           toast.success('Package updated successfully');
         }
       } else {
-        await createSmsPackage(formData).unwrap();
+        await createSmsPackage(packageData).unwrap();
         toast.success('Package created successfully');
       }
       setIsPackageFormOpen(false);

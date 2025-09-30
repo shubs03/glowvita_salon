@@ -8,7 +8,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { Label } from '@repo/ui/label';
 import { Download, Save, X, Image as ImageIcon, Type, Move, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { fabric } from 'fabric';
+import * as fabric from 'fabric';
 import { useSaveCustomizedTemplateMutation } from '@repo/store/services/api';
 
 interface SocialMediaTemplate {
@@ -242,7 +242,8 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
       editable: true,
       selectable: true
     });
-    fabricCanvas.add(text).setActiveObject(text);
+    fabricCanvas.add(text);
+    fabricCanvas.setActiveObject(text);
   };
   
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -251,11 +252,11 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl, (img: any) => {
+        fabric.Image.fromURL(dataUrl).then((img: fabric.Image) => {
           const maxWidth = 150;
           const maxHeight = 150;
           
-          if (img.width > maxWidth || img.height > maxHeight) {
+          if (img.width && img.height && (img.width > maxWidth || img.height > maxHeight)) {
             const scale = Math.min(maxWidth / img.width, maxHeight / img.height);
             img.scale(scale);
           }
@@ -304,7 +305,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
       setIsSaving(true);
       
       try {
-        const canvasJson = fabricCanvas.toJSON(['selectable', 'evented', 'id']);
+        const canvasJson = fabricCanvas.toJSON();
         
         await saveCustomizedTemplate({
           templateId: template._id || template.id,

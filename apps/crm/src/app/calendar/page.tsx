@@ -6,9 +6,10 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Label } from '@repo/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { ChevronLeft, Plus, Clock, User, Calendar as CalendarIcon, Clock3, X, CalendarDays, Eye, Pencil, MoreVertical, CheckCircle2, XCircle, ChevronRight, ChevronDown, Scissors } from 'lucide-react';
+import { ChevronLeft, Plus, Clock, User, Calendar as CalendarIcon, Clock3, X, CalendarDays, Eye, Pencil, MoreVertical, CheckCircle2, XCircle, ChevronRight, ChevronDown, Scissors, Loader2 } from 'lucide-react';
 import NewAppointmentForm, { Appointment } from './components/NewAppointmentForm';
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { cn } from '@repo/ui/cn';
@@ -104,6 +105,8 @@ export default function CalendarPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const router = useRouter();
   const dispatch = useAppDispatch();
 
@@ -294,8 +297,7 @@ export default function CalendarPage() {
   );
 
   const handleCancelAppointment = async (reason: string) => {
-    const appointment = selectedAppointment;
-    if (!appointment || (!appointment._id && !appointment.id)) {
+    if (!selectedAppointmentId) {
       toast.error('No appointment selected');
       return;
     }
@@ -303,24 +305,22 @@ export default function CalendarPage() {
     try {
       setIsCancelling(true);
       
-      // Use either _id or id, whichever is available
-      const appointmentId = appointment._id || appointment.id;
-      
       await updateAppointmentStatus({
-        id: appointmentId,
+        id: selectedAppointmentId,
         status: 'cancelled',
         cancellationReason: reason
       }).unwrap();
       
       toast.success('Appointment cancelled successfully');
       setShowCancelDialog(false);
+      setCancelReason('');
+      setSelectedAppointmentId(null);
       await refetch();
     } catch (error: any) {
       console.error('Error cancelling appointment:', error);
       toast.error(error?.data?.message || 'Failed to cancel appointment');
     } finally {
       setIsCancelling(false);
-      dispatch(setSelectedAppointment(null));
     }
   };
 
@@ -462,7 +462,15 @@ export default function CalendarPage() {
     dispatch(setSelectedAppointment(null));
   };
 
-  const AppointmentMenu = ({ appointment, onView, onEdit, onDelete, onCancel }) => {
+interface AppointmentMenuProps {
+  appointment: Appointment;
+  onView: () => void;
+  onEdit: () => void;
+  onDelete?: () => void;
+  onCancel?: () => void;
+}
+
+  const AppointmentMenu: React.FC<AppointmentMenuProps> = ({ appointment, onView, onEdit, onDelete, onCancel }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [showStatusMenu, setShowStatusMenu] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -615,7 +623,7 @@ export default function CalendarPage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Set to start of today
 
-      const appointmentsToUpdate = appointmentsData.data.filter(appointment => {
+      const appointmentsToUpdate = appointmentsData.data.filter((appointment: any) => {
         // Skip if already marked as completed, cancelled, or missed
         if (['completed', 'cancelled', 'missed'].includes(appointment.status)) {
           return false;
@@ -632,7 +640,7 @@ export default function CalendarPage() {
       if (appointmentsToUpdate.length > 0) {
         try {
           await Promise.all(
-            appointmentsToUpdate.map(appointment =>
+            appointmentsToUpdate.map((appointment: any) =>
               updateAppointmentStatus({
                 id: appointment.id,
                 status: 'missed',
@@ -775,6 +783,15 @@ export default function CalendarPage() {
                             router.push(`/calendar/${formattedDate}?appointmentId=${appointment.id}`);
                           }}
                           onEdit={() => handleEditAppointment(appointment)}
+                          onDelete={() => {
+                            if (window.confirm('Are you sure you want to delete this appointment?')) {
+                              handleDeleteAppointment(appointment.id || appointment._id!);
+                            }
+                          }}
+                          onCancel={() => {
+                            setSelectedAppointmentId(appointment.id || appointment._id!);
+                            setShowCancelDialog(true);
+                          }}
                         />
                       </div>
                       
@@ -797,7 +814,7 @@ export default function CalendarPage() {
                                   ? 'bg-green-100 text-green-800'
                                   : appointment.status === 'cancelled'
                                   ? 'bg-red-100 text-red-800'
-                                  : appointment.status === 'missed'
+                                  : appointment.status === 'no_show'
                                   ? 'bg-gray-100 text-gray-800'
                                   : 'bg-blue-100 text-blue-800'
                               )}

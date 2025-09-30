@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import AdminUserModel from "../../../../../../../../packages/lib/src/models/admin/AdminUser.model";
-import _db from "../../../../../../../../packages/lib/src/db";
+import AdminUserModel from "@repo/lib/models/admin/AdminUser";
+import _db from "@repo/lib/db";
 import validator from "validator";
 
 await _db();
