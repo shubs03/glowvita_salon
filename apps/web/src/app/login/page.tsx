@@ -277,17 +277,25 @@ export default function LoginPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <input
-                    id="remember"
+                    id="remember-me"
+                    name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="remember" className="ml-2 block text-md text-gray-700">
+                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
                     Remember me
                   </label>
                 </div>
-                <a href="#" className="text-md font-medium text-blue-600 hover:text-blue-500">
-                  Forgot password?
-                </a>
+
+                <div className="text-sm">
+                  <button
+                    type="button"
+                    onClick={() => router.push('/forgot-password')}
+                    className="font-medium text-indigo-600 hover:text-indigo-500"
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
               </div>
 
               <div className="relative my-4">

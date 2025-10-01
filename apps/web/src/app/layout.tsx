@@ -35,7 +35,10 @@ export default function RootLayout({
   ];
 
   const isMarketingPage = marketingPages.includes(pathname);
-  const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
+  const isAuthPage = pathname.startsWith('/client-login') || 
+                     pathname.startsWith('/client-register') || 
+                     pathname.startsWith('/forgot-password') ||
+                     pathname.startsWith('/reset-password');
   const isProfilePage = pathname.startsWith('/profile');
 
   // Show header on marketing and profile pages, but not on auth pages

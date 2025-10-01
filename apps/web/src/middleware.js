@@ -43,7 +43,7 @@ export async function middleware(request) {
   }
 
   // Handle auth pages for already logged-in users
-  const authPaths = ['/client-login', '/client-register'];
+  const authPaths = ['/client-login', '/client-register', '/forgot-password', '/reset-password'];
   if (authPaths.includes(pathname)) {
     if (token) {
       try {
