@@ -36,7 +36,10 @@ export default function RootLayout({
   ];
 
   const isMarketingPage = marketingPages.includes(pathname);
-  const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
+  const isAuthPage = pathname.startsWith('/client-login') || 
+                     pathname.startsWith('/client-register') || 
+                     pathname.startsWith('/forgot-password') ||
+                     pathname.startsWith('/reset-password');
 
   return (
     <html lang="en" suppressHydrationWarning>

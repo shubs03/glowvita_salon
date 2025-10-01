@@ -24,8 +24,8 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: "All fields are required" }, { status: 400 });
     }
 
-    if (password.length < 6) {
-      return NextResponse.json({ success: false, error: "Password must be at least 6 characters long" }, { status: 400 });
+    if (password.length < 8) {
+      return NextResponse.json({ success: false, error: "Password must be at least 8 characters long" }, { status: 400 });
     }
 
     // Find user across all models with the reset token
@@ -55,17 +55,30 @@ export async function POST(request) {
     }
 
     if (!user) {
-      return NextResponse.json({ success: false, error: "Invalid or expired token" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Password reset token is invalid or has expired." }, { status: 400 });
+    }
+
+    // Immediately clear the reset token to prevent reuse
+    try {
+      await Model.findByIdAndUpdate(user._id, {
+        resetPasswordToken: undefined,
+        resetPasswordExpires: undefined
+      });
+      console.log('Reset token cleared for user:', user.email);
+    } catch (clearError) {
+      console.error('Error clearing reset token:', clearError);
+      return NextResponse.json({ 
+        success: false, 
+        error: "Failed to process reset request. Please try again later." 
+      }, { status: 500 });
     }
 
     // Hash new password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Update user password and clear reset token fields
+    // Update user password
     await Model.findByIdAndUpdate(user._id, {
-      password: hashedPassword,
-      resetPasswordToken: undefined,
-      resetPasswordExpires: undefined
+      password: hashedPassword
     });
 
     return NextResponse.json({ 
