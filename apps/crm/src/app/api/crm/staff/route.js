@@ -1,3 +1,4 @@
+
 import { NextResponse } from 'next/server';
 import StaffModel from '@repo/lib/models/vendor/Staff.model';
 import _db from '@repo/lib/db';
@@ -36,7 +37,7 @@ const cleanupOldIndexes = async () => {
 // GET all staff for a vendor or doctor
 export const GET = authMiddlewareCrm(async (req) => {
     try {
-        const ownerId = req.user._id;
+        const ownerId = req.user.userId;
         
         console.log(`Fetching staff for owner: ${ownerId} (Role: ${req.user.role})`);
         
@@ -57,7 +58,7 @@ export const POST = authMiddlewareCrm(async (req) => {
         // Clean up indexes before creating a new entry
         await cleanupOldIndexes();
         
-        const ownerId = req.user._id.toString();
+        const ownerId = req.user.userId.toString();
         const userType = req.user.role === 'doctor' ? 'Doctor' : 'Vendor';
         const body = await req.json();
         
@@ -140,7 +141,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 // PUT (update) a staff member
 export const PUT = authMiddlewareCrm(async (req) => {
     try {
-        const ownerId = req.user._id;
+        const ownerId = req.user.userId;
         const { _id, ...updateData } = await req.json();
 
         if (!_id) {
@@ -194,7 +195,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE a staff member
 export const DELETE = authMiddlewareCrm(async (req) => {
     try {
-        const ownerId = req.user._id;
+        const ownerId = req.user.userId;
         const url = new URL(req.url);
         const id = url.searchParams.get('id') || (await req.json()).id;
 
