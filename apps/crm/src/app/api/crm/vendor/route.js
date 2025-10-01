@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SubscriptionPlanModel from '@repo/lib/models/admin/SubscriptionPlan.model';
@@ -9,7 +10,7 @@ await _db();
 // GET - Fetch vendor profile
 export const GET = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.toString();
+        const vendorId = req.user.userId;
         
         const vendor = await VendorModel.findById(vendorId)
             .select('-password -__v')
@@ -40,7 +41,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 // PUT - Update vendor profile
 export const PUT = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.toString();
+        const vendorId = req.user.userId;
         const body = await req.json();
 
         // Find the vendor

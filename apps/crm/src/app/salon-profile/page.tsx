@@ -481,7 +481,7 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
         {/* Image Preview Modal */}
         {previewImage && (
           <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closePreview}>
-            <div className="relative max-w-4xl max-h-full" onClick={(e) => e.stopPropagation()}>
+            <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
               <Button 
                 variant="secondary" 
                 size="icon" 
@@ -495,7 +495,7 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
                 alt="Preview"
                 width={800}
                 height={600}
-                className="object-contain max-h-[80vh]"
+                className="object-contain max-h-[80vh] mx-auto"
               />
             </div>
           </div>
@@ -1024,59 +1024,26 @@ const CategoriesTab = () => (
 
 // MAIN PAGE COMPONENT
 export default function SalonProfilePage() {
-  // Remove unused state since OpeningHoursTab manages its own state now
-  const dispatch = useDispatch();
-  const vendor = useAppSelector(selectVendor);
-  const loading = useAppSelector(selectVendorLoading);
-  const error = useAppSelector(selectVendorError);
-  const message = useAppSelector(selectVendorMessage);
+  const { user } = useCrmAuth();
+  const { data: vendorData, isLoading, isError, refetch } = useGetVendorProfileQuery(undefined, {
+    skip: !user?._id
+  });
   
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
-  const { data: vendorData, isLoading, isError } = useGetVendorProfileQuery(void 0);
   
-  const [localVendor, setLocalVendor] = useState<VendorProfile>({
-    _id: '',
-    businessName: '',
-    category: 'unisex',
-    subCategories: []
-  });
-  const [openingHours, setOpeningHours] = useState<OpeningHour[]>(
-    Array.from({ length: 7 }, (_, i) => {
-      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      return {
-        day: days[i],
-        open: '09:00',
-        close: '18:00',
-        isOpen: i < 5 // Monday to Friday open by default
-      };
-    })
-  );
+  const [localVendor, setLocalVendor] = useState<VendorProfile | null>(null);
+  const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (vendorData?.data) {
       setLocalVendor(vendorData.data);
-      // Initialize opening hours if they exist in the vendor data
       if (vendorData.data.openingHours) {
         setOpeningHours(vendorData.data.openingHours);
       }
     }
   }, [vendorData]);
-
-  useEffect(() => {
-    if (message) {
-      toast.success(message);
-      dispatch(clearVendorMessage());
-    }
-  }, [message, dispatch]);
-
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      dispatch(clearVendorError());
-    }
-  }, [error, dispatch]);
 
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1085,7 +1052,6 @@ export default function SalonProfilePage() {
     setIsUploading(true);
     
     try {
-      // Convert file to base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -1093,8 +1059,8 @@ export default function SalonProfilePage() {
         reader.onerror = (error) => reject(error);
       });
 
-      // Update vendor profile with new profile image
-      const result = await updateVendorProfile({
+      const result: any = await updateVendorProfile({
+        _id: localVendor?._id,
         profileImage: base64
       }).unwrap();
 
@@ -1111,13 +1077,12 @@ export default function SalonProfilePage() {
       toast.error(error?.data?.message || 'Failed to update profile image');
     } finally {
       setIsUploading(false);
-      // Reset the file input
       e.target.value = '';
     }
   };
 
   const openProfileImagePreview = () => {
-    if (localVendor.profileImage) {
+    if (localVendor?.profileImage) {
       setPreviewImage(localVendor.profileImage);
     }
   };
@@ -1142,7 +1107,7 @@ export default function SalonProfilePage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-red-600">Error loading vendor profile</p>
-          <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+          <Button onClick={() => refetch()} className="mt-4">Retry</Button>
         </div>
       </div>
     );
@@ -1239,7 +1204,7 @@ export default function SalonProfilePage() {
       {/* Profile Image Preview Modal */}
       {previewImage && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closePreview}>
-          <div className="relative max-w-4xl max-h-full" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
             <Button 
               variant="secondary" 
               size="icon" 
@@ -1253,7 +1218,7 @@ export default function SalonProfilePage() {
               alt="Profile Preview"
               width={800}
               height={600}
-              className="object-contain max-h-[80vh]"
+              className="object-contain max-h-[80vh] mx-auto"
             />
           </div>
         </div>
