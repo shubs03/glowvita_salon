@@ -41,7 +41,7 @@ export default function ResetPasswordPage() {
     // Validate token on page load
     const validateToken = async () => {
       try {
-        const response = await fetch('/api/crm/auth/validate-reset-token', {
+        const response = await fetch('/api/auth/validate-reset-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, email: emailParam }),
@@ -96,7 +96,7 @@ export default function ResetPasswordPage() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('/api/crm/auth/reset-password', {
+      const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, email, password }),
@@ -111,7 +111,7 @@ export default function ResetPasswordPage() {
         });
         // Redirect to login page after a short delay
         setTimeout(() => {
-          router.push('/login');
+          router.push('/client-login');
         }, 2000);
       } else {
         toast.error('Reset failed', {
@@ -276,7 +276,7 @@ export default function ResetPasswordPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push('/login')}
+                onClick={() => router.push('/client-login')}
                 className="w-full font-medium py-2 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition duration-300"
               >
                 Back to Login

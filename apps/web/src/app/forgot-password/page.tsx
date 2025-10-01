@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('/api/crm/auth/forgot-password', {
+      const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -108,7 +108,7 @@ export default function ForgotPasswordPage() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => router.push('/login')}
+                onClick={() => router.push('/client-login')}
                 className="w-full font-medium py-3 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all duration-300"
               >
                 Back to Login
@@ -121,7 +121,7 @@ export default function ForgotPasswordPage() {
           <p className="text-gray-600 text-sm">
             Remember your password?{' '}
             <button 
-              onClick={() => router.push('/login')}
+              onClick={() => router.push('/client-login')}
               className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
             >
               Sign in
