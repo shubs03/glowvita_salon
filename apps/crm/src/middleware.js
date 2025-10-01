@@ -77,24 +77,33 @@ export async function middleware(request) {
     response.cookies.set('crm_access_token', '', { expires: new Date(0) });
     return response;
   }
-
-  const role = payload.role;
+  
+  const { role, permissions } = payload;
   const navItems = getNavItemsForRole(role);
-  const allowedPaths = [...navItems.map(item => item.href), ...alwaysAllowedPaths];
+  
+  // Find the required permission for the current route
+  const requiredPermission = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/')?.permission;
 
-  const isPathAllowed = allowedPaths.some(allowedPath => {
-    if (pathname === allowedPath) return true;
-    if (allowedPath !== '/' && pathname.startsWith(allowedPath + '/')) {
-      return true;
-    }
-    return false;
-  });
+  // Always allow dashboard and profile pages for any authenticated user
+  const isAlwaysAllowed = alwaysAllowedPaths.some(path => pathname.startsWith(path));
 
-  if (!isPathAllowed) {
-    // Redirect to the not-found page if the path is not authorized
-    return NextResponse.redirect(new URL('/not-found', request.url));
+  if (isAlwaysAllowed) {
+    return NextResponse.next();
   }
 
+  // If a permission is required for the route, check if the user has it
+  if (requiredPermission) {
+    const userPermissions = permissions || [];
+    if (!userPermissions.includes(requiredPermission)) {
+      // If user doesn't have permission, redirect to a 'not-found' or 'unauthorized' page
+      return NextResponse.redirect(new URL('/not-found', request.url));
+    }
+  } else if (pathname !== '/') { 
+    // If the path is not in the nav items and not always allowed, it's not found
+    // This is a safety net for routes not defined in `lib/routes.ts`
+    return NextResponse.redirect(new URL('/not-found', request.url));
+  }
+  
   return NextResponse.next();
 }
 
