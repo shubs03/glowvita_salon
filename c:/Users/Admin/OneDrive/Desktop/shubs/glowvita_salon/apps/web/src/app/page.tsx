@@ -24,7 +24,7 @@ import { NewProductCard } from "@/components/landing/NewProductCard";
 
 import { Award, Users, LineChart, Clock, ArrowRight } from "lucide-react";
 import { Button } from "@repo/ui/button";
-import { useGetAdminProductCategoriesQuery, useGetVendorsQuery } from "@repo/store/api";
+import { useGetAdminProductCategoriesQuery } from "@repo/store/api";
 import { useState, useEffect } from "react";
 
 export default function HomePage() {
@@ -33,14 +33,6 @@ export default function HomePage() {
   const { data: ProductCategoryData } =
     useGetAdminProductCategoriesQuery(undefined);
   console.log("Product Category Data : ", ProductCategoryData);
-  
-  const { data: salonsData, isLoading: isLoadingSalons } = useGetVendorsQuery(undefined);
-
-  useEffect(() => {
-    if (salonsData) {
-      console.log("All Salon Details:", salonsData);
-    }
-  }, [salonsData]);
 
   const scrollAdvantages = (direction: "left" | "right") => {
     const container = document.getElementById("advantages-container");
