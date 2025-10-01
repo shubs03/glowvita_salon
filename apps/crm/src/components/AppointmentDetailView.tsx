@@ -13,7 +13,7 @@ import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { Badge } from "@repo/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
-import NewAppointmentForm, { type AppointmentFormData } from "../app/calendar/components/NewAppointmentForm";
+import NewAppointmentForm, { type Appointment as FormAppointment } from "../app/calendar/components/NewAppointmentForm";
 import { toast } from 'sonner';
 
 interface PaymentDetails {
@@ -30,24 +30,34 @@ interface PaymentDetails {
   paymentStatus: 'pending' | 'partial' | 'paid' | 'refunded';
 }
 
+// Create a new interface that combines the properties we need
 interface Appointment {
-  _id: string;
-  vendorId: string;
+  // Properties from the original FormAppointment interface
+  id?: string;
+  _id?: string;
+  client: string;
+  clientName: string;
+  service: string;
+  serviceName: string;
   staff: string;
   staffName: string;
-  service: string;  // This is the service ID
-  serviceName: string;  // This is the actual service name
   date: Date | string;
   startTime: string;
   endTime: string;
   duration: number;
+  notes: string;
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending';
   amount: number;
-  discount?: number;
+  discount: number;
+  tax: number;
   totalAmount: number;
-  status: string;
-  notes?: string;
-  clientName: string;
+  paymentStatus?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  
+  // Additional properties used in this component
   payment?: PaymentDetails;
+  vendorId?: string;
 }
 
 interface AppointmentDetailViewProps {
@@ -104,28 +114,33 @@ export function AppointmentDetailView({
   const [cancellationReason, setCancellationReason] = useState('');
 
   // Prepare default values for edit/reschedule form
-  const defaultFormValues = useMemo(() => ({
-    ...appointment,
-    date: appointment.date instanceof Date ? appointment.date : new Date(appointment.date),
-    startTime: appointment.startTime,
-    endTime: appointment.endTime,
-    service: appointment.service, // This should be the service ID
-    serviceName: appointment.serviceName || appointment.service, // Fallback to service ID if name is missing
-    staff: appointment.staff, // This should be the staff ID
-    staffName: appointment.staffName,
-    clientName: appointment.clientName,
-    notes: appointment.notes || '',
-    amount: appointment.amount,
-    status: appointment.status,
-    // Ensure these are always defined
-    _id: appointment._id,
-    id: appointment._id,
-    duration: appointment.duration || 60,
-    totalAmount: appointment.totalAmount || appointment.amount || 0,
-    discount: appointment.discount || 0,
-    tax: (appointment as any).tax || 0,
-    paymentStatus: (appointment as any).paymentStatus || 'pending'
-  }), [appointment]);
+  const defaultFormValues = useMemo(() => {
+    // Map 'pending' status to 'scheduled' since NewAppointmentForm doesn't support 'pending'
+    const status = appointment.status === 'pending' ? 'scheduled' : appointment.status;
+    
+    return {
+      ...appointment,
+      date: appointment.date instanceof Date ? appointment.date : new Date(appointment.date),
+      startTime: appointment.startTime,
+      endTime: appointment.endTime,
+      service: appointment.service, // This should be the service ID
+      serviceName: appointment.serviceName || appointment.service, // Fallback to service ID if name is missing
+      staff: appointment.staff, // This should be the staff ID
+      staffName: appointment.staffName,
+      clientName: appointment.clientName,
+      notes: appointment.notes || '',
+      amount: appointment.amount,
+      status: status,
+      // Ensure these are always defined
+      _id: appointment._id,
+      id: appointment._id,
+      duration: appointment.duration || 60,
+      totalAmount: appointment.totalAmount || appointment.amount || 0,
+      discount: appointment.discount || 0,
+      tax: (appointment as any).tax || 0,
+      paymentStatus: (appointment as any).paymentStatus || 'pending'
+    };
+  }, [appointment]);
 
   // Create service object in the format expected by NewAppointmentForm
   const currentService = {
@@ -173,10 +188,10 @@ export function AppointmentDetailView({
       if (onCloseReschedule) {
         onCloseReschedule();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error rescheduling appointment:', error);
       toast.error('Failed to reschedule appointment', {
-        description: error.message || 'Please try again.'
+        description: error?.message || 'Please try again.'
       });
     } finally {
       toast.dismiss(toastId);
@@ -189,7 +204,7 @@ export function AppointmentDetailView({
     try {
       console.log('Starting form submission with data:', { formData, appointment });
       
-      const appointmentId = appointment?._id || appointment?.id;
+      const appointmentId = appointment?._id || appointment?.id || '';
       if (!appointmentId) {
         console.error('Appointment ID is missing in handleFormSubmit');
         throw new Error('Appointment ID is missing. Cannot save changes.');
@@ -265,10 +280,11 @@ export function AppointmentDetailView({
         // Use the appointment data directly instead of mock data
         const allHistory: ClientAppointment[] = [
           {
-            id: appointment._id,
+            id: appointment._id || appointment.id || '',
             date: appointment.date instanceof Date ? appointment.date : new Date(appointment.date as string),
             service: appointment.serviceName,
-            status: appointment.status as 'pending' | 'completed' | 'cancelled' | 'missed',
+            status: 'pending' as 'pending' | 'completed' | 'cancelled' | 'missed',
+
             staffName: appointment.staffName,
             amount: appointment.amount,
             startTime: appointment.startTime,
@@ -284,7 +300,7 @@ export function AppointmentDetailView({
           : allHistory.filter(appt => appt.status === activeHistoryFilter);
 
         setClientHistory(filteredHistory);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error processing client history:', error);
         // In a real app, you might want to fetch from an API here
         // For now, we'll set an empty array if there's an error
@@ -453,10 +469,10 @@ export function AppointmentDetailView({
       // Call the parent's status change handler with the new status
       await onStatusChange(newStatus);
       toast.success(`Status updated to ${newStatus}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating status:', error);
       toast.error('Failed to update status', {
-        description: error.message || 'Please try again.'
+        description: error?.message || 'Please try again.'
       });
     } finally {
       setIsStatusChanging(false);
@@ -475,10 +491,10 @@ export function AppointmentDetailView({
       toast.success('Appointment cancelled successfully');
       setShowCancelDialog(false);
       setCancellationReason('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cancelling appointment:', error);
       toast.error('Failed to cancel appointment', {
-        description: error.message || 'Please try again.'
+        description: error?.message || 'Please try again.'
       });
     } finally {
       setIsStatusChanging(false);
@@ -1047,7 +1063,7 @@ export function AppointmentDetailView({
                               {format(appt.date, 'MMM d, yyyy')} • {appt.startTime}
                             </p>
                           </div>
-                          <Badge variant={appt.status === 'completed' ? 'success' : 'secondary'}>
+                          <Badge variant={appt.status === 'completed' ? 'default' : 'secondary'}>
                             {appt.status}
                           </Badge>
                         </div>

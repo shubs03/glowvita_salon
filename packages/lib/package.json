@@ -23,11 +23,7 @@
     "./models/admin/GeoFence": "./src/models/admin/GeoFence.model.js",
     "./models/admin/AdminOffers": "./src/models/admin/AdminOffers.model.js",
     "./models/admin/Faq": "./src/models/admin/Faq.model.js",
-    "./models/admin/SubscriptionPlan": "./src/models/admin/SubscriptionPlan.model.js",
     "./models/admin/SubscriptionPlan.model": "./src/models/admin/SubscriptionPlan.model.js",
-    "./models/admin/Service": "./src/models/admin/Service.model.js",
-    "./models/admin/Category": "./src/models/admin/Category.model.js",
-    "./models/admin/Faq": "./src/models/admin/Faq.model.js",
     "./models/Vendor.model": "./src/models/vendor/Vendor.model.js",
     "./models/vendor/Vendor.model": "./src/models/vendor/Vendor.model.js",
     "./models/vendor/Supplier.model": "./src/models/vendor/Supplier.model.js",
@@ -36,7 +32,6 @@
     "./models/Vendor/Docters.model": "./src/models/vendor/Docters.model.js",
     "./models/vendor/VendorServices.model": "./src/models/vendor/VendorServices.model.js",
     "./models/Vendor/VendorServices.model": "./src/models/vendor/VendorServices.model.js",
-    "./models/vendor/Vendor.model": "./src/models/vendor/Vendor.model.js",
     "./models/Vendor/Vendor.model": "./src/models/vendor/Vendor.model.js",
     "./models/vendor/Client.model": "./src/models/vendor/Client.model.js",
     "./models/vendor/Cart.model": "./src/models/vendor/Cart.model.js",
@@ -62,7 +57,7 @@
     "bcryptjs": "^2.4.3",
     "jose": "^5.4.0",
     "mongoose": "^8.4.1",
-    "nodemailer": "^6.9.0"
+    "nodemailer": "^6.10.1"
   },
   "devDependencies": {
     "@repo/eslint-config-custom": "*",

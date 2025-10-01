@@ -740,7 +740,7 @@ export default function DayScheduleView({
               appointment={{
                 ...selectedAppointment,
                 date: selectedAppointment.date,
-                serviceName: selectedAppointment.service,
+                serviceName: selectedAppointment.serviceName || selectedAppointment.service,
                 _id: selectedAppointment.id,
                 clientName: selectedAppointment.clientName,
                 staff: '',
@@ -752,7 +752,11 @@ export default function DayScheduleView({
                 amount: 0,
                 totalAmount: 0,
                 status: selectedAppointment.status,
-                notes: selectedAppointment.notes,
+                notes: selectedAppointment.notes || '',
+                client: '', // Add missing client property
+                discount: 0, // Add missing discount property
+                tax: 0, // Add missing tax property
+                paymentStatus: '', // Add missing paymentStatus property
                 vendorId: '', // Add vendorId property
               }}
               onClose={handleCloseDetailView}

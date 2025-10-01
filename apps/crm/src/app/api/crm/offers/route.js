@@ -2,11 +2,11 @@
 // crm/api/offers/route.js
 
 import _db from "../../../../../../../packages/lib/src/db.js";
-import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model';
+import CRMOfferModel from '@repo/lib/models/vendor/CRMOffer.model';
 import {
   authMiddlewareCrm,
   authMiddlewareCRM,
-} from "../../../../middlewareCrm.js";
+} from "../../../../middlewareCrm";
 
 // Predefined options for validation
 const validSpecialties = [

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import ClientModel from '@repo/lib/models/Vendor/Client.model';
+import ClientModel from '@repo/lib/models/vendor/Client.model';
 import _db from '@repo/lib/db';
-import { authMiddlewareCrm } from '@/middlewareCrm.js';
+import { authMiddlewareCrm } from '@/middlewareCrm';
 
 await _db();
 
