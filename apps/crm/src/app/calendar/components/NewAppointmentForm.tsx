@@ -107,32 +107,28 @@ export default function NewAppointmentForm({
   const isClientSearchEnabled = !isEditing && !isRescheduling;
 
   // Fetch staff data using the getStaff query
-  const { data: staffResponse = [], isLoading: isLoadingStaff } = glowvitaApi.useGetStaffQuery(undefined, {
-    refetchOnMountOrArgChange: true,
-    selectFromResult: ({ data = [], isLoading }) => ({
-      // Map the API response to match the StaffMember interface
-      data: (Array.isArray(data) ? data : []).map(staff => ({
-        _id: staff._id,
-        name: staff.fullName,
-        email: staff.emailAddress,
-        phone: staff.mobileNo
-      })),
-      isLoading
-    })
+  const { data: staffResponse, isLoading: isLoadingStaff } = glowvitaApi.useGetStaffQuery(undefined, {
+    refetchOnMountOrArgChange: true
   });
 
   // Update the staff data transformation
-  const staffData = React.useMemo(() => {
+  const staffData: StaffMember[] = React.useMemo(() => {
     console.log('Raw staff response:', staffResponse);
     
-    // Handle different response structures
+    // Handle different response structures from the API
     let rawStaff = [];
-    if (Array.isArray(staffResponse)) {
-      // Case 1: Response is already an array
-      rawStaff = staffResponse;
-    } else if (staffResponse?.data) {
-      // Case 2: Response has a data property that might be an array
-      rawStaff = Array.isArray(staffResponse.data) ? staffResponse.data : [];
+    
+    if (staffResponse) {
+      if (Array.isArray(staffResponse)) {
+        // Case 1: Response is directly an array
+        rawStaff = staffResponse;
+      } else if (staffResponse.data && Array.isArray(staffResponse.data)) {
+        // Case 2: Response has a data property that contains the array
+        rawStaff = staffResponse.data;
+      } else if (staffResponse.staff && Array.isArray(staffResponse.staff)) {
+        // Case 3: Response has a staff property that contains the array
+        rawStaff = staffResponse.staff;
+      }
     }
     
     console.log('Processed staff data:', rawStaff);
@@ -273,7 +269,7 @@ export default function NewAppointmentForm({
       const staffId = typeof newAppointmentState.staff === 'object' 
         ? (newAppointmentState.staff as any)._id 
         : newAppointmentState.staff;
-      const staffMember = staffData.find(s => s._id === staffId);
+      const staffMember = staffData.find((s: StaffMember) => s._id === staffId);
       if (staffMember) {
         newAppointmentState.staff = staffMember._id;
         newAppointmentState.staffName = staffMember.name;
@@ -339,7 +335,7 @@ export default function NewAppointmentForm({
 
   // Update the staff change handler
   const handleStaffChange = (staffId: string) => {
-    const selectedStaff = staffData.find(s => s._id === staffId);
+    const selectedStaff = staffData.find((s: StaffMember) => s._id === staffId);
     if (selectedStaff) {
       setAppointmentData(prev => ({
         ...prev,
@@ -354,7 +350,7 @@ export default function NewAppointmentForm({
     if (staffData.length > 0) {
       // If editing and staff is set, ensure staffName is set
       if (appointmentData.staff) {
-        const selectedStaff = staffData.find(s => s._id === appointmentData.staff);
+        const selectedStaff = staffData.find((s: StaffMember) => s._id === appointmentData.staff);
         if (selectedStaff && selectedStaff.name !== appointmentData.staffName) {
           setAppointmentData(prev => ({
             ...prev,
@@ -536,7 +532,7 @@ export default function NewAppointmentForm({
         clientName: appointmentData.clientName,
         // Ensure staff is set
         staff: appointmentData.staff || (staffData[0]?._id || ''),
-        staffName: appointmentData.staffName || staffData.find(s => s._id === appointmentData.staff)?.name || '',
+        staffName: appointmentData.staffName || staffData.find((s: StaffMember) => s._id === appointmentData.staff)?.name || '',
         // Ensure dates are properly formatted
         date: appointmentData.date instanceof Date 
           ? formatDateForBackend(appointmentData.date) 
@@ -997,7 +993,7 @@ export default function NewAppointmentForm({
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {staffData.map((staff) => (
+                  {staffData.map((staff: StaffMember) => (
                     <SelectItem key={staff._id} value={staff._id}>
                       <div className="flex flex-col">
                         <span>{staff.name}</span>

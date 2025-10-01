@@ -1,10 +1,10 @@
 
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
-import ProductModel from '../../../../../../../packages/lib/src/models/Vendor/Product.model.js';
-import SupplierModel from '../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js';
+import ProductModel from '@repo/lib/models/vendor/Product.model';
+import SupplierModel from '@repo/lib/models/vendor/Supplier.model';
 import ProductCategoryModel from '../../../../../../../packages/lib/src/models/admin/ProductCategory.model.js';
-import { authMiddlewareCrm } from '@/middlewareCrm.js';
+import { authMiddlewareCrm } from '@/middlewareCrm';
 
 await _db();
 

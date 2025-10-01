@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { saveBlockTime } from '@repo/store/slices/blockTimeSlice';
 import { blockTimeActions } from '@repo/store/slices/blockTimeSlice';
-import { RootState } from '@repo/store';
 import { format } from 'date-fns';
 import { Button } from '@repo/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/ui/dialog';
@@ -26,8 +25,8 @@ const staffMembers = [
 ];
 
 const AddBlockTime: React.FC<AddBlockTimeProps> = ({ open, onClose, initialDate = '' }) => {
-  const dispatch = useDispatch();
-  const blockTimeState = useSelector((state: RootState) => state.blockTime);
+  const dispatch = useAppDispatch();
+  const blockTimeState = useAppSelector((state) => state.blockTime);
   const { staffMember, startTime, endTime, description, date: blockTimeDate } = blockTimeState;
   const [date, setDate] = useState(initialDate);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -76,19 +75,26 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({ open, onClose, initialDate 
         startTime,
         endTime,
         description,
-      };
+      } as any;
       
       // Dispatch the save action
-      const result = await dispatch(saveBlockTime(blockTimeData)).unwrap();
-      
-      if (result && onClose) {
-        // Show success message
-        alert('Block time saved successfully!');
-        // Reset the form state using the reset action
-        dispatch(blockTimeActions.reset());
-        // Close the modal
-        onClose();
-      }
+      dispatch(saveBlockTime(blockTimeData) as any)
+        .then((action: any) => {
+          if (action.type === 'blockTime/saveBlockTime/fulfilled') {
+            // Show success message
+            alert('Block time saved successfully!');
+            // Reset the form state using the reset action
+            dispatch(blockTimeActions.reset());
+            // Close the modal
+            onClose();
+          } else {
+            throw new Error('Failed to save block time');
+          }
+        })
+        .catch((saveError: any) => {
+          console.error('Failed to save block time:', saveError);
+          alert('Failed to save block time. Please try again.');
+        });
     } catch (error) {
       console.error('Failed to save block time:', error);
       // Show error to user
@@ -150,7 +156,7 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({ open, onClose, initialDate 
                 onChange={(e) => {
                   const newDate = e.target.value;
                   setDate(newDate);
-                  dispatch(setDate(newDate));
+                  dispatch(blockTimeActions.setDate(newDate));
                 }}
                 className={`pl-10 ${errors.date ? 'border-destructive' : ''}`}
                 required

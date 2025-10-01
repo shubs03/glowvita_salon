@@ -1,6 +1,6 @@
 
-import _db from "../../../../../../../packages/lib/src/db.js";
-import OfferModel from "../../../../../../../packages/lib/src/models/admin/AdminOffers.model.js";
+import _db from "@repo/lib/db";
+import OfferModel from "@repo/lib/models/admin/AdminOffers";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 // Predefined options for validation

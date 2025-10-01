@@ -80,17 +80,18 @@ export default function CanvasTemplateEditor({
 
     // Load initial background image if provided
     if (initialImage) {
-      fabric.Image.fromURL(
-        initialImage,
-        (img: FabricImage) => {
+      fabric.Image.fromURL(initialImage)
+        .then((img: FabricImage) => {
+          img.set({
+            scaleX: (canvas.width || 1) / width,
+            scaleY: (canvas.height || 1) / height,
+          });
           canvas.backgroundImage = img;
           canvas.renderAll();
-        },
-        {
-          scaleX: (canvas.width || 1) / (initialImage ? width : 1),
-          scaleY: (canvas.height || 1) / (initialImage ? height : 1),
-        }
-      );
+        })
+        .catch((error) => {
+          console.error('Failed to load background image:', error);
+        });
     }
 
     // Add default text elements
@@ -211,32 +212,36 @@ export default function CanvasTemplateEditor({
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl, (img: FabricImage) => {
-          const maxWidth = 150;
-          const maxHeight = 150;
+        fabric.Image.fromURL(dataUrl)
+          .then((img: FabricImage) => {
+            const maxWidth = 150;
+            const maxHeight = 150;
 
-          if (
-            img.width &&
-            img.height &&
-            (img.width > maxWidth || img.height > maxHeight)
-          ) {
-            const scale = Math.min(
-              maxWidth / img.width,
-              maxHeight / img.height
-            );
-            img.scale(scale);
-          }
+            if (
+              img.width &&
+              img.height &&
+              (img.width > maxWidth || img.height > maxHeight)
+            ) {
+              const scale = Math.min(
+                maxWidth / img.width,
+                maxHeight / img.height
+              );
+              img.scale(scale);
+            }
 
-          img.set({
-            left: 50,
-            top: 50,
-            selectable: true,
+            img.set({
+              left: 50,
+              top: 50,
+              selectable: true,
+            });
+
+            fabricCanvas.add(img);
+            fabricCanvas.setActiveObject(img);
+            fabricCanvas.renderAll();
+          })
+          .catch((error) => {
+            console.error('Failed to load image:', error);
           });
-
-          fabricCanvas.add(img);
-          fabricCanvas.setActiveObject(img);
-          fabricCanvas.renderAll();
-        });
       };
       reader.readAsDataURL(file);
     }

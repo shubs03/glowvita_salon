@@ -1,6 +1,6 @@
 
 import _db from "@repo/lib/db";
-import SuperDataModel from "../../../../../../../packages/lib/src/models/admin/SuperData.model.js";
+import SuperDataModel from "@repo/lib/models/admin/SuperData";
 
 await _db();
 

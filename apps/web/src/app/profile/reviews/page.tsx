@@ -8,7 +8,15 @@ import { Star, Search } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { Pagination } from '@repo/ui/pagination';
 
-const allReviews = [
+interface Review {
+  id: string;
+  type: 'product' | 'service';
+  item: string;
+  rating: number;
+  review: string;
+}
+
+const allReviews: Review[] = [
   { id: "REV-001", type: "service", item: "Signature Facial", rating: 5, review: "Absolutely amazing experience. My skin has never felt better!" },
   { id: "REV-002", type: "product", item: "Aura Revitalizing Serum", rating: 4, review: "Great product, noticed a difference in a week. A bit pricey though." },
   { id: "REV-003", type: "service", item: "Haircut & Style", rating: 4, review: "Great haircut, but the wait was a bit long." },
@@ -17,7 +25,11 @@ const allReviews = [
   { id: "REV-006", type: "product", item: "Terra Scrub", rating: 3, review: "It's okay, but a bit too harsh for my sensitive skin." },
 ];
 
-const ReviewItem = ({ review }) => (
+interface ReviewItemProps {
+  review: Review;
+}
+
+const ReviewItem = ({ review }: ReviewItemProps) => (
   <div className="border-b pb-4">
     <div className="flex justify-between items-center mb-1">
       <div>

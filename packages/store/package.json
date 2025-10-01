@@ -6,6 +6,7 @@
   "exports": {
     "./store": "./src/store.js",
     "./hooks": "./src/hooks.ts",
+    "./types": "./src/types.d.ts",
     "./provider": "./src/provider.tsx",
     "./provider.jsx": "./src/provider.jsx",
     "./api": "./src/services/api.js",

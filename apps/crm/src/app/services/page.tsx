@@ -65,14 +65,80 @@ import {
 import Image from "next/image";
 import { Skeleton } from "@repo/ui/skeleton";
 import { Pagination } from "@repo/ui/pagination";
+import { toast } from 'sonner';
 import {
   setSearchTerm,
   setModalOpen,
   setDeleteModalOpen,
 } from "@repo/store/slices/serviceSlice";
+import { useAppSelector } from '@repo/store/hooks';
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 
-const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }) => {
+// Interface definitions for component props
+interface Category {
+  _id: string;
+  name: string;
+}
+
+interface FormData {
+  name: string;
+  category: Category | {};
+  price: string | number;
+  discountedPrice: string | number;
+  duration: string | number;
+  description: string;
+  gender: string;
+  staff: string[];
+  commission: boolean;
+  homeService: { available: boolean; charges: number | null };
+  weddingService: { available: boolean; charges: number | null };
+  bookingInterval: string | number;
+  tax: { enabled: boolean; type: string; value: number | null };
+  onlineBooking: boolean;
+  image: string;
+  status: string;
+}
+
+interface Service {
+  _id: string;
+  name: string;
+  category?: {
+    _id: string;
+    name?: string;
+  };
+  categoryName?: string;
+  price?: number;
+  discountedPrice?: number;
+  duration?: number;
+  description?: string;
+  gender?: string;
+  staff?: string[];
+  commission?: boolean;
+  homeService?: { available: boolean; charges: number | null };
+  weddingService?: { available: boolean; charges: number | null };
+  bookingInterval?: number;
+  tax?: { enabled: boolean; type: string; value: number | null };
+  onlineBooking?: boolean;
+  image?: string;
+  status?: string;
+}
+
+interface AddItemModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onItemCreated: (item: any) => void;
+  itemType: string;
+  categoryId?: string;
+}
+
+interface ServiceFormModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  service?: Service;
+  type: string;
+}
+
+const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: AddItemModalProps) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
@@ -82,12 +148,12 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }) 
 
   const isLoading = isCreatingCategory || isCreatingService;
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result);
+        setImage(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -163,7 +229,7 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }) 
   );
 };
 
-const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
+const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalProps) => {
   const { user } = useCrmAuth();
   const VENDOR_ID = user?._id;
 
@@ -187,7 +253,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     category: {},
     price: '',
@@ -210,19 +276,19 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
     if (service && type === "edit") {
       setFormData({
         name: service.name || '',
-        category: { _id: service.category, name: service.categoryName } || {},
-        price: service.price || '',
-        discountedPrice: service.discountedPrice || '',
-        duration: service.duration || '',
+        category: service.category || {},
+        price: String(service.price || ''),
+        discountedPrice: String(service.discountedPrice || ''),
+        duration: String(service.duration || ''),
         description: service.description || '',
         gender: service.gender || 'unisex',
         staff: service.staff || [],
         commission: service.commission || false,
         homeService: service.homeService || { available: false, charges: null },
         weddingService: service.weddingService || { available: false, charges: null },
-        bookingInterval: service.bookingInterval || '',
+        bookingInterval: String(service.bookingInterval || ''),
         tax: service.tax || { enabled: false, type: 'percentage', value: null },
-        onlineBooking: service.onlineBooking || true,
+        onlineBooking: service.onlineBooking !== undefined ? service.onlineBooking : true,
         image: service.image || '',
         status: service.status || 'pending',
       });
@@ -250,56 +316,56 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
     }
   }, [service, isOpen, type]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    const checked = e.target.checked;
+    const checked = (e.target as HTMLInputElement).checked;
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
   };
 
-  const handleSelectChange = (name, value) => {
+  const handleSelectChange = (name: string, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCategoryChange = (categoryId) => {
-    const category = categories.find((c) => c._id === categoryId);
+  const handleCategoryChange = (categoryId: string) => {
+    const category = categories.find((c: Category) => c._id === categoryId);
     setFormData((prev) => ({ ...prev, category: category || {}, name: "" }));
   };
 
-  const handleCheckboxChange = (name, id, checked) => {
-    const currentValues = (formData[name] || []);
-    const newValues = checked ? [...currentValues, id] : currentValues.filter((val) => val !== id);
+  const handleCheckboxChange = (name: string, id: string, checked: boolean) => {
+    const currentValues = (formData as any)[name] || [];
+    const newValues = checked ? [...currentValues, id] : currentValues.filter((val: string) => val !== id);
     setFormData((prev) => ({ ...prev, [name]: newValues }));
   };
 
-  const handleNestedChange = (parent, child, value) => {
+  const handleNestedChange = (parent: string, child: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
       [parent]: {
-        ...(prev[parent] || {}),
+        ...(prev as any)[parent] || {},
         [child]: value,
       },
     }));
   };
 
-  const handleCategoryCreated = (newCategory) => {
+  const handleCategoryCreated = (newCategory: Category) => {
     refetchCategories();
     setFormData((prev) => ({ ...prev, category: newCategory }));
   };
 
-  const handleServiceCreated = (newService) => {
+  const handleServiceCreated = (newService: Service) => {
     refetchServices();
     setFormData((prev) => ({ ...prev, name: newService.name || "" }));
   };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, image: reader.result }));
+        setFormData((prev) => ({ ...prev, image: reader.result as string }));
       };
       reader.readAsDataURL(file);
     }
@@ -313,7 +379,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
     
     const payload = {
       ...formData,
-      category: formData.category ? formData.category._id : undefined,
+      category: (formData.category as any)?._id || undefined,
       price: Number(formData.price) || 0,
       discountedPrice: Number(formData.discountedPrice) || 0,
       duration: Number(formData.duration) || 0,
@@ -350,11 +416,11 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
   };
 
   const servicesForCategory = useMemo(() => {
-    const categoryId = formData.category?._id;
-    return categoryId ? allServices.filter((s) => s.category?._id === categoryId) : [];
+    const categoryId = (formData.category as any)?._id;
+    return categoryId ? allServices.filter((s: Service) => s.category?._id === categoryId) : [];
   }, [allServices, formData.category]);
 
-  const selectedCategoryId = formData.category?._id || '';
+  const selectedCategoryId = (formData.category as any)?._id || '';
 
   const handleNextTab = () => {
     if (activeTab === "basic") {
@@ -383,7 +449,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
                     Loading...
                   </SelectItem>
                 ) : (
-                  categories.map((cat) => (
+                  categories.map((cat: Category) => (
                     <SelectItem key={cat._id} value={cat._id}>
                       {cat.name}
                     </SelectItem>
@@ -407,12 +473,12 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
             <Select
               value={formData.name || ""}
               onValueChange={(value) => handleSelectChange("name", value)}
-              disabled={!formData.category?._id}
+              disabled={!('_id' in formData.category && formData.category._id)}
             >
               <SelectTrigger>
                 <SelectValue
                   placeholder={
-                    formData.category?._id
+                    (formData.category as any)?._id
                       ? "Select Service"
                       : "Select Category First"
                   }
@@ -424,7 +490,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
                     Loading...
                   </SelectItem>
                 ) : servicesForCategory.length > 0 ? (
-                  servicesForCategory.map((s) => (
+                  servicesForCategory.map((s: Service) => (
                     <SelectItem key={s._id} value={s.name}>
                       {s.name}
                     </SelectItem>
@@ -441,7 +507,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
               variant="outline"
               size="icon"
               onClick={() => setIsServiceModalOpen(true)}
-              disabled={!formData.category?._id}
+              disabled={!('_id' in formData.category && formData.category._id)}
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -539,20 +605,20 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
                   id="staff-all"
                   checked={formData.staff?.length === staffList.length}
                   onCheckedChange={(checked) =>
-                    handleSelectChange("staff", checked ? staffList.map(s => s._id) : [])
+                    handleSelectChange("staff", checked ? staffList.map((s: any) => s._id) : [])
                   }
                 />
                 <Label htmlFor="staff-all" className="font-semibold">
                   Select All Staff
                 </Label>
               </div>
-              {staffList.map((staff) => (
+              {staffList.map((staff: any) => (
                 <div key={staff._id} className="flex items-center space-x-2">
                   <Checkbox
                     id={`staff-${staff._id}`}
-                    checked={formData.staff?.includes(staff._id) || false}
+                    checked={(formData.staff as string[])?.includes(staff._id) || false}
                     onCheckedChange={(checked) =>
-                      handleCheckboxChange("staff", staff._id, checked)
+                      handleCheckboxChange("staff", staff._id, !!checked)
                     }
                   />
                   <Label htmlFor={`staff-${staff._id}`}>{staff.fullName}</Label>
@@ -701,8 +767,8 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{service?.name}</DialogTitle>
-            <DialogDescription>{service?.description}</DialogDescription>
+            <DialogTitle>{service?.name || 'Service Details'}</DialogTitle>
+            <DialogDescription>{service?.description || 'No description available'}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4 text-sm">
             <div className="grid grid-cols-2 gap-4">
@@ -725,12 +791,12 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
                 <span className="font-semibold">Status:</span>
                 <Badge 
                    variant={
-                    service.status === 'approved' ? 'default' : 
-                    service.status === 'disapproved' ? 'destructive' : 'secondary'
+                    service?.status === 'approved' ? 'default' : 
+                    service?.status === 'disapproved' ? 'destructive' : 'secondary'
                   }
                   className={
-                    service.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    service.status === 'disapproved' ? 'bg-red-100 text-red-800' :
+                    service?.status === 'approved' ? 'bg-green-100 text-green-800' :
+                    service?.status === 'disapproved' ? 'bg-red-100 text-red-800' :
                     'bg-yellow-100 text-yellow-800'
                   }
                 >
@@ -804,7 +870,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }) => {
 export default function ServicesPage() {
   const { user } = useCrmAuth();
   const dispatch = useDispatch();
-  const serviceState = useSelector((state) => state.service || {
+  const serviceState = useAppSelector((state: any) => state.service || {
     searchTerm: '',
     isModalOpen: false,
     isDeleteModalOpen: false,
@@ -838,7 +904,7 @@ export default function ServicesPage() {
 
   const filteredServices = useMemo(() => {
     return services.filter(
-      (service) =>
+      (service: Service) =>
         service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (service.categoryName &&
           service.categoryName.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -850,7 +916,7 @@ export default function ServicesPage() {
   const currentItems = filteredServices.slice(firstItemIndex, lastItemIndex);
   const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
 
-  const handleOpenModal = (type: string, service = null) => {
+  const handleOpenModal = (type: string, service: Service | null = null) => {
     dispatch(setModalOpen({ isOpen: true, modalType: type, selectedService: service }));
   };
 
@@ -859,7 +925,7 @@ export default function ServicesPage() {
     refetch();
   };
 
-  const handleDeleteClick = (service) => {
+  const handleDeleteClick = (service: Service) => {
     dispatch(setDeleteModalOpen({ isOpen: true, selectedService: service }));
   };
 
@@ -891,7 +957,7 @@ export default function ServicesPage() {
     }
   };
 
-  const isNoServicesError = isError && error?.data?.message === "No services found for this vendor";
+  const isNoServicesError = isError && (error as any)?.data?.message === "No services found for this vendor";
 
   if (isLoading) {
     return (
@@ -1008,7 +1074,7 @@ export default function ServicesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₹{(services.length > 0 ? services.reduce((acc, s) => acc + (s.price || 0), 0) / services.length : 0).toFixed(2)}
+              ₹{(services.length > 0 ? services.reduce((acc: number, s: Service) => acc + (s.price || 0), 0) / services.length : 0).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">Average across all services</p>
           </CardContent>
@@ -1020,7 +1086,7 @@ export default function ServicesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {services.length > 0 ? new Set(services.map((s) => s.categoryName)).size : 0}
+              {services.length > 0 ? new Set(services.map((s: Service) => s.categoryName)).size : 0}
             </div>
             <p className="text-xs text-muted-foreground">Unique service categories</p>
           </CardContent>
@@ -1055,7 +1121,7 @@ export default function ServicesPage() {
                     </TableCell>
                   </TableRow>
                 ) : currentItems.length > 0 ? (
-                  currentItems.map((service) => (
+                  currentItems.map((service: Service) => (
                     <TableRow key={service._id}>
                       <TableCell>
                         <div className="flex items-center gap-3">

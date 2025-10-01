@@ -36,7 +36,7 @@ type Client = {
   updatedAt?: string;
 };
 
-export function ClientsPage() {
+export default function ClientsPage() {
     const { user } = useCrmAuth();
     const { data: clientList = [], isLoading, isError, refetch } = useGetClientsQuery({
         search: '',
@@ -1678,5 +1678,3 @@ export function ClientsPage() {
         </div>
     );
 }
-
-export default ClientsPage;

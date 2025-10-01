@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import _db from "../../../../../../../packages/lib/src/db.js";
+import _db from "@repo/lib/db";
 import mongoose from 'mongoose';
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 // Import the social media template model
-const { default: SocialMediaTemplateModel, modelName } = await import("../../../../../../../packages/lib/src/models/Marketing/socialMediaTemplate.model.js");
+const { default: SocialMediaTemplateModel, modelName } = await import("@repo/lib/models/Marketing/socialMediaTemplate.model");
 
 export const dynamic = 'force-dynamic'; // Ensure dynamic route handling
 

@@ -24,7 +24,7 @@ const NewAppointmentForm = dynamic(
 );
 
 type Appointment = {
-  _id: string;
+  _id?: string;
   id?: string;
   client: string;
   clientName: string;
@@ -32,15 +32,19 @@ type Appointment = {
   serviceName: string;
   staff: string;
   staffName: string;
-  date: string;
+  date: Date | string;
   startTime: string;
   endTime: string;
   duration: number;
+  notes?: string;
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   amount: number;
   discount: number;
+  tax?: number;
   totalAmount: number;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-  notes?: string;
+  paymentStatus?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export default function AppointmentsPage() {

@@ -16,7 +16,28 @@ import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
 import Image from 'next/image';
 
-const initialOrderHistory = [
+interface OrderItem {
+  id?: string;
+  name: string;
+  quantity: number;
+  price: number;
+  image: string;
+}
+
+interface Order {
+  id: string;
+  date: string;
+  items: OrderItem[];
+  total: number;
+  status: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  shippingAddress: string;
+  paymentMethod?: string;
+}
+
+const initialOrderHistory: Order[] = [
   { 
     id: "ORD-001", 
     date: "2024-08-01T10:00:00Z", 
@@ -70,8 +91,8 @@ export default function OrdersPage() {
     const [orderHistory, setOrderHistory] = useState(initialOrderHistory);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-    const [orderToCancel, setOrderToCancel] = useState(null);
-    const [selectedOrder, setSelectedOrder] = useState(null);
+    const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [cancellationReason, setCancellationReason] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
@@ -85,12 +106,12 @@ export default function OrdersPage() {
         );
     }, [orderHistory, searchTerm, statusFilter]);
 
-    const handleCancelClick = (order) => {
+    const handleCancelClick = (order: Order) => {
         setOrderToCancel(order);
         setIsCancelModalOpen(true);
     };
 
-    const handleViewClick = (order) => {
+    const handleViewClick = (order: Order) => {
         setSelectedOrder(order);
         setIsViewModalOpen(true);
     };
@@ -98,7 +119,7 @@ export default function OrdersPage() {
     const handleConfirmCancel = () => {
         console.log("Cancelling order:", orderToCancel?.id, "Reason:", cancellationReason);
         setOrderHistory(orderHistory.map(order => 
-            order.id === orderToCancel.id ? { ...order, status: 'Cancelled' } : order
+            order.id === orderToCancel!.id ? { ...order, status: 'Cancelled' } : order
         ));
         setIsCancelModalOpen(false);
         setOrderToCancel(null);

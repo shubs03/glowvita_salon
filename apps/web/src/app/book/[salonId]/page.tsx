@@ -25,8 +25,9 @@ interface Service {
 interface Staff {
   id: string;
   name: string;
-  role: string;
-  image: string;
+  role?: string;
+  image?: string;
+  hint?: string;
 }
 
 const staffMembers = [

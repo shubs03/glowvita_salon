@@ -1,6 +1,6 @@
 // app/api/notifications/route.js
-import _db from "../../../../../../../packages/lib/src/db.js";
-import NotificationModel from "../../../../../../../packages/lib/src/models/admin/CustomPushNotificationAdmin.model.js";
+import _db from "@repo/lib/db";
+import NotificationModel from "@repo/lib/models/admin/CustomPushNotificationAdmin";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();

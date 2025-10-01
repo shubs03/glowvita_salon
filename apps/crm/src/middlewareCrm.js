@@ -1,81 +1,82 @@
+import { NextResponse } from 'next/server';
+import * as jose from 'jose';
 
-import jwt from "jsonwebtoken";
-import VendorModel from "../../../packages/lib/src/models/vendor/Vendor.model.js";
-import DoctorModel from "../../../packages/lib/src/models/vendor/Docters.model.js";
-import SupplierModel from "../../../packages/lib/src/models/vendor/Supplier.model.js";
-import StaffModel from "../../../packages/lib/src/models/vendor/Staff.model.js";
-import _db from "../../../packages/lib/src/db.js";
-import { 
-  JWT_SECRET_VENDOR
-} from "../../../packages/config/config.js";
+const JWT_SECRET_VENDOR = process.env.JWT_SECRET_VENDOR;
+const JWT_SECRET_DOCTOR = process.env.JWT_SECRET_DOCTOR;
+const JWT_SECRET_SUPPLIER = process.env.JWT_SECRET_SUPPLIER;
 
-const roleToModelMap = {
-  vendor: VendorModel,
-  doctor: DoctorModel,
-  supplier: SupplierModel,
-  staff: StaffModel,
-};
+async function verifyJwt(token) {
+  if (!token) return null;
+  
+  try {
+    const decoded = jose.decodeJwt(token);
+    const role = decoded.role;
+    
+    let secret;
+    switch (role) {
+      case 'vendor':
+      case 'staff':
+        secret = JWT_SECRET_VENDOR;
+        break;
+      case 'doctor':
+        secret = JWT_SECRET_DOCTOR;
+        break;
+      case 'supplier':
+        secret = JWT_SECRET_SUPPLIER;
+        break;
+      default:
+        return null;
+    }
+    
+    if (!secret) {
+      console.log("CRM JWT Verification Error in Middleware: No secret for role", role);
+      return null;
+    }
+    
+    const secretKey = new TextEncoder().encode(secret);
+    const { payload } = await jose.jwtVerify(token, secretKey);
+    return payload;
+  } catch (error) {
+    console.log("CRM JWT Verification Error in Middleware:", error.code);
+    return null;
+  }
+}
 
-// Load secrets dynamically at runtime to ensure environment variables are loaded
-const getRoleSecrets = () => {
-  return {
-    vendor: process.env.JWT_SECRET_VENDOR,
-    doctor: process.env.JWT_SECRET_DOCTOR,
-    supplier: process.env.JWT_SECRET_SUPPLIER,
-    staff: process.env.JWT_SECRET_VENDOR, // Staff uses the same secret as vendors
-  };
-};
-
-
+// Create a higher-order function for authenticated routes
 export function authMiddlewareCrm(handler, allowedRoles = []) {
-  return async (req, ctx) => {
-    await _db();
-
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return Response.json({ message: "Unauthorized: No token provided" }, { status: 401 });
+  return async (request, context) => {
+    const token = request.cookies.get('crm_access_token')?.value;
+    
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    const token = authHeader.split(" ")[1];
-
-    try {
-      const decodedPayload = jwt.decode(token);
-      if (!decodedPayload || !decodedPayload.role) {
-        return Response.json({ message: "Invalid token: Role missing" }, { status: 401 });
-      }
-
-      const { role } = decodedPayload;
-      const roleSecrets = getRoleSecrets();
-      const secret = roleSecrets[role];
-      const Model = roleToModelMap[role];
-
-      if (!secret || !Model) {
-        return Response.json({ message: "Unauthorized: Invalid role specified in token" }, { status: 401 });
-      }
-      
-      // Verify token with the correct secret
-      const decoded = jwt.verify(token, secret);
-      
-      const user = await Model.findById(decoded.userId).select("-password");
-
-      if (!user) {
-        return Response.json({ message: `Unauthorized: ${role} not found` }, { status: 401 });
-      }
-
-      // Role check: ensure the user's role is one of the allowed roles for the endpoint
-      if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
-        return Response.json({ message: "Forbidden: You do not have permission to access this resource" }, { status: 403 });
-      }
-
-      // Attach user and role to the request for use in the handler
-      req.user = user;
-      req.user.role = role;
-      
-      return handler(req, ctx);
-    } catch (err) {
-      console.error("Auth Middleware Error:", err.message);
-      console.error("Error details:", err);
-      return Response.json({ message: `Invalid token: ${err.message}` }, { status: 401 });
+    const payload = await verifyJwt(token);
+    
+    if (!payload) {
+      const response = NextResponse.json(
+        { success: false, message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+      response.cookies.set('crm_access_token', '', { expires: new Date(0) });
+      return response;
     }
+
+    // Check if user role is in allowed roles (if specified)
+    if (allowedRoles.length > 0 && !allowedRoles.includes(payload.role)) {
+      return NextResponse.json(
+        { success: false, message: 'Insufficient permissions' },
+        { status: 403 }
+      );
+    }
+
+    // Attach user info to request
+    request.user = payload;
+    
+    // Call the original handler
+    return await handler(request, context);
   };
 }

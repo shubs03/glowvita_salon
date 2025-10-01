@@ -14,7 +14,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { Label } from '@repo/ui/label';
 import { cn } from '@repo/ui/cn';
 
-const initialAppointments = [
+const initialAppointments: Appointment[] = [
   {
     id: "APP-024",
     service: "Signature Facial",
@@ -69,7 +69,27 @@ const initialAppointments = [
   },
 ];
 
-const AppointmentCard = ({ appointment, onSelect, isSelected }) => {
+interface Appointment {
+  id: string;
+  service: string;
+  date: string;
+  staff: string;
+  status: 'Completed' | 'Confirmed' | 'Cancelled';
+  price: number;
+  duration: number;
+  salon: {
+    name: string;
+    address: string;
+  };
+}
+
+interface AppointmentCardProps {
+  appointment: Appointment;
+  onSelect: () => void;
+  isSelected: boolean;
+}
+
+const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardProps) => {
     const statusConfig = {
         Completed: { icon: CheckCircle, color: 'text-green-500' },
         Confirmed: { icon: Calendar, color: 'text-blue-500' },
@@ -102,7 +122,12 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }) => {
     );
 };
 
-const AppointmentDetails = ({ appointment, onCancelClick }) => {
+interface AppointmentDetailsProps {
+  appointment: Appointment | null;
+  onCancelClick: (appointment: Appointment) => void;
+}
+
+const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsProps) => {
     if (!appointment) return (
         <Card className="sticky top-24">
             <CardContent className="h-96 flex items-center justify-center text-muted-foreground">
@@ -199,11 +224,11 @@ const AppointmentDetails = ({ appointment, onCancelClick }) => {
 export default function AppointmentsPage() {
     const [appointments, setAppointments] = useState(initialAppointments);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-    const [appointmentToCancel, setAppointmentToCancel] = useState(null);
+    const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
     const [cancellationReason, setCancellationReason] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [selectedAppointment, setSelectedAppointment] = useState(appointments[0] || null);
+    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(initialAppointments[0] || null);
 
     const filteredAppointments = useMemo(() => {
         return appointments.filter(appointment =>
@@ -213,20 +238,20 @@ export default function AppointmentsPage() {
         );
     }, [appointments, searchTerm, statusFilter]);
 
-    const handleCancelClick = (appointment) => {
+    const handleCancelClick = (appointment: Appointment) => {
         setAppointmentToCancel(appointment);
         setIsCancelModalOpen(true);
     };
 
     const handleConfirmCancel = () => {
         setAppointments(appointments.map(appt => 
-            appt.id === appointmentToCancel.id ? { ...appt, status: 'Cancelled' } : appt
+            appt.id === appointmentToCancel!.id ? { ...appt, status: 'Cancelled' } : appt
         ));
         setIsCancelModalOpen(false);
         setAppointmentToCancel(null);
         setCancellationReason('');
-        if (selectedAppointment?.id === appointmentToCancel.id) {
-            setSelectedAppointment(prev => ({ ...prev, status: 'Cancelled' }));
+        if (selectedAppointment?.id === appointmentToCancel!.id) {
+            setSelectedAppointment(prev => prev ? ({ ...prev, status: 'Cancelled' }) : null);
         }
     };
     

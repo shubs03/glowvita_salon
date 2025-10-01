@@ -11,11 +11,20 @@ const config: Pick<Config, "content" | "presets" | "theme"> = {
   theme: {
     extend: {
       fontFamily: {
-        'display': ['Playfair Display', 'serif'],
-        'headline': ['Playfair Display', 'serif'],
-        'body': ['Roboto', 'sans-serif'],
-        'sans': ['Roboto', 'sans-serif'],
-        'serif': ['Playfair Display', 'serif'],
+        display: ["Playfair Display", "serif"],
+        headline: ["Playfair Display", "serif"],
+        body: ["Roboto", "sans-serif"],
+        sans: ["Roboto", "sans-serif"],
+        serif: ["Playfair Display", "serif"],
+      },
+      keyframes: {
+        marquee: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
+      },
+      animation: {
+        marquee: "marquee 20s linear infinite",
       },
     },
   },
