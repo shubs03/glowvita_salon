@@ -54,6 +54,7 @@ import Image from "next/image";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/dialog";
 import { useMemo } from 'react';
 import { SubscriptionPlansDialog } from "@/components/SubscriptionPlansDialog";
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 // TYPES
 type SalonCategory = "unisex" | "men" | "women";
@@ -124,6 +125,7 @@ const ProfileTab = ({ vendor, setVendor }: any) => {
   const handleSave = async () => {
     try {
       const result: any = await updateVendorProfile({
+        _id: vendor._id,
         businessName: vendor.businessName,
         description: vendor.description,
         category: vendor.category,
