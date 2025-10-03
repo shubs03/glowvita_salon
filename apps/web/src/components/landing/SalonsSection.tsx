@@ -10,6 +10,7 @@ import {
   Calendar,
   MapPin,
   Zap,
+  LucideProps,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -34,7 +35,7 @@ interface VendorData {
 
 interface TransformedSalon {
   id: string;
-  icon: React.ComponentType<any>;
+  icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
   title: string;
   location: string;
   rating: string | number;
@@ -47,6 +48,7 @@ interface TransformedSalon {
 
 const keyFeatures = [
   {
+    id: "1",
     icon: Sparkles,
     title: "Luxe Hair Studio",
     location: "Manhattan, NY",
@@ -59,6 +61,7 @@ const keyFeatures = [
     image: "https://placehold.co/400x200/6366f1/ffffff?text=Luxe+Hair+Studio",
   },
   {
+    id: "2",
     icon: Heart,
     title: "Bella Vista Spa",
     location: "Beverly Hills, CA",
@@ -71,6 +74,7 @@ const keyFeatures = [
     image: "https://placehold.co/400x200/10b981/ffffff?text=Bella+Vista+Spa",
   },
   {
+    id: "3",
     icon: Users,
     title: "Modern Cuts Barbershop",
     location: "Austin, TX (3 locations)",
@@ -83,6 +87,7 @@ const keyFeatures = [
     image: "https://placehold.co/400x200/475569/ffffff?text=Modern+Cuts",
   },
   {
+    id: "4",
     icon: Star,
     title: "Glamour Nails & Beauty",
     location: "Miami, FL",
@@ -95,6 +100,7 @@ const keyFeatures = [
     image: "https://placehold.co/400x200/ec4899/ffffff?text=Glamour+Nails",
   },
   {
+    id: "5",
     icon: Calendar,
     title: "Serenity Wellness Center",
     location: "Portland, OR",
@@ -107,6 +113,7 @@ const keyFeatures = [
     image: "https://placehold.co/400x200/059669/ffffff?text=Serenity+Wellness",
   },
   {
+    id: "6",
     icon: TrendingUp,
     title: "Radiant Skin Clinic",
     location: "Seattle, WA",

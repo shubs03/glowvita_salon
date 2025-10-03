@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
@@ -13,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
 
-export default function LoginPage() {
+  export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
