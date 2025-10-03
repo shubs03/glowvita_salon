@@ -80,119 +80,12 @@ const defaultSalon = {
     "https://picsum.photos/seed/salon3/800/600",
     "https://picsum.photos/seed/salon4/800/600",
   ],
-  services: [
-    { name: "Signature Facial", price: 150, duration: 60, category: "Skin", image: "https://picsum.photos/seed/facial/200/200" },
-    { name: "Deep Tissue Massage", price: 120, duration: 90, category: "Body", image: "https://picsum.photos/seed/massage/200/200" },
-    { name: "Manicure & Pedicure", price: 80, duration: 75, category: "Nails", image: "https://picsum.photos/seed/manicure/200/200" },
-    { name: "Hair Styling", price: 75, duration: 45, category: "Hair", image: "https://picsum.photos/seed/haircut/200/200" },
-    { name: "Keratin Treatment", price: 250, duration: 120, category: "Hair", image: "https://picsum.photos/seed/keratin/200/200" },
-    { name: "HydraFacial", price: 180, duration: 75, category: "Skin", image: "https://picsum.photos/seed/hydra/200/200" },
-    { name: "Gel Nails", price: 60, duration: 60, category: "Nails", image: "https://picsum.photos/seed/gelnails/200/200" },
-  ],
-  products: [
-    {
-      id: "p1",
-      name: "Revitalizing Serum",
-      brand: "Aura Skincare",
-      price: 85,
-      image: "https://picsum.photos/seed/productA/400/400",
-      hint: "skincare serum",
-      stock: 23,
-      rating: 4.8,
-    },
-    {
-      id: "p2",
-      name: "Hydrating Shampoo",
-      brand: "Luxe Hair",
-      price: 40,
-      image: "https://picsum.photos/seed/productB/400/400",
-      hint: "shampoo bottle",
-      stock: 50,
-      rating: 4.5,
-    },
-    {
-      id: "p3",
-      name: "Nourishing Hand Cream",
-      brand: "Zen Garden",
-      price: 25,
-      image: "https://picsum.photos/seed/productC/400/400",
-      hint: "hand cream tube",
-      stock: 0,
-      rating: 4.9,
-    },
-    {
-      id: "p4",
-      name: "Matte Lipstick",
-      brand: "Chroma Beauty",
-      price: 30,
-      image: "https://picsum.photos/seed/productD/400/400",
-      hint: "lipstick tube",
-      stock: 120,
-      rating: 4.6,
-    },
-  ],
-  staff: [
-    {
-      name: "Jessica Miller",
-      role: "Lead Stylist",
-      image: "https://picsum.photos/seed/staff1/400/400",
-      hint: "female stylist portrait",
-    },
-    {
-      name: "Michael Chen",
-      role: "Massage Therapist",
-      image: "https://picsum.photos/seed/staff2/400/400",
-      hint: "male therapist portrait",
-    },
-    {
-      name: "Emily White",
-      role: "Esthetician",
-      image: "https://picsum.photos/seed/staff3/400/400",
-      hint: "female esthetician portrait",
-    },
-  ],
-  reviews: [
-    {
-      author: "Amanda G.",
-      rating: 5,
-      date: "2024-08-20T10:00:00Z",
-      text: "Loved the experience! Will be back soon.",
-    },
-    {
-      author: "Robert K.",
-      rating: 4,
-      date: "2024-08-18T14:30:00Z",
-      text: "Great service, but a bit pricey.",
-    },
-    {
-      author: "Ikbal Z.",
-      rating: 5,
-      date: "2025-09-14T19:03:00Z",
-      text: "1st time datang potong sini , barber abg kamil mmg sangat profesional dari segi knowledge and skill...",
-    },
-  ],
-  workingHours: [
-    { day: "Monday - Friday", hours: "9:00 AM - 8:00 PM" },
-    { day: "Saturday", hours: "10:00 AM - 6:00 PM" },
-    { day: "Sunday", hours: "Closed" },
-  ],
-  offers: [
-    {
-      title: "Weekday Special",
-      description: "20% off on all haircuts, Mon-Wed.",
-      icon: Tag,
-    },
-    {
-      title: "First-Time Client",
-      description: "Get 15% off your first service with us.",
-      icon: UserPlus,
-    },
-    {
-      title: "Bundle & Save",
-      description: "Book a facial and massage together and save 25%.",
-      icon: Gift,
-    },
-  ],
+  services: [],
+  products: [],
+  staff: [],
+  reviews: [],
+  workingHours: [],
+  offers: [],
 };
 
 const nearbySalons = [
@@ -270,8 +163,6 @@ const nearbySalons = [
   },
 ];
 
-const serviceCategories = ["All", "Hair", "Skin", "Nails", "Body", "Massage", "Waxing", "Specialty"];
-
 // Function to get the salon data dynamically
 export default function SalonDetailsPage() {
   const params = useParams();
@@ -339,7 +230,7 @@ export default function SalonDetailsPage() {
   const [mainImage, setMainImage] = useState(salon.images[0]);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   
-  console.log("Vendor Product Data : ", productsData)
+  const router = useRouter();
 
   useEffect(() => {
     if (salon.images.length > 0) {
@@ -349,7 +240,7 @@ export default function SalonDetailsPage() {
   
   const handleBookNow = (service?: any) => {
     const query = service ? `?service=${encodeURIComponent(JSON.stringify(service))}` : '';
-    console.log('Navigate to booking:', `/book/${id}${query}`);
+    router.push(`/book/${id}${query}`);
   };
   
   const handleTabChange = (value: string) => {
@@ -359,6 +250,11 @@ export default function SalonDetailsPage() {
     }, 50);
   };
   
+  const serviceCategories = useMemo(() => {
+    const categories = new Set(salon.services.map((s: any) => s.category));
+    return ["All", ...Array.from(categories)];
+  }, [salon.services]);
+
   const filteredServices = useMemo(() => {
     return activeServiceTab === "All"
       ? salon.services
@@ -369,44 +265,6 @@ export default function SalonDetailsPage() {
     setSelectedImage(imageUrl);
     setGalleryModalOpen(true);
   };
-
-interface Service {
-    name: string;
-    price: number;
-    duration: number;
-    category: string;
-    image: string;
-}
-
-interface WorkingHours {
-    day: string;
-    hours: string;
-}
-
-interface Product {
-    id: string;
-    name: string;
-    brand: string;
-    price: number;
-    image: string;
-    hint: string;
-    stock: number;
-    rating: number;
-}
-
-interface StaffMember {
-    name: string;
-    role: string;
-    image: string;
-    hint: string;
-}
-
-interface Review {
-    author: string;
-    rating: number;
-    date: string;
-    text: string;
-}
 
   const StarRating = ({ rating }: { rating: number }) => (
     <div className="flex items-center gap-1">
@@ -796,7 +654,7 @@ interface Review {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {salon.workingHours.map((wh: WorkingHours) => (
+                  {salon.workingHours.map((wh: any) => (
                     <li key={wh.day} className="flex justify-between text-sm">
                       <span>{wh.day}</span>
                       <span className="font-semibold">{wh.hours}</span>
@@ -899,7 +757,7 @@ interface Review {
         <DialogContent className="max-w-4xl p-0">
           <div className="relative aspect-video bg-black">
             <Image
-              src={mainImage}
+              src={selectedImage}
               alt="Gallery View"
               fill
               className="object-contain"
@@ -923,4 +781,5 @@ interface Review {
     </PageContainer>
   );
 }
+
 ```
