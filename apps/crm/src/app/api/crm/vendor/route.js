@@ -60,9 +60,9 @@ export const PUT = authMiddlewareCrm(async (req) => {
             'website', 'description', 'profileImage', 'gallery', 'bankDetails', 'documents'
         ];
 
-        // Update subscription separately as it's a nested object
+        // Keep existing subscription data unless specifically provided in the update
         if (body.subscription) {
-            Object.keys(body.subscription).forEach(key => {
+             Object.keys(body.subscription).forEach(key => {
                 if (['plan', 'status', 'expires'].includes(key)) {
                     vendor.subscription[key] = body.subscription[key];
                 }
