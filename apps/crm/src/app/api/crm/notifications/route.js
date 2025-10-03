@@ -69,7 +69,7 @@ const targetDisplayMap = {
 
 // GET: Retrieve VendorNotifications by vendor ID or paginated notifications
 export const GET = authMiddlewareCrm(async (req) => {
-  const vendorId = req.user._id.toString();
+  const vendorId = req.user.userId.toString();
 
   if (!vendorId) {
     return Response.json(

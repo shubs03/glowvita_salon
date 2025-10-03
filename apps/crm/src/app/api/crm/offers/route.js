@@ -189,22 +189,18 @@ export const POST = authMiddlewareCrm(
 // Get All Offers
 export const GET = authMiddlewareCrm(async (req) => {
   try {
-    const user = req.user;
-    
-    // Validate user exists
-    if (!user || !user._id || !user.role) {
-      console.error('GET /api/crm/offers - User not found or missing data:', { user: user ? { _id: user._id, role: user.role } : null });
-      return Response.json({ message: "Unauthorized: User not found" }, { status: 401 });
-    }
+    const user = req.user.userId;
 
-    console.log('GET /api/crm/offers - User ID:', user._id, 'Role:', user.role);
+    console.log('req.user', req.user);
+
+    console.log("user:", user);
     
     // Determine business type for filtering
     // Staff members belong to vendor business type
     const businessType = user.role === 'staff' ? 'vendor' : user.role;
     
     // For staff, we need to get the vendor ID they belong to
-    let businessId = user._id;
+    let businessId = user;
     if (user.role === 'staff' && user.vendorId) {
       businessId = user.vendorId;
     }
@@ -250,7 +246,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 
     return Response.json(sanitizedOffers);
   } catch (error) {
-    console.error('GET /api/crm/offers - Error:', error);
+    console.error('Error:', error);
     return Response.json({ 
       message: "Internal server error", 
       error: error.message 
