@@ -50,7 +50,7 @@ import { PageContainer } from "@repo/ui/page-container";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from "@repo/ui/badge";
 import { cn } from "@repo/ui/cn";
-import { useGetPublicVendorByIdQuery, useGetPublicProductsQuery } from "@repo/store/api";
+import { useGetPublicVendorsQuery, useGetAllVendorProductsQuery } from "@repo/store/api";
 
 // Default fallback data
 const defaultSalon = {
@@ -282,8 +282,13 @@ export default function SalonDetailsPage() {
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState("");
   
-  const { data: vendorData, isLoading, error } = useGetPublicVendorByIdQuery(id, { skip: !id });
-  const { data: productsData } = useGetPublicProductsQuery(undefined);
+  const { data: vendorsData, isLoading, error } = useGetPublicVendorsQuery(undefined);
+  const vendorData = useMemo(() => {
+    if (!vendorsData || !id) return undefined;
+    return (vendorsData.vendors || vendorsData || []).find((v: any) => v._id === id);
+  }, [vendorsData, id]);
+  const { data: productsData } = useGetAllVendorProductsQuery(undefined);
+
   
   const salon = useMemo(() => {
     if (vendorData) {
@@ -322,13 +327,21 @@ export default function SalonDetailsPage() {
   }, [vendorData]);
 
   const salonProducts = useMemo(() => {
-    if (!productsData || !productsData.products) return [];
-    return productsData.products.filter((p: any) => p.vendorId === id);
+    if (!productsData) return [];
+    // Handle different possible response structures
+    const products = productsData;
+    return Array.isArray(products) ? products.filter((p: any) => {
+      // Handle both ObjectId and string comparison
+      const productVendorId = p.vendorId?._id || p.vendorId;
+      return productVendorId?.toString() === id?.toString();
+    }) : [];
   }, [productsData, id]);
   
   const [mainImage, setMainImage] = useState(salon.images[0]);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   
+  console.log("Vendor Product Data : ", productsData)
+
   useEffect(() => {
     if (salon.images.length > 0) {
       setMainImage(salon.images[0]);
@@ -657,13 +670,14 @@ interface Review {
                           </Badge>
                         </div>
                         <div className="p-3 flex flex-col flex-grow">
-                          <p className="text-xs font-bold text-primary mb-1">{product.brand}</p>
-                          <h4 className="text-sm font-semibold flex-grow mb-2">{product.name}</h4>
+                          <p className="text-xs font-bold text-primary mb-1">{product.category}</p>
+                          <h4 className="text-sm font-semibold flex-grow mb-2">{product.productName}</h4>
+                          <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
                           <div className="flex justify-between items-center mt-auto">
                               <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>
                               <div className="flex items-center gap-1">
-                                <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                                <span className="text-xs font-medium text-muted-foreground">{product.rating}</span>
+                                <Star className="h-3 w-3 text-blue-400 fill-current" />
+                                <span className="text-xs text-muted-foreground font-medium">{product.rating}</span>
                               </div>
                           </div>
                            <Button size="sm" variant="outline" className="w-full mt-2 text-xs">

@@ -1031,10 +1031,6 @@ export const {
   useDeleteVendorProductMutation,
   useCreateVendorProductMutation,
 
-  // Public Vendor Endpoints
-  useGetPublicVendorsQuery,
-  useGetPublicVendorByIdQuery,
-
   // Cart Endpoints
   useGetCartQuery,
   useAddToCartMutation,
