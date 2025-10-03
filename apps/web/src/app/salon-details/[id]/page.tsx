@@ -282,14 +282,15 @@ export default function SalonDetailsPage() {
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState("");
   
-  const { data: vendorsData, isLoading, error } = useGetPublicVendorsQuery(undefined);
+  const { data: vendorsResponse, isLoading, error } = useGetPublicVendorsQuery(undefined);
+  
   const vendorData = useMemo(() => {
-    if (!vendorsData || !id) return undefined;
-    return (vendorsData.vendors || vendorsData || []).find((v: any) => v._id === id);
-  }, [vendorsData, id]);
+    const vendors = vendorsResponse?.vendors || [];
+    return vendors.find((v: any) => v._id === id);
+  }, [vendorsResponse, id]);
+
   const { data: productsData } = useGetAllVendorProductsQuery(undefined);
 
-  
   const salon = useMemo(() => {
     if (vendorData) {
       return {
@@ -327,14 +328,12 @@ export default function SalonDetailsPage() {
   }, [vendorData]);
 
   const salonProducts = useMemo(() => {
-    if (!productsData) return [];
-    // Handle different possible response structures
-    const products = productsData;
-    return Array.isArray(products) ? products.filter((p: any) => {
-      // Handle both ObjectId and string comparison
+    if (!productsData?.products) return [];
+    
+    return productsData.products.filter((p: any) => {
       const productVendorId = p.vendorId?._id || p.vendorId;
       return productVendorId?.toString() === id?.toString();
-    }) : [];
+    });
   }, [productsData, id]);
   
   const [mainImage, setMainImage] = useState(salon.images[0]);
@@ -659,8 +658,8 @@ interface Review {
                     <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left">
                         <div className="relative aspect-square overflow-hidden rounded-md m-3">
                           <Image
-                            src={product.image}
-                            alt={product.name}
+                            src={product.productImage}
+                            alt={product.productName}
                             fill
                             className="group-hover:scale-105 transition-transform duration-300 object-cover"
                             data-ai-hint={product.hint}

@@ -1,3 +1,4 @@
+
 import _db from "@repo/lib/db";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
@@ -20,13 +21,13 @@ export const GET = async (req, { params }) => {
       );
     }
 
-    // Fetch approved vendor and populate their services
+    // Fetch approved vendor
     const vendor = await VendorModel.findOne({ 
       _id: id,
       status: 'Approved' 
     }).select(
       'businessName firstName lastName city state category subCategories profileImage gallery description rating clientCount revenue createdAt'
-    );
+    ).lean();
 
     if (!vendor) {
       return Response.json(
@@ -43,12 +44,12 @@ export const GET = async (req, { params }) => {
       .populate('services.category', 'name')
       .lean();
 
-    const transformedVendor = vendor.toObject();
-    transformedVendor.services = vendorServices ? vendorServices.services.filter(s => s.status === 'approved') : [];
+    // Attach services to the vendor object
+    vendor.services = vendorServices ? vendorServices.services.filter(s => s.status === 'approved') : [];
 
     return Response.json({
       success: true,
-      vendor: transformedVendor
+      vendor: vendor
     });
   } catch (error) {
     console.error('Error fetching vendor by ID:', error);
