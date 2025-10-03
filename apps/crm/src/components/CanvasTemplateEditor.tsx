@@ -65,12 +65,17 @@ export default function CanvasTemplateEditor({
 
     // Load initial background image if provided
     if (initialImage) {
-      fabric.Image.fromURL(initialImage, (img: FabricImage) => {
+      fabric.Image.fromURL(initialImage).then((img: FabricImage) => {
+        // Set scale properties on the image
+        img.set({
+          scaleX: (canvas.width || 1) / (img.width || 1),
+          scaleY: (canvas.height || 1) / (img.height || 1)
+        });
+        
         canvas.backgroundImage = img;
         canvas.renderAll();
-      }, {
-        scaleX: (canvas.width || 1) / (initialImage ? width : 1),
-        scaleY: (canvas.height || 1) / (initialImage ? height : 1)
+      }).catch((error) => {
+        console.error('Error loading background image:', error);
       });
     }
 
@@ -123,16 +128,16 @@ export default function CanvasTemplateEditor({
 
 
     // Set up event listeners
-    canvas.on('selection:created', (e: TEvent<TPointerEvent>) => {
-      const selected = (e as any).selected[0];
+    canvas.on('selection:created', (e: any) => {
+      const selected = e.selected[0];
       setSelectedObject(selected || null);
       if (selected && selected.type === 'textbox') {
         updateTextControls(selected);
       }
     });
     
-    canvas.on('selection:updated', (e: TEvent<TPointerEvent>) => {
-      const selected = (e as any).selected[0];
+    canvas.on('selection:updated', (e: any) => {
+      const selected = e.selected[0];
       setSelectedObject(selected || null);
       if (selected && selected.type === 'textbox') {
         updateTextControls(selected);
@@ -196,7 +201,7 @@ export default function CanvasTemplateEditor({
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl, (img: FabricImage) => {
+        fabric.Image.fromURL(dataUrl).then((img: FabricImage) => {
           const maxWidth = 150;
           const maxHeight = 150;
           
@@ -214,6 +219,9 @@ export default function CanvasTemplateEditor({
           fabricCanvas.add(img);
           fabricCanvas.setActiveObject(img);
           fabricCanvas.renderAll();
+        }).catch((error) => {
+          console.error('Error loading image:', error);
+          toast.error('Failed to load image');
         });
       };
       reader.readAsDataURL(file);

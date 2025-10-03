@@ -7,8 +7,9 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -16,12 +17,19 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidToken, setIsValidToken] = useState<boolean | null>(null); // null means we're still checking
   const [email, setEmail] = useState('');
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   
   const token = searchParams?.get('token');
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     // Get email from URL parameters
     const emailParam = searchParams?.get('email');
     if (emailParam) {
@@ -30,11 +38,7 @@ export default function ResetPasswordPage() {
     
     // Check if token and email are present
     if (!token || !emailParam) {
-      // Only show invalid token message if we're actually in a browser environment
-      // During build/static generation, we don't want to show this message
-      if (typeof window !== 'undefined') {
-        setIsValidToken(false);
-      }
+      setIsValidToken(false);
       return;
     }
     
@@ -60,7 +64,7 @@ export default function ResetPasswordPage() {
     };
     
     validateToken();
-  }, [token, searchParams, router]);
+  }, [token, searchParams, router, mounted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,35 +129,23 @@ export default function ResetPasswordPage() {
     }
   };
 
-  // During static generation, don't render anything that depends on query params
-  if (typeof window === 'undefined') {
+  // Show loading state during hydration or while checking token validity
+  if (!mounted || isValidToken === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900">Loading...</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {!mounted ? 'Loading...' : 'Validating Reset Link'}
+            </h1>
             <div className="flex justify-center my-6">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
             </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading state while checking token validity
-  if (isValidToken === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-900">Validating Reset Link</h1>
-            <div className="flex justify-center my-6">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-            <p className="mt-2 text-gray-600">
-              Please wait while we validate your reset link...
-            </p>
+            {mounted && (
+              <p className="mt-2 text-gray-600">
+                Please wait while we validate your reset link...
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -316,5 +308,24 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900">Loading...</h1>
+            <div className="flex justify-center my-6">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
