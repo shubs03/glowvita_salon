@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@repo/ui/button";
@@ -50,7 +50,7 @@ import { PageContainer } from "@repo/ui/page-container";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from "@repo/ui/badge";
 import { cn } from "@repo/ui/cn";
-import { useGetPublicVendorsQuery } from "@repo/store/api";
+import { useGetPublicVendorByIdQuery, useGetPublicProductsQuery } from "@repo/store/api";
 
 // Default fallback data
 const defaultSalon = {
@@ -244,6 +244,30 @@ const nearbySalons = [
     growth: "+35% revenue",
     image: "https://placehold.co/400x200/ec4899/ffffff?text=Glamour+Nails",
   },
+  {
+    icon: Calendar,
+    title: "Serenity Wellness Center",
+    location: "Portland, OR",
+    rating: 4.7,
+    clients: "600+",
+    specialty: "Massage & Wellness",
+    description:
+      "Holistic wellness center offering massage, yoga, and beauty services",
+    growth: "+50% class bookings",
+    image: "https://placehold.co/400x200/059669/ffffff?text=Serenity+Wellness",
+  },
+  {
+    icon: TrendingUp,
+    title: "Radiant Skin Clinic",
+    location: "Seattle, WA",
+    rating: 4.9,
+    clients: "350+",
+    specialty: "Medical Aesthetics",
+    description:
+      "Advanced skincare clinic with dermatologist-approved treatments",
+    growth: "+45% new clients",
+    image: "https://placehold.co/400x200/f97316/ffffff?text=Radiant+Skin",
+  },
 ];
 
 const serviceCategories = ["All", "Hair", "Skin", "Nails", "Body", "Massage", "Waxing", "Specialty"];
@@ -251,20 +275,16 @@ const serviceCategories = ["All", "Hair", "Skin", "Nails", "Body", "Massage", "W
 // Function to get the salon data dynamically
 export default function SalonDetailsPage() {
   const params = useParams();
-  const id = params.id;
+  const id = params.id as string;
   const [activeTab, setActiveTab] = useState("overview");
   const [activeServiceTab, setActiveServiceTab] = useState("All");
   const [visibleTab, setVisibleTab] = useState("overview");
   const [galleryModalOpen, setGalleryModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState("");
   
-  // Fetch the salon data using the API
-  const { data: vendorsData, isLoading, error } = useGetPublicVendorsQuery(undefined);
+  const { data: vendorData, isLoading, error } = useGetPublicVendorByIdQuery(id, { skip: !id });
+  const { data: productsData } = useGetPublicProductsQuery(undefined);
   
-  // Find the specific vendor by ID
-  const vendorData = vendorsData?.vendors?.find((vendor: any) => vendor._id === id);
-  
-  // Dynamically build the salon data object based on the API response
   const salon = useMemo(() => {
     if (vendorData) {
       return {
@@ -286,7 +306,7 @@ export default function SalonDetailsPage() {
               name: service.name || "",
               price: service.price || 0,
               duration: service.duration || 60,
-              category: service.category || "Other",
+              category: service.category?.name || "Other",
               image: "https://picsum.photos/seed/" + service.name?.toLowerCase().replace(/\s/g, '') + "/200/200"
             }))
           : defaultSalon.services,
@@ -300,19 +320,26 @@ export default function SalonDetailsPage() {
     }
     return defaultSalon;
   }, [vendorData]);
+
+  const salonProducts = useMemo(() => {
+    if (!productsData || !productsData.products) return [];
+    return productsData.products.filter((p: any) => p.vendorId === id);
+  }, [productsData, id]);
   
-  // Additional state variables needed for the component
   const [mainImage, setMainImage] = useState(salon.images[0]);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   
-  // Handle booking navigation
-  const handleBookNow = (service?: Service) => {
+  useEffect(() => {
+    if (salon.images.length > 0) {
+      setMainImage(salon.images[0]);
+    }
+  }, [salon.images]);
+  
+  const handleBookNow = (service?: any) => {
     const query = service ? `?service=${encodeURIComponent(JSON.stringify(service))}` : '';
-    // You can implement navigation to booking page here
     console.log('Navigate to booking:', `/book/${id}${query}`);
   };
   
-  // Handle tab changes
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     setTimeout(() => {
@@ -320,20 +347,17 @@ export default function SalonDetailsPage() {
     }, 50);
   };
   
-  // Filter services based on category
   const filteredServices = useMemo(() => {
     return activeServiceTab === "All"
       ? salon.services
-      : salon.services.filter((service: Service) => service.category === activeServiceTab);
+      : salon.services.filter((service: any) => service.category === activeServiceTab);
   }, [salon.services, activeServiceTab]);
   
-  // Gallery modal handler
   const openGalleryModal = (imageUrl: string) => {
     setSelectedImage(imageUrl);
     setGalleryModalOpen(true);
   };
 
-// Define interfaces for the salon data
 interface Service {
     name: string;
     price: number;
@@ -585,7 +609,7 @@ interface Review {
                     </Tabs>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-0">
-                  {filteredServices.map((service: Service) => (
+                  {filteredServices.map((service: any) => (
                     <div
                       key={service.name}
                       className="flex justify-between items-center p-4 border rounded-md hover:bg-secondary/50"
@@ -618,7 +642,7 @@ interface Review {
                 High-quality products available for purchase.
               </p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {salon.products.map((product) => (
+                {salonProducts.map((product: any) => (
                     <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left">
                         <div className="relative aspect-square overflow-hidden rounded-md m-3">
                           <Image
@@ -829,8 +853,8 @@ interface Review {
                       {salon.title}
                     </h3>
                     <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                      <MapPin className="h-3 w-3" />
-                      <span>{salon.location}</span>
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{salon.location}</span>
                     </div>
 
                     {/* Description */}
@@ -841,7 +865,7 @@ interface Review {
                     {/* Stats Row */}
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1">
-                        <Users className="h-3 w-3 text-primary" />
+                        <Users className="h-3 w-3 text-primary flex-shrink-0" />
                         <span className="text-muted-foreground">
                           {salon.clients} clients
                         </span>
