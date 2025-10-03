@@ -2,7 +2,6 @@
 export * from './HeroSection';
 export * from './BentoGrid';
 export * from './AppCTA';
-export * from './FeaturedSalons';
 export * from './HowItWorks';
 export * from './PlatformFor';
 export * from './Testimonials';

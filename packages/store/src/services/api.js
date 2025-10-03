@@ -213,6 +213,20 @@ export const glowvitaApi = createApi({
       providesTags: ["User"],
     }),
 
+    // Public Vendors for landing page
+    getPublicVendors: builder.query({
+      query: () => ({ url: "/vendors", method: "GET" }),
+      providesTags: ["PublicVendors"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Products for landing page
+    getPublicProducts: builder.query({
+      query: () => ({ url: "/products", method: "GET" }),
+      providesTags: ["PublicProducts"],
+      transformResponse: (response) => response,
+    }),
+
     // Admin Panel Endpoints
     getUsers: builder.query({
       query: () => ({
@@ -1166,6 +1180,8 @@ export const glowvitaApi = createApi({
 export const {
   // Web App
   useGetMeQuery,
+  useGetPublicVendorsQuery,
+  useGetPublicProductsQuery,
   useUserLoginMutation,
   // Admin Panel
   useAdminLoginMutation,

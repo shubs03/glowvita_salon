@@ -102,28 +102,33 @@ export function NewProductCard({
               )}
               <span
                 className={cn(
-                  "font-bold",
+                  "font-semibold",
                   salePrice
-                    ? "text-sm text-muted-foreground line-through"
-                    : "text-lg text-foreground"
+                    ? "text-xs text-muted-foreground line-through"
+                    : "text-md text-foreground"
                 )}
               >
                 ₹{price.toFixed(2)}
               </span>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full rounded-lg group-hover:text-primary transition-colors group-hover:border-primary"
-            onClick={(e) => {
-              e.stopPropagation();
-              alert("Added to cart!");
-            }}
-          >
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            Add to Cart
-          </Button>
+          <div className="flex justify-between gap-2">
+            <Button size="sm" variant="outline" className="w-fit rounded-lg group-hover:text-primary transition-colors group-hover:border-primary">
+              Buy Now
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-fit rounded-lg group-hover:text-primary transition-colors group-hover:border-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                alert("Added to cart!");
+              }}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              
+            </Button>
+          </div>
         </div>
       </div>
     </div>

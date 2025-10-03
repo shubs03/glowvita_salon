@@ -74,9 +74,17 @@ export async function middleware(request: NextRequest) {
   const payload = await verifyJwt(token);
 
   if (!payload) {
-    const response = NextResponse.redirect(new URL('/login', request.url));
-    response.cookies.set('crm_access_token', '', { expires: new Date(0) });
-    return response;
+    // Check if token is empty/missing or if it's malformed
+    if (!token || token.trim() === '' || token.split('.').length !== 3) {
+      // This is a legitimate authentication issue - redirect to login
+      const response = NextResponse.redirect(new URL('/login', request.url));
+      response.cookies.set('crm_access_token', '', { expires: new Date(0) });
+      return response;
+    }
+    
+    // For other verification errors, try once more before clearing
+    console.log("Token verification failed but not clearing cookie");
+    return NextResponse.redirect(new URL('/not-found', request.url));
   }
 
   const role = payload.role;

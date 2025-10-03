@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import ProductModel from '@repo/lib/models/Vendor/Product'; // Adjust path to your ProductModel
+import ProductModel from '@repo/lib/models/vendor/Product.model'; // Adjust path to your ProductModel
 import {authMiddlewareAdmin} from '../../../../middlewareAdmin'; // Adjust path to your middleware
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import ProductCategoryModel from '@repo/lib/models/admin/ProductCategory';

@@ -58,12 +58,26 @@ const baseQuery = async (args, api, extraOptions) => {
       extraOptions
     );
 
-    // Handle 401 Unauthorized globally
+    // Handle 401 Unauthorized globally - with MUCH more conservative criteria
     if (result.error?.status === 401) {
-      const state = api.getState();
-      if (state.crmAuth?.token) api.dispatch(clearCrmAuth());
-      if (state.adminAuth?.token) api.dispatch(clearAdminAuth());
-      if (state.userAuth?.token) api.dispatch(clearUserAuth());
+      // Only consider it an auth error if message EXPLICITLY says token is invalid/expired
+      const errorMessage = result.error?.data?.message || '';
+      const isStrictAuthError = 
+        errorMessage.includes('Invalid token') || 
+        errorMessage.includes('expired token') || 
+        errorMessage.includes('JWT verification failed') ||
+        errorMessage.includes('jwt malformed');
+      
+      if (isStrictAuthError) {
+        console.log("Strict auth error detected, logging out:", errorMessage);
+        const state = api.getState();
+        if (state.crmAuth?.token) api.dispatch(clearCrmAuth());
+        if (state.adminAuth?.token) api.dispatch(clearAdminAuth());
+        if (state.userAuth?.token) api.dispatch(clearUserAuth());
+      } else {
+        // Don't log out for other 401 errors - these might be permission or parameter issues
+        console.log("API returned 401 but not clearing auth:", errorMessage);
+      }
     }
 
     return result;
@@ -83,7 +97,7 @@ export const glowvitaApi = createApi({
     "TaxFeeSettings", "User", "PendingServices", "AdminProductCategory", 
     "ProductCategory", "SmsTemplate", "SmsPackage", "CrmSmsTemplate", 
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign", 
-    "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing", 
+    "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing", "PublicVendors", 
     "Appointment", "ShippingCharge", "Order", "CrmProducts", 
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart", "User"
   ],
@@ -222,6 +236,17 @@ export const glowvitaApi = createApi({
         method: 'POST',
       }),
       invalidatesTags: ['User'],
+    }),
+    // Public Vendors Endpoints
+    getPublicVendors: builder.query({
+      query: () => ({ url: "/vendors", method: "GET" }),
+      providesTags: ["PublicVendors"],
+      transformResponse: (response) => response.vendors || [],
+    }),
+    getPublicVendorById: builder.query({
+      query: (id) => ({ url: `/vendors/${id}`, method: "GET" }),
+      providesTags: (result, error, id) => [{ type: "PublicVendors", id }],
+      transformResponse: (response) => response.vendor || null,
     }),
 
     // Admin Panel Endpoints
@@ -540,7 +565,14 @@ export const glowvitaApi = createApi({
       query: ({ vendor, serviceId }) => ({ url: "/crm/services", method: "DELETE", body: { vendor, serviceId } }),
       invalidatesTags: ["VendorServices"],
     }),
-    getOffers: builder.query({ query: () => "/crm/offers", providesTags: ["Offer"] }),
+    getOffers: builder.query({ 
+      query: (params) => {
+        const queryString = params ? 
+          `?businessId=${params.businessId || ''}&businessType=${params.businessType || ''}` : '';
+        return `/crm/offers${queryString}`;
+      }, 
+      providesTags: ["Offer"] 
+    }),
     createOffer: builder.mutation({
       query: (body) => ({ url: "/crm/offers", method: "POST", body }),
       invalidatesTags: ["Offer"],
@@ -568,7 +600,10 @@ export const glowvitaApi = createApi({
 
     // Products endpoints
     getCrmProducts: builder.query({
-      query: () => ({ url: "/crm/products", method: "GET" }),
+      query: (userId) => ({ 
+        url: userId ? `/crm/products?userId=${userId}` : "/crm/products", 
+        method: "GET" 
+      }),
       providesTags: ["CrmProducts"],
       transformResponse: (response) => response.data || [],
     }),
@@ -843,6 +878,8 @@ export const glowvitaApi = createApi({
 export const {
   // Web App
   useGetMeQuery,
+  useGetPublicVendorsQuery,
+  useGetPublicVendorByIdQuery,
   useUserLoginMutation,
   useLogoutUserMutation,
   // Admin Panel
@@ -993,6 +1030,10 @@ export const {
   useUpdateVendorProductMutation,
   useDeleteVendorProductMutation,
   useCreateVendorProductMutation,
+
+  // Public Vendor Endpoints
+  useGetPublicVendorsQuery,
+  useGetPublicVendorByIdQuery,
 
   // Cart Endpoints
   useGetCartQuery,

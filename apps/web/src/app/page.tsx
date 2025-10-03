@@ -24,7 +24,7 @@ import { NewProductCard } from "@/components/landing/NewProductCard";
 
 import { Award, Users, LineChart, Clock, ArrowRight } from "lucide-react";
 import { Button } from "@repo/ui/button";
-import { useGetAdminProductCategoriesQuery, useGetVendorsQuery } from "@repo/store/api";
+import { useGetAdminProductCategoriesQuery, useGetVendorsQuery, useGetPublicProductsQuery } from "@repo/store/api";
 import { useState, useEffect } from "react";
 
 export default function HomePage() {
@@ -37,6 +37,12 @@ export default function HomePage() {
   const { data: VendorsData } = useGetVendorsQuery(undefined);
   console.log("Vendors Data : ", VendorsData);
 
+  // Fetch public products data
+  const { data: ProductsData, isLoading: productsLoading, error: productsError } = useGetPublicProductsQuery(undefined);
+  console.log("Products Data : ", ProductsData);
+  console.log("Products API Error:", productsError);
+  console.log("Products API Loading:", productsLoading);
+
   const scrollAdvantages = (direction: "left" | "right") => {
     const container = document.getElementById("advantages-container");
     if (container) {
@@ -48,8 +54,8 @@ export default function HomePage() {
     }
   };
 
-  // Mock products data for NewProductCard
-  const [products, setProducts] = useState([
+  // Mock products data for fallback
+  const mockProducts = [
     {
       id: "1",
       name: "Radiant Glow Serum",
@@ -125,7 +131,18 @@ export default function HomePage() {
       description: "Professional eyeshadow palette with 12 blendable shades",
       category: "cosmetics",
     },
-  ]);
+  ];
+
+  // Use dynamic products or fallback to mock data
+  const products = ProductsData?.products && ProductsData.products.length > 0 
+    ? ProductsData.products.slice(0, 8) // Limit to 8 products for the landing page
+    : mockProducts;
+
+  console.log("Final products being used:", products.length, "products");
+  console.log("Products loading:", productsLoading);
+  console.log("Products error:", productsError);
+  console.log("Using real data:", ProductsData?.products && ProductsData.products.length > 0 ? "YES" : "NO");
+  console.log("ProductsData structure:", ProductsData ? Object.keys(ProductsData) : "No data");
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -178,9 +195,31 @@ export default function HomePage() {
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
-              {products.map((product) => (
-                <NewProductCard key={product.id} {...product} />
-              ))}
+              {productsLoading ? (
+                // Loading skeleton cards for products
+                Array.from({ length: 8 }).map((_, index) => (
+                  <div
+                    key={`product-skeleton-${index}`}
+                    className="relative overflow-hidden rounded-md border bg-card animate-pulse"
+                  >
+                    <div className="aspect-[4/3] bg-gray-200"></div>
+                    <div className="p-4">
+                      <div className="h-3 bg-gray-200 rounded mb-1 w-20"></div>
+                      <div className="h-4 bg-gray-200 rounded mb-2 w-32"></div>
+                      <div className="h-3 bg-gray-200 rounded mb-3 w-full"></div>
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="h-3 bg-gray-200 rounded w-16"></div>
+                        <div className="h-4 bg-gray-200 rounded w-12"></div>
+                      </div>
+                      <div className="h-8 bg-gray-200 rounded w-full"></div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                products.map((product: any) => (
+                  <NewProductCard key={product.id} {...product} />
+                ))
+              )}
             </div>
           </div>
         </section>

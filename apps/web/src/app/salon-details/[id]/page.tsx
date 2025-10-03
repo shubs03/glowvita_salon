@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@repo/ui/button";
@@ -50,17 +50,17 @@ import { PageContainer } from "@repo/ui/page-container";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from "@repo/ui/badge";
 import { cn } from "@repo/ui/cn";
+import { useGetPublicVendorsQuery } from "@repo/store/api";
 
-const salon = {
-  id: "1",
-  name: "GlowVita Elite Spa",
-  rating: 4.9,
-  reviewCount: 250,
-  address: "123 Luxury Ave, Suite 100, Beverly Hills, CA 90210",
-  description:
-    "An oasis of tranquility and relaxation, offering a wide range of beauty and wellness services. Our expert therapists and state-of-the-art facilities ensure an unparalleled experience.",
-  mission:
-    "To enhance beauty and wellness through personalized care and high-quality services, creating a serene escape for every client. Lorem, ipsum dolor sit amet consectetur adipisicing elit. Illo vel cumque consequuntur. Officiis similique exercitationem, ducimus doloribus nostrum recusandae rem esse ullam quae id laborum ad fugiat nihil amet. Corrupti quisquam vitae perspiciatis porro incidunt velit impedit cumque alias assumenda. Earum aliquid soluta neque, laboriosam ?",
+// Default fallback data
+const defaultSalon = {
+  id: "",
+  name: "Loading...",
+  rating: 0,
+  reviewCount: 0,
+  address: "",
+  description: "",
+  mission: "",
   whyChooseUs: [
     "Expert & Certified Staff",
     "Premium & Organic Products",
@@ -248,6 +248,92 @@ const nearbySalons = [
 
 const serviceCategories = ["All", "Hair", "Skin", "Nails", "Body", "Massage", "Waxing", "Specialty"];
 
+// Function to get the salon data dynamically
+export default function SalonDetailsPage() {
+  const params = useParams();
+  const id = params.id;
+  const [activeTab, setActiveTab] = useState("overview");
+  const [activeServiceTab, setActiveServiceTab] = useState("All");
+  const [visibleTab, setVisibleTab] = useState("overview");
+  const [galleryModalOpen, setGalleryModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState("");
+  
+  // Fetch the salon data using the API
+  const { data: vendorsData, isLoading, error } = useGetPublicVendorsQuery(undefined);
+  
+  // Find the specific vendor by ID
+  const vendorData = vendorsData?.vendors?.find((vendor: any) => vendor._id === id);
+  
+  // Dynamically build the salon data object based on the API response
+  const salon = useMemo(() => {
+    if (vendorData) {
+      return {
+        ...defaultSalon,
+        id: vendorData._id || defaultSalon.id,
+        name: vendorData.businessName || "No Name Available",
+        rating: vendorData.rating || 4.8,
+        reviewCount: vendorData.clientCount || 250,
+        address: `${vendorData.city || ""}, ${vendorData.state || ""}`,
+        description: vendorData.description || "No description available",
+        mission: vendorData.description || "To enhance beauty and wellness through personalized care and high-quality services.",
+        images: vendorData.gallery && vendorData.gallery.length > 0 
+          ? vendorData.gallery 
+          : vendorData.profileImage 
+            ? [vendorData.profileImage, ...defaultSalon.images.slice(1)] 
+            : defaultSalon.images,
+        services: vendorData.services?.length > 0 
+          ? vendorData.services.map((service: any) => ({
+              name: service.name || "",
+              price: service.price || 0,
+              duration: service.duration || 60,
+              category: service.category || "Other",
+              image: "https://picsum.photos/seed/" + service.name?.toLowerCase().replace(/\s/g, '') + "/200/200"
+            }))
+          : defaultSalon.services,
+        workingHours: vendorData.workingHours?.length > 0
+          ? vendorData.workingHours.map((hours: any) => ({
+              day: hours.day || "",
+              hours: hours.hours || ""
+            }))
+          : defaultSalon.workingHours
+      };
+    }
+    return defaultSalon;
+  }, [vendorData]);
+  
+  // Additional state variables needed for the component
+  const [mainImage, setMainImage] = useState(salon.images[0]);
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+  
+  // Handle booking navigation
+  const handleBookNow = (service?: Service) => {
+    const query = service ? `?service=${encodeURIComponent(JSON.stringify(service))}` : '';
+    // You can implement navigation to booking page here
+    console.log('Navigate to booking:', `/book/${id}${query}`);
+  };
+  
+  // Handle tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setTimeout(() => {
+      setVisibleTab(value);
+    }, 50);
+  };
+  
+  // Filter services based on category
+  const filteredServices = useMemo(() => {
+    return activeServiceTab === "All"
+      ? salon.services
+      : salon.services.filter((service: Service) => service.category === activeServiceTab);
+  }, [salon.services, activeServiceTab]);
+  
+  // Gallery modal handler
+  const openGalleryModal = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setGalleryModalOpen(true);
+  };
+
+// Define interfaces for the salon data
 interface Service {
     name: string;
     price: number;
@@ -256,28 +342,35 @@ interface Service {
     image: string;
 }
 
-export default function SalonDetailsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const { id } = params;
-  const [mainImage, setMainImage] = useState(salon.images[0]);
-  const [activeServiceTab, setActiveServiceTab] = useState("All");
-  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+interface WorkingHours {
+    day: string;
+    hours: string;
+}
 
-  const filteredServices =
-    activeServiceTab === "All"
-      ? salon.services
-      : salon.services.filter((s) => s.category === activeServiceTab);
+interface Product {
+    id: string;
+    name: string;
+    brand: string;
+    price: number;
+    image: string;
+    hint: string;
+    stock: number;
+    rating: number;
+}
 
-  const openGalleryModal = (image: string) => {
-    setMainImage(image);
-    setIsGalleryModalOpen(true);
-  };
-  
-  const handleBookNow = (service?: Service) => {
-    const query = service ? `?service=${encodeURIComponent(JSON.stringify(service))}` : '';
-    router.push(`/book/${id}${query}`);
-  };
+interface StaffMember {
+    name: string;
+    role: string;
+    image: string;
+    hint: string;
+}
+
+interface Review {
+    author: string;
+    rating: number;
+    date: string;
+    text: string;
+}
 
   const StarRating = ({ rating }: { rating: number }) => (
     <div className="flex items-center gap-1">
@@ -492,7 +585,7 @@ export default function SalonDetailsPage() {
                     </Tabs>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-0">
-                  {filteredServices.map((service) => (
+                  {filteredServices.map((service: Service) => (
                     <div
                       key={service.name}
                       className="flex justify-between items-center p-4 border rounded-md hover:bg-secondary/50"
@@ -666,7 +759,7 @@ export default function SalonDetailsPage() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {salon.workingHours.map((wh) => (
+                  {salon.workingHours.map((wh: WorkingHours) => (
                     <li key={wh.day} className="flex justify-between text-sm">
                       <span>{wh.day}</span>
                       <span className="font-semibold">{wh.hours}</span>
@@ -776,7 +869,7 @@ export default function SalonDetailsPage() {
             />
           </div>
           <div className="flex justify-center gap-2 p-4 bg-secondary">
-            {salon.images.map((img, index) => (
+            {salon.images.map((img: string, index: number) => (
               <button key={index} onClick={() => setMainImage(img)}>
                 <Image
                   src={img}

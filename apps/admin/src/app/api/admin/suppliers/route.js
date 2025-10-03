@@ -5,7 +5,6 @@ import _db from "@repo/lib/db";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer";
 import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
-import { uploadBase64, deleteFile } from "@repo/utils/uploads";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 // Initialize database connection (assuming _db is a promise-based connection function)

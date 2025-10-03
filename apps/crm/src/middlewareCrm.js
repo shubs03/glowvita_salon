@@ -57,12 +57,12 @@ export function authMiddlewareCrm(handler, allowedRoles = []) {
     const payload = await verifyJwt(token);
     
     if (!payload) {
-      const response = NextResponse.json(
+      // Don't immediately clear the cookie as it may be a transient error
+      // Just return an auth error response
+      return NextResponse.json(
         { success: false, message: 'Invalid or expired token' },
         { status: 401 }
       );
-      response.cookies.set('crm_access_token', '', { expires: new Date(0) });
-      return response;
     }
 
     // Check if user role is in allowed roles (if specified)

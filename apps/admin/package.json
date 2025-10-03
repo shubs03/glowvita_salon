@@ -12,6 +12,7 @@
     "@genkit-ai/googleai": "^1.0.0",
     "@mapbox/mapbox-gl-draw": "^1.4.3",
     "@reduxjs/toolkit": "^2.2.5",
+    "@repo/config": "*",
     "@repo/lib": "*",
     "@repo/store": "*",
     "@repo/ui": "*",
