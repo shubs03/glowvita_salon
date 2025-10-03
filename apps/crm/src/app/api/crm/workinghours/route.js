@@ -8,7 +8,10 @@ await _db();
 // GET working hours for the vendor
 export const GET = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        const vendorId = req.user.userId;
+        console.log("req.user:", req.user);
+
+        console.log("Fetching working hours for vendor:", vendorId);
 
         // Find or create working hours for the vendor
         let workingHours = await VendorWorkingHours.findOne({ vendor: vendorId });
