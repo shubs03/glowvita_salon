@@ -7,7 +7,7 @@ import { authMiddlewareCrm } from "../../../../middlewareCrm";
 
 await _db();
 
-// POST: Create or update a VendorNotifications document, adding notifications to the array
+// Create or update a VendorNotifications document, adding notifications to the array
 export const POST = authMiddlewareCrm(async (req) => {
   const vendor = req.user;
   const body = await req.json();
