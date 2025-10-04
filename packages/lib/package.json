@@ -3,6 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
+    ".": "./src/index.js",
+    "./models/*": "./src/models/*",
     "./db": "./src/db.js",
     "./auth": "./src/auth.js",
     "./generateTokens": "./src/generateTokens.js",
@@ -42,7 +44,6 @@
     "./models/vendor/Shipping.model": "./src/models/vendor/Shipping.model.js",
     "./models/vendor/Staff.model": "./src/models/vendor/Staff.model.js",
     "./models/vendor/VendorWorkingHours.model": "./src/models/vendor/VendorWorkingHours.model.js",
-    "./models": "./src/models",
     "./stateCity": "./src/state-city.json",
     "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",
     "./models/Marketing/SmsPackage.model": "./src/models/Marketing/SmsPackage.model.js",
