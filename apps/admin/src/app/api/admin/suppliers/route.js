@@ -116,8 +116,8 @@ export const POST = async (req) => {
     // 🎁 Handle referral if a code was provided
     if (referredByCode) {
       // Check if referral code belongs to any user (vendor, doctor, or supplier)
-      const VendorModel = (await import("@repo/lib/models/Vendor/Vendor.model")).default;
-      const DoctorModel = (await import("@repo/lib/models/Vendor/Docters.model")).default;
+      const VendorModel = (await import("@repo/lib/models/vendor/Vendor.model")).default;
+      const DoctorModel = (await import("@repo/lib/models/vendor/Docters.model")).default;
       
       const referringVendor = await VendorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
       const referringDoctor = await DoctorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
