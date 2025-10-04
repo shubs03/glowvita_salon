@@ -289,7 +289,20 @@ export default function SalonDetailsPage() {
     return vendors.find((v: any) => v._id === id);
   }, [vendorsResponse, id]);
 
-  const { data: productsData } = useGetAllVendorProductsQuery(undefined);
+  const { data: productsData, error: productsError, isLoading: productsLoading } = useGetAllVendorProductsQuery(undefined);
+  
+  console.log("Products Data on salon details page: ", productsData)
+  console.log("Products Error: ", productsError)
+  console.log("Products Loading: ", productsLoading)
+  
+  // Additional debugging
+  if (productsError) {
+    console.error("Detailed Products Error: ", {
+      status: productsError.status,
+      data: productsError.data,
+      error: productsError.error
+    });
+  }
 
   const salon = useMemo(() => {
     if (vendorData) {
@@ -333,13 +346,26 @@ export default function SalonDetailsPage() {
     return productsData.products.filter((p: any) => {
       const productVendorId = p.vendorId?._id || p.vendorId;
       return productVendorId?.toString() === id?.toString();
-    });
+    }).map((p: any) => ({
+      id: p.id || p._id,
+      name: p.name || p.productName,
+      description: p.description || '',
+      price: p.price || 0,
+      salePrice: p.salePrice || null,
+      image: p.image || p.productImage || 'https://placehold.co/320x224/e2e8f0/64748b?text=Product',
+      category: p.category || 'Beauty Products',
+      stock: p.stock || 0,
+      rating: p.rating || (4.2 + Math.random() * 0.8).toFixed(1),
+      hint: p.hint || p.description || p.name || p.productName
+    }));
   }, [productsData, id]);
   
   const [mainImage, setMainImage] = useState(salon.images[0]);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   
   console.log("Vendor Product Data : ", productsData)
+  console.log("Salon Products filtered:", salonProducts)
+  console.log("Current Vendor ID:", id)
 
   useEffect(() => {
     if (salon.images.length > 0) {
@@ -621,7 +647,7 @@ interface Review {
                     </Tabs>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-0">
-                  {filteredServices.map((service: any) => (
+                  {filteredServices.length > 0 ? filteredServices.map((service: any) => (
                     <div
                       key={service.name}
                       className="flex justify-between items-center p-4 border rounded-md hover:bg-secondary/50"
@@ -641,7 +667,11 @@ interface Review {
                         </Button>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No services available in this category.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </section>
@@ -654,12 +684,12 @@ interface Review {
                 High-quality products available for purchase.
               </p>
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {salonProducts.map((product: any) => (
+                {salonProducts.length > 0 ? salonProducts.map((product: any) => (
                     <Card key={product.id} className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left">
                         <div className="relative aspect-square overflow-hidden rounded-md m-3">
                           <Image
-                            src={product.productImage}
-                            alt={product.productName}
+                            src={product.image}
+                            alt={product.name}
                             fill
                             className="group-hover:scale-105 transition-transform duration-300 object-cover"
                             data-ai-hint={product.hint}
@@ -670,7 +700,7 @@ interface Review {
                         </div>
                         <div className="p-3 flex flex-col flex-grow">
                           <p className="text-xs font-bold text-primary mb-1">{product.category}</p>
-                          <h4 className="text-sm font-semibold flex-grow mb-2">{product.productName}</h4>
+                          <h4 className="text-sm font-semibold flex-grow mb-2">{product.name}</h4>
                           <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
                           <div className="flex justify-between items-center mt-auto">
                               <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>
@@ -685,7 +715,11 @@ interface Review {
                           </Button>
                         </div>
                     </Card>
-                ))}
+                )) : (
+                  <div className="col-span-full text-center py-8">
+                    <p className="text-muted-foreground">No products available for this salon at the moment.</p>
+                  </div>
+                )}
               </div>
             </section>
 

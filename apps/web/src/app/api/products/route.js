@@ -1,13 +1,34 @@
 import _db from "@repo/lib/db";
 import ProductModel from "@repo/lib/models/vendor/Product.model";
-import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
+import VendorModel from "@repo/lib/models/vendor/Vendor.model";
 
 await _db();
 
+// Handle CORS preflight
+export const OPTIONS = async (request) => {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+};
+
 // Get Public Products (only products approved via admin panel)
-export const GET = async () => {
+export const GET = async (request) => {
   try {
+    console.log('=== PRODUCTS API CALLED ===');
+    console.log('Request URL:', request.url);
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     console.log('Products API: Starting to fetch approved products...');
+    
+    // Test database connection
+    console.log('Testing database connection...');
+    const dbTest = await ProductModel.findOne().limit(1);
+    console.log('Database test result:', dbTest ? 'Connected' : 'No data found');
     
     // Get products that are approved via admin panel
     const approvedProducts = await ProductModel.find({ 
@@ -48,6 +69,7 @@ export const GET = async () => {
       price: product.price,
       salePrice: product.salePrice > 0 ? product.salePrice : null,
       image: product.productImage || 'https://placehold.co/320x224/e2e8f0/64748b?text=Product',
+      vendorId: product.vendorId?._id || product.vendorId,
       vendorName: product.vendorId?.businessName || 'Unknown Vendor',
       category: 'Beauty Products',
       stock: product.stock,
@@ -60,10 +82,18 @@ export const GET = async () => {
     console.log('Products API: Successfully transformed products:', transformedProducts.length);
     console.log('Products API: Sample product names:', transformedProducts.slice(0, 3).map(p => p.name));
 
-    return Response.json({
+    return new Response(JSON.stringify({
       success: true,
       products: transformedProducts,
       count: transformedProducts.length
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      },
     });
   } catch (error) {
     console.error('Products API Error:', error);
@@ -72,14 +102,20 @@ export const GET = async () => {
       stack: error.stack,
       name: error.name
     });
-    return Response.json(
-      { 
-        success: false, 
-        message: `Failed to fetch products: ${error.message}`,
-        products: [],
-        error: error.message
+    
+    return new Response(JSON.stringify({ 
+      success: false, 
+      message: `Failed to fetch products: ${error.message}`,
+      products: [],
+      error: error.message
+    }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
       },
-      { status: 500 }
-    );
+    });
   }
 };

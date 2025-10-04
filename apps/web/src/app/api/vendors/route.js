@@ -1,7 +1,16 @@
 import _db from "@repo/lib/db";
-import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
+import VendorModel from "@repo/lib/models/vendor/Vendor.model";
 
 await _db();
+
+// Handle CORS preflight
+export const OPTIONS = async () => {
+  const response = new Response(null, { status: 200 });
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  return response;
+};
 
 // Get Public Vendors (only approved vendors for public display)
 export const GET = async () => {
@@ -13,14 +22,21 @@ export const GET = async () => {
       'businessName firstName lastName city state category subCategories profileImage description rating clientCount revenue createdAt'
     ).limit(20); // Limit to 20 vendors for performance
 
-    return Response.json({
+    const response = Response.json({
       success: true,
       vendors,
       count: vendors.length
     });
+
+    // Add CORS headers
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    return response;
   } catch (error) {
     console.error('Error fetching public vendors:', error);
-    return Response.json(
+    const response = Response.json(
       { 
         success: false, 
         message: "Failed to fetch vendors",
@@ -28,5 +44,12 @@ export const GET = async () => {
       },
       { status: 500 }
     );
+
+    // Add CORS headers to error response
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    return response;
   }
 };

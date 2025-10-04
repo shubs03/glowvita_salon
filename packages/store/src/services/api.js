@@ -924,7 +924,7 @@ export const glowvitaApi = createApi({
     
     // New endpoint to fetch all vendor products with origin 'Vendor'
     getAllVendorProducts: builder.query({
-      query: () => ({ url: "/crm/vendor/products", method: "GET" }),
+      query: () => ({ url: "/products", method: "GET" }),
       providesTags: ["CrmProducts"],
       transformResponse: (response) => response, // Keep the full response to check structure
     }),

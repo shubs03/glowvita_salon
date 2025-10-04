@@ -1,9 +1,18 @@
 
 import _db from "@repo/lib/db";
-import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
-import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
+import VendorModel from "@repo/lib/models/vendor/Vendor.model";
+import VendorServicesModel from "@repo/lib/models/vendor/VendorServices.model";
 
 await _db();
+
+// Handle CORS preflight
+export const OPTIONS = async () => {
+  const response = new Response(null, { status: 200 });
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  return response;
+};
 
 // Get a single vendor by ID for public display
 export const GET = async (req, { params }) => {
@@ -12,13 +21,20 @@ export const GET = async (req, { params }) => {
 
     // Validate ID
     if (!id) {
-      return Response.json(
+      const response = Response.json(
         { 
           success: false, 
           message: "Vendor ID is required",
         },
         { status: 400 }
       );
+
+      // Add CORS headers to error response
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+      return response;
     }
 
     // Fetch approved vendor
@@ -30,13 +46,20 @@ export const GET = async (req, { params }) => {
     ).lean();
 
     if (!vendor) {
-      return Response.json(
+      const response = Response.json(
         { 
           success: false, 
           message: "Vendor not found",
         },
         { status: 404 }
       );
+
+      // Add CORS headers to error response
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+      return response;
     }
 
     // Fetch services separately and attach them
@@ -47,18 +70,32 @@ export const GET = async (req, { params }) => {
     // Attach services to the vendor object
     vendor.services = vendorServices ? vendorServices.services.filter(s => s.status === 'approved') : [];
 
-    return Response.json({
+    const response = Response.json({
       success: true,
       vendor: vendor
     });
+
+    // Add CORS headers
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    return response;
   } catch (error) {
     console.error('Error fetching vendor by ID:', error);
-    return Response.json(
+    const response = Response.json(
       { 
         success: false, 
         message: "Failed to fetch vendor",
       },
       { status: 500 }
     );
+
+    // Add CORS headers to error response
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    return response;
   }
 };
