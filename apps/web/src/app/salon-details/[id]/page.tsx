@@ -290,19 +290,6 @@ export default function SalonDetailsPage() {
   }, [vendorsResponse, id]);
 
   const { data: productsData, error: productsError, isLoading: productsLoading } = useGetAllVendorProductsQuery(undefined);
-  
-  console.log("Products Data on salon details page: ", productsData)
-  console.log("Products Error: ", productsError)
-  console.log("Products Loading: ", productsLoading)
-  
-  // Additional debugging
-  if (productsError) {
-    console.error("Detailed Products Error: ", {
-      status: productsError.status,
-      data: productsError.data,
-      error: productsError.error
-    });
-  }
 
   const salon = useMemo(() => {
     if (vendorData) {
