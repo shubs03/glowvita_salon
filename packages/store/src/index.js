@@ -1,4 +1,3 @@
-
 export * from "./hooks";
 export * from "./provider";
 export * from "./store";
@@ -30,3 +29,4 @@ export * from "./slices/Admin/adminAuthSlice";
 export * from "./slices/Admin/refferalSlice";
 export * from "./slices/CRM/clientSlice";
 export * from "./slices/cartSlice";
+export * from "./slices/patientSlice";
