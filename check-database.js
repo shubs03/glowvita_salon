@@ -1,6 +1,6 @@
 // Script to check what products and vendors exist in the database for admin approval
 import mongoose from 'mongoose';
-import ProductModel from './packages/lib/src/models/vendor/Product.model.js';
+import ProductModel from './packages/lib/src/models/Vendor/Product.model.js';
 import VendorModel from './packages/lib/src/models/Vendor/Vendor.model.js';
 import _db from './packages/lib/src/db.js';
 

@@ -1,5 +1,5 @@
 import _db from "@repo/lib/db";
-import VendorModel from "@repo/lib/models/vendor/Vendor.model";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 
 await _db();
 

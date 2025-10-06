@@ -1,6 +1,6 @@
 import _db from "@repo/lib/db";
-import ProductModel from "@repo/lib/models/vendor/Product.model";
-import VendorModel from "@repo/lib/models/vendor/Vendor.model";
+import ProductModel from "@repo/lib/models/Vendor/Product.model";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 
 await _db();
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import StaffModel from '@repo/lib/models/vendor/Staff.model';
+import StaffModel from '@repo/lib/models/Vendor/Staff.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm';
 

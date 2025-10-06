@@ -1,7 +1,7 @@
 // Script to add sample product data for testing
 import mongoose from 'mongoose';
-import ProductModel from './packages/lib/src/models/vendor/Product.model.js';
-import VendorModel from './packages/lib/src/models/vendor/Vendor.model.js';
+import ProductModel from './packages/lib/src/models/Vendor/Product.model.js';
+import VendorModel from './packages/lib/src/models/Vendor/Vendor.model.js';
 import _db from './packages/lib/src/db.js';
 
 const sampleProducts = [
