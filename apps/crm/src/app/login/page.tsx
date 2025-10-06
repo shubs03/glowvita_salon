@@ -230,7 +230,7 @@ export default function LoginPage() {
                   Log in to access and manage your appointments anytime?
                 </p>
                 <a 
-                  href="http://localhost:3000" 
+                  href="/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-sm font-medium text-blue-600 hover:text-blue-500 block mt-1"

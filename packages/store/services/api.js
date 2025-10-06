@@ -3,11 +3,12 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import { clearUserAuth } from "@repo/store/slices/Web/userAuthSlice";
+import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from "../../config/config";
 
 const API_BASE_URLS = {
-  admin: "http://localhost:3002/api",
-  crm: "http://localhost:3001/api",
-  web: "http://localhost:3000/api",
+  admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
+  crm: `${NEXT_PUBLIC_CRM_URL}/api`,
+  web: `${NEXT_PUBLIC_WEB_URL}/api`,
 };
 
 // Base query function that determines the API URL and sets headers.
