@@ -87,10 +87,6 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-// Create indexes
-userSchema.index({ emailAddress: 1 }, { unique: true });
-userSchema.index({ mobileNo: 1 }, { unique: true });
-
 // Pre-save middleware to update timestamps
 userSchema.pre("save", function (next) {
   this.updatedAt = new Date();

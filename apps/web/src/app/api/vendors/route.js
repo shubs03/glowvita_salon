@@ -1,8 +1,6 @@
 import _db from "@repo/lib/db";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 
-await _db();
-
 // Handle CORS preflight
 export const OPTIONS = async () => {
   const response = new Response(null, { status: 200 });
@@ -15,6 +13,27 @@ export const OPTIONS = async () => {
 // Get Public Vendors (only approved vendors for public display)
 export const GET = async () => {
   try {
+    const db = await _db();
+    
+    // If database connection is not available, return an error
+    if (!db) {
+      const response = Response.json(
+        { 
+          success: false, 
+          message: "Service temporarily unavailable",
+          vendors: []
+        },
+        { status: 503 }
+      );
+      
+      // Add CORS headers
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      
+      return response;
+    }
+    
     // Only fetch approved vendors with selected fields for public display
     const vendors = await VendorModel.find({ 
       status: 'Approved' 
