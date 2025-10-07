@@ -6,6 +6,15 @@ import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from 
 
 // Function to get base URLs with intelligent fallbacks for production
 const getBaseUrls = () => {
+  // If environment variables are explicitly set, use them (highest priority)
+  if (NEXT_PUBLIC_WEB_URL && NEXT_PUBLIC_CRM_URL && NEXT_PUBLIC_ADMIN_URL) {
+    return {
+      admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
+      crm: `${NEXT_PUBLIC_CRM_URL}/api`,
+      web: `${NEXT_PUBLIC_WEB_URL}/api`,
+    };
+  }
+
   // In browser environment, dynamically determine URLs based on current location
   if (typeof window !== 'undefined' && window.location) {
     const protocol = window.location.protocol;
@@ -13,39 +22,48 @@ const getBaseUrls = () => {
     const port = window.location.port ? `:${window.location.port}` : '';
     const baseUrl = `${protocol}//${hostname}${port}`;
     
-    // If environment variables are set, use them (highest priority)
-    if (NEXT_PUBLIC_WEB_URL && NEXT_PUBLIC_CRM_URL && NEXT_PUBLIC_ADMIN_URL) {
-      return {
-        admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
-        crm: `${NEXT_PUBLIC_CRM_URL}/api`,
-        web: `${NEXT_PUBLIC_WEB_URL}/api`,
-      };
-    }
-    
-    // For production domains, construct URLs based on current location
-    if (hostname.includes('v2winonline.com') || !port) {
-      // Production environment - all services on same domain with path prefixes
-      return {
-        admin: `${baseUrl}/admin/api`,
-        crm: `${baseUrl}/crm/api`,
-        web: `${baseUrl}/api`,
-      };
+    // For production domains with specific patterns
+    if (hostname.includes('v2winonline.com')) {
+      // Production environment - different subdomains for different services
+      // partners.v2winonline.com is the CRM application
+      if (hostname.includes('partners')) {
+        // CRM application - API is on the same domain
+        return {
+          admin: `${protocol}//admin.v2winonline.com/api`,
+          crm: `${baseUrl}/api`, // CRM API is on the same domain
+          web: `${protocol}//v2winonline.com/api`,
+        };
+      } else if (hostname.includes('admin')) {
+        // Admin application - API is on the same domain
+        return {
+          admin: `${baseUrl}/api`, // Admin API is on the same domain
+          crm: `${protocol}//partners.v2winonline.com/api`,
+          web: `${protocol}//v2winonline.com/api`,
+        };
+      } else {
+        // Main website - API is on the same domain
+        return {
+          admin: `${protocol}//admin.v2winonline.com/api`,
+          crm: `${protocol}//partners.v2winonline.com/api`,
+          web: `${baseUrl}/api`, // Web API is on the same domain
+        };
+      }
     } else {
       // Local development - use port-based routing
       return {
         admin: `${protocol}//${hostname}:3002/api`,
         crm: `${protocol}//${hostname}:3001/api`,
-        web: `${baseUrl}/api`,
+        web: `${protocol}//${hostname}:3000/api`,
       };
     }
   }
   
   // Server-side rendering or when window is not available
-  // Fallback to environment variables or localhost defaults
+  // Fallback to localhost defaults
   return {
-    admin: `${NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002'}/api`,
-    crm: `${NEXT_PUBLIC_CRM_URL || 'http://localhost:3001'}/api`,
-    web: `${NEXT_PUBLIC_WEB_URL || 'http://localhost:3000'}/api`,
+    admin: 'http://localhost:3002/api',
+    crm: 'http://localhost:3001/api',
+    web: 'http://localhost:3000/api',
   };
 };
 
@@ -69,15 +87,23 @@ const baseQuery = async (args, api, extraOptions) => {
 
   const baseUrl = API_BASE_URLS[targetService];
   
-  // Remove any leading slashes from requestUrl to prevent double slashes
-  const cleanRequestUrl = requestUrl.startsWith("/") ? requestUrl.substring(1) : requestUrl;
+  // Remove service prefix and any leading slashes from requestUrl to prevent double slashes
+  let cleanRequestUrl = requestUrl;
+  if (targetService === "admin" && cleanRequestUrl.startsWith("/admin")) {
+    cleanRequestUrl = cleanRequestUrl.substring(6); // Remove "/admin"
+  } else if (targetService === "crm" && cleanRequestUrl.startsWith("/crm")) {
+    cleanRequestUrl = cleanRequestUrl.substring(4); // Remove "/crm"
+  }
+  
+  // Ensure cleanRequestUrl doesn't start with a slash to prevent double slashes
+  cleanRequestUrl = cleanRequestUrl.startsWith("/") ? cleanRequestUrl.substring(1) : cleanRequestUrl;
+  
   const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
+  console.log("Target Service:", targetService); // Debug log
+  console.log("Original Request URL:", requestUrl); // Debug log
   console.log("Clean Request URL:", cleanRequestUrl); // Debug log
   console.log("Base URL:", baseUrl); // Debug log
-  
   console.log("API Request URL:", fullUrl); // Debug log
-
-  
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
