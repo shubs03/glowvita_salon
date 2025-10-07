@@ -87,18 +87,14 @@ const baseQuery = async (args, api, extraOptions) => {
 
   const baseUrl = API_BASE_URLS[targetService];
   
-  // Remove service prefix and any leading slashes from requestUrl to prevent double slashes
+  // For CRM and Admin services, we don't strip the service prefix
+  // The API endpoints are actually at /api/crm/... and /api/admin/...
   let cleanRequestUrl = requestUrl;
-  if (targetService === "admin" && cleanRequestUrl.startsWith("/admin")) {
-    cleanRequestUrl = cleanRequestUrl.substring(6); // Remove "/admin"
-  } else if (targetService === "crm" && cleanRequestUrl.startsWith("/crm")) {
-    cleanRequestUrl = cleanRequestUrl.substring(4); // Remove "/crm"
-  }
   
-  // Ensure cleanRequestUrl doesn't start with a slash to prevent double slashes
-  cleanRequestUrl = cleanRequestUrl.startsWith("/") ? cleanRequestUrl.substring(1) : cleanRequestUrl;
+  // Ensure cleanRequestUrl starts with a slash to prevent issues
+  cleanRequestUrl = cleanRequestUrl.startsWith("/") ? cleanRequestUrl : `/${cleanRequestUrl}`;
   
-  const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
+  const fullUrl = `${baseUrl}${cleanRequestUrl}`;
   console.log("Target Service:", targetService); // Debug log
   console.log("Original Request URL:", requestUrl); // Debug log
   console.log("Clean Request URL:", cleanRequestUrl); // Debug log
