@@ -81,7 +81,8 @@ export const glowvitaApi = createApi({
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign", 
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing", 
     "Appointment", "ShippingCharge", "Order", "CrmProducts", 
-    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart"
+    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
+    "PublicProducts"
   ],
 
   endpoints: (builder) => ({
@@ -1160,6 +1161,20 @@ export const glowvitaApi = createApi({
         body: credentials,
       }),
     }),
+
+    // Public Products Endpoint - No authentication required
+    getPublicProducts: builder.query({
+      query: () => ({ url: "/products", method: "GET" }),
+      providesTags: ["PublicProducts"],
+      transformResponse: (response) => {
+        // Handle both direct array response and object with data property
+        if (Array.isArray(response)) {
+          return response;
+        }
+        return response.data || [];
+      },
+    }),
+
   }),
 });
 
@@ -1321,5 +1336,6 @@ export const {
   useAddToCartMutation,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
-  useUpdateAppointmentStatusMutation
+  useUpdateAppointmentStatusMutation,
+  useGetPublicProductsQuery,
 } = glowvitaApi;
