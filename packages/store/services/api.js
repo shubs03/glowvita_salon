@@ -31,6 +31,8 @@ const baseQuery = async (args, api, extraOptions) => {
   
   // Remove any leading slashes from requestUrl to prevent double slashes
   const cleanRequestUrl = requestUrl.startsWith("/") ? requestUrl.substring(1) : requestUrl;
+  console.log("API Request URL (cleaned):", cleanRequestUrl);
+  console.log("API Request URL (full):", fullUrl);
   const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
   
   console.log("API Request URL:", fullUrl); // Debug log

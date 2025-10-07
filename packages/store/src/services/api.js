@@ -31,8 +31,12 @@ const baseQuery = async (args, api, extraOptions) => {
   // Remove any leading slashes from requestUrl to prevent double slashes
   const cleanRequestUrl = requestUrl.startsWith("/") ? requestUrl.substring(1) : requestUrl;
   const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
+  console.log("Clean Request URL:", cleanRequestUrl); // Debug log
+  console.log("Base URL:", baseUrl); // Debug log
   
   console.log("API Request URL:", fullUrl); // Debug log
+
+  
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
