@@ -152,7 +152,7 @@ export const glowvitaApi = createApi({
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff", 
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
-    "PublicVendorProducts", "WorkingHours"
+    "PublicVendorProducts", "WorkingHours","Patient"
   ],
 
   endpoints: (builder) => ({
