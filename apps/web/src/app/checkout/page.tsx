@@ -1,5 +1,4 @@
 
-      
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -12,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCreateClientOrderMutation } from '@repo/store/api';
+import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Product {
@@ -34,19 +33,39 @@ export default function CheckoutPage() {
   
   const { user } = useAuth();
   const [createOrder, { isLoading }] = useCreateClientOrderMutation();
+  const [createPaymentOrder] = useCreatePaymentOrderMutation();
+  const [verifyPayment] = useVerifyPaymentMutation();
+
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   useEffect(() => {
     try {
       const storedProduct = localStorage.getItem('buyNowProduct');
+      console.log('Stored product from localStorage:', storedProduct);
       if (storedProduct) {
         const parsedProduct = JSON.parse(storedProduct);
         if (!parsedProduct.quantity) {
           parsedProduct.quantity = 1;
         }
+        // Ensure vendorId is not undefined
+        if (!parsedProduct.vendorId) {
+          console.warn('vendorId is missing from stored product data, using fallback');
+          parsedProduct.vendorId = 'unknown-vendor';
+        }
         setProduct(parsedProduct);
         setShippingAddress(user?.address || '');
         setContactNumber(user?.mobileNo || '');
       } else {
+        console.log('No product found in localStorage, redirecting to home');
         router.push('/');
       }
     } catch (e) {
@@ -62,32 +81,154 @@ export default function CheckoutPage() {
     }
     if (!product) return;
 
-    const orderData = {
-      items: [{
-        productId: product.id,
-        name: product.name,
-        quantity: product.quantity,
-        price: product.price,
-        image: product.image,
-      }],
-      vendorId: product.vendorId,
-      totalAmount: (product.price * product.quantity) + 5.00 + (product.price * product.quantity * 0.08),
-      shippingAddress,
-      contactNumber,
-      paymentMethod,
-    };
-    
+    const totalAmount = (product.price * product.quantity) + 5.00 + (product.price * product.quantity * 0.08);
+
     try {
-      await createOrder(orderData).unwrap();
-      toast.success('Order placed successfully!', {
-        description: 'You will be redirected to your orders page.',
-      });
+      // For cash on delivery, directly create order
+      if (paymentMethod === 'cash-on-delivery') {
+        const orderData = {
+          items: [{
+            productId: product.id,
+            name: product.name,
+            quantity: product.quantity,
+            price: product.price,
+            image: product.image,
+          }],
+          vendorId: product.vendorId,
+          totalAmount,
+          shippingAddress,
+          contactNumber,
+          paymentMethod,
+        };
+        
+        await createOrder(orderData).unwrap();
+        toast.success('Order placed successfully!', {
+          description: 'You will be redirected to your orders page.',
+        });
 
-      localStorage.removeItem('buyNowProduct');
+        localStorage.removeItem('buyNowProduct');
+        setTimeout(() => {
+          router.push('/profile/orders');
+        }, 2000);
+        return;
+      }
+      
+      // For UPI and Credit/Debit Card payments, use Razorpay
+      if (paymentMethod === 'upi' || paymentMethod === 'credit-card') {
+        // Create Razorpay payment order
+        const paymentOrderResponse = await createPaymentOrder({
+          amount: totalAmount,
+          receipt: `order_${Date.now()}`,
+        }).unwrap();
 
-      setTimeout(() => {
-        router.push('/profile/orders');
-      }, 2000);
+        if (!paymentOrderResponse.success) {
+          throw new Error('Failed to create payment order');
+        }
+
+        const razorpayOrder = paymentOrderResponse.order;
+
+        // Check if Razorpay is loaded
+        if (!(window as any).Razorpay) {
+          throw new Error('Razorpay SDK not loaded');
+        }
+
+        // Configure payment methods based on selection
+        let paymentMethods = {};
+        if (paymentMethod === 'credit-card') {
+          paymentMethods = {
+            card: true,
+            upi: false,
+            netbanking: false,
+            wallet: false,
+          };
+        } else if (paymentMethod === 'upi') {
+          paymentMethods = {
+            card: false,
+            upi: true,
+            netbanking: false,
+            wallet: false,
+          };
+        }
+
+        // Initialize Razorpay payment
+        const options = {
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency,
+          name: 'GlowVita Salon',
+          description: `Order for ${product.name}`,
+          image: '/images/logo.png', // Add your logo here
+          order_id: razorpayOrder.id,
+          method: paymentMethods,
+          handler: async function (response: any) {
+            try {
+              // Verify payment
+              const verifyResponse = await verifyPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }).unwrap();
+
+              if (verifyResponse.success) {
+                // Create order after successful payment
+                const orderData = {
+                  items: [{
+                    productId: product.id,
+                    name: product.name,
+                    quantity: product.quantity,
+                    price: product.price,
+                    image: product.image,
+                  }],
+                  vendorId: product.vendorId,
+                  totalAmount,
+                  shippingAddress,
+                  contactNumber,
+                  paymentMethod,
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpaySignature: response.razorpay_signature,
+                };
+                
+                await createOrder(orderData).unwrap();
+                toast.success('Payment successful! Order placed successfully!', {
+                  description: 'You will be redirected to your orders page.',
+                });
+
+                localStorage.removeItem('buyNowProduct');
+                setTimeout(() => {
+                  router.push('/profile/orders');
+                }, 2000);
+              } else {
+                throw new Error('Payment verification failed');
+              }
+            } catch (error) {
+              console.error('Error after payment:', error);
+              toast.error('Payment was successful but order creation failed. Please contact support.');
+            }
+          },
+          prefill: {
+            name: user?.firstName + ' ' + user?.lastName || '',
+            email: user?.emailAddress || '',
+            contact: contactNumber,
+          },
+          theme: {
+            color: '#3B82F6',
+          },
+          modal: {
+            ondismiss: function() {
+              toast.error('Payment cancelled by user');
+            }
+          }
+        };
+
+        const razorpay = new (window as any).Razorpay(options);
+        razorpay.open();
+        return;
+      }
+
+      // Fallback for any other payment method
+      toast.error('Selected payment method is not supported yet.');
+
     } catch (error) {
       console.error('Failed to place order:', error);
       toast.error('Failed to place order. Please try again.');
@@ -213,7 +354,7 @@ export default function CheckoutPage() {
                       <span>UPI</span>
                     </Label>
                     <Label className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                      <RadioGroupItem value="cod" id="cod" />
+                      <RadioGroupItem value="cash-on-delivery" id="cash-on-delivery" />
                       <Wallet className="h-5 w-5" />
                       <span>Cash on Delivery</span>
                     </Label>
@@ -227,7 +368,12 @@ export default function CheckoutPage() {
                   onClick={handlePlaceOrder}
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Placing Order...' : 'Place Order'}
+                  {isLoading ? 'Processing...' : 
+                   paymentMethod === 'cash-on-delivery' ? 'Place Order' :
+                   paymentMethod === 'credit-card' ? 'Pay with Card' :
+                   paymentMethod === 'upi' ? 'Pay with UPI' :
+                   'Place Order'
+                  }
                 </Button>
                 <div className="flex items-center text-xs text-muted-foreground">
                   <Shield className="h-4 w-4 mr-2" />
@@ -241,5 +387,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-
-    

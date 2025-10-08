@@ -355,8 +355,6 @@ export default function SalonDetailsPage() {
     error: servicesError,
   } = useGetPublicVendorServicesQuery(id);
 
-  console.log("servicesData:", servicesData);
-
   const vendorData = useMemo(() => {
     const vendors = vendorsResponse?.vendors || [];
     return vendors.find((v: any) => v._id === id);
@@ -397,8 +395,6 @@ export default function SalonDetailsPage() {
     skip: !id,
   });
 
-  console.log("workingHoursData:", workingHoursData);
-
   const salon = useMemo(() => {
     if (vendorData) {
       const salonData = {
@@ -430,7 +426,7 @@ export default function SalonDetailsPage() {
 
   const salonProducts = useMemo(() => {
     if (!productsData?.products) return [];
-
+    
     // Products are already filtered by vendor ID on the server side
     return productsData.products.map((p: any) => ({
       id: p.id || p._id,
@@ -442,12 +438,14 @@ export default function SalonDetailsPage() {
         p.image ||
         p.productImage ||
         "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
+      vendorId: id, // Always use the salon ID from URL params as vendorId
+      vendorName: vendorData?.businessName || 'Unknown Vendor',
       category: p.category || "Beauty Products",
       stock: p.stock || 0,
       rating: p.rating || (4.2 + Math.random() * 0.8).toFixed(1),
       hint: p.hint || p.description || p.name || p.productName,
     }));
-  }, [productsData]);
+  }, [productsData, id, vendorData]);
 
   useEffect(() => {
     if (salon.images.length > 0) {
@@ -468,7 +466,13 @@ export default function SalonDetailsPage() {
   const handleBuyNow = (product: any) => {
     // Store product details in local storage
     try {
-      localStorage.setItem('buyNowProduct', JSON.stringify(product));
+      const productWithVendor = {
+        ...product,
+        vendorId: id, // Always use the salon ID from URL params
+        vendorName: vendorData?.businessName || 'Unknown Vendor',
+        quantity: 1, // Add default quantity
+      };
+      localStorage.setItem('buyNowProduct', JSON.stringify(productWithVendor));
       // Redirect to checkout page
       router.push('/checkout');
     } catch (e) {

@@ -9,13 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "^2.2.5",
     "@repo/lib": "*",
     "@repo/store": "*",
     "@repo/ui": "*",
-    "@reduxjs/toolkit": "^2.2.5",
     "lucide-react": "^0.395.0",
     "next": "^14.2.4",
     "next-themes": "^0.3.0",
+    "razorpay": "^2.9.6",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },

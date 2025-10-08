@@ -8,7 +8,8 @@ await _db();
 // GET: Fetch all patients for the doctor
 export const GET = authMiddlewareCrm(async (req) => {
   try {
-    const doctorId = req.user._id;
+    // Use userId instead of _id since that's how it's stored in the JWT token
+    const doctorId = req.user.userId;
     
     const patients = await PatientModel.find({ doctorId }).sort({ createdAt: -1 });
     
@@ -21,7 +22,8 @@ export const GET = authMiddlewareCrm(async (req) => {
 // POST: Create a new patient
 export const POST = authMiddlewareCrm(async (req) => {
   try {
-    const doctorId = req.user._id;
+    // Use userId instead of _id since that's how it's stored in the JWT token
+    const doctorId = req.user.userId;
     const patientData = await req.json();
 
     // Validate required fields
@@ -61,7 +63,8 @@ export const POST = authMiddlewareCrm(async (req) => {
 // PUT: Update a patient
 export const PUT = authMiddlewareCrm(async (req) => {
   try {
-    const doctorId = req.user._id;
+    // Use userId instead of _id since that's how it's stored in the JWT token
+    const doctorId = req.user.userId;
     const { id, ...updateData } = await req.json();
 
     if (!id) {
@@ -107,7 +110,8 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE: Remove a patient
 export const DELETE = authMiddlewareCrm(async (req) => {
   try {
-    const doctorId = req.user._id;
+    // Use userId instead of _id since that's how it's stored in the JWT token
+    const doctorId = req.user.userId;
     const { id } = await req.json();
 
     if (!id) {
