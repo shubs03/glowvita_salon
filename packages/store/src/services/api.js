@@ -1280,6 +1280,36 @@ export const glowvitaApi = createApi({
         body: credentials,
       }),
     }),
+    
+    // Patient Endpoints
+    getPatients: builder.query({
+      query: () => ({ url: "/crm/patients", method: "GET" }),
+      providesTags: ["Patient"],
+    }),
+    createPatient: builder.mutation({
+      query: (patient) => ({
+        url: "/crm/patients",
+        method: "POST",
+        body: patient,
+      }),
+      invalidatesTags: ["Patient"],
+    }),
+    updatePatient: builder.mutation({
+      query: (patient) => ({
+        url: "/crm/patients",
+        method: "PUT",
+        body: patient,
+      }),
+      invalidatesTags: ["Patient"],
+    }),
+    deletePatient: builder.mutation({
+      query: (id) => ({
+        url: "/crm/patients",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Patient"],
+    }),
   }),
 });
 
@@ -1448,5 +1478,9 @@ export const {
   useAddToCartMutation,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
-  useUpdateAppointmentStatusMutation
+  useUpdateAppointmentStatusMutation,
+  useGetPatientsQuery,
+  useCreatePatientMutation,
+  useUpdatePatientMutation,
+  useDeletePatientMutation,
 } = glowvitaApi;

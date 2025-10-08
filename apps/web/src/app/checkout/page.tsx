@@ -1,4 +1,5 @@
 
+      
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -11,6 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCreateClientOrderMutation } from '@repo/store/api';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Product {
   id: string;
@@ -19,6 +22,7 @@ interface Product {
   image: string;
   quantity: number;
   vendorName: string;
+  vendorId: string;
 }
 
 export default function CheckoutPage() {
@@ -27,55 +31,66 @@ export default function CheckoutPage() {
   const [shippingAddress, setShippingAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('credit-card');
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const { user } = useAuth();
+  const [createOrder, { isLoading }] = useCreateClientOrderMutation();
 
   useEffect(() => {
     try {
       const storedProduct = localStorage.getItem('buyNowProduct');
       if (storedProduct) {
         const parsedProduct = JSON.parse(storedProduct);
-        // Ensure quantity is set, default to 1 if not present
         if (!parsedProduct.quantity) {
           parsedProduct.quantity = 1;
         }
         setProduct(parsedProduct);
+        setShippingAddress(user?.address || '');
+        setContactNumber(user?.mobileNo || '');
       } else {
-        router.push('/'); // Redirect if no product is in checkout
+        router.push('/');
       }
     } catch (e) {
       console.error('Failed to parse product from localStorage', e);
       router.push('/');
     }
-  }, [router]);
+  }, [router, user]);
 
   const handlePlaceOrder = async () => {
     if (!shippingAddress.trim() || !contactNumber.trim()) {
       toast.error('Please fill in all shipping details.');
       return;
     }
+    if (!product) return;
 
-    setIsLoading(true);
+    const orderData = {
+      items: [{
+        productId: product.id,
+        name: product.name,
+        quantity: product.quantity,
+        price: product.price,
+        image: product.image,
+      }],
+      vendorId: product.vendorId,
+      totalAmount: (product.price * product.quantity) + 5.00 + (product.price * product.quantity * 0.08),
+      shippingAddress,
+      contactNumber,
+      paymentMethod,
+    };
     
-    // Simulate API call to create an order
     try {
-      // In a real app, this would be an API call to your backend
-      // await createOrder({ product, shippingAddress, contactNumber, paymentMethod });
-
+      await createOrder(orderData).unwrap();
       toast.success('Order placed successfully!', {
         description: 'You will be redirected to your orders page.',
       });
 
-      // Clear the product from local storage after successful order
       localStorage.removeItem('buyNowProduct');
 
-      // Redirect to the profile orders page
       setTimeout(() => {
         router.push('/profile/orders');
       }, 2000);
     } catch (error) {
       console.error('Failed to place order:', error);
       toast.error('Failed to place order. Please try again.');
-      setIsLoading(false);
     }
   };
 
@@ -104,9 +119,7 @@ export default function CheckoutPage() {
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Order Summary & Shipping */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Order Summary */}
             <Card>
               <CardHeader>
                 <CardTitle>Order Summary</CardTitle>
@@ -133,7 +146,6 @@ export default function CheckoutPage() {
               </CardContent>
             </Card>
 
-            {/* Shipping Details */}
             <Card>
               <CardHeader>
                 <CardTitle>Shipping & Contact Details</CardTitle>
@@ -162,7 +174,6 @@ export default function CheckoutPage() {
             </Card>
           </div>
 
-          {/* Right Column: Payment Details */}
           <div className="lg:col-span-1">
             <Card className="sticky top-24">
               <CardHeader>
@@ -190,7 +201,7 @@ export default function CheckoutPage() {
 
                 <div>
                   <Label className="font-semibold">Payment Method</Label>
-                  <RadioGroup defaultValue="credit-card" className="mt-2 space-y-2">
+                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 space-y-2">
                     <Label className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
                       <RadioGroupItem value="credit-card" id="credit-card" />
                       <CreditCard className="h-5 w-5" />
@@ -230,3 +241,5 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
+    
