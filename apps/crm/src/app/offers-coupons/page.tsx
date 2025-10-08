@@ -15,7 +15,7 @@ import { Label } from '@repo/ui/label';
 import { Checkbox } from '@repo/ui/checkbox';
 import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee, Upload, X } from "lucide-react";
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { openModal, closeModal } from '@repo/store/slices/modal';
+import { closeModal, openModal } from '../../../../../packages/store/src/slices/modalSlice.js';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { useForm } from 'react-hook-form';
 import { 
@@ -23,7 +23,9 @@ import {
   useCreateOfferMutation, 
   useUpdateOfferMutation, 
   useDeleteOfferMutation,
-  useGetSuperDataQuery
+  useGetSuperDataQuery,
+  useGetVendorServicesQuery,
+  useGetCategoriesQuery
 } from '@repo/store/api';
 import { toast } from 'sonner';
 import { selectRootState } from '@repo/store/store';
@@ -41,6 +43,8 @@ type Coupon = {
   applicableSpecialties: string[];
   applicableCategories: string[];
   applicableDiseases: string[];
+  applicableServices: string[];
+  applicableServiceCategories: string[];
   minOrderAmount?: number;
   offerImage?: string;
   isCustomCode?: boolean;
@@ -57,13 +61,14 @@ type CouponForm = {
   applicableSpecialties: string[];
   applicableCategories: string[];
   applicableDiseases: string[];
+  applicableServices: string[];
+  applicableServiceCategories: string[];
   minOrderAmount?: number;
   offerImage?: string;
   isCustomCode: boolean;
 };
 
-// Predefined options for specialties and categories
-const specialtyOptions = ['Hair Cut', 'Spa', 'Massage', 'Facial', 'Manicure', 'Pedicure'];
+// Predefined options for categories (genders)
 const categoryOptions = ['Men', 'Women', 'Unisex'];
 
 export default function OffersCouponsPage() {
@@ -71,9 +76,10 @@ export default function OffersCouponsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
-  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedDiseases, setSelectedDiseases] = useState<string[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedServiceCategories, setSelectedServiceCategories] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [useCustomCode, setUseCustomCode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,9 +103,11 @@ export default function OffersCouponsPage() {
       value: 0,
       startDate: '',
       expires: '',
-      applicableSpecialties: [],
+      applicableSpecialties: [], // Keep for API compatibility but don't use in UI
       applicableCategories: [],
       applicableDiseases: [],
+      applicableServices: [],
+      applicableServiceCategories: [],
       minOrderAmount: 0,
       offerImage: '',
       isCustomCode: false,
@@ -132,6 +140,15 @@ export default function OffersCouponsPage() {
   // }, [auth, refetch]);
   
   const { data: superData = [], isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
+  
+  // Fetch vendor services and categories
+  const { data: vendorServicesData, isLoading: isServicesLoading } = useGetVendorServicesQuery(
+    { vendorId: businessId, page: 1, limit: 1000 },
+    { skip: !businessId || userRole !== 'vendor' }
+  );
+  const { data: categoriesData = [], isLoading: isCategoriesLoading } = useGetCategoriesQuery(undefined, {
+    skip: userRole !== 'vendor'
+  });
   
   const [createOffer, { isLoading: isCreating }] = useCreateOfferMutation();
   const [updateOffer, { isLoading: isUpdating }] = useUpdateOfferMutation();
@@ -187,16 +204,7 @@ export default function OffersCouponsPage() {
     }
   };
 
-  // Handle specialty selection
-  const handleSpecialtyChange = (specialty: string, checked: boolean) => {
-    const updated = checked 
-      ? [...selectedSpecialties, specialty]
-      : selectedSpecialties.filter(s => s !== specialty);
-    setSelectedSpecialties(updated);
-    setValue('applicableSpecialties', updated);
-  };
-
-  // Handle category selection
+  // Handle category selection (for genders)
   const handleCategoryChange = (category: string, checked: boolean) => {
     const updated = checked 
       ? [...selectedCategories, category]
@@ -214,6 +222,49 @@ export default function OffersCouponsPage() {
     setValue('applicableDiseases', updated);
   };
 
+  // Handle service selection
+  const handleServiceChange = (serviceId: string, checked: boolean) => {
+    const updated = checked 
+      ? [...selectedServices, serviceId]
+      : selectedServices.filter(s => s !== serviceId);
+    
+    setSelectedServices(updated);
+    setValue('applicableServices', updated);
+    
+    // Automatically update service categories based on selected services
+    const autoCategories = getAutoCategoriesFromServices(updated);
+    
+    // Merge auto-detected categories with manually selected ones
+    // Keep manually selected categories that don't conflict with auto-detected ones
+    const currentManualCategories = selectedServiceCategories.filter(catId => 
+      !autoCategories.includes(catId)
+    );
+    
+    const finalCategories = Array.from(new Set([...autoCategories, ...currentManualCategories]));
+    
+    setSelectedServiceCategories(finalCategories);
+    setValue('applicableServiceCategories', finalCategories);
+  };
+
+  // Handle service category selection
+  const handleServiceCategoryChange = (categoryId: string, checked: boolean) => {
+    // Get auto-detected categories from currently selected services
+    const autoCategories = getAutoCategoriesFromServices(selectedServices);
+    
+    // If this is an auto-detected category, don't allow manual deselection
+    if (autoCategories.includes(categoryId) && !checked) {
+      // Show a message or just return without changing
+      return;
+    }
+    
+    const updated = checked 
+      ? [...selectedServiceCategories, categoryId]
+      : selectedServiceCategories.filter(c => c !== categoryId);
+    
+    setSelectedServiceCategories(updated);
+    setValue('applicableServiceCategories', updated);
+  };
+
   // Update form values when editing
   useEffect(() => {
     if (modalType === 'editCoupon' && data) {
@@ -224,16 +275,24 @@ export default function OffersCouponsPage() {
       setValue('startDate', coupon.startDate ? coupon.startDate.split('T')[0] : '');
       setValue('expires', coupon.expires ? coupon.expires.split('T')[0] : '');
       
-      const specialties = Array.isArray(coupon.applicableSpecialties) ? coupon.applicableSpecialties : [];
       const categories = Array.isArray(coupon.applicableCategories) ? coupon.applicableCategories : [];
       const diseases = Array.isArray(coupon.applicableDiseases) ? coupon.applicableDiseases : [];
+      const services = Array.isArray(coupon.applicableServices) ? coupon.applicableServices : [];
+      const serviceCategories = Array.isArray(coupon.applicableServiceCategories) ? coupon.applicableServiceCategories : [];
       
-      setSelectedSpecialties(specialties);
       setSelectedCategories(categories);
       setSelectedDiseases(diseases);
-      setValue('applicableSpecialties', specialties);
+      setSelectedServices(services);
+      
+      // When editing, apply auto-selection logic to existing services
+      const autoCategories = getAutoCategoriesFromServices(services);
+      const mergedServiceCategories = Array.from(new Set([...autoCategories, ...serviceCategories]));
+      setSelectedServiceCategories(mergedServiceCategories);
+      
       setValue('applicableCategories', categories);
       setValue('applicableDiseases', diseases);
+      setValue('applicableServices', services);
+      setValue('applicableServiceCategories', mergedServiceCategories);
       setValue('minOrderAmount', coupon.minOrderAmount || 0);
       setValue('offerImage', coupon.offerImage || '');
       setPreviewImage(coupon.offerImage || null);
@@ -241,13 +300,14 @@ export default function OffersCouponsPage() {
       setValue('isCustomCode', coupon.isCustomCode || false);
     } else {
       reset();
-      setSelectedSpecialties([]);
       setSelectedCategories([]);
       setSelectedDiseases([]);
+      setSelectedServices([]);
+      setSelectedServiceCategories([]);
       setPreviewImage(null);
       setUseCustomCode(false);
     }
-  }, [modalType, data, setValue, reset]);
+  }, [modalType, data, setValue, reset, vendorServicesData]);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -262,9 +322,10 @@ export default function OffersCouponsPage() {
   const handleCloseModal = () => {
     dispatch(closeModal());
     reset();
-    setSelectedSpecialties([]);
     setSelectedCategories([]);
     setSelectedDiseases([]);
+    setSelectedServices([]);
+    setSelectedServiceCategories([]);
     setPreviewImage(null);
     setUseCustomCode(false);
   };
@@ -297,9 +358,11 @@ export default function OffersCouponsPage() {
     const processedData = {
       ...formData,
       code: useCustomCode ? formData.code : '', // Send empty if auto-generate
-      applicableSpecialties: userRole === 'vendor' ? selectedSpecialties : [],
+      applicableSpecialties: [], // Empty array since we removed specialties
       applicableCategories: userRole === 'vendor' ? selectedCategories : [],
       applicableDiseases: userRole === 'doctor' ? selectedDiseases : [],
+      applicableServices: userRole === 'vendor' ? selectedServices : [],
+      applicableServiceCategories: userRole === 'vendor' ? selectedServiceCategories : [],
       minOrderAmount: userRole === 'supplier' ? formData.minOrderAmount : undefined,
       isCustomCode: useCustomCode,
       businessType: userRole,
@@ -332,6 +395,49 @@ export default function OffersCouponsPage() {
       return 'All';
     }
     return list.join(', ');
+  };
+
+  // Helper function to get service names from IDs
+  const getServiceNames = (serviceIds: string[]): string => {
+    if (!Array.isArray(serviceIds) || serviceIds.length === 0) return 'All services';
+    if (!vendorServicesData?.services) return `${serviceIds.length} service(s)`;
+    
+    const serviceNames = serviceIds
+      .map(id => vendorServicesData.services.find((s: any) => s._id === id)?.name)
+      .filter(name => name);
+    
+    return serviceNames.length > 0 ? serviceNames.join(', ') : `${serviceIds.length} service(s)`;
+  };
+
+  // Helper function to get category names from IDs
+  const getCategoryNames = (categoryIds: string[]): string => {
+    if (!Array.isArray(categoryIds) || categoryIds.length === 0) return 'All categories';
+    if (!categoriesData || categoriesData.length === 0) return `${categoryIds.length} category(ies)`;
+    
+    const categoryNames = categoryIds
+      .map(id => categoriesData.find((c: any) => c._id === id)?.name)
+      .filter(name => name);
+    
+    return categoryNames.length > 0 ? categoryNames.join(', ') : `${categoryIds.length} category(ies)`;
+  };
+
+  // Helper function to automatically detect categories from selected services
+  const getAutoCategoriesFromServices = (serviceIds: string[]): string[] => {
+    if (!Array.isArray(serviceIds) || serviceIds.length === 0) return [];
+    if (!vendorServicesData?.services) return [];
+    
+    const selectedServiceObjects = serviceIds
+      .map(id => vendorServicesData.services.find((s: any) => s._id === id))
+      .filter(service => service);
+    
+    // Extract unique category IDs from selected services
+    const categoryIds = Array.from(new Set(
+      selectedServiceObjects
+        .map((service: any) => service.category)
+        .filter(categoryId => categoryId)
+    ));
+    
+    return categoryIds;
   };
 
   const totalDiscountValue = Array.isArray(couponsData) ? couponsData.reduce((acc, coupon) => {
@@ -568,8 +674,9 @@ export default function OffersCouponsPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Starts On</TableHead>
                   <TableHead>Expires On</TableHead>
-                  {userRole === 'vendor' && <TableHead>Specialties</TableHead>}
-                  {userRole === 'vendor' && <TableHead>Categories</TableHead>}
+                  {userRole === 'vendor' && <TableHead>Services</TableHead>}
+                  {userRole === 'vendor' && <TableHead>Service Categories</TableHead>}
+                  {userRole === 'vendor' && <TableHead>Genders</TableHead>}
                   {userRole === 'doctor' && <TableHead>Applicable Conditions</TableHead>}
                   {userRole === 'supplier' && <TableHead>Min Order Amount</TableHead>}
                   <TableHead>Image</TableHead>
@@ -600,8 +707,42 @@ export default function OffersCouponsPage() {
                     </TableCell>
                     <TableCell>{coupon.startDate.split('T')[0]}</TableCell>
                     <TableCell>{coupon.expires ? coupon.expires.split('T')[0] : 'N/A'}</TableCell>
-                    {userRole === 'vendor' && <TableCell>{formatList(coupon.applicableSpecialties)}</TableCell>}
-                    {userRole === 'vendor' && <TableCell>{formatList(coupon.applicableCategories)}</TableCell>}
+                    {userRole === 'vendor' && (
+                      <TableCell>
+                        {coupon.applicableServices && coupon.applicableServices.length > 0 
+                          ? getServiceNames(coupon.applicableServices)
+                          : 'All services'
+                        }
+                      </TableCell>
+                    )}
+                    {userRole === 'vendor' && (
+                      <TableCell>
+                        {coupon.applicableServiceCategories && coupon.applicableServiceCategories.length > 0 
+                          ? (() => {
+                              const autoCategories = getAutoCategoriesFromServices(coupon.applicableServices || []);
+                              const manualCategories = coupon.applicableServiceCategories.filter((id: string) => !autoCategories.includes(id));
+                              
+                              if (autoCategories.length > 0 && manualCategories.length > 0) {
+                                return `Auto: ${autoCategories.length}, Manual: ${manualCategories.length}`;
+                              } else if (autoCategories.length > 0) {
+                                return `Auto: ${autoCategories.length} category(ies)`;
+                              } else if (manualCategories.length > 0) {
+                                return `Manual: ${manualCategories.length} category(ies)`;
+                              }
+                              return `${coupon.applicableServiceCategories.length} category(ies)`;
+                            })()
+                          : 'All categories'
+                        }
+                      </TableCell>
+                    )}
+                    {userRole === 'vendor' && (
+                      <TableCell>
+                        {coupon.applicableCategories && coupon.applicableCategories.length > 0
+                          ? formatList(coupon.applicableCategories)
+                          : 'All genders'
+                        }
+                      </TableCell>
+                    )}
                     {userRole === 'doctor' && (
                       <TableCell>
                         {coupon.applicableDiseases && coupon.applicableDiseases.length > 0 
@@ -702,12 +843,54 @@ export default function OffersCouponsPage() {
               {userRole === 'vendor' && (
                 <>
                   <div className="grid grid-cols-3 items-center gap-4">
-                    <span className="font-semibold text-muted-foreground">Specialties</span>
-                    <span className="col-span-2">{formatList((data as Coupon)?.applicableSpecialties)}</span>
+                    <span className="font-semibold text-muted-foreground">Services</span>
+                    <span className="col-span-2">
+                      {(data as Coupon)?.applicableServices && (data as Coupon).applicableServices.length > 0 
+                        ? getServiceNames((data as Coupon).applicableServices)
+                        : 'All services'
+                      }
+                    </span>
                   </div>
                   <div className="grid grid-cols-3 items-center gap-4">
-                    <span className="font-semibold text-muted-foreground">Categories</span>
-                    <span className="col-span-2">{formatList((data as Coupon)?.applicableCategories)}</span>
+                    <span className="font-semibold text-muted-foreground">Service Categories</span>
+                    <span className="col-span-2">
+                      {(data as Coupon)?.applicableServiceCategories && (data as Coupon).applicableServiceCategories.length > 0 
+                        ? (() => {
+                            const allCategories = (data as Coupon).applicableServiceCategories;
+                            const autoCategories = getAutoCategoriesFromServices((data as Coupon).applicableServices || []);
+                            const manualCategories = allCategories.filter(id => !autoCategories.includes(id));
+                            
+                            const autoCategoryNames = getCategoryNames(autoCategories);
+                            const manualCategoryNames = getCategoryNames(manualCategories);
+                            
+                            return (
+                              <div>
+                                {autoCategories.length > 0 && (
+                                  <div className="text-blue-600">
+                                    Auto: {autoCategoryNames}
+                                  </div>
+                                )}
+                                {manualCategories.length > 0 && (
+                                  <div>
+                                    Manual: {manualCategoryNames}
+                                  </div>
+                                )}
+                                {autoCategories.length === 0 && manualCategories.length === 0 && 'All categories'}
+                              </div>
+                            );
+                          })()
+                        : 'All categories'
+                      }
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 items-center gap-4">
+                    <span className="font-semibold text-muted-foreground">Applicable Genders</span>
+                    <span className="col-span-2">
+                      {(data as Coupon)?.applicableCategories && (data as Coupon).applicableCategories.length > 0
+                        ? formatList((data as Coupon)?.applicableCategories)
+                        : 'All genders'
+                      }
+                    </span>
                   </div>
                 </>
               )}
@@ -847,49 +1030,130 @@ export default function OffersCouponsPage() {
               {/* Role-specific fields */}
               {userRole === 'vendor' && (
                 <>
-                  {/* Multiple Specialties Selection for Vendors */}
+                  {/* Services Selection */}
                   <div className="space-y-2">
-                    <Label>Applicable Specialties (Select multiple or none for all)</Label>
-                    <div className="grid grid-cols-2 gap-2 p-3 border rounded-md">
-                      {specialtyOptions.map((specialty) => (
-                        <div key={specialty} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`specialty-${specialty}`}
-                            checked={selectedSpecialties.includes(specialty)}
-                            onCheckedChange={(checked) => handleSpecialtyChange(specialty, !!checked)}
-                          />
-                          <Label htmlFor={`specialty-${specialty}`} className="text-sm">
-                            {specialty}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
+                    <Label>Applicable Services (Select specific services or leave empty for all)</Label>
+                    {isServicesLoading ? (
+                      <div className="p-3 border rounded-md">Loading services...</div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
+                        {vendorServicesData?.services?.filter((service: any) => service.status === 'approved').map((service: any) => (
+                          <div key={service._id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`service-${service._id}`}
+                              checked={selectedServices.includes(service._id)}
+                              onCheckedChange={(checked) => handleServiceChange(service._id, !!checked)}
+                            />
+                            <Label htmlFor={`service-${service._id}`} className="text-sm">
+                              {service.name} - ₹{service.price} ({service.categoryName})
+                            </Label>
+                          </div>
+                        )) || <div className="text-sm text-muted-foreground">No approved services found</div>}
+                      </div>
+                    )}
                     <p className="text-sm text-muted-foreground">
-                      {selectedSpecialties.length === 0 ? 'Will apply to all specialties' : `Selected: ${selectedSpecialties.length}`}
+                      {selectedServices.length === 0 ? 'Will apply to all services' : (
+                        <>
+                          Selected: {selectedServices.length} service(s)
+                          {selectedServices.length > 0 && (
+                            <span className="block text-blue-600">
+                              Auto-selecting {getAutoCategoriesFromServices(selectedServices).length} category(ies) from these services
+                            </span>
+                          )}
+                        </>
+                      )}
                     </p>
                   </div>
 
-                  {/* Multiple Categories Selection for Vendors */}
+                  {/* Service Categories Selection */}
                   <div className="space-y-2">
-                    <Label>Applicable Categories (Select multiple or none for all)</Label>
-                    <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
-                      {categoryOptions.map((category) => (
-                        <div key={category} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`category-${category}`}
-                            checked={selectedCategories.includes(category)}
-                            onCheckedChange={(checked) => handleCategoryChange(category, !!checked)}
-                          />
-                          <Label htmlFor={`category-${category}`} className="text-sm">
-                            {category}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
+                    <Label>Applicable Service Categories (Auto-selected based on services + manual selection)</Label>
+                    {isCategoriesLoading ? (
+                      <div className="p-3 border rounded-md">Loading categories...</div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
+                        {categoriesData.map((category: any) => {
+                          const autoCategories = getAutoCategoriesFromServices(selectedServices);
+                          const isAutoSelected = autoCategories.includes(category._id);
+                          const isSelected = selectedServiceCategories.includes(category._id);
+                          
+                          return (
+                            <div key={category._id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`service-category-${category._id}`}
+                                checked={isSelected}
+                                onCheckedChange={(checked) => handleServiceCategoryChange(category._id, !!checked)}
+                                disabled={isAutoSelected}
+                              />
+                              <Label 
+                                htmlFor={`service-category-${category._id}`} 
+                                className={`text-sm ${isAutoSelected ? 'text-blue-600 font-medium' : ''}`}
+                              >
+                                {category.name}
+                                {isAutoSelected && (
+                                  <span className="ml-1 text-xs bg-blue-100 text-blue-800 px-1 rounded">
+                                    Auto
+                                  </span>
+                                )}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     <p className="text-sm text-muted-foreground">
-                      {selectedCategories.length === 0 ? 'Will apply to all categories' : `Selected: ${selectedCategories.length}`}
+                      {selectedServiceCategories.length === 0 ? 'Will apply to all categories' : `Selected: ${selectedServiceCategories.length} category(ies)`}
+                      {getAutoCategoriesFromServices(selectedServices).length > 0 && (
+                        <span className="block text-blue-600">
+                          {getAutoCategoriesFromServices(selectedServices).length} category(ies) auto-selected from services
+                        </span>
+                      )}
                     </p>
                   </div>
+
+                  <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded-md">
+                    <strong>How it works:</strong>
+                    <ul className="mt-1 list-disc list-inside">
+                      <li>When you select specific services, their categories are automatically selected</li>
+                      <li>Auto-selected categories (marked with "Auto") cannot be manually deselected</li>
+                      <li>You can manually select additional categories beyond those auto-selected</li>
+                      <li>If you select both services and additional categories, the offer applies to:</li>
+                      <ul className="ml-4 list-disc list-inside">
+                        <li>All selected services</li>
+                        <li>All services in auto-selected categories</li>
+                        <li>All services in manually selected categories</li>
+                      </ul>
+                      <li>If you select neither services nor categories, the offer applies to all your services</li>
+                    </ul>
+                  </div>
+
+                  {/* Legacy fields for backward compatibility */}
+                  <details className="border rounded-md p-2">
+                    <summary className="text-sm font-medium cursor-pointer">Legacy Compatibility Settings</summary>
+                    <div className="mt-2 space-y-2">
+                      {/* Multiple Genders Selection for Vendors */}
+                      <div className="space-y-2">
+                        <Label>Applicable Genders (for backward compatibility)</Label>
+                        <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
+                          {categoryOptions.map((category) => (
+                            <div key={category} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`category-${category}`}
+                                checked={selectedCategories.includes(category)}
+                                onCheckedChange={(checked) => handleCategoryChange(category, !!checked)}
+                              />
+                              <Label htmlFor={`category-${category}`} className="text-sm">
+                                {category}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedCategories.length === 0 ? 'Will apply to all genders' : `Selected: ${selectedCategories.length}`}
+                        </p>
+                      </div>
+                    </div>
+                  </details>
                 </>
               )}
 

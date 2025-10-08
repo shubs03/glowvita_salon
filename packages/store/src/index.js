@@ -1,7 +1,8 @@
+
+export * from "./types";
 export * from "./hooks";
 export * from "./provider";
 export * from "./store";
-export * from "./slices/auth-slice";
 export * from "./slices/modalSlice";
 export * from "./slices/customerSlice";
 export * from "./slices/crmAuthSlice";
@@ -19,15 +20,19 @@ export * from "./slices/serviceSlice";
 export * from "./slices/staffSlice";
 export * from "./slices/appointmentSlice";
 export * from "./slices/blockTimeSlice";
-export * from "./slices/vendorprofileSlice";
+export * from "./slices/vendorProfileSlice";
 export * from "./slices/workingHoursSlice";
 export * from "./slices/orderSlice";
 export * from "./slices/shippingSlice";
 export * from "./slices/productSlice";
-export * from "./slices/smsTemplateSlice";
 export * from "./slices/calendarAppointmentSlice";
 export * from "./slices/Web/userAuthSlice";
 export * from "./slices/staffAvailabilityService";
 export * from "./slices/staffAvailabilitySlice";
 export * from "./slices/blockedTimesApi";
 
+export * from "./slices/Admin/adminAuthSlice";
+export * from "./slices/Admin/refferalSlice";
+export * from "./slices/CRM/clientSlice";
+export * from "./slices/cartSlice";
+export * from "./slices/patientSlice";

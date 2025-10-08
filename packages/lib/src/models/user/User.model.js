@@ -76,11 +76,16 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // Password reset fields
+  resetPasswordToken: {
+    type: String,
+    required: false,
+  },
+  resetPasswordExpires: {
+    type: Date,
+    required: false,
+  },
 });
-
-// Create indexes
-userSchema.index({ emailAddress: 1 }, { unique: true });
-userSchema.index({ mobileNo: 1 }, { unique: true });
 
 // Pre-save middleware to update timestamps
 userSchema.pre("save", function (next) {

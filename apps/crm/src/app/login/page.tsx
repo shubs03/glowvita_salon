@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
@@ -11,6 +11,7 @@ import { useVendorLoginMutation, useGetVendorsQuery } from '@repo/store/api';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { setCrmAuth } from '@repo/store/slices/crmAuthSlice';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 import Image from 'next/image';
 import salonImage from '../../../public/images/crm_registartion.jpg';
 
@@ -22,8 +23,14 @@ export default function LoginPage() {
   const dispatch = useAppDispatch();
   
   const [vendorLogin, { isLoading }] = useVendorLoginMutation();
-  const { data: vendorsData, isLoading: isVendorsLoading } = useGetVendorsQuery({});
-  const totalSalonsCount = vendorsData?.data?.total || vendorsData?.length || 0;
+  const { isCrmAuthenticated } = useCrmAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isCrmAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isCrmAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +45,8 @@ export default function LoginPage() {
           description: 'Welcome back to your dashboard.',
           duration: 3000,
         });
-        router.push('/dashboard');
+        // The useEffect will handle the redirect now.
+        // router.push('/dashboard'); 
       }
     } catch (error: any) {
       toast.error('Login failed', {
@@ -47,6 +55,18 @@ export default function LoginPage() {
       });
     }
   };
+  
+  // Prevent rendering the form if the user is already logged in and is about to be redirected.
+  if (isCrmAuthenticated) {
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/10 rounded-full"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-t-primary"></div>
+          </div>
+        </div>
+    );
+  }
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
@@ -54,6 +74,7 @@ export default function LoginPage() {
       <button 
         onClick={() => router.back()} 
         className="absolute top-4 left-4 z-20 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 shadow-md transition-all duration-200"
+        title="Go back"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -101,6 +122,7 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      title={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -139,9 +161,17 @@ export default function LoginPage() {
                     Remember me
                   </label>
                 </div>
-                <a href="#" className="text-md font-medium text-blue-600 hover:text-blue-500">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    console.log('Forgot password button clicked');
+                    router.push('/forgot-password');
+                  }}
+                  className="text-md font-medium text-blue-600 hover:text-blue-500"
+                  title="Forgot password"
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
 
               <div className="relative my-4">
@@ -183,6 +213,7 @@ export default function LoginPage() {
               {/* Sign up button */}
               <div className="text-center mt-2">
                 <Button 
+                  type="button"
                   onClick={() => router.push('/auth/register')}
                   className="w-full h-11 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
                 >
@@ -199,7 +230,7 @@ export default function LoginPage() {
                   Log in to access and manage your appointments anytime?
                 </p>
                 <a 
-                  href="http://localhost:3000" 
+                  href="/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-sm font-medium text-blue-600 hover:text-blue-500 block mt-1"
@@ -214,7 +245,7 @@ export default function LoginPage() {
 
       {/* Right Side - Background Image with Backdrop */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/30 z-10"></div>
+        <div className="absolute inset-0 bg-black/40 z-10"></div>
         <div className="absolute inset-0">
           <Image
             src={salonImage}

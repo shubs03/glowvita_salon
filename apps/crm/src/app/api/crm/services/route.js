@@ -1,5 +1,6 @@
+
 import _db from "../../../../../../../packages/lib/src/db.js";
-import VendorServicesModel from "../../../../../../../packages/lib/src/models/Vendor/VendorServices.model.js";
+import VendorServicesModel from '@repo/lib/models/Vendor/VendorServices.model';
 import CategoryModel from "../../../../../../../packages/lib/src/models/admin/Category.model.js";
 import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
 
@@ -12,7 +13,7 @@ export const POST = authMiddlewareCrm(async (req) => {
   const body = await req.json();
   const { services } = body;
 
-  const vendorId  =  vendor._id.toString();
+  const vendorId  =  vendor.userId.toString();
 
   // 1️⃣ Validate required fields
   if (!vendorId || !services || !Array.isArray(services)) {
@@ -49,7 +50,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 // GET: Retrieve VendorServices by vendor ID or paginated services
 export const GET = authMiddlewareCrm(async (req) => {
   const url = new URL(req.url);
-  const vendorId = req.user._id.toString();
+  const vendorId = req.user.userId.toString();
   const page = parseInt(url.searchParams.get("page") || "1");
   const limit = parseInt(url.searchParams.get("limit") || "100");
   const status = url.searchParams.get("status");
@@ -111,7 +112,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 
 // PUT: Update specific services in the VendorServices document
 export const PUT = authMiddlewareCrm(async (req) => {
-  const vendorId = req.user._id.toString();
+  const vendorId = req.user.userId.toString();
   const body = await req.json();
   const {  services } = body;
 
@@ -172,12 +173,12 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE: Remove specific services or the entire VendorServices document
 export const DELETE = authMiddlewareCrm(async (req) => {
 
-  const vendor = req.user._id.toString();
+  const vendorId = req.user.userId.toString();
 
   const body = await req.json();
   const { serviceId } = body;
 
-  if (!vendor) {
+  if (!vendorId) {
     return Response.json(
       { message: "Vendor ID is required" },
       { status: 400 }
@@ -193,7 +194,7 @@ export const DELETE = authMiddlewareCrm(async (req) => {
 
   // Delete the specific service from vendor's services array
   const result = await VendorServicesModel.findOneAndUpdate(
-    { vendor },
+    { vendor: vendorId },
     {
       $pull: { services: { _id: serviceId } },
       $set: { updatedAt: Date.now() },

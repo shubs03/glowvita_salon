@@ -1,164 +1,116 @@
-import { NextResponse } from "next/server";
+import _db from "@repo/lib/db";
+import ProductModel from "@repo/lib/models/Vendor/Product.model";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 
-// Mock product data - in a real app, this would come from a database
-const mockProducts = [
-  {
-    id: '1',
-    name: 'Aura Serum',
-    description: 'Revitalizing serum for a radiant glow.',
-    price: 68.00,
-    salePrice: 58.00,
-    image: 'https://picsum.photos/id/1027/400/400',
-    hint: 'skincare product bottle',
-    rating: 4.5,
-    reviewCount: 812,
-    vendorName: 'Aura Cosmetics',
-    isNew: true,
-    category: 'Skincare',
-  },
-  {
-    id: '2',
-    name: 'Chroma Balm',
-    description: 'Hydrating lip balm with a hint of color.',
-    price: 24.00,
-    image: 'https://picsum.photos/id/1028/400/400',
-    hint: 'cosmetic balm',
-    rating: 4.8,
-    reviewCount: 1254,
-    vendorName: 'Chroma Beauty',
-    category: 'Cosmetics',
-  },
-  {
-    id: '3',
-    name: 'Zen Mist',
-    description: 'Calming facial mist for instant hydration.',
-    price: 35.00,
-    salePrice: 29.99,
-    image: 'https://picsum.photos/id/1029/400/400',
-    hint: 'spray bottle',
-    rating: 4.7,
-    reviewCount: 987,
-    vendorName: 'Serenity Skincare',
-    category: 'Skincare',
-  },
-  {
-    id: '4',
-    name: 'Terra Scrub',
-    description: 'Exfoliating body scrub with natural minerals.',
-    price: 48.00,
-    image: 'https://picsum.photos/id/1031/400/400',
-    hint: 'cosmetic jar',
-    rating: 4.9,
-    reviewCount: 2310,
-    vendorName: 'Earthly Essentials',
-    isNew: true,
-    category: 'Body Care',
-  },
-  {
-    id: '5',
-    name: 'Luminous Cream',
-    description: 'Brightening day cream with SPF 30.',
-    price: 55.00,
-    image: 'https://picsum.photos/id/1032/400/400',
-    hint: 'cream jar',
-    rating: 4.6,
-    reviewCount: 742,
-    vendorName: 'Radiant Skin',
-    category: 'Skincare',
-  },
-  {
-    id: '6',
-    name: 'Ocean Essence',
-    description: 'Hydrating serum with marine extracts.',
-    price: 72.00,
-    salePrice: 65.00,
-    image: 'https://picsum.photos/id/1033/400/400',
-    hint: 'serum bottle',
-    rating: 4.8,
-    reviewCount: 1156,
-    vendorName: 'Aqua Beauty',
-    category: 'Skincare',
-  },
-  {
-    id: '7',
-    name: 'Bloom Perfume',
-    description: 'Floral fragrance for day and night.',
-    price: 85.00,
-    image: 'https://picsum.photos/id/1035/400/400',
-    hint: 'perfume bottle',
-    rating: 4.9,
-    reviewCount: 1876,
-    vendorName: 'Floral Essence',
-    isNew: true,
-    category: 'Fragrance',
-  },
-  {
-    id: '8',
-    name: 'Mineral Mask',
-    description: 'Detoxifying clay mask with minerals.',
-    price: 38.00,
-    image: 'https://picsum.photos/id/1036/400/400',
-    hint: 'mask jar',
-    rating: 4.4,
-    reviewCount: 632,
-    vendorName: 'Pure Earth',
-    category: 'Face Care',
-  },
-];
+await _db();
 
-// GET - Fetch all products
-export async function GET(request) {
+// Handle CORS preflight
+export const OPTIONS = async (request) => {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+};
+
+// Get Public Products (only products approved via admin panel)
+export const GET = async (request) => {
   try {
-    // In a real app, you would fetch from a database
-    // For now, we'll return the mock data
+    // Extract vendorId from query parameters if provided
+    const url = new URL(request.url);
+    const vendorId = url.searchParams.get('vendorId');
+    const dbTest = await ProductModel.findOne().limit(1);
     
-    // Get query parameters for filtering
-    const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category');
-    const search = searchParams.get('search');
-    const limit = searchParams.get('limit');
+    // Build query with optional vendor filter
+    const query = { 
+      status: 'approved', // This is set by admin panel product approval
+      isActive: true,
+      stock: { $gt: 0 }
+    };
     
-    let filteredProducts = mockProducts;
-    
-    // Apply category filter
-    if (category && category !== 'all') {
-      filteredProducts = filteredProducts.filter(
-        product => product.category.toLowerCase() === category.toLowerCase()
-      );
+    // Add vendor filter if vendorId is provided
+    if (vendorId) {
+      query.vendorId = vendorId;
     }
     
-    // Apply search filter
-    if (search) {
-      filteredProducts = filteredProducts.filter(
-        product => 
-          product.name.toLowerCase().includes(search.toLowerCase()) ||
-          product.description.toLowerCase().includes(search.toLowerCase()) ||
-          product.vendorName.toLowerCase().includes(search.toLowerCase())
-      );
+    // Get products that are approved via admin panel
+    const approvedProducts = await ProductModel.find(query)
+    .populate({
+      path: 'vendorId',
+      select: 'businessName firstName lastName status',
+      match: { status: 'Approved' } // Only include products from approved vendors
+    })
+    .select('productName description price salePrice productImage vendorId stock createdAt')
+    .sort({ createdAt: -1 })
+    .limit(50);
+
+    // Filter out products where vendor population failed (vendor not approved)
+    const validProducts = approvedProducts.filter(product => product.vendorId !== null);
+
+    if (validProducts.length === 0) {
+      return Response.json({
+        success: true,
+        products: [],
+        count: 0,
+        message: "No approved products from approved vendors found"
+      });
     }
-    
-    // Apply limit if specified
-    if (limit) {
-      const limitNum = parseInt(limit);
-      if (!isNaN(limitNum) && limitNum > 0) {
-        filteredProducts = filteredProducts.slice(0, limitNum);
-      }
-    }
-    
-    return NextResponse.json({
+
+    // Transform the data for the frontend
+    const transformedProducts = validProducts.map(product => ({
+      id: product._id,
+      name: product.productName,
+      description: product.description || '',
+      price: product.price,
+      salePrice: product.salePrice > 0 ? product.salePrice : null,
+      image: product.productImage || 'https://placehold.co/320x224/e2e8f0/64748b?text=Product',
+      vendorId: product.vendorId?._id || product.vendorId,
+      vendorName: product.vendorId?.businessName || 'Unknown Vendor',
+      category: 'Beauty Products',
+      stock: product.stock,
+      isNew: new Date(product.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+      rating: (4.2 + Math.random() * 0.8).toFixed(1),
+      reviewCount: Math.floor(50 + Math.random() * 500),
+      hint: product.description || product.productName
+    }));
+    return new Response(JSON.stringify({
       success: true,
-      data: filteredProducts,
-      count: filteredProducts.length
+      products: transformedProducts,
+      count: transformedProducts.length
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      },
     });
   } catch (error) {
-    console.error("Error fetching products:", error);
-    return NextResponse.json(
-      { 
-        success: false,
-        message: "Error fetching products", 
-        error: error.message 
+    console.error('Products API Error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
+    return new Response(JSON.stringify({ 
+      success: false, 
+      message: `Failed to fetch products: ${error.message}`,
+      products: [],
+      error: error.message
+    }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
       },
-      { status: 500 }
-    );
+    });
   }
-}
+};

@@ -34,11 +34,11 @@ export function LogoutConfirmationModal({
             <LogOut className="h-5 w-5 text-destructive" />
             <DialogTitle>Confirm Logout</DialogTitle>
           </div>
-          <DialogDescription>
+        </DialogHeader>
+        <DialogDescription>
             Are you sure you want to log out? You will need to sign in again to
             access your account.
-          </DialogDescription>
-        </DialogHeader>
+        </DialogDescription>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
             type="button"

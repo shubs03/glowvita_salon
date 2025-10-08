@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
@@ -36,10 +37,10 @@ interface SmsPackageFormProps {
   onClose: () => void;
   packageData?: Partial<SmsPackage>;
   isEditMode?: boolean;
-  onSubmit: (data: SmsPackage) => Promise<void>;
+  onSubmit: (data: Partial<SmsPackage>) => Promise<void>;
 }
 
-const getDefaultFormData = (): SmsPackage => ({
+const getDefaultFormData = (): Partial<SmsPackage> => ({
   id: '',
   name: '',
   description: '',
@@ -57,7 +58,7 @@ export function SmsPackageForm({
   isEditMode = false,
   onSubmit 
 }: SmsPackageFormProps) {
-  const [formData, setFormData] = useState<SmsPackage>(getDefaultFormData());
+  const [formData, setFormData] = useState<Partial<SmsPackage>>(getDefaultFormData());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize form data when packageData changes or dialog opens
@@ -75,14 +76,14 @@ export function SmsPackageForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || formData.smsCount === '' || formData.price === '' || formData.validityDays === '') {
+    if (!formData.name || !formData.smsCount || formData.price === undefined || !formData.validityDays) {
       toast.error('Please fill in all required fields');
       return;
     }
     
     try {
       setIsSubmitting(true);
-      const dataToSubmit = {
+      const dataToSubmit: Partial<SmsPackage> = {
         ...formData,
         smsCount: Number(formData.smsCount),
         price: Number(formData.price),
@@ -152,7 +153,7 @@ export function SmsPackageForm({
                   <Label htmlFor="name">Package Name *</Label>
                   <Input
                     id="name"
-                    value={formData.name}
+                    value={formData.name || ''}
                     onChange={(e) => handleChange('name', e.target.value)}
                     placeholder="e.g., Starter Pack"
                     disabled={isSubmitting}
@@ -164,7 +165,7 @@ export function SmsPackageForm({
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
-                    value={formData.description}
+                    value={formData.description || ''}
                     onChange={(e) => handleChange('description', e.target.value)}
                     placeholder="Brief description of the package"
                     rows={3}
@@ -178,7 +179,7 @@ export function SmsPackageForm({
                     <Input
                       id="smsCount"
                       type="number"
-                      value={formData.smsCount}
+                      value={formData.smsCount || ''}
                       onChange={(e) => handleChange('smsCount', e.target.value)}
                       min="1"
                       disabled={isSubmitting}
@@ -191,7 +192,7 @@ export function SmsPackageForm({
                     <Input
                       id="price"
                       type="number"
-                      value={formData.price}
+                      value={formData.price || ''}
                       onChange={(e) => handleChange('price', e.target.value)}
                       min="0"
                       step="0.01"
@@ -206,7 +207,7 @@ export function SmsPackageForm({
                   <Input
                     id="validityDays"
                     type="number"
-                    value={formData.validityDays}
+                    value={formData.validityDays || ''}
                     onChange={(e) => handleChange('validityDays', e.target.value)}
                     min="1"
                     disabled={isSubmitting}

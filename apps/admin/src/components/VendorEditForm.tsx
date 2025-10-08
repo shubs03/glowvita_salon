@@ -47,7 +47,7 @@ interface Document {
   notes?: string;
 }
 
-type SalonCategory = 'unisex' | 'men' | 'women';
+export type SalonCategory = 'unisex' | 'men' | 'women';
 type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
 
 export interface Vendor {
@@ -81,6 +81,7 @@ export interface Vendor {
   serviceCategories?: string[];
   status?: 'Active' | 'Disabled' | 'Pending' | 'Approved' | 'Disapproved';
 }
+
 
 interface Client {
   id: string;
@@ -129,85 +130,83 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
   // Initialize Mapbox when modal opens
   useEffect(() => {
     if (!isMapOpen || !MAPBOX_TOKEN) return;
-
+    
     const initMap = () => {
       if (!mapContainer.current) return;
-
-      try {
-        mapboxgl.accessToken = MAPBOX_TOKEN;
-        if (map.current) {
-          map.current.remove();
-        }
-
-        map.current = new mapboxgl.Map({
-          container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/streets-v11',
-          center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
-          zoom: formData.location ? 15 : 5,
-          attributionControl: false
-        });
-
-        if (marker.current) {
-          marker.current.remove();
-        }
-
-        marker.current = new mapboxgl.Marker({
-          draggable: true,
-          color: '#3B82F6'
-        })
-          .setLngLat(formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599])
+      
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+      
+      // Clean up existing map
+      if (map.current) map.current.remove();
+      
+      // Create new map
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
+        zoom: formData.location ? 15 : 5
+      });
+      
+      // Remove existing marker
+      if (marker.current) marker.current.remove();
+      
+      // Add marker if location exists
+      if (formData.location) {
+        marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
+          .setLngLat([formData.location.lng, formData.location.lat])
           .addTo(map.current);
-
+          
         marker.current.on('dragend', () => {
           const lngLat = marker.current!.getLngLat();
-          setFormData(prev => ({ 
-            ...prev, 
-            location: { lat: lngLat.lat, lng: lngLat.lng } 
-          }));
+          setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
           fetchAddress([lngLat.lng, lngLat.lat]);
         });
-
-        map.current.on('click', (e) => {
-          const { lng, lat } = e.lngLat;
-          setFormData(prev => ({ 
-            ...prev, 
-            location: { lat, lng } 
-          }));
-          marker.current!.setLngLat([lng, lat]);
-          fetchAddress([lng, lat]);
-        });
-
-        map.current.on('load', () => {
-          setTimeout(() => {
-            map.current!.resize();
-          }, 100);
-        });
-      } catch (error) {
-        console.error('Error initializing Mapbox:', error);
-        setFormData(prev => ({ ...prev, errors: { ...prev.errors, location: 'Failed to load map.' } }));
       }
+      
+      // Handle map clicks
+      map.current.on('click', (e: mapboxgl.MapLayerMouseEvent) => {
+        const { lng, lat } = e.lngLat;
+        setFormData(prev => ({ ...prev, location: { lat, lng } }));
+        
+        // Remove existing marker and add new one
+        if (marker.current) marker.current.remove();
+        if (map.current) {
+          marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
+            .setLngLat([lng, lat])
+            .addTo(map.current);
+            
+          marker.current.on('dragend', () => {
+            const lngLat = marker.current!.getLngLat();
+            setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
+            fetchAddress([lngLat.lng, lngLat.lat]);
+          });
+        }
+        
+        fetchAddress([lng, lat]);
+      });
+      
+      // Resize map after load
+      map.current.on('load', () => setTimeout(() => map.current?.resize(), 100));
     };
-
+    
+    // Initialize with a small delay to ensure DOM is ready
     const timeoutId = setTimeout(initMap, 100);
-
+    
+    // Cleanup function
     return () => {
       clearTimeout(timeoutId);
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
-      if (marker.current) {
-        marker.current.remove();
-        marker.current = null;
-      }
+      if (map.current) map.current.remove();
+      if (marker.current) marker.current.remove();
     };
-  }, [isMapOpen, formData.location, setFormData]);
-
+  }, [isMapOpen]);
+  
   // Resize map when modal is fully opened
   useEffect(() => {
     if (isMapOpen && map.current) {
       setTimeout(() => {
-        map.current!.resize();
+        if(map.current) {
+            map.current.resize();
+        }
       }, 300);
     }
   }, [isMapOpen]);
@@ -218,81 +217,68 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
       setSearchResults([]);
       return;
     }
-
+    
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          query
-        )}.json?access_token=${MAPBOX_TOKEN}&country=IN&types=place,locality,neighborhood,address`
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: { features: MapboxFeature[] } = await response.json();
+      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&country=IN&types=place,locality,neighborhood,address`);
+      const data = await response.json();
       setSearchResults(data.features || []);
     } catch (error) {
       console.error('Error searching locations:', error);
       setSearchResults([]);
     }
   };
-
-  // Fetch address from coordinates using reverse geocoding
+  
+  // Fetch address details based on coordinates
   const fetchAddress = async (coordinates: [number, number]) => {
     if (!MAPBOX_TOKEN) return;
-
+    
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,neighborhood,address`
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: { features: MapboxFeature[] } = await response.json();
+      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,neighborhood,address`);
+      const data = await response.json();
+      
       if (data.features && data.features.length > 0) {
         const address = data.features[0].place_name;
         const context = data.features[0].context || [];
-        const state = context.find(c => c.id.includes('region'))?.text || '';
-        const city = context.find(c => c.id.includes('place'))?.text || '';
-
-        setFormData(prev => ({ 
-          ...prev, 
-          address, 
-          state: state || prev.state, 
-          city: city || prev.city 
+        const state = context.find((c: any) => c.id.includes('region'))?.text || '';
+        const city = context.find((c: any) => c.id.includes('place'))?.text || '';
+        
+        setFormData(prev => ({
+          ...prev,
+          address,
+          state: state || prev.state,
+          city: city || prev.city
         }));
       }
     } catch (error) {
       console.error('Error fetching address:', error);
     }
   };
-
-  // Handle search result selection
-  const handleSearchResultSelect = (result: MapboxFeature) => {
+  
+  // Handle selection of a search result
+  const handleSearchResultSelect = (result: any) => {
     const coordinates = result.geometry.coordinates;
     const newLocation = { lat: coordinates[1], lng: coordinates[0] };
-
+    const state = result.context?.find((c: any) => c.id.includes('region'))?.text;
+    
     setFormData(prev => ({
       ...prev,
       location: newLocation,
       address: result.place_name,
-      state: result.context?.find(c => c.id.includes('region'))?.text || prev.state,
-      city: result.context?.find(c => c.id.includes('place'))?.text || prev.city,
+      state: state || prev.state,
+      city: result.context?.find((c: any) => c.id.includes('place'))?.text || prev.city,
     }));
-
+    
+    // Update map
     if (map.current) {
       map.current.setCenter(coordinates);
       map.current.setZoom(15);
-      setTimeout(() => map.current!.resize(), 100);
+      setTimeout(() => map.current?.resize(), 100);
     }
-
-    if (marker.current) {
-      marker.current.setLngLat(coordinates);
-    }
-
+    
+    // Update marker
+    if (marker.current) marker.current.setLngLat(coordinates);
+    
+    // Clear search
     setSearchResults([]);
     setSearchQuery('');
   };
@@ -560,7 +546,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               Search for a location, click on the map, or drag the marker to select the exact position.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 flex flex-col h-[60vh]">
+          <div className="space-y-4 flex flex-col max-h-[50vh] overflow-y-auto">
             <div className="relative">
               <Input
                 placeholder="Search for a location (e.g., Mumbai, Delhi, Bangalore)"
@@ -588,15 +574,14 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
             
             {formData.location && (
               <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                <strong>Selected Location:</strong> {formData.location.lat.toFixed(6)}, {formData.location.lng.toFixed(6)}
+                <strong>Selected Location:</strong> {formData.location?.lat.toFixed(6)}, {formData.location?.lng.toFixed(6)}
               </div>
             )}
             
-            <div className="flex-1 relative border rounded-lg overflow-hidden" style={{ minHeight: '400px' }}>
+            <div className="relative border rounded-lg overflow-hidden" style={{ height: '300px' }}>
               <div 
                 ref={mapContainer} 
                 className="w-full h-full"
-                style={{ minHeight: '400px' }}
               />
               
               {!MAPBOX_TOKEN && (
@@ -622,16 +607,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
             </Button>
             <Button
               type="button"
-              onClick={() => {
-                if (formData.location) {
-                  setIsMapOpen(false);
-                  if (errors.location) {
-                    setErrors(prev => ({ ...prev, location: undefined }));
-                  }
-                } else {
-                  setErrors(prev => ({ ...prev, location: 'Please select a location on the map' }));
-                }
-              }}
+              onClick={() => setIsMapOpen(false)}
             >
               Confirm Location
             </Button>
@@ -653,6 +629,7 @@ interface VendorEditFormProps {
   onClose: () => void;
   vendor: Vendor | null;
   onSubmit: (vendor: Vendor) => void;
+  onSuccess: () => void; // Added onSuccess prop
 }
 
 const getInitialFormData = (): Vendor => ({
@@ -678,7 +655,7 @@ const getInitialFormData = (): Vendor => ({
     location: null
 });
 
-export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEditFormProps) {
+export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }: VendorEditFormProps) {
   const [formData, setFormData] = useState<Vendor>(getInitialFormData());
   const [errors, setErrors] = useState<Partial<Record<keyof Vendor, string>>>({});
   const isEditMode = !!vendor;
@@ -710,7 +687,7 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit }: VendorEdit
     const newErrors: Partial<Record<keyof Vendor, string>> = {};
     let isValid = true;
     for (const field of requiredFields) {
-        if (!formData[field]) {
+        if (!formData[field as keyof typeof formData]) {
             newErrors[field] = 'This field is required';
             isValid = false;
         }

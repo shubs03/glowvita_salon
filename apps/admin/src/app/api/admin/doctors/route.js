@@ -1,9 +1,9 @@
 
 
-import _db from "../../../../../../../packages/lib/src/db.js";
+import _db from "@repo/lib/db";
 import DoctorModel from "@repo/lib/models/Vendor/Docters.model";
-import { ReferralModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
-import SubscriptionPlan from "../../../../../../../packages/lib/src/models/admin/SubscriptionPlan.model.js";
+import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer";
+import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import bcrypt from "bcryptjs";
 

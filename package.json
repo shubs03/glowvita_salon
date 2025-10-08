@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "start": "turbo start",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "clean": "turbo clean",
@@ -37,6 +38,7 @@
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",
     "next-themes": "^0.4.6",
+    "nodemailer": "^7.0.6",
     "react-hook-form": "^7.62.0",
     "react-hot-toast": "^2.6.0",
     "react-toastify": "^11.0.5",

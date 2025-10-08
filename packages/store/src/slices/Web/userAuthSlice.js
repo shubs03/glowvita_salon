@@ -1,15 +1,29 @@
 import { createSlice } from '@reduxjs/toolkit';
+import Cookies from 'js-cookie';
 
-const initialState = {
-  isAuthenticated: false,
-  user: null,
-  token: null,
-  role: null,
-  permissions: [],
+// Load initial state from localStorage if available
+const loadInitialState = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const savedState = localStorage.getItem('userAuthState');
+      if (savedState) {
+        return JSON.parse(savedState);
+      }
+    } catch (e) {
+      console.error("Could not load auth state from localStorage", e);
+    }
+  }
+  return {
+    isAuthenticated: false,
+    user: null,
+    token: null,
+    role: null,
+    permissions: [],
+  };
 };
 
-// The slice should not be responsible for loading its own state from localStorage.
-// This is an external concern that should be handled by a component like AuthInitializer.
+const initialState = loadInitialState();
+
 const userAuthSlice = createSlice({
   name: 'userAuth',
   initialState,
@@ -19,17 +33,17 @@ const userAuthSlice = createSlice({
       state.isAuthenticated = true;
       state.user = user;
       state.token = token;
-      state.role = role;
+      state.role = role || 'USER';
       state.permissions = permissions || [];
 
-      if (typeof localStorage !== 'undefined') {
+      if (typeof window !== 'undefined') {
         try {
-          // Persist only the necessary parts, not the entire state.
-          const stateToPersist = {
-            isAuthenticated: true,
-            user,
-            role,
-            permissions: permissions || [],
+          const stateToPersist = { 
+            isAuthenticated: true, 
+            user, 
+            token, 
+            role: role || 'USER', 
+            permissions: permissions || [] 
           };
           localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
         } catch (e) {
@@ -44,14 +58,27 @@ const userAuthSlice = createSlice({
       state.role = null;
       state.permissions = [];
 
-      if (typeof localStorage !== 'undefined') {
+      if (typeof window !== 'undefined') {
         localStorage.removeItem('userAuthState');
+        Cookies.remove('token', { path: '/' });
       }
     },
+    rehydrateAuth: (state, action) => {
+      if (action.payload) {
+        state.isAuthenticated = action.payload.isAuthenticated;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.role = action.payload.role;
+        state.permissions = action.payload.permissions;
+      } else {
+        // Explicitly set to false when nothing is found in storage
+        state.isAuthenticated = false;
+      }
+    }
   },
 });
 
-export const { setUserAuth, clearUserAuth } = userAuthSlice.actions;
+export const { setUserAuth, clearUserAuth, rehydrateAuth } = userAuthSlice.actions;
 
 export const selectUserAuth = (state) => ({
   isAuthenticated: state.userAuth.isAuthenticated,

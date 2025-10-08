@@ -1,11 +1,14 @@
 "use client";
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Search, Filter, Grid, List, Star, Tag, TrendingUp, X } from 'lucide-react';
+import { useGetAllVendorProductsQuery, useGetAdminProductCategoriesQuery } from '@repo/store/services/api'; // Added useGetAdminProductCategoriesQuery
 
 // Product type definition
 interface Product {
@@ -22,16 +25,6 @@ interface Product {
   category?: string;
 }
 
-// Mock categories
-const categories = [
-  { id: 'all', name: 'All Categories' },
-  { id: 'skincare', name: 'Skincare' },
-  { id: 'cosmetics', name: 'Cosmetics' },
-  { id: 'bodycare', name: 'Body Care' },
-  { id: 'facecare', name: 'Face Care' },
-  { id: 'fragrance', name: 'Fragrance' },
-];
-
 // Mock brands
 const brands = [
   { id: 'all', name: 'All Brands' },
@@ -42,10 +35,14 @@ const brands = [
 ];
 
 export default function ProductsPage() {
+  const { data: productsData, isLoading, isError, error: apiError } = useGetAllVendorProductsQuery(undefined);
+  const { data: categoriesData, isLoading: isCategoriesLoading, isError: isCategoriesError, error: categoriesError } = useGetAdminProductCategoriesQuery(undefined); // Added categories API hook
+  
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([{ id: 'all', name: 'All Categories' }]); // State for categories
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorState, setErrorState] = useState<string | null>(null); // Renamed from error to errorState
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedBrand, setSelectedBrand] = useState('all');
@@ -59,6 +56,12 @@ export default function ProductsPage() {
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const carouselRef = useRef<HTMLDivElement>(null);
   const autoPlayRef = useRef<NodeJS.Timeout | null>(null);
+  const router = useRouter();
+
+  // Helper function to get default description
+  const getDefaultDescription = (productName: string): string => {
+    return `Premium ${productName.toLowerCase()} with exceptional quality and results.`;
+  };
 
   // Handle hover to pause autoplay
   const handleMouseEnter = () => {
@@ -68,6 +71,27 @@ export default function ProductsPage() {
   const handleMouseLeave = () => {
     setIsAutoPlaying(true);
   };
+
+  // Format categories from API response
+  useEffect(() => {
+    if (isCategoriesLoading) {
+      // Keep default "All Categories" while loading
+      setCategories([{ id: 'all', name: 'All Categories' }]);
+    } else if (isCategoriesError) {
+      console.error('Error fetching categories:', categoriesError);
+      // Keep default "All Categories" on error
+      setCategories([{ id: 'all', name: 'All Categories' }]);
+    } else if (categoriesData && categoriesData.success) {
+      // Transform API data to match component's expected structure
+      const formattedCategories = categoriesData.data.map((category: any) => ({
+        id: category._id || category.id,
+        name: category.name
+      }));
+      
+      // Add "All Categories" at the beginning
+      setCategories([{ id: 'all', name: 'All Categories' }, ...formattedCategories]);
+    }
+  }, [categoriesData, isCategoriesLoading, isCategoriesError, categoriesError]);
 
   // Auto-scroll carousel with indicator update
   const startAutoPlay = () => {
@@ -138,30 +162,46 @@ export default function ProductsPage() {
     );
   };
 
-  // Fetch products from API
+  // Fetch products from API - Modified to use RTK Query
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/products');
-        const data = await response.json();
-        
-        if (data.success) {
-          setProducts(data.data);
-          setFilteredProducts(data.data);
-        } else {
-          setError(data.message || 'Failed to fetch products');
+    if (isLoading) {
+      setLoading(true);
+    } else if (isError) {
+      // Handle different error types
+      let errorMessage = 'Failed to fetch products';
+      if (apiError) {
+        if ('status' in apiError) {
+          // FetchBaseQueryError
+          const fetchError = apiError as { status: number; data?: any };
+          errorMessage = `Error ${fetchError.status}: ${JSON.stringify(fetchError.data || 'Unknown error')}`;
+        } else if ('message' in apiError) {
+          // SerializedError
+          errorMessage = apiError.message || errorMessage;
         }
-      } catch (err) {
-        setError('Failed to fetch products');
-        console.error('Error fetching products:', err);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchProducts();
-  }, []);
+      setErrorState(errorMessage);
+      setLoading(false);
+    } else if (productsData) {
+      // Transform API data to match component's expected structure
+      const transformedProducts = productsData.map((product: any) => ({
+        id: product._id || product.id,
+        name: product.productName || product.name || 'Unnamed Product',
+        price: product.price || 0,
+        image: product.productImage || product.image || '/placeholder-product.jpg',
+        hint: product.categoryDescription || product.hint || '',
+        rating: product.rating || 4.5, // Use product rating or default to 4.5
+        reviewCount: product.reviewCount || Math.floor(Math.random() * 100), // Use product reviewCount or generate random
+        vendorName: product.vendorId?.name || product.vendorName || 'Unknown Vendor',
+        isNew: product.isNew || product.status === 'pending',
+        description: product.description || '',
+        category: product.category?.name || product.category || 'Uncategorized'
+      }));
+      
+      setProducts(transformedProducts);
+      setFilteredProducts(transformedProducts);
+      setLoading(false);
+    }
+  }, [productsData, isLoading, isError, apiError]);
 
   // Filter and sort products
   useEffect(() => {
@@ -241,7 +281,7 @@ export default function ProductsPage() {
     );
   }
 
-  if (error) {
+  if (errorState) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 flex items-center justify-center">
         <div className="text-center bg-card p-8 rounded-2xl shadow-xl max-w-md mx-auto">
@@ -249,7 +289,7 @@ export default function ProductsPage() {
             <TrendingUp className="h-8 w-8 text-red-500" />
           </div>
           <h2 className="text-2xl font-bold mb-2">Error Loading Products</h2>
-          <p className="text-muted-foreground mb-6">{error}</p>
+          <p className="text-muted-foreground mb-6">{errorState}</p>
           <Button onClick={() => window.location.reload()} className="w-full">
             Try Again
           </Button>
@@ -259,7 +299,7 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/5 pb-16">
+    <div className="min-h-screen bg-background">
       <style jsx>{`
       .scrollbar-hide::-webkit-scrollbar {
         display: none;
@@ -328,7 +368,7 @@ export default function ProductsPage() {
                 <h3 className="text-xl md:text-2xl font-bold mb-1 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Featured Product</h3>
                 <p className="text-muted-foreground text-xs md:text-sm">Discover our most popular beauty item</p>
               </div>
-              <div className="bg-gradient-to-r from-primary to-secondary text-primary-foreground px-2.5 py-1 md:px-3 md:py-1 rounded-full text-xs font-semibold animate-pulse shadow-lg whitespace-nowrap">
+              <div className="bg-gradient-to-r from-primary to-secondary text-primary-foreground px-2.5 py-1 md:px-3 md:py-1 rounded-full text-xs font-semibold shadow-lg whitespace-nowrap">
                 Popular
               </div>
             </div>
@@ -411,9 +451,9 @@ export default function ProductsPage() {
           </div>
           
           {/* Medium Item 1 - New Arrivals */}
-          <div className="bg-gradient-to-br from-secondary/10 to-primary/10 rounded-3xl p-4 md:p-5 shadow-xl border border-border/50 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 group overflow-hidden relative">
+          <div className="bg-gradient-to-br from-secondary/10 to-primary/10 rounded-3xl p-4 md:p-5 shadow-xl border border-border/50 flex flex-col transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 group overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-r from-secondary/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
-            <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3 md:mb-4">
               <div>
                 <h3 className="text-base md:text-lg font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">New Arrivals</h3>
                 <p className="text-muted-foreground text-xs">Check out our latest products</p>
@@ -484,7 +524,7 @@ export default function ProductsPage() {
             </div>
             {products.length > 1 && (
               <div className="mt-auto relative">
-                <div className="relative bg-card rounded-xl p-3 md:p-4 shadow-md border border-border/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative z-10 overflow-hidden">
+                <div className="bg-card rounded-xl p-3 md:p-4 shadow-md border border-border/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative z-10 overflow-hidden">
                   <div className="bg-gradient-to-br from-primary/20 to-secondary/20 w-full h-48 md:h-80 rounded-xl flex items-center justify-center mb-3 md:mb-4 overflow-hidden transform transition-transform duration-500 group-hover:scale-105 mx-auto">
                     <img 
                       src={products[1].image} 
@@ -527,7 +567,7 @@ export default function ProductsPage() {
             </div>
             {products.length > 2 && (
               <div className="mt-auto relative">
-                <div className="relative bg-card rounded-xl p-3 md:p-4 shadow-md border border-border/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative z-10 overflow-hidden">
+                <div className="bg-card rounded-xl p-3 md:p-4 shadow-md border border-border/50 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative z-10 overflow-hidden">
                   <div className="bg-gradient-to-br from-secondary/20 to-primary/20 w-full h-32 md:h-36 rounded-full flex items-center justify-center mb-3 md:mb-4 overflow-hidden transform transition-transform duration-500 group-hover:scale-105 mx-auto">
                     <img 
                       src={products[2].image} 
@@ -881,8 +921,9 @@ export default function ProductsPage() {
                 {filteredProducts.map((product) => (
                   <div key={product.id} className="group">
                     <ProductCard 
+                      id={product.id}
                       name={product.name}
-                      description={product.description || product.hint}
+                      description={product.description || getDefaultDescription(product.name)}
                       price={product.price}
                       image={product.image}
                       hint={product.hint}
@@ -890,6 +931,7 @@ export default function ProductsPage() {
                       reviewCount={product.reviewCount}
                       vendorName={product.vendorName}
                       isNew={product.isNew}
+                      onClick={() => router.push(`/product-details/${product.id}`)}
                     />
                   </div>
                 ))}

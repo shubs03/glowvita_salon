@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
@@ -25,7 +24,6 @@ import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from "@repo/store/hooks";
 import { clearUserAuth } from "@repo/store/slices/userAuthSlice";
-import Cookies from "js-cookie";
 import { toast } from 'sonner';
 
 const navItems = [
@@ -40,29 +38,51 @@ const navItems = [
 
 function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
   const dispatch = useAppDispatch();
   const router = useRouter();
-
-  const handleLogout = async () => {
-    dispatch(clearUserAuth());
-    Cookies.remove('token', { path: '/' });
-    toast.success("You have been logged out.");
-    router.push('/client-login');
-  };
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    if (!isAuthLoading && !isAuthenticated) {
+    // This effect handles route protection.
+    // It waits until the initial auth check is done (isLoading is false).
+    if (!isLoading && !isAuthenticated) {
       router.push('/client-login');
     }
-  }, [isAuthLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router]);
 
-  if (isAuthLoading || !isAuthenticated) {
+
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    try {
+      dispatch(clearUserAuth());
+      toast.success("You have been logged out.");
+      router.push('/client-login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error("Error logging out. Please try again.");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  // While isLoading, show a full-page loading spinner.
+  // This prevents any "flicker" of content or incorrect redirects.
+  if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center">
+            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-muted-foreground">Loading Profile...</p>
+        </div>
       </div>
     );
+  }
+
+  // If loading is done and user is not authenticated, render nothing.
+  // The useEffect above will handle the redirection.
+  if (!isAuthenticated) {
+    return null;
   }
   
   return (
@@ -78,8 +98,8 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
                     src={user?.profilePicture}
                     alt={user?.firstName}
                   />
-                  <AvatarFallback className="text-3xl">
-                    {user?.firstName?.charAt(0) || 'U'}
+                  <AvatarFallback className="text-3xl bg-primary/10 text-primary font-bold">
+                    {(user?.firstName?.charAt(0) || '') + (user?.lastName?.charAt(0) || '')}
                   </AvatarFallback>
                 </Avatar>
                 <CardTitle className="text-xl font-bold">
@@ -109,9 +129,10 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
                       variant="ghost"
                       className="w-full justify-start gap-3 h-12 text-sm text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={handleLogout}
+                      disabled={isLoggingOut}
                     >
                       <LogOut className="h-4 w-4" />
-                      Logout
+                      {isLoggingOut ? "Logging out..." : "Logout"}
                     </Button>
                   </div>
                 </nav>
@@ -131,7 +152,7 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div>Loading profile...</div>}>
             <ProfileLayoutContent>
                 {children}
             </ProfileLayoutContent>

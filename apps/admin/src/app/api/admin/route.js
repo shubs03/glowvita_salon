@@ -1,6 +1,6 @@
 // app/api/admin-users/route.js
-import _db from "../../../../../../packages/lib/src/db.js";
-import AdminUserModel from "../../../../../../packages/lib/src/models/admin/AdminUser.model";
+import _db from "@repo/lib/db";
+import AdminUserModel from "@repo/lib/models/admin/AdminUser";
 import { authMiddlewareAdmin } from "../../../middlewareAdmin.js";
 import bcrypt from "bcryptjs";
 

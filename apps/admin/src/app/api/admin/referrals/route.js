@@ -1,9 +1,9 @@
 
-import _db from "../../../../../../../packages/lib/src/db.js";
-import { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
+import _db from "@repo/lib/db";
+import { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET_VENDOR } from "../../../../../../../packages/config/config.js";
+import { JWT_SECRET_VENDOR } from "@repo/config/config";
 
 await _db();
 

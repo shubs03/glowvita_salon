@@ -1,5 +1,3 @@
-
-
 import mongoose from "mongoose";
 
 const doctorSchema = new mongoose.Schema({
@@ -140,6 +138,12 @@ const doctorSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  resetPasswordToken: {
+    type: String,
+  },
+  resetPasswordExpires: {
+    type: Date,
+  },
   physicalConsultationStartTime: {
     type: String,
     required: true,
@@ -205,4 +209,3 @@ doctorSchema.virtual('specialization').get(function() {
 const DoctorModel = mongoose.models.Doctor || mongoose.model("Doctor", doctorSchema);
 
 export default DoctorModel;
-    

@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { verifyJwt } from '@repo/lib/auth';
 
@@ -44,7 +43,7 @@ export async function middleware(request) {
   }
 
   // Handle auth pages for already logged-in users
-  const authPaths = ['/client-login', '/client-register'];
+  const authPaths = ['/client-login', '/client-register', '/forgot-password', '/reset-password'];
   if (authPaths.includes(pathname)) {
     if (token) {
       try {
@@ -56,7 +55,7 @@ export async function middleware(request) {
       } catch (error) {
         // If token is invalid, let them stay on the auth page and clear the bad cookie
          const response = NextResponse.next();
-         response.cookies.set('token', '', { expires: new Date(0) });
+         response.cookies.set('token', '', { expires: new Date(0), path: '/' });
          return response;
       }
     }

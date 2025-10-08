@@ -1,33 +1,37 @@
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
-import adminAuthReducer from './slices/Admin/adminAuthSlice';
-import userAuthReducer from './slices/Web/userAuthSlice';
-import crmAuthReducer, { clearCrmAuth } from '@repo/store/slices/crmAuthSlice';
-import modalReducer from './slices/modalSlice';
-import customerReducer from './slices/customerSlice';
-import salonReducer from './slices/salonSlice';
-import vendorReducer from './slices/vendorSlice';
-import marketingReducer from './slices/marketingslice';
-import supplierReducer from './slices/supplierSlice';
-import subscriptionReducer from './slices/subscriptionSlice';
-import notificationReducer from './slices/notificationSlice';
-import geoFencingReducer from './slices/geoFencingSlice';
+import adminAuthReducer from './slices/Admin/adminAuthSlice.js';
+import userAuthReducer, { rehydrateAuth as rehydrateUserAuth } from './slices/Web/userAuthSlice.js';
+import crmAuthReducer, { rehydrateAuth as rehydrateCrmAuth } from './slices/crmAuthSlice.js';
+import modalReducer from './slices/modalSlice.js';
+import customerReducer from './slices/customerSlice.js';
+import salonReducer from './slices/salonSlice.js';
+import vendorReducer from './slices/vendorSlice.js';
+import marketingReducer from './slices/marketingslice.js';
+import supplierReducer from './slices/supplierSlice.js';
+import subscriptionReducer from './slices/subscriptionSlice.js';
+import notificationReducer from './slices/notificationSlice.js';
+import geoFencingReducer from './slices/geoFencingSlice.js';
 import refferalReducer from './slices/Admin/refferalSlice.js';
-import faqReducer from './slices/faqSlice';
-import shippingReducer from './slices/shippingSlice';
-import productReducer from './slices/productSlice';
+import faqReducer from './slices/faqSlice.js';
+import shippingReducer from './slices/shippingSlice.js';
+import productReducer from './slices/productSlice.js';
 import serviceReducer from "./slices/CRM/serviceSlice.js";
-import staffReducer from "./slices/CRM/staffSlice.js"; // Import staff slice
-import clientReducer from "./slices/CRM/clientSlice.js"; // Import client slice
-import appointmentReducer from './slices/appointmentSlice';
-import blockTimeReducer from './slices/blockTimeSlice';
-import vendorprofileReducer from './slices/vendorprofileSlice';
-import workingHoursReducer from './slices/workingHoursSlice';
-import orderReducer from './slices/orderSlice';
-import calendarAppointmentReducer from './slices/calendarAppointmentSlice';
-import cartReducer from './slices/cartSlice'; // Import the new cart reducer
+import staffReducer from "./slices/CRM/staffSlice.js";
+import clientReducer from "./slices/CRM/clientSlice.js";
+import appointmentReducer from './slices/appointmentSlice.js';
+import blockTimeReducer from './slices/blockTimeSlice.js';
+import vendorprofileReducer from './slices/vendorProfileSlice.js';
+import workingHoursReducer from './slices/workingHoursSlice.js';
+import orderReducer from './slices/orderSlice.js';
+import calendarAppointmentReducer from './slices/calendarAppointmentSlice.js';
+import cartReducer from './slices/cartSlice.js';
+import smsTemplateSlice from './slices/smsTemplateSlice.js';
+import patientReducer from './slices/patientSlice.js';
 import staffAvailabilityServiceReducer from './slices/staffAvailabilityService';
 
+// Import localStorage cleanup utility
+import './utils/localStorage-cleanup.js';
 
 const appReducer = combineReducers({
   [glowvitaApi.reducerPath]: glowvitaApi.reducer,
@@ -59,19 +63,19 @@ const appReducer = combineReducers({
   cart: cartReducer,
   staffAvailabilityService: staffAvailabilityServiceReducer,
 
+  smsTemplates: smsTemplateSlice,
+  patients: patientReducer,
 });
 
   
 const rootReducer = (state, action) => {
-  // when a logout action is dispatched, it will reset the state to the initial state.
-  // This includes the API state, which will clear the cache.
-  if (action.type === 'crmAuth/clearCrmAuth') {
-    // Keep only the state that should persist across logouts.
-    // For now, we reset everything.
-    return appReducer(undefined, action);
-  }
-  if (action.type === 'userAuth/clearUserAuth') {
-    return appReducer(undefined, action);
+  if (action.type === 'crmAuth/clearCrmAuth' || action.type === 'userAuth/clearUserAuth' || action.type === 'adminAuth/clearAdminAuth') {
+    // Keep API state, reset everything else
+    const { [glowvitaApi.reducerPath]: api, ...restState } = state;
+    return {
+      ...appReducer(undefined, action), // Reset all slices to initial state
+      [glowvitaApi.reducerPath]: api,  // Preserve the API slice
+    };
   }
   return appReducer(state, action);
 };
@@ -82,25 +86,48 @@ export const makeStore = () => {
     middleware: (getDefaultMiddleware) =>
       getDefaultMiddleware({
         serializableCheck: {
-          // Ignore these action types
           ignoredActions: [
-            'blockTime/saveBlockTime/pending', 
-            'blockTime/saveBlockTime/fulfilled', 
-            'blockTime/saveBlockTime/rejected',
-            'blockTime/setDate',
-            'blockTime/setStaffMember',
-            'blockTime/setStartTime',
-            'blockTime/setEndTime',
-            'blockTime/setDescription',
-            'blockTime/reset'
+            'userAuth/setUserAuth', 'userAuth/rehydrateAuth',
+            'crmAuth/setCrmAuth', 'crmAuth/rehydrateAuth',
+            'adminAuth/setAdminAuth', 'adminAuth/rehydrateAuth',
           ],
-          // Ignore these field paths in all actions
-          ignoredActionPaths: ['meta.arg', 'payload.timestamp', 'payload'],
-          // Ignore these paths in the state
-          ignoredPaths: ['blockTime.date', 'blockTime']
+          ignoredPaths: ['userAuth.user', 'crmAuth.user', 'adminAuth.admin'],
         }
       }).concat(glowvitaApi.middleware),
   });
 };
 
-// Export the root reducer state
+// Function to handle client-side rehydration
+export const rehydrateStore = (store) => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const userAuthState = localStorage.getItem('userAuthState');
+    if (userAuthState) {
+      store.dispatch(rehydrateUserAuth(JSON.parse(userAuthState)));
+    } else {
+      // Explicitly set auth to false if nothing is in storage
+      store.dispatch(rehydrateUserAuth(null));
+    }
+  } catch (e) {
+    console.error("Could not rehydrate user auth state from localStorage", e);
+    store.dispatch(rehydrateUserAuth(null));
+  }
+
+  try {
+    const crmAuthState = localStorage.getItem('crmAuthState');
+    if (crmAuthState) {
+      store.dispatch(rehydrateCrmAuth(JSON.parse(crmAuthState)));
+    } else {
+      store.dispatch(rehydrateCrmAuth(null));
+    }
+  } catch (e) {
+    console.error("Could not rehydrate CRM auth state from localStorage", e);
+    store.dispatch(rehydrateCrmAuth(null));
+  }
+};
+
+export const selectRootState = (state) => state;
+
+// Create and export store instance
+export const store = makeStore();

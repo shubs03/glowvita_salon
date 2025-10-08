@@ -2,9 +2,9 @@
 
 import _db from "../../../../../../../packages/lib/src/db.js";
 import { ReferralModel, V2VSettingsModel, D2DSettingsModel, S2SSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
-import VendorModel from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js";
-import DoctorModel from "../../../../../../../packages/lib/src/models/Vendor/Docters.model.js";
-import SupplierModel from "../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js";
+import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
+import DoctorModel from '@repo/lib/models/Vendor/Docters.model';
+import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
 
 await _db();
@@ -48,14 +48,28 @@ export const GET = authMiddlewareCrm(async (req) => {
     const referralType = 'V2V';
     
     // Get user's business name/name for filtering
-    const UserModel = getUserModel(userRole);
-    const userData = await UserModel.findById(user._id);
+    // First try to get it from the JWT payload directly
+    let referrerName = user.businessName || user.name || user.shopName;
     
-    if (!userData) {
-      return Response.json({ message: "User not found" }, { status: 404 });
+    // If not in JWT payload, fetch from database
+    if (!referrerName) {
+      const UserModel = getUserModel(userRole);
+      // Use the userId from JWT payload (note: it's userId, not _id)
+      const userId = user.userId || user._id || user.id;
+      if (!userId) {
+        console.error("User ID not found in token", user);
+        return Response.json({ message: "User ID not found in token" }, { status: 400 });
+      }
+      
+      const userData = await UserModel.findById(userId);
+      
+      if (!userData) {
+        console.error("User not found in database", { userId, userRole });
+        return Response.json({ message: "User not found" }, { status: 404 });
+      }
+      
+      referrerName = userData.businessName || userData.name || userData.shopName || (userData.firstName + ' ' + userData.lastName);
     }
-    
-    const referrerName = userData.businessName || userData.name || userData.shopName;
     
     // Get referrals where this user is the referrer
     const referrals = await ReferralModel.find({ 

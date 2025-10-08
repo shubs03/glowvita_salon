@@ -2,12 +2,12 @@
 // crm/api/notifications/route.js
 
 import _db from "../../../../../../../packages/lib/src/db.js";
-import VendorNotificationsModel from "../../../../../../../packages/lib/src/models/Vendor/VendorNotification.model.js";
-import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
+import VendorNotificationsModel from '@repo/lib/models/Vendor/VendorNotification.model';
+import { authMiddlewareCrm } from "../../../../middlewareCrm";
 
 await _db();
 
-// POST: Create or update a VendorNotifications document, adding notifications to the array
+// Create or update a VendorNotifications document, adding notifications to the array
 export const POST = authMiddlewareCrm(async (req) => {
   const vendor = req.user;
   const body = await req.json();
@@ -69,7 +69,7 @@ const targetDisplayMap = {
 
 // GET: Retrieve VendorNotifications by vendor ID or paginated notifications
 export const GET = authMiddlewareCrm(async (req) => {
-  const vendorId = req.user._id.toString();
+  const vendorId = req.user.userId.toString();
 
   if (!vendorId) {
     return Response.json(

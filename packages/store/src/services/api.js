@@ -2,12 +2,72 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from "@repo/config/config";
 
-const API_BASE_URLS = {
-  admin: "http://localhost:3002/api",
-  crm: "http://localhost:3001/api",
-  web: "http://localhost:3000/api",
+// Function to get base URLs with intelligent fallbacks for production
+const getBaseUrls = () => {
+  // If environment variables are explicitly set, use them (highest priority)
+  if (NEXT_PUBLIC_WEB_URL && NEXT_PUBLIC_CRM_URL && NEXT_PUBLIC_ADMIN_URL) {
+    return {
+      admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
+      crm: `${NEXT_PUBLIC_CRM_URL}/api`,
+      web: `${NEXT_PUBLIC_WEB_URL}/api`,
+    };
+  }
+
+  // In browser environment, dynamically determine URLs based on current location
+  if (typeof window !== 'undefined' && window.location) {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const baseUrl = `${protocol}//${hostname}${port}`;
+
+    // For production domains with specific patterns
+    if (hostname.includes('v2winonline.com')) {
+      // Production environment - different subdomains for different services
+      // partners.v2winonline.com is the CRM application
+      if (hostname.includes('partners')) {
+        // CRM application - API is on the same domain
+        return {
+          admin: `${protocol}//admin.v2winonline.com/api`,
+          crm: `${baseUrl}/api`, // CRM API is on the same domain
+          web: `${protocol}//v2winonline.com/api`,
+        };
+      } else if (hostname.includes('admin')) {
+        // Admin application - API is on the same domain
+        return {
+          admin: `${baseUrl}/api`, // Admin API is on the same domain
+          crm: `${protocol}//partners.v2winonline.com/api`,
+          web: `${protocol}//v2winonline.com/api`,
+        };
+      } else {
+        // Main website - API is on the same domain
+        return {
+          admin: `${protocol}//admin.v2winonline.com/api`,
+          crm: `${protocol}//partners.v2winonline.com/api`,
+          web: `${baseUrl}/api`, // Web API is on the same domain
+        };
+      }
+    } else {
+      // Local development - use port-based routing
+      return {
+        admin: `${protocol}//${hostname}:3002/api`,
+        crm: `${protocol}//${hostname}:3001/api`,
+        web: `${protocol}//${hostname}:3000/api`,
+      };
+    }
+  }
+
+  // Server-side rendering or when window is not available
+  // Fallback to localhost defaults
+  return {
+    admin: 'http://localhost:3002/api',
+    crm: 'http://localhost:3001/api',
+    web: 'http://localhost:3000/api',
+  };
 };
+
+const API_BASE_URLS = getBaseUrls();
 
 // Base query function that determines the API URL and sets headers.
 const baseQuery = async (args, api, extraOptions) => {
@@ -26,18 +86,26 @@ const baseQuery = async (args, api, extraOptions) => {
   }
 
   const baseUrl = API_BASE_URLS[targetService];
-  
-  // Remove any leading slashes from requestUrl to prevent double slashes
-  const cleanRequestUrl = requestUrl.startsWith("/") ? requestUrl.substring(1) : requestUrl;
-  const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
-  
+
+  // For CRM and Admin services, we don't strip the service prefix
+  // The API endpoints are actually at /api/crm/... and /api/admin/...
+  let cleanRequestUrl = requestUrl;
+
+  // Ensure cleanRequestUrl starts with a slash to prevent issues
+  cleanRequestUrl = cleanRequestUrl.startsWith("/") ? cleanRequestUrl : `/${cleanRequestUrl}`;
+
+  const fullUrl = `${baseUrl}${cleanRequestUrl}`;
+  console.log("Target Service:", targetService); // Debug log
+  console.log("Original Request URL:", requestUrl); // Debug log
+  console.log("Clean Request URL:", cleanRequestUrl); // Debug log
+  console.log("Base URL:", baseUrl); // Debug log
   console.log("API Request URL:", fullUrl); // Debug log
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
-    prepareHeaders: (headers) => {
-      const state = api.getState();
-      let token = state.crmAuth?.token || state.adminAuth?.token;
+    prepareHeaders: (headers, { getState }) => {
+      const state = getState();
+      let token = state.crmAuth?.token || state.adminAuth?.token || state.userAuth?.token;
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -73,19 +141,22 @@ export const glowvitaApi = createApi({
   reducerPath: "glowvitaApi",
   baseQuery: baseQuery,
   tagTypes: [
-    "admin", "offers", "Referrals", "Settings", "SuperData", "Supplier", 
-    "SubscriptionPlan", "Vendor", "doctors", "GeoFence", "Category", 
-    "Service", "Staff", "Client", "Offers", "Notification", 
-    "TaxFeeSettings", "User", "PendingServices", "AdminProductCategory", 
-    "ProductCategory", "SmsTemplate", "SmsPackage", "CrmSmsTemplate", 
-    "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign", 
-    "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing", 
-    "Appointment", "ShippingCharge", "Order", "CrmProducts", 
+    "admin", "offers", "Referrals", "Settings", "SuperData", "Supplier",
+    "SubscriptionPlan", "Vendor", "doctors", "GeoFence", "Category",
+    "Service", "Staff", "Client", "Offers", "Notification",
+    "TaxFeeSettings", "User", "PendingServices", "AdminProductCategory",
+    "ProductCategory", "SmsTemplate", "SmsPackage", "CrmSmsTemplate",
+    "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign",
+    "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing",
+    "Appointment", "ShippingCharge", "Order", "CrmProducts",
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
-    "BlockTime"
+    "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
+    "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
+    "PublicVendorProducts", "WorkingHours"
   ],
 
   endpoints: (builder) => ({
+
     // SMS Templates Endpoints
     getSmsTemplates: builder.query({
       query: () => "/admin/sms-template",
@@ -212,6 +283,55 @@ export const glowvitaApi = createApi({
     getMe: builder.query({
       query: () => ({ url: "/auth/me", method: "GET" }),
       providesTags: ["User"],
+    }),
+
+    // Public Vendors for landing page
+    getPublicVendors: builder.query({
+      query: () => ({ url: "/vendors", method: "GET" }),
+      providesTags: ["PublicVendors"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Products for landing page
+    getPublicProducts: builder.query({
+      query: () => ({ url: "/products", method: "GET" }),
+      providesTags: ["PublicProducts"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Products for specific vendor
+    getPublicVendorProducts: builder.query({
+      query: (vendorId) => ({ url: `/products?vendorId=${vendorId}`, method: "GET" }),
+      providesTags: (result, error, vendorId) => [{ type: "PublicVendorProducts", id: vendorId }],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Services for vendor details page
+    getPublicVendorServices: builder.query({
+      query: (vendorId) => ({ url: `/services/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorServices"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Working Hours for vendor details page
+    getPublicVendorWorkingHours: builder.query({
+      query: (vendorId) => ({ url: `/working-hours?vendorId=${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorWorkingHours"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Staff for vendor details page
+    getPublicVendorStaff: builder.query({
+      query: (vendorId) => ({ url: `/staff/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorStaff"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Offers for vendor details page
+    getPublicVendorOffers: builder.query({
+      query: (vendorId) => ({ url: `/offers?businessId=${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorOffers"],
+      transformResponse: (response) => response,
     }),
 
     // Admin Panel Endpoints
@@ -803,8 +923,8 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Faq"],
     }),
 
-     // Admin Product Categories 
-     
+    // Admin Product Categories 
+
     getAdminProductCategories: builder.query({
       query: () => ({ url: "/admin/product-categories", method: "GET" }),
       providesTags: ["AdminProductCategory"],
@@ -830,7 +950,7 @@ export const glowvitaApi = createApi({
     }),
     updateProductStatus: builder.mutation({
       query: ({ productId, status }) => ({
-        url: "/admin/product-approval", 
+        url: "/admin/product-approval",
         method: "PATCH",
         body: { productId, status },
       }),
@@ -909,6 +1029,27 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["CrmProducts"],
     }),
 
+    // New endpoint to fetch all vendor products with origin 'Vendor'
+    getAllVendorProducts: builder.query({
+      query: () => ({ url: "/products", method: "GET" }),
+      providesTags: ["CrmProducts"],
+      transformResponse: (response) => response,
+    }),
+
+    // New endpoints for vendor product operations
+    updateVendorProduct: builder.mutation({
+      query: (product) => ({ url: "/crm/vendor/products", method: "PUT", body: product }),
+      invalidatesTags: ["CrmProducts"],
+    }),
+    deleteVendorProduct: builder.mutation({
+      query: (id) => ({ url: "/crm/vendor/products", method: "DELETE", body: { id } }),
+      invalidatesTags: ["CrmProducts"],
+    }),
+    createVendorProduct: builder.mutation({
+      query: (product) => ({ url: "/crm/vendor/products", method: "POST", body: product }),
+      invalidatesTags: ["CrmProducts"],
+    }),
+
     // Supplier Products & Profile
     getSupplierProducts: builder.query({
       query: () => ({ url: '/crm/supplier-products' }),
@@ -921,22 +1062,22 @@ export const glowvitaApi = createApi({
 
     // Orders
     getCrmOrders: builder.query({
-        query: () => ({ url: '/crm/orders' }),
-        providesTags: ['CrmOrder'],
+      query: () => ({ url: '/crm/orders' }),
+      providesTags: ['CrmOrder'],
     }),
     createCrmOrder: builder.mutation({
-        query: (orderData) => ({ url: '/crm/orders', method: 'POST', body: orderData }),
-        invalidatesTags: ['CrmOrder'],
+      query: (orderData) => ({ url: '/crm/orders', method: 'POST', body: orderData }),
+      invalidatesTags: ['CrmOrder'],
     }),
     updateCrmOrder: builder.mutation({
-        query: ({ orderId, ...updateData }) => ({
-            url: '/crm/orders',
-            method: 'PATCH',
-            body: { orderId, ...updateData },
-        }),
-        invalidatesTags: ['CrmOrder'],
+      query: ({ orderId, ...updateData }) => ({
+        url: '/crm/orders',
+        method: 'PATCH',
+        body: { orderId, ...updateData },
+      }),
+      invalidatesTags: ['CrmOrder'],
     }),
-    
+
     // shipping charge endpoints
     getShippingConfig: builder.query({
       query: () => ({ url: "/crm/shipping", method: "GET" }),
@@ -1019,7 +1160,7 @@ export const glowvitaApi = createApi({
     // appointments endpoints
     getAppointments: builder.query({
       query: () => ({ url: "/crm/appointments", method: "GET" }),
-      providesTags: (result = [], error, arg) => [ 'Appointments', ...result.map(({ id }) => ({ type: 'Appointment', id })) ],
+      providesTags: (result = [], error, arg) => ['Appointments', ...result.map(({ id }) => ({ type: 'Appointment', id }))],
     }),
     createAppointment: builder.mutation({
       query: (appointment) => ({ url: "/crm/appointments", method: "POST", body: appointment }),
@@ -1027,10 +1168,8 @@ export const glowvitaApi = createApi({
     }),
     updateAppointment: builder.mutation({
       query: (appointmentData) => {
-        console.log('updateAppointment data:', appointmentData);
-        // Extract the ID and updates from the appointment data
         const { _id, ...updates } = appointmentData;
-        
+
         return {
           url: `/crm/appointments/${_id}`,
           method: "PUT",
@@ -1044,13 +1183,13 @@ export const glowvitaApi = createApi({
     }),
     updateAppointmentStatus: builder.mutation({
       query: ({ id, status, cancellationReason }) => ({ url: `/crm/appointments`, method: "PATCH", body: { _id: id, status, cancellationReason } }),
-      invalidatesTags: (result, error, { id }) => [ { type: 'Appointment', id }, 'Appointments' ],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Appointment', id }, 'Appointments'],
     }),
     deleteAppointment: builder.mutation({
       query: (id) => ({ url: `/crm/appointments/${id}`, method: "DELETE" }),
       invalidatesTags: ['Appointments'],
     }),
-   
+
     // Client Endpoints
     getClients: builder.query({
       query: ({ search, status, page = 1, limit = 100 } = {}) => {
@@ -1076,13 +1215,13 @@ export const glowvitaApi = createApi({
       query: (id) => ({ url: "/crm/clients", method: "DELETE", body: { id } }),
       invalidatesTags: ["Client"],
     }),
-    
+
     // Vendor Profile Endpoints
     getVendorProfile: builder.query({
       query: () => ({ url: "/crm/vendor", method: "GET" }),
       providesTags: ["Vendor"],
     }),
-    
+
     updateVendorProfile: builder.mutation({
       query: (vendorData) => ({ url: "/crm/vendor", method: "PUT", body: vendorData }),
       invalidatesTags: ["Vendor"],
@@ -1137,27 +1276,88 @@ export const glowvitaApi = createApi({
 
     // Cart Endpoints
     getCart: builder.query({
-        query: () => ({ url: "/crm/cart", method: "GET" }),
-        providesTags: ["Cart"],
+      query: () => ({ url: "/crm/cart", method: "GET" }),
+      providesTags: ["Cart"],
     }),
     addToCart: builder.mutation({
-        query: (item) => ({ url: "/crm/cart", method: "POST", body: item }),
-        invalidatesTags: ["Cart"],
+      query: (item) => ({ url: "/crm/cart", method: "POST", body: item }),
+      invalidatesTags: ["Cart"],
     }),
     updateCartItem: builder.mutation({
-        query: ({ productId, quantity }) => ({ url: "/crm/cart", method: "PUT", body: { productId, quantity } }),
-        invalidatesTags: ["Cart"],
+      query: ({ productId, quantity }) => ({ url: "/crm/cart", method: "PUT", body: { productId, quantity } }),
+      invalidatesTags: ["Cart"],
     }),
     removeFromCart: builder.mutation({
-        query: (productId) => ({ url: "/crm/cart", method: "DELETE", body: { productId } }),
-        invalidatesTags: ["Cart"],
+      query: (productId) => ({ url: "/crm/cart", method: "DELETE", body: { productId } }),
+      invalidatesTags: ["Cart"],
     }),
+
+    // Web App Login
+    userLogin: builder.mutation({
+      query: (credentials) => ({
+        url: '/auth/login',
+        method: 'POST',
+        body: credentials,
+      }),
+    }),
+
+    // Patient Endpoints
+    getPatients: builder.query({
+      query: () => ({ url: "/crm/patients", method: "GET" }),
+      providesTags: ["Patient"],
+    }),
+    createPatient: builder.mutation({
+      query: (patient) => ({
+        url: "/crm/patients",
+        method: "POST",
+        body: patient,
+      }),
+      invalidatesTags: ["Patient"],
+    }),
+    updatePatient: builder.mutation({
+      query: (patient) => ({
+        url: "/crm/patients",
+        method: "PUT",
+        body: patient,
+      }),
+      invalidatesTags: ["Patient"],
+    }),
+    deletePatient: builder.mutation({
+      query: (id) => ({
+        url: "/crm/patients",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Patient"],
+    }),
+
+    getClientOrders: builder.query({
+      query: () => ({ url: "/client/orders", method: "GET" }),
+      providesTags: ["ClientOrder"],
+    }),
+    createClientOrder: builder.mutation({
+      query: (orderData) => ({ url: "/client/orders", method: "POST", body: orderData }),
+      invalidatesTags: ["ClientOrder"],
+    }),
+
+
   }),
 });
 
 export const {
   // Web App
   useGetMeQuery,
+  useGetPublicVendorsQuery,
+  useGetPublicProductsQuery,
+  useGetPublicVendorProductsQuery,
+  useGetPublicVendorServicesQuery,
+  useGetPublicVendorWorkingHoursQuery,
+  useGetPublicVendorStaffQuery,
+  useGetPublicVendorOffersQuery,
+  useUserLoginMutation,
+  useGetClientOrdersQuery,
+  useCreateClientOrderMutation,
+
   // Admin Panel
   useAdminLoginMutation,
   useRegisterAdminMutation,
@@ -1243,7 +1443,7 @@ export const {
   useDeleteFaqMutation,
   useGetVendorProductsQuery,
   useUpdateProductStatusMutation,
-  
+
   // CRM Endpoints
   useVendorLoginMutation,
   useVendorRegisterMutation,
@@ -1300,6 +1500,12 @@ export const {
   useCreateCrmCampaignMutation,
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
+  // New endpoint for fetching all vendor products
+  useGetAllVendorProductsQuery,
+  // New endpoints for vendor product operations
+  useUpdateVendorProductMutation,
+  useDeleteVendorProductMutation,
+  useCreateVendorProductMutation,
 
   // Cart Endpoints
   useGetCartQuery,
@@ -1311,4 +1517,9 @@ export const {
   useGetBlockedTimesQuery,
   useCreateBlockTimeMutation,
   useDeleteBlockTimeMutation,
+  useUpdateAppointmentStatusMutation,
+  useGetPatientsQuery,
+  useCreatePatientMutation,
+  useUpdatePatientMutation,
+  useDeletePatientMutation,
 } = glowvitaApi;

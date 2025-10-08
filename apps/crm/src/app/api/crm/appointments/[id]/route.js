@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { Types } from 'mongoose';
 import AppointmentModel from "../../../../../../../../packages/lib/src/models/Appointment/Appointment.model";
 import _db from '@repo/lib/db';
-import { authMiddlewareCrm } from '@/middlewareCrm.js';
+import { authMiddlewareCrm } from '@/middlewareCrm';
 
 await _db();
 
@@ -90,7 +90,7 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
             },
             { new: true, runValidators: true }
         )
-        .populate('client', 'name email phone')
+        .populate('client', 'fullName email phone')
         .populate('service', 'name duration price')
         .populate('staff', 'name email phone');
 

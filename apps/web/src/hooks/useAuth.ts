@@ -1,29 +1,27 @@
 "use client";
 
+import { useEffect, useState } from 'react';
+import { selectRootState } from '../../../../packages/store/src/store';
 import { useAppSelector } from '@repo/store/hooks';
-import { selectRootState } from '@repo/store/store';
-import { useState, useEffect } from 'react';
 
+// This hook is now specifically for the Web app.
 export const useAuth = () => {
-  const { user, isAuthenticated, token, role } = useAppSelector((state) => selectRootState(state).userAuth);
-  const [isLoading, setIsLoading] = useState(true);
-
+  const { user, isAuthenticated, token, role, permissions } = useAppSelector((state) => selectRootState(state).userAuth);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  
   useEffect(() => {
-    // The AuthInitializer runs on first load. We can consider loading finished
-    // once the Redux state has been populated (token is present) or it's clear
-    // there is no session to restore (localStorage check is done and token is null).
-    const hasChecked = !!token || localStorage.getItem('userAuthState') === null;
-
-    if (hasChecked || isAuthenticated) {
-      setIsLoading(false);
+    // Check if we have loaded the initial state
+    if (isAuthenticated !== undefined) {
+      setIsInitialLoading(false);
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated]);
 
   return {
     user,
-    isAuthenticated,
+    isAuthenticated: Boolean(isAuthenticated), // Ensure it's a boolean
     token,
     role,
-    isLoading,
+    permissions,
+    isLoading: isInitialLoading,
   };
 };

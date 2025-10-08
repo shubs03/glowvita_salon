@@ -72,23 +72,23 @@ export default function OrdersPage() {
   const { customerOrders, myPurchases, receivedOrders } = useMemo(() => {
     if (!ordersData) return { customerOrders: [], myPurchases: [], receivedOrders: [] };
     
-    const customerOrders = ordersData.filter((o: any) => o.vendorId === user?._id && o.customerName);
-    const myPurchases = ordersData.filter((o: any) => o.vendorId === user?._id && o.supplierId);
-    const receivedOrders = ordersData.filter((o: any) => o.supplierId === user?._id);
+    const customerOrders = ordersData.filter((o: Order) => o.vendorId === user?._id && o.customerName);
+    const myPurchases = ordersData.filter((o: Order) => o.vendorId === user?._id && o.supplierId);
+    const receivedOrders = ordersData.filter((o: Order) => o.supplierId === user?._id);
 
     return { customerOrders, myPurchases, receivedOrders };
   }, [ordersData, user]);
 
   const filteredOrders = useMemo(() => {
-    let dataToFilter = [];
+    let dataToFilter: Order[] = [];
     if (activeTab === 'customer-orders') dataToFilter = customerOrders;
     if (activeTab === 'my-purchases') dataToFilter = myPurchases;
     if (activeTab === 'received-orders') dataToFilter = receivedOrders;
 
-    return dataToFilter.filter(order =>
+    return dataToFilter.filter((order: Order) =>
       (order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
        (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-       order.items.some((item: any) => item.productName.toLowerCase().includes(searchTerm.toLowerCase()))) &&
+       order.items.some((item: OrderItem) => item.productName.toLowerCase().includes(searchTerm.toLowerCase()))) &&
       (statusFilter === 'all' || order.status === statusFilter)
     );
   }, [searchTerm, statusFilter, activeTab, customerOrders, myPurchases, receivedOrders]);
@@ -129,7 +129,7 @@ export default function OrdersPage() {
 
   const handleUpdateStatus = async (orderId: string, status: Order['status']) => {
     if (status === 'Shipped') {
-        const order = receivedOrders.find(o => o._id === orderId);
+        const order = receivedOrders.find((o: Order) => o._id === orderId);
         setOrderToShip(order || null);
         setIsShipModalOpen(true);
     } else {

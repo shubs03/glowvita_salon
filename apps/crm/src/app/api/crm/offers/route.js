@@ -2,11 +2,11 @@
 // crm/api/offers/route.js
 
 import _db from "../../../../../../../packages/lib/src/db.js";
-import CRMOfferModel from "../../../../../../../packages/lib/src/models/Vendor/CRMOffer.model.js";
+import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model';
 import {
   authMiddlewareCrm,
   authMiddlewareCRM,
-} from "../../../../middlewareCrm.js";
+} from "../../../../middlewareCrm";
 
 // Predefined options for validation
 const validSpecialties = [
@@ -52,6 +52,8 @@ export const POST = authMiddlewareCrm(
       applicableSpecialties,
       applicableCategories,
       applicableDiseases,
+      applicableServices,
+      applicableServiceCategories,
       minOrderAmount,
       offerImage,
       isCustomCode,
@@ -104,10 +106,21 @@ export const POST = authMiddlewareCrm(
     let specialties = [];
     let categories = [];
     let diseases = [];
+    let services = [];
+    let serviceCategories = [];
     let orderAmount = null;
 
     if (userRole === 'vendor') {
-      // Validate applicableSpecialties for vendors
+      // Handle new services and service categories
+      if (Array.isArray(applicableServices) && applicableServices.length > 0) {
+        services = applicableServices;
+      }
+      
+      if (Array.isArray(applicableServiceCategories) && applicableServiceCategories.length > 0) {
+        serviceCategories = applicableServiceCategories;
+      }
+
+      // Keep legacy specialty validation for backward compatibility
       if (Array.isArray(applicableSpecialties) && applicableSpecialties.length > 0) {
         specialties = applicableSpecialties;
         if (!specialties.every((s) => validSpecialties.includes(s))) {
@@ -120,7 +133,7 @@ export const POST = authMiddlewareCrm(
         }
       }
 
-      // Validate applicableCategories for vendors
+      // Keep legacy category validation for backward compatibility
       if (Array.isArray(applicableCategories) && applicableCategories.length > 0) {
         categories = applicableCategories;
         if (!categories.every((c) => validCategories.includes(c))) {
@@ -155,7 +168,7 @@ export const POST = authMiddlewareCrm(
     // Determine business type and ID for the offer
     // Staff members belong to vendor business type
     const businessType = userRole === 'staff' ? 'vendor' : userRole;
-    let businessId = user._id;
+    let businessId = user.userId;
     if (userRole === 'staff' && user.vendorId) {
       businessId = user.vendorId;
     }
@@ -171,6 +184,8 @@ export const POST = authMiddlewareCrm(
       applicableSpecialties: specialties,
       applicableCategories: categories,
       applicableDiseases: diseases,
+      applicableServices: services,
+      applicableServiceCategories: serviceCategories,
       minOrderAmount: orderAmount,
       offerImage: offerImage || null,
       isCustomCode: isCustom,
@@ -190,21 +205,17 @@ export const POST = authMiddlewareCrm(
 export const GET = authMiddlewareCrm(async (req) => {
   try {
     const user = req.user;
-    
-    // Validate user exists
-    if (!user || !user._id || !user.role) {
-      console.error('GET /api/crm/offers - User not found or missing data:', { user: user ? { _id: user._id, role: user.role } : null });
-      return Response.json({ message: "Unauthorized: User not found" }, { status: 401 });
-    }
 
-    console.log('GET /api/crm/offers - User ID:', user._id, 'Role:', user.role);
+    console.log('req.user', req.user);
+
+    console.log("user:", user);
     
     // Determine business type for filtering
     // Staff members belong to vendor business type
     const businessType = user.role === 'staff' ? 'vendor' : user.role;
     
     // For staff, we need to get the vendor ID they belong to
-    let businessId = user._id;
+    let businessId = user.userId;
     if (user.role === 'staff' && user.vendorId) {
       businessId = user.vendorId;
     }
@@ -246,11 +257,17 @@ export const GET = authMiddlewareCrm(async (req) => {
       applicableDiseases: Array.isArray(offer.applicableDiseases)
         ? offer.applicableDiseases
         : [],
+      applicableServices: Array.isArray(offer.applicableServices)
+        ? offer.applicableServices
+        : [],
+      applicableServiceCategories: Array.isArray(offer.applicableServiceCategories)
+        ? offer.applicableServiceCategories
+        : [],
     }));
 
     return Response.json(sanitizedOffers);
   } catch (error) {
-    console.error('GET /api/crm/offers - Error:', error);
+    console.error('Error:', error);
     return Response.json({ 
       message: "Internal server error", 
       error: error.message 
@@ -267,7 +284,7 @@ export const PUT = authMiddlewareCrm(
 
     // Determine business type and ID for filtering
     const businessType = userRole === 'staff' ? 'vendor' : userRole;
-    let businessId = user._id;
+    let businessId = user.userId;
     if (userRole === 'staff' && user.vendorId) {
       businessId = user.vendorId;
     }
@@ -287,10 +304,21 @@ export const PUT = authMiddlewareCrm(
     let specialties = [];
     let categories = [];
     let diseases = [];
+    let services = [];
+    let serviceCategories = [];
     let orderAmount = existingOffer.minOrderAmount;
 
     if (userRole === 'vendor') {
-      // Validate applicableSpecialties for vendors
+      // Handle new services and service categories
+      if (Array.isArray(body.applicableServices)) {
+        services = body.applicableServices;
+      }
+      
+      if (Array.isArray(body.applicableServiceCategories)) {
+        serviceCategories = body.applicableServiceCategories;
+      }
+
+      // Keep legacy specialty validation for backward compatibility
       if (Array.isArray(body.applicableSpecialties) && body.applicableSpecialties.length > 0) {
         specialties = body.applicableSpecialties;
         if (!specialties.every((s) => validSpecialties.includes(s))) {
@@ -303,7 +331,7 @@ export const PUT = authMiddlewareCrm(
         }
       }
 
-      // Validate applicableCategories for vendors
+      // Keep legacy category validation for backward compatibility
       if (Array.isArray(body.applicableCategories) && body.applicableCategories.length > 0) {
         categories = body.applicableCategories;
         if (!categories.every((c) => validCategories.includes(c))) {
@@ -343,6 +371,8 @@ export const PUT = authMiddlewareCrm(
       applicableSpecialties: specialties,
       applicableCategories: categories,
       applicableDiseases: diseases,
+      applicableServices: services,
+      applicableServiceCategories: serviceCategories,
       minOrderAmount: orderAmount,
       updatedAt: Date.now(),
     };
@@ -381,7 +411,7 @@ export const DELETE = authMiddlewareCrm(
 
     // Determine business type and ID for filtering
     const businessType = userRole === 'staff' ? 'vendor' : userRole;
-    let businessId = user._id;
+    let businessId = user.userId;
     if (userRole === 'staff' && user.vendorId) {
       businessId = user.vendorId;
     }

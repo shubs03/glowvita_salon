@@ -9,7 +9,6 @@ import { MarketingLayout } from '@/components/MarketingLayout';
 import { CrmLayout } from '@/components/CrmLayout';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from 'sonner';
-import { CrmAuthInitializer } from '@/components/CrmAuthInitializer';
 
 export default function RootLayout({
   children,
@@ -49,7 +48,7 @@ export default function RootLayout({
   ].some(path => pathname.startsWith(path));
   
   const showMarketingLayout = ['/', '/apps', '/pricing', '/support'].includes(pathname);
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/auth/register');
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/auth/register') || pathname.startsWith('/forgot-password') || pathname.startsWith('/reset-password');
   const isNotFoundPage = pathname === '/not-found';
 
   let layoutContent: ReactNode;
@@ -75,17 +74,15 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          <CrmAuthInitializer>
-            <Toaster richColors />
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-            >
-              {layoutContent}
-            </ThemeProvider>
-          </CrmAuthInitializer>
+          <Toaster richColors />
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {layoutContent}
+          </ThemeProvider>
         </StoreProvider>
       </body>
     </html>

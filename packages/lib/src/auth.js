@@ -1,14 +1,15 @@
 import * as jose from 'jose';
 import * as bcrypt from 'bcryptjs';
 
-const JWT_SECRET = process.env.JWT_SECRET;
 const saltRounds = 10;
 
-if (!JWT_SECRET) {
-  throw new Error("JWT_SECRET environment variable is not defined");
+function getSecret() {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET) {
+    throw new Error("JWT_SECRET environment variable is not defined");
+  }
+  return new TextEncoder().encode(JWT_SECRET);
 }
-
-const secret = new TextEncoder().encode(JWT_SECRET);
 
 export async function hashPassword(password) {
   const salt = await bcrypt.genSalt(saltRounds);
@@ -21,6 +22,7 @@ export async function comparePassword(password, hash) {
 }
 
 export async function createJwt(payload) {
+  const secret = getSecret();
   return new jose.SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
@@ -30,6 +32,7 @@ export async function createJwt(payload) {
 
 export async function verifyJwt(token) {
   try {
+    const secret = getSecret();
     const { payload } = await jose.jwtVerify(token, secret);
     return payload;
   } catch (error) {

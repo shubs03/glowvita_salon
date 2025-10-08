@@ -1,55 +1,84 @@
-
 "use client";
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
-import { Eye, EyeOff, Map } from 'lucide-react';
-import Image from 'next/image';
-import customerImage from '../../../public/images/web_login.jpg';
 import { toast } from 'sonner';
+import { glowvitaApi } from '@repo/store/api';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch } from '@repo/store/hooks';
 import { setUserAuth } from '@repo/store/slices/userAuthSlice';
+import { useAuth } from '@/hooks/useAuth';
+import Image from 'next/image';
+import customerImage from '../../../public/images/web_login.jpg';
 
-export default function LoginPage() {
+  export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const dispatch = useAppDispatch();
+  
+  const [login, { isLoading: isLoggingIn }] = glowvitaApi.useUserLoginMutation();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated) {
+      router.push('/profile');
+    }
+  }, [isAuthLoading, isAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await login({ email, password }).unwrap();
 
-      const data = await res.json();
-
-      if (res.ok) {
-        // Dispatch the action to set auth state in Redux and localStorage
-        dispatch(setUserAuth({ user: data.user, token: data.token, role: data.role }));
-        toast.success('Login successful!');
-        router.push('/profile'); // Redirect to profile page
+      if (response.user && response.token) {
+        dispatch(setUserAuth({ user: response.user, token: response.token, role: response.role, permissions: response.permissions }));
+        
+        toast.success('Login successful!', {
+          description: 'Redirecting to your profile...',
+          duration: 1000,
+          onAutoClose: () => router.push('/profile'),
+        });
       } else {
-        toast.error(data.message || 'Failed to log in.');
+        toast.error(response.message || 'Failed to log in.');
       }
-    } catch (err) {
-      toast.error('An error occurred. Please try again.');
+    } catch (err: any) {
+      toast.error('An error occurred.', {
+        description: err.data?.message || 'Please check your credentials and try again.',
+      });
     }
   };
+  
+  // Only redirect if user is authenticated
+  if (!isAuthLoading && isAuthenticated) {
+    router.push('/profile');
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/10 rounded-full"></div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-t-primary"></div>
+          </div>
+        </div>
+    );
+  }
+
+  // If already authenticated, the useEffect will handle redirection, render nothing here to avoid flash.
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
       <button 
         onClick={() => router.back()} 
         className="absolute top-4 left-4 z-20 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 shadow-md transition-all duration-200"
+        aria-label="Go back"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -109,8 +138,17 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full h-12 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                disabled={isLoggingIn}
               >
-                Continue
+                {isLoggingIn ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Signing in...
+                  </span>
+                ) : 'Continue'}
               </Button>
 
               <div className="flex items-center justify-between">
@@ -124,9 +162,9 @@ export default function LoginPage() {
                     Remember me
                   </label>
                 </div>
-                <a href="#" className="text-md font-medium text-blue-600 hover:text-blue-500">
+                <Link href="/forgot-password" className="text-md font-medium text-blue-600 hover:text-blue-500">
                   Forgot password?
-                </a>
+                </Link>
               </div>
 
               <div className="relative my-4">
@@ -134,7 +172,7 @@ export default function LoginPage() {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-2 bg-gray-50 text-gray-500">OR</span>
+                  <span className="px-2 bg-gray-50 text-gray-500">OR CONTINUE WITH</span>
                 </div>
               </div>
 
@@ -192,7 +230,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Right Side - Background Image with Backdrop */}
       <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
         <div className="absolute inset-0 bg-black/40 z-10"></div>
         <div className="absolute inset-0">

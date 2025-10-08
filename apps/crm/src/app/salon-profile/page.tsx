@@ -2,8 +2,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useGetSubscriptionPlansQuery, useGetVendorProfileQuery, useUpdateVendorProfileMutation, useChangePlanMutation, useRenewPlanMutation } from '@repo/store/api';
+import { useDispatch } from "react-redux";
+import { useAppSelector } from '@repo/store/hooks';
+import { useGetSubscriptionPlansQuery, useGetVendorProfileQuery, useUpdateVendorProfileMutation, useChangePlanMutation, useRenewPlanMutation, useGetWorkingHoursQuery, useUpdateWorkingHoursMutation } from '@repo/store/api';
 import { selectVendor, selectVendorLoading, selectVendorError, selectVendorMessage, clearVendorMessage, clearVendorError } from '@repo/store/slices/vendorSlice';
 import { toast } from 'sonner';
 import {
@@ -53,6 +54,7 @@ import Image from "next/image";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/dialog";
 import { useMemo } from 'react';
 import { SubscriptionPlansDialog } from "@/components/SubscriptionPlansDialog";
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 // TYPES
 type SalonCategory = "unisex" | "men" | "women";
@@ -123,6 +125,7 @@ const ProfileTab = ({ vendor, setVendor }: any) => {
   const handleSave = async () => {
     try {
       const result: any = await updateVendorProfile({
+        _id: vendor._id,
         businessName: vendor.businessName,
         description: vendor.description,
         category: vendor.category,
@@ -217,12 +220,12 @@ const ProfileTab = ({ vendor, setVendor }: any) => {
   );
 };
 
-const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: Subscription; userType?: UserType }) => {
+const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription?: Subscription; userType?: UserType }) => {
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const isExpired = subscription?.endDate ? new Date(subscription.endDate) < new Date() : true;
-  const daysLeft = !isExpired ? Math.ceil((new Date(subscription?.endDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0;
+  const daysLeft = !isExpired && subscription?.endDate ? Math.ceil((new Date(subscription.endDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0;
   
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -249,7 +252,7 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: 
             <div className="mb-6">
               <h3 className="text-2xl font-bold">{subscription?.plan?.name || 'No Active Plan'}</h3>
               <p className="text-muted-foreground">
-                {isExpired ? 'Expired' : `Expires on ${new Date(subscription?.endDate).toLocaleDateString()}`}
+                {isExpired ? 'Expired' : `Expires on ${subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'Unknown'}`}
               </p>
             </div>
             <div className="grid sm:grid-cols-3 gap-6">
@@ -263,13 +266,13 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: 
               <div>
                 <p className="text-sm text-muted-foreground">Start Date</p>
                 <p className="mt-1 font-semibold">
-                  {new Date(subscription?.startDate).toLocaleDateString()}
+                  {subscription?.startDate ? new Date(subscription.startDate).toLocaleDateString() : 'Unknown'}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">End Date</p>
                 <p className="mt-1 font-semibold">
-                  {new Date(subscription?.endDate).toLocaleDateString()}
+                  {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'Unknown'}
                 </p>
               </div>
             </div>
@@ -299,12 +302,14 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription: 
         </CardContent>
       </Card>
 
-      <SubscriptionPlansDialog
-        open={showPlansModal}
-        onOpenChange={setShowPlansModal}
-        subscription={subscription}
-        userType={userType}
-      />
+      {subscription && (
+        <SubscriptionPlansDialog
+          open={showPlansModal}
+          onOpenChange={setShowPlansModal}
+          subscription={subscription}
+          userType={userType}
+        />
+      )}
       
       <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
         <DialogContent className="sm:max-w-[600px]">
@@ -478,7 +483,7 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
         {/* Image Preview Modal */}
         {previewImage && (
           <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closePreview}>
-            <div className="relative max-w-4xl max-h-full" onClick={(e) => e.stopPropagation()}>
+            <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
               <Button 
                 variant="secondary" 
                 size="icon" 
@@ -492,7 +497,7 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
                 alt="Preview"
                 width={800}
                 height={600}
-                className="object-contain max-h-[80vh]"
+                className="object-contain max-h-[80vh] mx-auto"
               />
             </div>
           </div>
@@ -752,120 +757,78 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
   );
 };
 
-const OpeningHoursTab = () => {
-  // Get the token from Redux store
-  const token = useSelector((state) => state.crmAuth?.token);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [hours, setHours] = useState<OpeningHour[]>([
-    { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
-    { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
-    { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
-    { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
-    { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
-    { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
-    { day: 'Sunday', open: '', close: '', isOpen: false },
-  ]);
-
-  // Fetch working hours on component mount
-  useEffect(() => {
-    const fetchWorkingHours = async () => {
-      try {
-        if (!token) {
-          console.error('No authentication token found in Redux store');
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetch('/api/crm/workinghours', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('API Response:', data); // Debug log
-          
-          // Check if data is an array or has a workingHours property
-          const workingHours = Array.isArray(data) ? data : 
-                             (Array.isArray(data.workingHours) ? data.workingHours : null);
-          
-          if (workingHours) {
-            setHours(prevHours => 
-              prevHours.map(day => {
-                const savedDay = workingHours.find((h: any) => h.day === day.day);
-                return {
-                  ...day,
-                  ...(savedDay || {})
-                };
-              })
-            );
-          }
-        } else if (response.status === 401) {
-          // Handle unauthorized error
-          console.error('Unauthorized: Please log in again');
-        }
-      } catch (error) {
-        console.error('Error fetching working hours:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchWorkingHours();
-  }, []);
+const OpeningHoursWithPropsTab = ({
+  hours,
+  setHours,
+  setVendor,
+  refetchWorkingHours,
+}: {
+  hours: OpeningHour[];
+  setHours: any;
+  setVendor: any;
+  refetchWorkingHours: () => void;
+}) => {
+  const [updateWorkingHours, { isLoading: isSaving }] = useUpdateWorkingHoursMutation();
 
   const handleSave = async () => {
     try {
-      setSaving(true);
-      if (!token) {
-        throw new Error('No authentication token found. Please log in again.');
-      }
+      // Transform hours array to the expected object format
+      const workingHoursObject: Record<string, any> = {};
+      const dayMapping: Record<string, string> = {
+        'Monday': 'monday',
+        'Tuesday': 'tuesday', 
+        'Wednesday': 'wednesday',
+        'Thursday': 'thursday',
+        'Friday': 'friday',
+        'Saturday': 'saturday',
+        'Sunday': 'sunday'
+      };
 
-      const response = await fetch('/api/crm/workinghours', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          workingHours: hours,
-          timezone: 'Asia/Kolkata',
-        }),
+      hours.forEach(hour => {
+        const dayKey = dayMapping[hour.day];
+        if (dayKey) {
+          workingHoursObject[dayKey] = {
+            isOpen: hour.isOpen,
+            hours: hour.isOpen && hour.open && hour.close ? [
+              {
+                openTime: hour.open,
+                closeTime: hour.close
+              }
+            ] : []
+          };
+        }
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to save working hours');
-      }
+      const result = await updateWorkingHours({
+        workingHours: workingHoursObject,
+        timezone: 'Asia/Kolkata',
+      }).unwrap();
+
+      // Refetch working hours data to get the updated values
+      refetchWorkingHours();
+
+      // Update the vendor profile with the new opening hours
+      setVendor((prev: any) => ({
+        ...prev,
+        openingHours: hours
+      }));
 
       // Show success message
-      alert('Working hours saved successfully!');
-    } catch (error) {
+      toast.success('Working hours saved successfully!');
+    } catch (error: any) {
       console.error('Error saving working hours:', error);
-      alert('Failed to save working hours. Please try again.');
-    } finally {
-      setSaving(false);
+      toast.error(error?.data?.message || 'Failed to save working hours. Please try again.');
     }
   };
 
   const updateHours = (index: number, updates: Partial<OpeningHour>) => {
-    setHours(prev => {
-      const newHours = [...prev];
-      newHours[index] = { ...newHours[index], ...updates };
-      return newHours;
-    });
+    const newHours = [...hours];
+    newHours[index] = { ...newHours[index], ...updates };
+    setHours(newHours);
   };
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center h-40">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const {data : workingHoursData} = useGetWorkingHoursQuery(undefined);
+  console.log("workingHoursData", workingHoursData);
 
   return (
     <Card>
@@ -873,97 +836,63 @@ const OpeningHoursTab = () => {
         <CardTitle>Opening Hours</CardTitle>
         <CardDescription>Set your weekly business hours.</CardDescription>
       </CardHeader>
+
       <CardContent className="space-y-4">
-        {hours.map((hour, index) => (
-          <div key={hour.day} className="grid grid-cols-4 items-center gap-4">
-            <div className="col-span-1 flex items-center">
-              <Checkbox
-                id={hour.day}
-                checked={hour.isOpen}
-                onCheckedChange={(checked) => {
-                  updateHours(index, { isOpen: !!checked });
-                }}
-                className="mr-2"
-              />
-              <Label htmlFor={hour.day} className="font-medium">
-                {hour.day}
-              </Label>
+        {hours &&
+          hours.map((hour, index) => (
+            <div key={hour.day} className="grid grid-cols-4 items-center gap-4">
+              <div className="col-span-1 flex items-center">
+                <Checkbox
+                  id={hour.day}
+                  checked={hour.isOpen}
+                  onCheckedChange={(checked) => {
+                    updateHours(index, { isOpen: !!checked });
+                  }}
+                  className="mr-2"
+                />
+                <Label htmlFor={hour.day} className="font-medium">
+                  {hour.day}
+                </Label>
+              </div>
+              <div className="col-span-1">
+                <Input
+                  type="time"
+                  value={hour.open}
+                  disabled={!hour.isOpen}
+                  onChange={(e) => {
+                    updateHours(index, { open: e.target.value });
+                  }}
+                />
+              </div>
+              <div className="col-span-1">
+                <Input
+                  type="time"
+                  value={hour.close}
+                  disabled={!hour.isOpen}
+                  onChange={(e) => {
+                    updateHours(index, { close: e.target.value });
+                  }}
+                />
+              </div>
+              <div className="col-span-1 text-right">
+                {hour.isOpen ? (
+                  <span className="text-green-600">Open</span>
+                ) : (
+                  <span className="text-red-600">Closed</span>
+                )}
+              </div>
             </div>
-            <div className="col-span-1">
-              <Input
-                type="time"
-                value={hour.open}
-                disabled={!hour.isOpen}
-                onChange={(e) => {
-                  updateHours(index, { open: e.target.value });
-                }}
-              />
-            </div>
-            <div className="col-span-1">
-              <Input
-                type="time"
-                value={hour.close}
-                disabled={!hour.isOpen}
-                onChange={(e) => {
-                  updateHours(index, { close: e.target.value });
-                }}
-              />
-            </div>
-            <div className="col-span-1 text-right">
-              {hour.isOpen ? (
-                <span className="text-green-600">Open</span>
-              ) : (
-                <span className="text-red-600">Closed</span>
-              )}
-            </div>
-          </div>
-        ))}
+          ))}
       </CardContent>
+
+      <CardFooter>
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? "Saving..." : "Save Hours"}
+        </Button>
+      </CardFooter>
     </Card>
   );
 };
-const OpeningHoursWithPropsTab = ({
-  hours,
-  setHours,
-}: {
-  hours: OpeningHour[];
-  setHours: any;
-}) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Opening Hours</CardTitle>
-      <CardDescription>Set your weekly business hours.</CardDescription>
-    </CardHeader>
-
-    <CardContent className="space-y-4">
-      {hours &&
-        hours.map((hour, index) => (
-          <div key={hour.day} className="grid grid-cols-4 items-center gap-4">
-            <div className="col-span-1 flex items-center">
-              <Checkbox
-                id={hour.day}
-                checked={hour.isOpen}
-                onCheckedChange={(checked) => {
-                  const newHours = [...hours];
-                  newHours[index].isOpen = !!checked;
-                  setHours(newHours);
-                }}
-              />
-              <Label htmlFor={hour.day} className="ml-2 font-medium">
-                {hour.day}
-              </Label>
-            </div>
-          </div>
-        ))}
-    </CardContent>
-
-    <CardFooter>
-      <Button onClick={handleSave} disabled={saving}>
-        {saving ? "Saving..." : "Save Hours"}
-      </Button>
-    </CardFooter>
-  </Card>
-);
 
 
 const CategoriesTab = () => (
@@ -983,59 +912,44 @@ const CategoriesTab = () => (
 
 // MAIN PAGE COMPONENT
 export default function SalonProfilePage() {
-  // Remove unused state since OpeningHoursTab manages its own state now
-  const dispatch = useDispatch();
-  const vendor = useSelector(selectVendor);
-  const loading = useSelector(selectVendorLoading);
-  const error = useSelector(selectVendorError);
-  const message = useSelector(selectVendorMessage);
+  const { user } = useCrmAuth();
+  const { data: vendorData, isLoading, isError, refetch } = useGetVendorProfileQuery(undefined, {
+    skip: !user?._id
+  });
+  
+  const { data: workingHoursData, isLoading: isLoadingWorkingHours, refetch: refetchWorkingHours } = useGetWorkingHoursQuery(undefined, {
+    skip: !user?._id
+  });
   
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
-  const { data: vendorData, isLoading, isError } = useGetVendorProfileQuery(void 0);
   
-  const [localVendor, setLocalVendor] = useState<VendorProfile>({
-    _id: '',
-    businessName: '',
-    category: 'unisex',
-    subCategories: []
-  });
-  const [openingHours, setOpeningHours] = useState<OpeningHour[]>(
-    Array.from({ length: 7 }, (_, i) => {
-      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      return {
-        day: days[i],
-        open: '09:00',
-        close: '18:00',
-        isOpen: i < 5 // Monday to Friday open by default
-      };
-    })
-  );
+  const [localVendor, setLocalVendor] = useState<VendorProfile | null>(null);
+  const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (vendorData?.data) {
       setLocalVendor(vendorData.data);
-      // Initialize opening hours if they exist in the vendor data
-      if (vendorData.data.openingHours) {
-        setOpeningHours(vendorData.data.openingHours);
-      }
     }
   }, [vendorData]);
 
   useEffect(() => {
-    if (message) {
-      toast.success(message);
-      dispatch(clearVendorMessage());
+    if (workingHoursData?.workingHoursArray && workingHoursData.workingHoursArray.length > 0) {
+      setOpeningHours(workingHoursData.workingHoursArray);
+    } else {
+      // Initialize with default opening hours if none exist
+      setOpeningHours([
+        { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
+        { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
+        { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
+        { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
+        { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
+        { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
+        { day: 'Sunday', open: '', close: '', isOpen: false },
+      ]);
     }
-  }, [message, dispatch]);
-
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      dispatch(clearVendorError());
-    }
-  }, [error, dispatch]);
+  }, [workingHoursData]);
 
   const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1044,7 +958,6 @@ export default function SalonProfilePage() {
     setIsUploading(true);
     
     try {
-      // Convert file to base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -1052,8 +965,8 @@ export default function SalonProfilePage() {
         reader.onerror = (error) => reject(error);
       });
 
-      // Update vendor profile with new profile image
-      const result = await updateVendorProfile({
+      const result: any = await updateVendorProfile({
+        _id: localVendor?._id,
         profileImage: base64
       }).unwrap();
 
@@ -1070,13 +983,12 @@ export default function SalonProfilePage() {
       toast.error(error?.data?.message || 'Failed to update profile image');
     } finally {
       setIsUploading(false);
-      // Reset the file input
       e.target.value = '';
     }
   };
 
   const openProfileImagePreview = () => {
-    if (localVendor.profileImage) {
+    if (localVendor?.profileImage) {
       setPreviewImage(localVendor.profileImage);
     }
   };
@@ -1085,7 +997,7 @@ export default function SalonProfilePage() {
     setPreviewImage(null);
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingWorkingHours) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -1101,7 +1013,10 @@ export default function SalonProfilePage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-red-600">Error loading vendor profile</p>
-          <Button onClick={() => window.location.reload()} className="mt-4">Retry</Button>
+          <Button onClick={() => {
+            refetch();
+            refetchWorkingHours();
+          }} className="mt-4">Retry</Button>
         </div>
       </div>
     );
@@ -1198,7 +1113,7 @@ export default function SalonProfilePage() {
       {/* Profile Image Preview Modal */}
       {previewImage && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closePreview}>
-          <div className="relative max-w-4xl max-h-full" onClick={(e) => e.stopPropagation()}>
+          <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
             <Button 
               variant="secondary" 
               size="icon" 
@@ -1212,7 +1127,7 @@ export default function SalonProfilePage() {
               alt="Profile Preview"
               width={800}
               height={600}
-              className="object-contain max-h-[80vh]"
+              className="object-contain max-h-[80vh] mx-auto"
             />
           </div>
         </div>
@@ -1259,7 +1174,12 @@ export default function SalonProfilePage() {
           />
         </TabsContent>
         <TabsContent value="opening-hours" className="mt-4">
-          <OpeningHoursTab />
+          <OpeningHoursWithPropsTab 
+            hours={openingHours} 
+            setHours={setOpeningHours}
+            setVendor={setLocalVendor}
+            refetchWorkingHours={refetchWorkingHours}
+          />
         </TabsContent>
         <TabsContent value="categories" className="mt-4">
           <CategoriesTab />

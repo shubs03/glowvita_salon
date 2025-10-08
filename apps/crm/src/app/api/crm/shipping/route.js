@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import _db from '../../../../../../../packages/lib/src/db.js';
-import ShippingConfigModel from '../../../../../../../packages/lib/src/models/Vendor/Shipping.model.js';
-import { authMiddlewareCrm } from '../../../../middlewareCrm.js';
+import ShippingConfigModel from '@repo/lib/models/Vendor/Shipping.model';
+import { authMiddlewareCrm } from '../../../../middlewareCrm';
 await _db();
 
 // Helper to validate shipping config data

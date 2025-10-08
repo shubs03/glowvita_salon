@@ -6,10 +6,9 @@ import { usePathname } from 'next/navigation';
 import StoreProvider from '@repo/store/provider';
 import './globals.css';
 import { Toaster } from 'sonner';
-import { AuthInitializer } from '@/components/AuthInitializer';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function RootLayout({
   children,
@@ -36,7 +35,16 @@ export default function RootLayout({
   ];
 
   const isMarketingPage = marketingPages.includes(pathname);
-  const isAuthPage = pathname.startsWith('/client-login') || pathname.startsWith('/client-register');
+  const isAuthPage = pathname.startsWith('/client-login') || 
+                     pathname.startsWith('/client-register') || 
+                     pathname.startsWith('/forgot-password') ||
+                     pathname.startsWith('/reset-password');
+  const isProfilePage = pathname.startsWith('/profile');
+
+  // Show header on marketing and profile pages, but not on auth pages
+  const showHeader = isMarketingPage || isProfilePage;
+  // Show footer only on marketing pages
+  const showFooter = isMarketingPage;
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -59,22 +67,20 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          <AuthInitializer>
-            <div className="flex flex-col min-h-screen bg-background text-foreground">
-              {!isAuthPage && (
-                <MarketingHeader 
-                  isMobileMenuOpen={isMobileMenuOpen} 
-                  toggleMobileMenu={toggleMobileMenu}
-                  isHomePage={pathname === '/'}
-                />
-              )}
-              <main className="flex-grow">
-                {children}
-              </main>
-              {isMarketingPage && <Footer />}
-            </div>
-            <Toaster />
-          </AuthInitializer>
+          <div className="flex flex-col min-h-screen bg-background text-foreground">
+            {showHeader && (
+              <MarketingHeader 
+                isMobileMenuOpen={isMobileMenuOpen} 
+                toggleMobileMenu={toggleMobileMenu}
+                isHomePage={pathname === '/'}
+              />
+            )}
+            <main className="flex-grow">
+              {children}
+            </main>
+            {showFooter && <Footer />}
+          </div>
+          <Toaster />
         </StoreProvider>
       </body>
     </html>

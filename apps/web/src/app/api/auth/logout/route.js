@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 
 export async function POST() {
   try {
+    // Remove the 'token' cookie by setting an expiration date in the past.
     cookies().set('token', '', {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',

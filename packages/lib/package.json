@@ -1,28 +1,46 @@
+
+      
 {
   "name": "@repo/lib",
   "version": "0.0.0",
   "private": true,
   "exports": {
-    "./*  ": "./src/*",
+    ".": "./src/index.js",
     "./db": "./src/db.js",
     "./auth": "./src/auth.js",
+    "./generateTokens": "./src/generateTokens.js",
+    "./emailService": "./src/emailService.js",
     "./models/user": "./src/models/user/User.model.js",
-    "./models/staffModel": "./src/models/vendor/Staff.model.js",
-    "./models/VendorWorkingHours": "./src/models/vendor/VendorWorkingHours.model.js",
-    "./models/vendor/Product": "./src/models/vendor/Product.model.js",
+    "./models/user/ClientOrder.model": "./src/models/user/ClientOrder.model.js",
+    "./models/staffModel": "./src/models/Vendor/Staff.model.js",
+    "./models/VendorWorkingHours": "./src/models/Vendor/VendorWorkingHours.model.js",
     "./models/admin/ProductCategory": "./src/models/admin/ProductCategory.model.js",
     "./models/admin/AdminUser": "./src/models/admin/AdminUser.model.js",
+    "./models/admin/CustomPushNotificationAdmin": "./src/models/admin/CustomPushNotificationAdmin.model.js",
+    "./models/admin/Category": "./src/models/admin/Category.model.js",
+    "./models/admin/Service": "./src/models/admin/Service.model.js",
     "./models/admin/TaxFeeSettings": "./src/models/admin/TaxFeeSettings.model.js",
     "./models/admin/SubscriptionPlan": "./src/models/admin/SubscriptionPlan.model.js",
-    "./models/admin/SubscriptionPlan.model": "./src/models/admin/SubscriptionPlan.model.js",
-    "./models/admin/Service": "./src/models/admin/Service.model.js",
-    "./models/admin/Category": "./src/models/admin/Category.model.js",
+    "./models/admin/Reffer": "./src/models/admin/Reffer.model.js",
+    "./models/admin/SuperData": "./src/models/admin/SuperData.model.js",
+    "./models/admin/GeoFence": "./src/models/admin/GeoFence.model.js",
+    "./models/admin/AdminOffers": "./src/models/admin/AdminOffers.model.js",
     "./models/admin/Faq": "./src/models/admin/Faq.model.js",
-    "./models/Vendor/Vendor.model": "./src/models/vendor/Vendor.model.js",
-    "./models/Vendor/Supplier.model": "./src/models/vendor/Supplier.model.js",
-    "./models/Vendor/Docters.model": "./src/models/vendor/Docters.model.js",
-    "./models/Vendor/VendorServices.model": "./src/models/vendor/VendorServices.model.js",
-    "./models": "./src/models",
+    "./models/admin/SubscriptionPlan.model": "./src/models/admin/SubscriptionPlan.model.js",
+    "./models/Vendor.model": "./src/models/Vendor/Vendor.model.js",
+    "./models/Vendor/Vendor.model": "./src/models/Vendor/Vendor.model.js",
+    "./models/Vendor/Supplier.model": "./src/models/Vendor/Supplier.model.js",
+    "./models/Vendor/Docters.model": "./src/models/Vendor/Docters.model.js",
+    "./models/Vendor/VendorServices.model": "./src/models/Vendor/VendorServices.model.js",
+    "./models/Vendor/Client.model": "./src/models/Vendor/Client.model.js",
+    "./models/Vendor/Cart.model": "./src/models/Vendor/Cart.model.js",
+    "./models/Vendor/VendorNotification.model": "./src/models/Vendor/VendorNotification.model.js",
+    "./models/Vendor/CRMOffer.model": "./src/models/Vendor/CRMOffer.model.js",
+    "./models/Vendor/Order.model": "./src/models/Vendor/Order.model.js",
+    "./models/Vendor/Product.model": "./src/models/Vendor/Product.model.js",
+    "./models/Vendor/Shipping.model": "./src/models/Vendor/Shipping.model.js",
+    "./models/Vendor/Staff.model": "./src/models/Vendor/Staff.model.js",
+    "./models/Vendor/VendorWorkingHours.model": "./src/models/Vendor/VendorWorkingHours.model.js",
     "./stateCity": "./src/state-city.json",
     "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",
     "./models/Marketing/SmsPackage.model": "./src/models/Marketing/SmsPackage.model.js",
@@ -36,7 +54,8 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "jose": "^5.4.0",
-    "mongoose": "^8.4.1"
+    "mongoose": "^8.4.1",
+    "nodemailer": "^6.10.1"
   },
   "devDependencies": {
     "@repo/eslint-config-custom": "*",
@@ -46,3 +65,5 @@
   },
   "type": "module"
 }
+
+    

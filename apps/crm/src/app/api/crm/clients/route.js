@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import ClientModel from '../../../../../../../packages/lib/src/models/Vendor/Client.model.js';
+import ClientModel from '@repo/lib/models/Vendor/Client.model';
 import _db from '@repo/lib/db';
-import { authMiddlewareCrm } from '@/middlewareCrm.js';
+import { authMiddlewareCrm } from '@/middlewareCrm';
 
 await _db();
 
 // GET - Fetch all clients for a vendor
 export const GET = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.toString();
+        const vendorId = req.user.userId.toString();
         const url = new URL(req.url);
         const searchTerm = url.searchParams.get('search');
         const status = url.searchParams.get('status');

@@ -5,7 +5,6 @@ import Image from 'next/image';
 import salonImage from '../../../public/images/salon_image.jpg';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Label } from '@repo/ui/label';
 import { useAppDispatch } from '@repo/store/hooks';
 import { setAdminAuth } from '@repo/store/slices/adminAuthSlice';

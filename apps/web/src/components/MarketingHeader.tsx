@@ -3,13 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { Button } from "@repo/ui/button";
-import { ArrowRight, Menu, X, User, LayoutDashboard, Calendar, ShoppingCart, Star, Wallet, Settings, LogOut, ChevronDown } from "lucide-react";
+import { ArrowRight, Menu, X, User, LayoutDashboard, Calendar, ShoppingCart, Star, Wallet, Settings, LogOut, ChevronDown, Gift } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@repo/store/hooks';
 import { clearUserAuth } from '@repo/store/slices/userAuthSlice';
-import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -22,13 +21,14 @@ import {
   DropdownMenuGroup,
 } from "@repo/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
-import { LogoutConfirmationModal } from '@repo/ui/logout-confirmation-modal';
+import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 
 interface User {
   firstName?: string;
   lastName?: string;
   emailAddress?: string;
   avatarUrl?: string;
+  profilePicture?: string;
 }
 
 interface MarketingHeaderProps {
@@ -40,33 +40,31 @@ interface MarketingHeaderProps {
 const profileNavItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
   { id: 'appointments', label: 'My Appointments', icon: Calendar, href: '/profile/appointments' },
+  { id: 'orders', label: 'My Orders', icon: ShoppingCart, href: '/profile/orders' },
   { id: 'reviews', label: 'My Reviews', icon: Star, href: '/profile/reviews' },
+  { id: 'referrals', label: 'Refer & Earn', icon: Gift, href: '/profile/referrals' },
   { id: 'wallet', label: 'Wallet', icon: Wallet, href: '/profile/wallet' },
+  { id: 'settings', label: 'Account Settings', icon: Settings, href: '/profile/settings' },
 ];
 
 export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage = false }: MarketingHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  
-  const { isAuthenticated, user, isLoading } = useAuth() as { isAuthenticated: boolean; user: User | null; isLoading: boolean };
+
+  const { isAuthenticated, user, isLoading } = useAuth();
   const dispatch = useAppDispatch();
   const router = useRouter();
 
-  const handleLogout = async () => {
-    try {
-      setIsLoggingOut(true);
-      dispatch(clearUserAuth());
-      Cookies.remove('token');
-      setShowLogoutModal(false);
-      toast.success("You have been logged out.");
-      router.push('/client-login');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error("Error logging out. Please try again.");
-    } finally {
-      setIsLoggingOut(false);
-    }
+  const handleLogout = () => {
+    setIsLoggingOut(true);
+    // Dispatch the client-side action to clear all auth state
+    dispatch(clearUserAuth());
+    toast.success("You have been logged out.");
+    // Redirect to login page
+    router.push('/client-login');
+    setIsLoggingOut(false);
+    setShowLogoutModal(false);
   };
 
   const getInitials = (firstName: string = '', lastName: string = '') => {
@@ -130,64 +128,66 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
               <ThemeToggle />
             </div>
             {!isLoading && (
-              isAuthenticated && user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      className="group flex items-center gap-2 h-10 rounded-full hover:bg-primary/10 transition-all duration-300"
-                      aria-label="User menu"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={user?.avatarUrl} alt={`${user?.firstName || 'User'} avatar`} />
-                        <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
-                      </Avatar>
-                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-xl border border-border/30 shadow-lg rounded-lg">
-                    <DropdownMenuLabel className="p-4 border-b border-border/20">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={user?.avatarUrl} alt={`${user?.firstName || 'User'} avatar`} />
+              <>
+                {isAuthenticated && user ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        className="group flex items-center gap-2 h-10 rounded-full hover:bg-primary/10 transition-all duration-300"
+                        aria-label="User menu"
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={user?.profilePicture || user?.avatarUrl} alt={`${user?.firstName || 'User'} avatar`} />
                           <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
                         </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-foreground truncate">
-                            {user.firstName && user.lastName 
-                              ? `${user.firstName} ${user.lastName}` 
-                              : user.firstName || user.lastName || 'User'
-                            }
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">{user.emailAddress}</p>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-xl border border-border/30 shadow-lg rounded-lg">
+                      <DropdownMenuLabel className="p-4 border-b border-border/20">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={user?.profilePicture || user?.avatarUrl} alt={`${user?.firstName || 'User'} avatar`} />
+                            <AvatarFallback>{getInitials(user?.firstName, user?.lastName)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-foreground truncate">
+                              {user.firstName && user.lastName 
+                                ? `${user.firstName} ${user.lastName}` 
+                                : user.firstName || user.lastName || 'User'
+                              }
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">{user.emailAddress}</p>
+                          </div>
                         </div>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuGroup className="p-2">
-                      {profileNavItems.map(item => (
-                        <DropdownMenuItem key={item.id} asChild className="rounded-md">
-                          <Link href={item.href} className="flex items-center gap-3">
-                            <item.icon className="h-4 w-4 text-muted-foreground" />
-                            <span>{item.label}</span>
-                          </Link>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={() => setShowLogoutModal(true)} 
-                      className="text-destructive m-2 rounded-md cursor-pointer"
-                    >
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Logout</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/client-login">Login</Link>
-                </Button>
-              )
+                      </DropdownMenuLabel>
+                      <DropdownMenuGroup className="p-2">
+                        {profileNavItems.map(item => (
+                          <DropdownMenuItem key={item.id} asChild className="rounded-md">
+                            <Link href={item.href} className="flex items-center gap-3">
+                              <item.icon className="h-4 w-4 text-muted-foreground" />
+                              <span>{item.label}</span>
+                            </Link>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => setShowLogoutModal(true)} 
+                        className="text-destructive m-2 rounded-md cursor-pointer"
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Logout</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                    <Link href="/client-login">Login</Link>
+                  </Button>
+                )}
+              </>
             )}
           </nav>
           

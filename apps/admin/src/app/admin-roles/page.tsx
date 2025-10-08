@@ -7,12 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Skeleton } from "@repo/ui/skeleton";
 import { Plus, Edit } from 'lucide-react';
-import { sidebarNavItems } from '@/lib/routes';
 import AddAdminForm, { AdminUser } from '@/components/AddAdminForm';
 import { useGetAdminsQuery, useGetSuperDataQuery } from '../../../../../packages/store/src/services/api.js';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { closeModal, openModal } from '@repo/store/slices/modal';
- 
+import { closeModal, openModal } from '../../../../../packages/store/src/slices/modalSlice.js';
 
 const rolesData = [
   {

@@ -1,38 +1,63 @@
 
+      
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
-import { Trash, ShoppingCart, TrendingUp, Package, Search } from 'lucide-react';
+import { Trash, ShoppingCart, TrendingUp, Package, Search, Eye, Calendar, DollarSign, MapPin, CreditCard, Mail, Phone, User } from 'lucide-react';
 import { StatCard } from '../../../components/profile/StatCard';
 import { Pagination } from '@repo/ui/pagination';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
+import { Label } from '@repo/ui/label';
+import Image from 'next/image';
+import { useGetClientOrdersQuery } from '@repo/store/api';
+import { useAuth } from '@/hooks/useAuth';
 
-const initialOrderHistory = [
-  { id: "ORD-001", date: "2024-08-01T10:00:00Z", total: 120, items: 3, status: "Delivered" },
-  { id: "ORD-002", date: "2024-07-15T15:30:00Z", total: 75, items: 2, status: "Processing" },
-  { id: "ORD-003", date: "2024-06-10T11:00:00Z", total: 210, items: 5, status: "Cancelled" },
-  { id: "ORD-004", date: "2024-05-25T09:00:00Z", total: 95, items: 1, status: "Delivered" },
-  { id: "ORD-005", date: "2024-05-10T18:00:00Z", total: 150, items: 4, status: "Delivered" },
-  { id: "ORD-006", date: "2024-04-20T12:00:00Z", total: 50, items: 1, status: "Delivered" },
-];
+interface OrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  image: string;
+}
+
+interface Order {
+  _id: string;
+  id: string;
+  createdAt: string;
+  items: OrderItem[];
+  totalAmount: number;
+  status: string;
+  shippingAddress: string;
+  paymentMethod?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+}
 
 export default function OrdersPage() {
-    const [orderHistory, setOrderHistory] = useState(initialOrderHistory);
+    const { user } = useAuth();
+    const { data: ordersData, isLoading, isError } = useGetClientOrdersQuery(undefined, {
+      skip: !user,
+    });
+
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-    const [orderToCancel, setOrderToCancel] = useState(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [cancellationReason, setCancellationReason] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+
+    const orderHistory: Order[] = ordersData?.data || [];
 
     const filteredOrders = useMemo(() => {
         return orderHistory.filter(order =>
@@ -41,23 +66,26 @@ export default function OrdersPage() {
         );
     }, [orderHistory, searchTerm, statusFilter]);
 
-    const handleCancelClick = (order) => {
+    const handleCancelClick = (order: Order) => {
         setOrderToCancel(order);
         setIsCancelModalOpen(true);
     };
 
+    const handleViewClick = (order: Order) => {
+        setSelectedOrder(order);
+        setIsViewModalOpen(true);
+    };
+
     const handleConfirmCancel = () => {
+        // Here you would call an API to cancel the order
         console.log("Cancelling order:", orderToCancel?.id, "Reason:", cancellationReason);
-        setOrderHistory(orderHistory.map(order => 
-            order.id === orderToCancel.id ? { ...order, status: 'Cancelled' } : order
-        ));
         setIsCancelModalOpen(false);
         setOrderToCancel(null);
         setCancellationReason('');
     };
     
     const isOrderCancellable = (status: string) => {
-        return status === 'Processing';
+        return status === 'Processing' || status === 'Pending';
     };
 
     const lastItemIndex = currentPage * itemsPerPage;
@@ -69,7 +97,7 @@ export default function OrdersPage() {
         <div className="space-y-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <StatCard icon={ShoppingCart} title="Total Orders" value={orderHistory.length} change="All time" />
-                <StatCard icon={TrendingUp} title="Total Spent" value={`₹${orderHistory.reduce((acc, o) => acc + o.total, 0).toFixed(2)}`} change="On products" />
+                <StatCard icon={TrendingUp} title="Total Spent" value={`₹${orderHistory.reduce((acc, o) => acc + o.totalAmount, 0).toFixed(2)}`} change="On products" />
                 <StatCard icon={Package} title="Delivered" value={orderHistory.filter(o => o.status === 'Delivered').length} change="All time" />
             </div>
             <Card>
@@ -99,6 +127,7 @@ export default function OrdersPage() {
                                 <SelectItem value="Delivered">Delivered</SelectItem>
                                 <SelectItem value="Processing">Processing</SelectItem>
                                 <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -118,30 +147,43 @@ export default function OrdersPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {currentItems.map((order) => (
-                          <TableRow key={order.id}>
-                            <TableCell>{order.id}</TableCell>
-                            <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
-                            <TableCell>{order.items}</TableCell>
-                            <TableCell>₹{order.total.toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Badge variant={order.status === "Delivered" ? "default" : "secondary"}>
-                                {order.status}
-                              </Badge>
-                            </TableCell>
-                             <TableCell className="text-right">
-                                {isOrderCancellable(order.status) ? (
-                                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancelClick(order)}>
-                                        <Trash className="h-4 w-4 mr-1"/>
-                                    </Button>
-                                ) : (
-                                    <Button variant="ghost" size="sm" disabled className="text-gray-400">
-                                        <Trash className="h-4 w-4 mr-1"/>
-                                    </Button>
-                                )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8">Loading orders...</TableCell>
+                            </TableRow>
+                        ) : isError ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8 text-destructive">Failed to load orders.</TableCell>
+                            </TableRow>
+                        ) : currentItems.length > 0 ? (
+                          currentItems.map((order) => (
+                            <TableRow key={order._id}>
+                              <TableCell className="font-mono">{order._id.slice(-6)}</TableCell>
+                              <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                              <TableCell>{order.items.length}</TableCell>
+                              <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
+                              <TableCell>
+                                <Badge variant={order.status === "Delivered" ? "default" : "secondary"}>
+                                  {order.status}
+                                </Badge>
+                              </TableCell>
+                               <TableCell className="text-right">
+                                  <Button variant="ghost" size="sm" onClick={() => handleViewClick(order)}>
+                                      <Eye className="h-4 w-4"/>
+                                  </Button>
+                                  {isOrderCancellable(order.status) && (
+                                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancelClick(order)}>
+                                          <Trash className="h-4 w-4"/>
+                                      </Button>
+                                  )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8">No orders found.</TableCell>
+                            </TableRow>
+                        )}
                       </TableBody>
                     </Table>
                   </div>
@@ -176,11 +218,95 @@ export default function OrdersPage() {
                         />
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCancelModalOpen(false)}>No</Button>
+                        <Button variant="outline" onClick={() => setIsCancelModalOpen(false)}>No, Keep It</Button>
                         <Button variant="destructive" onClick={handleConfirmCancel} disabled={!cancellationReason.trim()}>Yes, Cancel Order</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
+                <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+                    <DialogHeader className="p-6 pb-4 border-b">
+                        <DialogTitle className="text-2xl font-bold">Order Details: #{selectedOrder?._id.slice(-6)}</DialogTitle>
+                        <DialogDescription>
+                            Placed on {selectedOrder ? new Date(selectedOrder.createdAt).toLocaleDateString() : ''}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedOrder && (
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
+                                      <User className="h-5 w-5 text-primary" />
+                                      Customer & Shipping
+                                    </h3>
+                                    <div className="p-4 bg-secondary rounded-lg space-y-3 text-sm">
+                                      <div className="flex items-start gap-3">
+                                        <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                        <p className="text-muted-foreground">{selectedOrder.shippingAddress}</p>
+                                      </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
+                                      <DollarSign className="h-5 w-5 text-primary" />
+                                      Payment Summary
+                                    </h3>
+                                    <div className="space-y-2 text-sm p-4 bg-secondary rounded-lg">
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Subtotal:</span>
+                                            <span>₹{selectedOrder.totalAmount.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">Shipping:</span>
+                                            <span>Free</span>
+                                        </div>
+                                        <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
+                                            <span>Total:</span>
+                                            <span className="text-primary">₹{selectedOrder.totalAmount.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs pt-2 border-t">
+                                            <span className="text-muted-foreground">Payment Method:</span>
+                                            <div className="flex items-center gap-1.5">
+                                              <CreditCard className="h-3 w-3"/>
+                                              <span>{selectedOrder.paymentMethod}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
+                                  <ShoppingCart className="h-5 w-5 text-primary" />
+                                  Items Ordered ({selectedOrder.items.length})
+                                </h3>
+                                <div className="space-y-4">
+                                    {selectedOrder.items.map((item, index) => (
+                                        <div key={index} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
+                                            <Image 
+                                                src={item.image} 
+                                                alt={item.name} 
+                                                width={64} 
+                                                height={64} 
+                                                className="rounded-md object-cover" 
+                                            />
+                                            <div className="flex-grow">
+                                                <p className="font-medium">{item.name}</p>
+                                                <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                                            </div>
+                                            <p className="font-semibold">₹{(item.price * item.quantity).toFixed(2)}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter className="p-6 pt-4 border-t">
+                        <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>Close</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
-    );
+    );  
 }
