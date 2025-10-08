@@ -20,20 +20,10 @@ export const OPTIONS = async (request) => {
 // Get Public Products (only products approved via admin panel)
 export const GET = async (request) => {
   try {
-    console.log('=== PRODUCTS API CALLED ===');
-    console.log('Request URL:', request.url);
-    console.log('Request headers:', Object.fromEntries(request.headers.entries()));
-    console.log('Products API: Starting to fetch approved products...');
-    
     // Extract vendorId from query parameters if provided
     const url = new URL(request.url);
     const vendorId = url.searchParams.get('vendorId');
-    console.log('Products API: vendorId filter:', vendorId);
-    
-    // Test database connection
-    console.log('Testing database connection...');
     const dbTest = await ProductModel.findOne().limit(1);
-    console.log('Database test result:', dbTest ? 'Connected' : 'No data found');
     
     // Build query with optional vendor filter
     const query = { 
@@ -58,14 +48,10 @@ export const GET = async (request) => {
     .sort({ createdAt: -1 })
     .limit(50);
 
-    console.log('Products API: Total approved products found:', approvedProducts.length);
-
     // Filter out products where vendor population failed (vendor not approved)
     const validProducts = approvedProducts.filter(product => product.vendorId !== null);
-    console.log('Products API: Products with approved vendors:', validProducts.length);
 
     if (validProducts.length === 0) {
-      console.log('Products API: No approved products from approved vendors found');
       return Response.json({
         success: true,
         products: [],
@@ -91,10 +77,6 @@ export const GET = async (request) => {
       reviewCount: Math.floor(50 + Math.random() * 500),
       hint: product.description || product.productName
     }));
-
-    console.log('Products API: Successfully transformed products:', transformedProducts.length);
-    console.log('Products API: Sample product names:', transformedProducts.slice(0, 3).map(p => p.name));
-
     return new Response(JSON.stringify({
       success: true,
       products: transformedProducts,

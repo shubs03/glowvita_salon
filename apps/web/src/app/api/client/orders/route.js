@@ -1,15 +1,14 @@
 
       
 import { NextResponse } from 'next/server';
-import dbConnect from '@repo/lib/db';
+import _db from '@repo/lib/db';
 import ClientOrder from '@repo/lib/models/user/ClientOrder.model';
 import { verifyJwt } from '@repo/lib/auth';
 import { cookies } from 'next/headers';
 
 // GET User's Orders
 export async function GET(req) {
-  await dbConnect();
-  
+  await _db();
   const token = cookies().get('token')?.value;
 
   if (!token) {
@@ -34,7 +33,7 @@ export async function GET(req) {
 
 // POST a new Order
 export async function POST(req) {
-  await dbConnect();
+  await _db();
 
   const token = cookies().get('token')?.value;
   if (!token) {
