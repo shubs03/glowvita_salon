@@ -118,7 +118,7 @@ export default function AppointmentsPage() {
     try {
       if (modalType === 'edit' && selectedAppointment?._id) {
         // For updates, we need to separate the ID and exclude metadata fields
-        const { _id, createdAt, updatedAt, __v, ...updates } = appointmentData;
+        const { _id, createdAt, updatedAt, ...updates } = appointmentData;
         
         // Call the update mutation with properly structured data
         await updateAppointment({
@@ -129,7 +129,7 @@ export default function AppointmentsPage() {
         toast.success('Appointment updated successfully');
       } else {
         // For new appointments, ensure we're not sending _id or other metadata fields
-        const { _id, createdAt, updatedAt, __v, ...newAppointment } = appointmentData;
+        const { _id, createdAt, updatedAt, ...newAppointment } = appointmentData;
         await createAppointment(newAppointment).unwrap();
         toast.success('Appointment created successfully');
       }

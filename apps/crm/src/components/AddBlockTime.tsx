@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { blockTimeActions, addBlockTime, STATUS } from '@repo/store/slices/blockTimeSlice';
+import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
+import { blockTimeActions } from '@repo/store/slices/blockTimeSlice';
 import { RootState } from '@repo/store';
 import { format, parseISO } from 'date-fns';
 import { Button } from '@repo/ui/button';
@@ -33,6 +33,15 @@ interface StaffMember {
   [key: string]: any; // For any additional properties
 }
 
+interface BlockTimeData {
+  date: string;
+  startTime: string;
+  endTime: string;
+  staffId: string;
+  staffName: string;
+  reason: string;
+}
+
 interface AddBlockTimeProps {
   open: boolean;
   onClose: () => void;
@@ -54,8 +63,8 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
   selectedStaffId: propSelectedStaffId,
   onStaffChange
 }) => {
-  const dispatch = useDispatch();
-  const { status, error } = useSelector((state: RootState) => state.blockTime);
+  const dispatch = useAppDispatch();
+  const { status, error } = useAppSelector((state: RootState) => state.blockTime);
   
   const [selectedStaffId, setSelectedStaffId] = useState(propSelectedStaffId || defaultStaffId);
   const [date, setDate] = useState<string>(() => {
@@ -200,15 +209,18 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
       'All Staff';
     
     try {
+      // Fix the dispatch usage for addBlockTime thunk
+      const blockTimeData: BlockTimeData = {
+        date,
+        startTime,
+        endTime,
+        staffId: selectedStaffId,
+        staffName,
+        reason: reason || 'Blocked time',
+      };
+      
       const result = await dispatch(
-        addBlockTime({
-          date,
-          startTime,
-          endTime,
-          staffId: selectedStaffId,
-          staffName,
-          reason: reason || 'Blocked time',
-        })
+        blockTimeActions.addBlockTime(blockTimeData as any)
       ).unwrap();
       
       toast.success('Time blocked successfully');

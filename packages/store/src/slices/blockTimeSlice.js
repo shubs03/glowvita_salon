@@ -436,7 +436,8 @@ export const {
 export const blockTimeActions = {
   ...blockTimeSlice.actions,
   fetchBlockTimes,
-  removeBlockTime
+  removeBlockTime,
+  addBlockTime
 };
 
 export default blockTimeSlice.reducer;
