@@ -647,7 +647,6 @@ export default function DailySchedulePage() {
       <DayScheduleView
         selectedDate={selectedDate}
         appointments={filteredAppointments}
-        timeSlots={[]}
         staffList={staffList}
         workingHours={dayWorkingHours}
         blockedTimes={blockedTimes}
@@ -659,7 +658,7 @@ export default function DailySchedulePage() {
           dayWorkingHours?.startTime && dayWorkingHours?.endTime
             ? (() => {
                 // Generate time slots based on working hours (every 30 minutes)
-                const slots: string[] = [];
+                const slots = [];
                 const [startHour, startMinute] = parseTimeString(dayWorkingHours.startTime);
                 const [endHour, endMinute] = parseTimeString(dayWorkingHours.endTime);
                 const start = new Date(selectedDate);
@@ -668,24 +667,29 @@ export default function DailySchedulePage() {
                 end.setHours(endHour, endMinute, 0, 0);
                 let current = new Date(start);
                 while (current <= end) {
-                  slots.push(format(current, 'hh:mmaaa').toLowerCase());
+                  const time = format(current, 'hh:mmaaa').toLowerCase();
+                  slots.push({
+                    id: `${formatDateForAPI(selectedDate)}-${time}`,
+                    time,
+                    formattedTime: time,
+                    isAvailable: true, // Default to available
+                    staffId: 'default' // Default staff ID
+                  });
                   current = addMinutes(current, 30);
                 }
-                return slots.map((time, idx) => ({
-                  id: `${formatDateForAPI(selectedDate)}-${time}-${idx}`,
-                  time,
-                  formattedTime: time
-                }));
+                return slots;
               })()
             : [
                 "09:00am", "09:30am", "10:00am", "10:30am", "11:00am", "11:30am",
                 "12:00pm", "12:30pm", "01:00pm", "01:30pm", "02:00pm", "02:30pm",
                 "03:00pm", "03:30pm", "04:00pm", "04:30pm", "05:00pm", "05:30pm",
                 "06:00pm", "06:30pm", "07:00pm"
-              ].map((time, idx) => ({
-                id: `${formatDateForAPI(selectedDate)}-${time}-${idx}`,
+              ].map((time) => ({
+                id: `${formatDateForAPI(selectedDate)}-${time}`,
                 time,
-                formattedTime: time
+                formattedTime: time,
+                isAvailable: true, // Default to available
+                staffId: 'default' // Default staff ID
               }))
         }
         onCreateAppointment={handleCreateNewAppointment}

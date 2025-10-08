@@ -49,9 +49,19 @@ interface StaffMember {
   hasWeekdayAvailability?: boolean;
   hasWeekendAvailability?: boolean;
   totalWeeklyHours?: number;
-  blockedTimes?: Array<{startTime: string; endTime: string; date?: string}>;
+  blockedTimes?: Array<{startTime: string, endTime: string, date?: string}>;
   timezone?: string;
   isCurrentlyAvailable?: boolean;
+  // Add missing properties
+  startDate?: string | Date;
+  endDate?: string | Date;
+  workingHours?: {
+    startTime: string;
+    endTime: string;
+    startHour: number;
+    endHour: number;
+  };
+  fullName?: string;
 }
 
 interface TimeSlot {
@@ -73,6 +83,21 @@ interface BlockedTime {
   isRecurring?: boolean;
   _id?: string;
   [key: string]: any;
+}
+
+interface StaffAppointmentGroup {
+  staff: StaffMember;
+  appointments: Appointment[];
+  availability: {
+    isAvailable: boolean;
+    slots: TimeSlot[];
+    workingHours: {
+      startTime: string;
+      endTime: string;
+      startHour: number;
+      endHour: number;
+    };
+  };
 }
 
 interface DayScheduleViewProps {
@@ -263,8 +288,9 @@ export default function DayScheduleView({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const startDate = staff.startDate ? new Date(staff.startDate) : null;
-    const endDate = staff.endDate ? new Date(staff.endDate) : null;
+    // Use optional chaining and provide default values for startDate and endDate
+    const startDate = (staff as any).startDate ? new Date((staff as any).startDate) : null;
+    const endDate = (staff as any).endDate ? new Date((staff as any).endDate) : null;
     
     // Check if current date is within staff's active period
     const isWithinDateRange = (!startDate || today >= new Date(startDate.toISOString().split('T')[0])) &&
@@ -529,7 +555,7 @@ export default function DayScheduleView({
   });
 
   // Update staff appointments to include availability info
-  const staffAppointmentsWithAvailability = useMemo(() => {
+  const staffAppointmentsWithAvailability = useMemo<StaffAppointmentGroup[]>(() => {
     if (transformedStaffList.length > 0) {
       return transformedStaffList
         .filter(staff => staff.isActive)
@@ -543,7 +569,7 @@ export default function DayScheduleView({
     // Fallback to grouping by staff name if no staff data is available
     console.warn('No staff data available, falling back to appointment-based grouping');
     const grouped = groupAppointmentsByStaff(appointments);
-    return Object.entries(grouped).map(([staffName, staffAppointments]) => {
+    return grouped.map(([staffName, staffAppointments]) => {
       const defaultStaff: StaffMember = {
         id: `temp-${staffName.toLowerCase().replace(/\s+/g, '-')}`,
         name: staffName,
@@ -1218,7 +1244,7 @@ export default function DayScheduleView({
                       })()}
                       
                       {/* Appointments for this staff */}
-                      {isAvailable && staffAppointmentsWithAvailability[staffIndex]?.appointments?.map((appointment, index) => 
+                      {isAvailable && staffAppointmentsWithAvailability[staffIndex]?.appointments?.map((appointment: Appointment, index: number) => 
                         renderAppointment(appointment, index, staffIndex)
                       )}
                     </div>

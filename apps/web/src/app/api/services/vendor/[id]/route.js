@@ -1,5 +1,5 @@
 import _db from "@repo/lib/db";
-import VendorServicesModel from "@repo/lib/models/vendor/VendorServices.model";
+import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
 import CategoryModel from "../../../../../../../../packages/lib/src/models/admin/Category.model";
 import mongoose from "mongoose";
 

@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SubscriptionPlanModel from '@repo/lib/models/admin/SubscriptionPlan.model';
-import VendorWorkingHours from '@repo/lib/models/vendor/VendorWorkingHours.model';
+import VendorWorkingHours from '@repo/lib/models/Vendor/VendorWorkingHours.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 
