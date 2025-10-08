@@ -1,5 +1,4 @@
 
-      
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -248,7 +247,7 @@ export default function CheckoutPage() {
         },
         prefill: {
           name: user?.firstName + ' ' + user?.lastName || '',
-          email: user?.email || '',
+          email: user?.emailAddress || '',
           contact: contactNumber,
         },
         theme: {
@@ -432,5 +431,3 @@ export default function CheckoutPage() {
     </div>
   );
 }
-
-    

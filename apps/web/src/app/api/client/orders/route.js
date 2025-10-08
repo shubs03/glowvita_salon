@@ -59,15 +59,23 @@ export async function POST(req) {
     } = body;
 
     // Enhanced Validation
-    if (!items || !Array.isArray(items) || items.length === 0 || !totalAmount || !shippingAddress || !contactNumber || !paymentMethod || !vendorId) {
-      const missing = [];
-      if (!items) missing.push('items');
-      if (!totalAmount) missing.push('totalAmount');
-      if (!shippingAddress) missing.push('shippingAddress');
-      if (!contactNumber) missing.push('contactNumber');
-      if (!paymentMethod) missing.push('paymentMethod');
-      if (!vendorId) missing.push('vendorId');
-      return NextResponse.json({ success: false, message: `Missing required fields: ${missing.join(', ')}` }, { status: 400 });
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ success: false, message: 'Missing required field: items' }, { status: 400 });
+    }
+    if (typeof totalAmount !== 'number') {
+      return NextResponse.json({ success: false, message: 'Missing or invalid required field: totalAmount' }, { status: 400 });
+    }
+    if (!shippingAddress) {
+      return NextResponse.json({ success: false, message: 'Missing required field: shippingAddress' }, { status: 400 });
+    }
+    if (!contactNumber) {
+      return NextResponse.json({ success: false, message: 'Missing required field: contactNumber' }, { status: 400 });
+    }
+    if (!paymentMethod) {
+      return NextResponse.json({ success: false, message: 'Missing required field: paymentMethod' }, { status: 400 });
+    }
+    if (!vendorId) {
+      return NextResponse.json({ success: false, message: 'Missing required field: vendorId' }, { status: 400 });
     }
 
     // For online payments, verify payment signature
@@ -114,5 +122,3 @@ export async function POST(req) {
     return NextResponse.json({ success: false, message: 'Internal Server Error', error: error.message }, { status: 500 });
   }
 }
-
-    
