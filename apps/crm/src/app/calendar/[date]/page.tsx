@@ -277,8 +277,26 @@ export default function DailySchedulePage() {
   // Handle appointment click
   const handleAppointmentClick = useCallback((appointment: any) => {
     setSelectedAppointment(appointment);
-    // setIsNewAppointmentOpen(true);
   }, []);
+
+  // Handle creating a new appointment from the DayScheduleView
+  const handleCreateNewAppointment = useCallback((appointmentData: any) => {
+    // If we have a time slot selected, use its date
+    const appointmentDate = selectedTimeSlot?.date || selectedDate || new Date();
+    
+    // Format the appointment data
+    const newAppointment = {
+      ...appointmentData,
+      date: appointmentDate,
+      startTime: appointmentData.startTime || '09:00',
+      endTime: appointmentData.endTime || '10:00',
+      status: 'scheduled'
+    };
+    
+    // Open the form with the new appointment data
+    setSelectedAppointment(newAppointment);
+    setIsNewAppointmentOpen(true);
+  }, [selectedDate, selectedTimeSlot]);
 
   // Handle new appointment button click
   const handleNewAppointment = useCallback(() => {
@@ -291,6 +309,20 @@ export default function DailySchedulePage() {
     setSelectedAppointment(appointment);
     // setIsNewAppointmentOpen(true);
   }, []);
+
+  // Handle date change from the DayScheduleView
+  const handleDateChange = useCallback((newDate: Date) => {
+    if (!newDate || !(newDate instanceof Date)) return;
+    
+    // Format the new date to YYYY-MM-DD for the URL
+    const year = newDate.getFullYear();
+    const month = String(newDate.getMonth() + 1).padStart(2, '0');
+    const day = String(newDate.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
+    
+    // Navigate to the new date
+    router.push(`/calendar/${dateString}`);
+  }, [router]);
 
   // Handle back button click
   const handleBackClick = useCallback(() => {
@@ -319,19 +351,54 @@ export default function DailySchedulePage() {
     { skip: !selectedDate }
   );
 
-  // Fetch staff list
-  const { data: staffData, isLoading: isLoadingStaff, error: staffError } = glowvitaApi.useGetStaffQuery(undefined);
+  // Fetch staff data
+  const { data: staffData = [], isLoading: isLoadingStaff, error: staffError } = glowvitaApi.useGetStaffQuery(undefined, {
+    refetchOnMountOrArgChange: true
+  });
 
   // Transform staff data for the schedule view
   const staffList = useMemo(() => {
     if (!staffData || !Array.isArray(staffData)) return [];
     
-    return staffData.map(staff => ({
+    return staffData.map((staff: any) => ({
       id: staff._id || staff.id,
       name: staff.fullName || staff.name,
-      position: staff.position,
-      image: staff.photo,
-      isActive: staff.status === 'active' || staff.status === 'Active'
+      position: staff.position || '',
+      image: staff.photo || undefined,
+      isActive: staff.status === 'active' || staff.status === 'Active',
+      isAvailable: staff.isAvailable !== false,
+      isCurrentlyAvailable: staff.isCurrentlyAvailable !== false,
+      workingHours: staff.workingHours || {
+        startTime: '09:00',
+        endTime: '18:00',
+        startHour: 9,
+        endHour: 18
+      },
+      // Set default availability for each day
+      mondayAvailable: staff.mondayAvailable !== false,
+      tuesdayAvailable: staff.tuesdayAvailable !== false,
+      wednesdayAvailable: staff.wednesdayAvailable !== false,
+      thursdayAvailable: staff.thursdayAvailable !== false,
+      fridayAvailable: staff.fridayAvailable !== false,
+      saturdayAvailable: staff.saturdayAvailable !== false,
+      sundayAvailable: staff.sundayAvailable !== false,
+      // Initialize empty slots for each day
+      mondaySlots: staff.mondaySlots || [],
+      tuesdaySlots: staff.tuesdaySlots || [],
+      wednesdaySlots: staff.wednesdaySlots || [],
+      thursdaySlots: staff.thursdaySlots || [],
+      fridaySlots: staff.fridaySlots || [],
+      saturdaySlots: staff.saturdaySlots || [],
+      sundaySlots: staff.sundaySlots || [],
+      // Set default weekday/weekend availability
+      hasWeekdayAvailability: staff.hasWeekdayAvailability !== false,
+      hasWeekendAvailability: staff.hasWeekendAvailability !== false,
+      // Initialize empty blocked times array
+      blockedTimes: staff.blockedTimes || [],
+      // Add any other required fields with defaults
+      startTime: staff.startTime || '09:00',
+      endTime: staff.endTime || '18:00',
+      timezone: staff.timezone || 'Asia/Kolkata'
     }));
   }, [staffData]);
 
@@ -377,14 +444,22 @@ export default function DailySchedulePage() {
     return found || null;
   }, [workingHoursData, dayName]);
   
-  // Get blocked times for the selected date
-  const blockedTimes = useSelector((state: any) => 
-    (state.blockTime?.blockedTimes || []).filter((block: any) => {
-      if (!block?.date || !selectedDate) return false;
+  // Get blocked times for the selected date with proper timezone handling
+  const blockedTimes = useSelector((state: any) => {
+    if (!selectedDate) return [];
+    
+    return (state?.blockTime?.blockedTimes || []).filter((block: any) => {
+      if (!block?.date) return false;
+      
+      // Create date objects in local timezone for comparison
       const blockDate = new Date(block.date);
-      return isSameDay(blockDate, selectedDate);
-    })
-  );
+      
+      // Compare year, month, and date parts only
+      return blockDate.getFullYear() === selectedDate.getFullYear() &&
+             blockDate.getMonth() === selectedDate.getMonth() &&
+             blockDate.getDate() === selectedDate.getDate();
+    });
+  });
   
   // Handle status change from AppointmentDetailView
   const handleStatusChange = useCallback(async (newStatus: string, cancellationReason?: string) => {
@@ -565,8 +640,11 @@ export default function DailySchedulePage() {
       <DayScheduleView
         selectedDate={selectedDate}
         appointments={filteredAppointments}
+        timeSlots={[]}
         staffList={staffList}
-        isLoading={isLoading || isLoadingStaff || isLoadingWorkingHours}
+        workingHours={dayWorkingHours}
+        blockedTimes={blockedTimes}
+        isLoading={isLoading || isLoadingAppointments || isLoadingWorkingHours || isLoadingStaff}
         error={staffError || workingHoursError}
         onAppointmentClick={handleAppointmentClick}
         onTimeSlotClick={handleTimeSlotClick}
@@ -603,9 +681,10 @@ export default function DailySchedulePage() {
                 formattedTime: time
               }))
         }
+        onCreateAppointment={handleCreateNewAppointment}
+        onDateChange={handleDateChange}
       />
 
-      {/* New/Edit Appointment Dialog */}
       <Dialog 
         open={isNewAppointmentOpen} 
         onOpenChange={(isOpen) => {
@@ -613,6 +692,8 @@ export default function DailySchedulePage() {
             setIsNewAppointmentOpen(false);
             setSelectedTimeSlot(null);
             setSelectedAppointment(null);
+          } else {
+            setIsNewAppointmentOpen(true);
           }
         }}
       >

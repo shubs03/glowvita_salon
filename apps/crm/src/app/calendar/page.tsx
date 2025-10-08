@@ -8,7 +8,7 @@ import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Label } from '@repo/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { ChevronLeft, Plus, Clock, User, Calendar as CalendarIcon, Clock3, X, CalendarDays, Eye, Pencil, MoreVertical, CheckCircle2, XCircle, ChevronRight, ChevronDown, Scissors } from 'lucide-react';
+import { ChevronLeft, Plus, Clock, User, Calendar as CalendarIcon, Clock3, X, CalendarDays, Eye, Pencil, MoreVertical, CheckCircle2, XCircle, ChevronRight, ChevronDown, Scissors, Loader2 } from 'lucide-react';
 import NewAppointmentForm, { Appointment } from './components/NewAppointmentForm';
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { cn } from '@repo/ui/cn';
@@ -16,7 +16,15 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useAppDispatch } from '@repo/store/hooks';
 import { selectSelectedAppointment, setSelectedAppointment } from '@repo/store/slices/appointmentSlice';
 import AddBlockTime from '@/components/AddBlockTime';
-import { reset, selectBlockedTimes } from '@repo/store/slices/blockTimeSlice';
+import { 
+  reset, 
+  selectBlockedTimes, 
+  selectBlockedTimesByStaffAndDate, 
+  selectBlockTimeStatus, 
+  selectBlockTimeError,
+  fetchBlockTimes,
+  removeBlockTime 
+} from '@repo/store/slices/blockTimeSlice';
 import { glowvitaApi } from '@repo/store/api';
 import { startOfDay, endOfDay, isSameDay } from 'date-fns';
 
@@ -104,8 +112,14 @@ export default function CalendarPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isBlockingTime, setIsBlockingTime] = useState(false);
   const router = useRouter();
   const dispatch = useAppDispatch();
+  
+  // Fetch blocked times when component mounts
+  useEffect(() => {
+    dispatch(fetchBlockTimes());
+  }, [dispatch]);
 
   // RTK Query hooks for appointments with proper cache invalidation
   const { data: appointmentsData, isLoading: isLoadingAppointments, refetch } = glowvitaApi.useGetAppointmentsQuery(
@@ -119,6 +133,15 @@ export default function CalendarPage() {
     }
   );
 
+  const { data: staffData = [], isLoading: isLoadingStaff } = glowvitaApi.useGetStaffQuery(undefined, {
+    refetchOnMountOrArgChange: true,
+  });
+
+  const selectedStaffId = useMemo(() => {
+    if (!selectedStaff || selectedStaff === 'All Staff') return null;
+    return staffData.find(staff => staff.fullName === selectedStaff)?._id || null;
+  }, [selectedStaff, staffData]);
+
   const [createAppointment, { isLoading: isCreating }] = glowvitaApi.useCreateAppointmentMutation();
   const [updateAppointment, { isLoading: isUpdating }] = glowvitaApi.useUpdateAppointmentMutation();
   const [deleteAppointment, { isLoading: isDeleting }] = glowvitaApi.useDeleteAppointmentMutation();
@@ -126,13 +149,27 @@ export default function CalendarPage() {
 
   const selectedAppointment = useSelector(selectSelectedAppointment);
   const blockedTimes = useSelector((state) =>
-    selectBlockedTimes(state, {
-      staffName: selectedStaff === 'All Staff' ? null : selectedStaff,
+    selectBlockedTimesByStaffAndDate(state, {
+      staffId: selectedStaff === 'All Staff' ? undefined : selectedStaffId,
       date: currentDate,
     })
   );
-
+  
+  const blockTimeStatus = useSelector(selectBlockTimeStatus);
+  const blockTimeError = useSelector(selectBlockTimeError);
   const today = new Date();
+  
+  // Handle block time success/error
+  useEffect(() => {
+    if (blockTimeStatus === 'succeeded' && isBlockingTime) {
+      toast.success('Time blocked successfully');
+      setIsBlockingTime(false);
+      setIsBlockTimeModalOpen(false);
+    } else if (blockTimeStatus === 'failed' && isBlockingTime) {
+      toast.error(blockTimeError || 'Failed to block time');
+      setIsBlockingTime(false);
+    }
+  }, [blockTimeStatus, blockTimeError, isBlockingTime]);
 
   // Transform API data
   const appointments: Appointment[] = useMemo(() => {
@@ -418,21 +455,42 @@ export default function CalendarPage() {
                 {day}
               </div>
               <div className="flex flex-col gap-1 mt-1 w-full">
-                {blockedTimes.some(
-                  (block) => {
+                {blockedTimes.some(block => {
+                  try {
                     const blockDate = new Date(block.date);
                     return (
                       blockDate.getDate() === day &&
                       blockDate.getMonth() === currentDate.getMonth() &&
                       blockDate.getFullYear() === currentDate.getFullYear()
                     );
+                  } catch (e) {
+                    console.error('Error parsing block date:', e);
+                    return false;
                   }
-                ) && (
-                  <div className="w-full text-center">
-                    <span className="inline-block px-1 text-xs bg-amber-100 text-amber-800 rounded">
-                      Blocked
-                    </span>
-                  </div>
+                }) && (
+                  <div 
+                    className="w-full h-6 mt-1 relative"
+                    title="This time is blocked"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const block = blockedTimes.find(block => {
+                        try {
+                          const blockDate = new Date(block.date);
+                          return (
+                            blockDate.getDate() === day &&
+                            blockDate.getMonth() === currentDate.getMonth() &&
+                            blockDate.getFullYear() === currentDate.getFullYear()
+                          );
+                        } catch {
+                          return false;
+                        }
+                      });
+                      
+                      if (block && confirm('Do you want to unblock this time?')) {
+                        handleRemoveBlockTime(block.id || block._id);
+                      }
+                    }}
+                  />
                 )}
                 <div className="flex flex-wrap justify-center gap-1">
                   {appointmentsForDay.slice(0, 3).map((appt) => (
@@ -664,6 +722,9 @@ export default function CalendarPage() {
             <SelectContent>
               {staffMembers.map((staff) => (
                 <SelectItem key={staff} value={staff}>{staff}</SelectItem>
+              ))}
+              {staffData.map((staff) => (
+                <SelectItem key={staff.fullName} value={staff.fullName}>{staff.fullName}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -930,6 +991,8 @@ export default function CalendarPage() {
               open={isBlockTimeModalOpen}
               onClose={handleCloseBlockTimeModal}
               initialDate={selectedDateForBlock?.toISOString().split('T')[0]}
+              staffMembers={staffData}
+              defaultStaffId={selectedStaffId}
             />
           </div>
         </DialogContent>

@@ -26,6 +26,8 @@ import workingHoursReducer from './slices/workingHoursSlice';
 import orderReducer from './slices/orderSlice';
 import calendarAppointmentReducer from './slices/calendarAppointmentSlice';
 import cartReducer from './slices/cartSlice'; // Import the new cart reducer
+import staffAvailabilityServiceReducer from './slices/staffAvailabilityService';
+
 
 const appReducer = combineReducers({
   [glowvitaApi.reducerPath]: glowvitaApi.reducer,
@@ -55,7 +57,10 @@ const appReducer = combineReducers({
   order: orderReducer,
   calendarAppointments: calendarAppointmentReducer,
   cart: cartReducer,
+  staffAvailabilityService: staffAvailabilityServiceReducer,
+
 });
+
   
 const rootReducer = (state, action) => {
   // when a logout action is dispatched, it will reset the state to the initial state.

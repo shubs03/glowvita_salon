@@ -81,7 +81,8 @@ export const glowvitaApi = createApi({
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign", 
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing", 
     "Appointment", "ShippingCharge", "Order", "CrmProducts", 
-    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart"
+    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
+    "BlockTime"
   ],
 
   endpoints: (builder) => ({
@@ -958,6 +959,27 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["ProductCategory"],
     }),
     
+    // Block Time Endpoints
+    getBlockedTimes: builder.query({
+      query: (staffId) => ({ url: `/crm/block-time/${staffId}`, method: 'GET' }),
+      providesTags: ['BlockTime'],
+    }),
+    createBlockTime: builder.mutation({
+      query: (blockTimeData) => ({
+        url: '/crm/block-time',
+        method: 'POST',
+        body: blockTimeData,
+      }),
+      invalidatesTags: ['BlockTime'],
+    }),
+    deleteBlockTime: builder.mutation({
+      query: (blockTimeId) => ({
+        url: `/crm/block-time/${blockTimeId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['BlockTime'],
+    }),
+
     // Staff Endpoints
     getStaff: builder.query({
       query: () => ({ url: "/crm/staff", method: "GET" }),
@@ -1284,4 +1306,9 @@ export const {
   useAddToCartMutation,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
+
+  // Block Time Endpoints
+  useGetBlockedTimesQuery,
+  useCreateBlockTimeMutation,
+  useDeleteBlockTimeMutation,
 } = glowvitaApi;
