@@ -1,4 +1,5 @@
 
+
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import ClientOrder from '@repo/lib/models/user/ClientOrder.model';
@@ -59,25 +60,13 @@ export async function POST(req) {
     } = body;
 
     // Enhanced Validation
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ success: false, message: 'Missing required field: items' }, { status: 400 });
+    const requiredFields: { [key: string]: any } = { items, totalAmount, shippingAddress, contactNumber, paymentMethod, vendorId };
+    for (const field in requiredFields) {
+      if (!requiredFields[field] || (Array.isArray(requiredFields[field]) && requiredFields[field].length === 0)) {
+        return NextResponse.json({ success: false, message: `Missing required field: ${field}` }, { status: 400 });
+      }
     }
-    if (typeof totalAmount !== 'number') {
-      return NextResponse.json({ success: false, message: 'Missing or invalid required field: totalAmount' }, { status: 400 });
-    }
-    if (!shippingAddress) {
-      return NextResponse.json({ success: false, message: 'Missing required field: shippingAddress' }, { status: 400 });
-    }
-    if (!contactNumber) {
-      return NextResponse.json({ success: false, message: 'Missing required field: contactNumber' }, { status: 400 });
-    }
-    if (!paymentMethod) {
-      return NextResponse.json({ success: false, message: 'Missing required field: paymentMethod' }, { status: 400 });
-    }
-    if (!vendorId) {
-      return NextResponse.json({ success: false, message: 'Missing required field: vendorId' }, { status: 400 });
-    }
-
+    
     // For online payments, verify payment signature
     if (paymentMethod !== 'cash-on-delivery' && razorpayOrderId && razorpayPaymentId && razorpaySignature) {
       const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_WEB_URL || 'http://localhost:3000'}/api/payments/verify`, {
