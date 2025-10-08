@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -61,15 +62,15 @@ export default function CheckoutPage() {
       // await createOrder({ product, shippingAddress, contactNumber, paymentMethod });
 
       toast.success('Order placed successfully!', {
-        description: 'You will be redirected to the order confirmation page.',
+        description: 'You will be redirected to your orders page.',
       });
 
       // Clear the product from local storage after successful order
       localStorage.removeItem('buyNowProduct');
 
-      // Redirect to a success page
+      // Redirect to the profile orders page
       setTimeout(() => {
-        router.push('/order-success');
+        router.push('/profile/orders');
       }, 2000);
     } catch (error) {
       console.error('Failed to place order:', error);
