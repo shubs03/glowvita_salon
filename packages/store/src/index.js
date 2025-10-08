@@ -32,3 +32,6 @@ export * from "./slices/productSlice";
 export * from "./slices/smsTemplateSlice";
 export * from "./slices/calendarAppointmentSlice";
 export * from "./slices/staffAvailabilityService";
+export * from "./slices/staffAvailabilitySlice";
+export * from "./slices/blockedTimesApi";
+

@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { blockTimeActions } from '@repo/store/slices/blockTimeSlice';
+import { blockTimeActions, addBlockTime, STATUS } from '@repo/store/slices/blockTimeSlice';
 import { RootState } from '@repo/store';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { Button } from '@repo/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { X, Clock, Calendar as CalendarIcon, User } from 'lucide-react';
+import { X, Clock, Calendar as CalendarIcon, User, Loader2 } from 'lucide-react';
 import { Textarea } from '@repo/ui/textarea';
+import { cn } from '@repo/ui/cn';
 import toast from 'react-hot-toast';
 
 interface StaffMember {
@@ -23,206 +24,156 @@ interface StaffMember {
   mobileNo?: string;
   emailAddress?: string;
   photo?: string;
-  description?: string;
-  salary?: number;
-  startDate?: string;
-  endDate?: string;
-  yearOfExperience?: number;
-  clientsServed?: number;
-  commission?: boolean;
-  bankDetails?: object;
-  password?: string;
-  role?: string;
-  permissions?: string[];
-  status?: string;
-  lastLoginAt?: string;
-  mondayAvailable?: boolean;
-  mondaySlots?: any[];
-  tuesdayAvailable?: boolean;
-  tuesdaySlots?: any[];
-  wednesdayAvailable?: boolean;
-  wednesdaySlots?: any[];
-  thursdayAvailable?: boolean;
-  thursdaySlots?: any[];
-  fridayAvailable?: boolean;
-  fridaySlots?: any[];
-  saturdayAvailable?: boolean;
-  saturdaySlots?: any[];
-  sundayAvailable?: boolean;
-  sundaySlots?: any[];
-  hasWeekdayAvailability?: boolean;
-  hasWeekendAvailability?: boolean;
-  totalWeeklyHours?: number;
-  blockedTimes?: any[];
-  timezone?: string;
-  isCurrentlyAvailable?: boolean;
-  avgResponseTime?: number;
-  rating?: number;
-  totalRatings?: number;
-  tags?: any[];
-  lastAvailabilityUpdate?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  searchText?: string;
-  __v?: number;
+  status?: 'active' | 'inactive';
   workingHours?: {
     start: string;
     end: string;
     days: number[];
   };
+  [key: string]: any; // For any additional properties
 }
 
 interface AddBlockTimeProps {
   open: boolean;
   onClose: () => void;
-  initialDate?: string;
+  onSuccess?: () => void;
+  initialDate?: string | Date;
   staffMembers: StaffMember[];
   defaultStaffId?: string;
+  selectedStaffId?: string;
+  onStaffChange?: (staffId: string) => void;
 }
 
 const AddBlockTime: React.FC<AddBlockTimeProps> = ({ 
   open, 
   onClose, 
-  initialDate = '', 
+  onSuccess,
+  initialDate = new Date(),
   staffMembers = [],
-  defaultStaffId = ''
+  defaultStaffId = '',
+  selectedStaffId: propSelectedStaffId,
+  onStaffChange
 }) => {
   const dispatch = useDispatch();
-  const blockTimeState = useSelector((state: RootState) => state.blockTime);
-  const { startTime, endTime, description } = blockTimeState;
+  const { status, error } = useSelector((state: RootState) => state.blockTime);
   
-  const [selectedStaff, setSelectedStaff] = useState(defaultStaffId);
-  const [date, setDate] = useState(initialDate);
+  const [selectedStaffId, setSelectedStaffId] = useState(propSelectedStaffId || defaultStaffId);
+  const [date, setDate] = useState<string>(() => {
+    if (!initialDate) return '';
+    try {
+      const d = initialDate instanceof Date ? initialDate : parseISO(initialDate);
+      return format(d, 'yyyy-MM-dd');
+    } catch (e) {
+      return format(new Date(), 'yyyy-MM-dd');
+    }
+  });
+  
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [reason, setReason] = useState('');
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Check if status is 'loading' (string) or 1 (LOADING enum value)
+  const isLoading = status === 'loading' || status === 1;
+
+  // Update selected staff when prop changes
+  useEffect(() => {
+    if (propSelectedStaffId) {
+      setSelectedStaffId(propSelectedStaffId);
+    }
+  }, [propSelectedStaffId]);
 
   // Generate available time slots when staff or date changes
   useEffect(() => {
     const generateAvailableSlots = () => {
-      if (!selectedStaff || !date) {
+      if (!selectedStaffId || !date) {
         setAvailableSlots([]);
         return;
       }
       
-      const staff = staffMembers.find(s => s._id === selectedStaff);
+      const staff = staffMembers.find(s => s._id === selectedStaffId);
       
       if (!staff) {
         setAvailableSlots([]);
         return;
       }
       
-      if (!staff.workingHours) {
-        // Generate default slots if no working hours
-        const slots = [];
-        for (let hour = 9; hour < 17; hour++) {
-          for (let minute = 0; minute < 60; minute += 30) {
-            const timeSlot = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-            slots.push(timeSlot);
-          }
-        }
-        setAvailableSlots(slots);
-        return;
-      }
+      // Default working hours (9 AM to 5 PM)
+      const defaultStartHour = 9;
+      const defaultEndHour = 17;
       
       setIsLoadingSlots(true);
+      
       try {
-        const slots = [];
+        let startHour = defaultStartHour;
+        let endHour = defaultEndHour;
         
-        // Handle different time formats
-        let startTime = staff.workingHours.start;
-        let endTime = staff.workingHours.end;
-        
-        // If time is in format like "09:00" or "9:00", ensure proper format
-        if (typeof startTime === 'string') {
-          const startParts = startTime.split(':');
-          if (startParts.length === 2) {
-            startTime = `${startParts[0].padStart(2, '0')}:${startParts[1].padStart(2, '0')}`;
-          }
-        }
-        
-        if (typeof endTime === 'string') {
-          const endParts = endTime.split(':');
-          if (endParts.length === 2) {
-            endTime = `${endParts[0].padStart(2, '0')}:${endParts[1].padStart(2, '0')}`;
-          }
-        }
-        
-        const start = new Date(`2000-01-01T${startTime}:00`);
-        const end = new Date(`2000-01-01T${endTime}:00`);
-        
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-          // Fallback to manual parsing
-          const startHour = parseInt(staff.workingHours.start.split(':')[0]);
-          const startMinute = parseInt(staff.workingHours.start.split(':')[1] || '0');
-          const endHour = parseInt(staff.workingHours.end.split(':')[0]);
-          const endMinute = parseInt(staff.workingHours.end.split(':')[1] || '0');
-          
-          let currentHour = startHour;
-          let currentMinute = startMinute;
-          
-          while (currentHour < endHour || (currentHour === endHour && currentMinute < endMinute)) {
-            const timeSlot = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`;
-            slots.push(timeSlot);
+        // Use staff's working hours if available
+        if (staff.workingHours?.start && staff.workingHours?.end) {
+          try {
+            const [startH, startM] = staff.workingHours.start.split(':').map(Number);
+            const [endH, endM] = staff.workingHours.end.split(':').map(Number);
             
-            currentMinute += 30;
-            if (currentMinute >= 60) {
-              currentMinute = 0;
-              currentHour += 1;
+            if (!isNaN(startH) && !isNaN(endH)) {
+              startHour = startH;
+              // If there are minutes, add 1 to the end hour to include the full hour
+              endHour = endH + (endM > 0 ? 1 : 0);
+              
+              // Ensure end hour is after start hour
+              if (endHour <= startHour) {
+                endHour = startHour + 8; // Default to 8-hour shift if invalid range
+              }
             }
-          }
-        } else {
-          // Generate 30-minute slots using Date objects
-          let current = new Date(start);
-          while (current < end) {
-            slots.push(format(current, 'HH:mm'));
-            current = new Date(current.getTime() + 30 * 60000);
+          } catch (e) {
+            console.error('Error parsing working hours:', e);
           }
         }
         
+        // Generate 30-minute slots between start and end time
+        const slots: string[] = [];
+        for (let hour = startHour; hour <= endHour; hour++) {
+          // Only add :00 and :30 minutes for each hour
+          if (hour < endHour) {
+            slots.push(`${hour.toString().padStart(2, '0')}:00`);
+          }
+          if (hour < endHour) {
+            slots.push(`${hour.toString().padStart(2, '0')}:30`);
+          }
+        }
+        
+        console.log('Generated time slots:', slots);
         setAvailableSlots(slots);
-        
       } catch (error) {
-        // Fallback: generate basic time slots
-        const fallbackSlots = [];
-        for (let hour = 9; hour < 17; hour++) {
-          for (let minute = 0; minute < 60; minute += 30) {
-            const timeSlot = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-            fallbackSlots.push(timeSlot);
-          }
-        }
-        setAvailableSlots(fallbackSlots);
-        
-        toast.error('Using default time slots due to error');
+        console.error('Error generating time slots:', error);
+        setAvailableSlots([]);
+        toast.error('Failed to generate available time slots');
       } finally {
         setIsLoadingSlots(false);
       }
     };
     
-    generateAvailableSlots();
-  }, [selectedStaff, date, staffMembers]);
-  
-  // Sync date with Redux
-  useEffect(() => {
-    if (date) {
-      dispatch(blockTimeActions.setDate(date));
+    // Only generate slots if the dialog is open
+    if (open) {
+      generateAvailableSlots();
     }
-  }, [date, dispatch]);
+  }, [selectedStaffId, date, staffMembers, open]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
-    if (!selectedStaff) {
+    if (!selectedStaffId) {
       newErrors.staff = 'Please select a staff member';
     }
     if (!date) {
       newErrors.date = 'Please select a date';
     }
     if (!startTime) {
-      newErrors.startTime = 'Please select start time';
+      newErrors.startTime = 'Please select a start time';
     }
     if (!endTime) {
-      newErrors.endTime = 'Please select end time';
+      newErrors.endTime = 'Please select an end time';
     } else if (startTime && endTime <= startTime) {
       newErrors.endTime = 'End time must be after start time';
     }
@@ -231,41 +182,63 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleStaffChange = (value: string) => {
+    setSelectedStaffId(value);
+    if (onStaffChange) {
+      onStaffChange(value);
+    }
+  };
+
+  const handleSave = async () => {
     if (!validateForm()) {
       return;
     }
     
-    const staff = staffMembers.find(s => s._id === selectedStaff);
+    const staff = staffMembers.find(s => s._id === selectedStaffId);
+    const staffName = staff ? 
+      (staff.fullName || staff.staffName || `${staff.firstName || ''} ${staff.lastName || ''}`.trim()) : 
+      'All Staff';
     
-    if (!staff) {
-      return;
+    try {
+      const result = await dispatch(
+        addBlockTime({
+          date,
+          startTime,
+          endTime,
+          staffId: selectedStaffId,
+          staffName,
+          reason: reason || 'Blocked time',
+        })
+      ).unwrap();
+      
+      toast.success('Time blocked successfully');
+      if (onSuccess) onSuccess();
+      handleClose();
+    } catch (error: any) {
+      console.error('Error blocking time:', error);
+      toast.error(error.message || 'Failed to block time');
     }
+  };
+  
+  const handleClose = () => {
+    // Reset form state
+    setStartTime('');
+    setEndTime('');
+    setReason('');
+    setErrors({});
     
-    const staffName = staff.fullName || `${staff.firstName || ''} ${staff.lastName || ''}`.trim();
+    // Reset the form in Redux
+    dispatch(blockTimeActions.resetBlockTime());
     
-    const blockTimeData = {
-      staffId: selectedStaff,
-      staffName: staffName,
-      date,
-      startTime,
-      endTime,
-      description: description || 'Blocked time'
-    };
-    
-    dispatch(blockTimeActions.addBlockedTime(blockTimeData));
-
+    // Close the dialog
     onClose();
-    toast.success('Time blocked successfully');
   };
 
-  const handleClose = () => {
-    setSelectedStaff(defaultStaffId);
-    setDate(initialDate);
-    setAvailableSlots([]);
-    setErrors({});
-    dispatch(blockTimeActions.resetBlockTime());
-    onClose();
+  const getStaffName = (staff: StaffMember) => {
+    if (!staff) return 'Unknown Staff';
+    return staff.fullName || staff.staffName || 
+           `${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 
+           `Staff ${staff._id}`;
   };
 
   return (
@@ -287,12 +260,9 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
               Staff Member *
             </label>
             <Select 
-              value={selectedStaff} 
-              onValueChange={(value) => {
-                setSelectedStaff(value);
-                dispatch(blockTimeActions.setStaffMember(value));
-              }}
-              disabled={isLoadingSlots}
+              value={selectedStaffId}
+              onValueChange={handleStaffChange}
+              disabled={isLoading || isLoadingSlots}
             >
               <SelectTrigger className="h-12">
                 <User className="h-4 w-4 mr-2 text-gray-500" />
@@ -306,15 +276,28 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
                 ) : (
                   staffMembers.map((staff) => (
                     <SelectItem key={staff._id} value={staff._id} className="cursor-pointer">
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {staff.staffName || staff.fullName}
-                        </span>
-                        {staff.position && (
-                          <span className="text-xs text-gray-500">
-                            {staff.position}
-                          </span>
+                      <div className="flex items-center">
+                        {staff.photo ? (
+                          <img 
+                            src={staff.photo} 
+                            alt={getStaffName(staff)}
+                            className="h-6 w-6 rounded-full mr-2 object-cover"
+                          />
+                        ) : (
+                          <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                            <User className="h-3.5 w-3.5 text-gray-500" />
+                          </div>
                         )}
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {getStaffName(staff)}
+                          </span>
+                          {staff.position && (
+                            <span className="text-xs text-gray-500">
+                              {staff.position}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </SelectItem>
                   ))
@@ -340,6 +323,7 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
                 onChange={(e) => setDate(e.target.value)}
                 min={format(new Date(), 'yyyy-MM-dd')}
                 className="h-12 pl-10"
+                disabled={isLoading || isLoadingSlots}
               />
             </div>
             {errors.date && (
@@ -356,19 +340,14 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
               </label>
               <Select
                 value={startTime}
-                onValueChange={(value) => {
-                  dispatch(blockTimeActions.setStartTime(value));
-                  if (endTime && value >= endTime) {
-                    dispatch(blockTimeActions.setEndTime(''));
-                  }
-                }}
-                disabled={!selectedStaff || isLoadingSlots || availableSlots.length === 0}
+                onValueChange={setStartTime}
+                disabled={!selectedStaffId || isLoading || isLoadingSlots || availableSlots.length === 0}
               >
                 <SelectTrigger className="h-12">
                   <Clock className="h-4 w-4 mr-2 text-gray-500" />
                   <SelectValue 
                     placeholder={
-                      !selectedStaff ? "Select staff first" : 
+                      !selectedStaffId ? "Select staff first" : 
                       isLoadingSlots ? "Loading..." : 
                       availableSlots.length === 0 ? "No slots available" : 
                       "Start time"
@@ -401,8 +380,8 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
               </label>
               <Select
                 value={endTime}
-                onValueChange={(value) => dispatch(blockTimeActions.setEndTime(value))}
-                disabled={!startTime || isLoadingSlots}
+                onValueChange={setEndTime}
+                disabled={!startTime || isLoading || isLoadingSlots}
               >
                 <SelectTrigger className="h-12">
                   <Clock className="h-4 w-4 mr-2 text-gray-500" />
@@ -439,40 +418,51 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
             </div>
           </div>
 
-          {/* Description */}
+          {/* Reason */}
           <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium text-gray-700">
-              Description
+            <label htmlFor="reason" className="text-sm font-medium text-gray-700">
+              Reason (Optional)
             </label>
             <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => dispatch(blockTimeActions.setDescription(e.target.value))}
-              placeholder="Optional: Add a reason for blocking this time..."
-              className="min-h-[100px] resize-none"
+              id="reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Enter reason for blocking this time..."
+              className="min-h-[100px]"
+              disabled={isLoading || isLoadingSlots}
               rows={3}
             />
           </div>
 
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 bg-red-50 text-red-700 text-sm rounded-md">
+              {error}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3 pt-4 border-t">
             <Button 
+              type="button"
               variant="outline" 
               onClick={handleClose}
               className="px-6"
+              disabled={isLoading}
             >
               Cancel
             </Button>
             <Button 
+              type="button"
               onClick={handleSave} 
-              disabled={isLoadingSlots}
+              disabled={isLoading || isLoadingSlots}
               className="px-6 bg-blue-600 hover:bg-blue-700"
             >
-              {isLoadingSlots ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Blocking...
-                </div>
+                </>
               ) : (
                 'Block Time'
               )}
