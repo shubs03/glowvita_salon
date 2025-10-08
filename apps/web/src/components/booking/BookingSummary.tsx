@@ -9,23 +9,17 @@ import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, C
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { cn } from '@repo/ui/cn';
-
-const salonInfo = {
-  name: "Pedal Barbers",
-  rating: "4.9",
-  reviews: 328,
-  address: "13-1, Persiaran Eserina, Shah Alam, Selangor",
-  image: "https://picsum.photos/seed/pedalbarber/400/400"
-};
+import { Service, StaffMember, SalonInfo } from '@/hooks/useBookingData';
 
 interface BookingSummaryProps {
-    selectedServices: any[];
-    selectedStaff: any;
+    selectedServices: Service[];
+    selectedStaff: StaffMember | null;
     selectedDate: Date;
     selectedTime: string | null;
     onNextStep: () => void;
     currentStep: number;
     isMobileFooter?: boolean;
+    salonInfo?: SalonInfo | null;
 }
 
 export function BookingSummary({ 
@@ -35,12 +29,22 @@ export function BookingSummary({
   selectedTime, 
   onNextStep, 
   currentStep,
-  isMobileFooter = false
+  isMobileFooter = false,
+  salonInfo
 }: BookingSummaryProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const subtotal = selectedServices.reduce((acc, service) => acc + parseFloat(service.price), 0);
     const serviceTax = subtotal * 0.06; // Example 6% tax
     const total = subtotal + serviceTax;
+
+    // Use provided salon info or fallback
+    const currentSalonInfo = salonInfo || {
+        name: "Salon",
+        rating: "4.5",
+        reviews: 0,
+        address: "Loading address...",
+        image: "https://picsum.photos/seed/salon/400/400"
+    };
     
     const stepDetails = [
       { step: 1, label: 'Select Staff', enabled: selectedServices.length > 0 },
@@ -62,15 +66,22 @@ export function BookingSummary({
                     {isExpanded && (
                          <div className="overflow-y-auto no-scrollbar flex-grow space-y-3 pb-4">
                             <div className="flex items-center gap-4">
-                                <Image src={salonInfo.image} alt={salonInfo.name} width={48} height={48} className="rounded-lg shadow-md" data-ai-hint="salon exterior" />
+                                <Image 
+                                    src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"} 
+                                    alt={currentSalonInfo.name} 
+                                    width={48} 
+                                    height={48} 
+                                    className="rounded-lg shadow-md" 
+                                    data-ai-hint="salon exterior" 
+                                />
                                 <div>
-                                    <h4 className="font-bold text-base">{salonInfo.name}</h4>
-                                    <p className="text-sm text-muted-foreground">{salonInfo.address}</p>
+                                    <h4 className="font-bold text-base">{currentSalonInfo.name}</h4>
+                                    <p className="text-sm text-muted-foreground">{currentSalonInfo.address}</p>
                                 </div>
                             </div>
                             <Separator />
-                            {selectedServices.map(service => (
-                                <div key={service.name} className="flex justify-between items-center text-sm">
+                            {selectedServices.map((service: Service) => (
+                                <div key={service.id} className="flex justify-between items-center text-sm">
                                     <span className="line-clamp-2">{service.name}</span>
                                     <span className="font-medium">₹{service.price}</span>
                                 </div>
@@ -106,13 +117,20 @@ export function BookingSummary({
       <CardHeader className="p-6 border-b flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <Image src={salonInfo.image} alt={salonInfo.name} width={64} height={64} className="rounded-lg shadow-md border-2 border-background" data-ai-hint="salon exterior" />
+            <Image 
+              src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"} 
+              alt={currentSalonInfo.name} 
+              width={64} 
+              height={64} 
+              className="rounded-lg shadow-md border-2 border-background" 
+              data-ai-hint="salon exterior" 
+            />
           </div>
           <div>
-            <CardTitle className="font-bold text-lg">{salonInfo.name}</CardTitle>
+            <CardTitle className="font-bold text-lg">{currentSalonInfo.name}</CardTitle>
             <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
               <Star className="h-4 w-4 text-yellow-400 fill-current" />
-              <span>{salonInfo.rating} ({salonInfo.reviews} reviews)</span>
+              <span>{currentSalonInfo.rating} ({currentSalonInfo.reviews} reviews)</span>
             </div>
           </div>
         </div>

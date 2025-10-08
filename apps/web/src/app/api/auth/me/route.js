@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyJwt } from '@repo/lib/auth';
@@ -6,7 +5,12 @@ import dbConnect from '@repo/lib/db';
 import User from '@repo/lib/models/user';
 
 export async function GET(req) {
-  await dbConnect();
+  const db = await dbConnect();
+  
+  // If database connection is not available, return an error
+  if (!db) {
+    return NextResponse.json({ message: 'Service temporarily unavailable' }, { status: 503 });
+  }
   
   const token = cookies().get('token')?.value;
 

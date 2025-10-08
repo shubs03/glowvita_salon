@@ -232,6 +232,8 @@ const vendorSchema = new mongoose.Schema({
   },
 });
 
+vendorSchema.index({ status: 1 });
+
 const VendorModel =
   mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);
 

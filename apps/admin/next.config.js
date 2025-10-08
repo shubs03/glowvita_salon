@@ -4,6 +4,25 @@ require('dotenv').config({ path: '../../.env' });
 const nextConfig = {
   output: 'standalone',
   poweredByHeader: false,
+  webpack: (config, { isServer }) => {
+    // Handle canvas.node binary files
+    config.module.rules.push({
+      test: /\.node$/,
+      use: 'ignore-loader',
+    });
+    
+    // For server-side builds, provide a fallback for canvas
+    if (isServer) {
+      config.externals = [
+        ...config.externals,
+        {
+          canvas: 'commonjs canvas',
+        },
+      ];
+    }
+    
+    return config;
+  },
   async headers() {
     return [
       {

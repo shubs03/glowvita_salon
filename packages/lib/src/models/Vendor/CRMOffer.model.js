@@ -49,6 +49,17 @@ const crmOfferSchema = new mongoose.Schema({
     enum: ['Men', 'Women', 'Unisex', ''], // Allow empty string for backward compatibility
     default: [],
   },
+  // New fields for services and service categories
+  applicableServices: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'VendorServices.services',
+    default: [],
+  },
+  applicableServiceCategories: {
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'Category',
+    default: [],
+  },
   // New field for offer image
   offerImage: {
     type: String, // Base64 encoded image string

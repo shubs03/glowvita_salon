@@ -29,6 +29,9 @@ import cartReducer from './slices/cartSlice.js';
 import smsTemplateSlice from './slices/smsTemplateSlice.js';
 import patientReducer from './slices/patientSlice.js';
 
+// Import localStorage cleanup utility
+import './utils/localStorage-cleanup.js';
+
 const appReducer = combineReducers({
   [glowvitaApi.reducerPath]: glowvitaApi.reducer,
   adminAuth: adminAuthReducer,

@@ -2,12 +2,72 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from "@repo/config/config";
 
-const API_BASE_URLS = {
-  admin: "http://localhost:3002/api",
-  crm: "http://localhost:3001/api",
-  web: "http://localhost:3000/api",
+// Function to get base URLs with intelligent fallbacks for production
+const getBaseUrls = () => {
+  // If environment variables are explicitly set, use them (highest priority)
+  if (NEXT_PUBLIC_WEB_URL && NEXT_PUBLIC_CRM_URL && NEXT_PUBLIC_ADMIN_URL) {
+    return {
+      admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
+      crm: `${NEXT_PUBLIC_CRM_URL}/api`,
+      web: `${NEXT_PUBLIC_WEB_URL}/api`,
+    };
+  }
+
+  // In browser environment, dynamically determine URLs based on current location
+  if (typeof window !== 'undefined' && window.location) {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const baseUrl = `${protocol}//${hostname}${port}`;
+    
+    // For production domains with specific patterns
+    if (hostname.includes('v2winonline.com')) {
+      // Production environment - different subdomains for different services
+      // partners.v2winonline.com is the CRM application
+      if (hostname.includes('partners')) {
+        // CRM application - API is on the same domain
+        return {
+          admin: `${protocol}//admin.v2winonline.com/api`,
+          crm: `${baseUrl}/api`, // CRM API is on the same domain
+          web: `${protocol}//v2winonline.com/api`,
+        };
+      } else if (hostname.includes('admin')) {
+        // Admin application - API is on the same domain
+        return {
+          admin: `${baseUrl}/api`, // Admin API is on the same domain
+          crm: `${protocol}//partners.v2winonline.com/api`,
+          web: `${protocol}//v2winonline.com/api`,
+        };
+      } else {
+        // Main website - API is on the same domain
+        return {
+          admin: `${protocol}//admin.v2winonline.com/api`,
+          crm: `${protocol}//partners.v2winonline.com/api`,
+          web: `${baseUrl}/api`, // Web API is on the same domain
+        };
+      }
+    } else {
+      // Local development - use port-based routing
+      return {
+        admin: `${protocol}//${hostname}:3002/api`,
+        crm: `${protocol}//${hostname}:3001/api`,
+        web: `${protocol}//${hostname}:3000/api`,
+      };
+    }
+  }
+  
+  // Server-side rendering or when window is not available
+  // Fallback to localhost defaults
+  return {
+    admin: 'http://localhost:3002/api',
+    crm: 'http://localhost:3001/api',
+    web: 'http://localhost:3000/api',
+  };
 };
+
+const API_BASE_URLS = getBaseUrls();
 
 // Base query function that determines the API URL and sets headers.
 const baseQuery = async (args, api, extraOptions) => {
@@ -27,10 +87,18 @@ const baseQuery = async (args, api, extraOptions) => {
 
   const baseUrl = API_BASE_URLS[targetService];
   
-  // Remove any leading slashes from requestUrl to prevent double slashes
-  const cleanRequestUrl = requestUrl.startsWith("/") ? requestUrl.substring(1) : requestUrl;
-  const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
+  // For CRM and Admin services, we don't strip the service prefix
+  // The API endpoints are actually at /api/crm/... and /api/admin/...
+  let cleanRequestUrl = requestUrl;
   
+  // Ensure cleanRequestUrl starts with a slash to prevent issues
+  cleanRequestUrl = cleanRequestUrl.startsWith("/") ? cleanRequestUrl : `/${cleanRequestUrl}`;
+  
+  const fullUrl = `${baseUrl}${cleanRequestUrl}`;
+  console.log("Target Service:", targetService); // Debug log
+  console.log("Original Request URL:", requestUrl); // Debug log
+  console.log("Clean Request URL:", cleanRequestUrl); // Debug log
+  console.log("Base URL:", baseUrl); // Debug log
   console.log("API Request URL:", fullUrl); // Debug log
 
   const dynamicFetch = fetchBaseQuery({
@@ -81,7 +149,10 @@ export const glowvitaApi = createApi({
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign", 
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing", 
     "Appointment", "ShippingCharge", "Order", "CrmProducts", 
-    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart", "Patient"
+    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
+    "PublicVendors", "PublicVendorServices", "PublicVendorStaff", 
+    "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
+    "PublicVendorProducts", "WorkingHours"
   ],
 
   endpoints: (builder) => ({
@@ -224,6 +295,41 @@ export const glowvitaApi = createApi({
     getPublicProducts: builder.query({
       query: () => ({ url: "/products", method: "GET" }),
       providesTags: ["PublicProducts"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Products for specific vendor
+    getPublicVendorProducts: builder.query({
+      query: (vendorId) => ({ url: `/products?vendorId=${vendorId}`, method: "GET" }),
+      providesTags: (result, error, vendorId) => [{ type: "PublicVendorProducts", id: vendorId }],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Services for vendor details page
+    getPublicVendorServices: builder.query({
+      query: (vendorId) => ({ url: `/services/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorServices"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Working Hours for vendor details page
+    getPublicVendorWorkingHours: builder.query({
+      query: (vendorId) => ({ url: `/working-hours?vendorId=${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorWorkingHours"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Staff for vendor details page
+    getPublicVendorStaff: builder.query({
+      query: (vendorId) => ({ url: `/staff/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorStaff"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Offers for vendor details page
+    getPublicVendorOffers: builder.query({
+      query: (vendorId) => ({ url: `/offers?businessId=${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorOffers"],
       transformResponse: (response) => response,
     }),
 
@@ -1212,6 +1318,11 @@ export const {
   useGetMeQuery,
   useGetPublicVendorsQuery,
   useGetPublicProductsQuery,
+  useGetPublicVendorProductsQuery,
+  useGetPublicVendorServicesQuery,
+  useGetPublicVendorWorkingHoursQuery,
+  useGetPublicVendorStaffQuery,
+  useGetPublicVendorOffersQuery,
   useUserLoginMutation,
   // Admin Panel
   useAdminLoginMutation,

@@ -2,49 +2,39 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
-import { ChevronLeft, X, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown, Wallet, CreditCard, Hourglass } from "lucide-react";
+import { ChevronLeft, X, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown, Wallet, CreditCard, Hourglass, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { BookingSummary } from "@/components/booking/BookingSummary";
 import { Step1_Services } from "@/components/booking/Step1_Services";
 import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot } from "@/components/booking/Step3_TimeSlot";
-import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent } from '@repo/ui/card';
 import { Separator } from '@repo/ui/separator';
 import { format } from 'date-fns';
-
-// Define interfaces for our state
-interface Service {
-  name: string;
-  duration: string;
-  price: string;
-  image: string;
-}
-
-interface Staff {
-  id: string;
-  name: string;
-  role?: string;
-  image?: string;
-  hint?: string;
-}
-
-const staffMembers = [
-    { id: '1', name: 'Jessica Miller', role: 'Lead Stylist', image: 'https://picsum.photos/seed/staff1/400/400', hint: 'female stylist portrait' },
-    { id: '2', name: 'Michael Chen', role: 'Massage Therapist', image: 'https://picsum.photos/seed/staff2/400/400', hint: 'male therapist portrait' },
-    { id: '3', name: 'Emily White', role: 'Esthetician', image: 'https://picsum.photos/seed/staff3/400/400', hint: 'female esthetician portrait' },
-];
+import { useBookingData, Service, StaffMember } from '@/hooks/useBookingData';
 
 function BookingPageContent() {
   const router = useRouter();
   const params = useParams();
-  const searchParams = useSearchParams();
   const { salonId } = params;
+
+  // Fetch dynamic data using our custom hook
+  const {
+    services,
+    servicesByCategory,
+    categories,
+    staff,
+    workingHours,
+    salonInfo,
+    isLoading,
+    error
+  } = useBookingData(salonId as string);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
-  const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
@@ -53,18 +43,83 @@ function BookingPageContent() {
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-
+  // Check for pre-selected service from sessionStorage
   useEffect(() => {
-    const serviceQuery = searchParams.get('service');
-    if (serviceQuery) {
+    if (services.length > 0) {
       try {
-        const service = JSON.parse(decodeURIComponent(serviceQuery));
-        setSelectedServices([service]);
+        const storedService = sessionStorage.getItem('selectedService');
+        if (storedService) {
+          const serviceData = JSON.parse(storedService);
+          // Find the service in our fetched services by name
+          const matchingService = services.find((s: Service) => s.name === serviceData.name);
+          if (matchingService) {
+            setSelectedServices([matchingService]);
+            // Clear the stored service after using it
+            sessionStorage.removeItem('selectedService');
+          }
+        }
       } catch (error) {
-        console.error("Failed to parse service from URL:", error);
+        console.error("Failed to parse service from sessionStorage:", error);
+        // Clear invalid data
+        sessionStorage.removeItem('selectedService');
       }
     }
-  }, [searchParams]);
+  }, [services]);
+
+  // Loading state for the entire page
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
+        <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
+          <Button variant="ghost" onClick={() => window.history.back()} className="flex items-center gap-2">
+            <ChevronLeft className="mr-1 h-5 w-5" />
+            Back
+          </Button>
+          <div className="font-bold text-lg font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            GlowVita
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
+            <X className="h-5 w-5" />
+          </Button>
+        </header>
+        
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-lg text-muted-foreground">Loading booking details...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state for the entire page
+  if (error) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
+        <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
+          <Button variant="ghost" onClick={() => window.history.back()} className="flex items-center gap-2">
+            <ChevronLeft className="mr-1 h-5 w-5" />
+            Back
+          </Button>
+          <div className="font-bold text-lg font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            GlowVita
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
+            <X className="h-5 w-5" />
+          </Button>
+        </header>
+        
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <AlertCircle className="h-12 w-12 text-destructive" />
+            <p className="text-lg text-muted-foreground">Unable to load salon data</p>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleNextStep = () => {
     if (currentStep < 3) {
@@ -100,9 +155,9 @@ function BookingPageContent() {
   
   const handleSelectService = (service: Service) => {
     setSelectedServices(prev => {
-      const isSelected = prev.some(s => s.name === service.name);
+      const isSelected = prev.some(s => s.id === service.id);
       if (isSelected) {
-        return prev.filter(s => s.name !== service.name);
+        return prev.filter(s => s.id !== service.id);
       } else {
         return [...prev, service];
       }
@@ -110,27 +165,50 @@ function BookingPageContent() {
   };
 
   const renderStepContent = () => {
-    const props = {
-        selectedServices,
-        onSelectService: handleSelectService,
-        selectedStaff,
-        onSelectStaff: setSelectedStaff,
-        selectedDate,
-        onSelectDate: setSelectedDate,
-        selectedTime,
-        onSelectTime: setSelectedTime,
-        currentStep,
-        setCurrentStep,
-        staffMembers
-    };
-    
     switch (currentStep) {
         case 1:
-            return <Step1_Services {...props} />;
+            return (
+              <Step1_Services 
+                selectedServices={selectedServices}
+                onSelectService={handleSelectService}
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                services={services}
+                servicesByCategory={servicesByCategory}
+                categories={categories}
+                isLoading={false} // Already handled at page level
+                error={null}
+              />
+            );
         case 2:
-            return <Step2_Staff {...props} />;
+            return (
+              <Step2_Staff 
+                selectedStaff={selectedStaff}
+                onSelectStaff={setSelectedStaff}
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                staff={staff}
+                isLoading={false} // Already handled at page level
+                error={null}
+              />
+            );
         case 3:
-            return <Step3_TimeSlot {...props} />;
+            return (
+              <Step3_TimeSlot 
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+                selectedTime={selectedTime}
+                onSelectTime={setSelectedTime}
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                selectedStaff={selectedStaff}
+                onSelectStaff={setSelectedStaff}
+                staff={staff}
+                workingHours={workingHours}
+                isLoading={false} // Already handled at page level
+                error={null}
+              />
+            );
         default:
             return <div>Step not found</div>;
     }
@@ -166,6 +244,7 @@ function BookingPageContent() {
               selectedTime={selectedTime}
               onNextStep={handleNextStep}
               currentStep={currentStep}
+              salonInfo={salonInfo}
             />
           </div>
         </aside>
@@ -180,6 +259,7 @@ function BookingPageContent() {
             onNextStep={handleNextStep}
             currentStep={currentStep}
             isMobileFooter={true}
+            salonInfo={salonInfo}
         />
       </div>
 
