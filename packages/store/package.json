@@ -35,7 +35,9 @@
     "./slices/smsTemplateSlice": "./src/slices/smsTemplateSlice.js",
     "./slices/orderSlice": "./src/slices/orderSlice.js",
     "./slices/cartSlice": "./src/slices/cartSlice.js",
-    "./slices/userAuthSlice": "./src/slices/Web/userAuthSlice.js"
+    "./slices/userAuthSlice": "./src/slices/Web/userAuthSlice.js",
+    "./slices/staffAvailabilityService": "./src/slices/staffAvailabilityService.js",
+    "./slices/patientSlice": "./src/slices/patientSlice.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
