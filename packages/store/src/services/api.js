@@ -1099,6 +1099,27 @@ export const glowvitaApi = createApi({
       query: (category) => ({ url: "/crm/product-categories", method: "POST", body: category }),
       invalidatesTags: ["ProductCategory"],
     }),
+    
+    // Block Time Endpoints
+    getBlockedTimes: builder.query({
+      query: (staffId) => ({ url: `/crm/block-time/${staffId}`, method: 'GET' }),
+      providesTags: ['BlockTime'],
+    }),
+    createBlockTime: builder.mutation({
+      query: (blockTimeData) => ({
+        url: '/crm/block-time',
+        method: 'POST',
+        body: blockTimeData,
+      }),
+      invalidatesTags: ['BlockTime'],
+    }),
+    deleteBlockTime: builder.mutation({
+      query: (blockTimeId) => ({
+        url: `/crm/block-time/${blockTimeId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['BlockTime'],
+    }),
 
     // Staff Endpoints
     getStaff: builder.query({
@@ -1318,6 +1339,19 @@ export const glowvitaApi = createApi({
       query: (orderData) => ({ url: "/client/orders", method: "POST", body: orderData }),
       invalidatesTags: ["ClientOrder"],
     }),
+    createPaymentOrder: builder.mutation({
+      query: (paymentData) => ({ url: "/payments/create-order", method: "POST", body: paymentData }),
+    }),
+    verifyPayment: builder.mutation({
+      query: (verificationData) => ({ url: "/payments/verify", method: "POST", body: verificationData }),
+    }),
+    // Mock payment endpoints for development
+    createMockPaymentOrder: builder.mutation({
+      query: (paymentData) => ({ url: "/payments/create-order-mock", method: "POST", body: paymentData }),
+    }),
+    verifyMockPayment: builder.mutation({
+      query: (verificationData) => ({ url: "/payments/verify-mock", method: "POST", body: verificationData }),
+    }),
 
 
   }),
@@ -1336,6 +1370,10 @@ export const {
   useUserLoginMutation,
   useGetClientOrdersQuery,
   useCreateClientOrderMutation,
+  useCreatePaymentOrderMutation,
+  useVerifyPaymentMutation,
+  useCreateMockPaymentOrderMutation,
+  useVerifyMockPaymentMutation,
 
   // Admin Panel
   useAdminLoginMutation,
@@ -1491,6 +1529,11 @@ export const {
   useAddToCartMutation,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
+
+  // Block Time Endpoints
+  useGetBlockedTimesQuery,
+  useCreateBlockTimeMutation,
+  useDeleteBlockTimeMutation,
   useUpdateAppointmentStatusMutation,
   useGetPatientsQuery,
   useCreatePatientMutation,

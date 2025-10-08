@@ -1,15 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Textarea } from '@repo/ui/textarea';
 import { Button } from '@repo/ui/button';
-import { format, addMinutes } from 'date-fns';
+import { format, addMinutes, isWithinInterval, parseISO, isSameDay } from 'date-fns';
+import { useSelector } from 'react-redux';
+import { selectBlockedTimesByStaffAndDate } from '@repo/store/slices/blockTimeSlice';
+import { selectWorkingHours } from '@repo/store/slices/workingHoursSlice';
+
+import { getDay } from 'date-fns';
 import { Calendar as CalendarIcon, Trash2, Loader2, Search, X, PlusCircle } from 'lucide-react';
-import { glowvitaApi, useCreateClientMutation } from '@repo/store/api';
+import { glowvitaApi, useCreateClientMutation, useGetWorkingHoursQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { toast } from 'sonner';
@@ -100,7 +105,160 @@ export default function NewAppointmentForm({
   const router = useRouter();
   const { user } = useCrmAuth();
   const vendorId = user?.vendorId || user?._id;
+  
+  // Initialize form data with default values
+  const [formData, setFormData] = useState<Partial<Appointment>>({
+    client: '',
+    clientName: '',
+    service: '',
+    serviceName: '',
+    staff: '',
+    staffName: '',
+    date: defaultDate ? format(defaultDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+    startTime: '',
+    endTime: '',
+    duration: 0,
+    notes: '',
+    status: 'scheduled',
+    amount: 0,
+    tax: 0,
+    totalAmount: 0,
+    ...defaultValues
+  });
+  
+  // Fetch working hours when component mounts
+  const { data: workingHoursResponse, error: workingHoursError, isLoading: isLoadingWorkingHours } = useGetWorkingHoursQuery(undefined, {
+    // Force refetch when component mounts
+    refetchOnMountOrArgChange: true
+  });
+  
+  // Debug working hours state
+  const [workingHours, setWorkingHours] = useState<Record<string, any> | null>(null);
+  
+  useEffect(() => {
+    console.group('=== Working Hours Data ===');
+    
+    if (workingHoursError) {
+      console.error('❌ Error fetching working hours:', workingHoursError);
+    }
+    
+    if (workingHoursResponse) {
+      console.log('📅 Raw API Response:', workingHoursResponse);
+      
+      // Extract the actual working hours data
+      const workingHoursData = workingHoursResponse.data || workingHoursResponse;
+      console.log('📊 Processed working hours data:', workingHoursData);
+      
+      if (workingHoursData && typeof workingHoursData === 'object') {
+        console.log('📋 Raw working hours data:', workingHoursData);
+        
+        // Initialize with default values (closed)
+        const processedHours: Record<string, any> = {
+          sunday: { isOpen: false, openTime: '09:00', closeTime: '17:00' },
+          monday: { isOpen: false, openTime: '09:00', closeTime: '17:00' },
+          tuesday: { isOpen: false, openTime: '09:00', closeTime: '17:00' },
+          wednesday: { isOpen: false, openTime: '09:00', closeTime: '17:00' },
+          thursday: { isOpen: false, openTime: '09:00', closeTime: '17:00' },
+          friday: { isOpen: false, openTime: '09:00', closeTime: '17:00' },
+          saturday: { isOpen: false, openTime: '09:00', closeTime: '17:00' }
+        };
 
+        // Check if workingHours is an array (new format)
+        if (Array.isArray(workingHoursData.workingHours)) {
+          console.log('📅 Processing working hours array format');
+          
+          workingHoursData.workingHours.forEach((dayData: any) => {
+            if (!dayData || !dayData.day) return;
+            
+            // Convert day name to lowercase for consistent access
+            const dayName = dayData.day.toLowerCase();
+            
+            // Only update if we have a valid day
+            if (processedHours[dayName] !== undefined) {
+              processedHours[dayName] = {
+                isOpen: dayData.isOpen !== undefined ? dayData.isOpen : true,
+                openTime: dayData.open || '09:00',
+                closeTime: dayData.close || '17:00'
+              };
+              
+              console.log(`✅ Processed ${dayName}:`, {
+                isOpen: processedHours[dayName].isOpen,
+                openTime: processedHours[dayName].openTime,
+                closeTime: processedHours[dayName].closeTime
+              });
+            } else {
+              console.warn(`⚠️ Unknown day in working hours: ${dayData.day}`);
+            }
+          });
+        } 
+        // Fallback to old format if not an array
+        else if (typeof workingHoursData === 'object') {
+          console.log('ℹ️ Using legacy working hours format');
+          
+          const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+          days.forEach(day => {
+            // Check for day in various cases
+            const dayData = workingHoursData[day] || 
+                           workingHoursData[day.charAt(0).toUpperCase() + day.slice(1)] ||
+                           workingHoursData[day.toUpperCase()];
+            
+            if (dayData) {
+              processedHours[day] = {
+                isOpen: dayData.isOpen !== undefined ? dayData.isOpen : true,
+                openTime: dayData.openTime || dayData.open || '09:00',
+                closeTime: dayData.closeTime || dayData.close || '17:00'
+              };
+            }
+          });
+        }
+        
+        console.log('🏁 Final working hours:', processedHours);
+        setWorkingHours(processedHours);
+      } else {
+        console.warn('⚠️ Unexpected working hours format. Using default schedule.');
+        // Set default working hours if data format is unexpected
+        const defaultHours = days.reduce((acc, day) => ({
+          ...acc,
+          [day]: {
+            isOpen: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(day),
+            openTime: '09:00',
+            closeTime: '17:00'
+          }
+        }), {});
+        
+        setWorkingHours(defaultHours);
+      }
+    } else if (isLoadingWorkingHours) {
+      console.log('⏳ Loading working hours...');
+    } else {
+      console.warn('⚠️ No working hours data received from API. Using default schedule.');
+      // Set default working hours if no data is received
+      const defaultHours = days.reduce((acc, day) => ({
+        ...acc,
+        [day]: {
+          isOpen: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(day),
+          openTime: '09:00',
+          closeTime: '17:00'
+        }
+      }), {});
+      
+      setWorkingHours(defaultHours);
+    }
+    
+    console.groupEnd();
+  }, [workingHoursResponse, workingHoursError, isLoadingWorkingHours]);
+  
+  // Log working hours state changes
+  useEffect(() => {
+    if (workingHours) {
+      console.log('🔄 Working hours state updated:', {
+        availableDays: Object.keys(workingHours).filter(day => workingHours[day]?.isOpen),
+        tuesday: workingHours.tuesday || 'No Tuesday data'
+      });
+    }
+  }, [workingHours]);
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
 
   // Determine if client search should be enabled (only for new appointments)
@@ -193,13 +351,47 @@ export default function NewAppointmentForm({
   // Get the first staff member as default if available
   const defaultStaff = staffData?.[0];
 
-  // Get current time with 15-minute buffer
-  const getCurrentTimeWithBuffer = () => {
+  // Check if a date is today
+  const isToday = (date: Date): boolean => {
+    const today = new Date();
+    return date.getDate() === today.getDate() &&
+           date.getMonth() === today.getMonth() &&
+           date.getFullYear() === today.getFullYear();
+  };
+
+  // Get the minimum allowed time for a given date
+  const getMinTimeForDate = (date: Date | string): string => {
+    const targetDate = new Date(date);
     const now = new Date();
-    const bufferTime = new Date(now.getTime() + 15 * 60 * 1000);
-    const hours = bufferTime.getHours().toString().padStart(2, '0');
-    const minutes = bufferTime.getMinutes().toString().padStart(2, '0');
+    
+    // For future dates, return start of day (00:00)
+    if (!isToday(targetDate)) {
+      return '00:00'; // Allow any time for future dates
+    }
+    
+    // For today, use current time + 15 minutes
+    const minTime = new Date(now.getTime() + 15 * 60 * 1000);
+    const hours = minTime.getHours().toString().padStart(2, '0');
+    const minutes = minTime.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
+  };
+
+  // Use a ref to track the current duration without causing re-renders
+  const durationRef = useRef(60); // Default to 60 minutes
+
+  // Get current time with 15-minute buffer (only for today)
+  const getCurrentTimeWithBuffer = (selectedDate?: Date | string) => {
+    const now = new Date();
+    const targetDate = selectedDate ? new Date(selectedDate) : now;
+    
+    // For future dates, return 09:00 as default start time
+    if (targetDate > now && !isToday(targetDate)) {
+      return '09:00';
+    }
+    
+    // For today, use current time with buffer
+    const minTime = getMinTimeForDate(now);
+    return minTime;
   };
 
   const [appointmentData, setAppointmentData] = useState<Appointment>({
@@ -223,6 +415,259 @@ export default function NewAppointmentForm({
     totalAmount: defaultValues?.totalAmount || 0,
     paymentStatus: defaultValues?.paymentStatus || 'pending',
   });
+
+  // Get blocked times for the selected staff and date - MOVED TO TOP LEVEL
+  const blockedTimes = useSelector((state: any) => {
+    if (!appointmentData.staff || !appointmentData.date) return [];
+    
+    try {
+      const dateString = appointmentData.date instanceof Date 
+        ? format(appointmentData.date, 'yyyy-MM-dd')
+        : appointmentData.date;
+      
+      const result = selectBlockedTimesByStaffAndDate(state, { 
+        staffId: appointmentData.staff, 
+        date: dateString 
+      });
+      
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error('Error getting blocked times:', error);
+      return [];
+    }
+  });
+
+  // Get blocked times for staff
+  const { data: blockedTimesData, isLoading: isLoadingBlockedTimes } = glowvitaApi.useGetBlockedTimesQuery(
+    formData.staff,
+    { skip: !formData.staff || !formData.date }
+  );
+  
+  // Check if the selected time is within working hours
+  const isWithinWorkingHours = useCallback((startTime: string, endTime: string, selectedDate: Date | string) => {
+    if (!workingHours) {
+      console.warn('No working hours available');
+      return false;
+    }
+    
+    const date = new Date(selectedDate);
+    const dayOfWeek = getDay(date);
+    const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+    const daySchedule = workingHours[dayName];
+    
+    // Check if the business is closed on this day
+    if (!daySchedule || !daySchedule.isOpen) {
+      console.log('Business is closed on', dayName);
+      return false;
+    }
+    
+    // Parse times into minutes since midnight
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    const [openH, openM] = daySchedule.openTime.split(':').map(Number);
+    const [closeH, closeM] = daySchedule.closeTime.split(':').map(Number);
+    
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const openMinutes = openH * 60 + openM;
+    const closeMinutes = closeH * 60 + closeM;
+    
+    // Check if appointment is completely within working hours
+    const isWithinHours = startMinutes >= openMinutes && endMinutes <= closeMinutes;
+    
+    // Debug logging
+    if (!isWithinHours) {
+      console.log('Appointment outside working hours:', {
+        day: dayName,
+        workingHours: `${daySchedule.openTime} - ${daySchedule.closeTime}`,
+        appointmentTime: `${startTime} - ${endTime}`,
+        startInMinutes: startMinutes,
+        endInMinutes: endMinutes,
+        openInMinutes: openMinutes,
+        closeInMinutes: closeMinutes
+      });
+    }
+    
+    return isWithinHours;
+  }, [workingHours]);
+  
+  // Check if staff is available at the selected time
+  const isStaffAvailable = useCallback((startTime: string, endTime: string, staffId: string, appointmentId?: string) => {
+    if (!staffId) return false;
+    
+    // Get existing appointments for the staff member
+    const { data: existingAppointments } = glowvitaApi.useGetAppointmentsQuery(
+      { staffId, date: formatDateForBackend(appointmentData.date) },
+      { skip: !staffId || !appointmentData.date }
+    );
+
+    // Check for overlapping appointments (excluding current appointment if editing)
+    const hasOverlappingAppointment = existingAppointments?.some((appt: any) => {
+      // Skip the current appointment when editing
+      if (appointmentId && (appt._id === appointmentId || appt.id === appointmentId)) {
+        return false;
+      }
+      
+      const apptStart = new Date(`${appt.date}T${appt.startTime}`).getTime();
+      const apptEnd = new Date(`${appt.date}T${appt.endTime}`).getTime();
+      const newStart = new Date(`${formatDateForBackend(appointmentData.date)}T${startTime}`).getTime();
+      const newEnd = new Date(`${formatDateForBackend(appointmentData.date)}T${endTime}`).getTime();
+      
+      return newStart < apptEnd && newEnd > apptStart;
+    });
+
+    if (hasOverlappingAppointment) {
+      return false;
+    }
+
+    // Check blocked times
+    if (!blockedTimesData) return true; // If no blocked times data, assume available
+    
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    
+    // Check if there are any blocked times that overlap with the selected time
+    const isBlocked = blockedTimesData.some((block: any) => {
+      const [blockStartH, blockStartM] = block.startTime.split(':').map(Number);
+      const [blockEndH, blockEndM] = block.endTime.split(':').map(Number);
+      const blockStartMinutes = blockStartH * 60 + blockStartM;
+      const blockEndMinutes = blockEndH * 60 + blockEndM;
+      
+      // Check for time overlap
+      return startMinutes < blockEndMinutes && endMinutes > blockStartMinutes;
+    });
+    
+    return !isBlocked; // If not blocked, staff is available
+  }, [blockedTimesData]);
+  
+  // Check if time is blocked (using the same logic as isStaffAvailable for now)
+  const isTimeBlocked = useCallback((startTime: string, endTime: string) => {
+    return !isStaffAvailable(startTime, endTime);
+  }, [isStaffAvailable]);
+  
+  // Log the current working hours state when validation starts
+  useEffect(() => {
+    console.log('🔄 Current working hours state:', workingHours);
+  }, [workingHours]);
+
+  // Validate appointment time with detailed checks
+  const validateAppointmentTime = useCallback((startTime: string, endTime: string, selectedDate: Date | string) => {
+    if (!workingHours) {
+      return 'Working hours not loaded. Please try again.';
+    }
+    
+    const date = new Date(selectedDate);
+    const dayOfWeek = getDay(date);
+    const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dayOfWeek];
+    const daySchedule = workingHours[dayName];
+    
+    // Debug log to see the working hours data
+    console.log('Working hours for', dayName, ':', daySchedule);
+    
+    // Check if the business is open on this day
+    if (!daySchedule) {
+      console.error(`❌ No schedule found for ${dayName}`);
+      console.groupEnd();
+      return `No working hours found for ${dayName.charAt(0).toUpperCase() + dayName.slice(1)}. Please contact support.`;
+    }
+    
+    if (!daySchedule.isOpen) {
+      console.log(`ℹ️ ${dayName} is marked as closed in working hours`);
+      console.groupEnd();
+      return `Business is closed on ${dayName.charAt(0).toUpperCase() + dayName.slice(1)}`;
+    }
+    
+    // Parse times for comparison
+    console.log('⏰ Parsing times:', {
+      selectedTime: `${startTime} - ${endTime}`,
+      workingHours: `${daySchedule.openTime} - ${daySchedule.closeTime}`
+    });
+    
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    const [openH, openM] = daySchedule.openTime.split(':').map(Number);
+    const [closeH, closeM] = daySchedule.closeTime.split(':').map(Number);
+    
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const openMinutes = openH * 60 + openM;
+    const closeMinutes = closeH * 60 + closeM;
+    
+    console.log('📊 Time comparison:', {
+      startTime: { hours: startH, minutes: startM, totalMinutes: startMinutes },
+      endTime: { hours: endH, minutes: endM, totalMinutes: endMinutes },
+      openTime: { hours: openH, minutes: openM, totalMinutes: openMinutes },
+      closeTime: { hours: closeH, minutes: closeM, totalMinutes: closeMinutes }
+    });
+    
+    // Check if appointment is within working hours
+    const isBeforeOpen = startMinutes < openMinutes;
+    const isAfterClose = endMinutes > closeMinutes;
+    
+    console.log('✅ Time validation:', {
+      isBeforeOpen,
+      isAfterClose,
+      isWithinHours: !isBeforeOpen && !isAfterClose
+    });
+    
+    if (isBeforeOpen || isAfterClose) {
+      console.warn(`❌ Time outside working hours. Before open: ${isBeforeOpen}, After close: ${isAfterClose}`);
+      console.groupEnd();
+      return `Selected time (${startTime} - ${endTime}) is outside of working hours (${daySchedule.openTime} - ${daySchedule.closeTime})`;
+    }
+    
+    // Check staff availability
+    const staffAvailable = isStaffAvailable(startTime, endTime);
+    console.log('👤 Staff availability:', staffAvailable ? '✅ Available' : '❌ Not available');
+    
+    if (!staffAvailable) {
+      console.groupEnd();
+      return 'Staff member is not available at the selected time';
+    }
+    
+    // Check for blocked times
+    const timeBlocked = isTimeBlocked(startTime, endTime);
+    console.log('🚫 Blocked time check:', timeBlocked ? 'Blocked' : 'Available');
+    
+    if (timeBlocked) {
+      console.groupEnd();
+      return 'The selected time is blocked';
+    }
+    
+    console.log('🎉 Time slot is valid!');
+    console.groupEnd();
+    return null; // No errors, time slot is valid
+  }, [workingHours, isWithinWorkingHours, isStaffAvailable, isTimeBlocked]);
+
+  // Check if a time is within working hours and not blocked - FIXED
+  const isTimeAvailable = useCallback((date: Date, time: string, staffId: string): boolean => {
+    if (!staffId) return true;
+    
+    const [hours, minutes] = time.split(':').map(Number);
+    const startTime = new Date(date);
+    startTime.setHours(hours, minutes, 0, 0);
+    
+    const endTime = addMinutes(startTime, durationRef.current);
+    
+    // Use the blockedTimes from the top-level selector
+    const isBlocked = blockedTimes.some((block: any) => {
+      if (block.staffId !== staffId && block.staffId !== 'all') return false;
+      
+      const blockStart = new Date(block.startTime);
+      const blockEnd = new Date(block.endTime);
+      
+      // Check if the appointment overlaps with the blocked time
+      return (
+        (startTime.getTime() >= blockStart.getTime() && startTime.getTime() < blockEnd.getTime()) ||
+        (endTime.getTime() > blockStart.getTime() && endTime.getTime() <= blockEnd.getTime()) ||
+        (startTime.getTime() <= blockStart.getTime() && endTime.getTime() >= blockEnd.getTime())
+      );
+    });
+    
+    return !isBlocked;
+  }, [blockedTimes]); // Add blockedTimes as dependency
 
   // A ref to track the ID of the appointment being edited to prevent re-initialization
   const processedAppointmentId = useRef<string | null>(null);
@@ -369,9 +814,16 @@ export default function NewAppointmentForm({
     }
   }, [staffData, appointmentData.staff, appointmentData.staffName]);
 
-  // Update the getMinTime function to return current time with buffer
+  // Update the getMinTime function to return current time with buffer only for today
   const getMinTime = (selectedDate: Date): string => {
     const now = new Date();
+    
+    // If the selected date is not today, allow any time
+    if (!isToday(selectedDate)) {
+      return '00:00';
+    }
+    
+    // For today, use current time + 15 minutes
     const bufferTime = new Date(now.getTime() + 15 * 60 * 1000);
     const hours = bufferTime.getHours().toString().padStart(2, '0');
     const minutes = bufferTime.getMinutes().toString().padStart(2, '0');
@@ -413,16 +865,123 @@ export default function NewAppointmentForm({
     }
   };
 
+  // Find the next available time slot that fits the duration
+  const findNextAvailableTimeSlot = async (date: Date, startTime: string, duration: number, staffId: string): Promise<string | null> => {
+    if (!staffId) return startTime;
+    
+    const [startHours, startMinutes] = startTime.split(':').map(Number);
+    let currentTime = new Date(date);
+    currentTime.setHours(startHours, startMinutes, 0, 0);
+    
+    // Get existing appointments for the staff member
+    const { data: existingAppointments } = await glowvitaApi.endpoints.getAppointments.initiate(
+      { 
+        staffId, 
+        date: formatDateForBackend(date)
+      }
+    );
+    
+    // Check up to 24 hours in the future
+    for (let i = 0; i < 96; i++) { // 96 = 24 hours * 4 (15-minute intervals)
+      const timeStr = format(currentTime, 'HH:mm');
+      const endTime = calculateEndTime(timeStr, duration);
+      
+      // Check if time is available (not blocked)
+      const isAvailable = isTimeAvailable(date, timeStr, staffId);
+      
+      // Check for overlapping appointments
+      const hasOverlap = existingAppointments?.some((appt: any) => {
+        const apptStart = new Date(`${appt.date}T${appt.startTime}`).getTime();
+        const apptEnd = new Date(`${appt.date}T${appt.endTime}`).getTime();
+        const newStart = currentTime.getTime();
+        const newEnd = addMinutes(currentTime, duration).getTime();
+        
+        return newStart < apptEnd && newEnd > apptStart;
+      });
+      
+      if (isAvailable && !hasOverlap) {
+        return timeStr;
+      }
+      
+      // Move to next 15-minute interval
+      currentTime = addMinutes(currentTime, 15);
+    }
+    
+    return null;
+  };
+
   // Update the start time handler to also update end time
-  const handleStartTimeChange = (time: string) => {
-    setAppointmentData(prev => ({
-      ...prev,
-      startTime: time,
-      // Only update end time if duration is set
-      ...(prev.duration > 0 && {
-        endTime: calculateEndTime(time, prev.duration)
-      })
-    }));
+  const handleStartTimeChange = async (time: string) => {
+    try {
+      setAppointmentData(prev => {
+        // Check if the selected time is available
+        if (prev.staff && !isTimeAvailable(prev.date, time, prev.staff)) {
+          // Find the next available time slot
+          findNextAvailableTimeSlot(
+            prev.date,
+            time,
+            prev.duration || 60,
+            prev.staff
+          ).then(nextAvailableTime => {
+            if (nextAvailableTime) {
+              setAppointmentData(current => ({
+                ...current,
+                startTime: nextAvailableTime,
+                endTime: calculateEndTime(nextAvailableTime, current.duration || 60)
+              }));
+            } else {
+              toast.error('No available time slots found. Please try a different time or staff member.');
+            }
+          });
+          
+          // Return current state while we check for availability
+          return prev;
+        }
+        
+        // Check for overlapping appointments
+        if (prev.staff) {
+          const endTime = calculateEndTime(time, prev.duration || 60);
+          
+          glowvitaApi.endpoints.getAppointments.initiate(
+            { 
+              staffId: prev.staff, 
+              date: formatDateForBackend(prev.date)
+            }
+          ).then(({ data: existingAppointments }) => {
+            const hasOverlap = existingAppointments?.some((appt: any) => {
+              if (appointmentData._id && (appt._id === appointmentData._id)) {
+                return false;
+              }
+              
+              const apptStart = new Date(`${appt.date}T${appt.startTime}`).getTime();
+              const apptEnd = new Date(`${appt.date}T${appt.endTime}`).getTime();
+              const newStart = new Date(prev.date);
+              const [hours, mins] = time.split(':').map(Number);
+              newStart.setHours(hours, mins, 0, 0);
+              const newEnd = addMinutes(newStart, prev.duration || 60);
+              
+              return newStart.getTime() < apptEnd && newEnd.getTime() > apptStart;
+            });
+            
+            if (hasOverlap) {
+              toast.error('The selected staff member already has an appointment at this time. Please choose a different time or staff member.');
+            }
+          });
+        }
+        
+        return {
+          ...prev,
+          startTime: time,
+          // Only update end time if duration is set
+          ...(prev.duration > 0 && {
+            endTime: calculateEndTime(time, prev.duration)
+          })
+        };
+      });
+    } catch (error) {
+      console.error('Error checking appointment availability:', error);
+      toast.error('Error checking appointment availability. Please try again.');
+    }
   };
 
   // Update the end time handler
@@ -503,19 +1062,83 @@ export default function NewAppointmentForm({
   const formatDateForBackend = (date: Date | string): string => {
     if (!date) return '';
     const d = new Date(date);
-    return d.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+    return d.toISOString().split('T')[0];
   };
-
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if the selected time is within working hours
+    if (appointmentData.staff && appointmentData.date && appointmentData.startTime) {
+      // Calculate end time based on duration
+      const [hours, minutes] = appointmentData.startTime.split(':').map(Number);
+      const startTime = new Date(appointmentData.date);
+      startTime.setHours(hours, minutes, 0, 0);
+      const endTime = addMinutes(startTime, appointmentData.duration || 60);
+      
+      // Format times for validation
+      const startTimeStr = format(startTime, 'HH:mm');
+      const endTimeStr = format(endTime, 'HH:mm');
+      
+      // 1. Validate appointment time against working hours
+      const timeError = validateAppointmentTime(
+        startTimeStr, 
+        endTimeStr, 
+        appointmentData.date
+      );
+      
+      if (timeError) {
+        toast.error(timeError);
+        return;
+      }
+      
+      // 2. Check if the selected time is blocked
+      const isTimeBlocked = !isTimeAvailable(
+        appointmentData.date,
+        appointmentData.startTime,
+        appointmentData.staff
+      );
+      
+      if (isTimeBlocked) {
+        toast.error('The selected time is blocked. Please choose a different time or staff member.');
+        return;
+      }
+      
+      // 3. Check for existing appointments for the same staff at the same time
+      const { data: existingAppointments } = await glowvitaApi.endpoints.getAppointments.initiate(
+        { 
+          staffId: appointmentData.staff, 
+          date: formatDateForBackend(appointmentData.date) 
+        }
+      );
+      
+      const hasOverlappingAppointment = existingAppointments?.some((appt: any) => {
+        // Skip the current appointment when editing
+        if (appointmentData._id && (appt._id === appointmentData._id)) {
+          return false;
+        }
+        
+        const apptStart = new Date(`${appt.date}T${appt.startTime}`).getTime();
+        const apptEnd = new Date(`${appt.date}T${appt.endTime}`).getTime();
+        const newStart = startTime.getTime();
+        const newEnd = endTime.getTime();
+        
+        return newStart < apptEnd && newEnd > apptStart;
+      });
+      
+      if (hasOverlappingAppointment) {
+        toast.error('The selected staff member already has an appointment at this time. Please choose a different time or staff member.');
+        return;
+      }
+    }
+    
     try {
+      setIsSubmitting(true);
       // Validate required fields
       if (!appointmentData.clientName || !appointmentData.clientName.trim()) {
         toast.error('Please enter client name');
         return;
       }
-
       if (!appointmentData.service) {
         toast.error('Please select a service');
         return;
@@ -574,6 +1197,8 @@ export default function NewAppointmentForm({
       const errorMessage = error?.data?.message || error?.message || 'Failed to save appointment. Please check all fields and try again.';
       console.error('Detailed error:', error);
       toast.error('Error', errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -862,15 +1487,19 @@ export default function NewAppointmentForm({
                 onChange={(e) => {
                   const selectedDate = new Date(e.target.value);
                   if (!isDateDisabled(selectedDate)) {
+                    // Update the date
                     handleFieldChange('date', selectedDate);
                     
                     // If the selected date is today, update the minimum time
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    if (selectedDate.getTime() === today.getTime()) {
+                    if (isToday(selectedDate)) {
                       const minTime = getMinTime(selectedDate);
                       if (appointmentData.startTime < minTime) {
-                        handleFieldChange('startTime', minTime);
+                        handleStartTimeChange(minTime);
+                      }
+                    } else {
+                      // For future dates, set a default start time if not already set
+                      if (!appointmentData.startTime) {
+                        handleStartTimeChange('09:00');
                       }
                     }
                   } else {
