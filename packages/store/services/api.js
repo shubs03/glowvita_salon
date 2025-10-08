@@ -3,12 +3,55 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import { clearUserAuth } from "@repo/store/slices/Web/userAuthSlice";
+import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from "../../config/config";
 
-const API_BASE_URLS = {
-  admin: "http://localhost:3002/api",
-  crm: "http://localhost:3001/api",
-  web: "http://localhost:3000/api",
+// Function to get base URLs with intelligent fallbacks for production
+const getBaseUrls = () => {
+  // In browser environment, dynamically determine URLs based on current location
+  if (typeof window !== 'undefined' && window.location) {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const baseUrl = `${protocol}//${hostname}${port}`;
+    
+    // If environment variables are set, use them (highest priority)
+    if (NEXT_PUBLIC_WEB_URL && NEXT_PUBLIC_CRM_URL && NEXT_PUBLIC_ADMIN_URL) {
+      return {
+        admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
+        crm: `${NEXT_PUBLIC_CRM_URL}/api`,
+        web: `${NEXT_PUBLIC_WEB_URL}/api`,
+      };
+    }
+    
+    // Otherwise, derive service URLs based on current location
+    // This handles production environments where env vars might not be set
+    if (hostname.includes('v2winonline.com')) {
+      // Production environment - all services on same domain
+      return {
+        admin: `${baseUrl}/admin/api`,
+        crm: `${baseUrl}/crm/api`,
+        web: `${baseUrl}/api`,
+      };
+    } else {
+      // Local development - use port-based routing
+      return {
+        admin: `${protocol}//${hostname}:3002/api`,
+        crm: `${protocol}//${hostname}:3001/api`,
+        web: `${baseUrl}/api`,
+      };
+    }
+  }
+  
+  // Server-side rendering or when window is not available
+  // Fallback to environment variables or localhost defaults
+  return {
+    admin: `${NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002'}/api`,
+    crm: `${NEXT_PUBLIC_CRM_URL || 'http://localhost:3001'}/api`,
+    web: `${NEXT_PUBLIC_WEB_URL || 'http://localhost:3000'}/api`,
+  };
 };
+
+const API_BASE_URLS = getBaseUrls();
 
 // Base query function that determines the API URL and sets headers.
 const baseQuery = async (args, api, extraOptions) => {
@@ -30,8 +73,11 @@ const baseQuery = async (args, api, extraOptions) => {
   
   // Remove any leading slashes from requestUrl to prevent double slashes
   const cleanRequestUrl = requestUrl.startsWith("/") ? requestUrl.substring(1) : requestUrl;
-  const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
+  console.log("Clean Request URL:", cleanRequestUrl);
   
+  // Construct the full URL
+  const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
+  console.log("Base URL:", baseUrl);
   console.log("API Request URL:", fullUrl); // Debug log
 
   const dynamicFetch = fetchBaseQuery({

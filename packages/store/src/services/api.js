@@ -2,12 +2,72 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from "@repo/config/config";
 
-const API_BASE_URLS = {
-  admin: "http://localhost:3002/api",
-  crm: "http://localhost:3001/api",
-  web: "http://localhost:3000/api",
+// Function to get base URLs with intelligent fallbacks for production
+const getBaseUrls = () => {
+  // If environment variables are explicitly set, use them (highest priority)
+  if (NEXT_PUBLIC_WEB_URL && NEXT_PUBLIC_CRM_URL && NEXT_PUBLIC_ADMIN_URL) {
+    return {
+      admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
+      crm: `${NEXT_PUBLIC_CRM_URL}/api`,
+      web: `${NEXT_PUBLIC_WEB_URL}/api`,
+    };
+  }
+
+  // In browser environment, dynamically determine URLs based on current location
+  if (typeof window !== 'undefined' && window.location) {
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : '';
+    const baseUrl = `${protocol}//${hostname}${port}`;
+    
+    // For production domains with specific patterns
+    if (hostname.includes('v2winonline.com')) {
+      // Production environment - different subdomains for different services
+      // partners.v2winonline.com is the CRM application
+      if (hostname.includes('partners')) {
+        // CRM application - API is on the same domain
+        return {
+          admin: `${protocol}//admin.v2winonline.com/api`,
+          crm: `${baseUrl}/api`, // CRM API is on the same domain
+          web: `${protocol}//v2winonline.com/api`,
+        };
+      } else if (hostname.includes('admin')) {
+        // Admin application - API is on the same domain
+        return {
+          admin: `${baseUrl}/api`, // Admin API is on the same domain
+          crm: `${protocol}//partners.v2winonline.com/api`,
+          web: `${protocol}//v2winonline.com/api`,
+        };
+      } else {
+        // Main website - API is on the same domain
+        return {
+          admin: `${protocol}//admin.v2winonline.com/api`,
+          crm: `${protocol}//partners.v2winonline.com/api`,
+          web: `${baseUrl}/api`, // Web API is on the same domain
+        };
+      }
+    } else {
+      // Local development - use port-based routing
+      return {
+        admin: `${protocol}//${hostname}:3002/api`,
+        crm: `${protocol}//${hostname}:3001/api`,
+        web: `${protocol}//${hostname}:3000/api`,
+      };
+    }
+  }
+  
+  // Server-side rendering or when window is not available
+  // Fallback to localhost defaults
+  return {
+    admin: 'http://localhost:3002/api',
+    crm: 'http://localhost:3001/api',
+    web: 'http://localhost:3000/api',
+  };
 };
+
+const API_BASE_URLS = getBaseUrls();
 
 // Base query function that determines the API URL and sets headers.
 const baseQuery = async (args, api, extraOptions) => {
@@ -27,10 +87,18 @@ const baseQuery = async (args, api, extraOptions) => {
 
   const baseUrl = API_BASE_URLS[targetService];
   
-  // Remove any leading slashes from requestUrl to prevent double slashes
-  const cleanRequestUrl = requestUrl.startsWith("/") ? requestUrl.substring(1) : requestUrl;
-  const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
+  // For CRM and Admin services, we don't strip the service prefix
+  // The API endpoints are actually at /api/crm/... and /api/admin/...
+  let cleanRequestUrl = requestUrl;
   
+  // Ensure cleanRequestUrl starts with a slash to prevent issues
+  cleanRequestUrl = cleanRequestUrl.startsWith("/") ? cleanRequestUrl : `/${cleanRequestUrl}`;
+  
+  const fullUrl = `${baseUrl}${cleanRequestUrl}`;
+  console.log("Target Service:", targetService); // Debug log
+  console.log("Original Request URL:", requestUrl); // Debug log
+  console.log("Clean Request URL:", cleanRequestUrl); // Debug log
+  console.log("Base URL:", baseUrl); // Debug log
   console.log("API Request URL:", fullUrl); // Debug log
 
   const dynamicFetch = fetchBaseQuery({

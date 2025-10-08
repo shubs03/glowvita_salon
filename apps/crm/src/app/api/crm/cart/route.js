@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
-import CartModel from '@repo/lib/models/vendor/Cart.model';
+import CartModel from '@repo/lib/models/Vendor/Cart.model';
 import { authMiddlewareCrm } from '@/middlewareCrm';
 
 await _db();

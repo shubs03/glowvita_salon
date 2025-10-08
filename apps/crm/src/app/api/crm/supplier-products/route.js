@@ -1,8 +1,8 @@
 
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
-import ProductModel from '@repo/lib/models/vendor/Product.model';
-import SupplierModel from '@repo/lib/models/vendor/Supplier.model';
+import ProductModel from '@repo/lib/models/Vendor/Product.model';
+import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import ProductCategoryModel from '../../../../../../../packages/lib/src/models/admin/ProductCategory.model.js';
 import { authMiddlewareCrm } from '@/middlewareCrm';
 

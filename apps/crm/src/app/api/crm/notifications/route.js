@@ -2,12 +2,12 @@
 // crm/api/notifications/route.js
 
 import _db from "../../../../../../../packages/lib/src/db.js";
-import VendorNotificationsModel from '@repo/lib/models/vendor/VendorNotification.model';
+import VendorNotificationsModel from '@repo/lib/models/Vendor/VendorNotification.model';
 import { authMiddlewareCrm } from "../../../../middlewareCrm";
 
 await _db();
 
-// POST: Create or update a VendorNotifications document, adding notifications to the array
+// Create or update a VendorNotifications document, adding notifications to the array
 export const POST = authMiddlewareCrm(async (req) => {
   const vendor = req.user;
   const body = await req.json();

@@ -9,10 +9,22 @@ if (!cached) {
 }
 
 const _db = async () => {
+  // Don't connect during build time
+  if (process.env.NEXT_PHASE === 'phase-production-build') {
+    console.log("Skipping MongoDB connection during build phase");
+    return null;
+  }
+
   // If already connected, return the existing connection
   if (cached.conn) {
     console.log("Using existing MongoDB connection");
     return cached.conn;
+  }
+
+  // Check if MONGODB_URI is defined
+  if (!MONGODB_URI) {
+    console.warn("MONGODB_URI is not defined, skipping database connection");
+    return null;
   }
 
   if (!cached.promise) {
