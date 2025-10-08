@@ -1340,13 +1340,6 @@ export const glowvitaApi = createApi({
     verifyPayment: builder.mutation({
       query: (verificationData) => ({ url: "/payments/verify", method: "POST", body: verificationData }),
     }),
-    // Mock payment endpoints for development
-    createMockPaymentOrder: builder.mutation({
-      query: (paymentData) => ({ url: "/payments/create-order-mock", method: "POST", body: paymentData }),
-    }),
-    verifyMockPayment: builder.mutation({
-      query: (verificationData) => ({ url: "/payments/verify-mock", method: "POST", body: verificationData }),
-    }),
 
 
   }),
@@ -1367,8 +1360,6 @@ export const {
   useCreateClientOrderMutation,
   useCreatePaymentOrderMutation,
   useVerifyPaymentMutation,
-  useCreateMockPaymentOrderMutation,
-  useVerifyMockPaymentMutation,
 
   // Admin Panel
   useAdminLoginMutation,
