@@ -44,6 +44,12 @@ const ClientOrderSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  paymentId: {
+    type: String, // Razorpay payment ID
+  },
+  razorpayOrderId: {
+    type: String, // Razorpay order ID
+  },
   status: {
     type: String,
     enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
