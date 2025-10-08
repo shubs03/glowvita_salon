@@ -19,12 +19,12 @@ export const GET = async () => {
     const vendors = await VendorModel.find({ 
       status: 'Approved' 
     }).select(
-      'businessName firstName lastName city state category subCategories profileImage description rating clientCount revenue createdAt'
+      'businessName firstName lastName city email phone website state category subCategories profileImage description rating clientCount revenue createdAt gallery'
     ).limit(20); // Limit to 20 vendors for performance
 
     const response = Response.json({
       success: true,
-      vendors,
+      vendors: vendors,
       count: vendors.length
     });
 

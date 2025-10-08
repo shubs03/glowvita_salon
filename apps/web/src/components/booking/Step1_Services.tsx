@@ -5,11 +5,13 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
-import { Plus, Check, Scissors } from 'lucide-react';
+import { Plus, Check, Scissors, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 import { ChevronRight } from 'lucide-react';
+import { Service } from '@/hooks/useBookingData';
 
-const serviceCategories = [
+// Default categories as fallback
+const defaultCategories = [
     { name: "All" },
     { name: "Hair" },
     { name: "Skin" },
@@ -19,43 +21,6 @@ const serviceCategories = [
     { name: "Waxing" },
     { name: "Facials" }
 ];
-
-interface Service {
-    name: string;
-    duration: string;
-    price: string;
-    image: string;
-}
-
-const services: { [key: string]: Service[] } = {
-    "Hair": [
-        { name: "Signature Haircut", duration: "60 min", price: "120.00", image: 'https://picsum.photos/seed/haircut/200/200' },
-        { name: "Color & Highlights", duration: "120 min", price: "250.00", image: 'https://picsum.photos/seed/haircolor/200/200' },
-        { name: "Keratin Treatment", duration: "90 min", price: "180.00", image: 'https://picsum.photos/seed/keratin/200/200' }
-    ],
-    "Skin": [
-        { name: "GlowVita Facial", duration: "75 min", price: "150.00", image: 'https://picsum.photos/seed/facial/200/200' },
-        { name: "HydraFacial", duration: "60 min", price: "180.00", image: 'https://picsum.photos/seed/hydra/200/200' }
-    ],
-    "Nails": [
-        { name: "Classic Manicure", duration: "45 min", price: "60.00", image: 'https://picsum.photos/seed/manicure/200/200' },
-        { name: "Gel Pedicure", duration: "60 min", price: "80.00", image: 'https://picsum.photos/seed/pedicure/200/200' }
-    ],
-    "Body": [
-        { name: "Deep Tissue Massage", duration: "90 min", price: "200.00", image: 'https://picsum.photos/seed/massage/200/200' }
-    ],
-    "Massage": [
-        { name: "Swedish Massage", duration: "60 min", price: "180.00", image: 'https://picsum.photos/seed/swedish/200/200' }
-    ],
-    "Waxing": [
-        { name: "Full Body Wax", duration: "120 min", price: "300.00", image: 'https://picsum.photos/seed/waxing/200/200' }
-    ],
-    "Facials": [
-        { name: "Anti-Aging Facial", duration: "75 min", price: "160.00", image: 'https://picsum.photos/seed/antiaging/200/200' }
-    ]
-};
-
-const allServices = Object.values(services).flat();
 
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
@@ -80,10 +45,113 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
     );
 };
 
-export function Step1_Services({ selectedServices, onSelectService, currentStep, setCurrentStep }: { selectedServices: any[], onSelectService: (service: Service) => void; currentStep: number; setCurrentStep: (step: number) => void; }) {
+interface Step1ServicesProps {
+    selectedServices: Service[];
+    onSelectService: (service: Service) => void;
+    currentStep: number;
+    setCurrentStep: (step: number) => void;
+    services: Service[];
+    servicesByCategory: { [key: string]: Service[] };
+    categories: { name: string }[];
+    isLoading: boolean;
+    error?: any;
+}
+
+export function Step1_Services({ 
+    selectedServices, 
+    onSelectService, 
+    currentStep, 
+    setCurrentStep,
+    services,
+    servicesByCategory,
+    categories,
+    isLoading,
+    error
+}: Step1ServicesProps) {
   const [activeCategory, setActiveCategory] = useState("All");
 
-  const servicesToDisplay = activeCategory === "All" ? allServices : (services[activeCategory] || []);
+  // Use provided categories or fallback to default
+  const displayCategories = categories?.length > 0 ? categories : defaultCategories;
+  
+  // Calculate services to display based on category
+  const servicesToDisplay = activeCategory === "All" 
+    ? services 
+    : (servicesByCategory[activeCategory] || []);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="w-full">
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 bg-primary/10 rounded-full text-primary">
+              <Scissors className="h-6 w-6" />
+            </div>
+            <h2 className="text-3xl font-bold font-headline">Select Your Services</h2>
+          </div>
+          <p className="text-muted-foreground">Choose one or more services you'd like to book.</p>
+        </div>
+        
+        <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading services...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="w-full">
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 bg-primary/10 rounded-full text-primary">
+              <Scissors className="h-6 w-6" />
+            </div>
+            <h2 className="text-3xl font-bold font-headline">Select Your Services</h2>
+          </div>
+          <p className="text-muted-foreground">Choose one or more services you'd like to book.</p>
+        </div>
+        
+        <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center gap-4">
+            <AlertCircle className="h-8 w-8 text-destructive" />
+            <p className="text-muted-foreground">Unable to load services. Please try again.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // No services available
+  if (!services || services.length === 0) {
+    return (
+      <div className="w-full">
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 bg-primary/10 rounded-full text-primary">
+              <Scissors className="h-6 w-6" />
+            </div>
+            <h2 className="text-3xl font-bold font-headline">Select Your Services</h2>
+          </div>
+          <p className="text-muted-foreground">Choose one or more services you'd like to book.</p>
+        </div>
+        
+        <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center gap-4">
+            <Scissors className="h-8 w-8 text-muted-foreground" />
+            <p className="text-muted-foreground">No services available at this salon.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -102,7 +170,7 @@ export function Step1_Services({ selectedServices, onSelectService, currentStep,
         <div className="sticky top-0 z-10 py-4 bg-background/80 backdrop-blur-sm -mx-6 px-6">
             <div className="relative">
                 <div className="flex space-x-2 overflow-x-auto pb-2 no-scrollbar">
-                    {serviceCategories.map(category => (
+                    {displayCategories.map((category: { name: string }) => (
                         <Button 
                             key={category.name}
                             variant={activeCategory === category.name ? 'default' : 'outline'}
@@ -122,11 +190,11 @@ export function Step1_Services({ selectedServices, onSelectService, currentStep,
 
         {/* Services List */}
         <div className="space-y-4 pt-4">
-            {servicesToDisplay.map(service => {
-                const isSelected = selectedServices.some(s => s.name === service.name);
+            {servicesToDisplay.map((service: Service) => {
+                const isSelected = selectedServices.some(s => s.id === service.id);
                 return (
                     <Card 
-                        key={service.name} 
+                        key={service.id} 
                         className={cn(
                             'p-4 flex flex-col sm:flex-row items-center gap-4 transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-md',
                             isSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-transparent bg-secondary/30'
@@ -134,11 +202,20 @@ export function Step1_Services({ selectedServices, onSelectService, currentStep,
                         onClick={() => onSelectService(service)}
                     >
                         <div className="relative w-full sm:w-20 h-24 sm:h-20 rounded-md overflow-hidden flex-shrink-0">
-                            <Image src={service.image} alt={service.name} layout="fill" className="object-cover" data-ai-hint="beauty service" />
+                            <Image 
+                                src={service.image || `https://picsum.photos/seed/${service.name}/200/200`} 
+                                alt={service.name} 
+                                layout="fill" 
+                                className="object-cover" 
+                                data-ai-hint="beauty service" 
+                            />
                         </div>
                         <div className="flex-1 text-center sm:text-left">
                             <h3 className="font-semibold">{service.name}</h3>
                             <p className="text-sm text-muted-foreground">{service.duration}</p>
+                            {service.description && (
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{service.description}</p>
+                            )}
                         </div>
                         <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-4 text-right">
                             <span className="font-bold text-lg text-primary">₹{service.price}</span>

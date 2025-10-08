@@ -248,6 +248,25 @@ export const glowvitaApi = createApi({
       providesTags: (result, error, id) => [{ type: "PublicVendors", id }],
       transformResponse: (response) => response.vendor || null,
     }),
+    getPublicVendorStaff: builder.query({
+      query: (vendorId) => ({ url: `/staff/vendor/${vendorId}`, method: "GET" }),
+      providesTags: (result, error, vendorId) => [{ type: "PublicVendorStaff", id: vendorId }],
+      transformResponse: (response) => response || { staff: [] },
+    }),
+
+    // Public Products for landing page
+    getPublicProducts: builder.query({
+      query: () => ({ url: "/products", method: "GET" }),
+      providesTags: ["PublicProducts"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Products for specific vendor
+    getPublicVendorProducts: builder.query({
+      query: (vendorId) => ({ url: `/products?vendorId=${vendorId}`, method: "GET" }),
+      providesTags: (result, error, vendorId) => [{ type: "PublicVendorProducts", id: vendorId }],
+      transformResponse: (response) => response,
+    }),
 
     // Admin Panel Endpoints
     getUsers: builder.query({
@@ -457,6 +476,39 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["SuperData"],
     }),
 
+    // Categories Endpoints
+    getCategories: builder.query({
+      query: () => ({ url: "/admin/categories", method: "GET" }),
+      providesTags: ["Category"],
+    }),
+
+    createCategory: builder.mutation({
+      query: (category) => ({
+        url: "/admin/categories",
+        method: "POST",
+        body: category,
+      }),
+      invalidatesTags: ["Category"],
+    }),
+
+    updateCategory: builder.mutation({
+      query: (category) => ({
+        url: "/admin/categories",
+        method: "PUT",
+        body: category,
+      }),
+      invalidatesTags: ["Category"],
+    }),
+
+    deleteCategory: builder.mutation({
+      query: ({ id }) => ({
+        url: "/admin/categories",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Category"],
+    }),
+
     // Tax Fee Settings Endpoints
     getTaxFeeSettings: builder.query({
       query: () => "/admin/tax-fees",
@@ -564,6 +616,12 @@ export const glowvitaApi = createApi({
     deleteVendorServices: builder.mutation({
       query: ({ vendor, serviceId }) => ({ url: "/crm/services", method: "DELETE", body: { vendor, serviceId } }),
       invalidatesTags: ["VendorServices"],
+    }),
+    
+    // CRM Categories
+    getCrmCategories: builder.query({
+      query: () => ({ url: "/crm/categories", method: "GET" }),
+      providesTags: ["CrmCategories"],
     }),
     getOffers: builder.query({ 
       query: (params) => {
@@ -879,7 +937,10 @@ export const {
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
+  useGetPublicProductsQuery,
+  useGetPublicVendorProductsQuery,
   useGetPublicVendorByIdQuery,
+  useGetPublicVendorStaffQuery,
   useUserLoginMutation,
   useLogoutUserMutation,
   // Admin Panel
@@ -906,6 +967,7 @@ export const {
   useCreateSuperDataItemMutation,
   useUpdateSuperDataItemMutation,
   useDeleteSuperDataItemMutation,
+
   useGetAdminProductCategoriesQuery,
   useCreateAdminProductCategoryMutation,
   useUpdateAdminProductCategoryMutation,
@@ -972,6 +1034,7 @@ export const {
   useVendorLoginMutation,
   useVendorRegisterMutation,
   useGetVendorServicesQuery,
+  useGetCrmCategoriesQuery,
   useCreateVendorServicesMutation,
   useUpdateVendorServicesMutation,
   useDeleteVendorServicesMutation,
