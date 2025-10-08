@@ -21,12 +21,15 @@ import staffReducer from "./slices/CRM/staffSlice.js";
 import clientReducer from "./slices/CRM/clientSlice.js";
 import appointmentReducer from './slices/appointmentSlice.js';
 import blockTimeReducer from './slices/blockTimeSlice.js';
-import vendorprofileReducer from './slices/vendorprofileSlice.js';
+import vendorprofileReducer from './slices/vendorProfileSlice.js';
 import workingHoursReducer from './slices/workingHoursSlice.js';
 import orderReducer from './slices/orderSlice.js';
 import calendarAppointmentReducer from './slices/calendarAppointmentSlice.js';
 import cartReducer from './slices/cartSlice.js';
 import smsTemplateSlice from './slices/smsTemplateSlice.js';
+
+// Import localStorage cleanup utility
+import './utils/localStorage-cleanup.js';
 
 const appReducer = combineReducers({
   [glowvitaApi.reducerPath]: glowvitaApi.reducer,

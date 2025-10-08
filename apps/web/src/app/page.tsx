@@ -21,9 +21,7 @@ import {
 
 import { Award, Users, LineChart, Clock, ArrowRight } from "lucide-react";
 import { Button } from "@repo/ui/button";
-import { Badge } from "@repo/ui/badge";
-import { ShoppingCart, Star, Heart } from "lucide-react";
-import { useGetAdminProductCategoriesQuery, useGetPublicProductsQuery } from "@repo/store/api";
+import { useGetAdminProductCategoriesQuery, useGetVendorsQuery, useGetPublicProductsQuery } from "@repo/store/api";
 import { useState, useEffect } from "react";
 
 // Inline ProductCard component
@@ -233,25 +231,15 @@ export default function HomePage() {
     useGetPublicProductsQuery(undefined);
 
   console.log("Product Category Data : ", ProductCategoryData);
-  console.log("Products Data:", products);
-  console.log("Loading:", isLoading);
-  console.log("Error:", isError, error);
 
-  // Add effect to log when products change
-  useEffect(() => {
-    if (products && products.length > 0) {
-      console.log("Products loaded:", products.length);
-      console.log("First product details:", products[0]);
-      // Log the image data specifically to debug image issues
-      console.log("First product image data:", products[0].productImage || products[0].image);
-    } else if (isError) {
-      console.error("Error loading products:", error);
-    } else if (isLoading) {
-      console.log("Loading products...");
-    } else {
-      console.log("No products available");
-    }
-  }, [products, isLoading, isError, error]);
+  const { data: VendorsData } = useGetVendorsQuery(undefined);
+  console.log("Vendors Data : ", VendorsData);
+
+  // Fetch public products data
+  const { data: ProductsData, isLoading: productsLoading, error: productsError } = useGetPublicProductsQuery(undefined);
+  console.log("Products Data : ", ProductsData);
+  console.log("Products API Error:", productsError);
+  console.log("Products API Loading:", productsLoading);
 
   const scrollAdvantages = (direction: "left" | "right") => {
     const container = document.getElementById("advantages-container");
@@ -263,6 +251,96 @@ export default function HomePage() {
       });
     }
   };
+
+  // Mock products data for fallback
+  const mockProducts = [
+    {
+      id: "1",
+      name: "Radiant Glow Serum",
+      price: 45.99,
+      image: "https://placehold.co/320x224.png",
+      hint: "Brightening vitamin C serum",
+      rating: 4.8,
+      reviewCount: 324,
+      vendorName: "Aura Cosmetics",
+      isNew: true,
+      description:
+        "A powerful vitamin C serum that brightens and evens skin tone",
+      category: "skincare",
+    },
+    {
+      id: "2",
+      name: "Luxury Face Cream",
+      price: 78.5,
+      image: "https://placehold.co/320x224.png",
+      hint: "Anti-aging moisturizer",
+      rating: 4.9,
+      reviewCount: 567,
+      vendorName: "Serenity Skincare",
+      description: "Rich anti-aging cream with peptides and hyaluronic acid",
+      category: "skincare",
+    },
+    {
+      id: "3",
+      name: "Matte Lipstick Set",
+      price: 32.0,
+      image: "https://placehold.co/320x224.png",
+      hint: "Long-lasting matte lipsticks",
+      rating: 4.7,
+      reviewCount: 892,
+      vendorName: "Chroma Beauty",
+      isNew: true,
+      description: "Set of 6 long-lasting matte lipsticks in trending shades",
+      category: "cosmetics",
+    },
+    {
+      id: "4",
+      name: "Gentle Cleansing Oil",
+      price: 28.75,
+      image: "https://placehold.co/320x224.png",
+      hint: "Removes makeup effortlessly",
+      rating: 4.6,
+      reviewCount: 445,
+      vendorName: "Earthly Essentials",
+      description: "Natural cleansing oil that removes makeup and impurities",
+      category: "facecare",
+    },
+    {
+      id: "5",
+      name: "Body Butter Trio",
+      price: 56.99,
+      image: "https://placehold.co/320x224.png",
+      hint: "Nourishing body care set",
+      rating: 4.8,
+      reviewCount: 234,
+      vendorName: "Earthly Essentials",
+      description: "Set of 3 rich body butters with natural ingredients",
+      category: "bodycare",
+    },
+    {
+      id: "6",
+      name: "Eye Shadow Palette",
+      price: 42.25,
+      image: "https://placehold.co/320x224.png",
+      hint: "12 versatile shades",
+      rating: 4.9,
+      reviewCount: 678,
+      vendorName: "Chroma Beauty",
+      description: "Professional eyeshadow palette with 12 blendable shades",
+      category: "cosmetics",
+    },
+  ];
+
+  // Use dynamic products or fallback to mock data
+  const products = ProductsData?.products && ProductsData.products.length > 0 
+    ? ProductsData.products.slice(0, 8) // Limit to 8 products for the landing page
+    : mockProducts;
+
+  console.log("Final products being used:", products.length, "products");
+  console.log("Products loading:", productsLoading);
+  console.log("Products error:", productsError);
+  console.log("Using real data:", ProductsData?.products && ProductsData.products.length > 0 ? "YES" : "NO");
+  console.log("ProductsData structure:", ProductsData ? Object.keys(ProductsData) : "No data");
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -313,19 +391,30 @@ export default function HomePage() {
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
-              {isLoading ? (
-                <p className="col-span-full text-center py-8">Loading products...</p>
-              ) : isError ? (
-                <div className="col-span-full text-center py-8">
-                  <p className="text-red-500 font-medium">Error loading products. Please try again later.</p>
-                  {error && <p className="text-sm text-muted-foreground mt-2">Error details: {JSON.stringify(error)}</p>}
-                </div>
-              ) : products && products.length > 0 ? (
-                products.map((product: any) => (
-                  <ProductCard key={product._id || product.id} {...product} />
+              {productsLoading ? (
+                // Loading skeleton cards for products
+                Array.from({ length: 8 }).map((_, index) => (
+                  <div
+                    key={`product-skeleton-${index}`}
+                    className="relative overflow-hidden rounded-md border bg-card animate-pulse"
+                  >
+                    <div className="aspect-[4/3] bg-gray-200"></div>
+                    <div className="p-4">
+                      <div className="h-3 bg-gray-200 rounded mb-1 w-20"></div>
+                      <div className="h-4 bg-gray-200 rounded mb-2 w-32"></div>
+                      <div className="h-3 bg-gray-200 rounded mb-3 w-full"></div>
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="h-3 bg-gray-200 rounded w-16"></div>
+                        <div className="h-4 bg-gray-200 rounded w-12"></div>
+                      </div>
+                      <div className="h-8 bg-gray-200 rounded w-full"></div>
+                    </div>
+                  </div>
                 ))
               ) : (
-                <p className="col-span-full text-center py-8 text-muted-foreground">No products available at the moment.</p>
+                products.map((product: any) => (
+                  <NewProductCard key={product.id} {...product} />
+                ))
               )}
             </div>
             {products && products.length > 0 && (

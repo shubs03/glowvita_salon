@@ -7,23 +7,31 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isValidToken, setIsValidToken] = useState(true);
+  const [isValidToken, setIsValidToken] = useState<boolean | null>(null); // null means we're still checking
   const [email, setEmail] = useState('');
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  const token = searchParams.get('token');
+  const token = searchParams?.get('token');
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     // Get email from URL parameters
-    const emailParam = searchParams.get('email');
+    const emailParam = searchParams?.get('email');
     if (emailParam) {
       setEmail(emailParam);
     }
@@ -31,10 +39,6 @@ export default function ResetPasswordPage() {
     // Check if token and email are present
     if (!token || !emailParam) {
       setIsValidToken(false);
-      toast.error('Invalid reset link', {
-        description: 'The password reset link is invalid or has expired.',
-        duration: 5000,
-      });
       return;
     }
     
@@ -51,26 +55,16 @@ export default function ResetPasswordPage() {
         
         if (!response.ok || !data.isValid) {
           setIsValidToken(false);
-          toast.error('Invalid reset link', {
-            description: 'The password reset link is invalid or has expired.',
-            duration: 5000,
-          });
-          // Redirect to forgot password page after a short delay
-          setTimeout(() => {
-            router.push('/forgot-password');
-          }, 3000);
+        } else {
+          setIsValidToken(true);
         }
       } catch (error) {
         setIsValidToken(false);
-        toast.error('Error', {
-          description: 'Failed to validate reset link. Please try again.',
-          duration: 4000,
-        });
       }
     };
     
     validateToken();
-  }, [token, searchParams, router]);
+  }, [token, searchParams, router, mounted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,23 +129,56 @@ export default function ResetPasswordPage() {
     }
   };
 
+  // Show loading state during hydration or while checking token validity
+  if (!mounted || isValidToken === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900">
+              {!mounted ? 'Loading...' : 'Validating Reset Link'}
+            </h1>
+            <div className="flex justify-center my-6">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+            {mounted && (
+              <p className="mt-2 text-gray-600">
+                Please wait while we validate your reset link...
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show invalid token message
   if (!isValidToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4 overflow-hidden">
-        <style jsx global>{`
-          body {
-            overflow: hidden;
-          }
-        `}</style>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900">Invalid Reset Link</h1>
             <p className="mt-2 text-gray-600">
               The password reset link is invalid or has expired.
             </p>
-            <p className="mt-2 text-gray-600">
-              Redirecting to forgot password page...
-            </p>
+            <div className="mt-6">
+              <Button
+                onClick={() => router.push('/forgot-password')}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition duration-300"
+              >
+                Request New Reset Link
+              </Button>
+            </div>
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => router.push('/client-login')}
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
+                Back to Login
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -159,12 +186,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4 overflow-hidden">
-      <style jsx global>{`
-        body {
-          overflow: hidden;
-        }
-      `}</style>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">Reset Password</h1>
@@ -286,5 +308,24 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-900">Loading...</h1>
+            <div className="flex justify-center my-6">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

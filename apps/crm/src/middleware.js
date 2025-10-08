@@ -73,28 +73,45 @@ export async function middleware(request) {
   const payload = await verifyJwt(token);
 
   if (!payload) {
-    const response = NextResponse.redirect(new URL('/login', request.url));
-    response.cookies.set('crm_access_token', '', { expires: new Date(0) });
-    return response;
-  }
-
-  const role = payload.role;
-  const navItems = getNavItemsForRole(role);
-  const allowedPaths = [...navItems.map(item => item.href), ...alwaysAllowedPaths];
-
-  const isPathAllowed = allowedPaths.some(allowedPath => {
-    if (pathname === allowedPath) return true;
-    if (allowedPath !== '/' && pathname.startsWith(allowedPath + '/')) {
-      return true;
+    // Check if token is empty/missing or if it's malformed
+    if (!token || token.trim() === '' || token.split('.').length !== 3) {
+      // This is a legitimate authentication issue - redirect to login
+      const response = NextResponse.redirect(new URL('/login', request.url));
+      response.cookies.set('crm_access_token', '', { expires: new Date(0) });
+      return response;
     }
-    return false;
-  });
-
-  if (!isPathAllowed) {
-    // Redirect to the not-found page if the path is not authorized
+    
+    // For other verification errors, try once more before clearing
+    console.log("Token verification failed but not clearing cookie");
     return NextResponse.redirect(new URL('/not-found', request.url));
   }
+  
+  const { role, permissions } = payload;
+  const navItems = getNavItemsForRole(role);
+  
+  // Find the required permission for the current route
+  const requiredPermission = navItems.find(item => pathname.startsWith(item.href) && item.href !== '/')?.permission;
 
+  // Always allow dashboard and profile pages for any authenticated user
+  const isAlwaysAllowed = alwaysAllowedPaths.some(path => pathname.startsWith(path));
+
+  if (isAlwaysAllowed) {
+    return NextResponse.next();
+  }
+
+  // If a permission is required for the route, check if the user has it
+  if (requiredPermission) {
+    const userPermissions = permissions || [];
+    if (!userPermissions.includes(requiredPermission)) {
+      // If user doesn't have permission, redirect to a 'not-found' or 'unauthorized' page
+      return NextResponse.redirect(new URL('/not-found', request.url));
+    }
+  } else if (pathname !== '/') { 
+    // If the path is not in the nav items and not always allowed, it's not found
+    // This is a safety net for routes not defined in `lib/routes.ts`
+    return NextResponse.redirect(new URL('/not-found', request.url));
+  }
+  
   return NextResponse.next();
 }
 

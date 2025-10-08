@@ -3,6 +3,7 @@ import UserModel from '@repo/lib/models/user';
 import _db from "@repo/lib/db";
 import crypto from 'crypto';
 import { sendEmail } from "@repo/lib/emailService";
+import { NEXT_PUBLIC_WEB_URL } from '../../../../../../../packages/config/config';
 
 export async function POST(request) {
   try {
@@ -74,7 +75,7 @@ export async function POST(request) {
     }
 
     // Send email with reset link
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+    const baseUrl = NEXT_PUBLIC_WEB_URL;
     const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${email}`;
     console.log('Reset URL:', resetUrl);
     

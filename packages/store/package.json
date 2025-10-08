@@ -29,7 +29,7 @@
     "./slices/appointmentSlice": "./src/slices/appointmentSlice.js",
     "./slices/shippingSlice": "./src/slices/shippingSlice.js",
     "./slices/productSlice": "./src/slices/productSlice.js",
-    "./slices/vendorprofileSlice": "./src/slices/vendorprofileSlice.js",
+    "./slices/vendorProfileSlice": "./src/slices/vendorProfileSlice.js",
     "./slices/workingHoursSlice": "./src/slices/workingHoursSlice.js",
     "./slices/vendorSlice": "./src/slices/vendorSlice.js",
     "./slices/smsTemplateSlice": "./src/slices/smsTemplateSlice.js",

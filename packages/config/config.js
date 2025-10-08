@@ -3,9 +3,10 @@ dotenv.config();
 
 export const ENVIRONMENT = process.env.NODE_ENV;
 export const BASE_URL = process.env.BASE_URL;
-// Use MONGODB_URI as the primary database connection string
-export const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI;
-
+export const NEXT_PUBLIC_WEB_URL = process.env.NEXT_PUBLIC_WEB_URL;
+export const NEXT_PUBLIC_CRM_URL = process.env.NEXT_PUBLIC_CRM_URL;
+export const NEXT_PUBLIC_ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL;
+export const MONGODB_URI = process.env.MONGODB_URI;
 export const JWT_SECRET_USER = process.env.JWT_SECRET_USER;
 export const JWT_SECRET_ADMIN = process.env.JWT_SECRET_ADMIN;
 export const JWT_SECRET_VENDOR = process.env.JWT_SECRET_VENDOR;

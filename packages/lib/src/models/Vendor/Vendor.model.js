@@ -124,8 +124,8 @@ const vendorSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ["Active", "Expired"],
-      default: "Active",
+      enum: ["Active", "Expired", "Pending"],
+      default: "Pending",
     },
     startDate: {
       type: Date,
@@ -231,6 +231,8 @@ const vendorSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+
+vendorSchema.index({ status: 1 });
 
 const VendorModel =
   mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);
