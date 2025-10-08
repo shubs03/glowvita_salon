@@ -10,9 +10,9 @@ const getBaseUrls = () => {
   // If environment variables are explicitly set, use them (highest priority)
   if (NEXT_PUBLIC_WEB_URL && NEXT_PUBLIC_CRM_URL && NEXT_PUBLIC_ADMIN_URL) {
     return {
-      admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
-      crm: `${NEXT_PUBLIC_CRM_URL}/api`,
-      web: `${NEXT_PUBLIC_WEB_URL}/api`,
+      admin: `${NEXT_PUBLIC_ADMIN_URL}`,
+      crm: `${NEXT_PUBLIC_CRM_URL}`,
+      web: `${NEXT_PUBLIC_WEB_URL}`,
     };
   }
 
@@ -20,41 +20,34 @@ const getBaseUrls = () => {
   if (typeof window !== 'undefined' && window.location) {
     const protocol = window.location.protocol;
     const hostname = window.location.hostname;
-    const port = window.location.port ? `:${window.location.port}` : '';
-    const baseUrl = `${protocol}//${hostname}${port}`;
     
     // For production domains with specific patterns
     if (hostname.includes('v2winonline.com')) {
-      // Production environment - different subdomains for different services
-      // partners.v2winonline.com is the CRM application
-      if (hostname.includes('partners')) {
-        // CRM application - API is on the same domain
+      if (hostname.startsWith('partners')) {
         return {
-          admin: `${protocol}//admin.v2winonline.com/api`,
-          crm: `${baseUrl}/api`, // CRM API is on the same domain
-          web: `${protocol}//v2winonline.com/api`,
+          admin: `${protocol}//admin.v2winonline.com`,
+          crm: `${protocol}//${hostname}`,
+          web: `${protocol}//v2winonline.com`,
         };
-      } else if (hostname.includes('admin')) {
-        // Admin application - API is on the same domain
+      } else if (hostname.startsWith('admin')) {
         return {
-          admin: `${baseUrl}/api`, // Admin API is on the same domain
-          crm: `${protocol}//partners.v2winonline.com/api`,
-          web: `${protocol}//v2winonline.com/api`,
+          admin: `${protocol}//${hostname}`,
+          crm: `${protocol}//partners.v2winonline.com`,
+          web: `${protocol}//v2winonline.com`,
         };
       } else {
-        // Main website - API is on the same domain
         return {
-          admin: `${protocol}//admin.v2winonline.com/api`,
-          crm: `${protocol}//partners.v2winonline.com/api`,
-          web: `${baseUrl}/api`, // Web API is on the same domain
+          admin: `${protocol}//admin.v2winonline.com`,
+          crm: `${protocol}//partners.v2winonline.com`,
+          web: `${protocol}//${hostname}`,
         };
       }
     } else {
       // Local development - use port-based routing
       return {
-        admin: `${protocol}//${hostname}:3002/api`,
-        crm: `${protocol}//${hostname}:3001/api`,
-        web: `${protocol}//${hostname}:3000/api`,
+        admin: `${protocol}//${hostname}:3002`,
+        crm: `${protocol}//${hostname}:3001`,
+        web: `${protocol}//${hostname}:3000`,
       };
     }
   }
@@ -62,9 +55,9 @@ const getBaseUrls = () => {
   // Server-side rendering or when window is not available
   // Fallback to localhost defaults
   return {
-    admin: 'http://localhost:3002/api',
-    crm: 'http://localhost:3001/api',
-    web: 'http://localhost:3000/api',
+    admin: 'http://localhost:3002',
+    crm: 'http://localhost:3001',
+    web: 'http://localhost:3000',
   };
 };
 
@@ -91,12 +84,8 @@ const baseQuery = async (args, api, extraOptions) => {
 
   const baseUrl = API_BASE_URLS[targetService];
   
-  // For CRM and Admin services, we don't strip the service prefix
-  // The API endpoints are actually at /api/crm/... and /api/admin/...
-  let cleanRequestUrl = requestUrl;
-  
-  // Ensure cleanRequestUrl starts with a slash to prevent issues
-  cleanRequestUrl = cleanRequestUrl.startsWith("/") ? cleanRequestUrl : `/${cleanRequestUrl}`;
+  // Ensure the URL starts with `/api`
+  const cleanRequestUrl = requestUrl.startsWith("/api") ? requestUrl : `/api${requestUrl.startsWith("/") ? "" : "/"}${requestUrl}`;
   
   const fullUrl = `${baseUrl}${cleanRequestUrl}`;
   console.log("Target Service:", targetService); // Debug log
@@ -349,6 +338,34 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => response,
     }),
 
+    // Public Services for vendor details page
+    getPublicVendorServices: builder.query({
+      query: (vendorId) => ({ url: `/services/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorServices"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Working Hours for vendor details page
+    getPublicVendorWorkingHours: builder.query({
+      query: (vendorId) => ({ url: `/working-hours?vendorId=${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorWorkingHours"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Staff for vendor details page
+    getPublicVendorStaff: builder.query({
+      query: (vendorId) => ({ url: `/staff/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorStaff"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Offers for vendor details page
+    getPublicVendorOffers: builder.query({
+      query: (vendorId) => ({ url: `/offers?businessId=${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorOffers"],
+      transformResponse: (response) => response,
+    }),
+
     // Admin Panel Endpoints
     getUsers: builder.query({
       query: () => ({
@@ -408,7 +425,7 @@ export const glowvitaApi = createApi({
       query: ({ id, ...data }) => ({
         url: `/admin`,
         method: "PUT",
-        body: { id, ...data },
+        body: { _id: id, ...data }, // Changed to send _id
       }),
       invalidatesTags: ["admin"],
     }),
@@ -417,7 +434,7 @@ export const glowvitaApi = createApi({
       query: (id) => ({
         url: `/admin`,
         method: "DELETE",
-        body: { id },
+        body: { _id: id },
       }),
       invalidatesTags: ["admin"],
     }),
@@ -574,7 +591,7 @@ export const glowvitaApi = createApi({
 
     updateCategory: builder.mutation({
       query: (category) => ({
-        url: "/admin/categories",
+        url: `/admin/categories`,
         method: "PUT",
         body: category,
       }),
@@ -583,7 +600,7 @@ export const glowvitaApi = createApi({
 
     deleteCategory: builder.mutation({
       query: ({ id }) => ({
-        url: "/admin/categories",
+        url: `/admin/categories`,
         method: "DELETE",
         body: { id },
       }),
@@ -664,7 +681,7 @@ export const glowvitaApi = createApi({
     }),
     updateProductStatus: builder.mutation({
       query: ({ productId, status }) => ({
-        url: "/admin/product-approval", 
+        url: "/admin/product-approval",
         method: "PATCH",
         body: { productId, status },
       }),
@@ -823,7 +840,7 @@ export const glowvitaApi = createApi({
       query: (category) => ({ url: "/crm/product-categories", method: "POST", body: category }),
       invalidatesTags: ["ProductCategory"],
     }),
-    
+
     // Staff Endpoints
     getStaff: builder.query({
       query: () => ({ url: "/crm/staff", method: "GET" }),
@@ -871,8 +888,6 @@ export const glowvitaApi = createApi({
     }),
     updateAppointment: builder.mutation({
       query: (appointmentData) => {
-        console.log('updateAppointment data:', appointmentData);
-        // Extract the ID and updates from the appointment data
         const { _id, ...updates } = appointmentData;
         
         return {
@@ -888,7 +903,7 @@ export const glowvitaApi = createApi({
     }),
     updateAppointmentStatus: builder.mutation({
       query: ({ id, status, cancellationReason }) => ({ url: `/crm/appointments`, method: "PATCH", body: { _id: id, status, cancellationReason } }),
-      invalidatesTags: (result, error, { id }) => [ { type: 'Appointment', id }, 'Appointments' ],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Appointment', id }, 'Appointments'],
     }),
     deleteAppointment: builder.mutation({
       query: (id) => ({ url: `/crm/appointments/${id}`, method: "DELETE" }),
@@ -993,7 +1008,7 @@ export const glowvitaApi = createApi({
         invalidatesTags: ["Cart"],
     }),
     removeFromCart: builder.mutation({
-        query: (productId) => ({ url: "/crm/cart", method: "DELETE", body: { productId } }),
+        query: ({ productId }) => ({ url: "/crm/cart", method: "DELETE", body: { productId } }),
         invalidatesTags: ["Cart"],
     }),
 
@@ -1039,16 +1054,17 @@ export const glowvitaApi = createApi({
 });
 
 export const {
-  // Client Order
-  useGetClientOrdersQuery,
-  useCreateClientOrderMutation,
-
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
   useGetPublicProductsQuery,
   useGetPublicVendorProductsQuery,
+  useGetPublicVendorServicesQuery,
+  useGetPublicVendorWorkingHoursQuery,
+  useGetPublicVendorStaffQuery,
+  useGetPublicVendorOffersQuery,
   useUserLoginMutation,
+  
   // Admin Panel
   useAdminLoginMutation,
   useRegisterAdminMutation,
@@ -1073,7 +1089,6 @@ export const {
   useCreateSuperDataItemMutation,
   useUpdateSuperDataItemMutation,
   useDeleteSuperDataItemMutation,
-
   useGetAdminProductCategoriesQuery,
   useCreateAdminProductCategoryMutation,
   useUpdateAdminProductCategoryMutation,
@@ -1210,3 +1225,5 @@ export const {
   useUpdatePatientMutation,
   useDeletePatientMutation,
 } = glowvitaApi;
+
+    
