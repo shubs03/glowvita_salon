@@ -25,17 +25,30 @@ export const GET = async (request) => {
     console.log('Request headers:', Object.fromEntries(request.headers.entries()));
     console.log('Products API: Starting to fetch approved products...');
     
+    // Extract vendorId from query parameters if provided
+    const url = new URL(request.url);
+    const vendorId = url.searchParams.get('vendorId');
+    console.log('Products API: vendorId filter:', vendorId);
+    
     // Test database connection
     console.log('Testing database connection...');
     const dbTest = await ProductModel.findOne().limit(1);
     console.log('Database test result:', dbTest ? 'Connected' : 'No data found');
     
-    // Get products that are approved via admin panel
-    const approvedProducts = await ProductModel.find({ 
+    // Build query with optional vendor filter
+    const query = { 
       status: 'approved', // This is set by admin panel product approval
       isActive: true,
       stock: { $gt: 0 }
-    })
+    };
+    
+    // Add vendor filter if vendorId is provided
+    if (vendorId) {
+      query.vendorId = vendorId;
+    }
+    
+    // Get products that are approved via admin panel
+    const approvedProducts = await ProductModel.find(query)
     .populate({
       path: 'vendorId',
       select: 'businessName firstName lastName status',

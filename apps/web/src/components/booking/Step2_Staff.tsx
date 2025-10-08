@@ -4,13 +4,8 @@
 import React from 'react';
 import Image from 'next/image';
 import { cn } from '@repo/ui/cn';
-import { User, Users, CheckCircle, ChevronRight } from 'lucide-react';
-
-const staffMembers = [
-    { id: '1', name: 'Jessica Miller', role: 'Lead Stylist', image: 'https://picsum.photos/seed/staff1/400/400', hint: 'female stylist portrait' },
-    { id: '2', name: 'Michael Chen', role: 'Massage Therapist', image: 'https://picsum.photos/seed/staff2/400/400', hint: 'male therapist portrait' },
-    { id: '3', name: 'Emily White', role: 'Esthetician', image: 'https://picsum.photos/seed/staff3/400/400', hint: 'female esthetician portrait' },
-];
+import { User, Users, CheckCircle, ChevronRight, Loader2, AlertCircle, Star } from 'lucide-react';
+import { StaffMember } from '@/hooks/useBookingData';
 
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
@@ -35,22 +30,75 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
     );
 };
 
-interface StaffMember {
-    id: string;
-    name: string;
-    role?: string;
-    image?: string;
-    hint?: string;
-}
-
 interface Step2StaffProps {
     selectedStaff: StaffMember | null;
     onSelectStaff: (staff: StaffMember | null) => void;
     currentStep: number;
     setCurrentStep: (step: number) => void;
+    staff: StaffMember[];
+    isLoading: boolean;
+    error?: any;
 }
 
-export function Step2_Staff({ selectedStaff, onSelectStaff, currentStep, setCurrentStep }: Step2StaffProps): JSX.Element {
+export function Step2_Staff({ 
+    selectedStaff, 
+    onSelectStaff, 
+    currentStep, 
+    setCurrentStep,
+    staff,
+    isLoading,
+    error
+}: Step2StaffProps): JSX.Element {
+
+    // Loading state
+    if (isLoading) {
+        return (
+            <div className="w-full">
+                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+                <div className="mb-8">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-3 bg-primary/10 rounded-full text-primary">
+                            <Users className="h-6 w-6" />
+                        </div>
+                        <h2 className="text-3xl font-bold font-headline">Select a Professional</h2>
+                    </div>
+                    <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
+                </div>
+                
+                <div className="flex items-center justify-center py-12">
+                    <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-muted-foreground">Loading staff members...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="w-full">
+                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+                <div className="mb-8">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-3 bg-primary/10 rounded-full text-primary">
+                            <Users className="h-6 w-6" />
+                        </div>
+                        <h2 className="text-3xl font-bold font-headline">Select a Professional</h2>
+                    </div>
+                    <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
+                </div>
+                
+                <div className="flex items-center justify-center py-12">
+                    <div className="flex flex-col items-center gap-4">
+                        <AlertCircle className="h-8 w-8 text-destructive" />
+                        <p className="text-muted-foreground">Unable to load staff members. Please try again.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
   return (
     <div className="w-full">
@@ -85,34 +133,54 @@ export function Step2_Staff({ selectedStaff, onSelectStaff, currentStep, setCurr
                 )}
             </div>
             {/* Staff Member Cards */}
-            {staffMembers.map(staff => (
+            {staff && staff.length > 0 ? staff.map((staffMember: StaffMember) => (
                 <div 
-                    key={staff.id}
+                    key={staffMember.id}
                     className={cn(
                         'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2 overflow-hidden',
-                        selectedStaff?.id === staff.id ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
+                        selectedStaff?.id === staffMember.id ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
                     )}
-                    onClick={() => onSelectStaff(staff)}
+                    onClick={() => onSelectStaff(staffMember)}
                 >
                     <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
                         <Image 
-                            src={staff.image} 
-                            alt={staff.name} 
+                            src={staffMember.image || `https://picsum.photos/seed/${staffMember.name}/400/400`} 
+                            alt={staffMember.name} 
                             width={120} 
                             height={120} 
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            data-ai-hint={staff.hint}
+                            data-ai-hint="professional staff portrait"
                         />
                     </div>
-                    <h3 className="font-semibold text-foreground">{staff.name}</h3>
-                    <p className="text-sm text-muted-foreground">{staff.role}</p>
-                    {selectedStaff?.id === staff.id && (
+                    <h3 className="font-semibold text-foreground text-sm">{staffMember.name}</h3>
+                    <p className="text-xs text-muted-foreground">{staffMember.role}</p>
+                    {staffMember.rating && (
+                        <div className="flex items-center gap-1 mt-1">
+                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                            <span className="text-xs text-muted-foreground">{staffMember.rating}</span>
+                        </div>
+                    )}
+                    {staffMember.specialties && staffMember.specialties.length > 0 && (
+                        <div className="mt-1">
+                            <p className="text-xs text-muted-foreground truncate">
+                                {staffMember.specialties.slice(0, 2).join(', ')}
+                            </p>
+                        </div>
+                    )}
+                    {selectedStaff?.id === staffMember.id && (
                          <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                             <CheckCircle className="h-4 w-4" />
                         </div>
                     )}
                 </div>
-            ))}
+            )) : (
+                <div className="col-span-full flex items-center justify-center py-12">
+                    <div className="flex flex-col items-center gap-4">
+                        <Users className="h-8 w-8 text-muted-foreground" />
+                        <p className="text-muted-foreground">No staff members available. You can still book with any professional.</p>
+                    </div>
+                </div>
+            )}
         </div>
     </div>
   );

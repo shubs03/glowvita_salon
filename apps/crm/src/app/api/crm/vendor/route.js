@@ -2,10 +2,32 @@
 import { NextResponse } from "next/server";
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SubscriptionPlanModel from '@repo/lib/models/admin/SubscriptionPlan.model';
+import VendorWorkingHours from '@repo/lib/models/vendor/VendorWorkingHours.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 
 await _db();
+
+// Utility function to convert 12-hour time to 24-hour format for display
+const convertTo24HourFormat = (time12) => {
+    if (!time12) return '';
+    
+    const timePattern = /^(\d{1,2}):(\d{2})(AM|PM)$/i;
+    const match = time12.match(timePattern);
+    
+    if (!match) return time12; // Return as-is if it doesn't match expected format
+    
+    let [, hours, minutes, ampm] = match;
+    hours = parseInt(hours);
+    
+    if (ampm.toUpperCase() === 'AM') {
+        if (hours === 12) hours = 0;
+    } else {
+        if (hours !== 12) hours += 12;
+    }
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes}`;
+};
 
 // GET - Fetch vendor profile
 export const GET = authMiddlewareCrm(async (req) => {
@@ -22,6 +44,71 @@ export const GET = authMiddlewareCrm(async (req) => {
                 success: false,
                 message: "Vendor not found" 
             }, { status: 404 });
+        }
+
+        // Fetch working hours for the vendor
+        try {
+            const workingHours = await VendorWorkingHours.findOne({ vendor: vendorId })
+                .select('workingHours timezone');
+            
+            // Transform working hours from the object structure to array structure for frontend
+            if (workingHours && workingHours.workingHours) {
+                const workingHoursArray = [];
+                const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                const daysMap = {
+                    'monday': 'Monday',
+                    'tuesday': 'Tuesday', 
+                    'wednesday': 'Wednesday',
+                    'thursday': 'Thursday',
+                    'friday': 'Friday',
+                    'saturday': 'Saturday',
+                    'sunday': 'Sunday'
+                };
+
+                // Process days in the correct order
+                daysOrder.forEach(dayKey => {
+                    const dayData = workingHours.workingHours[dayKey];
+                    if (dayData && typeof dayData === 'object') {
+                        const openTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0 
+                            ? convertTo24HourFormat(dayData.hours[0].openTime) : '';
+                        const closeTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0 
+                            ? convertTo24HourFormat(dayData.hours[0].closeTime) : '';
+                        
+                        workingHoursArray.push({
+                            day: daysMap[dayKey] || dayKey,
+                            open: openTime,
+                            close: closeTime,
+                            isOpen: dayData.isOpen || false
+                        });
+                    }
+                });
+
+                vendor.openingHours = workingHoursArray;
+                vendor.timezone = workingHours.timezone;
+            } else {
+                // Default working hours if none found
+                vendor.openingHours = [
+                    { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
+                    { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
+                    { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
+                    { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
+                    { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
+                    { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
+                    { day: 'Sunday', open: '', close: '', isOpen: false }
+                ];
+            }
+        } catch (workingHoursError) {
+            console.error('Error fetching working hours:', workingHoursError);
+            // Set default working hours if there's an error
+            vendor.openingHours = [
+                { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
+                { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
+                { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
+                { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
+                { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
+                { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
+                { day: 'Sunday', open: '', close: '', isOpen: false }
+            ];
         }
 
         return NextResponse.json({ 

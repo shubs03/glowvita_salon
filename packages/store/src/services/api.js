@@ -149,7 +149,10 @@ export const glowvitaApi = createApi({
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign", 
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing", 
     "Appointment", "ShippingCharge", "Order", "CrmProducts", 
-    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart"
+    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
+    "PublicVendors", "PublicVendorServices", "PublicVendorStaff", 
+    "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
+    "PublicVendorProducts", "WorkingHours"
   ],
 
   endpoints: (builder) => ({
@@ -292,6 +295,41 @@ export const glowvitaApi = createApi({
     getPublicProducts: builder.query({
       query: () => ({ url: "/products", method: "GET" }),
       providesTags: ["PublicProducts"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Products for specific vendor
+    getPublicVendorProducts: builder.query({
+      query: (vendorId) => ({ url: `/products?vendorId=${vendorId}`, method: "GET" }),
+      providesTags: (result, error, vendorId) => [{ type: "PublicVendorProducts", id: vendorId }],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Services for vendor details page
+    getPublicVendorServices: builder.query({
+      query: (vendorId) => ({ url: `/services/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorServices"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Working Hours for vendor details page
+    getPublicVendorWorkingHours: builder.query({
+      query: (vendorId) => ({ url: `/working-hours?vendorId=${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorWorkingHours"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Staff for vendor details page
+    getPublicVendorStaff: builder.query({
+      query: (vendorId) => ({ url: `/staff/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorStaff"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Offers for vendor details page
+    getPublicVendorOffers: builder.query({
+      query: (vendorId) => ({ url: `/offers?businessId=${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorOffers"],
       transformResponse: (response) => response,
     }),
 
@@ -1250,6 +1288,11 @@ export const {
   useGetMeQuery,
   useGetPublicVendorsQuery,
   useGetPublicProductsQuery,
+  useGetPublicVendorProductsQuery,
+  useGetPublicVendorServicesQuery,
+  useGetPublicVendorWorkingHoursQuery,
+  useGetPublicVendorStaffQuery,
+  useGetPublicVendorOffersQuery,
   useUserLoginMutation,
   // Admin Panel
   useAdminLoginMutation,
