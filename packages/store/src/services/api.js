@@ -1099,6 +1099,27 @@ export const glowvitaApi = createApi({
       query: (category) => ({ url: "/crm/product-categories", method: "POST", body: category }),
       invalidatesTags: ["ProductCategory"],
     }),
+    
+    // Block Time Endpoints
+    getBlockedTimes: builder.query({
+      query: (staffId) => ({ url: `/crm/block-time/${staffId}`, method: 'GET' }),
+      providesTags: ['BlockTime'],
+    }),
+    createBlockTime: builder.mutation({
+      query: (blockTimeData) => ({
+        url: '/crm/block-time',
+        method: 'POST',
+        body: blockTimeData,
+      }),
+      invalidatesTags: ['BlockTime'],
+    }),
+    deleteBlockTime: builder.mutation({
+      query: (blockTimeId) => ({
+        url: `/crm/block-time/${blockTimeId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['BlockTime'],
+    }),
 
     // Staff Endpoints
     getStaff: builder.query({
@@ -1508,6 +1529,11 @@ export const {
   useAddToCartMutation,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
+
+  // Block Time Endpoints
+  useGetBlockedTimesQuery,
+  useCreateBlockTimeMutation,
+  useDeleteBlockTimeMutation,
   useUpdateAppointmentStatusMutation,
   useGetPatientsQuery,
   useCreatePatientMutation,
