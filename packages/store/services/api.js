@@ -1,4 +1,5 @@
 
+
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -7,6 +8,15 @@ import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from 
 
 // Function to get base URLs with intelligent fallbacks for production
 const getBaseUrls = () => {
+  // If environment variables are explicitly set, use them (highest priority)
+  if (NEXT_PUBLIC_WEB_URL && NEXT_PUBLIC_CRM_URL && NEXT_PUBLIC_ADMIN_URL) {
+    return {
+      admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
+      crm: `${NEXT_PUBLIC_CRM_URL}/api`,
+      web: `${NEXT_PUBLIC_WEB_URL}/api`,
+    };
+  }
+
   // In browser environment, dynamically determine URLs based on current location
   if (typeof window !== 'undefined' && window.location) {
     const protocol = window.location.protocol;
@@ -14,40 +24,48 @@ const getBaseUrls = () => {
     const port = window.location.port ? `:${window.location.port}` : '';
     const baseUrl = `${protocol}//${hostname}${port}`;
     
-    // If environment variables are set, use them (highest priority)
-    if (NEXT_PUBLIC_WEB_URL && NEXT_PUBLIC_CRM_URL && NEXT_PUBLIC_ADMIN_URL) {
-      return {
-        admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
-        crm: `${NEXT_PUBLIC_CRM_URL}/api`,
-        web: `${NEXT_PUBLIC_WEB_URL}/api`,
-      };
-    }
-    
-    // Otherwise, derive service URLs based on current location
-    // This handles production environments where env vars might not be set
+    // For production domains with specific patterns
     if (hostname.includes('v2winonline.com')) {
-      // Production environment - all services on same domain
-      return {
-        admin: `${baseUrl}/admin/api`,
-        crm: `${baseUrl}/crm/api`,
-        web: `${baseUrl}/api`,
-      };
+      // Production environment - different subdomains for different services
+      // partners.v2winonline.com is the CRM application
+      if (hostname.includes('partners')) {
+        // CRM application - API is on the same domain
+        return {
+          admin: `${protocol}//admin.v2winonline.com/api`,
+          crm: `${baseUrl}/api`, // CRM API is on the same domain
+          web: `${protocol}//v2winonline.com/api`,
+        };
+      } else if (hostname.includes('admin')) {
+        // Admin application - API is on the same domain
+        return {
+          admin: `${baseUrl}/api`, // Admin API is on the same domain
+          crm: `${protocol}//partners.v2winonline.com/api`,
+          web: `${protocol}//v2winonline.com/api`,
+        };
+      } else {
+        // Main website - API is on the same domain
+        return {
+          admin: `${protocol}//admin.v2winonline.com/api`,
+          crm: `${protocol}//partners.v2winonline.com/api`,
+          web: `${baseUrl}/api`, // Web API is on the same domain
+        };
+      }
     } else {
       // Local development - use port-based routing
       return {
         admin: `${protocol}//${hostname}:3002/api`,
         crm: `${protocol}//${hostname}:3001/api`,
-        web: `${baseUrl}/api`,
+        web: `${protocol}//${hostname}:3000/api`,
       };
     }
   }
   
   // Server-side rendering or when window is not available
-  // Fallback to environment variables or localhost defaults
+  // Fallback to localhost defaults
   return {
-    admin: `${NEXT_PUBLIC_ADMIN_URL || 'http://localhost:3002'}/api`,
-    crm: `${NEXT_PUBLIC_CRM_URL || 'http://localhost:3001'}/api`,
-    web: `${NEXT_PUBLIC_WEB_URL || 'http://localhost:3000'}/api`,
+    admin: 'http://localhost:3002/api',
+    crm: 'http://localhost:3001/api',
+    web: 'http://localhost:3000/api',
   };
 };
 
@@ -67,25 +85,33 @@ const baseQuery = async (args, api, extraOptions) => {
     targetService = "admin";
   } else if (requestUrl.startsWith("/crm")) {
     targetService = "crm";
+  } else if (requestUrl.startsWith("/client")) {
+    targetService = "web"; // Client-specific endpoints are on the web app
   }
+
 
   const baseUrl = API_BASE_URLS[targetService];
   
-  // Remove any leading slashes from requestUrl to prevent double slashes
-  const cleanRequestUrl = requestUrl.startsWith("/") ? requestUrl.substring(1) : requestUrl;
-  console.log("Clean Request URL:", cleanRequestUrl);
+  // For CRM and Admin services, we don't strip the service prefix
+  // The API endpoints are actually at /api/crm/... and /api/admin/...
+  let cleanRequestUrl = requestUrl;
   
-  // Construct the full URL
-  const fullUrl = `${baseUrl}/${cleanRequestUrl}`;
-  console.log("Base URL:", baseUrl);
+  // Ensure cleanRequestUrl starts with a slash to prevent issues
+  cleanRequestUrl = cleanRequestUrl.startsWith("/") ? cleanRequestUrl : `/${cleanRequestUrl}`;
+  
+  const fullUrl = `${baseUrl}${cleanRequestUrl}`;
+  console.log("Target Service:", targetService); // Debug log
+  console.log("Original Request URL:", requestUrl); // Debug log
+  console.log("Clean Request URL:", cleanRequestUrl); // Debug log
+  console.log("Base URL:", baseUrl); // Debug log
   console.log("API Request URL:", fullUrl); // Debug log
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
     prepareHeaders: (headers, { getState }) => {
       const state = getState();
-      // Prioritize token based on which auth state is populated
       let token;
+      // Prioritize token based on which auth state is populated
       if(state.crmAuth?.token) token = state.crmAuth.token;
       else if(state.adminAuth?.token) token = state.adminAuth.token;
       else if(state.userAuth?.token) token = state.userAuth.token;
@@ -145,10 +171,21 @@ export const glowvitaApi = createApi({
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign", 
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing", "PublicVendors", 
     "Appointment", "ShippingCharge", "Order", "CrmProducts", 
-    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart", "User"
+    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart", "User",
+    "ClientOrder"
   ],
 
   endpoints: (builder) => ({
+    // Client Order Endpoints
+    getClientOrders: builder.query({
+      query: () => ({ url: "/client/orders", method: "GET" }),
+      providesTags: ["ClientOrder"],
+    }),
+    createClientOrder: builder.mutation({
+      query: (orderData) => ({ url: "/client/orders", method: "POST", body: orderData }),
+      invalidatesTags: ["ClientOrder"],
+    }),
+
     // SMS Templates Endpoints
     getSmsTemplates: builder.query({
       query: () => "/admin/sms-template",
@@ -980,15 +1017,20 @@ export const glowvitaApi = createApi({
 });
 
 export const {
+  // Client Order
+  useGetClientOrdersQuery,
+  useCreateClientOrderMutation,
+
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
   useGetPublicProductsQuery,
   useGetPublicVendorProductsQuery,
-  useGetPublicVendorByIdQuery,
+  useGetPublicVendorServicesQuery,
+  useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorStaffQuery,
+  useGetPublicVendorOffersQuery,
   useUserLoginMutation,
-  useLogoutUserMutation,
   // Admin Panel
   useAdminLoginMutation,
   useRegisterAdminMutation,
@@ -1080,7 +1122,6 @@ export const {
   useVendorLoginMutation,
   useVendorRegisterMutation,
   useGetVendorServicesQuery,
-  useGetCrmCategoriesQuery,
   useCreateVendorServicesMutation,
   useUpdateVendorServicesMutation,
   useDeleteVendorServicesMutation,
@@ -1147,3 +1188,6 @@ export const {
   useRemoveFromCartMutation,
   useUpdateAppointmentStatusMutation
 } = glowvitaApi;
+
+```
+</changes>
