@@ -1,7 +1,8 @@
 
+      
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
@@ -12,12 +13,14 @@ import { StatCard } from '../../../components/profile/StatCard';
 import { Pagination } from '@repo/ui/pagination';
 import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
+import { Label } from '@repo/ui/label';
 import Image from 'next/image';
+import { useGetClientOrdersQuery } from '@repo/store/api';
+import { useAuth } from '@/hooks/useAuth';
 
 interface OrderItem {
-  id?: string;
+  productId: string;
   name: string;
   quantity: number;
   price: number;
@@ -25,70 +28,25 @@ interface OrderItem {
 }
 
 interface Order {
+  _id: string;
   id: string;
-  date: string;
+  createdAt: string;
   items: OrderItem[];
-  total: number;
+  totalAmount: number;
   status: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
   shippingAddress: string;
   paymentMethod?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
 }
 
-const initialOrderHistory: Order[] = [
-  { 
-    id: "ORD-001", 
-    date: "2024-08-01T10:00:00Z", 
-    total: 120, 
-    items: [
-      { name: "Aura Serum", quantity: 1, price: 68.00, image: 'https://picsum.photos/seed/cart1/200/200' },
-      { name: "Chroma Balm", quantity: 1, price: 24.00, image: 'https://picsum.photos/seed/cart2/200/200' },
-      { name: "Zen Mist", quantity: 1, price: 28.00, image: 'https://picsum.photos/seed/product3/200/200' },
-    ], 
-    status: "Delivered",
-    shippingAddress: "123 Ocean View, Apt 4B, Miami, FL 33101",
-    paymentMethod: "Visa **** 4242",
-    customerName: 'Alice Johnson',
-    customerEmail: 'alice@example.com',
-    customerPhone: '555-123-4567'
-  },
-  { 
-    id: "ORD-002", 
-    date: "2024-07-15T15:30:00Z", 
-    total: 75, 
-    items: [
-        { name: "Terra Scrub", quantity: 1, price: 48.00, image: 'https://picsum.photos/seed/product4/200/200' },
-        { name: "Luxe Lip Oil", quantity: 1, price: 27.00, image: 'https://picsum.photos/seed/product5/200/200' },
-    ], 
-    status: "Processing",
-    shippingAddress: "456 Downtown Ave, New York, NY 10001",
-    paymentMethod: "PayPal",
-    customerName: 'Bob Williams',
-    customerEmail: 'bob@example.com',
-    customerPhone: '555-987-6543'
-  },
-  { 
-    id: "ORD-003", 
-    date: "2024-06-10T11:00:00Z", 
-    total: 210, 
-    items: [
-        { name: "Aura Serum", quantity: 2, price: 68.00, image: 'https://picsum.photos/seed/cart1/200/200' },
-        { name: "Zen Mist", quantity: 1, price: 28.00, image: 'https://picsum.photos/seed/product3/200/200' },
-        { name: "Bloom Perfume", quantity: 1, price: 46.00, image: 'https://picsum.photos/seed/product6/200/200' },
-    ], 
-    status: "Cancelled",
-    shippingAddress: "789 Suburbia Lane, Chicago, IL 60611",
-    paymentMethod: "Visa **** 1234",
-    customerName: 'Charlie Brown',
-    customerEmail: 'charlie@example.com',
-    customerPhone: '555-555-5555'
-  },
-];
-
 export default function OrdersPage() {
-    const [orderHistory, setOrderHistory] = useState(initialOrderHistory);
+    const { user } = useAuth();
+    const { data: ordersData, isLoading, isError } = useGetClientOrdersQuery(undefined, {
+      skip: !user,
+    });
+
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
@@ -98,6 +56,8 @@ export default function OrdersPage() {
     const [itemsPerPage, setItemsPerPage] = useState(5);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+
+    const orderHistory: Order[] = ordersData?.data || [];
 
     const filteredOrders = useMemo(() => {
         return orderHistory.filter(order =>
@@ -117,17 +77,15 @@ export default function OrdersPage() {
     };
 
     const handleConfirmCancel = () => {
+        // Here you would call an API to cancel the order
         console.log("Cancelling order:", orderToCancel?.id, "Reason:", cancellationReason);
-        setOrderHistory(orderHistory.map(order => 
-            order.id === orderToCancel!.id ? { ...order, status: 'Cancelled' } : order
-        ));
         setIsCancelModalOpen(false);
         setOrderToCancel(null);
         setCancellationReason('');
     };
     
     const isOrderCancellable = (status: string) => {
-        return status === 'Processing';
+        return status === 'Processing' || status === 'Pending';
     };
 
     const lastItemIndex = currentPage * itemsPerPage;
@@ -139,7 +97,7 @@ export default function OrdersPage() {
         <div className="space-y-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <StatCard icon={ShoppingCart} title="Total Orders" value={orderHistory.length} change="All time" />
-                <StatCard icon={TrendingUp} title="Total Spent" value={`₹${orderHistory.reduce((acc, o) => acc + o.total, 0).toFixed(2)}`} change="On products" />
+                <StatCard icon={TrendingUp} title="Total Spent" value={`₹${orderHistory.reduce((acc, o) => acc + o.totalAmount, 0).toFixed(2)}`} change="On products" />
                 <StatCard icon={Package} title="Delivered" value={orderHistory.filter(o => o.status === 'Delivered').length} change="All time" />
             </div>
             <Card>
@@ -169,6 +127,7 @@ export default function OrdersPage() {
                                 <SelectItem value="Delivered">Delivered</SelectItem>
                                 <SelectItem value="Processing">Processing</SelectItem>
                                 <SelectItem value="Cancelled">Cancelled</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -188,33 +147,43 @@ export default function OrdersPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {currentItems.map((order) => (
-                          <TableRow key={order.id}>
-                            <TableCell className="font-mono">{order.id}</TableCell>
-                            <TableCell>{new Date(order.date).toLocaleDateString()}</TableCell>
-                            <TableCell>{order.items.length}</TableCell>
-                            <TableCell>₹{order.total.toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Badge variant={order.status === "Delivered" ? "default" : "secondary"}>
-                                {order.status}
-                              </Badge>
-                            </TableCell>
-                             <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => handleViewClick(order)}>
-                                    <Eye className="h-4 w-4"/>
-                                </Button>
-                                {isOrderCancellable(order.status) ? (
-                                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancelClick(order)}>
-                                        <Trash className="h-4 w-4"/>
-                                    </Button>
-                                ) : (
-                                    <Button variant="ghost" size="sm" disabled className="text-gray-400">
-                                        <Trash className="h-4 w-4"/>
-                                    </Button>
-                                )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8">Loading orders...</TableCell>
+                            </TableRow>
+                        ) : isError ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8 text-destructive">Failed to load orders.</TableCell>
+                            </TableRow>
+                        ) : currentItems.length > 0 ? (
+                          currentItems.map((order) => (
+                            <TableRow key={order._id}>
+                              <TableCell className="font-mono">{order._id.slice(-6)}</TableCell>
+                              <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                              <TableCell>{order.items.length}</TableCell>
+                              <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
+                              <TableCell>
+                                <Badge variant={order.status === "Delivered" ? "default" : "secondary"}>
+                                  {order.status}
+                                </Badge>
+                              </TableCell>
+                               <TableCell className="text-right">
+                                  <Button variant="ghost" size="sm" onClick={() => handleViewClick(order)}>
+                                      <Eye className="h-4 w-4"/>
+                                  </Button>
+                                  {isOrderCancellable(order.status) && (
+                                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleCancelClick(order)}>
+                                          <Trash className="h-4 w-4"/>
+                                      </Button>
+                                  )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-8">No orders found.</TableCell>
+                            </TableRow>
+                        )}
                       </TableBody>
                     </Table>
                   </div>
@@ -258,13 +227,13 @@ export default function OrdersPage() {
             <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
                 <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
                     <DialogHeader className="p-6 pb-4 border-b">
-                        <DialogTitle className="text-2xl font-bold">Order Details: #{selectedOrder?.id}</DialogTitle>
+                        <DialogTitle className="text-2xl font-bold">Order Details: #{selectedOrder?._id.slice(-6)}</DialogTitle>
                         <DialogDescription>
-                            Placed on {selectedOrder ? new Date(selectedOrder.date).toLocaleDateString() : ''}
+                            Placed on {selectedOrder ? new Date(selectedOrder.createdAt).toLocaleDateString() : ''}
                         </DialogDescription>
                     </DialogHeader>
                     {selectedOrder && (
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
@@ -273,18 +242,6 @@ export default function OrdersPage() {
                                     </h3>
                                     <div className="p-4 bg-secondary rounded-lg space-y-3 text-sm">
                                       <div className="flex items-start gap-3">
-                                        <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                        <p className="font-medium">{selectedOrder.customerName}</p>
-                                      </div>
-                                      <div className="flex items-start gap-3">
-                                        <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                        <p className="text-muted-foreground">{selectedOrder.customerEmail}</p>
-                                      </div>
-                                      <div className="flex items-start gap-3">
-                                        <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                        <p className="text-muted-foreground">{selectedOrder.customerPhone}</p>
-                                      </div>
-                                      <div className="flex items-start gap-3 pt-2 border-t border-border/50">
                                         <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
                                         <p className="text-muted-foreground">{selectedOrder.shippingAddress}</p>
                                       </div>
@@ -298,7 +255,7 @@ export default function OrdersPage() {
                                     <div className="space-y-2 text-sm p-4 bg-secondary rounded-lg">
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Subtotal:</span>
-                                            <span>₹{selectedOrder.total.toFixed(2)}</span>
+                                            <span>₹{selectedOrder.totalAmount.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-muted-foreground">Shipping:</span>
@@ -306,7 +263,7 @@ export default function OrdersPage() {
                                         </div>
                                         <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
                                             <span>Total:</span>
-                                            <span className="text-primary">₹{selectedOrder.total.toFixed(2)}</span>
+                                            <span className="text-primary">₹{selectedOrder.totalAmount.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between text-xs pt-2 border-t">
                                             <span className="text-muted-foreground">Payment Method:</span>
@@ -351,5 +308,5 @@ export default function OrdersPage() {
                 </DialogContent>
             </Dialog>
         </div>
-    );
+    );  
 }

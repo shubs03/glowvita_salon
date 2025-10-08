@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-
+import { glowvitaApi } from '@repo/store/api';
 
 // Helper function to create date with time
 const getDateWithTime = (date, timeString) => {
@@ -15,7 +15,7 @@ export const fetchAppointments = createAsyncThunk(
   async (params, { dispatch }) => {
     try {
       const response = await dispatch(
-        api.endpoints.getAppointments.initiate(params)
+        glowvitaApi.endpoints.getAppointments.initiate(params)
       ).unwrap();
       return response;
     } catch (error) {
@@ -29,7 +29,7 @@ export const createNewAppointment = createAsyncThunk(
   async (appointmentData, { dispatch }) => {
     try {
       const response = await dispatch(
-        api.endpoints.createAppointment.initiate(appointmentData)
+        glowvitaApi.endpoints.createAppointment.initiate(appointmentData)
       ).unwrap();
       return response.appointment;
     } catch (error) {
@@ -43,7 +43,7 @@ export const updateExistingAppointment = createAsyncThunk(
   async ({ id, ...updates }, { dispatch }) => {
     try {
       const response = await dispatch(
-        api.endpoints.updateAppointment.initiate({ id, ...updates })
+        glowvitaApi.endpoints.updateAppointment.initiate({ id, ...updates })
       ).unwrap();
       return response.appointment;
     } catch (error) {
@@ -56,14 +56,13 @@ export const removeAppointment = createAsyncThunk(
   'appointments/deleteAppointment',
   async (id, { dispatch }) => {
     try {
-      await dispatch(api.endpoints.deleteAppointment.initiate(id)).unwrap();
+      await dispatch(glowvitaApi.endpoints.deleteAppointment.initiate(id)).unwrap();
       return id;
     } catch (error) {
       throw error;
     }
   }
 );
-
 const initialState = {
   appointments: [],
   status: 'idle',
@@ -78,7 +77,7 @@ const appointmentSlice = createSlice({
     setSelectedAppointment: (state, action) => {
       state.selectedAppointment = action.payload;
     },
-    
+
     // Update appointment status
     updateAppointmentStatus: (state, action) => {
       const { id, status } = action.payload;
@@ -87,7 +86,7 @@ const appointmentSlice = createSlice({
         appointment.status = status;
       }
     },
-    
+
     // Add payment to an appointment
     addPayment: (state, action) => {
       const { id, payment } = action.payload;
@@ -100,7 +99,7 @@ const appointmentSlice = createSlice({
         };
       }
     },
-    
+
     // Reset the state
     resetAppointments: () => initialState
   },
@@ -121,7 +120,7 @@ const appointmentSlice = createSlice({
         state.status = 'failed';
         state.error = action.error.message;
       })
-      
+
       // Create appointment
       .addCase(createNewAppointment.fulfilled, (state, action) => {
         state.appointments.push({
@@ -129,7 +128,7 @@ const appointmentSlice = createSlice({
           date: new Date(action.payload.date)
         });
       })
-      
+
       // Update appointment
       .addCase(updateExistingAppointment.fulfilled, (state, action) => {
         const index = state.appointments.findIndex(
@@ -143,7 +142,7 @@ const appointmentSlice = createSlice({
           };
         }
       })
-      
+
       // Delete appointment
       .addCase(removeAppointment.fulfilled, (state, action) => {
         state.appointments = state.appointments.filter(
@@ -162,11 +161,11 @@ export const selectAllAppointments = (state) => state.appointments.appointments;
 export const selectAppointmentById = (state, appointmentId) =>
   state.appointments.appointments.find(appt => appt.id === appointmentId);
 
-export const selectSelectedAppointment = state => state.appointments.selectedAppointment;
+export const selectSelectedAppointment = (state) => state.appointments.selectedAppointment;
 
-export const selectAppointmentsStatus = state => state.appointments.status;
+export const selectAppointmentsStatus = (state) => state.appointments.status;
 
-export const selectAppointmentsError = state => state.appointments.error;
+export const selectAppointmentsError = (state) => state.appointments.error;
 
 // Export the reducer
 export default appointmentSlice.reducer;

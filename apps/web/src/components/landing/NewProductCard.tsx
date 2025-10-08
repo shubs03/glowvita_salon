@@ -5,6 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
 import { ShoppingCart, Star, Heart } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 
 interface NewProductCardProps {
@@ -16,6 +17,7 @@ interface NewProductCardProps {
   rating: number;
   reviewCount: number;
   vendorName: string;
+  vendorId: string;
   isNew?: boolean;
   description?: string;
   category?: string;
@@ -23,6 +25,7 @@ interface NewProductCardProps {
 }
 
 export function NewProductCard({
+  id,
   name,
   price,
   salePrice,
@@ -32,9 +35,35 @@ export function NewProductCard({
   reviewCount,
   isNew = false,
   vendorName,
+  vendorId,
   description,
 }: NewProductCardProps) {
   const [isLiked, setIsLiked] = useState(false);
+  const router = useRouter();
+
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log('Buy Now clicked for product:', { id, name, vendorId });
+    // Store product details in local storage
+    try {
+      const productData = {
+        id,
+        name,
+        price: salePrice || price,
+        image,
+        vendorName,
+        vendorId: vendorId || 'unknown-vendor',
+        quantity: 1,
+      };
+      console.log('Storing product data:', productData);
+      localStorage.setItem('buyNowProduct', JSON.stringify(productData));
+      // Redirect to checkout page
+      router.push('/checkout');
+    } catch (e) {
+      console.error('Failed to save to localStorage', e);
+      alert('Could not process your request. Please ensure you are not in private browsing mode.');
+    }
+  };
 
   return (
     <div className="group relative overflow-hidden rounded-md hover:shadow-md border bg-card transition-all duration-500 hover:-translate-y-2">
@@ -113,7 +142,12 @@ export function NewProductCard({
             </div>
           </div>
           <div className="flex justify-between gap-2">
-            <Button size="sm" variant="outline" className="w-fit rounded-lg group-hover:text-primary transition-colors group-hover:border-primary">
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="w-fit rounded-lg group-hover:text-primary transition-colors group-hover:border-primary"
+              onClick={handleBuyNow}
+            >
               Buy Now
             </Button>
             <Button
