@@ -13,7 +13,7 @@ import { PageContainer } from '@repo/ui/page-container';
 import Link from 'next/link';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
 import { useGetCartQuery, useUpdateCartItemMutation, useRemoveFromCartMutation } from '@repo/store/api';
-import { useCrmAuth } from '@/hooks/useCrmAuth';
+import { useCrmAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 const suggestedProducts = [
@@ -73,7 +73,11 @@ export default function CartPage() {
   
   const handleQuantityChange = async (productId: string, quantity: number) => {
     try {
-      await updateCartItem({ productId, quantity }).unwrap();
+      if (quantity > 0) {
+        await updateCartItem({ productId, quantity }).unwrap();
+      } else {
+        await removeFromCart({ productId }).unwrap();
+      }
     } catch (error) {
       toast.error('Failed to update quantity.');
     }
