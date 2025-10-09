@@ -17,10 +17,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuGroup,
 } from "@repo/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
-import { usePathname } from 'next/navigation';
-import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
 import { Cart } from "./cart/Cart";
@@ -213,7 +212,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
                   {(user?.businessName || user?.name || "U").charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full border-2 border-background animate-pulse shadow-lg shadow-green-500/50"></div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-xl border border-border/30 shadow-lg rounded-lg">
@@ -225,7 +224,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
                       {(user?.businessName || user?.name || "U").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
+                  <div className="min-w-0 flex-1">
                     <p className="font-bold text-foreground truncate">{user?.businessName || user?.name}</p>
                     <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                     <div className="flex items-center gap-2 mt-1">
@@ -236,22 +235,24 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
                 </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild className="hover:bg-muted/50 transition-colors">
-                <Link href="/salon-profile" className="flex items-center gap-3 p-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                    <span className="font-semibold">Profile Settings</span>
-                </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="hover:bg-gradient-to-r hover:from-muted/30 hover:to-muted/50 p-3 transition-all duration-300 group">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/50 dark:to-cyan-900/50 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-blue-500/20">
-                  <Settings className="h-4 w-4 text-blue-600 dark:text-blue-400 group-hover:rotate-12 transition-transform duration-300" />
+            <DropdownMenuGroup className="p-2">
+              <DropdownMenuItem asChild className="rounded-md">
+                  <Link href="/salon-profile" className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="font-semibold">Profile Settings</span>
+                  </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="hover:bg-gradient-to-r hover:from-muted/30 hover:to-muted/50 p-3 transition-all duration-300 group">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/50 dark:to-cyan-900/50 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-blue-500/20">
+                    <Settings className="h-4 w-4 text-blue-600 dark:text-blue-400 group-hover:rotate-12 transition-transform duration-300" />
+                  </div>
+                  <span className="font-semibold group-hover:text-primary transition-colors duration-300">Preferences</span>
                 </div>
-                <span className="font-semibold group-hover:text-primary transition-colors duration-300">Preferences</span>
-              </div>
-            </DropdownMenuItem>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setShowLogoutModal(true)} className="hover:bg-gradient-to-r hover:from-red-50/50 hover:to-red-100/50 dark:hover:from-red-900/20 dark:hover:to-red-800/20 p-3 text-red-600 dark:text-red-400 transition-all duration-300 group">
               <div className="flex items-center gap-3">
@@ -275,5 +276,3 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
     </header>
   );
 }
-
-export default Header;

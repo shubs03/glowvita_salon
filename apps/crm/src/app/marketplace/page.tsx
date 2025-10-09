@@ -696,10 +696,6 @@ export default function MarketplacePage() {
                     <span>Shipping</span>
                     <span className="text-green-600 font-medium">FREE</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Tax</span>
-                    <span>₹0</span>
-                  </div>
                   <div className="border-t border-border/20 pt-2">
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
