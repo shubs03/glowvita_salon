@@ -1,11 +1,9 @@
-
 import { NextResponse } from "next/server";
 import _db from "@repo/lib/db";
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import ProductCategoryModel from "@repo/lib/models/admin/ProductCategory";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import { authMiddlewareCrm } from "../../../../../middlewareCrm.js";
-
-await _db();
 
 // GET - Fetch all vendor products (public endpoint)
 const getProducts = async (req) => {
@@ -17,28 +15,61 @@ const getProducts = async (req) => {
       "Access-Control-Allow-Headers": "Content-Type",
     };
 
+    console.log("Connecting to database...");
+    // Ensure database connection is established
+    const dbConnection = await _db();
+    console.log("Database connected successfully", dbConnection?.connection?.name);
+
+    console.log("Fetching approved vendor products from database");
+    
     // Filter products by fixed origin 'Vendor' only and with status 'approved'
     const products = await ProductModel.find({ origin: 'Vendor', status: 'approved' })
       .populate('category', 'name description')
-      .populate('vendorId', 'businessName')
+      .populate({
+        path: 'vendorId',
+        model: 'Vendor',
+        select: 'businessName'
+      })
       .sort({ createdAt: -1 })
       .lean();
 
+    console.log(`Found ${products.length} approved vendor products`);
+    
+    // Log sample product data for debugging
+    if (products.length > 0) {
+      console.log("Sample product:", JSON.stringify(products[0], null, 2));
+    }
+
     const transformedProducts = products.map(product => ({
-      ...product,
-      category: product.category?.name || '',
-      categoryDescription: product.category?.description || product.categoryDescription || '',
+      _id: product._id,
+      id: product._id,
+      productName: product.productName,
+      name: product.productName,
+      price: product.price,
+      salePrice: product.salePrice,
+      productImage: product.productImage,
+      image: product.productImage,
+      description: product.description,
       vendorName: product.vendorId?.businessName || 'GlowVita',
+      businessName: product.vendorId?.businessName || 'GlowVita',
+      category: product.category?.name || '',
+      categoryName: product.category?.name || '',
+      categoryDescription: product.category?.description || product.categoryDescription || '',
       status: product.status === 'rejected' ? 'disapproved' : product.status,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+      // Add any other fields that might be needed
     }));
 
     return NextResponse.json(transformedProducts, { headers });
   } catch (error) {
     console.error("Error fetching products:", error);
+    console.error("Error stack:", error.stack);
     return NextResponse.json({ 
       success: false,
       message: "Error fetching products", 
-      error: error.message 
+      error: error.message,
+      stack: error.stack
     }, { status: 500 });
   }
 };
@@ -50,6 +81,7 @@ export const GET = getProducts;
 // POST - Create new product with fixed origin 'Vendor'
 const createProduct = async (req) => {
     try {
+        await _db(); // Ensure database connection
         const body = await req.json();
         const { productName, description, category, categoryDescription, price, salePrice, stock, productImage, isActive, status } = body;
         const userRole = req.user?.role;
@@ -121,6 +153,7 @@ export const POST = authMiddlewareCrm(createProduct, ["vendor"]);
 // PUT (update) a product
 export const PUT = authMiddlewareCrm(async (req) => {
   try {
+    await _db(); // Ensure database connection
     const { id, productImage, category, status, ...updateData } = await req.json();
 
     if (!id) {
@@ -184,6 +217,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE a product
 export const DELETE = authMiddlewareCrm(async (req) => {
   try {
+    await _db(); // Ensure database connection
     const { id } = await req.json();
 
     if (!id) {

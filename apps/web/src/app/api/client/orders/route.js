@@ -59,8 +59,9 @@ export async function POST(req) {
       razorpaySignature 
     } = body;
 
+    console.log('Creating order with data body:', body);
     // Enhanced Validation
-    const requiredFields: { [key: string]: any } = { items, totalAmount, shippingAddress, contactNumber, paymentMethod, vendorId };
+    const requiredFields = { items, totalAmount, shippingAddress, contactNumber, paymentMethod, vendorId };
     for (const field in requiredFields) {
       if (!requiredFields[field] || (Array.isArray(requiredFields[field]) && requiredFields[field].length === 0)) {
         return NextResponse.json({ success: false, message: `Missing required field: ${field}` }, { status: 400 });
@@ -69,6 +70,7 @@ export async function POST(req) {
     
     // For online payments, verify payment signature
     if (paymentMethod !== 'cash-on-delivery' && razorpayOrderId && razorpayPaymentId && razorpaySignature) {
+      // Verify payment with Razorpay
       const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_WEB_URL || 'http://localhost:3000'}/api/payments/verify`, {
         method: 'POST',
         headers: {
@@ -83,7 +85,7 @@ export async function POST(req) {
 
       const verifyResult = await verifyResponse.json();
       if (!verifyResult.success) {
-        return NextResponse.json({ success: false, message: 'Payment verification failed' }, { status: 400 });
+        return NextResponse.json({ success: false, message: 'Payment verification failed in client orders route' }, { status: 400 });
       }
     }
     

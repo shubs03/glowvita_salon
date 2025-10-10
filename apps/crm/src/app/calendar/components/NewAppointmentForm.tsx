@@ -8,9 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@repo/ui/textarea';
 import { Button } from '@repo/ui/button';
 import { format, addMinutes, isWithinInterval, parseISO, isSameDay } from 'date-fns';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { selectBlockedTimesByStaffAndDate } from '@repo/store/slices/blockTimeSlice';
-import { selectWorkingHours } from '@repo/store/slices/workingHoursSlice';
 
 import { getDay } from 'date-fns';
 import { Calendar as CalendarIcon, Trash2, Loader2, Search, X, PlusCircle } from 'lucide-react';
@@ -103,6 +102,7 @@ export default function NewAppointmentForm({
   onDelete
 }: NewAppointmentFormProps) {
   const router = useRouter();
+  const dispatch = useDispatch();
   const { user } = useCrmAuth();
   const vendorId = user?.vendorId || user?._id;
   
@@ -217,7 +217,8 @@ export default function NewAppointmentForm({
       } else {
         console.warn('⚠️ Unexpected working hours format. Using default schedule.');
         // Set default working hours if data format is unexpected
-        const defaultHours = days.reduce((acc, day) => ({
+        const days: string[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const defaultHours = days.reduce((acc: Record<string, any>, day: string) => ({
           ...acc,
           [day]: {
             isOpen: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(day),
@@ -233,7 +234,8 @@ export default function NewAppointmentForm({
     } else {
       console.warn('⚠️ No working hours data received from API. Using default schedule.');
       // Set default working hours if no data is received
-      const defaultHours = days.reduce((acc, day) => ({
+      const days: string[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const defaultHours = days.reduce((acc: Record<string, any>, day: string) => ({
         ...acc,
         [day]: {
           isOpen: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].includes(day),
@@ -425,7 +427,7 @@ export default function NewAppointmentForm({
         ? format(appointmentData.date, 'yyyy-MM-dd')
         : appointmentData.date;
       
-      const result = selectBlockedTimesByStaffAndDate(state, { 
+      const result = (selectBlockedTimesByStaffAndDate as any)(state, { 
         staffId: appointmentData.staff, 
         date: dateString 
       });
@@ -540,12 +542,16 @@ export default function NewAppointmentForm({
     });
     
     return !isBlocked; // If not blocked, staff is available
-  }, [blockedTimesData]);
+  }, [blockedTimesData, appointmentData.date]);
   
+  // Check if staff is available at the given time range
+
   // Check if time is blocked (using the same logic as isStaffAvailable for now)
   const isTimeBlocked = useCallback((startTime: string, endTime: string) => {
-    return !isStaffAvailable(startTime, endTime);
-  }, [isStaffAvailable]);
+    // We need to pass the staffId to isStaffAvailable
+    const staffId = appointmentData.staff;
+    return !isStaffAvailable(startTime, endTime, staffId);
+  }, [isStaffAvailable, appointmentData.staff]);
   
   // Log the current working hours state when validation starts
   useEffect(() => {
@@ -619,7 +625,9 @@ export default function NewAppointmentForm({
     }
     
     // Check staff availability
-    const staffAvailable = isStaffAvailable(startTime, endTime);
+    const staffId = appointmentData.staff;
+    const appointmentId = appointmentData._id || appointmentData.id;
+    const staffAvailable = isStaffAvailable(startTime, endTime, staffId, appointmentId);
     console.log('👤 Staff availability:', staffAvailable ? '✅ Available' : '❌ Not available');
     
     if (!staffAvailable) {
@@ -639,7 +647,7 @@ export default function NewAppointmentForm({
     console.log('🎉 Time slot is valid!');
     console.groupEnd();
     return null; // No errors, time slot is valid
-  }, [workingHours, isWithinWorkingHours, isStaffAvailable, isTimeBlocked]);
+  }, [workingHours, isWithinWorkingHours, isStaffAvailable, isTimeBlocked, appointmentData.staff, appointmentData._id, appointmentData.id]);
 
   // Check if a time is within working hours and not blocked - FIXED
   const isTimeAvailable = useCallback((date: Date, time: string, staffId: string): boolean => {
@@ -874,12 +882,13 @@ export default function NewAppointmentForm({
     currentTime.setHours(startHours, startMinutes, 0, 0);
     
     // Get existing appointments for the staff member
-    const { data: existingAppointments } = await glowvitaApi.endpoints.getAppointments.initiate(
+    const response: any = await (glowvitaApi.endpoints.getAppointments.initiate(
       { 
         staffId, 
         date: formatDateForBackend(date)
       }
-    );
+    ) as any).unwrap();
+    const existingAppointments = response || [];
     
     // Check up to 24 hours in the future
     for (let i = 0; i < 96; i++) { // 96 = 24 hours * 4 (15-minute intervals)
@@ -915,10 +924,10 @@ export default function NewAppointmentForm({
     try {
       setAppointmentData(prev => {
         // Check if the selected time is available
-        if (prev.staff && !isTimeAvailable(prev.date, time, prev.staff)) {
+        if (prev.staff && !isTimeAvailable(new Date(prev.date), time, prev.staff)) {
           // Find the next available time slot
           findNextAvailableTimeSlot(
-            prev.date,
+            new Date(prev.date),
             time,
             prev.duration || 60,
             prev.staff
@@ -942,12 +951,13 @@ export default function NewAppointmentForm({
         if (prev.staff) {
           const endTime = calculateEndTime(time, prev.duration || 60);
           
-          glowvitaApi.endpoints.getAppointments.initiate(
+          (glowvitaApi.endpoints.getAppointments.initiate(
             { 
               staffId: prev.staff, 
               date: formatDateForBackend(prev.date)
             }
-          ).then(({ data: existingAppointments }) => {
+          ) as any).unwrap().then((response: any) => {
+            const existingAppointments = response || [];
             const hasOverlap = existingAppointments?.some((appt: any) => {
               if (appointmentData._id && (appt._id === appointmentData._id)) {
                 return false;
@@ -1094,7 +1104,7 @@ export default function NewAppointmentForm({
       
       // 2. Check if the selected time is blocked
       const isTimeBlocked = !isTimeAvailable(
-        appointmentData.date,
+        new Date(appointmentData.date),
         appointmentData.startTime,
         appointmentData.staff
       );
@@ -1105,12 +1115,13 @@ export default function NewAppointmentForm({
       }
       
       // 3. Check for existing appointments for the same staff at the same time
-      const { data: existingAppointments } = await glowvitaApi.endpoints.getAppointments.initiate(
+      const response: any = await (glowvitaApi.endpoints.getAppointments.initiate(
         { 
           staffId: appointmentData.staff, 
           date: formatDateForBackend(appointmentData.date) 
         }
-      );
+      ) as any).unwrap();
+      const existingAppointments = response || [];
       
       const hasOverlappingAppointment = existingAppointments?.some((appt: any) => {
         // Skip the current appointment when editing
