@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -41,6 +42,7 @@ const profileNavItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
   { id: 'appointments', label: 'My Appointments', icon: Calendar, href: '/profile/appointments' },
   { id: 'orders', label: 'My Orders', icon: ShoppingCart, href: '/profile/orders' },
+  { id: 'cart', label: 'My Cart', icon: ShoppingCart, href: '/profile/cart' },
   { id: 'reviews', label: 'My Reviews', icon: Star, href: '/profile/reviews' },
   { id: 'referrals', label: 'Refer & Earn', icon: Gift, href: '/profile/referrals' },
   { id: 'wallet', label: 'Wallet', icon: Wallet, href: '/profile/wallet' },
