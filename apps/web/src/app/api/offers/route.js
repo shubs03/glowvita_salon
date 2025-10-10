@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import CRMOfferModel from '@repo/lib/models/vendor/CRMOffer.model';
+import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model';
 import connectDB from '@repo/lib/db';
 
 export async function GET(request) {

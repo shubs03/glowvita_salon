@@ -1,4 +1,5 @@
 
+
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -78,25 +79,25 @@ const baseQuery = async (args, api, extraOptions) => {
     return { error: { status: "CUSTOM_ERROR", error: "Invalid URL provided" } };
   }
 
-  let targetService = "web"; // Default
+  // Determine the target service based on the URL prefix
+  let targetService;
   if (requestUrl.startsWith("/admin")) {
     targetService = "admin";
   } else if (requestUrl.startsWith("/crm")) {
     targetService = "crm";
-  } else if (requestUrl.startsWith("/client") || requestUrl.startsWith("/payments")) {
+  } else {
+    // Default to 'web' for auth, payments, and client-facing endpoints
     targetService = "web";
   }
 
   const baseUrl = API_BASE_URLS[targetService];
   const fullUrl = `${baseUrl}${requestUrl}`;
 
-  console.log("Target Service:", targetService);
-  console.log("Original Request URL:", requestUrl);
-  console.log("Base URL:", baseUrl);
-  console.log("API Request URL:", fullUrl);
+  console.log("API Service:", targetService);
+  console.log("Full Request URL:", fullUrl);
 
   const dynamicFetch = fetchBaseQuery({
-    baseUrl: "", // We're already building the full URL
+    baseUrl: "", // Base URL is now part of the full URL
     prepareHeaders: (headers, { getState }) => {
       const state = getState();
       let token = state.crmAuth?.token || state.adminAuth?.token || state.userAuth?.token;

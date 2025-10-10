@@ -12,11 +12,9 @@ import { X, Plus, Minus, Heart, Shield, Tag, ShoppingCart, ArrowLeft } from 'luc
 import { PageContainer } from '@repo/ui/page-container';
 import Link from 'next/link';
 import { ProductCard } from '@repo/ui/components/landing/ProductCard';
-
-const initialCartItems = [
-  { id: 1, name: 'Aura Revitalizing Serum', price: 68.00, quantity: 1, image: 'https://picsum.photos/seed/cart1/200/200', hint: 'skincare product' },
-  { id: 2, name: 'Chroma Hydrating Balm', price: 24.00, quantity: 2, image: 'https://picsum.photos/seed/cart2/200/200', hint: 'cosmetic balm' },
-];
+import { useGetCartQuery, useUpdateCartItemMutation, useRemoveFromCartMutation } from '@repo/store/api';
+import { useCrmAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 const suggestedProducts = [
   {
@@ -63,26 +61,43 @@ const suggestedProducts = [
 ];
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState(initialCartItems);
-  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
-  const [itemToRemove, setItemToRemove] = useState<number | null>(null);
+  const { user, isCrmAuthenticated } = useCrmAuth();
+  const { data: cartData, isLoading } = useGetCartQuery(user?._id, { skip: !isCrmAuthenticated || !user?._id });
+  const [updateCartItem] = useUpdateCartItemMutation();
+  const [removeFromCart] = useRemoveFromCartMutation();
   
-  const handleQuantityChange = (id: number, delta: number) => {
-    setCartItems(cartItems.map(item => 
-      item.id === id ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item
-    ).filter(item => item.quantity > 0));
+  const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<string | null>(null);
+
+  const cartItems = cartData?.data?.items || [];
+  
+  const handleQuantityChange = async (productId: string, quantity: number) => {
+    try {
+      if (quantity > 0) {
+        await updateCartItem({ productId, quantity }).unwrap();
+      } else {
+        await removeFromCart({ productId }).unwrap();
+      }
+    } catch (error) {
+      toast.error('Failed to update quantity.');
+    }
   };
   
-  const openRemoveModal = (id: number) => {
-    setItemToRemove(id);
+  const openRemoveModal = (productId: string) => {
+    setItemToRemove(productId);
     setIsRemoveModalOpen(true);
   };
   
-  const handleRemoveItem = () => {
+  const handleRemoveItem = async () => {
     if (itemToRemove) {
-      setCartItems(cartItems.filter(item => item.id !== itemToRemove));
-      setIsRemoveModalOpen(false);
-      setItemToRemove(null);
+      try {
+        await removeFromCart({ productId: itemToRemove }).unwrap();
+        setIsRemoveModalOpen(false);
+        setItemToRemove(null);
+        toast.success("Item removed from cart.");
+      } catch (error) {
+        toast.error("Failed to remove item.");
+      }
     }
   };
 
@@ -91,12 +106,12 @@ export default function CartPage() {
     setItemToRemove(null);
   };
 
-  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((acc: number, item: any) => acc + item.price * item.quantity, 0);
   const shipping = subtotal > 0 ? 5.00 : 0;
   const tax = subtotal * 0.08;
   const discount = subtotal * 0.1; // 10% discount
   const total = subtotal + shipping + tax - discount;
-  const itemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+  const itemCount = cartItems.reduce((acc: number, item: any) => acc + item.quantity, 0);
 
   return (
     <PageContainer className="max-w-7xl">
@@ -112,7 +127,9 @@ export default function CartPage() {
           )}
         </div>
 
-        {cartItems.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-16 lg:py-20">Loading cart...</div>
+        ) : cartItems.length === 0 ? (
           <div className="text-center py-16 lg:py-20 space-y-6">
             <ShoppingCart className="mx-auto h-16 w-16 lg:h-20 lg:w-20 text-muted-foreground" />
             <div className="space-y-3">
@@ -133,33 +150,33 @@ export default function CartPage() {
             <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
               {/* Cart Items List */}
               <div className="space-y-4 lg:space-y-6">
-                {cartItems.map(item => (
-                  <Card key={item.id} className="flex items-center p-4 lg:p-6 shadow-sm hover:shadow-md transition-shadow border border-border/50 hover:border-border">
+                {cartItems.map((item: any) => (
+                  <Card key={item.productId} className="flex items-center p-4 lg:p-6 shadow-sm hover:shadow-md transition-shadow border border-border/50 hover:border-border">
                     <div className="relative w-20 h-20 lg:w-24 lg:h-24 rounded-md overflow-hidden flex-shrink-0">
                       <Image 
-                        src={item.image} 
-                        alt={item.name} 
+                        src={item.productImage || 'https://placehold.co/100x100.png'} 
+                        alt={item.productName} 
                         layout="fill"
                         objectFit="cover"
-                        data-ai-hint={item.hint}
+                        data-ai-hint={item.productName}
                       />
                     </div>
                     <div className="flex-grow ml-4 lg:ml-6">
-                      <h3 className="font-semibold text-base lg:text-lg mb-1">{item.name}</h3>
+                      <h3 className="font-semibold text-base lg:text-lg mb-1">{item.productName}</h3>
                       <p className="text-muted-foreground text-sm lg:text-base">Price: ₹{item.price.toFixed(2)}</p>
                       <div className="flex items-center gap-2 mt-3">
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(item.id, -1)}>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(item.productId, item.quantity - 1)}>
                           <Minus className="h-4 w-4" />
                         </Button>
                         <span className="font-semibold w-8 text-center">{item.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(item.id, 1)}>
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}>
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-lg lg:text-xl">₹{(item.price * item.quantity).toFixed(2)}</p>
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8 mt-2" onClick={() => openRemoveModal(item.id)}>
+                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive h-8 w-8 mt-2" onClick={() => openRemoveModal(item.productId)}>
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -167,95 +184,7 @@ export default function CartPage() {
                 ))}
               </div>
 
-              {/* How to Complete Your Order Section */}
-              <div className="mt-16 lg:mt-20">
-                <div className="text-center mb-10 lg:mb-12 space-y-3">
-                  <h2 className="text-2xl lg:text-3xl font-bold font-headline text-foreground">How to Complete Your Order</h2>
-                  <p className="text-muted-foreground text-base lg:text-lg max-w-2xl mx-auto leading-relaxed">
-                    Follow these simple steps to securely complete your purchase
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
-                  {/* Step 1 */}
-                   <Card className="text-center p-6 lg:p-8 border border-border/50 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-background to-blue-50">
-                    {/* Breaking Line Border Effect */}
-                    <div className="mb-4 relative z-10">
-                      <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        <span className="text-xl lg:text-2xl font-bold">1</span>
-                      </div>
-                      <h3 className="text-lg lg:text-xl font-semibold mb-2 text-blue-700">Review Cart</h3>
-                      <p className="text-sm lg:text-base text-blue-600 leading-relaxed">
-                        Check your items, quantities, and pricing before proceeding
-                      </p>
-                    </div>
-                  </Card>
-
-                  {/* Step 2 - Apply Coupon with Breaking Border */}
-                  <Card className="text-center p-6 lg:p-8 relative overflow-hidden hover:shadow-xl hover:shadow-blue-500/20 transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-background to-blue-50 border-2 border-dashed border-blue-300 hover:border-blue-400">
-                    {/* Breaking Line Border Effect */}
-                    <div className="mb-4 relative z-10">
-                      <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        <span className="text-xl lg:text-2xl font-bold">2</span>
-                      </div>
-                      <h3 className="text-lg lg:text-xl font-semibold mb-2 text-blue-700">Apply Coupon</h3>
-                      <p className="text-sm lg:text-base text-blue-600 leading-relaxed">
-                        Enter any discount codes you have to save on your order
-                      </p>
-                    </div>
-                  </Card>
-
-                  {/* Step 3 */}
-                  <Card className="text-center p-6 lg:p-8 border border-border/50 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-background to-blue-50">
-                    <div className="mb-4">
-                      <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        <span className="text-xl lg:text-2xl font-bold">3</span>
-                      </div>
-                      <h3 className="text-lg lg:text-xl font-semibold mb-2 text-blue-700">Checkout</h3>
-                      <p className="text-sm lg:text-base text-blue-600 leading-relaxed">
-                        Proceed to secure checkout and enter your payment details
-                      </p>
-                    </div>
-                  </Card>
-
-                  {/* Step 4 */}
-                  <Card className="text-center p-6 lg:p-8 border border-border/50 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-background to-blue-50">
-                    <div className="mb-4">
-                      <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        <span className="text-xl lg:text-2xl font-bold">4</span>
-                      </div>
-                      <h3 className="text-lg lg:text-xl font-semibold mb-2 text-blue-700">Confirmation</h3>
-                      <p className="text-sm lg:text-base text-blue-600 leading-relaxed">
-                        Receive order confirmation and tracking information via email
-                      </p>
-                    </div>
-                  </Card>
-                </div>
-
-                {/* Additional Information */}
-                <div className="mt-10 lg:mt-12 text-center">
-                  <Card className="bg-primary/5 border border-primary/20 p-6 lg:p-8">
-                    <div className="space-y-4">
-                      <h3 className="text-lg lg:text-xl font-semibold text-foreground">Need Help?</h3>
-                      <p className="text-sm lg:text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-                        Our customer support team is available 24/7 to assist you with your order. 
-                        Contact us via chat, email, or phone if you have any questions.
-                      </p>
-                      <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                        <Button variant="outline" size="sm">
-                          Live Chat
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Email Support
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Call: 1-800-BEAUTY
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              </div>
+              {/* Other sections can be added here if needed */}
             </div>
 
             {/* Sidebar with Order Summary */}
@@ -341,19 +270,19 @@ export default function CartPage() {
           {itemToRemove && (
             <div className="py-4">
               {(() => {
-                const item = cartItems.find(item => item.id === itemToRemove);
+                const item = cartItems.find((i: any) => i.productId === itemToRemove);
                 return item ? (
                   <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
                     <div className="relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
                       <Image 
-                        src={item.image} 
-                        alt={item.name} 
+                        src={item.productImage || 'https://placehold.co/80x80.png'} 
+                        alt={item.productName} 
                         layout="fill"
                         objectFit="cover"
                       />
                     </div>
                     <div className="flex-grow">
-                      <h4 className="font-semibold text-sm">{item.name}</h4>
+                      <h4 className="font-semibold text-sm">{item.productName}</h4>
                       <p className="text-sm text-muted-foreground">Qty: {item.quantity} × ₹{item.price.toFixed(2)}</p>
                       <p className="text-sm font-medium">Total: ₹{(item.price * item.quantity).toFixed(2)}</p>
                     </div>

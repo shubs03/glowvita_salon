@@ -27,7 +27,7 @@ export async function POST(req) {
         orderId: razorpay_order_id,
       });
     } else {
-      return NextResponse.json({ success: false, message: 'Payment verification failed' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'Payment verification failed in payment-verify api route' }, { status: 400 });
     }
   } catch (error) {
     console.error('Payment verification error:', error);
