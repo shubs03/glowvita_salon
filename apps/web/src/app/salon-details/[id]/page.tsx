@@ -63,7 +63,13 @@ import {
   useGetPublicVendorOffersQuery,
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorServicesQuery,
+  useAddToClientCartMutation,
 } from "@repo/store/api";
+import { useAppDispatch } from "@repo/store/hooks";
+import { addToCart, setCurrentUser } from "@repo/store/slices/cartSlice";
+import { useAuth } from "@/hooks/useAuth";
+import { useCartSync } from "@/hooks/useCartSync";
+import { toast } from "sonner";
 import ServicesSection from "./components/ServicesSection";
 import Link from "next/link";
 
@@ -330,6 +336,8 @@ const defaultSalon = {
 export default function SalonDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { user, isAuthenticated } = useAuth();
   const id = params.id as string;
   const [activeTab, setActiveTab] = useState("overview");
   const [visibleTab, setVisibleTab] = useState("overview");
@@ -393,6 +401,12 @@ export default function SalonDetailsPage() {
   } = useGetPublicVendorWorkingHoursQuery(id, {
     skip: !id,
   });
+
+  // Cart mutation for authenticated users
+  const [addToCartAPI] = useAddToClientCartMutation();
+
+  // Initialize cart sync
+  useCartSync();
 
   const salon = useMemo(() => {
     if (vendorData) {
@@ -480,6 +494,64 @@ export default function SalonDetailsPage() {
       alert(
         "Could not process your request. Please ensure you are not in private browsing mode."
       );
+    }
+  };
+
+  const handleAddToCart = async (product: any) => {
+    try {
+      if (isAuthenticated && user?._id) {
+        // User is authenticated - use API
+        const cartItem = {
+          productId: product.id,
+          productName: product.name,
+          productImage: product.image,
+          quantity: 1,
+          price: product.price,
+          vendorId: id,
+          supplierName: vendorData?.businessName || "Unknown Vendor",
+        };
+
+        await addToCartAPI(cartItem).unwrap();
+        
+        // Show success toast
+        toast.success(`${product.name} added to cart!`, {
+          description: `You can view all items in your cart.`,
+          action: {
+            label: "View Cart",
+            onClick: () => router.push("/cart"),
+          },
+        });
+      } else {
+        // User is not authenticated - use local storage
+        const cartItem = {
+          _id: product.id,
+          productName: product.name,
+          price: product.price,
+          quantity: 1,
+          productImage: product.image,
+          vendorId: id,
+          supplierName: vendorData?.businessName || "Unknown Vendor",
+          // Additional details for better cart management
+          category: product.category,
+          stock: product.stock,
+          hint: product.hint,
+        };
+
+        // Dispatch to Redux store (will also save to localStorage)
+        dispatch(addToCart(cartItem));
+
+        // Show success toast
+        toast.success(`${product.name} added to cart!`, {
+          description: `You can view all items in your cart.`,
+          action: {
+            label: "View Cart",
+            onClick: () => router.push("/cart"),
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to add item to cart:", error);
+      toast.error("Failed to add item to cart. Please try again.");
     }
   };
 

@@ -9,6 +9,7 @@ import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@repo/store/hooks';
 import { clearUserAuth } from '@repo/store/slices/userAuthSlice';
+import { resetToGuest } from "@repo/store/slices/cartSlice";
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -35,6 +36,7 @@ interface MarketingHeaderProps {
   isMobileMenuOpen: boolean;
   toggleMobileMenu: () => void;
   isHomePage?: boolean;
+  hideMenuItems?: boolean;
 }
 
 const profileNavItems = [
@@ -47,7 +49,7 @@ const profileNavItems = [
   { id: 'settings', label: 'Account Settings', icon: Settings, href: '/profile/settings' },
 ];
 
-export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage = false }: MarketingHeaderProps) {
+export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage = false, hideMenuItems = false }: MarketingHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -60,6 +62,8 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
     setIsLoggingOut(true);
     // Dispatch the client-side action to clear all auth state
     dispatch(clearUserAuth());
+    // Reset cart to guest mode
+    dispatch(resetToGuest());
     toast.success("You have been logged out.");
     // Redirect to login page
     router.push('/client-login');
@@ -109,21 +113,25 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
           
           {/* Desktop & Tablet Nav */}
           <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-            <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-              <Link href="/apps">Features</Link>
-            </Button>
-            <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-              <Link href="/pricing">Pricing</Link>
-            </Button>
-            <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-              <Link href="/about">About Us</Link>
-            </Button>
-            <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-              <Link href="/contact">Contact</Link>
-            </Button>
-            <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-              <Link href="/support">Support</Link>
-            </Button>
+            {!hideMenuItems && (
+              <>
+                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                  <Link href="/apps">Features</Link>
+                </Button>
+                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                  <Link href="/pricing">Pricing</Link>
+                </Button>
+                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                  <Link href="/about">About Us</Link>
+                </Button>
+                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                  <Link href="/contact">Contact</Link>
+                </Button>
+                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                  <Link href="/support">Support</Link>
+                </Button>
+              </>
+            )}
             <div className="mx-2">
               <ThemeToggle />
             </div>
@@ -205,25 +213,29 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
         {isMobileMenuOpen && (
           <div className="lg:hidden bg-background/95 backdrop-blur-md border-t border-border/50 absolute top-16 sm:top-20 left-0 w-full z-30 shadow-lg">
             <nav className="flex flex-col gap-1 p-4 max-h-[80vh] overflow-y-auto">
-              <div className="space-y-1">
-                <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                  <Link href="/apps">Features</Link>
-                </Button>
-                <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                  <Link href="/pricing">Pricing</Link>
-                </Button>
-                <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                  <Link href="/about">About Us</Link>
-                </Button>
-                <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                  <Link href="/contact">Contact</Link>
-                </Button>
-                <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                  <Link href="/support">Support</Link>
-                </Button>
-              </div>
-              
-              <div className="border-t border-border/30 my-4"></div>
+              {!hideMenuItems && (
+                <>
+                  <div className="space-y-1">
+                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                      <Link href="/apps">Features</Link>
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                      <Link href="/pricing">Pricing</Link>
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                      <Link href="/about">About Us</Link>
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                      <Link href="/contact">Contact</Link>
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                      <Link href="/support">Support</Link>
+                    </Button>
+                  </div>
+                  
+                  <div className="border-t border-border/30 my-4"></div>
+                </>
+              )}
               
               <div className="space-y-2">
                 {!isLoading && (
