@@ -12,6 +12,8 @@ import { useState } from 'react';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Skeleton } from '@repo/ui/skeleton';
+import { useDispatch } from 'react-redux';
+import { clearCart } from '@repo/store';
 
 interface CartItem {
   _id: string;
@@ -39,12 +41,15 @@ interface CartProps {
 
 export function Cart({ isOpen, onOpenChange }: CartProps) {
   const { user, isCrmAuthenticated } = useCrmAuth();
+  const dispatch = useDispatch();
 
-  const { data: cartData, isLoading: isCartLoading } = useGetCartQuery(user?._id, {
+  const { data: cartData, isLoading: isCartLoading, refetch } = useGetCartQuery(user?._id, {
     skip: !isCrmAuthenticated || !user?._id,
   });
   
   const cartItems: CartItem[] = cartData?.data?.items || [];
+  
+  console.log("Cart component rendered with items:", cartItems.length);
 
   const [updateCartItem] = useUpdateCartItemMutation();
   const [removeFromCart] = useRemoveFromCartMutation();
@@ -56,27 +61,40 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
   const subtotal = cartItems.reduce((acc: number, item: CartItem) => acc + item.price * item.quantity, 0);
 
   const handleUpdateQuantity = async (productId: string, quantity: number) => {
+    console.log("Updating cart item quantity:", { productId, quantity });
     try {
       if (quantity > 0) {
+        // Pass just the productId and quantity, not an object
         await updateCartItem({ productId, quantity }).unwrap();
+        console.log("Successfully updated cart item quantity:", { productId, quantity });
       } else {
-        await removeFromCart({ productId }).unwrap();
+        // Pass just the productId string, not an object
+        await removeFromCart(productId).unwrap();
+        console.log("Successfully removed item from cart:", productId);
       }
     } catch (error) {
+      console.error("Failed to update quantity:", error);
       toast.error('Failed to update quantity.');
     }
   };
 
   const handleRemoveFromCart = async (productId: string) => {
+    console.log("Removing item from cart:", productId);
     try {
-      await removeFromCart({ productId }).unwrap();
+      // Pass just the productId string, not an object
+      await removeFromCart(productId).unwrap();
+      console.log("Successfully removed item from cart:", productId);
       toast.success('Item removed from cart.');
     } catch (error) {
+      console.error("Failed to remove item from cart:", error);
       toast.error('Failed to remove item.');
     }
   };
   
   const handlePlaceOrder = async () => {
+    console.log("=== Starting order placement process ===");
+    console.log("Current cart items:", cartItems);
+    
     if (!shippingAddress.trim()) {
         toast.error("Shipping address is required.");
         return;
@@ -97,6 +115,8 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
         return acc;
     }, {} as Record<string, OrderItem[]>);
 
+    console.log("Orders to be created:", ordersBySupplier);
+
     try {
         const orderPromises = Object.entries(ordersBySupplier).map(([supplierId, items]) => {
             const totalAmount = items.reduce((sum: number, item: OrderItem) => sum + item.price * item.quantity, 0);
@@ -107,19 +127,48 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
                 shippingAddress,
                 vendorId: user?._id // The logged-in vendor is the one placing the order
             };
+            console.log(`Creating order for supplier ${supplierId} with ${items.length} items`);
             return createOrder(orderData).unwrap();
         });
 
-        await Promise.all(orderPromises);
+        const results = await Promise.all(orderPromises);
+        console.log("All orders created successfully:", results);
         
         toast.success("Orders placed successfully!", {
             description: "Your orders have been sent to the respective suppliers."
         });
         
-        // This will trigger a refetch of the cart, which should now be empty
-        // No need to dispatch clearCart manually if the backend clears it
+        // Clear all items from the cart one by one
+        console.log("Clearing cart items from database...");
+        const removePromises = cartItems.map(item => {
+            console.log("Removing item from database:", item.productId);
+            // Pass just the productId string, not an object
+            return removeFromCart(item.productId).unwrap();
+        });
+        
+        try {
+            await Promise.all(removePromises);
+            console.log("All items removed from database successfully");
+        } catch (removeError) {
+            console.error("Failed to remove items from database:", removeError);
+        }
+        
+        // Clear the cart in Redux state
+        console.log("Dispatching clearCart action...");
+        dispatch(clearCart());
+        console.log("clearCart action dispatched");
+        
+        // Also refetch to ensure consistency with backend
+        console.log("Refetching cart data...");
+        await refetch();
+        console.log("Cart data refetched");
+        
+        // Close the modals
+        console.log("Closing modals...");
         setIsCheckoutModalOpen(false);
         onOpenChange(false);
+        console.log("Modals closed");
+        console.log("=== Order placement process completed ===");
     } catch (error) {
         console.error("Failed to place orders:", error);
         toast.error("Failed to place orders. Please try again.");
