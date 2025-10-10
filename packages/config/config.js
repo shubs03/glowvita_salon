@@ -1,3 +1,6 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 export const ENVIRONMENT = process.env.NODE_ENV;
 export const BASE_URL = process.env.BASE_URL;
 export const NEXT_PUBLIC_WEB_URL = process.env.NEXT_PUBLIC_WEB_URL;
