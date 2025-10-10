@@ -5,11 +5,12 @@ import { Button } from "@repo/ui/button";
 import Link from 'next/link';
 import { ThemeToggle } from "./ThemeToggle";
 import { Bell, Menu, LogOut, User, Settings, CheckCircle, XCircle, Search, ChevronRight, Calendar, Clock, TrendingUp, ShoppingCart } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAppDispatch } from "@repo/store/hooks";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
 import Cookies from "js-cookie";
+import { vendorNavItems, doctorNavItems, supplierNavItems } from '@/lib/routes';
 import {
   DropdownMenu,
   DropdownMenuContent,
