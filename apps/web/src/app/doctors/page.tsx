@@ -446,7 +446,7 @@ export default function DoctorsPage() {
             </Button>
           </div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
             {filteredDoctors.map((doctor) => (
               <div 
                 key={doctor._id} 
@@ -494,7 +494,7 @@ export default function DoctorsPage() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2 mt-4 mb-5 max-h-16 overflow-hidden">
+                  <div className="flex flex-wrap gap-2 mt-4 mb-5 md:line-clamp-1 md:h-6">
                     {doctor.specialties.slice(0, 3).map((specialty, index) => (
                       <Badge key={index} variant="secondary" className="rounded-full px-3 py-1 text-xs hover:bg-primary/20 transition-colors">
                         {specialty}

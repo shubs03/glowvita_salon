@@ -257,14 +257,14 @@ export default function DoctorDetailsPage({ params }: { params: { id: string } }
                   </div>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full justify-center sm:justify-end">
-                  <div className="flex items-center justify-center sm:justify-start gap-2 bg-white/90 backdrop-blur-sm px-3 py-2 sm:px-3 sm:py-1.5 border border-border shadow-sm rounded-sm w-full sm:w-auto max-w-[200px] sm:max-w-none">
-                    <GraduationCap className="h-4 w-4 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                    <p className="font-semibold text-sm sm:text-sm text-slate-700 whitespace-nowrap truncate">{doctor.experience}+ years</p>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+                  <div className="flex items-center justify-center sm:justify-start gap-2 bg-white/90 backdrop-blur-sm px-3 py-2 border border-border shadow-sm rounded-sm">
+                    <CalendarDays className="h-4 w-4 text-primary flex-shrink-0" />
+                    <p className="font-semibold text-sm text-slate-700 whitespace-nowrap">{doctor.experience}+ years</p>
                   </div>
-                  <div className="flex items-center justify-center sm:justify-start gap-2 bg-white/90 backdrop-blur-sm px-3 py-2 sm:px-3 sm:py-1.5 border border-border shadow-sm rounded-sm w-full sm:w-auto max-w-[200px] sm:max-w-none">
-                    <Building className="h-4 w-4 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                    <p className="font-semibold text-sm sm:text-sm text-slate-700 truncate">{doctor.clinicName}</p>
+                  <div className="flex items-center justify-center sm:justify-start gap-2 bg-white/90 backdrop-blur-sm px-3 py-2 border border-border shadow-sm rounded-sm">
+                    <Building className="h-4 w-4 text-primary flex-shrink-0" />
+                    <p className="font-semibold text-sm text-slate-700 truncate max-w-[100px]">{doctor.clinicName}</p>
                   </div>
                 </div>
               </div>
@@ -282,7 +282,7 @@ export default function DoctorDetailsPage({ params }: { params: { id: string } }
               <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-5 text-center text-slate-800">Book Consultation</h2>
               
               <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                <Button className="w-full py-5 sm:py-6 text-sm sm:text-base font-semibold flex items-center justify-center gap-2 sm:gap-3 bg-blue-600 hover:bg-blue-700 text-white transition-all duration-300 shadow-lg hover:shadow-xl rounded-sm" onClick={() => router.push(`/book-appointment?doctorId=${doctor._id}`)}>
+                <Button className="w-full py-5 sm:py-6 text-sm sm:text-base font-semibold flex items-center justify-center gap-2 sm:gap-3 bg-blue-400 hover:bg-blue-500 text-white transition-all duration-300 shadow-lg hover:shadow-xl rounded-sm">
                   <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
                   Book Appointment
                 </Button>
