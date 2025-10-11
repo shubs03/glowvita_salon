@@ -148,7 +148,7 @@ export const glowvitaApi = createApi({
     "ProductCategory", "SmsTemplate", "SmsPackage", "CrmSmsTemplate",
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign",
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing",
-    "Appointment", "ShippingCharge", "Order", "CrmProducts",
+    "Appointments", "ShippingCharge", "Order", "CrmProducts",
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",

@@ -29,7 +29,7 @@ export * from "./slices/calendarAppointmentSlice";
 export * from "./slices/Web/userAuthSlice";
 export * from "./slices/staffAvailabilityService";
 export * from "./slices/staffAvailabilitySlice";
-export * from "./slices/blockedTimesApi";
+
 
 export * from "./slices/Admin/adminAuthSlice";
 export * from "./slices/Admin/refferalSlice";
