@@ -142,7 +142,7 @@ export const glowvitaApi = createApi({
     "ProductCategory", "SmsTemplate", "SmsPackage", "CrmSmsTemplate",
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign",
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing",
-    "Appointment", "ShippingCharge", "Order", "CrmProducts",
+    "Appointments", "ShippingCharge", "Order", "CrmProducts",
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
@@ -317,6 +317,13 @@ export const glowvitaApi = createApi({
     // Public Staff for vendor details page
     getPublicVendorStaff: builder.query({
       query: (vendorId) => ({ url: `/staff/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorStaff"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Staff by Service for booking flow
+    getPublicVendorStaffByService: builder.query({
+      query: ({ vendorId, serviceId }) => ({ url: `/staff/vendor/${vendorId}/service/${serviceId}`, method: "GET" }),
       providesTags: ["PublicVendorStaff"],
       transformResponse: (response) => response,
     }),
@@ -1269,7 +1276,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["CrmSocialMediaTemplate"],
     }),
 
-    // Cart Endpoints
+    // Cart Endpoints (CRM - for vendors)
     getCart: builder.query({
       query: () => ({ url: "/crm/cart", method: "GET" }),
       providesTags: ["Cart"],
@@ -1285,6 +1292,24 @@ export const glowvitaApi = createApi({
     removeFromCart: builder.mutation({
       query: (productId) => ({ url: "/crm/cart", method: "DELETE", body: { productId } }),
       invalidatesTags: ["Cart"],
+    }),
+
+    // Client Cart Endpoints (Web App - for customers)
+    getClientCart: builder.query({
+      query: () => ({ url: "/client/cart", method: "GET" }),
+      providesTags: ["ClientCart"],
+    }),
+    addToClientCart: builder.mutation({
+      query: (item) => ({ url: "/client/cart", method: "POST", body: item }),
+      invalidatesTags: ["ClientCart"],
+    }),
+    updateClientCartItem: builder.mutation({
+      query: ({ productId, quantity }) => ({ url: "/client/cart", method: "PUT", body: { productId, quantity } }),
+      invalidatesTags: ["ClientCart"],
+    }),
+    removeFromClientCart: builder.mutation({
+      query: ({ productId }) => ({ url: "/client/cart", method: "DELETE", body: { productId } }),
+      invalidatesTags: ["ClientCart"],
     }),
 
     // Web App Login
@@ -1354,6 +1379,7 @@ export const {
   useGetPublicVendorServicesQuery,
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorStaffQuery,
+  useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorOffersQuery,
   useUserLoginMutation,
   useGetClientOrdersQuery,
@@ -1510,11 +1536,17 @@ export const {
   useDeleteVendorProductMutation,
   useCreateVendorProductMutation,
 
-  // Cart Endpoints
+  // Cart Endpoints (CRM)
   useGetCartQuery,
   useAddToCartMutation,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
+
+  // Client Cart Endpoints (Web App)
+  useGetClientCartQuery,
+  useAddToClientCartMutation,
+  useUpdateClientCartItemMutation,
+  useRemoveFromClientCartMutation,
 
   // Block Time Endpoints
   useGetBlockedTimesQuery,

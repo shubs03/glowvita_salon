@@ -35,7 +35,9 @@ const extractAppointmentId = (url, params) => {
 // Handle both GET /api/crm/appointments and GET /api/crm/appointments/[id]
 export const GET = authMiddlewareCrm(async (req, { params }) => {
     try {
-        const vendorId = req.user._id;
+        console.log('GET request - params:', params);
+        console.log('GET request - req.user:', req.user);
+        const vendorId = req.user.userId;
         const { searchParams } = new URL(req.url);
         const id = extractAppointmentId(req.url, params);
 
@@ -404,3 +406,4 @@ export const PATCH = authMiddlewareCrm(async (req, { params }) => {
         );
     }
 }, ['vendor']);
+

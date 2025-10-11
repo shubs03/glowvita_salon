@@ -19,10 +19,12 @@ import {
   SalonsSection,
 } from "@/components/landing";
 
-import { Award, Users, LineChart, Clock, ArrowRight } from "lucide-react";
+import { Award, Users, LineChart, Clock, ArrowRight, ShoppingCart, Star, Heart } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { useGetAdminProductCategoriesQuery, useGetVendorsQuery, useGetPublicProductsQuery } from "@repo/store/api";
 import { useState, useEffect } from "react";
+import { NewProductCard } from "@/components/landing/NewProductCard";
+import { Badge } from "@repo/ui/badge";
 
 // Inline ProductCard component
 function ProductCard({
@@ -226,10 +228,6 @@ export default function HomePage() {
   const { data: ProductCategoryData } =
     useGetAdminProductCategoriesQuery(undefined);
   
-  // Fetch public products from CRM instead of using mock data
-  const { data: products = [], isLoading, isError, error } =
-    useGetPublicProductsQuery(undefined);
-
   console.log("Product Category Data : ", ProductCategoryData);
 
   const { data: VendorsData } = useGetVendorsQuery(undefined);
@@ -237,9 +235,6 @@ export default function HomePage() {
 
   // Fetch public products data
   const { data: ProductsData, isLoading: productsLoading, error: productsError } = useGetPublicProductsQuery(undefined);
-  console.log("Products Data : ", ProductsData);
-  console.log("Products API Error:", productsError);
-  console.log("Products API Loading:", productsLoading);
 
   const scrollAdvantages = (direction: "left" | "right") => {
     const container = document.getElementById("advantages-container");

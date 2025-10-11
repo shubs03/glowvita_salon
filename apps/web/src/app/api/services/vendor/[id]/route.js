@@ -87,6 +87,8 @@ export const GET = async (request, { params }) => {
           categoryName = service.category;
         }
 
+        console.log(`Service ${service.name} has staff array:`, service.staff);
+
         return {
           _id: service._id,
           name: service.name,
@@ -97,7 +99,7 @@ export const GET = async (request, { params }) => {
           image: service.image,
           status: service.status,
           gender: service.gender,
-          staff: service.staff,
+          staff: service.staff || [], // Ensure staff array is included
           homeService: service.homeService,
           weddingService: service.weddingService,
           onlineBooking: service.onlineBooking

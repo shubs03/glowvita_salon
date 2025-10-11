@@ -187,11 +187,6 @@ const staffSchema = new mongoose.Schema(
     sundayAvailable: { type: Boolean, default: true, index: true },
     sundaySlots: { type: [timeSlotSchema], default: [] },
 
-    // Aggregate availability flags for faster queries
-    hasWeekdayAvailability: { type: Boolean, default: true, index: true },
-    hasWeekendAvailability: { type: Boolean, default: true, index: true },
-    totalWeeklyHours: { type: Number, default: 0, index: true },
-
     // Blocked times - optimized structure
     blockedTimes: [
       {
@@ -333,6 +328,25 @@ staffSchema.methods.isAvailableAt = function (date, timeStr) {
   return true;
 };
 
+// Check if time slot is blocked
+staffSchema.methods.isBlockedAt = function (date, timeStr) {
+  if (!this.blockedTimes || this.blockedTimes.length === 0) {
+    return false;
+  }
+
+  const timeMinutes = this.constructor.timeToMinutes(timeStr);
+  const dateString = date.toISOString().split('T')[0];
+
+  return this.blockedTimes.some(blocked => {
+    const blockedDateString = blocked.date.toISOString().split('T')[0];
+    return (
+      blockedDateString === dateString &&
+      timeMinutes >= blocked.startMinutes &&
+      timeMinutes < blocked.endMinutes
+    );
+  });
+};
+
 // Static methods for optimized queries
 staffSchema.statics.findAvailableStaff = function (
   vendorId,
@@ -358,7 +372,7 @@ staffSchema.statics.findAvailableStaff = function (
         dayField +
         " " +
         day.toLowerCase() +
-        "Slots"
+        "Slots blockedTimes"
     )
     .sort({ rating: -1, yearOfExperience: -1 })
     .limit(options.limit || 50);
