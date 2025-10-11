@@ -142,7 +142,7 @@ export default function CalendarPage() {
 
   const selectedStaffId = useMemo(() => {
     if (!selectedStaff || selectedStaff === 'All Staff') return null;
-    return staffData.find(staff => staff.fullName === selectedStaff)?._id || null;
+    return staffData.find((staff: any) => staff.fullName === selectedStaff)?._id || null;
   }, [selectedStaff, staffData]);
 
   const [createAppointment, { isLoading: isCreating }] = glowvitaApi.useCreateAppointmentMutation();
@@ -152,7 +152,7 @@ export default function CalendarPage() {
 
   const selectedAppointment = useSelector(selectSelectedAppointment);
   const blockedTimes = useSelector((state) =>
-    selectBlockedTimesByStaffAndDate(state, {
+    (selectBlockedTimesByStaffAndDate as any)(state, {
       staffId: selectedStaff === 'All Staff' ? undefined : selectedStaffId,
       date: currentDate,
     })
@@ -455,7 +455,7 @@ export default function CalendarPage() {
                 {day}
               </div>
               <div className="flex flex-col gap-1 mt-1 w-full">
-                {blockedTimes.some(block => {
+                {blockedTimes.some((block: any) => {
                   try {
                     const blockDate = new Date(block.date);
                     return (
@@ -473,7 +473,7 @@ export default function CalendarPage() {
                     title="This time is blocked"
                     onClick={(e) => {
                       e.stopPropagation();
-                      const block = blockedTimes.find(block => {
+                      const block = blockedTimes.find((block: any) => {
                         try {
                           const blockDate = new Date(block.date);
                           return (
@@ -487,7 +487,7 @@ export default function CalendarPage() {
                       });
                       
                       if (block && confirm('Do you want to unblock this time?')) {
-                        handleRemoveBlockTime(block.id || block._id);
+                        dispatch(removeBlockTime(block.id || block._id));
                       }
                     }}
                   />
@@ -731,7 +731,7 @@ interface AppointmentMenuProps {
               {staffMembers.map((staff) => (
                 <SelectItem key={staff} value={staff}>{staff}</SelectItem>
               ))}
-              {staffData.map((staff) => (
+              {staffData.map((staff: any) => (
                 <SelectItem key={staff.fullName} value={staff.fullName}>{staff.fullName}</SelectItem>
               ))}
             </SelectContent>

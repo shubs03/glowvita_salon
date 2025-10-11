@@ -26,3 +26,5 @@ export * from "./3d-card";
 export * from "./page-container";
 export * from "./components/landing/ProductCard";
 export * from "./separator";
+export * from "./header";
+export * from "./footer";

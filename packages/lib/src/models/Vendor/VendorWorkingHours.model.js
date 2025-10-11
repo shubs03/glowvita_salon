@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 const workingDaySchema = new mongoose.Schema(
@@ -31,13 +30,12 @@ const vendorWorkingHoursSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Vendor',
       required: true,
-      unique: true,
-      index: true,
+      unique: true, // This already creates an index, no need for separate index: true
     },
     hrs_vid: {
       type: Number,
       required: true,
-      unique: true,
+      unique: true, // This already creates an index, no need for separate index: true
       default: () => Date.now(),
     },
     timezone: {
@@ -75,9 +73,7 @@ const vendorWorkingHoursSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Indexes for optimized querying
-vendorWorkingHoursSchema.index({ vendor: 1 });
-vendorWorkingHoursSchema.index({ hrs_vid: 1 });
+// Indexes for optimized querying (removed duplicates)
 vendorWorkingHoursSchema.index({ "specialHours.date": 1 });
 vendorWorkingHoursSchema.index({ createdAt: -1 });
 vendorWorkingHoursSchema.index({ updatedAt: -1 });

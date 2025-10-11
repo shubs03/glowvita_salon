@@ -34,11 +34,11 @@ export const GET = async (request, { params }) => {
       return response;
     }
 
-    // Find all active staff members for the vendor
+    // Find all active staff members for the vendor with availability information
     const staffMembers = await StaffModel.find({ 
       vendorId: vendorId, 
       status: 'Active' 
-    }).select('fullName position photo mobileNo emailAddress');
+    }).select('fullName position photo mobileNo emailAddress mondayAvailable tuesdayAvailable wednesdayAvailable thursdayAvailable fridayAvailable saturdayAvailable sundayAvailable blockedTimes');
 
     // Transform staff data for public consumption (hide sensitive info)
     const publicStaffData = staffMembers.map(staff => ({
@@ -46,6 +46,14 @@ export const GET = async (request, { params }) => {
       name: staff.fullName,
       role: staff.position,
       image: staff.photo || null,
+      mondayAvailable: staff.mondayAvailable,
+      tuesdayAvailable: staff.tuesdayAvailable,
+      wednesdayAvailable: staff.wednesdayAvailable,
+      thursdayAvailable: staff.thursdayAvailable,
+      fridayAvailable: staff.fridayAvailable,
+      saturdayAvailable: staff.saturdayAvailable,
+      sundayAvailable: staff.sundayAvailable,
+      blockedTimes: staff.blockedTimes || []
       // Hide sensitive information like phone and email for public endpoint
     }));
 

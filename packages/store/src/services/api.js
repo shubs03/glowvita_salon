@@ -83,23 +83,17 @@ const baseQuery = async (args, api, extraOptions) => {
     targetService = "admin";
   } else if (requestUrl.startsWith("/crm")) {
     targetService = "crm";
+  } else if (requestUrl.startsWith("/client") || requestUrl.startsWith("/payments")) {
+    targetService = "web";
   }
 
   const baseUrl = API_BASE_URLS[targetService];
+  const fullUrl = `${baseUrl}${requestUrl}`;
 
-  // For CRM and Admin services, we don't strip the service prefix
-  // The API endpoints are actually at /api/crm/... and /api/admin/...
-  let cleanRequestUrl = requestUrl;
-
-  // Ensure cleanRequestUrl starts with a slash to prevent issues
-  cleanRequestUrl = cleanRequestUrl.startsWith("/") ? cleanRequestUrl : `/${cleanRequestUrl}`;
-
-  const fullUrl = `${baseUrl}${cleanRequestUrl}`;
-  console.log("Target Service:", targetService); // Debug log
-  console.log("Original Request URL:", requestUrl); // Debug log
-  console.log("Clean Request URL:", cleanRequestUrl); // Debug log
-  console.log("Base URL:", baseUrl); // Debug log
-  console.log("API Request URL:", fullUrl); // Debug log
+  console.log("Target Service:", targetService);
+  console.log("Original Request URL:", requestUrl);
+  console.log("Base URL:", baseUrl);
+  console.log("API Request URL:", fullUrl);
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
@@ -152,7 +146,7 @@ export const glowvitaApi = createApi({
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
-    "PublicVendorProducts", "WorkingHours"
+    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient"
   ],
 
   endpoints: (builder) => ({
@@ -323,6 +317,13 @@ export const glowvitaApi = createApi({
     // Public Staff for vendor details page
     getPublicVendorStaff: builder.query({
       query: (vendorId) => ({ url: `/staff/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorStaff"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Staff by Service for booking flow
+    getPublicVendorStaffByService: builder.query({
+      query: ({ vendorId, serviceId }) => ({ url: `/staff/vendor/${vendorId}/service/${serviceId}`, method: "GET" }),
       providesTags: ["PublicVendorStaff"],
       transformResponse: (response) => response,
     }),
@@ -544,9 +545,10 @@ export const glowvitaApi = createApi({
 
     // Tax Fee Settings Endpoints
     getTaxFeeSettings: builder.query({
-      query: () => "/admin/tax-fees",
+      query: () => ({ url: "/admin/tax-fees", method: "GET" }),
       providesTags: ["TaxFeeSettings"],
     }),
+
     updateTaxFeeSettings: builder.mutation({
       query: (settings) => ({
         url: "/admin/tax-fees",
@@ -1274,7 +1276,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["CrmSocialMediaTemplate"],
     }),
 
-    // Cart Endpoints
+    // Cart Endpoints (CRM - for vendors)
     getCart: builder.query({
       query: () => ({ url: "/crm/cart", method: "GET" }),
       providesTags: ["Cart"],
@@ -1290,6 +1292,24 @@ export const glowvitaApi = createApi({
     removeFromCart: builder.mutation({
       query: (productId) => ({ url: "/crm/cart", method: "DELETE", body: { productId } }),
       invalidatesTags: ["Cart"],
+    }),
+
+    // Client Cart Endpoints (Web App - for customers)
+    getClientCart: builder.query({
+      query: () => ({ url: "/client/cart", method: "GET" }),
+      providesTags: ["ClientCart"],
+    }),
+    addToClientCart: builder.mutation({
+      query: (item) => ({ url: "/client/cart", method: "POST", body: item }),
+      invalidatesTags: ["ClientCart"],
+    }),
+    updateClientCartItem: builder.mutation({
+      query: ({ productId, quantity }) => ({ url: "/client/cart", method: "PUT", body: { productId, quantity } }),
+      invalidatesTags: ["ClientCart"],
+    }),
+    removeFromClientCart: builder.mutation({
+      query: ({ productId }) => ({ url: "/client/cart", method: "DELETE", body: { productId } }),
+      invalidatesTags: ["ClientCart"],
     }),
 
     // Web App Login
@@ -1339,6 +1359,12 @@ export const glowvitaApi = createApi({
       query: (orderData) => ({ url: "/client/orders", method: "POST", body: orderData }),
       invalidatesTags: ["ClientOrder"],
     }),
+    createPaymentOrder: builder.mutation({
+      query: (paymentData) => ({ url: "/payments/create-order", method: "POST", body: paymentData }),
+    }),
+    verifyPayment: builder.mutation({
+      query: (verificationData) => ({ url: "/payments/verify", method: "POST", body: verificationData }),
+    }),
 
 
   }),
@@ -1353,10 +1379,13 @@ export const {
   useGetPublicVendorServicesQuery,
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorStaffQuery,
+  useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorOffersQuery,
   useUserLoginMutation,
   useGetClientOrdersQuery,
   useCreateClientOrderMutation,
+  useCreatePaymentOrderMutation,
+  useVerifyPaymentMutation,
 
   // Admin Panel
   useAdminLoginMutation,
@@ -1507,11 +1536,17 @@ export const {
   useDeleteVendorProductMutation,
   useCreateVendorProductMutation,
 
-  // Cart Endpoints
+  // Cart Endpoints (CRM)
   useGetCartQuery,
   useAddToCartMutation,
   useUpdateCartItemMutation,
   useRemoveFromCartMutation,
+
+  // Client Cart Endpoints (Web App)
+  useGetClientCartQuery,
+  useAddToClientCartMutation,
+  useUpdateClientCartItemMutation,
+  useRemoveFromClientCartMutation,
 
   // Block Time Endpoints
   useGetBlockedTimesQuery,

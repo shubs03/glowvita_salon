@@ -1,4 +1,3 @@
-
 export * from "./types";
 export * from "./hooks";
 export * from "./provider";
@@ -30,6 +29,8 @@ export * from "./slices/Web/userAuthSlice";
 export * from "./slices/staffAvailabilityService";
 export * from "./slices/staffAvailabilitySlice";
 
+// Fixed the import - changed from blockedTimesApi to blockTimeSlice
+export * from "./slices/blockTimeSlice";
 
 export * from "./slices/Admin/adminAuthSlice";
 export * from "./slices/Admin/refferalSlice";

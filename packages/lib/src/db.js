@@ -1,6 +1,8 @@
 import { MONGODB_URI } from "../../config/config.js";
 import mongoose from "mongoose";
 
+console.log("MONGODB_URI from config:", MONGODB_URI);
+
 // Cache the connection to prevent multiple connections
 let cached = global.mongoose;
 
@@ -36,9 +38,18 @@ const _db = async () => {
 
     try {
       console.log("Creating new MongoDB connection...");
+      console.log("Using MONGODB_URI:", MONGODB_URI);
+      
+      if (!MONGODB_URI) {
+        throw new Error("MONGODB_URI is not defined. Check your environment variables.");
+      }
+      
       cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
         console.log("MongoDB connected successfully");
         return mongoose;
+      }).catch((error) => {
+        console.error("MongoDB connection error:", error);
+        throw error;
       });
     } catch (error) {
       console.error("MongoDB connection error:", error);
