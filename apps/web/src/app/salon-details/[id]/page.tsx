@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
@@ -64,7 +63,13 @@ import {
   useGetPublicVendorOffersQuery,
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorServicesQuery,
+  useAddToClientCartMutation,
 } from "@repo/store/api";
+import { useAppDispatch } from "@repo/store/hooks";
+import { addToCart, setCurrentUser } from "@repo/store/slices/cartSlice";
+import { useAuth } from "@/hooks/useAuth";
+import { useCartSync } from "@/hooks/useCartSync";
+import { toast } from "sonner";
 import ServicesSection from "./components/ServicesSection";
 import Link from "next/link";
 
@@ -109,7 +114,7 @@ const StaffDisplay = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
         {Array.from({ length: 6 }).map((_, index) => (
           <StaffSkeleton key={index} />
         ))}
@@ -134,10 +139,10 @@ const StaffDisplay = ({
   }
 
   return (
-    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
       {staffData.map((member: any, index: number) => (
         <div key={member.id || index} className="text-center group">
-          <div className="relative w-32 h-32 mx-auto rounded-full overflow-hidden shadow-lg mb-4 transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/20">
+          <div className="relative w-28 h-28 mx-auto rounded-full overflow-hidden shadow-lg mb-4 transform transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/20">
             <Image
               src={
                 member.image ||
@@ -149,7 +154,7 @@ const StaffDisplay = ({
               data-ai-hint={`${member.name || "staff member"} portrait`}
             />
           </div>
-          <h4 className="font-semibold text-lg mb-1">
+          <h4 className="font-bold text-md mb-1">
             {member.name || "Staff Member"}
           </h4>
           <p className="text-sm text-primary font-medium">
@@ -331,6 +336,8 @@ const defaultSalon = {
 export default function SalonDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { user, isAuthenticated } = useAuth();
   const id = params.id as string;
   const [activeTab, setActiveTab] = useState("overview");
   const [visibleTab, setVisibleTab] = useState("overview");
@@ -395,6 +402,12 @@ export default function SalonDetailsPage() {
     skip: !id,
   });
 
+  // Cart mutation for authenticated users
+  const [addToCartAPI] = useAddToClientCartMutation();
+
+  // Initialize cart sync
+  useCartSync();
+
   const salon = useMemo(() => {
     if (vendorData) {
       const salonData = {
@@ -426,7 +439,7 @@ export default function SalonDetailsPage() {
 
   const salonProducts = useMemo(() => {
     if (!productsData?.products) return [];
-    
+
     // Products are already filtered by vendor ID on the server side
     return productsData.products.map((p: any) => ({
       id: p.id || p._id,
@@ -439,7 +452,7 @@ export default function SalonDetailsPage() {
         p.productImage ||
         "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
       vendorId: id, // Always use the salon ID from URL params as vendorId
-      vendorName: vendorData?.businessName || 'Unknown Vendor',
+      vendorName: vendorData?.businessName || "Unknown Vendor",
       category: p.category || "Beauty Products",
       stock: p.stock || 0,
       rating: p.rating || (4.2 + Math.random() * 0.8).toFixed(1),
@@ -469,16 +482,76 @@ export default function SalonDetailsPage() {
       const productWithVendor = {
         ...product,
         vendorId: id, // Always use the salon ID from URL params
-        vendorName: vendorData?.businessName || 'Unknown Vendor',
+        vendorName: vendorData?.businessName || "Unknown Vendor",
         quantity: 1, // Add default quantity
       };
-      localStorage.setItem('buyNowProduct', JSON.stringify(productWithVendor));
+      localStorage.setItem("buyNowProduct", JSON.stringify(productWithVendor));
       // Redirect to checkout page
-      router.push('/checkout');
+      router.push("/checkout");
     } catch (e) {
-      console.error('Failed to save to localStorage', e);
+      console.error("Failed to save to localStorage", e);
       // Handle potential storage errors (e.g., private browsing)
-      alert('Could not process your request. Please ensure you are not in private browsing mode.');
+      alert(
+        "Could not process your request. Please ensure you are not in private browsing mode."
+      );
+    }
+  };
+
+  const handleAddToCart = async (product: any) => {
+    try {
+      if (isAuthenticated && user?._id) {
+        // User is authenticated - use API
+        const cartItem = {
+          productId: product.id,
+          productName: product.name,
+          productImage: product.image,
+          quantity: 1,
+          price: product.price,
+          vendorId: id,
+          supplierName: vendorData?.businessName || "Unknown Vendor",
+        };
+
+        await addToCartAPI(cartItem).unwrap();
+        
+        // Show success toast
+        toast.success(`${product.name} added to cart!`, {
+          description: `You can view all items in your cart.`,
+          action: {
+            label: "View Cart",
+            onClick: () => router.push("/cart"),
+          },
+        });
+      } else {
+        // User is not authenticated - use local storage
+        const cartItem = {
+          _id: product.id,
+          productName: product.name,
+          price: product.price,
+          quantity: 1,
+          productImage: product.image,
+          vendorId: id,
+          supplierName: vendorData?.businessName || "Unknown Vendor",
+          // Additional details for better cart management
+          category: product.category,
+          stock: product.stock,
+          hint: product.hint,
+        };
+
+        // Dispatch to Redux store (will also save to localStorage)
+        dispatch(addToCart(cartItem));
+
+        // Show success toast
+        toast.success(`${product.name} added to cart!`, {
+          description: `You can view all items in your cart.`,
+          action: {
+            label: "View Cart",
+            onClick: () => router.push("/cart"),
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Failed to add item to cart:", error);
+      toast.error("Failed to add item to cart. Please try again.");
     }
   };
 
@@ -494,117 +567,117 @@ export default function SalonDetailsPage() {
   if (isLoading) {
     return (
       <>
-        <MarketingHeader 
+        <MarketingHeader
           isMobileMenuOpen={isMobileMenuOpen}
           toggleMobileMenu={toggleMobileMenu}
           isHomePage={false}
         />
         <PageContainer padding="none">
-        <div className="container mx-auto px-4">
-          {/* Header Skeleton */}
-          <section className="py-8 border-b">
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex-1 space-y-4">
-                <Skeleton className="h-12 w-80" />
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                  <Skeleton className="h-5 w-32" />
-                  <Skeleton className="h-5 w-40" />
-                  <Skeleton className="h-5 w-24" />
+          <div className="container mx-auto px-4">
+            {/* Header Skeleton */}
+            <section className="py-8 border-b">
+              <div className="flex justify-between items-start gap-4">
+                <div className="flex-1 space-y-4">
+                  <Skeleton className="h-12 w-80" />
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                    <Skeleton className="h-5 w-32" />
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-10 w-20" />
+                  <Skeleton className="h-10 w-10" />
                 </div>
               </div>
-              <div className="flex gap-2">
-                <Skeleton className="h-10 w-20" />
-                <Skeleton className="h-10 w-10" />
-              </div>
-            </div>
-          </section>
+            </section>
 
-          {/* Gallery Skeleton */}
-          <section className="py-8">
-            <div className="grid grid-cols-4 gap-4 h-96">
-              <div className="col-span-2 row-span-2">
-                <Skeleton className="w-full h-full rounded-lg" />
+            {/* Gallery Skeleton */}
+            <section className="py-8">
+              <div className="grid grid-cols-4 gap-4 h-96">
+                <div className="col-span-2 row-span-2">
+                  <Skeleton className="w-full h-full rounded-lg" />
+                </div>
+                <Skeleton className="rounded-lg h-full" />
+                <Skeleton className="rounded-lg h-full" />
+                <Skeleton className="rounded-lg h-full" />
+                <Skeleton className="rounded-lg h-full" />
               </div>
-              <Skeleton className="rounded-lg h-full" />
-              <Skeleton className="rounded-lg h-full" />
-              <Skeleton className="rounded-lg h-full" />
-              <Skeleton className="rounded-lg h-full" />
-            </div>
-          </section>
+            </section>
 
-          {/* Content Skeleton */}
-          <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start py-8">
-            <div className="lg:col-span-2 space-y-16">
-              {/* About Section Skeleton */}
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Skeleton className="h-8 w-48" />
-                  <Skeleton className="h-4 w-96" />
+            {/* Content Skeleton */}
+            <div className="lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start py-8">
+              <div className="lg:col-span-2 space-y-16">
+                {/* About Section Skeleton */}
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-4 w-96" />
+                  </div>
+                  <Skeleton className="h-24 w-full" />
+                  <div className="grid sm:grid-cols-4 gap-6">
+                    {[1, 2, 3, 4].map((i) => (
+                      <StatSkeleton key={i} />
+                    ))}
+                  </div>
                 </div>
-                <Skeleton className="h-24 w-full" />
-                <div className="grid sm:grid-cols-4 gap-6">
-                  {[1, 2, 3, 4].map((i) => (
-                    <StatSkeleton key={i} />
-                  ))}
+
+                {/* Services Skeleton */}
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-40" />
+                    <Skeleton className="h-4 w-80" />
+                  </div>
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-16 w-full" />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Products Skeleton */}
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-52" />
+                    <Skeleton className="h-4 w-72" />
+                  </div>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <ProductSkeleton key={i} />
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Services Skeleton */}
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Skeleton className="h-8 w-40" />
-                  <Skeleton className="h-4 w-80" />
-                </div>
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
+              {/* Sidebar Skeleton */}
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader className="space-y-2">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-4 w-48" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-12 w-full" />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <Skeleton className="h-5 w-32" />
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex justify-between">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
               </div>
-
-              {/* Products Skeleton */}
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Skeleton className="h-8 w-52" />
-                  <Skeleton className="h-4 w-72" />
-                </div>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <ProductSkeleton key={i} />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Sidebar Skeleton */}
-            <div className="space-y-4">
-              <Card>
-                <CardHeader className="space-y-2">
-                  <Skeleton className="h-5 w-40" />
-                  <Skeleton className="h-4 w-48" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-12 w-full" />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-5 w-32" />
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex justify-between">
-                      <Skeleton className="h-4 w-24" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
             </div>
           </div>
-        </div>
-      </PageContainer>
-      <Footer />
+        </PageContainer>
+        <Footer />
       </>
     );
   }
@@ -613,21 +686,21 @@ export default function SalonDetailsPage() {
   if (error) {
     return (
       <>
-        <MarketingHeader 
+        <MarketingHeader
           isMobileMenuOpen={isMobileMenuOpen}
           toggleMobileMenu={toggleMobileMenu}
           isHomePage={false}
         />
         <PageContainer padding="none">
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
-          <p className="text-muted-foreground mb-6">
-            We couldn't load the salon details. Please try again later.
-          </p>
-          <Button onClick={() => window.location.reload()}>Try Again</Button>
-        </div>
-      </PageContainer>
-      <Footer />
+          <div className="container mx-auto px-4 py-16 text-center">
+            <h1 className="text-2xl font-bold mb-4">Something went wrong</h1>
+            <p className="text-muted-foreground mb-6">
+              We couldn't load the salon details. Please try again later.
+            </p>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
+          </div>
+        </PageContainer>
+        <Footer />
       </>
     );
   }
@@ -636,21 +709,21 @@ export default function SalonDetailsPage() {
   if (!vendorData) {
     return (
       <>
-        <MarketingHeader 
+        <MarketingHeader
           isMobileMenuOpen={isMobileMenuOpen}
           toggleMobileMenu={toggleMobileMenu}
           isHomePage={false}
         />
         <PageContainer padding="none">
-        <div className="container mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold mb-4">Salon Not Found</h1>
-          <p className="text-muted-foreground mb-6">
-            The salon you're looking for doesn't exist or has been removed.
-          </p>
-          <Button onClick={() => window.history.back()}>Go Back</Button>
-        </div>
-      </PageContainer>
-      <Footer />
+          <div className="container mx-auto px-4 py-16 text-center">
+            <h1 className="text-2xl font-bold mb-4">Salon Not Found</h1>
+            <p className="text-muted-foreground mb-6">
+              The salon you're looking for doesn't exist or has been removed.
+            </p>
+            <Button onClick={() => window.history.back()}>Go Back</Button>
+          </div>
+        </PageContainer>
+        <Footer />
       </>
     );
   }
@@ -701,605 +774,623 @@ export default function SalonDetailsPage() {
 
   return (
     <>
-      <MarketingHeader 
+      <MarketingHeader
         isMobileMenuOpen={isMobileMenuOpen}
         toggleMobileMenu={toggleMobileMenu}
         isHomePage={false}
       />
       <PageContainer padding="none">
         <div className="container mx-auto px-4">
-        {/* Salon Name and Basic Info */}
-        <section className="py-8 border-b">
-          <div className="flex justify-between items-start gap-4">
-            <div className="flex-1">
-              <h1 className="text-5xl font-bold font-headline mb-4">
-                {salon.name}
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                  <span className="font-semibold">{salon.rating}</span>
-                  <span>({salon.reviewCount} reviews)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  <span>{salon.address}</span>
+          {/* Salon Name and Basic Info */}
+          <section className="py-8 border-b">
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex-1">
+                <h1 className="text-5xl font-bold font-headline mb-4">
+                  {salon.name}
+                </h1>
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                    <span className="font-semibold">{salon.rating}</span>
+                    <span>({salon.reviewCount} reviews)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    <span>{salon.address}</span>
+                  </div>
                 </div>
               </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Heart className="h-4 w-4" />
+                  Like
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Share className="h-4 w-4" />
+                  Share
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex items-center gap-2"
+          </section>
+
+          {/* Compact Bento Grid Hero Gallery */}
+          <section className="py-6">
+            <div className="grid grid-cols-6 grid-rows-2 gap-2 h-40 md:h-64 lg:h-96">
+              <div
+                className="col-span-4 md:col-span-3 row-span-2 rounded-md overflow-hidden group cursor-pointer"
+                onClick={() => openGalleryModal(salon.images[0])}
               >
-                <Heart className="h-4 w-4" />
-                Like
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex items-center gap-2"
+                <Image
+                  src={salon.images[0]}
+                  alt={salon.name}
+                  width={800}
+                  height={600}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  data-ai-hint="luxury salon interior main view"
+                />
+              </div>
+              <div
+                className="col-span-2 md:col-span-1 row-span-1 rounded-md overflow-hidden group cursor-pointer"
+                onClick={() => openGalleryModal(salon.images[1])}
               >
-                <Share className="h-4 w-4" />
-                Share
-              </Button>
+                <Image
+                  src={salon.images[1]}
+                  alt={`${salon.name} view 2`}
+                  width={400}
+                  height={300}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  data-ai-hint="salon detail photo"
+                />
+              </div>
+              <div
+                className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
+                onClick={() => openGalleryModal(salon.images[2])}
+              >
+                <Image
+                  src={salon.images[2]}
+                  alt={`${salon.name} view 3`}
+                  width={400}
+                  height={300}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  data-ai-hint="salon treatment room"
+                />
+              </div>
+              <div
+                className="col-span-2 md:col-span-1 row-span-1 rounded-md overflow-hidden group cursor-pointer"
+                onClick={() => openGalleryModal(salon.images[3])}
+              >
+                <Image
+                  src={salon.images[3]}
+                  alt={`${salon.name} view 4`}
+                  width={400}
+                  height={300}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  data-ai-hint="salon product display"
+                />
+              </div>
+              <div
+                className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
+                onClick={() => openGalleryModal(salon.images[0])}
+              >
+                <Image
+                  src={salon.images[0]}
+                  alt={`${salon.name} view 1`}
+                  width={400}
+                  height={300}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  data-ai-hint="salon reception area"
+                />
+                {salon.images.length > 4 && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span className="text-white font-semibold text-sm">
+                      +{salon.images.length - 4} more
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Compact Bento Grid Hero Gallery */}
-        <section className="py-6">
-          <div className="grid grid-cols-6 grid-rows-2 gap-2 h-40 md:h-64 lg:h-96">
-            <div
-              className="col-span-4 md:col-span-3 row-span-2 rounded-md overflow-hidden group cursor-pointer"
-              onClick={() => openGalleryModal(salon.images[0])}
-            >
-              <Image
-                src={salon.images[0]}
-                alt={salon.name}
-                width={800}
-                height={600}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="luxury salon interior main view"
-              />
-            </div>
-            <div
-              className="col-span-2 md:col-span-1 row-span-1 rounded-md overflow-hidden group cursor-pointer"
-              onClick={() => openGalleryModal(salon.images[1])}
-            >
-              <Image
-                src={salon.images[1]}
-                alt={`${salon.name} view 2`}
-                width={400}
-                height={300}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="salon detail photo"
-              />
-            </div>
-            <div
-              className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
-              onClick={() => openGalleryModal(salon.images[2])}
-            >
-              <Image
-                src={salon.images[2]}
-                alt={`${salon.name} view 3`}
-                width={400}
-                height={300}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="salon treatment room"
-              />
-            </div>
-            <div
-              className="col-span-2 md:col-span-1 row-span-1 rounded-md overflow-hidden group cursor-pointer"
-              onClick={() => openGalleryModal(salon.images[3])}
-            >
-              <Image
-                src={salon.images[3]}
-                alt={`${salon.name} view 4`}
-                width={400}
-                height={300}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="salon product display"
-              />
-            </div>
-            <div
-              className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
-              onClick={() => openGalleryModal(salon.images[0])}
-            >
-              <Image
-                src={salon.images[0]}
-                alt={`${salon.name} view 1`}
-                width={400}
-                height={300}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                data-ai-hint="salon reception area"
-              />
-              {salon.images.length > 4 && (
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <span className="text-white font-semibold text-sm">
-                    +{salon.images.length - 4} more
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* Main Content Area */}
-        <div className="lg:grid lg:grid-cols-3 lg:gap-12 lg:items-start py-8">
-          {/* Left Scrolling Column */}
-          <div className="lg:col-span-2 space-y-16">
-            {/* About Section */}
-            <section id="about">
-              <h2 className="text-4xl font-bold mb-2">About {salon.name}</h2>
-              <p className="text-muted-foreground mb-6">
-                Discover the story and values behind our brand.
-              </p>
-
-              <div className="space-y-8">
-                <p className="text-muted-foreground leading-relaxed">
-                  {salon.mission || salon.description}
+          {/* Main Content Area */}
+          <div className="lg:grid lg:grid-cols-3 lg:gap-12 lg:items-start py-8">
+            {/* Left Scrolling Column */}
+            <div className="lg:col-span-2 space-y-16">
+              {/* About Section */}
+              <section id="about">
+                <h2 className="text-4xl font-bold mb-2">About {salon.name}</h2>
+                <p className="text-muted-foreground mb-6">
+                  Discover the story and values behind our brand.
                 </p>
-                {/* Stats section - always show structure with values or defaults */}
-                <div className="grid sm:grid-cols-4 gap-6 text-center">
-                  <div className="bg-secondary/50 p-4 rounded-lg">
-                    <p className="text-4xl font-bold text-primary">
-                      {isLoading ? (
-                        <Skeleton className="h-8 w-12 mx-auto" />
-                      ) : (
-                        vendorData?.stats?.find(
-                          (s: any) => s.label === "Years Experience"
-                        )?.value ||
-                        vendorData?.yearsExperience ||
-                        0
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Years Experience
-                    </p>
-                  </div>
-                  <div className="bg-secondary/50 p-4 rounded-lg">
-                    <p className="text-4xl font-bold text-primary">
-                      {isLoading ? (
-                        <Skeleton className="h-8 w-12 mx-auto" />
-                      ) : (
-                        vendorData?.stats?.find(
-                          (s: any) => s.label === "Happy Clients"
-                        )?.value ||
-                        vendorData?.clientCount ||
-                        salon.reviewCount ||
-                        0
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Happy Clients
-                    </p>
-                  </div>
-                  <div className="bg-secondary/50 p-4 rounded-lg">
-                    <p className="text-4xl font-bold text-primary">
-                      {isLoading ? (
-                        <Skeleton className="h-8 w-12 mx-auto" />
-                      ) : (
-                        vendorData?.stats?.find(
-                          (s: any) => s.label === "Services"
-                        )?.value ||
-                        servicesData?.services?.length ||
-                        0
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Services
-                    </p>
-                  </div>
-                  <div className="bg-secondary/50 p-4 rounded-lg">
-                    <p className="text-4xl font-bold text-primary">
-                      {isLoading ? (
-                        <Skeleton className="h-8 w-12 mx-auto" />
-                      ) : (
-                        vendorData?.stats?.find(
-                          (s: any) => s.label === "Awards"
-                        )?.value ||
-                        vendorData?.awards?.length ||
-                        0
-                      )}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">Awards</p>
+
+                <div className="space-y-8">
+                  <p className="text-muted-foreground leading-relaxed">
+                    {salon.mission || salon.description}
+                  </p>
+                  {/* Stats section - always show structure with values or defaults */}
+                  <div className="grid sm:grid-cols-4 gap-6 text-center">
+                    <div className="bg-secondary/50 p-4 rounded-lg">
+                      <p className="text-4xl font-bold text-primary">
+                        {isLoading ? (
+                          <Skeleton className="h-8 w-12 mx-auto" />
+                        ) : (
+                          vendorData?.stats?.find(
+                            (s: any) => s.label === "Years Experience"
+                          )?.value ||
+                          vendorData?.yearsExperience ||
+                          0
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Years Experience
+                      </p>
+                    </div>
+                    <div className="bg-secondary/50 p-4 rounded-lg">
+                      <p className="text-4xl font-bold text-primary">
+                        {isLoading ? (
+                          <Skeleton className="h-8 w-12 mx-auto" />
+                        ) : (
+                          vendorData?.stats?.find(
+                            (s: any) => s.label === "Happy Clients"
+                          )?.value ||
+                          vendorData?.clientCount ||
+                          salon.reviewCount ||
+                          0
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Happy Clients
+                      </p>
+                    </div>
+                    <div className="bg-secondary/50 p-4 rounded-lg">
+                      <p className="text-4xl font-bold text-primary">
+                        {isLoading ? (
+                          <Skeleton className="h-8 w-12 mx-auto" />
+                        ) : (
+                          vendorData?.stats?.find(
+                            (s: any) => s.label === "Services"
+                          )?.value ||
+                          servicesData?.services?.length ||
+                          0
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Services
+                      </p>
+                    </div>
+                    <div className="bg-secondary/50 p-4 rounded-lg">
+                      <p className="text-4xl font-bold text-primary">
+                        {isLoading ? (
+                          <Skeleton className="h-8 w-12 mx-auto" />
+                        ) : (
+                          vendorData?.stats?.find(
+                            (s: any) => s.label === "Awards"
+                          )?.value ||
+                          vendorData?.awards?.length ||
+                          0
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Awards
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </section>
+              </section>
 
-            <section id="offers">
-              <h2 className="text-4xl font-bold mb-2">Offers Available</h2>
-              <p className="text-muted-foreground mb-6">
-                Take advantage of our special offers and packages.
-              </p>
-              <div className="grid md:grid-cols-3 gap-6">
-                {isLoadingOffers ? (
-                  // Loading state
-                  Array.from({ length: 3 }).map((_, index) => (
-                    <Card key={index} className="p-6 text-center space-y-4">
-                      <Skeleton className="w-16 h-16 rounded-full mx-auto" />
-                      <Skeleton className="h-5 w-32 mx-auto" />
-                      <Skeleton className="h-16 w-full" />
-                      <Skeleton className="h-8 w-24 mx-auto" />
-                    </Card>
-                  ))
-                ) : offersData?.data?.length > 0 &&
-                  offersData.data.filter(
-                    (offer: any) => offer.status === "Active"
-                  ).length > 0 ? (
-                  offersData.data
-                    .filter((offer: any) => offer.status === "Active") // Only show active offers
-                    .map((offer: any, index: number) => {
-                      const Icon = Gift; // Using Gift as default icon
-                      return (
-                        <Card
-                          key={offer._id || index}
-                          className="group flex flex-col p-6 text-center border-border/50 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-background to-primary/5"
-                        >
-                          <div className="mx-auto bg-gradient-to-br from-primary/10 to-primary/20 text-primary p-4 rounded-full w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
-                            <Icon className="h-8 w-8" />
-                          </div>
-                          <h3 className="text-lg font-bold mb-2 group-hover:text-primary transition-colors duration-300">
-                            {offer.code}
-                          </h3>
-                          <p className="text-sm text-muted-foreground flex-grow mb-4">
-                            {offer.type === "percentage"
-                              ? `${offer.value}% discount on selected services`
-                              : `$${offer.value} off on selected services`}
-                          </p>
-                          <div className="text-sm space-y-1 mb-4">
-                            {offer.value && (
-                              <p className="text-primary font-semibold">
-                                {offer.type === "percentage"
-                                  ? `${offer.value}% OFF`
-                                  : `$${offer.value} OFF`}
-                              </p>
-                            )}
-                            {offer.expires && (
-                              <p className="text-xs text-muted-foreground">
-                                Valid until:{" "}
-                                {new Date(offer.expires).toLocaleDateString()}
-                              </p>
-                            )}
-                          </div>
-                          <Button
-                            variant="link"
-                            className="text-primary group-hover:underline"
-                          >
-                            Claim Offer{" "}
-                            <ArrowRight className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" />
-                          </Button>
-                        </Card>
-                      );
-                    })
-                ) : (
-                  // Show placeholder when no offers available
-                  <div className="col-span-3 text-center py-12">
-                    <div className="bg-secondary/20 rounded-lg p-8">
-                      <Gift className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground">
-                        No special offers available at the moment
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Check back later for exciting deals!
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* Services Section */}
-            <ServicesSection vendorId={id} onBookNow={handleBookNow} />
-
-            <section id="products">
-              <h2 className="text-4xl font-bold mb-2">
-                Products We Use & Sell
-              </h2>
-              <p className="text-muted-foreground mb-6">
-                High-quality products available for purchase.
-              </p>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {salonProducts.length > 0 ? (
-                  salonProducts.map((product: any) => (
-                    <Card
-                      key={product.id}
-                      className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left"
-                    >
-                      <div className="relative aspect-square overflow-hidden rounded-md m-3">
-                        <Image
-                          src={product.image}
-                          alt={product.name}
-                          fill
-                          className="group-hover:scale-105 transition-transform duration-300 object-cover"
-                          data-ai-hint={product.hint}
-                        />
-                        <Badge
-                          variant={product.stock > 0 ? "secondary" : "default"}
-                          className="absolute top-2 right-2 text-xs"
-                        >
-                          {product.stock > 0 ? `In Stock` : "Out of Stock"}
-                        </Badge>
-                      </div>
-                      <div className="p-3 flex flex-col flex-grow">
-                        <p className="text-xs font-bold text-primary mb-1">
-                          {product.category}
-                        </p>
-                        <h4 className="text-sm font-semibold flex-grow mb-2">
-                          {product.name}
-                        </h4>
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {product.description}
-                        </p>
-                        <div className="flex justify-between items-center mt-auto">
-                          <p className="font-bold text-primary">
-                            ₹{product.price.toFixed(2)}
-                          </p>
-                          <div className="flex items-center gap-1">
-                            <Star className="h-3 w-3 text-blue-400 fill-current" />
-                            <span className="text-xs text-muted-foreground font-medium">
-                              {product.rating}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between gap-2 mt-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full mt-2 text-xs"
-                            onClick={() => handleBuyNow(product)}
-                          >
-                            Buy Now
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  ))
-                ) : (
-                  <div className="col-span-full text-center py-8">
-                    <p className="text-muted-foreground">
-                      No products available for this salon at the moment.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            <section id="team">
-              <h2 className="text-4xl font-bold mb-2">Meet Our Team</h2>
-              <p className="text-muted-foreground mb-6">
-                Our talented and experienced professionals.
-              </p>
-              <StaffDisplay
-                staffData={staffData?.staff || []}
-                isLoading={isLoadingStaff}
-              />
-            </section>
-
-            <section id="reviews">
-              <h2 className="text-4xl font-bold mb-2">Reviews</h2>
-              <p className="text-muted-foreground mb-6">
-                What our clients are saying about us.
-              </p>
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-4">
-                    <div className="text-4xl font-bold">
-                      {salon.rating || 0}
-                    </div>
-                    <div>
-                      <StarRating rating={salon.rating || 0} />
-                      <p className="text-sm text-muted-foreground">
-                        Based on {salon.reviewCount || 0} reviews
-                      </p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {vendorData?.reviews?.length > 0 ? (
-                    vendorData.reviews.map((review: any, index: number) => (
-                      <div key={index} className="border-t pt-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
-                              {review.author?.charAt(0) || "U"}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-sm">
-                                {review.author || "Anonymous"}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {review.date
-                                  ? new Date(review.date).toLocaleDateString(
-                                      "en-US",
-                                      {
-                                        day: "numeric",
-                                        month: "short",
-                                        year: "numeric",
-                                      }
-                                    )
-                                  : "Date not available"}
-                              </p>
-                            </div>
-                          </div>
-                          <StarRating rating={review.rating || 0} />
-                        </div>
-                        <p className="text-sm text-muted-foreground italic">
-                          "{review.text || "No review text available"}"
-                        </p>
-                      </div>
+              <section id="offers">
+                <h2 className="text-4xl font-bold mb-2">Offers Available</h2>
+                <p className="text-muted-foreground mb-6">
+                  Take advantage of our special offers and packages.
+                </p>
+                <div className="grid md:grid-cols-3 gap-6">
+                  {isLoadingOffers ? (
+                    // Loading state
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <Card key={index} className="p-6 text-center space-y-4">
+                        <Skeleton className="w-16 h-16 rounded-full mx-auto" />
+                        <Skeleton className="h-5 w-32 mx-auto" />
+                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-8 w-24 mx-auto" />
+                      </Card>
                     ))
+                  ) : offersData?.data?.length > 0 &&
+                    offersData.data.filter(
+                      (offer: any) => offer.status === "Active"
+                    ).length > 0 ? (
+                    offersData.data
+                      .filter((offer: any) => offer.status === "Active") // Only show active offers
+                      .map((offer: any, index: number) => {
+                        const Icon = Gift; // Using Gift as default icon
+                        return (
+                          <Card
+                            key={offer._id || index}
+                            className="group flex flex-col p-6 text-center border-border/50 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-background to-primary/5"
+                          >
+                            <div className="mx-auto bg-gradient-to-br from-primary/10 to-primary/20 text-primary p-4 rounded-full w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
+                              <Icon className="h-8 w-8" />
+                            </div>
+                            <h3 className="text-lg font-bold mb-2 group-hover:text-primary transition-colors duration-300">
+                              {offer.code}
+                            </h3>
+                            <p className="text-sm text-muted-foreground flex-grow mb-4">
+                              {offer.type === "percentage"
+                                ? `${offer.value}% discount on selected services`
+                                : `$${offer.value} off on selected services`}
+                            </p>
+                            <div className="text-sm space-y-1 mb-4">
+                              {offer.value && (
+                                <p className="text-primary font-semibold">
+                                  {offer.type === "percentage"
+                                    ? `${offer.value}% OFF`
+                                    : `$${offer.value} OFF`}
+                                </p>
+                              )}
+                              {offer.expires && (
+                                <p className="text-xs text-muted-foreground">
+                                  Valid until:{" "}
+                                  {new Date(offer.expires).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              variant="link"
+                              className="text-primary group-hover:underline"
+                            >
+                              Claim Offer{" "}
+                              <ArrowRight className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" />
+                            </Button>
+                          </Card>
+                        );
+                      })
                   ) : (
-                    // Show placeholder when no reviews available
-                    <div className="text-center py-12">
+                    // Show placeholder when no offers available
+                    <div className="col-span-3 text-center py-12">
                       <div className="bg-secondary/20 rounded-lg p-8">
-                        <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">No reviews yet</p>
+                        <Gift className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="text-muted-foreground">
+                          No special offers available at the moment
+                        </p>
                         <p className="text-sm text-muted-foreground mt-2">
-                          Be the first to leave a review!
+                          Check back later for exciting deals!
                         </p>
                       </div>
                     </div>
                   )}
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full">
-                    {vendorData?.reviews?.length > 0
-                      ? "Read All Reviews"
-                      : "Write a Review"}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </section>
-          </div>
+                </div>
+              </section>
 
-          {/* Right Sticky Column */}
-          <div className="lg:sticky top-28 self-start space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Book an Appointment</CardTitle>
-                <CardDescription>
-                  Choose your service and book online.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <h3 className="text-4xl font-bold mb-2">{salon.name}</h3>
+              {/* Services Section */}
+              <ServicesSection vendorId={id} onBookNow={handleBookNow} />
+
+              <section id="products">
+                <h2 className="text-4xl font-bold mb-2">
+                  Products We Use & Sell
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  High-quality products available for purchase.
+                </p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {salonProducts.length > 0 ? (
+                    salonProducts.map((product: any) => (
+                      <Card
+                        key={product.id}
+                        className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left"
+                      >
+                        <div className="relative aspect-square overflow-hidden rounded-md m-3">
+                          <Image
+                            src={product.image}
+                            alt={product.name}
+                            fill
+                            className="group-hover:scale-105 transition-transform duration-300 object-cover"
+                            data-ai-hint={product.hint}
+                          />
+                          <Badge
+                            variant={
+                              product.stock > 0 ? "secondary" : "default"
+                            }
+                            className="absolute top-2 right-2 text-xs"
+                          >
+                            {product.stock > 0 ? `In Stock` : "Out of Stock"}
+                          </Badge>
+                        </div>
+                        <div className="p-3 flex flex-col flex-grow">
+                          <p className="text-xs font-bold text-primary mb-1">
+                            {product.category}
+                          </p>
+                          <h4 className="text-sm font-semibold flex-grow mb-2">
+                            {product.name}
+                          </h4>
+                          <p className="text-xs text-muted-foreground line-clamp-2">
+                            {product.description}
+                          </p>
+                          <div className="flex justify-between items-center mt-auto">
+                            <p className="font-bold text-primary">
+                              ₹{product.price.toFixed(2)}
+                            </p>
+                            <div className="flex items-center gap-1">
+                              <Star className="h-3 w-3 text-blue-400 fill-current" />
+                              <span className="text-xs text-muted-foreground font-medium">
+                                {product.rating}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 mt-2">
+                            <div className="flex justify-between w-full">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full text-xs lg:mr-3"
+                                onClick={() => handleBuyNow(product)}
+                              >
+                                Buy Now
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-fit text-xs"
+                                onClick={() => handleAddToCart(product)}
+                              >
+                                <ShoppingCart className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="col-span-full text-center py-8">
+                      <p className="text-muted-foreground">
+                        No products available for this salon at the moment.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <section id="team">
+                <h2 className="text-4xl font-bold mb-2">Meet Our Team</h2>
+                <p className="text-muted-foreground mb-6">
+                  Our talented and experienced professionals.
+                </p>
+                <StaffDisplay
+                  staffData={staffData?.staff || []}
+                  isLoading={isLoadingStaff}
+                />
+              </section>
+
+              <section id="reviews">
+                <h2 className="text-4xl font-bold mb-2">Reviews</h2>
+                <p className="text-muted-foreground mb-6">
+                  What our clients are saying about us.
+                </p>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-4">
+                      <div className="text-4xl font-bold">
+                        {salon.rating || 0}
+                      </div>
+                      <div>
+                        <StarRating rating={salon.rating || 0} />
+                        <p className="text-sm text-muted-foreground">
+                          Based on {salon.reviewCount || 0} reviews
+                        </p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {vendorData?.reviews?.length > 0 ? (
+                      vendorData.reviews.map((review: any, index: number) => (
+                        <div key={index} className="border-t pt-4">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
+                                {review.author?.charAt(0) || "U"}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-sm">
+                                  {review.author || "Anonymous"}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {review.date
+                                    ? new Date(review.date).toLocaleDateString(
+                                        "en-US",
+                                        {
+                                          day: "numeric",
+                                          month: "short",
+                                          year: "numeric",
+                                        }
+                                      )
+                                    : "Date not available"}
+                                </p>
+                              </div>
+                            </div>
+                            <StarRating rating={review.rating || 0} />
+                          </div>
+                          <p className="text-sm text-muted-foreground italic">
+                            "{review.text || "No review text available"}"
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      // Show placeholder when no reviews available
+                      <div className="text-center py-12">
+                        <div className="bg-secondary/20 rounded-lg p-8">
+                          <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                          <p className="text-muted-foreground">
+                            No reviews yet
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Be the first to leave a review!
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                  <CardFooter>
+                    <Button variant="outline" className="w-full">
+                      {vendorData?.reviews?.length > 0
+                        ? "Read All Reviews"
+                        : "Write a Review"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </section>
+            </div>
+
+            {/* Right Sticky Column */}
+            <div className="lg:sticky top-28 self-start space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Book an Appointment</CardTitle>
+                  <CardDescription>
+                    Choose your service and book online.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <h3 className="text-4xl font-bold mb-2">{salon.name}</h3>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                        <span className="font-medium">{salon.rating}</span>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        ({salon.reviewCount} reviews)
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2 text-sm">
+                      <Badge
+                        variant="secondary"
+                        className="bg-primary/10 text-primary border-primary/20"
+                      >
+                        {vendorData?.services?.length || 15}+ Services
+                      </Badge>
+                      <Badge
+                        variant="secondary"
+                        className="bg-primary/10 text-primary border-primary/20"
+                      >
+                        {vendorData?.yearsExperience || 5}+ Years
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <Button
+                    size="lg"
+                    className="w-full rounded-sm"
+                    onClick={() => handleBookNow()}
+                  >
+                    Book Now
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Working Hours</CardTitle>
+                  <CardDescription>
+                    View our working hours and plan your visit.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <WorkingHoursDisplay
+                    workingHoursData={workingHoursData?.data}
+                    isLoading={isLoadingWorkingHours}
+                    error={workingHoursError}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contact</CardTitle>
+                  <CardDescription>
+                    Choose your service and book online.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`mailto:${salon.email}`}
+                      className="flex items-center gap-2"
+                    >
+                      <Mail className="h-4 w-4" /> {salon.email || "N/A"}
+                    </Link>
+                  </div>
 
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="font-medium">{salon.rating}</span>
-                    </div>
-                    <span className="text-sm text-muted-foreground">
-                      ({salon.reviewCount} reviews)
-                    </span>
-                  </div>
-
-                  <div className="flex gap-2 text-sm">
-                    <Badge
-                      variant="secondary"
-                      className="bg-primary/10 text-primary border-primary/20"
+                    <Link
+                      href={`tel:${salon.phone}`}
+                      className="flex items-center gap-2"
                     >
-                      {vendorData?.services?.length || 15}+ Services
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="bg-primary/10 text-primary border-primary/20"
-                    >
-                      {vendorData?.yearsExperience || 5}+ Years
-                    </Badge>
+                      <Phone className="h-4 w-4" /> {salon.phone || "N/A"}
+                    </Link>
                   </div>
-                </div>
-
-                <Button
-                  size="lg"
-                  className="w-full rounded-sm"
-                  onClick={() => handleBookNow()}
-                >
-                  Book Now
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Working Hours</CardTitle>
-                <CardDescription>
-                  View our working hours and plan your visit.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <WorkingHoursDisplay
-                  workingHoursData={workingHoursData?.data}
-                  isLoading={isLoadingWorkingHours}
-                  error={workingHoursError}
-                />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact</CardTitle>
-                <CardDescription>
-                  Choose your service and book online.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`mailto:${salon.email}`}
-                    className="flex items-center gap-2"
-                  >
-                    <Mail className="h-4 w-4" /> {salon.email || "N/A"}
-                  </Link>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`tel:${salon.phone}`}
-                    className="flex items-center gap-2"
-                  >
-                    <Phone className="h-4 w-4" /> {salon.phone || "N/A"}
-                  </Link>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    className="flex items-center gap-2"
-                    href={`https://maps.google.com/?q=${encodeURIComponent(salon.address)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <MapPin className="h-4 w-4" /> <span>{salon.address}</span>
-                  </Link>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    className="flex items-center gap-2"
-                    href={salon.website || "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                  <Globe className="h-4 w-4" /> {salon.website || "N/A"}
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      className="flex items-center gap-2"
+                      href={`https://maps.google.com/?q=${encodeURIComponent(salon.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <MapPin className="h-4 w-4" />{" "}
+                      <span>{salon.address}</span>
+                    </Link>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      className="flex items-center gap-2"
+                      href={salon.website || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Globe className="h-4 w-4" /> {salon.website || "N/A"}
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
-      </div>
 
-      <Dialog open={isGalleryModalOpen} onOpenChange={setIsGalleryModalOpen}>
-        <DialogContent className="max-w-4xl p-0">
-          <div className="relative aspect-video bg-black">
-            <Image
-              src={mainImage}
-              alt="Gallery View"
-              fill
-              className="object-contain"
-            />
-          </div>
-          <div className="flex justify-center gap-2 p-4 bg-secondary">
-            {salon.images.map((img: string, index: number) => (
-              <button key={index} onClick={() => setMainImage(img)}>
-                <Image
-                  src={img}
-                  alt={`Thumbnail ${index + 1}`}
-                  width={80}
-                  height={60}
-                  className={`rounded-md object-cover cursor-pointer border-2 transition-all ${mainImage === img ? "border-primary" : "border-transparent hover:border-primary/50"}`}
-                />
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </PageContainer>
-    <Footer />
+        <Dialog open={isGalleryModalOpen} onOpenChange={setIsGalleryModalOpen}>
+          <DialogContent className="max-w-4xl p-0">
+            <div className="relative aspect-video bg-black">
+              <Image
+                src={mainImage}
+                alt="Gallery View"
+                fill
+                className="object-contain"
+              />
+            </div>
+            <div className="flex justify-center gap-2 p-4 bg-secondary">
+              {salon.images.map((img: string, index: number) => (
+                <button key={index} onClick={() => setMainImage(img)}>
+                  <Image
+                    src={img}
+                    alt={`Thumbnail ${index + 1}`}
+                    width={80}
+                    height={60}
+                    className={`rounded-md object-cover cursor-pointer border-2 transition-all ${mainImage === img ? "border-primary" : "border-transparent hover:border-primary/50"}`}
+                  />
+                </button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </PageContainer>
+      <Footer />
     </>
   );
 }

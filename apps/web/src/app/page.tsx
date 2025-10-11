@@ -19,19 +19,215 @@ import {
   SalonsSection,
 } from "@/components/landing";
 
-// import { FeaturedProducts } from "@/components/landing/FeaturedProducts";
-import { NewProductCard } from "@/components/landing/NewProductCard";
-
-import { Award, Users, LineChart, Clock, ArrowRight } from "lucide-react";
+import { Award, Users, LineChart, Clock, ArrowRight, ShoppingCart, Star, Heart } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { useGetAdminProductCategoriesQuery, useGetVendorsQuery, useGetPublicProductsQuery } from "@repo/store/api";
 import { useState, useEffect } from "react";
+import { NewProductCard } from "@/components/landing/NewProductCard";
+import { Badge } from "@repo/ui/badge";
+
+// Inline ProductCard component
+function ProductCard({
+  id,
+  _id,
+  productName,
+  name,
+  price = 0,
+  salePrice,
+  productImage,
+  image,
+  description,
+  vendorName,
+  businessName,
+  category,
+  categoryName,
+  status,
+}: {
+  id?: string;
+  _id?: string;
+  productName?: string;
+  name?: string;
+  price?: number;
+  salePrice?: number;
+  productImage?: string;
+  image?: string;
+  description?: string;
+  vendorName?: string;
+  businessName?: string;
+  category?: string;
+  categoryName?: string;
+  status?: string;
+}) {
+  const [isLiked, setIsLiked] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  
+  // Use the available product name field
+  const displayName = productName || name || "Product";
+  
+  // Use the available image field with fallback to Unsplash
+  const displayImage = productImage || image;
+  const fallbackImage = "https://images.unsplash.com/photo-1526947425969-2c925c7fcc39?w=320&h=224&fit=crop";
+  
+  // Use the available vendor name field
+  const displayVendor = vendorName || businessName || "Vendor";
+  
+  // Use the available category name field
+  const displayCategory = categoryName || category || "";
+  
+  // Product ID for navigation
+  const productId = _id || id || "unknown";
+
+  // Handle click to navigate to product details
+  const handleClick = () => {
+    if (productId !== "unknown") {
+      window.location.href = `/product-details/${productId}`;
+    }
+  };
+
+  // Format price display
+  const displayPrice = price !== undefined ? price.toFixed(2) : "0.00";
+  const displaySalePrice = salePrice !== undefined ? salePrice.toFixed(2) : null;
+
+  // Process image source
+  const processImageSrc = (imgSrc: string) => {
+    if (!imgSrc) return fallbackImage;
+    
+    // If it's already a complete URL, return as is
+    if (imgSrc.startsWith('http') || imgSrc.startsWith('https')) {
+      return imgSrc;
+    }
+    
+    // If it's base64 data, ensure it has the proper data URI prefix
+    if (imgSrc.startsWith('data:image')) {
+      return imgSrc;
+    }
+    
+    // Handle base64 strings without the data URI prefix
+    if (imgSrc.startsWith('/9j/') || imgSrc.startsWith('iVBOR')) {
+      return `data:image/jpeg;base64,${imgSrc}`;
+    }
+    
+    // For relative paths or other formats, use fallback
+    return fallbackImage;
+  };
+
+  // Create a state for the final image source to handle dynamic updates
+  const [finalImageSrc, setFinalImageSrc] = useState(
+    imageError ? fallbackImage : processImageSrc(displayImage || "")
+  );
+
+  // Update image source when displayImage changes
+  useEffect(() => {
+    if (!imageError) {
+      setFinalImageSrc(processImageSrc(displayImage || ""));
+    }
+  }, [displayImage, imageError]);
+
+  return (
+    <div 
+      className="group relative overflow-hidden rounded-md hover:shadow-md border bg-card transition-all duration-500 hover:-translate-y-2 cursor-pointer"
+      onClick={handleClick}
+    >
+      {/* Upper Half: Image */}
+      <div className="aspect-[4/3] relative w-full overflow-hidden">
+        <img
+          src={finalImageSrc}
+          alt={displayName}
+          className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
+          onError={() => {
+            setImageError(true);
+            setFinalImageSrc(fallbackImage);
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity"></div>
+        {status === "approved" && (
+          <Badge className="absolute top-3 left-3 bg-primary text-primary-foreground border-none text-xs py-0.5 px-2 rounded-full font-bold shadow-lg">
+            APPROVED
+          </Badge>
+        )}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 text-blue-500 backdrop-blur-sm hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsLiked(!isLiked);
+          }}
+        >
+          <Heart
+            className={cn("h-4 w-4", isLiked && "fill-current text-blue-500")}
+          />
+        </Button>
+      </div>
+
+      {/* Lower Half: Details */}
+      <div className="p-4 flex flex-col justify-between h-fit bg-card">
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">
+            {displayVendor}
+          </p>
+          <h3 className="font-bold text-base text-foreground line-clamp-2 leading-snug mb-2 group-hover:text-primary transition-colors">
+            {displayName}
+          </h3>
+
+          <p className="text-xs text-muted-foreground mb-1 line-clamp-1">
+            {description || displayCategory || "No description available"}
+          </p>
+        </div>
+
+        <div className="mt-auto">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1">
+              <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+              <span className="text-xs font-semibold text-foreground">
+                4.5
+              </span>
+              <span className="text-xs text-muted-foreground">
+                (128)
+              </span>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              {displaySalePrice && (
+                <span className="text-lg font-bold text-primary">
+                  ₹{displaySalePrice}
+                </span>
+              )}
+              <span
+                className={cn(
+                  "font-bold",
+                  displaySalePrice
+                    ? "text-sm text-muted-foreground line-through"
+                    : "text-lg text-foreground"
+                )}
+              >
+                ₹{displayPrice}
+              </span>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full rounded-lg group-hover:text-primary transition-colors group-hover:border-primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              alert("Added to cart!");
+            }}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Add to Cart
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage() {
   const [isVisible, setIsVisible] = useState(false);
 
   const { data: ProductCategoryData } =
     useGetAdminProductCategoriesQuery(undefined);
+  
   console.log("Product Category Data : ", ProductCategoryData);
 
   const { data: VendorsData } = useGetVendorsQuery(undefined);
@@ -39,9 +235,6 @@ export default function HomePage() {
 
   // Fetch public products data
   const { data: ProductsData, isLoading: productsLoading, error: productsError } = useGetPublicProductsQuery(undefined);
-  console.log("Products Data : ", ProductsData);
-  console.log("Products API Error:", productsError);
-  console.log("Products API Loading:", productsLoading);
 
   const scrollAdvantages = (direction: "left" | "right") => {
     const container = document.getElementById("advantages-container");
@@ -180,24 +373,22 @@ export default function HomePage() {
         <PlatformFor />
         {/* <HowItWorks /> */}
         {/* <FeaturedProducts /> */}
-        {/* Replace FeaturedProducts with NewProductCard grid */}
+        {/* Replace FeaturedProducts with ProductCard grid */}
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4">
             <div
               className={cn(
-                "text-center space-y-6transition-all duration-1000 lg:py-16 md:py-16 py-8",
+                "text-center space-y-6 transition-all duration-1000 lg:py-16 md:py-16 py-8",
                 isVisible
                   ? "translate-y-0 opacity-100"
                   : "translate-y-8 opacity-0"
               )}
             >
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent pb-3">
-                A Platform for Every Style
+                Our Featured Products
               </h2>
               <p className="text-lg md:text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-                Whether you're running a small boutique salon or managing
-                multiple locations, our platform scales with your ambitions and
-                adapts to your unique business needs.
+                Discover our premium selection of salon products, carefully curated for professionals and enthusiasts alike.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
@@ -227,6 +418,19 @@ export default function HomePage() {
                 ))
               )}
             </div>
+            {products && products.length > 0 && (
+              <div className="text-center mt-8">
+                <Button 
+                  variant="default" 
+                  size="lg"
+                  className="rounded-full px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+                  onClick={() => window.location.href = '/products'}
+                >
+                  View All Products
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </div>
+            )}
           </div>
         </section>
         <Services />
