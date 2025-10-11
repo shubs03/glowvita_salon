@@ -75,6 +75,27 @@ const getDayName = (date: Date): string => {
     return days[getDay(date)];
 };
 
+// Helper function to check if a time slot is blocked for a staff member
+const isTimeSlotBlocked = (staff: StaffMember | null, date: Date, time: string): boolean => {
+    if (!staff || !staff.blockedTimes || staff.blockedTimes.length === 0) {
+        return false;
+    }
+    
+    const dateString = format(date, 'yyyy-MM-dd');
+    const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+    
+    return staff.blockedTimes.some(blocked => {
+        const blockedDate = new Date(blocked.date);
+        const blockedDateString = format(blockedDate, 'yyyy-MM-dd');
+        
+        return (
+            blockedDateString === dateString &&
+            timeMinutes >= blocked.startMinutes &&
+            timeMinutes < blocked.endMinutes
+        );
+    });
+};
+
 export function Step3_TimeSlot({
   selectedDate,
   onSelectDate,
@@ -91,52 +112,69 @@ export function Step3_TimeSlot({
 }: Step3TimeSlotProps) {
   const dateScrollerRef = useRef<HTMLDivElement>(null);
 
-
-
-
   // Generate available dates (next 60 days)
   const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
   
   const currentMonthYear = useMemo(() => format(selectedDate, 'MMMM yyyy'), [selectedDate]);
 
-
   // Generate available time slots based on working hours for selected date
   const availableTimeSlots = useMemo(() => {
     console.log('Step3_TimeSlot - Working Hours Details:', {
       selectedDate: format(selectedDate, 'EEEE, MMM d, yyyy'),
-      workingHours: workingHours
+      workingHours: workingHours,
+      selectedStaff: selectedStaff
     });
     
     if (!workingHours || workingHours.length === 0) {
       // Fallback to default time slots if no working hours data
+      console.log('Step3_TimeSlot - No working hours data, using fallback time slots');
       return ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "13:00", "13:30", "14:00", "14:30", "15:00", "16:00", "16:30", "17:00"];
     }
 
     const dayName = getDayName(selectedDate);
     
-    const dayWorkingHours = workingHours.find(wh => 
+    const dayWorkingHours = workingHours.find((wh: WorkingHours) => 
       wh.dayOfWeek.toLowerCase() === dayName.toLowerCase()
     );
 
+    console.log('Step3_TimeSlot - Day working hours:', dayWorkingHours);
+
     if (!dayWorkingHours || !dayWorkingHours.isAvailable) {
+      console.log('Step3_TimeSlot - Day not available, returning empty slots');
       return [];
     }
 
     const slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
+    console.log('Step3_TimeSlot - Generated slots:', slots);
     
-    return slots;
-  }, [selectedDate, workingHours]);
+    // Filter out blocked time slots for the selected staff
+    const filteredSlots = slots.filter((slot: string) => !isTimeSlotBlocked(selectedStaff, selectedDate, slot));
+    console.log('Step3_TimeSlot - Filtered slots (after blocking):', filteredSlots);
+    
+    return filteredSlots;
+  }, [selectedDate, workingHours, selectedStaff]);
 
-  // Check if a date is available based on working hours
+  // Check if a date is available based on working hours and staff availability
   const isDateAvailable = (date: Date): boolean => {
     if (!workingHours || workingHours.length === 0) return true;
     
     const dayName = getDayName(date);
-    const dayWorkingHours = workingHours.find(wh => 
+    const dayWorkingHours = workingHours.find((wh: WorkingHours) => 
       wh.dayOfWeek.toLowerCase() === dayName.toLowerCase()
     );
     
-    return dayWorkingHours?.isAvailable || false;
+    // Check if the staff is available on this day
+    if (selectedStaff) {
+      const dayKey = `${dayName.toLowerCase()}Available` as keyof StaffMember;
+      if (selectedStaff[dayKey] === false) {
+        console.log(`Step3_TimeSlot - Staff not available on ${dayName}`);
+        return false;
+      }
+    }
+    
+    const result = dayWorkingHours?.isAvailable || false;
+    console.log(`Step3_TimeSlot - Date ${format(date, 'yyyy-MM-dd')} availability:`, result);
+    return result;
   };
 
   const handleDateScroll = (direction: 'left' | 'right') => {

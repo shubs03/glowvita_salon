@@ -321,6 +321,13 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => response,
     }),
 
+    // Public Staff by Service for booking flow
+    getPublicVendorStaffByService: builder.query({
+      query: ({ vendorId, serviceId }) => ({ url: `/staff/vendor/${vendorId}/service/${serviceId}`, method: "GET" }),
+      providesTags: ["PublicVendorStaff"],
+      transformResponse: (response) => response,
+    }),
+
     // Public Offers for vendor details page
     getPublicVendorOffers: builder.query({
       query: (vendorId) => ({ url: `/offers?businessId=${vendorId}`, method: "GET" }),
@@ -1354,6 +1361,7 @@ export const {
   useGetPublicVendorServicesQuery,
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorStaffQuery,
+  useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorOffersQuery,
   useUserLoginMutation,
   useGetClientOrdersQuery,

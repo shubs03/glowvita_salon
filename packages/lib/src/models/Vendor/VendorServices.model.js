@@ -125,8 +125,7 @@ const vendorServicesSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Vendor",
     required: true,
-    unique: true, // One document per vendor
-    index: true, // Optimize vendor lookups
+    unique: true, // One document per vendor (this already creates an index)
   },
   services: {
     type: [serviceSchema],
@@ -146,7 +145,7 @@ const vendorServicesSchema = new mongoose.Schema({
   },
 });
 
-// Indexes for optimized querying
+// Indexes for optimized querying (removed duplicate vendor index)
 vendorServicesSchema.index({ vendor: 1, "services.status": 1 }); // For vendor and status filtering
 vendorServicesSchema.index({ "services.category": 1 }); // For category-based filtering
 vendorServicesSchema.index(
@@ -227,7 +226,25 @@ vendorServicesSchema.statics.getServicesByVendor = async function (
   return this.aggregate(pipeline).exec();
 };
 
+// Static method to get staff for a specific service
+vendorServicesSchema.statics.getStaffForService = async function (
+  vendorId,
+  serviceId
+) {
+  const vendorServices = await this.findOne({ vendor: vendorId });
+  
+  if (!vendorServices) {
+    return [];
+  }
 
+  const service = vendorServices.services.id(serviceId);
+  
+  if (!service || !service.staff || service.staff.length === 0) {
+    return [];
+  }
+
+  return service.staff;
+};
 
 const VendorServicesModel =
   mongoose.models.VendorServices ||

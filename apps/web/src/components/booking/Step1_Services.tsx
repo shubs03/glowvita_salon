@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -55,6 +54,7 @@ interface Step1ServicesProps {
     categories: { name: string }[];
     isLoading: boolean;
     error?: any;
+    onServiceSelect?: (service: Service) => void; // Add callback for service selection
 }
 
 export function Step1_Services({ 
@@ -66,7 +66,8 @@ export function Step1_Services({
     servicesByCategory,
     categories,
     isLoading,
-    error
+    error,
+    onServiceSelect
 }: Step1ServicesProps) {
   const [activeCategory, setActiveCategory] = useState("All");
 
@@ -77,6 +78,17 @@ export function Step1_Services({
   const servicesToDisplay = activeCategory === "All" 
     ? services 
     : (servicesByCategory[activeCategory] || []);
+
+  // Handle service selection
+  const handleSelectService = (service: Service) => {
+    console.log('Step1_Services - Service selected:', service);
+    onSelectService(service);
+    // Call the callback if provided
+    if (onServiceSelect) {
+      console.log('Step1_Services - Calling onServiceSelect callback with:', service);
+      onServiceSelect(service);
+    }
+  };
 
   // Loading state
   if (isLoading) {
@@ -199,7 +211,7 @@ export function Step1_Services({
                             'p-4 flex flex-col sm:flex-row items-center gap-4 transition-all duration-300 cursor-pointer border-2 hover:border-primary/50 hover:shadow-md',
                             isSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-transparent bg-secondary/30'
                         )}
-                        onClick={() => onSelectService(service)}
+                        onClick={() => handleSelectService(service)}
                     >
                         <div className="relative w-full sm:w-20 h-24 sm:h-20 rounded-md overflow-hidden flex-shrink-0">
                             <Image 
