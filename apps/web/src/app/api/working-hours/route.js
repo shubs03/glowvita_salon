@@ -69,11 +69,8 @@ export const GET = async (req) => {
         // Get the base data first to check what structure we have
         const baseData = workingHours.toObject();
 
-        // Check if there's already a workingHours array with proper data
-        if (Array.isArray(baseData.workingHours) && baseData.workingHours.length > 0 && baseData.workingHours[0].hasOwnProperty('day')) {
-            // Data is already in the correct format - use it directly
-            workingHoursArray = baseData.workingHours;
-        } else if (baseData.workingHours && typeof baseData.workingHours === 'object' && !Array.isArray(baseData.workingHours)) {
+        // Prioritize workingHours over workingHoursArray since workingHours has the correct data
+        if (baseData.workingHours && typeof baseData.workingHours === 'object' && !Array.isArray(baseData.workingHours)) {
             // Convert object structure to array format for frontend
             const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
             const daysMap = {
@@ -89,16 +86,20 @@ export const GET = async (req) => {
             daysOrder.forEach(dayKey => {
                 const dayData = baseData.workingHours[dayKey];
                 if (dayData) {
-                    const openTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0 
-                        ? convertTo24HourFormat(dayData.hours[0].openTime) : '';
-                    const closeTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0 
-                        ? convertTo24HourFormat(dayData.hours[0].closeTime) : '';
+                    // Check if hours array exists and has data
+                    let openTime = '';
+                    let closeTime = '';
+                    
+                    if (dayData.hours && dayData.hours.length > 0) {
+                        openTime = convertTo24HourFormat(dayData.hours[0].openTime) || '';
+                        closeTime = convertTo24HourFormat(dayData.hours[0].closeTime) || '';
+                    }
                     
                     workingHoursArray.push({
                         day: daysMap[dayKey] || dayKey,
                         open: openTime,
                         close: closeTime,
-                        isOpen: dayData.isOpen || false
+                        isOpen: dayData.isOpen !== undefined ? dayData.isOpen : false
                     });
                 } else {
                     // Add default entry if day data doesn't exist
@@ -110,6 +111,9 @@ export const GET = async (req) => {
                     });
                 }
             });
+        } else if (Array.isArray(baseData.workingHoursArray) && baseData.workingHoursArray.length > 0) {
+            // Data is already in the correct format - use it directly
+            workingHoursArray = baseData.workingHoursArray;
         } else {
             // No working hours data - create default array
             const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -123,13 +127,11 @@ export const GET = async (req) => {
             });
         }
 
-        // Create the final response with the correct workingHoursArray
-        // Remove any existing workingHoursArray from the base data to prevent conflicts
-        delete baseData.workingHoursArray;
-        
+        // Create the final response with both workingHours and workingHoursArray for compatibility
         const transformedData = {
             ...baseData,
-            workingHoursArray: workingHoursArray  // Our correctly populated array
+            workingHours: workingHoursArray, // Use the properly transformed data
+            workingHoursArray: workingHoursArray // Keep for backward compatibility
         };
 
         return NextResponse.json({
