@@ -4,9 +4,10 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
+import { Input } from '@repo/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
-import { X, Plus, Minus, ShoppingCart, ArrowLeft, Trash2 } from 'lucide-react';
+import { X, Plus, Minus, ShoppingCart, ArrowLeft, Trash2, Shield, Tag } from 'lucide-react';
 import { PageContainer } from '@repo/ui/page-container';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -16,7 +17,7 @@ import { toast } from 'sonner';
 
 interface CartItem {
   _id: string;
-  productId: string;
+  productId: string; 
   productName: string;
   price: number;
   quantity: number;
@@ -40,7 +41,6 @@ export default function CartPage() {
       if (quantity > 0) {
         await updateCartItem({ productId, quantity }).unwrap();
       } else {
-        // This case should be handled by the remove button, but as a safeguard:
         await removeFromCart({ productId }).unwrap();
       }
     } catch (error) {
@@ -67,21 +67,26 @@ export default function CartPage() {
     }
   };
 
+  const cancelRemove = () => {
+    setIsRemoveModalOpen(false);
+    setItemToRemove(null);
+  };
+
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = subtotal > 0 ? 50.00 : 0; // Example shipping cost
-  const tax = subtotal * 0.05; // Example 5% tax
-  const total = subtotal + shipping + tax;
+  const shipping = subtotal > 0 ? 50.00 : 0; 
+  const tax = subtotal * 0.08;
+  const discount = subtotal * 0.1; // 10% discount
+  const total = subtotal + shipping + tax - discount;
+  const itemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   const handleCheckout = () => {
-    // This assumes the cart contains items from a single vendor for simplicity.
-    // A real implementation would group by vendorId or handle multi-vendor checkouts.
     if (cartItems.length > 0) {
       const checkoutProduct = {
-        id: cartItems.map(item => item.productId).join(','), // A bit of a hack for multiple items
+        id: cartItems.map(item => item.productId).join(','),
         name: cartItems.length > 1 ? `${cartItems.length} items` : cartItems[0].productName,
         price: total,
         image: cartItems[0].productImage,
-        quantity: 1, // We'll use the total price
+        quantity: 1,
         vendorId: (cartItems[0] as any).vendorId,
         vendorName: (cartItems[0] as any).supplierName,
       };
@@ -92,100 +97,386 @@ export default function CartPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Your Cart</CardTitle>
-              <CardDescription>You have {cartItems.length} item(s) in your cart.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="text-center py-10">Loading cart...</div>
-              ) : cartItems.length === 0 ? (
-                <div className="text-center py-10">
-                  <ShoppingCart className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <p className="mt-4 text-muted-foreground">Your cart is empty.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {cartItems.map((item) => (
-                    <div key={item.productId} className="flex items-center gap-4 p-4 border rounded-md">
-                      <Image 
-                        src={item.productImage || 'https://placehold.co/80x80.png'} 
-                        alt={item.productName} 
-                        width={80} 
-                        height={80} 
-                        className="rounded-md object-cover" 
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{item.productName}</h4>
-                        <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(item.productId, item.quantity - 1)} disabled={item.quantity <= 1}>
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span>{item.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}>
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="font-semibold w-20 text-right">₹{(item.price * item.quantity).toFixed(2)}</p>
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => openRemoveModal(item)}>
-                        <Trash2 className="h-4 w-4" />
+      <div className="text-center mb-8 lg:mb-12 space-y-2 lg:space-y-3">
+        <h1 className="text-3xl lg:text-4xl xl:text-5xl font-bold font-headline text-foreground">
+          Shopping Cart
+        </h1>
+        {cartItems.length > 0 && (
+          <p className="text-muted-foreground text-base lg:text-lg leading-relaxed">
+            You have{" "}
+            <span className="font-semibold text-foreground">
+              {cartItems.length}
+            </span>{" "}
+            item(s) in your cart.
+          </p>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-16 lg:py-20">Loading cart...</div>
+      ) : cartItems.length === 0 ? (
+        <div className="text-center py-16 lg:py-20 space-y-6">
+          <ShoppingCart className="mx-auto h-16 w-16 lg:h-20 lg:w-20 text-muted-foreground" />
+          <div className="space-y-3">
+            <h2 className="text-2xl lg:text-3xl xl:text-4xl font-semibold text-foreground">
+              Your cart is empty
+            </h2>
+            <p className="text-muted-foreground text-base lg:text-lg max-w-md mx-auto leading-relaxed">
+              Looks like you haven't added anything to your cart yet. Start
+              shopping to discover amazing products.
+            </p>
+          </div>
+          <Button asChild size="lg" className="mt-8">
+            <Link href="/profile">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Profile
+            </Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start">
+          {/* Main Content Area */}
+          <div className="col-span-12 lg:col-span-8 space-y-6 lg:space-y-8">
+            {/* Cart Items List */}
+            <div className="space-y-4 lg:space-y-6">
+              {cartItems.map((item: CartItem) => (
+                <Card
+                  key={item.productId}
+                  className="flex items-center p-4 lg:p-6 shadow-sm hover:shadow-md transition-shadow border border-border/50 hover:border-border"
+                >
+                  <div className="relative w-20 h-20 lg:w-24 lg:h-24 rounded-md overflow-hidden flex-shrink-0">
+                    <Image
+                      src={item.productImage || "https://placehold.co/100x100.png"}
+                      alt={item.productName}
+                      layout="fill"
+                      objectFit="cover"
+                      data-ai-hint={item.productName}
+                    />
+                  </div>
+                  <div className="flex-grow ml-4 lg:ml-6">
+                    <h3 className="font-semibold text-base lg:text-lg mb-1">
+                      {item.productName}
+                    </h3>
+                    <p className="text-muted-foreground text-sm lg:text-base">
+                      Price: ₹{item.price.toFixed(2)}
+                    </p>
+                    <div className="flex items-center gap-2 mt-3">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleQuantityChange(item.productId, item.quantity - 1)}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <span className="font-semibold w-8 text-center">
+                        {item.quantity}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
+                      >
+                        <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                  ))}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-lg lg:text-xl">
+                      ₹{(item.price * item.quantity).toFixed(2)}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive h-8 w-8 mt-2"
+                      onClick={() => openRemoveModal(item)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {/* How to Complete Your Order Section */}
+            <div className="mt-16 lg:mt-20">
+              <div className="text-center mb-10 lg:mb-12 space-y-3">
+                <h2 className="text-2xl lg:text-3xl font-bold font-headline text-foreground">
+                  How to Complete Your Order
+                </h2>
+                <p className="text-muted-foreground text-base lg:text-lg max-w-2xl mx-auto leading-relaxed">
+                  Follow these simple steps to securely complete your purchase
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                {/* Step 1 */}
+                <Card className="text-center p-6 lg:p-8 border border-border/50 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-background to-blue-50">
+                  <div className="mb-4 relative z-10">
+                    <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <span className="text-xl lg:text-2xl font-bold">1</span>
+                    </div>
+                    <h3 className="text-lg lg:text-xl font-semibold mb-2 text-blue-700">
+                      Review Cart
+                    </h3>
+                    <p className="text-sm lg:text-base text-blue-600 leading-relaxed">
+                      Check your items, quantities, and pricing before proceeding
+                    </p>
+                  </div>
+                </Card>
+
+                {/* Step 2 - Apply Coupon with Breaking Border */}
+                <Card className="text-center p-6 lg:p-8 relative overflow-hidden hover:shadow-xl hover:shadow-blue-500/20 transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-background to-blue-50 border-2 border-dashed border-blue-300 hover:border-blue-400">
+                  <div className="mb-4 relative z-10">
+                    <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <span className="text-xl lg:text-2xl font-bold">2</span>
+                    </div>
+                    <h3 className="text-lg lg:text-xl font-semibold mb-2 text-blue-700">
+                      Apply Coupon
+                    </h3>
+                    <p className="text-sm lg:text-base text-blue-600 leading-relaxed">
+                      Enter any discount codes you have to save on your order
+                    </p>
+                  </div>
+                </Card>
+
+                {/* Step 3 */}
+                <Card className="text-center p-6 lg:p-8 border border-border/50 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-background to-blue-50">
+                  <div className="mb-4">
+                    <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <span className="text-xl lg:text-2xl font-bold">3</span>
+                    </div>
+                    <h3 className="text-lg lg:text-xl font-semibold mb-2 text-blue-700">
+                      Checkout
+                    </h3>
+                    <p className="text-sm lg:text-base text-blue-600 leading-relaxed">
+                      Proceed to secure checkout and enter your payment details
+                    </p>
+                  </div>
+                </Card>
+
+                {/* Step 4 */}
+                <Card className="text-center p-6 lg:p-8 border border-border/50 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-background to-blue-50">
+                  <div className="mb-4">
+                    <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <span className="text-xl lg:text-2xl font-bold">4</span>
+                    </div>
+                    <h3 className="text-lg lg:text-xl font-semibold mb-2 text-blue-700">
+                      Confirmation
+                    </h3>
+                    <p className="text-sm lg:text-base text-blue-600 leading-relaxed">
+                      Receive order confirmation and tracking information via email
+                    </p>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Additional Information */}
+              <div className="mt-10 lg:mt-12 text-center">
+                <Card className="bg-primary/5 border border-primary/20 p-6 lg:p-8">
+                  <div className="space-y-4">
+                    <h3 className="text-lg lg:text-xl font-semibold text-foreground">
+                      Need Help?
+                    </h3>
+                    <p className="text-sm lg:text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+                      Our customer support team is available 24/7 to assist you
+                      with your order. Contact us via chat, email, or phone if you
+                      have any questions.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                      <Button variant="outline" size="sm">
+                        Live Chat
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        Email Support
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        Call: 1-800-BEAUTY
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </div>
+
+          {/* Sidebar with Order Summary */}
+          <div className="col-span-12 lg:col-span-4 lg:sticky top-24 space-y-4 lg:space-y-6">
+            <Card className="border border-border/50">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl lg:text-2xl">
+                  Order Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 lg:space-y-4">
+                {/* Items List Section */}
+                {cartItems.length > 0 && (
+                  <div className="space-y-2 pb-3 border-b border-border/30">
+                    <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                      Items in Cart
+                    </h4>
+                    <div className="space-y-1.5">
+                      {cartItems.map((item: CartItem, index: number) => (
+                        <div key={item.productId || index} className="flex justify-between items-start text-sm">
+                          <span className="text-foreground leading-snug flex-1 pr-2">
+                            {item.productName}
+                          </span>
+                          <span className="text-muted-foreground font-medium whitespace-nowrap">
+                            ×{item.quantity}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Pricing Breakdown */}
+                <div className="flex justify-between text-sm lg:text-base">
+                  <span className="text-muted-foreground">
+                    Items ({itemCount})
+                  </span>
+                  <span className="font-medium">₹{subtotal.toFixed(2)}</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <div className="flex justify-between text-sm lg:text-base">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="font-medium text-blue-600">
+                    -₹{discount.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm lg:text-base">
+                  <span className="text-muted-foreground">Est. Shipping</span>
+                  <span className="font-medium">₹{shipping.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm lg:text-base">
+                  <span className="text-muted-foreground">Est. Tax</span>
+                  <span className="font-medium">₹{tax.toFixed(2)}</span>
+                </div>
+                <div className="border-t pt-3 lg:pt-4 flex justify-between font-bold text-lg lg:text-xl">
+                  <span>Total</span>
+                  <span>₹{total.toFixed(2)}</span>
+                </div>
+              </CardContent>
+              <CardFooter className="flex-col gap-3 lg:gap-4 pt-4">
+                <Button className="w-full" size="lg" disabled={cartItems.length === 0} onClick={handleCheckout}>
+                  Proceed to Checkout
+                </Button>
+                {discount > 0 && (
+                  <div className="text-center">
+                    <p className="text-sm text-blue-600 font-medium">
+                      You saved ₹{discount.toFixed(2)} on this order!
+                    </p>
+                  </div>
+                )}
+              </CardFooter>
+            </Card>
+
+            <Card className="border border-border/50">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Tag className="h-5 w-5" /> Coupon Code
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  <Input
+                    id="coupon"
+                    placeholder="Enter coupon code"
+                    className="flex-1"
+                  />
+                  <Button variant="outline">Apply</Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-border/50">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Shield className="h-5 w-5" /> Secure Checkout
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                  Your payment information is encrypted and secure.
+                </p>
+                <div className="flex justify-center items-center gap-4">
+                  <Image
+                    src="https://www.logo.wine/a/logo/Visa_Inc./Visa_Inc.-Logo.wine.svg"
+                    alt="Visa"
+                    width={50}
+                    height={30}
+                    className="opacity-80"
+                  />
+                  <Image
+                    src="https://www.logo.wine/a/logo/Mastercard/Mastercard-Logo.wine.svg"
+                    alt="Mastercard"
+                    width={40}
+                    height={30}
+                    className="opacity-80"
+                  />
+                  <Image
+                    src="https://www.logo.wine/a/logo/PayPal/PayPal-Logo.wine.svg"
+                    alt="PayPal"
+                    width={70}
+                    height={30}
+                    className="opacity-80"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-        
-        <div className="lg:col-span-1">
-          <Card className="sticky top-24">
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>₹{subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Shipping</span>
-                <span>₹{shipping.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tax (5%)</span>
-                <span>₹{tax.toFixed(2)}</span>
-              </div>
-              <div className="border-t pt-3 mt-3 flex justify-between font-bold text-lg">
-                <span>Total</span>
-                <span>₹{total.toFixed(2)}</span>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full" size="lg" disabled={cartItems.length === 0} onClick={handleCheckout}>
-                Proceed to Checkout
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      </div>
-      
+      )}
+
+      {/* Remove Item Confirmation Modal */}
       <Dialog open={isRemoveModalOpen} onOpenChange={setIsRemoveModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Item</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove "{itemToRemove?.productName}" from your cart?
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-xl font-semibold">
+              Remove Item from Cart
+            </DialogTitle>
+            <DialogDescription className="text-base leading-relaxed">
+              Are you sure you want to remove this item from your cart? This
+              action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRemoveModalOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleRemoveItem}>Remove</Button>
+
+          {itemToRemove && (
+            <div className="py-4">
+              <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
+                <div className="relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
+                  <Image
+                    src={itemToRemove.productImage || "https://placehold.co/80x80.png"}
+                    alt={itemToRemove.productName}
+                    layout="fill"
+                    objectFit="cover"
+                  />
+                </div>
+                <div className="flex-grow">
+                  <h4 className="font-semibold text-sm">
+                    {itemToRemove.productName}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    Qty: {itemToRemove.quantity} × ₹{itemToRemove.price.toFixed(2)}
+                  </p>
+                  <p className="text-sm font-medium">
+                    Total: ₹{(itemToRemove.price * itemToRemove.quantity).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-3">
+            <Button variant="outline" onClick={cancelRemove} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRemoveItem}
+              className="flex-1"
+            >
+              Remove Item
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
