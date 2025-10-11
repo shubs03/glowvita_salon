@@ -2,7 +2,7 @@
 
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Badge } from '@repo/ui/badge';
 import { Footer } from '../../../../../packages/ui/src/footer';
 import { 
@@ -40,12 +40,12 @@ export default function DoctorsPage() {
               India's Leading Healthcare Platform
             </div>
             
-            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
+            <h1 className="text-4xl md:text-6xl font-bold font-headline mb-6 leading-tight">
               Your Health,{" "}
               <span className="text-primary">Our Priority</span>
             </h1>
             
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
               Connect with qualified doctors, book appointments instantly, and get expert medical care from the comfort of your home.
             </p>
 
@@ -81,7 +81,7 @@ export default function DoctorsPage() {
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary mb-1">50,000+</div>
                 <div className="text-muted-foreground">Verified Doctors</div>
