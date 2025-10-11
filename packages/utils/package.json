@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "exports": {
-    "./uploads": "./uploads.js"
+    "./uploads": "./uploads.js",
+    "./staffWorkingHoursValidator": "./staffWorkingHoursValidator.js"
   },
   "type": "module"
 }

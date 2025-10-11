@@ -172,6 +172,40 @@ vendorWorkingHoursSchema.methods.isTimeInRange = function (time, start, end) {
   return target >= startTime && target <= endTime;
 };
 
+// Helper method to convert 12-hour format to minutes
+vendorWorkingHoursSchema.statics.timeToMinutes = function (timeStr) {
+  const [timePart, modifier] = timeStr.split(/([AP]M)/);
+  let [hours, minutes] = timePart.split(':').map(Number);
+  
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+  
+  return hours * 60 + minutes;
+};
+
+// Method to get vendor working hours for a specific day
+vendorWorkingHoursSchema.statics.getVendorHoursForDay = async function (vendorId, day) {
+  const vendorHours = await this.findOne({ vendor: vendorId });
+  
+  if (!vendorHours) {
+    return null;
+  }
+  
+  const dayHours = vendorHours.workingHours[day.toLowerCase()];
+  
+  if (!dayHours || !dayHours.isOpen || !dayHours.hours.length) {
+    return null;
+  }
+  
+  // Return the first time slot (assuming single time slot per day)
+  return {
+    openTime: dayHours.hours[0].openTime,
+    closeTime: dayHours.hours[0].closeTime,
+    openMinutes: this.timeToMinutes(dayHours.hours[0].openTime),
+    closeMinutes: this.timeToMinutes(dayHours.hours[0].closeTime)
+  };
+};
+
 const VendorWorkingHoursModel =
   mongoose.models.VendorWorkingHours ||
   mongoose.model("VendorWorkingHours", vendorWorkingHoursSchema);
