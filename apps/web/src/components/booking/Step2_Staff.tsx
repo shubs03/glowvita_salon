@@ -38,6 +38,7 @@ interface Step2StaffProps {
     isLoading: boolean;
     error?: any;
     selectedService?: Service | null; // Add selected service prop
+    onStaffSelect?: (staff: StaffMember | null) => void; // Add callback for staff selection
 }
 
 export function Step2_Staff({ 
@@ -48,7 +49,8 @@ export function Step2_Staff({
     staff,
     isLoading,
     error,
-    selectedService
+    selectedService,
+    onStaffSelect
 }: Step2StaffProps): JSX.Element {
 
     // Log what we receive as props
@@ -86,6 +88,19 @@ export function Step2_Staff({
         console.log('Step2_Staff - Filtered staff based on service:', serviceStaff);
         return serviceStaff;
     }, [staff, selectedService]);
+
+    // Handle staff selection with automatic navigation to Step 3
+    const handleSelectStaff = (staff: StaffMember | null) => {
+        console.log('Step2_Staff - Staff selected:', staff);
+        onSelectStaff(staff);
+        // Call the callback if provided
+        if (onStaffSelect) {
+            console.log('Step2_Staff - Calling onStaffSelect callback with:', staff);
+            onStaffSelect(staff);
+        }
+        // Automatically navigate to Step 3
+        setCurrentStep(3);
+    };
 
     // Loading state
     if (isLoading) {
@@ -150,13 +165,13 @@ export function Step2_Staff({
             <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {/* Any Professional Card */}
+            {/* Any Professional Card */}}
             <div 
                 className={cn(
                     'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',
                     !selectedStaff ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
                 )}
-                onClick={() => onSelectStaff(null)}
+                onClick={() => handleSelectStaff(null)}
             >
                 <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
                     <Users className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -177,7 +192,7 @@ export function Step2_Staff({
                         'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2 overflow-hidden',
                         selectedStaff?.id === staffMember.id ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
                     )}
-                    onClick={() => onSelectStaff(staffMember)}
+                    onClick={() => handleSelectStaff(staffMember)}
                 >
                     <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
                         <Image 

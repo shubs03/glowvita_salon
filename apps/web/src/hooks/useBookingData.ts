@@ -12,6 +12,13 @@ import {
   useGetPublicVendorsQuery 
 } from '@repo/store/api';
 
+export interface TimeSlot {
+  startMinutes: number;
+  endMinutes: number;
+  startTime: string;
+  endTime: string;
+}
+
 export interface Service {
   id: string;
   name: string;
@@ -46,6 +53,14 @@ export interface StaffMember {
     endTime: string;
     reason?: string;
   }>;
+  // Add time slots for each day
+  mondaySlots?: TimeSlot[];
+  tuesdaySlots?: TimeSlot[];
+  wednesdaySlots?: TimeSlot[];
+  thursdaySlots?: TimeSlot[];
+  fridaySlots?: TimeSlot[];
+  saturdaySlots?: TimeSlot[];
+  sundaySlots?: TimeSlot[];
 }
 
 export interface WorkingHours {
@@ -184,7 +199,14 @@ export const useSalonStaff = (salonId: string, serviceId?: string) => {
       fridayAvailable: member.fridayAvailable,
       saturdayAvailable: member.saturdayAvailable,
       sundayAvailable: member.sundayAvailable,
-      blockedTimes: member.blockedTimes || []
+      blockedTimes: member.blockedTimes || [],
+      mondaySlots: member.mondaySlots || [],
+      tuesdaySlots: member.tuesdaySlots || [],
+      wednesdaySlots: member.wednesdaySlots || [],
+      thursdaySlots: member.thursdaySlots || [],
+      fridaySlots: member.fridaySlots || [],
+      saturdaySlots: member.saturdaySlots || [],
+      sundaySlots: member.sundaySlots || []
     }));
   }, [rawStaff]);
 

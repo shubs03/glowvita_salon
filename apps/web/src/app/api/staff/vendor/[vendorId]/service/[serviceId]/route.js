@@ -139,9 +139,9 @@ export const GET = async (request, { params }) => {
     console.log("Staff query:", staffQuery);
 
     // Find all active staff members for the vendor who provide the specific service
-    // with availability information
+    // with availability information including time slots
     let staffMembers = await StaffModel.find(staffQuery).select(
-      'fullName position photo mobileNo emailAddress mondayAvailable tuesdayAvailable wednesdayAvailable thursdayAvailable fridayAvailable saturdayAvailable sundayAvailable blockedTimes'
+      'fullName position photo mobileNo emailAddress mondayAvailable tuesdayAvailable wednesdayAvailable thursdayAvailable fridayAvailable saturdayAvailable sundayAvailable blockedTimes mondaySlots tuesdaySlots wednesdaySlots thursdaySlots fridaySlots saturdaySlots sundaySlots'
     );
 
     console.log("Found staff members:", staffMembers.length, staffMembers.map(s => s.fullName));
@@ -161,7 +161,7 @@ export const GET = async (request, { params }) => {
         const orQuery = { $or: nameQueries };
         console.log("Trying alternative name query:", orQuery);
         const alternativeStaff = await StaffModel.find(orQuery).select(
-          'fullName position photo mobileNo emailAddress mondayAvailable tuesdayAvailable wednesdayAvailable thursdayAvailable fridayAvailable saturdayAvailable sundayAvailable blockedTimes'
+          'fullName position photo mobileNo emailAddress mondayAvailable tuesdayAvailable wednesdayAvailable thursdayAvailable fridayAvailable saturdayAvailable sundayAvailable blockedTimes mondaySlots tuesdaySlots wednesdaySlots thursdaySlots fridaySlots saturdaySlots sundaySlots'
         );
         console.log("Found alternative staff members:", alternativeStaff.length, alternativeStaff.map(s => s.fullName));
         staffMembers = alternativeStaff;
@@ -181,7 +181,14 @@ export const GET = async (request, { params }) => {
       fridayAvailable: staff.fridayAvailable,
       saturdayAvailable: staff.saturdayAvailable,
       sundayAvailable: staff.sundayAvailable,
-      blockedTimes: staff.blockedTimes || []
+      blockedTimes: staff.blockedTimes || [],
+      mondaySlots: staff.mondaySlots || [],
+      tuesdaySlots: staff.tuesdaySlots || [],
+      wednesdaySlots: staff.wednesdaySlots || [],
+      thursdaySlots: staff.thursdaySlots || [],
+      fridaySlots: staff.fridaySlots || [],
+      saturdaySlots: staff.saturdaySlots || [],
+      sundaySlots: staff.sundaySlots || []
       // Hide sensitive information like phone and email for public endpoint
     }));
 

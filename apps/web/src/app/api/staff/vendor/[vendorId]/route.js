@@ -34,11 +34,11 @@ export const GET = async (request, { params }) => {
       return response;
     }
 
-    // Find all active staff members for the vendor with availability information
+    // Find all active staff members for the vendor with availability information including time slots
     const staffMembers = await StaffModel.find({ 
       vendorId: vendorId, 
       status: 'Active' 
-    }).select('fullName position photo mobileNo emailAddress mondayAvailable tuesdayAvailable wednesdayAvailable thursdayAvailable fridayAvailable saturdayAvailable sundayAvailable blockedTimes');
+    }).select('fullName position photo mobileNo emailAddress mondayAvailable tuesdayAvailable wednesdayAvailable thursdayAvailable fridayAvailable saturdayAvailable sundayAvailable blockedTimes mondaySlots tuesdaySlots wednesdaySlots thursdaySlots fridaySlots saturdaySlots sundaySlots');
 
     // Transform staff data for public consumption (hide sensitive info)
     const publicStaffData = staffMembers.map(staff => ({
@@ -53,7 +53,14 @@ export const GET = async (request, { params }) => {
       fridayAvailable: staff.fridayAvailable,
       saturdayAvailable: staff.saturdayAvailable,
       sundayAvailable: staff.sundayAvailable,
-      blockedTimes: staff.blockedTimes || []
+      blockedTimes: staff.blockedTimes || [],
+      mondaySlots: staff.mondaySlots || [],
+      tuesdaySlots: staff.tuesdaySlots || [],
+      wednesdaySlots: staff.wednesdaySlots || [],
+      thursdaySlots: staff.thursdaySlots || [],
+      fridaySlots: staff.fridaySlots || [],
+      saturdaySlots: staff.saturdaySlots || [],
+      sundaySlots: staff.sundaySlots || []
       // Hide sensitive information like phone and email for public endpoint
     }));
 
