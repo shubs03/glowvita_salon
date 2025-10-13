@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
@@ -69,10 +68,49 @@ const generateTimeSlots = (startTime: string, endTime: string, interval: number 
     return slots;
 };
 
+// Helper function to generate time slots from staff slots
+const generateTimeSlotsFromStaffSlots = (slots: any[]): string[] => {
+    const timeSlots: string[] = [];
+    slots.forEach(slot => {
+        // Convert start and end times to Date objects for easier manipulation
+        const start = new Date(`2023-01-01 ${slot.startTime}`);
+        const end = new Date(`2023-01-01 ${slot.endTime}`);
+        
+        // Generate 30-minute intervals between start and end times
+        let current = new Date(start);
+        while (current < end) {
+            timeSlots.push(format(current, 'HH:mm'));
+            current.setMinutes(current.getMinutes() + 30);
+        }
+    });
+    return timeSlots;
+};
+
 // Helper function to get day name from date
 const getDayName = (date: Date): string => {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     return days[getDay(date)];
+};
+
+// Helper function to check if a time slot is blocked for a staff member
+const isTimeSlotBlocked = (staff: StaffMember | null, date: Date, time: string): boolean => {
+    if (!staff || !staff.blockedTimes || staff.blockedTimes.length === 0) {
+        return false;
+    }
+    
+    const dateString = format(date, 'yyyy-MM-dd');
+    const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+    
+    return staff.blockedTimes.some(blocked => {
+        const blockedDate = new Date(blocked.date);
+        const blockedDateString = format(blockedDate, 'yyyy-MM-dd');
+        
+        return (
+            blockedDateString === dateString &&
+            timeMinutes >= blocked.startMinutes &&
+            timeMinutes < blocked.endMinutes
+        );
+    });
 };
 
 export function Step3_TimeSlot({
@@ -91,52 +129,117 @@ export function Step3_TimeSlot({
 }: Step3TimeSlotProps) {
   const dateScrollerRef = useRef<HTMLDivElement>(null);
 
-
-
-
   // Generate available dates (next 60 days)
   const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
   
   const currentMonthYear = useMemo(() => format(selectedDate, 'MMMM yyyy'), [selectedDate]);
 
-
   // Generate available time slots based on working hours for selected date
   const availableTimeSlots = useMemo(() => {
     console.log('Step3_TimeSlot - Working Hours Details:', {
       selectedDate: format(selectedDate, 'EEEE, MMM d, yyyy'),
-      workingHours: workingHours
+      workingHours: workingHours,
+      selectedStaff: selectedStaff
     });
     
+    // If no working hours data, return fallback slots
     if (!workingHours || workingHours.length === 0) {
-      // Fallback to default time slots if no working hours data
+      console.log('Step3_TimeSlot - No working hours data, using fallback time slots');
       return ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "13:00", "13:30", "14:00", "14:30", "15:00", "16:00", "16:30", "17:00"];
     }
 
     const dayName = getDayName(selectedDate);
     
-    const dayWorkingHours = workingHours.find(wh => 
+    // If a staff member is selected, use their specific working hours
+    if (selectedStaff) {
+      console.log(`Step3_TimeSlot - Using staff-specific hours for ${dayName}`);
+      
+      // Get the staff's slots for the selected day
+      let staffSlots = [];
+      switch (dayName.toLowerCase()) {
+        case 'monday':
+          staffSlots = selectedStaff.mondaySlots || [];
+          break;
+        case 'tuesday':
+          staffSlots = selectedStaff.tuesdaySlots || [];
+          break;
+        case 'wednesday':
+          staffSlots = selectedStaff.wednesdaySlots || [];
+          break;
+        case 'thursday':
+          staffSlots = selectedStaff.thursdaySlots || [];
+          break;
+        case 'friday':
+          staffSlots = selectedStaff.fridaySlots || [];
+          break;
+        case 'saturday':
+          staffSlots = selectedStaff.saturdaySlots || [];
+          break;
+        case 'sunday':
+          staffSlots = selectedStaff.sundaySlots || [];
+          break;
+      }
+      
+      // If staff has specific slots, use them
+      if (staffSlots.length > 0) {
+        console.log('Step3_TimeSlot - Using staff slots:', staffSlots);
+        const slots = generateTimeSlotsFromStaffSlots(staffSlots);
+        console.log('Step3_TimeSlot - Generated slots from staff slots:', slots);
+        
+        // Filter out blocked time slots for the selected staff
+        const filteredSlots = slots.filter((slot: string) => !isTimeSlotBlocked(selectedStaff, selectedDate, slot));
+        console.log('Step3_TimeSlot - Filtered slots (after blocking):', filteredSlots);
+        
+        return filteredSlots;
+      }
+      
+      // If staff has no specific slots, fall back to vendor hours
+      console.log('Step3_TimeSlot - No staff slots, falling back to vendor hours');
+    }
+    
+    // Use vendor working hours as fallback
+    const dayWorkingHours = workingHours.find((wh: WorkingHours) => 
       wh.dayOfWeek.toLowerCase() === dayName.toLowerCase()
     );
 
+    console.log('Step3_TimeSlot - Day working hours:', dayWorkingHours);
+
     if (!dayWorkingHours || !dayWorkingHours.isAvailable) {
+      console.log('Step3_TimeSlot - Day not available, returning empty slots');
       return [];
     }
 
     const slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
+    console.log('Step3_TimeSlot - Generated slots from vendor hours:', slots);
     
-    return slots;
-  }, [selectedDate, workingHours]);
+    // Filter out blocked time slots for the selected staff
+    const filteredSlots = slots.filter((slot: string) => !isTimeSlotBlocked(selectedStaff, selectedDate, slot));
+    console.log('Step3_TimeSlot - Filtered slots (after blocking):', filteredSlots);
+    
+    return filteredSlots;
+  }, [selectedDate, workingHours, selectedStaff]);
 
-  // Check if a date is available based on working hours
+  // Check if a date is available based on working hours and staff availability
   const isDateAvailable = (date: Date): boolean => {
     if (!workingHours || workingHours.length === 0) return true;
     
     const dayName = getDayName(date);
-    const dayWorkingHours = workingHours.find(wh => 
+    const dayWorkingHours = workingHours.find((wh: WorkingHours) => 
       wh.dayOfWeek.toLowerCase() === dayName.toLowerCase()
     );
     
-    return dayWorkingHours?.isAvailable || false;
+    // Check if the staff is available on this day
+    if (selectedStaff) {
+      const dayKey = `${dayName.toLowerCase()}Available` as keyof StaffMember;
+      if (selectedStaff[dayKey] === false) {
+        console.log(`Step3_TimeSlot - Staff not available on ${dayName}`);
+        return false;
+      }
+    }
+    
+    const result = dayWorkingHours?.isAvailable || false;
+    console.log(`Step3_TimeSlot - Date ${format(date, 'yyyy-MM-dd')} availability:`, result);
+    return result;
   };
 
   const handleDateScroll = (direction: 'left' | 'right') => {
@@ -164,6 +267,16 @@ export function Step3_TimeSlot({
   }, [selectedDate, availableTimeSlots, selectedTime, onSelectTime]);
 
   const allProfessionals = [{ id: 'any', name: 'Any Professional' }, ...(staff || [])];
+
+  // Handle staff selection from the dropdown
+  const handleSelectStaff = (staffId: string) => {
+    const foundStaff = allProfessionals.find(s => s.id === staffId);
+    if (foundStaff?.id === 'any') {
+      onSelectStaff(null);
+    } else {
+      onSelectStaff(foundStaff as StaffMember || null);
+    }
+  };
 
   // Loading state
   if (isLoading) {
@@ -233,14 +346,7 @@ export function Step3_TimeSlot({
             <Label htmlFor="staff-select" className="text-sm font-medium">Professional</Label>
             <Select 
                 value={selectedStaff?.id || 'any'} 
-                onValueChange={(staffId) => {
-                    const foundStaff = allProfessionals.find(s => s.id === staffId);
-                    if (foundStaff?.id === 'any') {
-                        onSelectStaff(null);
-                    } else {
-                        onSelectStaff(foundStaff as StaffMember || null);
-                    }
-                }}
+                onValueChange={handleSelectStaff}
             >
                 <SelectTrigger id="staff-select" className="mt-1">
                     <div className="flex items-center gap-2">

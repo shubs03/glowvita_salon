@@ -187,17 +187,12 @@ const staffSchema = new mongoose.Schema(
     sundayAvailable: { type: Boolean, default: true, index: true },
     sundaySlots: { type: [timeSlotSchema], default: [] },
 
-    // Aggregate availability flags for faster queries
-    hasWeekdayAvailability: { type: Boolean, default: true, index: true },
-    hasWeekendAvailability: { type: Boolean, default: true, index: true },
-    totalWeeklyHours: { type: Number, default: 0, index: true },
-
     // Blocked times - optimized structure
     blockedTimes: [
       {
         date: { type: Date, required: true, index: true },
-        startMinutes: { type: Number, required: true, min: 0, max: 1439 },
-        endMinutes: { type: Number, required: true, min: 0, max: 1439 },
+        startMinutes: { type: Number, min: 0, max: 1439 },
+        endMinutes: { type: Number, min: 0, max: 1439 },
         startTime: { type: String, required: true },
         endTime: { type: String, required: true },
         reason: { type: String, trim: true, default: "" },
@@ -239,6 +234,64 @@ const staffSchema = new mongoose.Schema(
     read: "secondaryPreferred",
   }
 );
+
+// Pre-save hook to validate staff working hours against vendor hours
+staffSchema.pre("save", async function (next) {
+  try {
+    // Only validate if working hours slots are being modified
+    const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    let needsValidation = false;
+    
+    for (const day of dayNames) {
+      const dayField = `${day}Slots`;
+      if (this.isModified(dayField) && this[dayField] && this[dayField].length > 0) {
+        needsValidation = true;
+        break;
+      }
+    }
+    
+    if (needsValidation) {
+      // Dynamically import VendorWorkingHours to avoid circular dependency
+      const { default: VendorWorkingHours } = await import('./VendorWorkingHours.model.js');
+      
+      for (const day of dayNames) {
+        const dayAvailableField = `${day}Available`;
+        const dayField = `${day}Slots`;
+        
+        // Only validate if the day is available and has slots defined
+        if (this[dayAvailableField] && this[dayField] && this[dayField].length > 0) {
+          // Get vendor working hours for the specific day
+          const vendorHours = await VendorWorkingHours.getVendorHoursForDay(this.vendorId, day);
+          
+          // If vendor is closed on this day, staff cannot work
+          if (!vendorHours) {
+            return next(new Error(`Vendor is closed on ${day}. Staff cannot be scheduled.`));
+          }
+          
+          // Validate each staff slot
+          for (const slot of this[dayField]) {
+            const staffStartMinutes = this.constructor.timeToMinutes(slot.startTime);
+            const staffEndMinutes = this.constructor.timeToMinutes(slot.endTime);
+            
+            // Check if staff hours are within vendor hours
+            if (staffStartMinutes < vendorHours.openMinutes || staffEndMinutes > vendorHours.closeMinutes) {
+              return next(new Error(`Staff working hours must be within vendor hours (${vendorHours.openTime} - ${vendorHours.closeTime}) on ${day}`));
+            }
+            
+            // Check if staff start time is before end time
+            if (staffStartMinutes >= staffEndMinutes) {
+              return next(new Error(`Staff start time must be before end time on ${day}`));
+            }
+          }
+        }
+      }
+    }
+    
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 // COMPOUND INDEXES for common query patterns
 staffSchema.index({ vendorId: 1, status: 1, role: 1 }); // Most common filter
@@ -333,6 +386,25 @@ staffSchema.methods.isAvailableAt = function (date, timeStr) {
   return true;
 };
 
+// Check if time slot is blocked
+staffSchema.methods.isBlockedAt = function (date, timeStr) {
+  if (!this.blockedTimes || this.blockedTimes.length === 0) {
+    return false;
+  }
+
+  const timeMinutes = this.constructor.timeToMinutes(timeStr);
+  const dateString = date.toISOString().split('T')[0];
+
+  return this.blockedTimes.some(blocked => {
+    const blockedDateString = blocked.date.toISOString().split('T')[0];
+    return (
+      blockedDateString === dateString &&
+      timeMinutes >= blocked.startMinutes &&
+      timeMinutes < blocked.endMinutes
+    );
+  });
+};
+
 // Static methods for optimized queries
 staffSchema.statics.findAvailableStaff = function (
   vendorId,
@@ -358,7 +430,7 @@ staffSchema.statics.findAvailableStaff = function (
         dayField +
         " " +
         day.toLowerCase() +
-        "Slots"
+        "Slots blockedTimes"
     )
     .sort({ rating: -1, yearOfExperience: -1 })
     .limit(options.limit || 50);

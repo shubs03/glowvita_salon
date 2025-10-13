@@ -41,7 +41,7 @@ const convertTo24HourFormat = (time12) => {
 // GET working hours for the vendor
 export const GET = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        const vendorId = req.user.userId;
         console.log("req.user:", req.user);
 
         console.log("Fetching working hours for vendor:", vendorId);
@@ -106,7 +106,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 // Update working hours
 export const PUT = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        const vendorId = req.user.userId;
         const updateData = await req.json();
 
         // Validate the update data
@@ -168,7 +168,8 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // Add special hours
 export const POST = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        
+        const vendorId = req.user.userId;
         const { date, isOpen, hours, description } = await req.json();
 
         // Validate the special hours data
@@ -218,7 +219,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 // Remove special hours
 export const DELETE = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id;
+        const vendorId = req.user.userId;
         const url = new URL(req.url);
         const specialHourId = url.searchParams.get('id');
 

@@ -1,11 +1,10 @@
-
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { cn } from '@repo/ui/cn';
 import { User, Users, CheckCircle, ChevronRight, Loader2, AlertCircle, Star } from 'lucide-react';
-import { StaffMember } from '@/hooks/useBookingData';
+import { StaffMember, Service } from '@/hooks/useBookingData';
 
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
@@ -38,6 +37,8 @@ interface Step2StaffProps {
     staff: StaffMember[];
     isLoading: boolean;
     error?: any;
+    selectedService?: Service | null; // Add selected service prop
+    onStaffSelect?: (staff: StaffMember | null) => void; // Add callback for staff selection
 }
 
 export function Step2_Staff({ 
@@ -47,8 +48,59 @@ export function Step2_Staff({
     setCurrentStep,
     staff,
     isLoading,
-    error
+    error,
+    selectedService,
+    onStaffSelect
 }: Step2StaffProps): JSX.Element {
+
+    // Log what we receive as props
+    console.log('Step2_Staff - Props received:', { selectedStaff, currentStep, staff, isLoading, error, selectedService });
+
+    // Filter staff based on selected service
+    const filteredStaff = useMemo(() => {
+        console.log('Step2_Staff - Selected Service:', selectedService);
+        console.log('Step2_Staff - All Staff:', staff);
+        
+        // If no service is selected, show all staff
+        if (!selectedService) {
+            console.log('Step2_Staff - No service selected, returning all staff');
+            return staff;
+        }
+        
+        // If the service doesn't have a staff array, show all staff
+        if (!selectedService.staff || selectedService.staff.length === 0) {
+            console.log('Step2_Staff - Service has no staff array, returning all staff');
+            return staff;
+        }
+        
+        // Filter staff based on the service's staff array
+        // The staff array in the service can contain either staff IDs or staff names
+        const serviceStaff = staff.filter(staffMember => {
+            // Check if staff member ID is in the service's staff array
+            const isIdMatch = selectedService.staff?.includes(staffMember.id);
+            // Check if staff member name is in the service's staff array
+            const isNameMatch = selectedService.staff?.includes(staffMember.name);
+            const result = isIdMatch || isNameMatch;
+            console.log(`Step2_Staff - Checking staff ${staffMember.name} (${staffMember.id}): ID match: ${isIdMatch}, Name match: ${isNameMatch}, Result: ${result}`);
+            return result;
+        });
+        
+        console.log('Step2_Staff - Filtered staff based on service:', serviceStaff);
+        return serviceStaff;
+    }, [staff, selectedService]);
+
+    // Handle staff selection with automatic navigation to Step 3
+    const handleSelectStaff = (staff: StaffMember | null) => {
+        console.log('Step2_Staff - Staff selected:', staff);
+        onSelectStaff(staff);
+        // Call the callback if provided
+        if (onStaffSelect) {
+            console.log('Step2_Staff - Calling onStaffSelect callback with:', staff);
+            onStaffSelect(staff);
+        }
+        // Automatically navigate to Step 3
+        setCurrentStep(3);
+    };
 
     // Loading state
     if (isLoading) {
@@ -113,13 +165,13 @@ export function Step2_Staff({
             <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {/* Any Professional Card */}
+            {/* Any Professional Card */}}
             <div 
                 className={cn(
                     'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',
                     !selectedStaff ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
                 )}
-                onClick={() => onSelectStaff(null)}
+                onClick={() => handleSelectStaff(null)}
             >
                 <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
                     <Users className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -133,14 +185,14 @@ export function Step2_Staff({
                 )}
             </div>
             {/* Staff Member Cards */}
-            {staff && staff.length > 0 ? staff.map((staffMember: StaffMember) => (
+            {filteredStaff && filteredStaff.length > 0 ? filteredStaff.map((staffMember: StaffMember) => (
                 <div 
                     key={staffMember.id}
                     className={cn(
                         'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2 overflow-hidden',
                         selectedStaff?.id === staffMember.id ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
                     )}
-                    onClick={() => onSelectStaff(staffMember)}
+                    onClick={() => handleSelectStaff(staffMember)}
                 >
                     <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
                         <Image 
@@ -177,7 +229,7 @@ export function Step2_Staff({
                 <div className="col-span-full flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <Users className="h-8 w-8 text-muted-foreground" />
-                        <p className="text-muted-foreground">No staff members available. You can still book with any professional.</p>
+                        <p className="text-muted-foreground">No staff members available for this service. You can still book with any professional.</p>
                     </div>
                 </div>
             )}

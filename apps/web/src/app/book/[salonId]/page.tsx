@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
@@ -20,6 +19,9 @@ function BookingPageContent() {
   const params = useParams();
   const { salonId } = params;
 
+  // State for tracking the selected service
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+
   // Fetch dynamic data using our custom hook
   const {
     services,
@@ -31,6 +33,9 @@ function BookingPageContent() {
     isLoading,
     error
   } = useBookingData(salonId as string);
+
+  // Fetch service-specific staff data when a service is selected
+  const serviceStaffData = useBookingData(salonId as string, selectedService?.id);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
@@ -54,6 +59,7 @@ function BookingPageContent() {
           const matchingService = services.find((s: Service) => s.name === serviceData.name);
           if (matchingService) {
             setSelectedServices([matchingService]);
+            setSelectedService(matchingService); // Set the selected service
             // Clear the stored service after using it
             sessionStorage.removeItem('selectedService');
           }
@@ -157,11 +163,23 @@ function BookingPageContent() {
     setSelectedServices(prev => {
       const isSelected = prev.some(s => s.id === service.id);
       if (isSelected) {
+        // If deselecting the service, clear the selected service if it matches
+        if (selectedService?.id === service.id) {
+          setSelectedService(null);
+        }
         return prev.filter(s => s.id !== service.id);
       } else {
+        // When selecting a service, set it as the selected service
+        setSelectedService(service);
         return [...prev, service];
       }
     });
+  };
+
+  // Handle staff selection with automatic navigation to Step 3
+  const handleSelectStaff = (staff: StaffMember | null) => {
+    setSelectedStaff(staff);
+    // Note: Navigation to Step 3 is now handled in Step2_Staff component
   };
 
   const renderStepContent = () => {
@@ -178,18 +196,21 @@ function BookingPageContent() {
                 categories={categories}
                 isLoading={false} // Already handled at page level
                 error={null}
+                onServiceSelect={setSelectedService} // Pass the callback to set selected service
               />
             );
         case 2:
             return (
               <Step2_Staff 
                 selectedStaff={selectedStaff}
-                onSelectStaff={setSelectedStaff}
+                onSelectStaff={handleSelectStaff}
                 currentStep={currentStep}
                 setCurrentStep={setCurrentStep}
-                staff={staff}
-                isLoading={false} // Already handled at page level
-                error={null}
+                staff={serviceStaffData.staff} // Use service-specific staff data
+                isLoading={serviceStaffData.isLoading} // Use service-specific loading state
+                error={serviceStaffData.error} // Use service-specific error state
+                selectedService={selectedService} // Pass the selected service
+                onStaffSelect={setSelectedStaff} // Pass the callback to set selected staff
               />
             );
         case 3:
@@ -203,10 +224,10 @@ function BookingPageContent() {
                 setCurrentStep={setCurrentStep}
                 selectedStaff={selectedStaff}
                 onSelectStaff={setSelectedStaff}
-                staff={staff}
+                staff={serviceStaffData.staff} // Use service-specific staff data
                 workingHours={workingHours}
-                isLoading={false} // Already handled at page level
-                error={null}
+                isLoading={serviceStaffData.isLoading} // Use service-specific loading state
+                error={serviceStaffData.error} // Use service-specific error state
               />
             );
         default:

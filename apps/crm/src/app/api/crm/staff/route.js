@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import StaffModel from '@repo/lib/models/Vendor/Staff.model';
 import _db from '@repo/lib/db';
@@ -115,6 +114,11 @@ export const POST = authMiddlewareCrm(async (req) => {
     } catch (error) {
         console.error('Error creating staff:', error);
         
+        // Handle validation errors
+        if (error.name === 'ValidationError' || error.message.includes('Vendor is closed') || error.message.includes('Staff working hours must be within vendor hours')) {
+            return NextResponse.json({ message: error.message }, { status: 400 });
+        }
+        
         if (error.code === 11000) {
             const duplicateField = Object.keys(error.keyPattern)[0];
             const userType = req.user.role === 'doctor' ? 'doctor' : 'vendor';
@@ -148,11 +152,13 @@ export const PUT = authMiddlewareCrm(async (req) => {
             return NextResponse.json({ message: "Staff ID is required for update" }, { status: 400 });
         }
         
+        // Find the existing staff member
         const staff = await StaffModel.findOne({ _id: _id, vendorId: ownerId });
         if (!staff) {
             return NextResponse.json({ message: "Staff not found or access denied" }, { status: 404 });
         }
         
+        // Check for email conflicts
         if (updateData.emailAddress && updateData.emailAddress !== staff.emailAddress) {
             const existingEmailStaff = await StaffModel.findOne({ 
                 vendorId: ownerId, 
@@ -164,6 +170,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
             }
         }
         
+        // Check for mobile number conflicts
         if (updateData.mobileNo && updateData.mobileNo !== staff.mobileNo) {
             const existingMobileStaff = await StaffModel.findOne({ 
                 vendorId: ownerId, 
@@ -175,16 +182,86 @@ export const PUT = authMiddlewareCrm(async (req) => {
             }
         }
         
+        // Handle password update
         if (updateData.password && updateData.password.trim() !== '') {
             updateData.password = await bcrypt.hash(updateData.password, 10);
         } else {
             delete updateData.password;
         }
 
+        // Create a temporary staff instance to validate working hours before updating
+        // This is necessary because findByIdAndUpdate doesn't trigger pre-save hooks
+        const updatedStaffData = {
+            ...staff.toObject(),
+            ...updateData
+        };
+        
+        // Only run validation if working hours are being modified
+        const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        let needsValidation = false;
+        
+        for (const day of dayNames) {
+            const dayField = `${day}Slots`;
+            if (updateData.hasOwnProperty(dayField)) {
+                needsValidation = true;
+                break;
+            }
+        }
+        
+        if (needsValidation) {
+            // Dynamically import VendorWorkingHours to avoid circular dependency
+            const { default: VendorWorkingHours } = await import('@repo/lib/models/Vendor/VendorWorkingHours.model');
+            
+            for (const day of dayNames) {
+                const dayAvailableField = `${day}Available`;
+                const dayField = `${day}Slots`;
+                
+                // Check if this day is being updated
+                if (updateData.hasOwnProperty(dayField)) {
+                    // Only validate if the day is available and has slots defined
+                    if (updatedStaffData[dayAvailableField] && updatedStaffData[dayField] && updatedStaffData[dayField].length > 0) {
+                        // Get vendor working hours for the specific day
+                        const vendorHours = await VendorWorkingHours.getVendorHoursForDay(ownerId, day);
+                        
+                        // If vendor is closed on this day, staff cannot work
+                        if (!vendorHours) {
+                            return NextResponse.json({ message: `Vendor is closed on ${day}. Staff cannot be scheduled.` }, { status: 400 });
+                        }
+                        
+                        // Validate each staff slot
+                        for (const slot of updatedStaffData[dayField]) {
+                            const staffStartMinutes = StaffModel.timeToMinutes(slot.startTime);
+                            const staffEndMinutes = StaffModel.timeToMinutes(slot.endTime);
+                            
+                            // Check if staff hours are within vendor hours
+                            if (staffStartMinutes < vendorHours.openMinutes || staffEndMinutes > vendorHours.closeMinutes) {
+                                return NextResponse.json({ message: `Staff working hours must be within vendor hours (${vendorHours.openTime} - ${vendorHours.closeTime}) on ${day}` }, { status: 400 });
+                            }
+                            
+                            // Check if staff start time is before end time
+                            if (staffStartMinutes >= staffEndMinutes) {
+                                return NextResponse.json({ message: `Staff start time must be before end time on ${day}` }, { status: 400 });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update the staff member
         const updatedStaff = await StaffModel.findByIdAndUpdate(_id, updateData, { new: true });
         
         return NextResponse.json(updatedStaff, { status: 200 });
     } catch (error) {
+        console.error('Error updating staff:', error);
+        
+        // Handle validation errors
+        if (error.name === 'ValidationError' || 
+            (error.message && (error.message.includes('Vendor is closed') || 
+                              error.message.includes('Staff working hours must be within vendor hours')))) {
+            return NextResponse.json({ message: error.message }, { status: 400 });
+        }
+        
         if (error.code === 11000) {
             return NextResponse.json({ message: "A staff member with these details already exists." }, { status: 409 });
         }

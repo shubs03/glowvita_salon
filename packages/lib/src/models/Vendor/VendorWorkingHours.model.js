@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 const workingDaySchema = new mongoose.Schema(
@@ -31,13 +30,12 @@ const vendorWorkingHoursSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Vendor',
       required: true,
-      unique: true,
-      index: true,
+      unique: true, // This already creates an index, no need for separate index: true
     },
     hrs_vid: {
       type: Number,
       required: true,
-      unique: true,
+      unique: true, // This already creates an index, no need for separate index: true
       default: () => Date.now(),
     },
     timezone: {
@@ -75,9 +73,7 @@ const vendorWorkingHoursSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Indexes for optimized querying
-vendorWorkingHoursSchema.index({ vendor: 1 });
-vendorWorkingHoursSchema.index({ hrs_vid: 1 });
+// Indexes for optimized querying (removed duplicates)
 vendorWorkingHoursSchema.index({ "specialHours.date": 1 });
 vendorWorkingHoursSchema.index({ createdAt: -1 });
 vendorWorkingHoursSchema.index({ updatedAt: -1 });
@@ -174,6 +170,40 @@ vendorWorkingHoursSchema.methods.isTimeInRange = function (time, start, end) {
   const endTime = parseTime(end);
 
   return target >= startTime && target <= endTime;
+};
+
+// Helper method to convert 12-hour format to minutes
+vendorWorkingHoursSchema.statics.timeToMinutes = function (timeStr) {
+  const [timePart, modifier] = timeStr.split(/([AP]M)/);
+  let [hours, minutes] = timePart.split(':').map(Number);
+  
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+  
+  return hours * 60 + minutes;
+};
+
+// Method to get vendor working hours for a specific day
+vendorWorkingHoursSchema.statics.getVendorHoursForDay = async function (vendorId, day) {
+  const vendorHours = await this.findOne({ vendor: vendorId });
+  
+  if (!vendorHours) {
+    return null;
+  }
+  
+  const dayHours = vendorHours.workingHours[day.toLowerCase()];
+  
+  if (!dayHours || !dayHours.isOpen || !dayHours.hours.length) {
+    return null;
+  }
+  
+  // Return the first time slot (assuming single time slot per day)
+  return {
+    openTime: dayHours.hours[0].openTime,
+    closeTime: dayHours.hours[0].closeTime,
+    openMinutes: this.timeToMinutes(dayHours.hours[0].openTime),
+    closeMinutes: this.timeToMinutes(dayHours.hours[0].closeTime)
+  };
 };
 
 const VendorWorkingHoursModel =
