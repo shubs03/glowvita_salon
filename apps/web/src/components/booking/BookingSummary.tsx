@@ -9,7 +9,7 @@ import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, C
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { cn } from '@repo/ui/cn';
-import { Service, StaffMember, SalonInfo } from '@/hooks/useBookingData';
+import { Service, StaffMember, SalonInfo, ServiceStaffAssignment } from '@/hooks/useBookingData';
 
 interface BookingSummaryProps {
     selectedServices: Service[];
@@ -20,6 +20,7 @@ interface BookingSummaryProps {
     currentStep: number;
     isMobileFooter?: boolean;
     salonInfo?: SalonInfo | null;
+    serviceStaffAssignments?: ServiceStaffAssignment[]; // For multi-service bookings
 }
 
 export function BookingSummary({ 
@@ -30,7 +31,8 @@ export function BookingSummary({
   onNextStep, 
   currentStep,
   isMobileFooter = false,
-  salonInfo
+  salonInfo,
+  serviceStaffAssignments = []
 }: BookingSummaryProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const subtotal = selectedServices.reduce((acc, service) => acc + parseFloat(service.price), 0);
@@ -48,7 +50,11 @@ export function BookingSummary({
     
     const stepDetails = [
       { step: 1, label: 'Select Staff', enabled: selectedServices.length > 0 },
-      { step: 2, label: 'Find a Time', enabled: !!selectedStaff },
+      { step: 2, label: 'Find a Time', 
+        enabled: serviceStaffAssignments && serviceStaffAssignments.length > 0 
+          ? serviceStaffAssignments.every(a => a.staff !== undefined) 
+          : !!selectedStaff 
+      },
       { step: 3, label: 'Confirm Booking', enabled: !!selectedTime },
       { step: 4, label: 'Finish', enabled: false }, // Final step
     ];
@@ -80,13 +86,28 @@ export function BookingSummary({
                                 </div>
                             </div>
                             <Separator />
-                            {selectedServices.map((service: Service) => (
-                                <div key={service.id} className="flex justify-between items-center text-sm">
-                                    <span className="line-clamp-2">{service.name}</span>
-                                    <span className="font-medium">₹{service.price}</span>
-                                </div>
-                            ))}
-                            {selectedStaff && <p className="text-sm">With: <span className="font-medium">{selectedStaff.name}</span></p>}
+                            {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
+                                serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
+                                    <div key={assignment.service.id} className="flex justify-between items-center text-sm">
+                                        <span className="line-clamp-2">{assignment.service.name}</span>
+                                        <span className="font-medium">₹{assignment.service.price}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                selectedServices.map((service: Service) => (
+                                    <div key={service.id} className="flex justify-between items-center text-sm">
+                                        <span className="line-clamp-2">{service.name}</span>
+                                        <span className="font-medium">₹{service.price}</span>
+                                    </div>
+                                ))
+                            )}
+                            {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
+                                serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
+                                    <p key={assignment.service.id} className="text-sm">With: <span className="font-medium">{assignment.staff?.name || 'Any Professional'}</span></p>
+                                ))
+                            ) : (
+                                selectedStaff && <p className="text-sm">With: <span className="font-medium">{selectedStaff.name}</span></p>
+                            )}
                             {selectedTime && <p className="text-sm">On: <span className="font-medium">{format(selectedDate, 'MMM d')} at {selectedTime}</span></p>}
                          </div>
                     )}
@@ -155,8 +176,18 @@ export function BookingSummary({
             <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-md"><User className="h-4 w-4 text-primary" /></div>
                 <div>
-                    <p className="text-xs text-muted-foreground">Professional</p>
-                    <p className="font-medium text-sm">{selectedStaff?.name || 'Any Professional'}</p>
+                    <p className="text-xs text-muted-foreground">Professional(s)</p>
+                    {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
+                        <div className="space-y-1">
+                            {serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
+                                <p key={assignment.service.id} className="font-medium text-sm">
+                                    {assignment.service.name}: {assignment.staff?.name || 'Any Professional'}
+                                </p>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="font-medium text-sm">{selectedStaff?.name || 'Any Professional'}</p>
+                    )}
                 </div>
             </div>
           </div>

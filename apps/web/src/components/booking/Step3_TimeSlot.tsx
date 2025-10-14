@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { cn } from '@repo/ui/cn';
-import { StaffMember, WorkingHours } from '@/hooks/useBookingData';
+import { StaffMember, WorkingHours, TimeSlot } from '@/hooks/useBookingData';
 
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
@@ -155,7 +155,7 @@ export function Step3_TimeSlot({
       console.log(`Step3_TimeSlot - Using staff-specific hours for ${dayName}`);
       
       // Get the staff's slots for the selected day
-      let staffSlots = [];
+      let staffSlots: TimeSlot[] = [];
       switch (dayName.toLowerCase()) {
         case 'monday':
           staffSlots = selectedStaff.mondaySlots || [];
