@@ -1,0 +1,10 @@
+export { HeroSection } from './HeroSection';
+export { SpecialtiesSection } from './SpecialtiesSection';
+export { CommonHealthConcernsSection } from './CommonHealthConcernsSection';
+export { OurDoctorsSection } from './OurDoctorsSection';
+export { StatSection } from './StatSection';
+export { BenefitsSection } from './BenefitsSection';
+export { TestimonialsSection } from './TestimonialsSection';
+export { FAQSection } from './FAQSection';
+export { CTASection } from './CTASection';
+export { DownloadAppSection } from './DownloadAppSection';
