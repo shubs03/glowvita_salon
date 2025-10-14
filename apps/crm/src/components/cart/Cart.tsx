@@ -14,6 +14,7 @@ import { Label } from '@repo/ui/label';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useDispatch } from 'react-redux';
 import { clearCart } from '@repo/store';
+import { useRouter } from 'next/navigation';
 
 interface CartItem {
   _id: string;
@@ -42,6 +43,7 @@ interface CartProps {
 export function Cart({ isOpen, onOpenChange }: CartProps) {
   const { user, isCrmAuthenticated } = useCrmAuth();
   const dispatch = useDispatch();
+  const router = useRouter();
 
   const { data: cartData, isLoading: isCartLoading, refetch } = useGetCartQuery(user?._id, {
     skip: !isCrmAuthenticated || !user?._id,
@@ -218,7 +220,10 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
               <Button 
                 size="lg"
                 className="px-8 py-3 rounded-xl" 
-                onClick={() => onOpenChange(false)}
+                onClick={() => {
+                  onOpenChange(false);
+                  router.push('/marketplace');
+                }}
               >
                 Continue Shopping
               </Button>
