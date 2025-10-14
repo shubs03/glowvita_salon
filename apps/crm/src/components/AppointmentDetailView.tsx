@@ -30,6 +30,19 @@ interface PaymentDetails {
   paymentStatus: 'pending' | 'partial' | 'paid' | 'refunded';
 }
 
+// Service item interface for multi-service appointments
+interface ServiceItem {
+  _id?: string;
+  service: string;
+  serviceName: string;
+  staff: string;
+  staffName: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  amount: number;
+}
+
 // Create a new interface that combines the properties we need
 interface Appointment {
   // Properties from the original FormAppointment interface
@@ -54,6 +67,10 @@ interface Appointment {
   paymentStatus?: string;
   createdAt?: string;
   updatedAt?: string;
+  
+  // Multi-service appointment properties
+  isMultiService?: boolean;
+  serviceItems?: ServiceItem[];
   
   // Additional properties used in this component
   payment?: PaymentDetails;
@@ -857,6 +874,38 @@ export function AppointmentDetailView({
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Service Items for Multi-Service Appointments */}
+                  {appointment.isMultiService && appointment.serviceItems && appointment.serviceItems.length > 0 && (
+                    <div className="bg-background p-3 rounded-lg border shadow-sm">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                          <ClipboardList className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Services</p>
+                          <p className="text-lg font-semibold text-foreground">Multi-Service Appointment</p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        {appointment.serviceItems.map((item: ServiceItem, index: number) => (
+                          <div key={item._id || index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                            <div className="flex-1">
+                              <div className="font-medium">{item.serviceName}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {item.staffName} • {item.startTime} - {item.endTime}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium">₹{item.amount?.toFixed(2) || '0.00'}</div>
+                              <div className="text-xs text-muted-foreground">{item.duration} min</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="bg-background p-3 rounded-lg border shadow-sm">
                     <div className="flex items-center space-x-3">

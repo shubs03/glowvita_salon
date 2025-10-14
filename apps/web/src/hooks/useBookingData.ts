@@ -80,6 +80,80 @@ export interface SalonInfo {
   phone?: string;
 }
 
+// New interface for service-staff assignment
+export interface ServiceStaffAssignment {
+  service: Service;
+  staff: StaffMember | null;
+}
+
+// Helper function to convert duration string to minutes
+export const convertDurationToMinutes = (duration: string): number => {
+  const match = duration.match(/(\d+)\s*(min|hour|hours)/);
+  if (!match) return 60; // default to 60 minutes
+  
+  const value = parseInt(match[1]);
+  const unit = match[2];
+  
+  if (unit === 'min') return value;
+  if (unit === 'hour' || unit === 'hours') return value * 60;
+  return 60; // default to 60 minutes
+};
+
+// Helper function to calculate total duration for multiple services
+export const calculateTotalDuration = (services: Service[]): number => {
+  return services.reduce((total, service) => {
+    return total + convertDurationToMinutes(service.duration);
+  }, 0);
+};
+
+// Helper function to validate staff-service compatibility
+export const isStaffCompatibleWithService = (staff: StaffMember, service: Service): boolean => {
+  // If service has no staff array, all staff are compatible
+  if (!service.staff || service.staff.length === 0) {
+    return true;
+  }
+  
+  // Check if staff member ID is in the service's staff array
+  const isIdMatch = service.staff.includes(staff.id);
+  // Check if staff member name is in the service's staff array
+  const isNameMatch = service.staff.includes(staff.name);
+  
+  return isIdMatch || isNameMatch;
+};
+
+// Helper function to validate all staff-service assignments
+export const validateServiceStaffAssignments = (assignments: ServiceStaffAssignment[]): boolean => {
+  return assignments.every(assignment => {
+    // If no staff assigned, it's valid ("Any Professional")
+    if (!assignment.staff) {
+      return true;
+    }
+    
+    // Check if assigned staff is compatible with the service
+    return isStaffCompatibleWithService(assignment.staff, assignment.service);
+  });
+};
+
+// Helper function to find overlapping availability for multiple staff members
+export const findOverlappingAvailability = (assignments: ServiceStaffAssignment[], date: Date, workingHours: WorkingHours[]): string[] => {
+  // If all assignments are for "Any Professional", use vendor working hours
+  const allAnyProfessional = assignments.every(assignment => !assignment.staff);
+  if (allAnyProfessional) {
+    return [];
+  }
+  
+  // If only one staff member assigned, use their availability
+  const assignedStaff = assignments.filter(assignment => assignment.staff);
+  if (assignedStaff.length === 1) {
+    return [];
+  }
+  
+  // For multiple staff members, find overlapping availability
+  // This is a simplified implementation - in a real app, you would implement
+  // a more sophisticated algorithm to find overlapping time slots
+  return [];
+};
+
 /**
  * Hook to fetch salon services with formatted data for the booking flow
  */

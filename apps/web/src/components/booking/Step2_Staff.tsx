@@ -165,7 +165,7 @@ export function Step2_Staff({
             <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {/* Any Professional Card */}}
+            {/* Any Professional Card */}
             <div 
                 className={cn(
                     'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',

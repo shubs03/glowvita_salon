@@ -1365,7 +1365,11 @@ export const glowvitaApi = createApi({
     verifyPayment: builder.mutation({
       query: (verificationData) => ({ url: "/payments/verify", method: "POST", body: verificationData }),
     }),
-
+    
+    // Public Appointment Endpoint
+    createPublicAppointment: builder.mutation({
+      query: (appointmentData) => ({ url: "/appointments", method: "POST", body: appointmentData }),
+    }),
 
   }),
 });
@@ -1557,4 +1561,6 @@ export const {
   useCreatePatientMutation,
   useUpdatePatientMutation,
   useDeletePatientMutation,
+  // Public Appointment Hook
+  useCreatePublicAppointmentMutation,
 } = glowvitaApi;
