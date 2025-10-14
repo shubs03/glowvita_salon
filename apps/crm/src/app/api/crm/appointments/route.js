@@ -106,7 +106,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 
         // Required fields validation
         const requiredFields = [
-          'clientName',   // This is the client's name
+          'clientName',
           'service',
           'serviceName',
           'staff',
@@ -116,13 +116,16 @@ export const POST = authMiddlewareCrm(async (req) => {
           'endTime',
           'duration',
           'amount',
-          'totalAmount',
-          'paymentStatus',
-          'service',
-          'serviceName'
+          'totalAmount'
         ];
         
-        const missingFields = requiredFields.filter(field => !body[field]);
+        const missingFields = requiredFields.filter(field => {
+          // Special handling for staff field - it can be null but must be present
+          if (field === 'staff') {
+            return body[field] === undefined;
+          }
+          return !body[field];
+        });
         
         if (missingFields.length > 0) {
             return NextResponse.json(

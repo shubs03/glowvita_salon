@@ -48,6 +48,7 @@ interface Product {
   rating: number;
   reviewCount: number;
   vendorName: string;
+  vendorId: string;
   isNew?: boolean;
   description: string;
   category: string;
@@ -239,6 +240,7 @@ export default function AllProductsPage() {
       rating: 4.8,
       reviewCount: 324,
       vendorName: "Aura Cosmetics",
+      vendorId: "vendor-1",
       isNew: true,
       description:
         "A powerful vitamin C serum that brightens and evens skin tone",
@@ -253,6 +255,7 @@ export default function AllProductsPage() {
       rating: 4.9,
       reviewCount: 567,
       vendorName: "Serenity Skincare",
+      vendorId: "vendor-2",
       description: "Rich anti-aging cream with peptides and hyaluronic acid",
       category: "skincare",
     },
@@ -265,6 +268,7 @@ export default function AllProductsPage() {
       rating: 4.7,
       reviewCount: 892,
       vendorName: "Chroma Beauty",
+      vendorId: "vendor-3",
       isNew: true,
       description: "Set of 6 long-lasting matte lipsticks in trending shades",
       category: "cosmetics",
@@ -278,6 +282,7 @@ export default function AllProductsPage() {
       rating: 4.6,
       reviewCount: 445,
       vendorName: "Earthly Essentials",
+      vendorId: "vendor-4",
       description: "Natural cleansing oil that removes makeup and impurities",
       category: "facecare",
     },
@@ -290,7 +295,8 @@ export default function AllProductsPage() {
       rating: 4.8,
       reviewCount: 234,
       vendorName: "Earthly Essentials",
-      description: "Set of 3 rich body butters with natural ingblueients",
+      vendorId: "vendor-4",
+      description: "Set of 3 rich body butters with natural ingredients",
       category: "bodycare",
     },
     {
@@ -302,6 +308,7 @@ export default function AllProductsPage() {
       rating: 4.9,
       reviewCount: 678,
       vendorName: "Chroma Beauty",
+      vendorId: "vendor-3",
       description: "Professional eyeshadow palette with 12 blendable shades",
       category: "cosmetics",
     },
@@ -314,6 +321,7 @@ export default function AllProductsPage() {
       rating: 4.5,
       reviewCount: 321,
       vendorName: "Serenity Skincare",
+      vendorId: "vendor-2",
       description: "Alcohol-free toner that balances and hydrates skin",
       category: "skincare",
     },
@@ -326,6 +334,7 @@ export default function AllProductsPage() {
       rating: 4.7,
       reviewCount: 156,
       vendorName: "Aura Cosmetics",
+      vendorId: "vendor-1",
       description:
         "Sophisticated floral fragrance with notes of jasmine and rose",
       category: "fragrance",
@@ -339,6 +348,7 @@ export default function AllProductsPage() {
       rating: 4.4,
       reviewCount: 289,
       vendorName: "Earthly Essentials",
+      vendorId: "vendor-4",
       description: "Natural exfoliating scrub with bamboo particles",
       category: "facecare",
     },
@@ -351,6 +361,7 @@ export default function AllProductsPage() {
       rating: 4.6,
       reviewCount: 445,
       vendorName: "Chroma Beauty",
+      vendorId: "vendor-3",
       description: "Buildable full-coverage foundation stick",
       category: "cosmetics",
     },
@@ -363,6 +374,7 @@ export default function AllProductsPage() {
       rating: 4.8,
       reviewCount: 512,
       vendorName: "Serenity Skincare",
+      vendorId: "vendor-2",
       isNew: true,
       description: "Advanced night serum with retinol and peptides",
       category: "skincare",
@@ -376,6 +388,7 @@ export default function AllProductsPage() {
       rating: 4.3,
       reviewCount: 178,
       vendorName: "Aura Cosmetics",
+      vendorId: "vendor-1",
       description: "Set of 4 high-shine lip glosses with mirror finish",
       category: "cosmetics",
     },
@@ -1006,8 +1019,7 @@ export default function AllProductsPage() {
                   </h2>
                   <p className="text-xl text-primary-foreground/80 max-w-7xl mx-auto leading-relaxed mb-6">
                     Become part of our vibrant beauty community and unlock
-                    exclusive offers and early access to new arrivals. 
-                    Subscribe to our newsletter for expert tips, special rewards, and the
+                    exclusive offers and early access to new arrivals. Subscribe to our newsletter for expert tips, special rewards, and the
                     latest updates. Discover a world of beauty, wellness, and
                     inspiration delivered straight to your inbox every week.
                     Join us on this transformative journey of self-care and

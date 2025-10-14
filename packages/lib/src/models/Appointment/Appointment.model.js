@@ -1,8 +1,48 @@
 import mongoose from 'mongoose';
 import ServiceModel from '../admin/Service.model';
+import StaffModel from '../Vendor/Staff.model';
 
-// Ensure the Service model is registered
+// Ensure the Service and Staff models are registered
 const Service = mongoose.models.Service || ServiceModel;
+const Staff = mongoose.models.Staff || StaffModel;
+
+// Schema for individual service items in a multi-service appointment
+const serviceItemSchema = new mongoose.Schema({
+    service: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Service',
+        required: true
+    },
+    serviceName: {
+        type: String,
+        required: true
+    },
+    staff: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Staff',
+        required: false // Allow null for "Any Professional"
+    },
+    staffName: {
+        type: String,
+        required: true
+    },
+    startTime: {
+        type: String,
+        required: true
+    },
+    endTime: {
+        type: String,
+        required: true
+    },
+    duration: {
+        type: Number,
+        required: true
+    },
+    amount: {
+        type: Number,
+        required: true
+    }
+});
 
 const appointmentSchema = new mongoose.Schema({
     vendorId: {
@@ -14,10 +54,12 @@ const appointmentSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Client'
     },
+    // For backward compatibility, keep the main staff/service fields
+    // For multi-service appointments, these will represent the primary service
     staff: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Staff',
-        required: true
+        required: false // Changed to false to allow null values for "Any Professional"
     },
     staffName: {
         type: String,
@@ -70,6 +112,16 @@ const appointmentSchema = new mongoose.Schema({
     },
     notes: {
         type: String
+    },
+    // New field for multi-service appointments
+    serviceItems: {
+        type: [serviceItemSchema],
+        default: []
+    },
+    // Flag to indicate if this is a multi-service appointment
+    isMultiService: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
