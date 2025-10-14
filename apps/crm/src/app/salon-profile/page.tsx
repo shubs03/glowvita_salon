@@ -827,69 +827,197 @@ const OpeningHoursWithPropsTab = ({
     setHours(newHours);
   };
 
+  // Function to apply the first open day's hours to all other open days
+  const applyTimeForAll = async () => {
+    // Find the first open day
+    const firstOpenDay = hours.find(hour => hour.isOpen);
+    
+    // If no day is open, show a message and return
+    if (!firstOpenDay) {
+      toast.info('No open days found. Please open at least one day.');
+      return;
+    }
+    
+    // Apply the hours from the first open day to all other open days
+    const newHours = hours.map(hour => {
+      // Only update days that are open
+      if (hour.isOpen) {
+        return {
+          ...hour,
+          open: firstOpenDay.open,
+          close: firstOpenDay.close
+        };
+      }
+      // Return closed days unchanged
+      return hour;
+    });
+    
+    setHours(newHours);
+    toast.success(`Applied ${firstOpenDay.open} to ${firstOpenDay.close} to all open days`);
+    
+    // Automatically save the changes
+    try {
+      // Transform hours array to the expected object format
+      const workingHoursObject: Record<string, any> = {};
+      const dayMapping: Record<string, string> = {
+        'Monday': 'monday',
+        'Tuesday': 'tuesday', 
+        'Wednesday': 'wednesday',
+        'Thursday': 'thursday',
+        'Friday': 'friday',
+        'Saturday': 'saturday',
+        'Sunday': 'sunday'
+      };
+
+      newHours.forEach(hour => {
+        const dayKey = dayMapping[hour.day];
+        if (dayKey) {
+          workingHoursObject[dayKey] = {
+            isOpen: hour.isOpen,
+            hours: hour.isOpen && hour.open && hour.close ? [
+              {
+                openTime: hour.open,
+                closeTime: hour.close
+              }
+            ] : []
+          };
+        }
+      });
+
+      const result = await updateWorkingHours({
+        workingHours: workingHoursObject,
+        timezone: 'Asia/Kolkata',
+      }).unwrap();
+
+      // Refetch working hours data to get the updated values
+      refetchWorkingHours();
+
+      // Update the vendor profile with the new opening hours
+      setVendor((prev: any) => ({
+        ...prev,
+        openingHours: newHours
+      }));
+
+      // Show success message
+      toast.success('Working hours applied and saved successfully!');
+    } catch (error: any) {
+      console.error('Error saving working hours:', error);
+      toast.error(error?.data?.message || 'Failed to save working hours. Please try again.');
+    }
+  };
+
   const {data : workingHoursData} = useGetWorkingHoursQuery(undefined);
   console.log("workingHoursData", workingHoursData);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Opening Hours</CardTitle>
-        <CardDescription>Set your weekly business hours.</CardDescription>
+        <CardTitle className="text-xl font-semibold">Opening Hours</CardTitle>
+        <CardDescription>Set your weekly business hours</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {hours &&
-          hours.map((hour, index) => (
-            <div key={hour.day} className="grid grid-cols-4 items-center gap-4">
-              <div className="col-span-1 flex items-center">
-                <Checkbox
-                  id={hour.day}
-                  checked={hour.isOpen}
-                  onCheckedChange={(checked) => {
-                    updateHours(index, { isOpen: !!checked });
-                  }}
-                  className="mr-2"
-                />
-                <Label htmlFor={hour.day} className="font-medium">
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+          <div className="grid grid-cols-12 gap-4 px-4 py-3 text-sm font-medium text-muted-foreground border-b bg-muted/50">
+            <div className="col-span-3">Day</div>
+            <div className="col-span-3">Open Time</div>
+            <div className="col-span-3">Close Time</div>
+            <div className="col-span-2">Status</div>
+            <div className="col-span-1 text-center">Open</div>
+          </div>
+          
+          {hours &&
+            hours.map((hour, index) => (
+              <div 
+                key={hour.day} 
+                className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors hover:bg-muted/30 ${
+                  index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                }`}
+              >
+                <div className="col-span-3 font-medium flex items-center gap-2">
                   {hour.day}
-                </Label>
+                  {index === 0 && (
+                    <Button
+                      onClick={applyTimeForAll}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs rounded-full hover:scale-105 transition-transform"
+                      disabled={isSaving}
+                    >
+                      Apply to All
+                    </Button>
+                  )}
+                </div>
+                <div className="col-span-3">
+                  <Input
+                    type="time"
+                    value={hour.open}
+                    disabled={!hour.isOpen}
+                    onChange={(e) => {
+                      updateHours(index, { open: e.target.value });
+                    }}
+                    className="h-9 border-muted-foreground/20"
+                  />
+                </div>
+                <div className="col-span-3">
+                  <Input
+                    type="time"
+                    value={hour.close}
+                    disabled={!hour.isOpen}
+                    onChange={(e) => {
+                      updateHours(index, { close: e.target.value });
+                    }}
+                    className="h-9 border-muted-foreground/20"
+                  />
+                </div>
+                <div className="col-span-2">
+                  {hour.isOpen ? (
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                      <div className="mr-1.5 h-2 w-2 rounded-full bg-green-500"></div>
+                      Open
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                      <div className="mr-1.5 h-2 w-2 rounded-full bg-red-500"></div>
+                      Closed
+                    </span>
+                  )}
+                </div>
+                <div className="col-span-1 flex justify-center">
+                  <div 
+                    onClick={() => updateHours(index, { isOpen: !hour.isOpen })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors ${
+                      hour.isOpen ? 'bg-blue-400' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span 
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        hour.isOpen ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="col-span-1">
-                <Input
-                  type="time"
-                  value={hour.open}
-                  disabled={!hour.isOpen}
-                  onChange={(e) => {
-                    updateHours(index, { open: e.target.value });
-                  }}
-                />
-              </div>
-              <div className="col-span-1">
-                <Input
-                  type="time"
-                  value={hour.close}
-                  disabled={!hour.isOpen}
-                  onChange={(e) => {
-                    updateHours(index, { close: e.target.value });
-                  }}
-                />
-              </div>
-              <div className="col-span-1 text-right">
-                {hour.isOpen ? (
-                  <span className="text-green-600">Open</span>
-                ) : (
-                  <span className="text-red-600">Closed</span>
-                )}
-              </div>
-            </div>
-          ))}
+            ))}
+        </div>
+        
+        <div className="flex justify-end pt-4">
+          <Button 
+            onClick={handleSave} 
+            className="px-6"
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+                Saving Changes
+              </>
+            ) : (
+              "Save Hours"
+            )}
+          </Button>
+        </div>
       </CardContent>
-
-      <CardFooter>
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save Hours"}
-        </Button>
-      </CardFooter>
     </Card>
   );
 };
@@ -913,7 +1041,7 @@ const CategoriesTab = () => (
 // MAIN PAGE COMPONENT
 export default function SalonProfilePage() {
   const { user } = useCrmAuth();
-  const { data: vendorData, isLoading, isError, refetch } = useGetVendorProfileQuery(undefined, {
+  const { data: vendorData, isLoading, isError, refetch, error } = useGetVendorProfileQuery(undefined, {
     skip: !user?._id
   });
   
@@ -927,6 +1055,7 @@ export default function SalonProfilePage() {
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (vendorData?.data) {
@@ -997,26 +1126,83 @@ export default function SalonProfilePage() {
     setPreviewImage(null);
   };
 
+  // Auto-retry on error (up to 3 times)
+  useEffect(() => {
+    if (isError && retryCount < 3) {
+      const retryTimer = setTimeout(() => {
+        refetch();
+        refetchWorkingHours();
+        setRetryCount(prev => prev + 1);
+      }, 1000);
+      
+      return () => clearTimeout(retryTimer);
+    }
+  }, [isError, retryCount, refetch, refetchWorkingHours]);
+
   if (isLoading || isLoadingWorkingHours) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p>Loading vendor profile...</p>
+          <p className="text-sm text-muted-foreground mt-2">Please wait while we fetch your data</p>
         </div>
       </div>
     );
   }
 
-  if (isError || !localVendor) {
+  // Show error only if we've exhausted retries or have a critical error
+  if ((isError && retryCount >= 3) || (!isLoading && !localVendor && !isError)) {
+    // Extract error message safely
+    let errorMessage = 'No profile data available';
+    if (error) {
+      try {
+        errorMessage = `Error: ${JSON.stringify(error)}`;
+      } catch (e) {
+        errorMessage = 'Error: Unknown error occurred';
+      }
+    }
+
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-red-600">Error loading vendor profile</p>
-          <Button onClick={() => {
-            refetch();
-            refetchWorkingHours();
-          }} className="mt-4">Retry</Button>
+          <p className="text-sm text-muted-foreground mt-2">{errorMessage}</p>
+          <Button 
+            onClick={() => {
+              refetch();
+              refetchWorkingHours();
+              setRetryCount(0);
+            }} 
+            className="mt-4"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state if we have an error but are still retrying
+  if (isError && retryCount < 3) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Retrying to load vendor profile...</p>
+          <p className="text-sm text-muted-foreground mt-2">Attempt {retryCount + 1} of 3</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If we don't have data yet but aren't loading or in error state, show loading
+  if (!localVendor) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading vendor profile...</p>
         </div>
       </div>
     );
