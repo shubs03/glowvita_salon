@@ -126,15 +126,29 @@ export default function CartPage() {
 
   const handleCheckout = () => {
     if (cartItems.length > 0) {
+      // Try to get vendorId from the first cart item
+      let vendorId = (cartItems[0] as any).vendorId;
+      
+      // If vendorId is not directly available, check other possible fields
+      if (!vendorId) {
+        vendorId = (cartItems[0] as any).supplierId || 
+                  (cartItems[0] as any).vendor_id ||
+                  null;
+      }
+      
       const checkoutProduct = {
         id: cartItems.map((item: any) => item.productId || item._id).join(','),
         name: cartItems.length > 1 ? `${cartItems.length} items` : cartItems[0].productName,
         price: total,
         image: cartItems[0].productImage,
         quantity: 1,
-        vendorId: (cartItems[0] as any).vendorId,
-        vendorName: (cartItems[0] as any).supplierName,
+        vendorId: vendorId,
+        vendorName: (cartItems[0] as any).supplierName || (cartItems[0] as any).vendorName,
       };
+      
+      // Log for debugging
+      console.log('Checkout product data:', checkoutProduct);
+      
       localStorage.setItem('buyNowProduct', JSON.stringify(checkoutProduct));
       router.push('/checkout');
     }
