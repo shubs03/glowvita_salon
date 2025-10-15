@@ -1,5 +1,5 @@
 import _db from "@repo/lib/db";
-import StaffModel from "@repo/lib/models/Vendor/Staff.model";
+import StaffModel from "@repo/lib/models/staffModel";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
 import mongoose from "mongoose";
 

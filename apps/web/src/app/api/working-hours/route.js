@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import VendorWorkingHours from '@repo/lib/models/Vendor/VendorWorkingHours.model';
+import VendorWorkingHours from '@repo/lib/models/VendorWorkingHours';
 import _db from '@repo/lib/db';
 
 // Utility function to convert 24-hour time to 12-hour format

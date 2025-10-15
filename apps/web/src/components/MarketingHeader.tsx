@@ -33,11 +33,17 @@ interface User {
   profilePicture?: string;
 }
 
+interface MenuItemProps {
+  label: string;
+  href: string;
+}
+
 interface MarketingHeaderProps {
   isMobileMenuOpen: boolean;
   toggleMobileMenu: () => void;
   isHomePage?: boolean;
   hideMenuItems?: boolean;
+  customMenuItems?: MenuItemProps[];
 }
 
 const profileNavItems = [
@@ -51,7 +57,7 @@ const profileNavItems = [
   { id: 'settings', label: 'Account Settings', icon: Settings, href: '/profile/settings' },
 ];
 
-export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage = false, hideMenuItems = false }: MarketingHeaderProps) {
+export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage = false, hideMenuItems = false, customMenuItems }: MarketingHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -117,21 +123,31 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
           <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
             {!hideMenuItems && (
               <>
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/apps">Features</Link>
-                </Button>
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/pricing">Pricing</Link>
-                </Button>
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/about">About Us</Link>
-                </Button>
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/contact">Contact</Link>
-                </Button>
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/support">Support</Link>
-                </Button>
+                {customMenuItems ? (
+                  customMenuItems.map((item, index) => (
+                    <Button key={index} variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href={item.href}>{item.label}</Link>
+                    </Button>
+                  ))
+                ) : (
+                  <>
+                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href="/apps">Features</Link>
+                    </Button>
+                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href="/pricing">Pricing</Link>
+                    </Button>
+                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href="/about">About Us</Link>
+                    </Button>
+                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href="/contact">Contact</Link>
+                    </Button>
+                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href="/support">Support</Link>
+                    </Button>
+                  </>
+                )}
               </>
             )}
             <div className="mx-2">
@@ -218,21 +234,31 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
               {!hideMenuItems && (
                 <>
                   <div className="space-y-1">
-                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                      <Link href="/apps">Features</Link>
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                      <Link href="/pricing">Pricing</Link>
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                      <Link href="/about">About Us</Link>
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                      <Link href="/contact">Contact</Link>
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                      <Link href="/support">Support</Link>
-                    </Button>
+                    {customMenuItems ? (
+                      customMenuItems.map((item, index) => (
+                        <Button key={index} variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href={item.href}>{item.label}</Link>
+                        </Button>
+                      ))
+                    ) : (
+                      <>
+                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href="/apps">Features</Link>
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href="/pricing">Pricing</Link>
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href="/about">About Us</Link>
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href="/contact">Contact</Link>
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href="/support">Support</Link>
+                        </Button>
+                      </>
+                    )}
                   </div>
                   
                   <div className="border-t border-border/30 my-4"></div>

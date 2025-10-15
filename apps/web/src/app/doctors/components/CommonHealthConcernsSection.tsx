@@ -10,65 +10,49 @@ export function CommonHealthConcernsSection() {
       icon: Heart,
       title: "Heart Health",
       description: "Chest pain, high blood pressure, heart palpitations",
-      specialists: ["Cardiologist", "General Medicine"],
-      color: "red",
-      gradient: "from-red-500/10 to-red-500/5"
+      specialists: ["Cardiologist", "General Medicine"]
     },
     {
       icon: Brain,
       title: "Mental Health",
       description: "Anxiety, depression, stress management",
-      specialists: ["Psychiatrist", "Psychologist"],
-      color: "purple",
-      gradient: "from-purple-500/10 to-purple-500/5"
+      specialists: ["Psychiatrist", "Psychologist"]
     },
     {
       icon: Bone,
       title: "Joint & Bone Issues",
       description: "Joint pain, arthritis, fractures, back pain",
-      specialists: ["Orthopedic", "Rheumatologist"],
-      color: "orange",
-      gradient: "from-orange-500/10 to-orange-500/5"
+      specialists: ["Orthopedic", "Rheumatologist"]
     },
     {
       icon: Activity,
       title: "Diabetes & Metabolism",
       description: "Blood sugar issues, weight management, thyroid",
-      specialists: ["Endocrinologist", "General Medicine"],
-      color: "green",
-      gradient: "from-green-500/10 to-green-500/5"
+      specialists: ["Endocrinologist", "General Medicine"]
     },
     {
       icon: Eye,
       title: "Vision Problems",
       description: "Eye strain, vision changes, eye infections",
-      specialists: ["Ophthalmologist", "Optometrist"],
-      color: "blue",
-      gradient: "from-blue-500/10 to-blue-500/5"
+      specialists: ["Ophthalmologist", "Optometrist"]
     },
     {
       icon: Stethoscope,
       title: "Respiratory Issues",
       description: "Cough, breathing problems, asthma, allergies",
-      specialists: ["Pulmonologist", "General Medicine"],
-      color: "teal",
-      gradient: "from-teal-500/10 to-teal-500/5"
+      specialists: ["Pulmonologist", "General Medicine"]
     },
     {
       icon: User,
       title: "Skin Conditions",
       description: "Acne, rashes, skin allergies, dermatitis",
-      specialists: ["Dermatologist", "General Medicine"],
-      color: "pink",
-      gradient: "from-pink-500/10 to-pink-500/5"
+      specialists: ["Dermatologist", "General Medicine"]
     },
     {
       icon: Baby,
       title: "Women's Health",
       description: "Pregnancy, menstrual issues, reproductive health",
-      specialists: ["Gynecologist", "Obstetrician"],
-      color: "indigo",
-      gradient: "from-indigo-500/10 to-indigo-500/5"
+      specialists: ["Gynecologist", "Obstetrician"]
     }
   ];
 
@@ -90,45 +74,14 @@ export function CommonHealthConcernsSection() {
             return (
               <div
                 key={concern.title}
-                className={`group relative p-6 rounded-md transition-all duration-300 hover:-translate-y-1 bg-gradient-to-br ${concern.gradient} border hover:border-opacity-40 cursor-pointer`}
-                style={{
-                  borderColor: `${concern.color === 'red' ? 'rgb(239 68 68 / 0.1)' : 
-                    concern.color === 'purple' ? 'rgb(168 85 247 / 0.1)' : 
-                    concern.color === 'orange' ? 'rgb(249 115 22 / 0.1)' :
-                    concern.color === 'green' ? 'rgb(34 197 94 / 0.1)' :
-                    concern.color === 'blue' ? 'rgb(59 130 246 / 0.1)' :
-                    concern.color === 'teal' ? 'rgb(20 184 166 / 0.1)' :
-                    concern.color === 'pink' ? 'rgb(236 72 153 / 0.1)' :
-                    'rgb(99 102 241 / 0.1)'}`
-                }}
+                className="group relative p-6 rounded-md transition-all duration-300 hover:-translate-y-1 bg-gradient-to-br from-blue-400/10 to-blue-400/5 border border-blue-400/10 hover:border-blue-400/20 cursor-pointer"
               >
                 <div className="flex flex-col items-start text-left">
-                  <div className={`w-12 h-12 rounded-md flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110`}
-                       style={{
-                         backgroundColor: `${concern.color === 'red' ? 'rgb(239 68 68 / 0.15)' : 
-                           concern.color === 'purple' ? 'rgb(168 85 247 / 0.15)' : 
-                           concern.color === 'orange' ? 'rgb(249 115 22 / 0.15)' :
-                           concern.color === 'green' ? 'rgb(34 197 94 / 0.15)' :
-                           concern.color === 'blue' ? 'rgb(59 130 246 / 0.15)' :
-                           concern.color === 'teal' ? 'rgb(20 184 166 / 0.15)' :
-                           concern.color === 'pink' ? 'rgb(236 72 153 / 0.15)' :
-                           'rgb(99 102 241 / 0.15)'}`
-                       }}
-                  >
-                    <IconComponent className={`h-6 w-6`} 
-                                   style={{
-                                     color: `${concern.color === 'red' ? 'rgb(239 68 68)' : 
-                                       concern.color === 'purple' ? 'rgb(168 85 247)' : 
-                                       concern.color === 'orange' ? 'rgb(249 115 22)' :
-                                       concern.color === 'green' ? 'rgb(34 197 94)' :
-                                       concern.color === 'blue' ? 'rgb(59 130 246)' :
-                                       concern.color === 'teal' ? 'rgb(20 184 166)' :
-                                       concern.color === 'pink' ? 'rgb(236 72 153)' :
-                                       'rgb(99 102 241)'}`
-                                   }} />
+                  <div className="w-12 h-12 rounded-md flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 bg-blue-400/15">
+                    <IconComponent className="h-6 w-6 text-blue-400" />
                   </div>
                   
-                  <h3 className={`text-lg font-bold text-foreground mb-2 group-hover:text-primary transition-colors`}>
+                  <h3 className="text-lg font-bold text-foreground mb-2 group-hover:text-blue-400 transition-colors">
                     {concern.title}
                   </h3>
                   
@@ -142,25 +95,7 @@ export function CommonHealthConcernsSection() {
                       {concern.specialists.map((specialist) => (
                         <span
                           key={specialist}
-                          className={`text-xs px-2 py-1 rounded-full`}
-                          style={{
-                            backgroundColor: `${concern.color === 'red' ? 'rgb(239 68 68 / 0.1)' : 
-                              concern.color === 'purple' ? 'rgb(168 85 247 / 0.1)' : 
-                              concern.color === 'orange' ? 'rgb(249 115 22 / 0.1)' :
-                              concern.color === 'green' ? 'rgb(34 197 94 / 0.1)' :
-                              concern.color === 'blue' ? 'rgb(59 130 246 / 0.1)' :
-                              concern.color === 'teal' ? 'rgb(20 184 166 / 0.1)' :
-                              concern.color === 'pink' ? 'rgb(236 72 153 / 0.1)' :
-                              'rgb(99 102 241 / 0.1)'}`,
-                            color: `${concern.color === 'red' ? 'rgb(185 28 28)' : 
-                              concern.color === 'purple' ? 'rgb(124 58 237)' : 
-                              concern.color === 'orange' ? 'rgb(194 65 12)' :
-                              concern.color === 'green' ? 'rgb(21 128 61)' :
-                              concern.color === 'blue' ? 'rgb(37 99 235)' :
-                              concern.color === 'teal' ? 'rgb(13 148 136)' :
-                              concern.color === 'pink' ? 'rgb(190 24 93)' :
-                              'rgb(79 70 229)'}`
-                          }}
+                          className="text-xs px-2 py-1 rounded-full bg-blue-400/10 text-blue-700"
                         >
                           {specialist}
                         </span>
@@ -172,7 +107,7 @@ export function CommonHealthConcernsSection() {
                     asChild
                     size="sm"
                     variant="outline"
-                    className={`w-full mt-auto hover:bg-primary/5 text-primary border-primary/20 hover:border-primary/40`}
+                    className="w-full mt-auto hover:bg-blue-400/10 text-blue-400 border-blue-400/20 hover:border-blue-400/40"
                   >
                     <Link href={`/doctors/consultations/concern/${concern.title.toLowerCase().replace(/\s+/g, '-')}`}>
                       Consult Now
@@ -180,7 +115,7 @@ export function CommonHealthConcernsSection() {
                   </Button>
 
                   {/* Subtle underline animation */}
-                  <div className={`h-0.5 w-0 bg-primary mt-3 transition-all duration-300 rounded-full group-hover:w-8 mx-auto`} />
+                  <div className="h-0.5 w-0 bg-blue-400 mt-3 transition-all duration-300 rounded-full group-hover:w-8 mx-auto" />
                 </div>
               </div>
             );
@@ -194,7 +129,7 @@ export function CommonHealthConcernsSection() {
           <Button
             asChild
             variant="outline"
-            className="px-8 py-3 border-primary/20 hover:border-primary/40 hover:bg-primary/5 text-primary"
+            className="px-8 py-3 border-blue-400/20 hover:border-blue-400/40 hover:bg-blue-400/10 text-blue-400"
           >
             <Link href="/doctors/consultations/general">
               General Consultation

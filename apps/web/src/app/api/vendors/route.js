@@ -1,5 +1,5 @@
 import _db from "@repo/lib/db";
-import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
+import VendorModel from "@repo/lib/models/Vendor.model";
 
 // CORS headers helper
 const setCorsHeaders = (response) => {

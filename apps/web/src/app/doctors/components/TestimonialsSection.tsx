@@ -37,7 +37,7 @@ export function TestimonialsSection() {
       quote: "Quick and professional service. Got my skin concern addressed within minutes. The prescription was sent digitally which was very convenient.",
       condition: "Dermatology",
       doctor: "Dr. Michael Chen",
-      avatar: "https://placehold.co/60x60/10B981/FFFFFF?text=MC",
+      avatar: "https://placehold.co/60x60/3B82F6/FFFFFF?text=MC",
       date: "1 week ago"
     },
     {
@@ -48,7 +48,7 @@ export function TestimonialsSection() {
       quote: "As a busy mom, being able to get medical advice for my kids without leaving home is a game-changer. Dr. Rodriguez was so patient and understanding.",
       condition: "Pediatrics",
       doctor: "Dr. Emily Rodriguez",
-      avatar: "https://placehold.co/60x60/8B5CF6/FFFFFF?text=ER",
+      avatar: "https://placehold.co/60x60/3B82F6/FFFFFF?text=ER",
       date: "3 days ago"
     },
     {
@@ -59,7 +59,7 @@ export function TestimonialsSection() {
       quote: "Professional consultation for my neurological concerns. The doctor explained everything clearly and provided helpful treatment recommendations.",
       condition: "Neurology",
       doctor: "Dr. James Wilson",
-      avatar: "https://placehold.co/60x60/F97316/FFFFFF?text=JW",
+      avatar: "https://placehold.co/60x60/3B82F6/FFFFFF?text=JW",
       date: "5 days ago"
     },
     {
@@ -70,7 +70,7 @@ export function TestimonialsSection() {
       quote: "The 24/7 availability saved me during a weekend emergency. The doctor was compassionate and provided immediate relief for my anxiety.",
       condition: "Mental Health",
       doctor: "Dr. Amanda Smith",
-      avatar: "https://placehold.co/60x60/EC4899/FFFFFF?text=LT",
+      avatar: "https://placehold.co/60x60/3B82F6/FFFFFF?text=LT",
       date: "1 day ago"
     },
     {
@@ -81,7 +81,7 @@ export function TestimonialsSection() {
       quote: "Excellent platform for diabetes management consultation. The doctor provided personalized advice and adjusted my treatment plan effectively.",
       condition: "Endocrinology",
       doctor: "Dr. Robert Kim",
-      avatar: "https://placehold.co/60x60/06B6D4/FFFFFF?text=DP",
+      avatar: "https://placehold.co/60x60/3B82F6/FFFFFF?text=DP",
       date: "4 days ago"
     }
   ];
@@ -152,7 +152,7 @@ export function TestimonialsSection() {
                         className={cn(
                           "h-4 w-4",
                           i < testimonial.rating 
-                            ? "text-yellow-400 fill-yellow-400" 
+                            ? "text-blue-400 fill-blue-400" 
                             : "text-gray-300"
                         )}
                       />
@@ -208,12 +208,12 @@ export function TestimonialsSection() {
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
           <div className="p-6 bg-gradient-to-br from-primary/5 to-primary/2 rounded-md border border-primary/10">
-            <div className="text-3xl font-bold text-primary mb-2">4.9/5</div>
+            <div className="text-3xl font-bold text-blue-600 mb-2">4.9/5</div>
             <div className="text-sm text-muted-foreground">Average Rating</div>
             <div className="text-xs text-muted-foreground mt-1">Based on 15,000+ reviews</div>
           </div>
-          <div className="p-6 bg-gradient-to-br from-green-500/5 to-green-500/2 rounded-md border border-green-500/10">
-            <div className="text-3xl font-bold text-green-600 mb-2">98%</div>
+          <div className="p-6 bg-gradient-to-br from-blue-500/5 to-blue-500/2 rounded-md border border-blue-500/10">
+            <div className="text-3xl font-bold text-blue-600 mb-2">98%</div>
             <div className="text-sm text-muted-foreground">Satisfaction Rate</div>
             <div className="text-xs text-muted-foreground mt-1">Patients recommend us</div>
           </div>
