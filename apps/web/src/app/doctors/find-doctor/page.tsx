@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
+import { Card, CardContent } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
 import { Input } from '@repo/ui/input';
@@ -19,9 +19,12 @@ import {
   Navigation,
   Award,
   GraduationCap,
-  Building
+  Building,
+  Heart,
+  Stethoscope
 } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
+import Link from 'next/link';
 
 interface Doctor {
   id: string;
@@ -66,7 +69,7 @@ const sampleDoctors: Doctor[] = [
     languages: ["English", "Spanish"],
     availableToday: true,
     nextAvailable: "Today 2:30 PM",
-    image: "/images/doctors/dr-sarah.jpg",
+    image: "https://placehold.co/400x400/3B82F6/FFFFFF?text=Dr.+Sarah",
     isVerified: true,
     hasVideoConsult: true,
     hasHomeVisit: false
@@ -89,7 +92,7 @@ const sampleDoctors: Doctor[] = [
     languages: ["English", "Mandarin", "Cantonese"],
     availableToday: false,
     nextAvailable: "Tomorrow 9:00 AM",
-    image: "/images/doctors/dr-michael.jpg",
+    image: "https://placehold.co/400x400/10B981/FFFFFF?text=Dr.+Michael",
     isVerified: true,
     hasVideoConsult: true,
     hasHomeVisit: true
@@ -112,7 +115,7 @@ const sampleDoctors: Doctor[] = [
     languages: ["English", "Spanish"],
     availableToday: true,
     nextAvailable: "Today 4:00 PM",
-    image: "/images/doctors/dr-emily.jpg",
+    image: "https://placehold.co/400x400/8B5CF6/FFFFFF?text=Dr.+Emily",
     isVerified: true,
     hasVideoConsult: false,
     hasHomeVisit: true
@@ -135,7 +138,7 @@ const sampleDoctors: Doctor[] = [
     languages: ["English"],
     availableToday: false,
     nextAvailable: "Tomorrow 10:30 AM",
-    image: "/images/doctors/dr-james.jpg",
+    image: "https://placehold.co/400x400/F97316/FFFFFF?text=Dr.+James",
     isVerified: true,
     hasVideoConsult: true,
     hasHomeVisit: false
@@ -208,7 +211,9 @@ export default function FindDoctorPage() {
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative py-20 lg:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-secondary/5"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+          <div className="absolute inset-0 bg-grid-black/[0.02] bg-[size:20px_20px]" />
+        </div>
         <div className="container mx-auto px-4 max-w-7xl relative">
           <div className="text-center max-w-4xl mx-auto">
             <Badge className="mb-6 bg-primary/10 text-primary border-primary/20">
@@ -220,27 +225,43 @@ export default function FindDoctorPage() {
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
               Search and book appointments with verified, experienced doctors in your area. Choose from various specialties and consultation types.
             </p>
+            
+            {/* Trust Indicators */}
+            <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-muted-foreground mb-10">
+              <div className="flex items-center gap-2">
+                <Award className="h-5 w-5 text-green-500" />
+                <span>Verified Doctors</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Heart className="h-5 w-5 text-red-500" />
+                <span>100% Satisfaction</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Stethoscope className="h-5 w-5 text-blue-500" />
+                <span>24/7 Support</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Quick Search Section */}
-      <section className="py-12 bg-muted/50">
+      <section className="py-12 -mt-12 relative z-10">
         <div className="container mx-auto px-4 max-w-7xl">
-          <div className="bg-background rounded-lg shadow-lg p-6">
+          <div className="bg-background rounded-lg shadow-lg p-6 border border-border/50">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
               <div className="lg:col-span-2 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   placeholder="Search doctors, specialties, or clinics..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 h-12 text-base"
                 />
               </div>
               
               <Select value={selectedSpecialty} onValueChange={setSelectedSpecialty}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 text-base">
                   <SelectValue placeholder="Specialty" />
                 </SelectTrigger>
                 <SelectContent>
@@ -253,7 +274,7 @@ export default function FindDoctorPage() {
               </Select>
               
               <Select value={selectedLocation} onValueChange={setSelectedLocation}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12 text-base">
                   <SelectValue placeholder="Location" />
                 </SelectTrigger>
                 <SelectContent>
@@ -265,8 +286,8 @@ export default function FindDoctorPage() {
                 </SelectContent>
               </Select>
               
-              <Button className="bg-primary hover:bg-primary/90">
-                <Search className="h-4 w-4 mr-2" />
+              <Button className="h-12 bg-primary hover:bg-primary/90 text-base">
+                <Search className="h-5 w-5 mr-2" />
                 Search
               </Button>
             </div>
@@ -290,8 +311,11 @@ export default function FindDoctorPage() {
             
             <div className="flex flex-wrap gap-4">
               <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Availability" />
+                <SelectTrigger className="w-[180px]">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <SelectValue placeholder="Availability" />
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Doctors</SelectItem>
@@ -302,7 +326,7 @@ export default function FindDoctorPage() {
               </Select>
               
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent>
@@ -319,17 +343,25 @@ export default function FindDoctorPage() {
           {/* Doctors Grid */}
           <div className="grid gap-6">
             {filteredDoctors.map((doctor) => (
-              <Card key={doctor.id} className="hover:shadow-lg transition-shadow">
+              <Card key={doctor.id} className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border-border/50">
                 <CardContent className="p-6">
                   <div className="flex flex-col lg:flex-row gap-6">
                     {/* Doctor Info */}
                     <div className="flex gap-4 flex-1">
                       <div className="relative">
-                        <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center">
-                          <User className="h-12 w-12 text-primary" />
+                        <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                          {doctor.image ? (
+                            <img 
+                              src={doctor.image} 
+                              alt={doctor.name} 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <User className="h-12 w-12 text-primary" />
+                          )}
                         </div>
                         {doctor.isVerified && (
-                          <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                          <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-green-500 rounded-full flex items-center justify-center border-2 border-background">
                             <Award className="h-4 w-4 text-white" />
                           </div>
                         )}
@@ -339,20 +371,20 @@ export default function FindDoctorPage() {
                         <div className="flex items-start justify-between mb-2">
                           <div>
                             <h3 className="text-xl font-semibold">{doctor.name}</h3>
-                            <p className="text-primary font-medium">{doctor.specialty}</p>
+                            <p className="text-primary font-medium text-lg">{doctor.specialty}</p>
                             {doctor.subSpecialty && (
                               <p className="text-sm text-muted-foreground">{doctor.subSpecialty}</p>
                             )}
                           </div>
                           <div className="flex gap-2">
                             {doctor.hasVideoConsult && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs py-1">
                                 <Video className="h-3 w-3 mr-1" />
                                 Video
                               </Badge>
                             )}
                             {doctor.hasHomeVisit && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs py-1">
                                 <Navigation className="h-3 w-3 mr-1" />
                                 Home Visit
                               </Badge>
@@ -363,7 +395,8 @@ export default function FindDoctorPage() {
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
                           <span className="flex items-center gap-1">
                             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            {doctor.rating} ({doctor.totalReviews} reviews)
+                            <span className="font-semibold">{doctor.rating}</span> 
+                            <span>({doctor.totalReviews} reviews)</span>
                           </span>
                           <span className="flex items-center gap-1">
                             <GraduationCap className="h-4 w-4" />
@@ -371,17 +404,27 @@ export default function FindDoctorPage() {
                           </span>
                         </div>
                         
-                        <div className="flex items-center gap-2 text-sm mb-3">
-                          <Building className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{doctor.location.clinic}</span>
+                        <div className="flex items-start gap-2 text-sm mb-3">
+                          <Building className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <div>
+                            <span className="font-medium">{doctor.location.clinic}</span>
+                            <p className="text-muted-foreground">{doctor.location.address}</p>
+                          </div>
                         </div>
                         
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                          <MapPin className="h-4 w-4" />
-                          <span>{doctor.location.address}</span>
-                          <Badge variant="outline" className="text-xs ml-2">
+                          <MapPin className="h-4 w-4 flex-shrink-0" />
+                          <Badge variant="outline" className="text-xs">
                             {doctor.location.distance} away
                           </Badge>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {doctor.education.slice(0, 2).map((edu, index) => (
+                            <Badge key={index} variant="secondary" className="text-xs bg-primary/10 text-primary hover:bg-primary/15">
+                              {edu}
+                            </Badge>
+                          ))}
                         </div>
                         
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -393,7 +436,7 @@ export default function FindDoctorPage() {
                         </div>
                         
                         <div className="flex items-center gap-2 text-sm">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           <span className={cn(
                             "font-medium",
                             doctor.availableToday ? "text-green-600" : "text-orange-600"
@@ -405,32 +448,34 @@ export default function FindDoctorPage() {
                     </div>
                     
                     {/* Booking Section */}
-                    <div className="lg:w-80 space-y-4">
+                    <div className="lg:w-80 space-y-4 border-l border-border/50 pl-6 lg:pl-0 lg:border-l-0 lg:border-t lg:border-t-border/50 lg:pt-6 lg:mt-4">
                       <div className="text-center lg:text-right">
-                        <p className="text-2xl font-bold">${doctor.consultationFee}</p>
+                        <p className="text-3xl font-bold text-primary">${doctor.consultationFee}</p>
                         <p className="text-sm text-muted-foreground">Consultation fee</p>
                       </div>
                       
                       <div className="space-y-3">
-                        <Button className="w-full bg-primary hover:bg-primary/90">
-                          <Calendar className="h-4 w-4 mr-2" />
+                        <Button className="w-full bg-primary hover:bg-primary/90 h-11 text-base">
+                          <Calendar className="h-5 w-5 mr-2" />
                           Book Appointment
                         </Button>
                         
                         {doctor.hasVideoConsult && (
-                          <Button variant="outline" className="w-full">
-                            <Video className="h-4 w-4 mr-2" />
+                          <Button variant="outline" className="w-full h-11 text-base">
+                            <Video className="h-5 w-5 mr-2" />
                             Video Consultation
                           </Button>
                         )}
                         
                         <div className="grid grid-cols-2 gap-2">
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="h-9">
                             <Phone className="h-4 w-4 mr-1" />
                             Call
                           </Button>
-                          <Button variant="outline" size="sm">
-                            View Profile
+                          <Button variant="outline" size="sm" className="h-9" asChild>
+                            <Link href={`/doctors/${doctor.id}`}>
+                              View Profile
+                            </Link>
                           </Button>
                         </div>
                       </div>
@@ -443,12 +488,12 @@ export default function FindDoctorPage() {
           
           {filteredDoctors.length === 0 && (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="h-8 w-8 text-muted-foreground" />
+              <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <Search className="h-10 w-10 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No doctors found</h3>
-              <p className="text-muted-foreground mb-4">
-                Try adjusting your search criteria or filters
+              <h3 className="text-2xl font-bold mb-2">No doctors found</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Try adjusting your search criteria or filters to find the right doctor for you.
               </p>
               <Button 
                 variant="outline" 
@@ -458,6 +503,7 @@ export default function FindDoctorPage() {
                   setSelectedLocation('All Locations');
                   setSelectedAvailability('All');
                 }}
+                className="h-11 px-6"
               >
                 Clear All Filters
               </Button>
@@ -467,22 +513,24 @@ export default function FindDoctorPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-primary/5">
+      <section className="py-20 bg-gradient-to-r from-primary/5 to-secondary/5">
         <div className="container mx-auto px-4 max-w-7xl text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Can't Find the Right Doctor?
-          </h2>
-          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Our support team can help you find the perfect doctor for your specific needs. Get personalized recommendations based on your requirements.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-primary hover:bg-primary/90">
-              <Phone className="h-5 w-5 mr-2" />
-              Call Support
-            </Button>
-            <Button variant="outline" size="lg">
-              Request Callback
-            </Button>
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Need Help Finding the Right Doctor?
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              Our medical concierge team can help you find the perfect doctor based on your specific needs and preferences. Get personalized recommendations today.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" className="px-8 h-12 bg-primary hover:bg-primary/90 text-base">
+                <Phone className="h-5 w-5 mr-2" />
+                Call Support
+              </Button>
+              <Button variant="outline" size="lg" className="px-8 h-12 text-base border-primary/30 hover:border-primary/50">
+                Request Callback
+              </Button>
+            </div>
           </div>
         </div>
       </section>
