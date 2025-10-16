@@ -82,6 +82,8 @@ const Step3WithServiceData = ({
       workingHours={baseData.workingHours}
       isLoading={baseData.isLoading || serviceStaffData.isLoading}
       error={baseData.error || serviceStaffData.error}
+      vendorId={salonId}
+      selectedService={selectedService}
     />
   );
 };

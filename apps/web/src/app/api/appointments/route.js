@@ -4,6 +4,101 @@ import _db from '@repo/lib/db';
 
 await _db();
 
+// GET existing appointments for checking availability
+export const GET = async (req) => {
+    try {
+        const { searchParams } = new URL(req.url);
+        const vendorId = searchParams.get('vendorId');
+        const staffId = searchParams.get('staffId');
+        const date = searchParams.get('date');
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+
+        console.log('GET appointments - vendorId:', vendorId, 'staffId:', staffId, 'date:', date);
+
+        // Base query - must have vendorId
+        if (!vendorId) {
+            return NextResponse.json(
+                { message: "vendorId is required" },
+                { status: 400 }
+            );
+        }
+
+        const query = { 
+            vendorId, 
+            status: { $nin: ['cancelled'] } // Exclude cancelled appointments
+        };
+
+        // Add date filtering
+        if (date) {
+            // Single date query
+            const searchDate = new Date(date);
+            const startOfDay = new Date(searchDate);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(searchDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            
+            query.date = {
+                $gte: startOfDay,
+                $lte: endOfDay
+            };
+        } else if (startDate && endDate) {
+            // Date range query
+            query.date = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
+
+        // Add staff filtering
+        if (staffId && staffId !== 'null') {
+            query.staff = staffId;
+        }
+
+        console.log('Final query:', JSON.stringify(query, null, 2));
+
+        const appointments = await AppointmentModel.find(query)
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems')
+            .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
+
+        console.log('Found appointments:', appointments.length);
+        console.log('Appointment details:', appointments.map(apt => ({
+            id: apt._id?.toString(),
+            staffId: apt.staff?.toString(),
+            staffName: apt.staffName,
+            date: apt.date,
+            startTime: apt.startTime,
+            endTime: apt.endTime,
+            duration: apt.duration,
+            service: apt.serviceName || apt.service,
+            status: apt.status
+        })));
+
+        // Add CORS headers
+        const response = NextResponse.json(appointments, { status: 200 });
+        
+        response.headers.set('Access-Control-Allow-Origin', '*');
+        response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+        
+        return response;
+    } catch (error) {
+        console.error('Error fetching appointments:', error);
+        
+        // Add CORS headers to error response
+        const response = NextResponse.json(
+            { message: "Error fetching appointments", error: error.message },
+            { status: 500 }
+        );
+        
+        response.headers.set('Access-Control-Allow-Origin', '*');
+        response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+        
+        return response;
+    }
+};
+
 // POST a new appointment from public web booking
 export const POST = async (req) => {
     try {
@@ -104,7 +199,7 @@ export const POST = async (req) => {
 export const OPTIONS = async () => {
     const response = NextResponse.json({}, { status: 200 });
     response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
     return response;
 };
