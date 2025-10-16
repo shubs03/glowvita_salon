@@ -69,29 +69,12 @@ function BookingPageContent() {
       console.log("Selected time:", selectedTime);
       console.log("Service staff assignments:", serviceStaffAssignments);
       console.log("Selected services:", selectedServices);
+      console.log("Selected staff:", selectedStaff);
+      console.log("Is single service?", selectedServices.length === 1);
       
       // Calculate the detailed schedule for each service
       const totalDuration = calculateTotalDuration(selectedServices);
       console.log("Total duration:", totalDuration);
-      
-      // Group services by staff member to determine the sequence
-      const staffServiceMap: { [key: string]: { staff: StaffMember; services: Service[] } } = {};
-      
-      for (const assignment of serviceStaffAssignments) {
-        if (assignment.staff) {
-          const staffId = assignment.staff.id;
-          if (staffServiceMap[staffId]) {
-            staffServiceMap[staffId].services.push(assignment.service);
-          } else {
-            staffServiceMap[staffId] = {
-              staff: assignment.staff,
-              services: [assignment.service]
-            };
-          }
-        }
-      }
-      
-      console.log("Staff service map:", staffServiceMap);
       
       // Calculate start and end times for each service
       const newServiceSchedule: Array<{
@@ -104,46 +87,88 @@ function BookingPageContent() {
       
       let currentTimeMinutes = parseInt(selectedTime?.split(':')[0] || '0') * 60 + parseInt(selectedTime?.split(':')[1] || '0');
       
-      // Process each staff member's services in order
-      Object.keys(staffServiceMap).forEach(staffId => {
-        const entry = staffServiceMap[staffId];
-        entry.services.forEach((service: Service) => {
-          const serviceDuration = convertDurationToMinutes(service.duration);
+      // Check if this is a single service booking (no service-staff assignments)
+      if (selectedServices.length === 1 && serviceStaffAssignments.length === 0) {
+        console.log("Processing SINGLE SERVICE booking");
+        const service = selectedServices[0];
+        const serviceDuration = convertDurationToMinutes(service.duration);
+        const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
+        const endTimeMinutes = currentTimeMinutes + serviceDuration;
+        const endTime = `${Math.floor(endTimeMinutes / 60).toString().padStart(2, '0')}:${(endTimeMinutes % 60).toString().padStart(2, '0')}`;
+        
+        newServiceSchedule.push({
+          service,
+          staff: selectedStaff, // Use the selectedStaff from Step2
+          startTime,
+          endTime,
+          duration: serviceDuration
+        });
+        
+        console.log("Single service schedule created:", newServiceSchedule);
+      } else {
+        // Multi-service flow - use service-staff assignments
+        console.log("Processing MULTI-SERVICE booking");
+        
+        // Group services by staff member to determine the sequence
+        const staffServiceMap: { [key: string]: { staff: StaffMember; services: Service[] } } = {};
+        
+        for (const assignment of serviceStaffAssignments) {
+          if (assignment.staff) {
+            const staffId = assignment.staff.id;
+            if (staffServiceMap[staffId]) {
+              staffServiceMap[staffId].services.push(assignment.service);
+            } else {
+              staffServiceMap[staffId] = {
+                staff: assignment.staff,
+                services: [assignment.service]
+              };
+            }
+          }
+        }
+        
+        console.log("Staff service map:", staffServiceMap);
+        
+        // Process each staff member's services in order
+        Object.keys(staffServiceMap).forEach(staffId => {
+          const entry = staffServiceMap[staffId];
+          entry.services.forEach((service: Service) => {
+            const serviceDuration = convertDurationToMinutes(service.duration);
+            const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
+            currentTimeMinutes += serviceDuration;
+            const endTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
+            
+            newServiceSchedule.push({
+              service,
+              staff: entry.staff,
+              startTime,
+              endTime,
+              duration: serviceDuration
+            });
+          });
+        });
+        
+        // If there are services with "Any Professional", add them at the end
+        const anyProfessionalAssignments = serviceStaffAssignments.filter(assignment => !assignment.staff);
+        anyProfessionalAssignments.forEach((assignment: ServiceStaffAssignment) => {
+          const serviceDuration = convertDurationToMinutes(assignment.service.duration);
           const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
           currentTimeMinutes += serviceDuration;
           const endTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
           
           newServiceSchedule.push({
-            service,
-            staff: entry.staff,
+            service: assignment.service,
+            staff: null,
             startTime,
             endTime,
             duration: serviceDuration
           });
         });
-      });
+      }
       
-      // If there are services with "Any Professional", add them at the end
-      const anyProfessionalAssignments = serviceStaffAssignments.filter(assignment => !assignment.staff);
-      anyProfessionalAssignments.forEach((assignment: ServiceStaffAssignment) => {
-        const serviceDuration = convertDurationToMinutes(assignment.service.duration);
-        const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
-        currentTimeMinutes += serviceDuration;
-        const endTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
-        
-        newServiceSchedule.push({
-          service: assignment.service,
-          staff: null,
-          startTime,
-          endTime,
-          duration: serviceDuration
-        });
-      });
-      
-      console.log("New service schedule:", newServiceSchedule);
+      console.log("Final service schedule:", newServiceSchedule);
       setServiceSchedule(newServiceSchedule);
     }
-  }, [selectedTime, serviceStaffAssignments, selectedServices]);
+  }, [selectedTime, serviceStaffAssignments, selectedServices, selectedStaff]);
 
   // Check for pre-selected service from sessionStorage
   useEffect(() => {
@@ -541,6 +566,7 @@ function BookingPageContent() {
                     isLoading={false}
                     error={null}
                     selectedServices={selectedServices}
+                    vendorId={salonId as string}
                   />
                 );
             } else {
@@ -559,6 +585,8 @@ function BookingPageContent() {
                     workingHours={workingHours}
                     isLoading={serviceStaffData.isLoading} // Use service-specific loading state
                     error={serviceStaffData.error} // Use service-specific error state
+                    vendorId={salonId as string}
+                    selectedService={selectedService}
                   />
                 );
             }
