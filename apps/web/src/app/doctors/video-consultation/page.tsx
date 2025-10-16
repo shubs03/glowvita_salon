@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
@@ -20,7 +21,8 @@ import {
   Shield,
   Monitor,
   Users,
-  ArrowRight
+  ArrowRight,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 
@@ -137,6 +139,14 @@ export default function VideoConsultationPage() {
             <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
               Connect with certified doctors from the comfort of your home. Get professional medical advice through secure video calls.
             </p>
+            <div className="mb-8">
+              <Link href="/doctors/physical-consultation">
+                <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Prefer in-person consultation?
+                </Button>
+              </Link>
+            </div>
             
             {/* Features */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
