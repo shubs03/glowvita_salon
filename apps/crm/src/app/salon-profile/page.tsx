@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { useAppSelector } from '@repo/store/hooks';
-import { useGetSubscriptionPlansQuery, useGetVendorProfileQuery, useUpdateVendorProfileMutation, useChangePlanMutation, useRenewPlanMutation, useGetWorkingHoursQuery, useUpdateWorkingHoursMutation, useGetCurrentSupplierProfileQuery, useUpdateSupplierProfileMutation } from '@repo/store/api';
+import { useGetSubscriptionPlansQuery, useGetVendorProfileQuery, useUpdateVendorProfileMutation, useChangePlanMutation, useRenewPlanMutation, useGetWorkingHoursQuery, useUpdateWorkingHoursMutation, useGetCurrentSupplierProfileQuery, useUpdateSupplierProfileMutation, useGetDoctorProfileQuery, useUpdateDoctorProfileMutation } from '@repo/store/api';
 import { selectVendor, selectVendorLoading, selectVendorError, selectVendorMessage, clearVendorMessage, clearVendorError } from '@repo/store/slices/vendorSlice';
 import { toast } from 'sonner';
 import {
@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { Checkbox } from "@repo/ui/checkbox";
+import { Switch } from "@repo/ui/switch";
 import {
   Badge,
   Building,
@@ -139,6 +140,47 @@ interface SupplierProfile {
   subscription?: Subscription;
   referralCode?: string;
   licenseFiles?: string[];
+}
+
+// Add DoctorProfile interface
+interface DoctorProfile {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  gender: string;
+  registrationNumber: string;
+  doctorType: string;
+  specialties: string[];
+  diseases: string[];
+  experience: string;
+  clinicName: string;
+  clinicAddress: string;
+  state: string;
+  city: string;
+  pincode: string;
+  profileImage?: string;
+  subscription?: Subscription;
+  type?: UserType;
+  qualification?: string;
+  registrationYear?: string;
+  physicalConsultationStartTime?: string;
+  physicalConsultationEndTime?: string;
+  faculty?: string;
+  assistantName?: string;
+  assistantContact?: string;
+  doctorAvailability?: string;
+  landline?: string;
+  workingWithHospital?: boolean;
+  referralCode?: string;
+  status?: string;
+  password?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // New working hours fields
+  physicalConsultation?: Record<string, Array<{startTime: string, endTime: string}>>;
+  videoConsultationEnabled?: boolean;
+  videoConsultation?: Record<string, Array<{startTime: string, endTime: string}>>;
 }
 
 // SUB-COMPONENTS FOR TABS
@@ -1061,13 +1103,441 @@ const CategoriesTab = () => (
   </Card>
 );
 
+// Add Doctor Profile Tab Component
+const DoctorProfileTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
+  return (
+    <Tabs defaultValue="basic-info" className="w-full">
+      <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+        <TabsTrigger value="basic-info">Basic Info</TabsTrigger>
+        <TabsTrigger value="professional">Professional</TabsTrigger>
+        <TabsTrigger value="clinic">Clinic Details</TabsTrigger>
+        <TabsTrigger value="assistant">Assistant</TabsTrigger>
+        <TabsTrigger value="documents">Documents</TabsTrigger>
+      </TabsList>
+      <TabsContent value="basic-info" className="mt-4">
+        <DoctorBasicInfoTab doctor={doctor} setDoctor={setDoctor} />
+      </TabsContent>
+      <TabsContent value="professional" className="mt-4">
+        <DoctorProfessionalDetailsTab doctor={doctor} setDoctor={setDoctor} />
+      </TabsContent>
+      <TabsContent value="clinic" className="mt-4">
+        <DoctorClinicDetailsTab doctor={doctor} setDoctor={setDoctor} />
+      </TabsContent>
+      <TabsContent value="assistant" className="mt-4">
+        <DoctorAssistantInfoTab doctor={doctor} setDoctor={setDoctor} />
+      </TabsContent>
+      <TabsContent value="documents" className="mt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Documents</CardTitle>
+            <CardDescription>Upload and manage your professional documents.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>Document management functionality coming soon.</p>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+    </Tabs>
+  );
+};
+
+const DoctorBasicInfoTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
+  
+  const handleSave = async () => {
+    try {
+      const updateData: any = {
+        _id: doctor._id,
+        name: doctor.name,
+        email: doctor.email,
+        phone: doctor.phone,
+        gender: doctor.gender,
+        registrationNumber: doctor.registrationNumber,
+        doctorType: doctor.doctorType,
+        experience: doctor.experience,
+        status: doctor.status,
+        referralCode: doctor.referralCode,
+      };
+
+      const result: any = await updateDoctorProfile(updateData).unwrap();
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Basic Information</CardTitle>
+        <CardDescription>Manage your basic doctor profile information.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="name">Doctor Name</Label>
+            <Input
+              id="name"
+              value={doctor.name || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, name: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="gender">Gender</Label>
+            <Select
+              value={doctor.gender || ''}
+              onValueChange={(value) => setDoctor({ ...doctor, gender: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Mobile Number</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={doctor.phone || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, phone: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address</Label>
+            <Input
+              id="email"
+              type="email"
+              value={doctor.email || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, email: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="registrationNumber">Registration Number</Label>
+            <Input
+              id="registrationNumber"
+              value={doctor.registrationNumber || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, registrationNumber: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="doctorType">Doctor Type</Label>
+            <Select
+              value={doctor.doctorType || ''}
+              onValueChange={(value) => setDoctor({ ...doctor, doctorType: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select doctor type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Physician">Physician</SelectItem>
+                <SelectItem value="Dermatologist">Dermatologist</SelectItem>
+                <SelectItem value="Surgeon">Surgeon</SelectItem>
+                <SelectItem value="Trichologist">Trichologist</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="experience">Experience (years)</Label>
+            <Input
+              id="experience"
+              type="number"
+              value={doctor.experience || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, experience: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={doctor.status || ''}
+              onValueChange={(value) => setDoctor({ ...doctor, status: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Approved">Approved</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="Rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="referralCode">Referral Code</Label>
+            <Input
+              id="referralCode"
+              value={doctor.referralCode || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, referralCode: e.target.value })
+              }
+            />
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleSave}>Save Changes</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+const DoctorProfessionalDetailsTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
+  
+  const handleSave = async () => {
+    try {
+      const updateData: any = {
+        _id: doctor._id,
+        qualification: doctor.qualification,
+        registrationYear: doctor.registrationYear,
+        faculty: doctor.faculty,
+        specialties: doctor.specialties,
+        diseases: doctor.diseases,
+        workingWithHospital: doctor.workingWithHospital,
+        doctorAvailability: doctor.doctorAvailability,
+      };
+
+      const result: any = await updateDoctorProfile(updateData).unwrap();
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Professional Details</CardTitle>
+        <CardDescription>Manage your professional qualifications and specialties.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="qualification">Qualification</Label>
+            <Input
+              id="qualification"
+              value={doctor.qualification || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, qualification: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="registrationYear">Registration Year</Label>
+            <Input
+              id="registrationYear"
+              value={doctor.registrationYear || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, registrationYear: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="faculty">Faculty / Institution</Label>
+            <Input
+              id="faculty"
+              value={doctor.faculty || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, faculty: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="specialties">Specialties</Label>
+            <Textarea
+              id="specialties"
+              placeholder="Enter specialties separated by commas"
+              value={doctor.specialties?.join(', ') || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, specialties: e.target.value.split(',').map(s => s.trim()).filter(s => s) })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="diseases">Diseases Treated</Label>
+            <Textarea
+              id="diseases"
+              placeholder="Enter diseases treated separated by commas"
+              value={doctor.diseases?.join(', ') || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, diseases: e.target.value.split(',').map(d => d.trim()).filter(d => d) })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Working With Hospital</Label>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="workingWithHospital"
+                checked={doctor.workingWithHospital || false}
+                onCheckedChange={(checked: boolean) => setDoctor({ ...doctor, workingWithHospital: checked })}
+              />
+              <Label htmlFor="workingWithHospital">Yes</Label>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="doctorAvailability">Doctor Availability</Label>
+            <Select
+              value={doctor.doctorAvailability || ''}
+              onValueChange={(value) => setDoctor({ ...doctor, doctorAvailability: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select availability" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Online">Online</SelectItem>
+                <SelectItem value="Offline">Offline</SelectItem>
+                <SelectItem value="On Leave">On Leave</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleSave}>Save Changes</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+const DoctorClinicDetailsTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
+  
+  const handleSave = async () => {
+    try {
+      const updateData: any = {
+        _id: doctor._id,
+        clinicName: doctor.clinicName,
+        clinicAddress: doctor.clinicAddress,
+        state: doctor.state,
+        city: doctor.city,
+        pincode: doctor.pincode,
+        landline: doctor.landline,
+        // Removed physicalConsultationStartTime, physicalConsultationEndTime, and videoConsultation
+        // as these are now managed in the Working Hours tab
+      };
+
+      const result: any = await updateDoctorProfile(updateData).unwrap();
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Clinic / Hospital Details</CardTitle>
+        <CardDescription>Manage your clinic information.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="clinicName">Clinic Name</Label>
+            <Input
+              id="clinicName"
+              value={doctor.clinicName || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, clinicName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="clinicAddress">Clinic Address</Label>
+            <Textarea
+              id="clinicAddress"
+              value={doctor.clinicAddress || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, clinicAddress: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="state">State</Label>
+            <Input
+              id="state"
+              value={doctor.state || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, state: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              value={doctor.city || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, city: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pincode">Pincode</Label>
+            <Input
+              id="pincode"
+              value={doctor.pincode || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, pincode: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="landline">Landline Number</Label>
+            <Input
+              id="landline"
+              value={doctor.landline || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, landline: e.target.value })
+              }
+            />
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleSave}>Save Changes</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
 // Add Supplier Profile Tab Component
 const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfile; setSupplier: any }) => {
   const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
   
   const handleSave = async () => {
     try {
-      // Prepare the data for update
       const updateData: any = {
         _id: supplier._id,
         firstName: supplier.firstName,
@@ -1083,6 +1553,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
         address: supplier.address,
         supplierType: supplier.supplierType,
         businessRegistrationNo: supplier.businessRegistrationNo,
+        referralCode: supplier.referralCode,
       };
 
       const result: any = await updateSupplierProfile(updateData).unwrap();
@@ -1100,41 +1571,11 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Business Profile</CardTitle>
-        <CardDescription>Manage your supplier business information.</CardDescription>
+        <CardTitle>Supplier Profile</CardTitle>
+        <CardDescription>Manage your supplier information.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-2">
-            <Label htmlFor="shopName">Shop Name</Label>
-            <Input
-              id="shopName"
-              value={supplier.shopName || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, shopName: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="supplierType">Supplier Type</Label>
-            <Input
-              id="supplierType"
-              value={supplier.supplierType || ''}
-              disabled
-            />
-          </div>
-          
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={supplier.description || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, description: e.target.value })
-              }
-              placeholder="Describe your business..."
-            />
-          </div>
           <div className="space-y-2">
             <Label htmlFor="firstName">First Name</Label>
             <Input
@@ -1156,6 +1597,26 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="shopName">Shop Name</Label>
+            <Input
+              id="shopName"
+              value={supplier.shopName || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, shopName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={supplier.description || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, description: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
@@ -1170,7 +1631,6 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             <Label htmlFor="mobile">Mobile</Label>
             <Input
               id="mobile"
-              type="tel"
               value={supplier.mobile || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, mobile: e.target.value })
@@ -1178,36 +1638,12 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="businessRegistrationNo">Business Registration No</Label>
+            <Label htmlFor="country">Country</Label>
             <Input
-              id="businessRegistrationNo"
-              value={supplier.businessRegistrationNo || ''}
+              id="country"
+              value={supplier.country || ''}
               onChange={(e) =>
-                setSupplier({ ...supplier, businessRegistrationNo: e.target.value })
-              }
-            />
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
-          <Textarea
-            id="address"
-            value={supplier.address || ''}
-            onChange={(e) =>
-              setSupplier({ ...supplier, address: e.target.value })
-            }
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
-            <Input
-              id="city"
-              value={supplier.city || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, city: e.target.value })
+                setSupplier({ ...supplier, country: e.target.value })
               }
             />
           </div>
@@ -1222,6 +1658,16 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              value={supplier.city || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, city: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="pincode">Pincode</Label>
             <Input
               id="pincode"
@@ -1231,16 +1677,33 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               }
             />
           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="country">Country</Label>
-            <Input
-              id="country"
-              value={supplier.country || ''}
+            <Label htmlFor="address">Address</Label>
+            <Textarea
+              id="address"
+              value={supplier.address || ''}
               onChange={(e) =>
-                setSupplier({ ...supplier, country: e.target.value })
+                setSupplier({ ...supplier, address: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="supplierType">Supplier Type</Label>
+            <Input
+              id="supplierType"
+              value={supplier.supplierType || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, supplierType: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="businessRegistrationNo">Business Registration No</Label>
+            <Input
+              id="businessRegistrationNo"
+              value={supplier.businessRegistrationNo || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, businessRegistrationNo: e.target.value })
               }
             />
           </div>
@@ -1249,7 +1712,9 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             <Input
               id="referralCode"
               value={supplier.referralCode || ''}
-              disabled
+              onChange={(e) =>
+                setSupplier({ ...supplier, referralCode: e.target.value })
+              }
             />
           </div>
         </div>
@@ -1260,6 +1725,68 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
     </Card>
   );
 };
+
+const DoctorAssistantInfoTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
+  
+  const handleSave = async () => {
+    try {
+      const updateData: any = {
+        _id: doctor._id,
+        assistantName: doctor.assistantName,
+        assistantContact: doctor.assistantContact,
+      };
+
+      const result: any = await updateDoctorProfile(updateData).unwrap();
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Assistant Information</CardTitle>
+        <CardDescription>Manage your assistant or receptionist information.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="assistantName">Assistant Name</Label>
+            <Input
+              id="assistantName"
+              value={doctor.assistantName || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, assistantName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assistantContact">Assistant Contact Number</Label>
+            <Input
+              id="assistantContact"
+              value={doctor.assistantContact || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, assistantContact: e.target.value })
+              }
+            />
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleSave}>Save Changes</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+
 
 // Add Supplier Documents Tab Component
 const SupplierDocumentsTab = ({ supplier, setSupplier }: { supplier: SupplierProfile; setSupplier: any }) => {
@@ -1470,15 +1997,22 @@ export default function SalonProfilePage() {
     skip: !user?._id || role !== 'supplier'
   });
   
+  // Doctor profile data (current doctor's profile)
+  const { data: doctorData, isLoading: isDoctorLoading, isError: isDoctorError, refetch: refetchDoctor, error: doctorError } = useGetDoctorProfileQuery(undefined, {
+    skip: !user?._id || role !== 'doctor'
+  });
+  
   const { data: workingHoursData, isLoading: isLoadingWorkingHours, refetch: refetchWorkingHours } = useGetWorkingHoursQuery(undefined, {
     skip: !user?._id || role !== 'vendor'
   });
   
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
-  const [updateSupplierProfile] = useUpdateSupplierProfileMutation(); // Add supplier profile update hook
+  const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
   
   const [localVendor, setLocalVendor] = useState<VendorProfile | null>(null);
   const [localSupplier, setLocalSupplier] = useState<SupplierProfile | null>(null);
+  const [localDoctor, setLocalDoctor] = useState<DoctorProfile | null>(null);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -1515,6 +2049,53 @@ export default function SalonProfilePage() {
       });
     }
   }, [supplierData]);
+
+  useEffect(() => {
+    if (doctorData?.data) {
+      console.log("Doctor data received:", doctorData.data);
+      setLocalDoctor({
+        _id: doctorData.data._id,
+        name: doctorData.data.name || '',
+        email: doctorData.data.email || '',
+        phone: doctorData.data.phone || '',
+        gender: doctorData.data.gender || '',
+        registrationNumber: doctorData.data.registrationNumber || '',
+        doctorType: doctorData.data.doctorType || '',
+        specialties: doctorData.data.specialties || [],
+        diseases: doctorData.data.diseases || [],
+        experience: doctorData.data.experience || '',
+        clinicName: doctorData.data.clinicName || '',
+        clinicAddress: doctorData.data.clinicAddress || '',
+        state: doctorData.data.state || '',
+        city: doctorData.data.city || '',
+        pincode: doctorData.data.pincode || '',
+        profileImage: doctorData.data.profileImage || '',
+        subscription: doctorData.data.subscription || undefined,
+        type: 'doctor',
+        qualification: doctorData.data.qualification || '',
+        registrationYear: doctorData.data.registrationYear || '',
+        faculty: doctorData.data.faculty || '',
+        assistantName: doctorData.data.assistantName || '',
+        assistantContact: doctorData.data.assistantContact || '',
+        doctorAvailability: doctorData.data.doctorAvailability || '',
+        landline: doctorData.data.landline || '',
+        workingWithHospital: doctorData.data.workingWithHospital || false,
+        referralCode: doctorData.data.referralCode || '',
+        // New consultation fields
+        physicalConsultation: doctorData.data.physicalConsultation || {
+          startTime: doctorData.data.physicalConsultationStartTime || '',
+          endTime: doctorData.data.physicalConsultationEndTime || '',
+          days: doctorData.data.physicalConsultationDays || []
+        },
+        videoConsultationEnabled: doctorData.data.videoConsultationEnabled || false,
+        videoConsultation: doctorData.data.videoConsultation || {
+          startTime: '',
+          endTime: '',
+          days: []
+        }
+      });
+    }
+  }, [doctorData]);
 
   useEffect(() => {
     if (workingHoursData?.workingHoursArray && workingHoursData.workingHoursArray.length > 0) {
@@ -1563,7 +2144,7 @@ export default function SalonProfilePage() {
         } else {
           toast.error(result.message || 'Failed to update profile image');
         }
-      } else {
+      } else if (role === 'supplier') {
         // For suppliers, use the supplier update function
         const result: any = await updateSupplierProfile({
           _id: localSupplier?._id,
@@ -1572,6 +2153,22 @@ export default function SalonProfilePage() {
 
         if (result.success) {
           setLocalSupplier((prev: any) => ({
+            ...prev,
+            profileImage: base64
+          }));
+          toast.success('Profile image updated successfully');
+        } else {
+          toast.error(result.message || 'Failed to update profile image');
+        }
+      } else {
+        // For doctors, use the doctor update function
+        const result: any = await updateDoctorProfile({
+          _id: localDoctor?._id,
+          profileImage: base64
+        }).unwrap();
+
+        if (result.success) {
+          setLocalDoctor((prev: any) => ({
             ...prev,
             profileImage: base64
           }));
@@ -1593,6 +2190,8 @@ export default function SalonProfilePage() {
       setPreviewImage(localVendor.profileImage);
     } else if (role === 'supplier' && localSupplier?.profileImage) {
       setPreviewImage(localSupplier.profileImage);
+    } else if (role === 'doctor' && localDoctor?.profileImage) {
+      setPreviewImage(localDoctor.profileImage);
     }
   };
 
@@ -1602,24 +2201,26 @@ export default function SalonProfilePage() {
 
   // Auto-retry on error (up to 3 times)
   useEffect(() => {
-    const hasError = (role === 'vendor' && isVendorError) || (role === 'supplier' && isSupplierError);
+    const hasError = (role === 'vendor' && isVendorError) || (role === 'supplier' && isSupplierError) || (role === 'doctor' && isDoctorError);
     if (hasError && retryCount < 3) {
       const retryTimer = setTimeout(() => {
         if (role === 'vendor') {
           refetchVendor();
           refetchWorkingHours();
-        } else {
+        } else if (role === 'supplier') {
           refetchSupplier();
+        } else {
+          refetchDoctor();
         }
         setRetryCount(prev => prev + 1);
       }, 1000);
       
       return () => clearTimeout(retryTimer);
     }
-  }, [isVendorError, isSupplierError, retryCount, refetchVendor, refetchWorkingHours, refetchSupplier, role]);
+  }, [isVendorError, isSupplierError, isDoctorError, retryCount, refetchVendor, refetchWorkingHours, refetchSupplier, refetchDoctor, role]);
 
-  // Update the loading state to handle both vendor and supplier
-  if ((role === 'vendor' && isVendorLoading) || (role === 'supplier' && isSupplierLoading) || (role === 'vendor' && isLoadingWorkingHours)) {
+  // Update the loading state to handle doctor profile
+  if ((role === 'vendor' && isVendorLoading) || (role === 'supplier' && isSupplierLoading) || (role === 'doctor' && isDoctorLoading) || (role === 'vendor' && isLoadingWorkingHours)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -1631,14 +2232,16 @@ export default function SalonProfilePage() {
     );
   }
 
-  // Update the error state to handle both vendor and supplier
+  // Update the error state to handle doctor profile
   if ((role === 'vendor' && isVendorError && retryCount >= 3) || 
       (role === 'supplier' && isSupplierError && retryCount >= 3) || 
+      (role === 'doctor' && isDoctorError && retryCount >= 3) ||
       (role === 'vendor' && !isVendorLoading && !localVendor && !isVendorError) ||
-      (role === 'supplier' && !isSupplierLoading && !localSupplier && !isSupplierError)) {
+      (role === 'supplier' && !isSupplierLoading && !localSupplier && !isSupplierError) ||
+      (role === 'doctor' && !isDoctorLoading && !localDoctor && !isDoctorError)) {
     // Extract error message safely
     let errorMessage = 'No profile data available';
-    const error = role === 'vendor' ? vendorError : supplierError;
+    const error = role === 'vendor' ? vendorError : role === 'supplier' ? supplierError : doctorError;
     if (error) {
       try {
         errorMessage = `Error: ${JSON.stringify(error)}`;
@@ -1657,8 +2260,10 @@ export default function SalonProfilePage() {
               if (role === 'vendor') {
                 refetchVendor();
                 refetchWorkingHours();
-              } else {
+              } else if (role === 'supplier') {
                 refetchSupplier();
+              } else {
+                refetchDoctor();
               }
               setRetryCount(0);
             }} 
@@ -1672,7 +2277,7 @@ export default function SalonProfilePage() {
   }
 
   // Show loading state if we have an error but are still retrying
-  if (((role === 'vendor' && isVendorError) || (role === 'supplier' && isSupplierError)) && retryCount < 3) {
+  if (((role === 'vendor' && isVendorError) || (role === 'supplier' && isSupplierError) || (role === 'doctor' && isDoctorError)) && retryCount < 3) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -1685,7 +2290,7 @@ export default function SalonProfilePage() {
   }
 
   // If we don't have data yet but aren't loading or in error state, show loading
-  if ((role === 'vendor' && !localVendor) || (role === 'supplier' && !localSupplier)) {
+  if ((role === 'vendor' && !localVendor) || (role === 'supplier' && !localSupplier) || (role === 'doctor' && !localDoctor)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -1696,9 +2301,9 @@ export default function SalonProfilePage() {
     );
   }
 
-  // Use either vendor or supplier data based on role
-  const profileData = role === 'vendor' ? localVendor : localSupplier;
-  const setProfileData = role === 'vendor' ? setLocalVendor : setLocalSupplier;
+  // Use either vendor, supplier, or doctor data based on role
+  const profileData = role === 'vendor' ? localVendor : role === 'supplier' ? localSupplier : localDoctor;
+  const setProfileData = role === 'vendor' ? setLocalVendor : role === 'supplier' ? setLocalSupplier : setLocalDoctor;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -1708,7 +2313,7 @@ export default function SalonProfilePage() {
             <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-background shadow-lg flex-shrink-0 group">
               <Image
                 src={profileData?.profileImage || "https://placehold.co/200x200.png"}
-                alt={role === 'vendor' ? "Salon Logo" : "Supplier Logo"}
+                alt={role === 'vendor' ? "Salon Logo" : role === 'supplier' ? "Supplier Logo" : "Doctor Profile"}
                 layout="fill"
                 className="object-cover cursor-pointer"
                 onClick={openProfileImagePreview}
@@ -1756,15 +2361,18 @@ export default function SalonProfilePage() {
             </div>
             <div className="flex-grow">
               <CardTitle className="text-2xl md:text-3xl font-bold">
-                {role === 'vendor' ? (localVendor?.businessName || 'Your Salon') : (localSupplier?.shopName || `${localSupplier?.firstName} ${localSupplier?.lastName}`)}
+                {role === 'vendor' ? (localVendor?.businessName || 'Your Salon') : 
+                 role === 'supplier' ? (localSupplier?.shopName || `${localSupplier?.firstName} ${localSupplier?.lastName}`) : 
+                 (localDoctor?.name || 'Doctor Profile')}
               </CardTitle>
               <CardDescription className="text-base flex items-center gap-2 mt-1">
                 <MapPin className="h-4 w-4" /> 
                 {role === 'vendor' ? (localVendor?.address || 'Address not set') : 
-                  (localSupplier?.address || `${localSupplier?.city || ''}, ${localSupplier?.state || ''}, ${localSupplier?.country || ''}`)}
+                 role === 'supplier' ? (localSupplier?.address || `${localSupplier?.city || ''}, ${localSupplier?.state || ''}, ${localSupplier?.country || ''}`) :
+                 (localDoctor?.clinicAddress || `${localDoctor?.city || ''}, ${localDoctor?.state || ''}`)}
               </CardDescription>
               <div className="text-sm text-muted-foreground mt-2">
-                {role === 'vendor' ? 'Vendor' : 'Supplier'} ID:{" "}
+                {role === 'vendor' ? 'Vendor' : role === 'supplier' ? 'Supplier' : 'Doctor'} ID:{" "}
                 <span className="font-mono bg-secondary px-1.5 py-0.5 rounded">
                   {profileData?._id?.substring(0, 8) || 'N/A'}
                 </span>
@@ -1868,7 +2476,7 @@ export default function SalonProfilePage() {
             <CategoriesTab />
           </TabsContent>
         </Tabs>
-      ) : localSupplier ? (
+      ) : role === 'supplier' && localSupplier ? (
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="profile">Profile</TabsTrigger>
@@ -1894,7 +2502,48 @@ export default function SalonProfilePage() {
             />
           </TabsContent>
         </Tabs>
+      ) : role === 'doctor' && localDoctor ? (
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="subscription">Subscription</TabsTrigger>
+            <TabsTrigger value="professional">Professional</TabsTrigger>
+            <TabsTrigger value="clinic">Clinic Details</TabsTrigger>
+            <TabsTrigger value="assistant">Assistant</TabsTrigger>
+          </TabsList>
+          <TabsContent value="profile" className="mt-4">
+            <DoctorBasicInfoTab
+              doctor={localDoctor}
+              setDoctor={setLocalDoctor}
+            />
+          </TabsContent>
+          <TabsContent value="subscription" className="mt-4">
+            <SubscriptionTab 
+              subscription={localDoctor.subscription} 
+              userType={localDoctor.type || 'doctor'}
+            />
+          </TabsContent>
+          <TabsContent value="professional" className="mt-4">
+            <DoctorProfessionalDetailsTab 
+              doctor={localDoctor}
+              setDoctor={setLocalDoctor}
+            />
+          </TabsContent>
+          <TabsContent value="clinic" className="mt-4">
+            <DoctorClinicDetailsTab 
+              doctor={localDoctor}
+              setDoctor={setLocalDoctor}
+            />
+          </TabsContent>
+          <TabsContent value="assistant" className="mt-4">
+            <DoctorAssistantInfoTab 
+              doctor={localDoctor}
+              setDoctor={setLocalDoctor}
+            />
+          </TabsContent>
+        </Tabs>
       ) : null}
     </div>
   );
 }
+
