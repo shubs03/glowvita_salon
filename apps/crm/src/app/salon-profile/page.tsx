@@ -55,6 +55,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useMemo } from 'react';
 import { SubscriptionPlansDialog } from "@/components/SubscriptionPlansDialog";
 import { useCrmAuth } from '@/hooks/useCrmAuth';
+import { SmsPackagesTab } from '@/components/SmsPackagesTab';
 
 // TYPES
 type SalonCategory = "unisex" | "men" | "women";
@@ -1134,13 +1135,14 @@ export default function SalonProfilePage() {
       )}
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="subscription">Subscription</TabsTrigger>
           <TabsTrigger value="gallery">Gallery</TabsTrigger>
           <TabsTrigger value="bank-details">Bank Details</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="opening-hours">Opening Hours</TabsTrigger>
+          <TabsTrigger value="sms-packages">SMS Packages</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
         </TabsList>
         <TabsContent value="profile" className="mt-4">
@@ -1180,6 +1182,9 @@ export default function SalonProfilePage() {
             setVendor={setLocalVendor}
             refetchWorkingHours={refetchWorkingHours}
           />
+        </TabsContent>
+        <TabsContent value="sms-packages" className="mt-4">
+          <SmsPackagesTab />
         </TabsContent>
         <TabsContent value="categories" className="mt-4">
           <CategoriesTab />

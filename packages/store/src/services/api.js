@@ -1276,6 +1276,20 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["CrmSocialMediaTemplate"],
     }),
 
+    // CRM SMS Purchase Endpoints
+    purchaseSmsPackage: builder.mutation({
+      query: (packageData) => ({ url: "/crm/sms-purchase", method: "POST", body: packageData }),
+      invalidatesTags: ["Vendor"],
+    }),
+    getSmsPurchaseHistory: builder.query({
+      query: (params) => ({ 
+        url: "/crm/sms-purchase", 
+        method: "GET",
+        params
+      }),
+      providesTags: ["Vendor"],
+    }),
+
     // Cart Endpoints (CRM - for vendors)
     getCart: builder.query({
       query: () => ({ url: "/crm/cart", method: "GET" }),
@@ -1529,6 +1543,8 @@ export const {
   useCreateCrmCampaignMutation,
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
+  usePurchaseSmsPackageMutation,
+  useGetSmsPurchaseHistoryQuery,
   // New endpoint for fetching all vendor products
   useGetAllVendorProductsQuery,
   // New endpoints for vendor product operations
