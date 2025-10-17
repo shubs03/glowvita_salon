@@ -1690,6 +1690,12 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               value={supplier.country || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, country: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="businessRegistrationNo">Business Registration No</Label>
+            <Input
               id="businessRegistrationNo"
               placeholder="Enter business registration number"
               value={supplier.businessRegistrationNo || ''}
@@ -1771,7 +1777,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               placeholder="Enter country"
               value={supplier.country || ''}
               onChange={(e) =>
-                setSupplier({ ...supplier, address: e.target.value })
+                setSupplier({ ...supplier, country: e.target.value })
               }
             />
           </div>
