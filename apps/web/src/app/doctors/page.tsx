@@ -336,6 +336,26 @@ export default function DoctorsPage() {
                 </div>
               </div>
             </Link>
+
+            {/* Physical Consultation */}
+            <Link href="/doctors/physical-consultation" className="group block">
+              <div className="relative p-6 rounded-md transition-all duration-300 hover:bg-green-500/5 hover:-translate-y-1 bg-gradient-to-br from-green-500/5 to-green-500/2">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 bg-green-500/15 rounded-md flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-green-500 group-hover:text-white group-hover:scale-110">
+                    <MapPin className="h-6 w-6 text-green-500 group-hover:text-white" />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground mb-2 group-hover:text-green-600 transition-colors">
+                    Physical Consultation
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Book in-person appointment
+                  </p>
+
+                  {/* Subtle underline animation */}
+                  <div className="h-0.5 w-0 bg-green-500 mt-3 transition-all duration-300 rounded-full group-hover:w-8" />
+                </div>
+              </div>
+            </Link>
           </div>
         </div>
       </section>

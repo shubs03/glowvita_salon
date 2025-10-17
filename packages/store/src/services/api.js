@@ -1061,7 +1061,23 @@ export const glowvitaApi = createApi({
       query: (id) => `/crm/supplier-profile/${id}`,
       providesTags: (result, error, id) => [{ type: 'SupplierProfile', id }],
     }),
+    
+    // Add new endpoint for getting current supplier's profile
+    getCurrentSupplierProfile: builder.query({
+      query: () => ({ url: "/crm/supplier-profile", method: "GET" }),
+      providesTags: ["Supplier"],
+    }),
 
+    // Add new endpoint for updating supplier profile
+    updateSupplierProfile: builder.mutation({
+      query: (supplierData) => ({
+        url: "/crm/supplier-profile",
+        method: "PUT",
+        body: supplierData,
+      }),
+      invalidatesTags: ["Supplier"],
+    }),
+    
     // Orders
     getCrmOrders: builder.query({
       query: () => ({ url: '/crm/orders' }),
@@ -1366,9 +1382,26 @@ export const glowvitaApi = createApi({
       query: (verificationData) => ({ url: "/payments/verify", method: "POST", body: verificationData }),
     }),
     
-    // Public Appointment Endpoint
+    // Public Appointment Endpoints
+    getPublicAppointments: builder.query({
+      query: ({ vendorId, staffId, date, startDate, endDate }) => {
+        const params = new URLSearchParams();
+        if (vendorId) params.append('vendorId', vendorId);
+        if (staffId) params.append('staffId', staffId);
+        if (date) params.append('date', date);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        
+        return { 
+          url: `/appointments?${params.toString()}`, 
+          method: "GET" 
+        };
+      },
+      providesTags: ['PublicAppointments'],
+    }),
     createPublicAppointment: builder.mutation({
       query: (appointmentData) => ({ url: "/appointments", method: "POST", body: appointmentData }),
+      invalidatesTags: ['PublicAppointments'],
     }),
 
   }),
@@ -1497,6 +1530,8 @@ export const {
   useDeleteCrmProductMutation,
   useGetSupplierProductsQuery,
   useGetSupplierProfileQuery,
+  useGetCurrentSupplierProfileQuery,
+  useUpdateSupplierProfileMutation,
   useGetCrmOrdersQuery,
   useCreateCrmOrderMutation,
   useUpdateCrmOrderMutation,
@@ -1561,6 +1596,7 @@ export const {
   useCreatePatientMutation,
   useUpdatePatientMutation,
   useDeletePatientMutation,
-  // Public Appointment Hook
+  // Public Appointment Hooks
+  useGetPublicAppointmentsQuery,
   useCreatePublicAppointmentMutation,
 } = glowvitaApi;

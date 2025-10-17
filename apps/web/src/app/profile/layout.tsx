@@ -26,6 +26,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from "@repo/store/hooks";
 import { clearUserAuth } from "@repo/store/slices/userAuthSlice";
 import { toast } from 'sonner';
+import Cookies from 'js-cookie';
 
 const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
@@ -57,6 +58,30 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   const handleLogout = () => {
     setIsLoggingOut(true);
     try {
+      // Remove all possible auth tokens from cookies
+      Cookies.remove('token', { path: '/' });
+      Cookies.remove('token', { path: '/', domain: window.location.hostname });
+      Cookies.remove('access_token', { path: '/' });
+      Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
+      Cookies.remove('crm_access_token', { path: '/' });
+      Cookies.remove('crm_access_token', { path: '/', domain: window.location.hostname });
+      
+      // Clear all auth-related data from localStorage
+      localStorage.removeItem('userAuthState');
+      localStorage.removeItem('crmAuthState');
+      localStorage.removeItem('adminAuthState');
+      
+      // Clear any other possible tokens
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('token') || key.includes('auth')) {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            console.warn(`Failed to remove localStorage item: ${key}`, e);
+          }
+        }
+      });
+
       dispatch(clearUserAuth());
       toast.success("You have been logged out.");
       router.push('/client-login');

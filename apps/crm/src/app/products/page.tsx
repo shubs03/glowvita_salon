@@ -267,7 +267,7 @@ export default function ProductsPage() {
                 {/* Enhanced Header Section matching marketplace design */}
                 <div className="mb-6">
                     <div className="flex items-center gap-4 mb-6">
-                        <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 shadow-lg backdrop-blur-sm">
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-primary/10 via-primary to-transparent border border-primary/20 shadow-lg backdrop-blur-sm">
                             <Store className="h-8 w-8 text-primary" />
                         </div>
                         <div>
@@ -379,109 +379,85 @@ export default function ProductsPage() {
                                 </Button>
                             </div>
                         ) : viewMode === 'grid' ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                {paginatedProducts.map((product, index) => (
-                                    <Card 
-                                        key={product._id} 
-                                        className="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-500 hover:shadow-xl hover:shadow-primary/10 transform hover:-translate-y-2 bg-card cursor-pointer animate-fadeInUp flex flex-col h-[21rem]"
-                                        style={{ animationDelay: `${index * 0.1}s` }}
-                                        onClick={() => handleOpenProductModal(product)}
-                                    >
-                                        {/* Image Section - 65% of card height */}
-                                        <div className="relative h-[60%] w-full overflow-hidden rounded-t-xl">
-                                            <Image 
-                                                src={product.productImage || 'https://placehold.co/300x200.png'} 
-                                                alt={product.productName} 
-                                                fill
-                                                className="object-cover group-hover:scale-105 transition-transform duration-500" 
-                                            />
-                                            
-                                            {/* Status Badge */}
-                                            <div className="absolute top-2 left-2">
-                                                {getStatusBadge(product.status)}
-                                            </div>
-                                            
-                                            {/* Stock Badge */}
-                                            <div className="absolute top-2 right-2">
-                                                <Badge 
-                                                    variant={product.stock > 10 ? "secondary" : product.stock > 0 ? "outline" : "destructive"}
-                                                    className="rounded-full backdrop-blur-sm border-0 shadow-sm text-xs"
-                                                >
-                                                    <div className={`w-1.5 h-1.5 rounded-full mr-1 ${
-                                                        product.stock > 10 ? 'bg-green-500' : product.stock > 0 ? 'bg-yellow-500' : 'bg-red-500'
-                                                    }`} />
-                                                    {product.stock > 10 ? 'In Stock' : product.stock > 0 ? `${product.stock} Left` : 'Out of Stock'}
-                                                </Badge>
-                                            </div>
-                                            
-                                            {/* Discount Badge */}
-                                            {product.price > product.salePrice && (
-                                                <div className="absolute bottom-2 left-2">
-                                                    <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white border-0 shadow-lg rounded-full font-bold text-xs">
-                                                        {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
-                                                    </Badge>
-                                                </div>
-                                            )}
-                                        </div>
-                                        
-                                        {/* Content Section - 35% of card height */}
-                                        <div className="flex flex-col h-[40%] p-3 justify-between">
-                                            {/* Product Name & Price - Same Line */}
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-1 flex-1 mr-2">
-                                                    {product.productName}
-                                                </h3>
-                                                <div className="flex items-baseline gap-1 flex-shrink-0">
-                                                    <span className="text-base font-bold text-primary">
-                                                        ₹{product.salePrice.toFixed(0)}
-                                                    </span>
-                                                    {product.price > product.salePrice && (
-                                                        <span className="text-xs line-through text-muted-foreground">
-                                                            ₹{product.price.toFixed(0)}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {paginatedProducts.map((product: Product) => (
+                              <Card
+                                key={product._id}
+                                className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left"
+                              >
+                                <div className="relative aspect-square overflow-hidden rounded-md m-3">
+                                  <Image
+                                    src={product.productImage || 'https://placehold.co/300x300.png'}
+                                    alt={product.productName}
+                                    fill
+                                    className="group-hover:scale-105 transition-transform duration-300 object-cover"
+                                  />
+                                  <Badge
+                                    variant={product.stock > 0 ? "secondary" : "default"}
+                                    className="absolute top-2 right-2 text-xs"
+                                  >
+                                    {product.stock > 0 ? `In Stock` : "Out of Stock"}
+                                  </Badge>
+                                  {/* Status Badge */}
+                                  <div className="absolute top-2 left-2">
+                                    {getStatusBadge(product.status)}
+                                  </div>
+                                </div>
+                                <div className="p-3 flex flex-col flex-grow">
+                                  <p className="text-xs font-bold text-primary mb-1">
+                                    {product.category}
+                                  </p>
+                                  <h4 className="text-sm font-semibold flex-grow mb-2">
+                                    {product.productName}
+                                  </h4>
+                                  <p className="text-xs text-muted-foreground line-clamp-2">
+                                    {product.description || "No description available"}
+                                  </p>
+                                  <div className="flex justify-between items-center mt-auto">
+                                    <p className="font-bold text-primary">
+                                      ₹{product.salePrice.toFixed(2)}
+                                    </p>
+                                    <div className="flex items-center gap-1">
+                                      <Star className="h-3 w-3 text-blue-400 fill-current" />
+                                      <span className="text-xs text-muted-foreground font-medium">
+                                        {(4.2 + Math.random() * 0.8).toFixed(1)}
+                                      </span>
+                                    </div>
+                                  </div>
 
-                                            {/* Category & Stock - Same Line */}
-                                            <div className="flex items-center justify-between mb-2">
-                                                <Badge variant="outline" className="rounded-full text-xs border-border/40 px-2 py-0.5">
-                                                    {product.category}
-                                                </Badge>
-                                                <div className={`text-xs font-medium flex items-center gap-1 ${
-                                                    product.stock > 10 ? 'text-green-600' : product.stock > 0 ? 'text-yellow-600' : 'text-red-600'
-                                                }`}>
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${
-                                                        product.stock > 10 ? 'bg-green-500' : product.stock > 0 ? 'bg-yellow-500' : 'bg-red-500'
-                                                    }`} />
-                                                    {product.stock} units
-                                                </div>
-                                            </div>
+                                  <div className="flex items-center justify-between gap-2 mt-2">
+                                    <div className="flex justify-between w-full">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="w-full text-xs lg:mr-3"
+                                        onClick={(e) => { 
+                                          e.stopPropagation(); 
+                                          handleOpenProductModal(product); 
+                                        }}
+                                      >
+                                        <Edit className="h-3 w-3 mr-1" />
+                                        Edit
+                                      </Button>
 
-                                            {/* Action Buttons */}
-                                            <div className="flex gap-1.5 mt-auto">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="flex-1 rounded-lg border-border/40 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 h-7 text-xs"
-                                                    onClick={(e) => { e.stopPropagation(); handleOpenProductModal(product); }}
-                                                >
-                                                    <Edit className="mr-1 h-3 w-3" />
-                                                    Edit
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="destructive"
-                                                    className="rounded-lg transition-all duration-300 hover:scale-105 h-7 px-2"
-                                                    onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setIsDeleteModalOpen(true); }}
-                                                >
-                                                    <Trash2 className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="w-fit text-xs"
+                                        onClick={(e) => { 
+                                          e.stopPropagation(); 
+                                          setSelectedProduct(product); 
+                                          setIsDeleteModalOpen(true); 
+                                        }}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </Card>
+                            ))}
+                          </div>
                         ) : (
                             /* Simplified List View */
                             <div className="space-y-4">

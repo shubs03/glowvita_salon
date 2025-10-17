@@ -7,58 +7,42 @@ export function BenefitsSection() {
     {
       icon: Clock,
       title: "Save Time",
-      description: "No more waiting rooms or travel time. Get expert medical advice from anywhere.",
-      color: "blue",
-      gradient: "from-blue-500/10 to-blue-500/5"
+      description: "No more waiting rooms or travel time. Get expert medical advice from anywhere."
     },
     {
       icon: Shield,
       title: "100% Secure",
-      description: "End-to-end encryption ensures your medical information stays private and protected.",
-      color: "green",
-      gradient: "from-green-500/10 to-green-500/5"
+      description: "End-to-end encryption ensures your medical information stays private and protected."
     },
     {
       icon: Video,
       title: "HD Video Quality",
-      description: "Crystal clear video consultations with reliable connection for accurate diagnosis.",
-      color: "purple",
-      gradient: "from-purple-500/10 to-purple-500/5"
+      description: "Crystal clear video consultations with reliable connection for accurate diagnosis."
     },
     {
       icon: FileText,
       title: "Digital Prescriptions",
-      description: "Receive digital prescriptions instantly and access your medical records anytime.",
-      color: "orange",
-      gradient: "from-orange-500/10 to-orange-500/5"
+      description: "Receive digital prescriptions instantly and access your medical records anytime."
     },
     {
       icon: Phone,
       title: "24/7 Support",
-      description: "Round-the-clock customer support and emergency medical assistance available.",
-      color: "red",
-      gradient: "from-red-500/10 to-red-500/5"
+      description: "Round-the-clock customer support and emergency medical assistance available."
     },
     {
       icon: Award,
       title: "Certified Doctors",
-      description: "All our doctors are board-certified and verified medical professionals.",
-      color: "yellow",
-      gradient: "from-yellow-500/10 to-yellow-500/5"
+      description: "All our doctors are board-certified and verified medical professionals."
     },
     {
       icon: Zap,
       title: "Instant Consultation",
-      description: "Connect with available doctors within minutes for urgent medical needs.",
-      color: "indigo",
-      gradient: "from-indigo-500/10 to-indigo-500/5"
+      description: "Connect with available doctors within minutes for urgent medical needs."
     },
     {
       icon: Heart,
       title: "Affordable Care",
-      description: "Quality healthcare at transparent pricing with no hidden fees or charges.",
-      color: "pink",
-      gradient: "from-pink-500/10 to-pink-500/5"
+      description: "Quality healthcare at transparent pricing with no hidden fees or charges."
     }
   ];
 
@@ -80,45 +64,14 @@ export function BenefitsSection() {
             return (
               <div
                 key={benefit.title}
-                className={`group relative p-6 rounded-md transition-all duration-300 hover:-translate-y-1 bg-gradient-to-br ${benefit.gradient} border hover:border-opacity-40 cursor-pointer`}
-                style={{
-                  borderColor: `${benefit.color === 'blue' ? 'rgb(59 130 246 / 0.1)' : 
-                    benefit.color === 'green' ? 'rgb(34 197 94 / 0.1)' : 
-                    benefit.color === 'purple' ? 'rgb(168 85 247 / 0.1)' :
-                    benefit.color === 'orange' ? 'rgb(249 115 22 / 0.1)' :
-                    benefit.color === 'red' ? 'rgb(239 68 68 / 0.1)' :
-                    benefit.color === 'yellow' ? 'rgb(234 179 8 / 0.1)' :
-                    benefit.color === 'indigo' ? 'rgb(99 102 241 / 0.1)' :
-                    'rgb(236 72 153 / 0.1)'}`
-                }}
+                className="group relative p-6 rounded-md transition-all duration-300 hover:-translate-y-1 bg-gradient-to-br from-blue-400/10 to-blue-400/5 border border-blue-400/10 hover:border-blue-400/20 cursor-pointer"
               >
                 <div className="flex flex-col items-center text-center">
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110`}
-                       style={{
-                         backgroundColor: `${benefit.color === 'blue' ? 'rgb(59 130 246 / 0.15)' : 
-                           benefit.color === 'green' ? 'rgb(34 197 94 / 0.15)' : 
-                           benefit.color === 'purple' ? 'rgb(168 85 247 / 0.15)' :
-                           benefit.color === 'orange' ? 'rgb(249 115 22 / 0.15)' :
-                           benefit.color === 'red' ? 'rgb(239 68 68 / 0.15)' :
-                           benefit.color === 'yellow' ? 'rgb(234 179 8 / 0.15)' :
-                           benefit.color === 'indigo' ? 'rgb(99 102 241 / 0.15)' :
-                           'rgb(236 72 153 / 0.15)'}`
-                       }}
-                  >
-                    <IconComponent className={`h-8 w-8`}
-                                   style={{
-                                     color: `${benefit.color === 'blue' ? 'rgb(59 130 246)' : 
-                                       benefit.color === 'green' ? 'rgb(34 197 94)' : 
-                                       benefit.color === 'purple' ? 'rgb(168 85 247)' :
-                                       benefit.color === 'orange' ? 'rgb(249 115 22)' :
-                                       benefit.color === 'red' ? 'rgb(239 68 68)' :
-                                       benefit.color === 'yellow' ? 'rgb(234 179 8)' :
-                                       benefit.color === 'indigo' ? 'rgb(99 102 241)' :
-                                       'rgb(236 72 153)'}`
-                                   }} />
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 bg-blue-400/15">
+                    <IconComponent className="h-8 w-8 text-blue-400" />
                   </div>
                   
-                  <h3 className={`text-lg font-bold text-foreground mb-3 group-hover:text-primary transition-colors`}>
+                  <h3 className="text-lg font-bold text-foreground mb-3 group-hover:text-blue-400 transition-colors">
                     {benefit.title}
                   </h3>
                   
@@ -127,7 +80,7 @@ export function BenefitsSection() {
                   </p>
 
                   {/* Subtle underline animation */}
-                  <div className={`h-0.5 w-0 bg-primary mt-4 transition-all duration-300 rounded-full group-hover:w-8`} />
+                  <div className="h-0.5 w-0 bg-blue-400 mt-4 transition-all duration-300 rounded-full group-hover:w-8" />
                 </div>
               </div>
             );
@@ -144,17 +97,17 @@ export function BenefitsSection() {
               Join thousands of patients who have made the smart choice for their health
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <div className="flex items-center justify-center gap-2 px-6 py-3 bg-white/50 border border-primary/10 rounded-md">
-                <Shield className="h-5 w-5 text-green-500" />
-                <span className="text-sm font-medium">HIPAA Compliant</span>
+              <div className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-400/10 border border-blue-400/20 rounded-md">
+                <Shield className="h-5 w-5 text-blue-400" />
+                <span className="text-sm font-medium text-blue-700">HIPAA Compliant</span>
               </div>
-              <div className="flex items-center justify-center gap-2 px-6 py-3 bg-white/50 border border-primary/10 rounded-md">
-                <Award className="h-5 w-5 text-blue-500" />
-                <span className="text-sm font-medium">Licensed Doctors</span>
+              <div className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-400/10 border border-blue-400/20 rounded-md">
+                <Award className="h-5 w-5 text-blue-400" />
+                <span className="text-sm font-medium text-blue-700">Licensed Doctors</span>
               </div>
-              <div className="flex items-center justify-center gap-2 px-6 py-3 bg-white/50 border border-primary/10 rounded-md">
-                <Clock className="h-5 w-5 text-orange-500" />
-                <span className="text-sm font-medium">Available 24/7</span>
+              <div className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-400/10 border border-blue-400/20 rounded-md">
+                <Clock className="h-5 w-5 text-blue-400" />
+                <span className="text-sm font-medium text-blue-700">Available 24/7</span>
               </div>
             </div>
           </div>

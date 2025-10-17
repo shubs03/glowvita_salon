@@ -8,7 +8,7 @@ await _db();
 // GET Orders for the logged-in user (Vendor or Supplier)
 export const GET = authMiddlewareCrm(async (req) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user.userId;
     const role = req.user.role;
 
     let query = {};
@@ -38,7 +38,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 // POST - Create a new Order (Vendor purchasing from Supplier)
 export const POST = authMiddlewareCrm(async (req) => {
   try {
-    const vendorId = req.user._id;
+    const vendorId = req.user.userId;
     const { items, supplierId, totalAmount, shippingAddress } = await req.json();
 
     if (!items || items.length === 0 || !supplierId || !totalAmount || !shippingAddress) {
@@ -70,7 +70,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 // PATCH - Update order status and tracking
 export const PATCH = authMiddlewareCrm(async (req) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user.userId;
     const role = req.user.role;
     const { orderId, status, trackingNumber, courier } = await req.json();
 

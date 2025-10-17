@@ -170,7 +170,116 @@ export default function OrdersPage() {
   
   const renderOrderTable = (orders: Order[]) => (
     <>
-      {orders.length === 0 ? (
+      {isLoading ? (
+        // Loading state with skeleton loaders
+        <div className="space-y-4">
+          {/* Desktop Skeleton View */}
+          <div className="hidden lg:block">
+            <div className="overflow-x-auto rounded-2xl border border-border/50">
+              <Table>
+                <TableHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
+                  <TableRow className="border-border/50">
+                    <TableHead className="font-semibold">Order Details</TableHead>
+                    <TableHead className="font-semibold">Products</TableHead>
+                    <TableHead className="font-semibold">{role === 'supplier' ? 'Vendor' : 'Customer'}</TableHead>
+                    <TableHead className="font-semibold">Date</TableHead>
+                    <TableHead className="font-semibold">Total</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="text-right font-semibold">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(5)].map((_, index) => (
+                    <TableRow key={index} className="border-border/30">
+                      <TableCell>
+                        <Skeleton className="h-4 w-24 mb-2" />
+                        <Skeleton className="h-3 w-32" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-12 w-12 rounded-lg" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-24" />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-6 w-24 rounded-full" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <Skeleton className="h-8 w-16 rounded-lg" />
+                          <Skeleton className="h-8 w-24 rounded-lg" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Mobile Skeleton View */}
+          <div className="lg:hidden space-y-4">
+            {[...Array(3)].map((_, index) => (
+              <Card key={index} className="overflow-hidden border-border/50">
+                <CardContent className="p-0">
+                  <div className="p-4 bg-gradient-to-r from-muted/30 to-muted/20 border-b border-border/30">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <Skeleton className="h-4 w-20 mb-2" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-12 w-12 rounded-lg" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-24" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-border/20">
+                      <div>
+                        <Skeleton className="h-6 w-20 mb-1" />
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                      <div className="flex gap-2">
+                        <Skeleton className="h-8 w-16 rounded-lg" />
+                        <Skeleton className="h-8 w-16 rounded-lg" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ) : isError ? (
+        // Show "No orders found" when there's an error
+        <div className="text-center py-16">
+          <div className="mx-auto w-32 h-32 mb-6 bg-gradient-to-br from-muted to-muted/50 rounded-full flex items-center justify-center">
+            <Package className="h-16 w-16 text-muted-foreground/50" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">No orders found</h3>
+          <p className="text-muted-foreground">There was a problem loading your orders. Please try again later.</p>
+        </div>
+      ) : orders.length === 0 ? (
         <div className="text-center py-16">
           <div className="mx-auto w-32 h-32 mb-6 bg-gradient-to-br from-muted to-muted/50 rounded-full flex items-center justify-center">
             <Package className="h-16 w-16 text-muted-foreground/50" />

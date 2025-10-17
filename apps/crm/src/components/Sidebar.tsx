@@ -32,10 +32,41 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      // Remove all possible auth tokens from cookies
+      Cookies.remove('crm_access_token', { path: '/' });
+      Cookies.remove('crm_access_token', { path: '/', domain: window.location.hostname });
+      Cookies.remove('access_token', { path: '/' });
+      Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
+      Cookies.remove('token', { path: '/' });
+      Cookies.remove('token', { path: '/', domain: window.location.hostname });
+      
+      // Clear all auth-related data from localStorage
+      localStorage.removeItem('crmAuthState');
+      localStorage.removeItem('userAuthState');
+      localStorage.removeItem('adminAuthState');
+      
+      // Clear any other possible tokens
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('token') || key.includes('auth')) {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            console.warn(`Failed to remove localStorage item: ${key}`, e);
+          }
+        }
+      });
+
+      // This action will now trigger the root reducer to reset the entire state
       dispatch(clearCrmAuth());
-      Cookies.remove('crm_access_token');
+      
+      // Redirect to login page after state is cleared
       router.push('/login');
+      // Force a page refresh to ensure all state is cleared
       router.refresh();
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still redirect to login even if there was an error
+      router.push('/login');
     } finally {
       setIsLoggingOut(false);
       setShowLogoutModal(false);

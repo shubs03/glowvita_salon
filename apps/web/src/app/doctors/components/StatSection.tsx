@@ -8,33 +8,25 @@ export function StatSection() {
       icon: Users,
       value: "50,000+",
       label: "Happy Patients",
-      description: "Trusted by patients worldwide",
-      color: "blue",
-      gradient: "from-blue-500/10 to-blue-500/5"
+      description: "Trusted by patients worldwide"
     },
     {
       icon: Clock,
       value: "24/7",
       label: "Available",
-      description: "Round-the-clock medical support",
-      color: "green",
-      gradient: "from-green-500/10 to-green-500/5"
+      description: "Round-the-clock medical support"
     },
     {
       icon: Star,
       value: "4.9/5",
       label: "Average Rating",
-      description: "Based on patient reviews",
-      color: "yellow",
-      gradient: "from-yellow-500/10 to-yellow-500/5"
+      description: "Based on patient reviews"
     },
     {
       icon: Calendar,
       value: "100,000+",
       label: "Consultations",
-      description: "Successful online consultations",
-      color: "purple",
-      gradient: "from-purple-500/10 to-purple-500/5"
+      description: "Successful online consultations"
     }
   ];
 
@@ -56,44 +48,18 @@ export function StatSection() {
             return (
               <div
                 key={stat.label}
-                className={`group relative p-8 rounded-md transition-all duration-300 hover:-translate-y-1 bg-gradient-to-br ${stat.gradient} border hover:border-opacity-40 text-center cursor-pointer`}
-                style={{
-                  borderColor: `${stat.color === 'blue' ? 'rgb(59 130 246 / 0.1)' : 
-                    stat.color === 'green' ? 'rgb(34 197 94 / 0.1)' : 
-                    stat.color === 'yellow' ? 'rgb(234 179 8 / 0.1)' :
-                    'rgb(168 85 247 / 0.1)'}`
-                }}
+                className="group relative p-6 rounded-md transition-all duration-300 hover:-translate-y-1 bg-gradient-to-br from-blue-400/10 to-blue-400/5 border border-blue-400/10 hover:border-blue-400/20 text-center cursor-pointer"
               >
                 <div className="flex flex-col items-center">
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 transition-all duration-300 group-hover:scale-110`}
-                       style={{
-                         backgroundColor: `${stat.color === 'blue' ? 'rgb(59 130 246 / 0.15)' : 
-                           stat.color === 'green' ? 'rgb(34 197 94 / 0.15)' : 
-                           stat.color === 'yellow' ? 'rgb(234 179 8 / 0.15)' :
-                           'rgb(168 85 247 / 0.15)'}`
-                       }}
-                  >
-                    <IconComponent className={`h-8 w-8`}
-                                   style={{
-                                     color: `${stat.color === 'blue' ? 'rgb(59 130 246)' : 
-                                       stat.color === 'green' ? 'rgb(34 197 94)' : 
-                                       stat.color === 'yellow' ? 'rgb(234 179 8)' :
-                                       'rgb(168 85 247)'}`
-                                   }} />
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-110 bg-blue-400/15">
+                    <IconComponent className="h-6 w-6 text-blue-400" />
                   </div>
                   
-                  <div className={`text-4xl lg:text-5xl font-bold mb-2 transition-all duration-300 group-hover:scale-105`}
-                       style={{
-                         color: `${stat.color === 'blue' ? 'rgb(37 99 235)' : 
-                           stat.color === 'green' ? 'rgb(21 128 61)' : 
-                           stat.color === 'yellow' ? 'rgb(161 98 7)' :
-                           'rgb(124 58 237)'}`
-                       }}
-                  >
+                  <div className="text-3xl lg:text-4xl font-bold mb-2 transition-all duration-300 group-hover:scale-105 text-blue-400">
                     {stat.value}
                   </div>
                   
-                  <h3 className="text-xl font-bold text-foreground mb-2">
+                  <h3 className="text-lg font-bold text-foreground mb-2">
                     {stat.label}
                   </h3>
                   
@@ -102,7 +68,7 @@ export function StatSection() {
                   </p>
 
                   {/* Subtle underline animation */}
-                  <div className={`h-0.5 w-0 bg-primary mt-4 transition-all duration-300 rounded-full group-hover:w-12`} />
+                  <div className="h-0.5 w-0 bg-blue-400 mt-4 transition-all duration-300 rounded-full group-hover:w-12" />
                 </div>
               </div>
             );
@@ -112,19 +78,19 @@ export function StatSection() {
         {/* Additional Mini Stats */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
           <div className="p-4">
-            <div className="text-2xl font-bold text-primary mb-1">500+</div>
+            <div className="text-2xl font-bold text-blue-400 mb-1">500+</div>
             <div className="text-sm text-muted-foreground">Certified Doctors</div>
           </div>
           <div className="p-4">
-            <div className="text-2xl font-bold text-primary mb-1">50+</div>
+            <div className="text-2xl font-bold text-blue-400 mb-1">50+</div>
             <div className="text-sm text-muted-foreground">Medical Specialties</div>
           </div>
           <div className="p-4">
-            <div className="text-2xl font-bold text-primary mb-1">15 min</div>
+            <div className="text-2xl font-bold text-blue-400 mb-1">15 min</div>
             <div className="text-sm text-muted-foreground">Average Wait Time</div>
           </div>
           <div className="p-4">
-            <div className="text-2xl font-bold text-primary mb-1">99.9%</div>
+            <div className="text-2xl font-bold text-blue-400 mb-1">99.9%</div>
             <div className="text-sm text-muted-foreground">Platform Uptime</div>
           </div>
         </div>
