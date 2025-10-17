@@ -14,7 +14,7 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
         return NextResponse.json({ message: "Supplier ID is required" }, { status: 400 });
     }
 
-    const supplier = await SupplierModel.findById(id).select('shopName email country city description profileImage');
+    const supplier = await SupplierModel.findById(id).select('firstName lastName shopName description email mobile country state city pincode address supplierType businessRegistrationNo profileImage status referralCode licenseFiles');
 
     if (!supplier) {
         return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
@@ -25,4 +25,4 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
     console.error("Error fetching supplier profile:", error);
     return NextResponse.json({ message: "Failed to fetch supplier profile" }, { status: 500 });
   }
-}, ['vendor']);
+}, ['supplier']);

@@ -1061,7 +1061,23 @@ export const glowvitaApi = createApi({
       query: (id) => `/crm/supplier-profile/${id}`,
       providesTags: (result, error, id) => [{ type: 'SupplierProfile', id }],
     }),
+    
+    // Add new endpoint for getting current supplier's profile
+    getCurrentSupplierProfile: builder.query({
+      query: () => ({ url: "/crm/supplier-profile", method: "GET" }),
+      providesTags: ["Supplier"],
+    }),
 
+    // Add new endpoint for updating supplier profile
+    updateSupplierProfile: builder.mutation({
+      query: (supplierData) => ({
+        url: "/crm/supplier-profile",
+        method: "PUT",
+        body: supplierData,
+      }),
+      invalidatesTags: ["Supplier"],
+    }),
+    
     // Orders
     getCrmOrders: builder.query({
       query: () => ({ url: '/crm/orders' }),
@@ -1497,6 +1513,8 @@ export const {
   useDeleteCrmProductMutation,
   useGetSupplierProductsQuery,
   useGetSupplierProfileQuery,
+  useGetCurrentSupplierProfileQuery,
+  useUpdateSupplierProfileMutation,
   useGetCrmOrdersQuery,
   useCreateCrmOrderMutation,
   useUpdateCrmOrderMutation,
