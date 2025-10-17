@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { CreateCampaignModal } from './CreateCampaignModal';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
-import { MessageSquare, Package, FileText, Plus } from 'lucide-react';
+import { MessageSquare, Package, FileText, Plus, ArrowLeft } from 'lucide-react';
 import { useAppSelector } from '@repo/store/hooks';
 import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery, usePurchaseSmsPackageMutation } from '@repo/store/services/api';
 import { toast } from 'sonner';
@@ -162,9 +163,16 @@ export default function MessageBlastPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Message Blast</h1>
-        <p className="text-muted-foreground">Send bulk messages to your customers</p>
+      <div className="flex items-center gap-4 mb-8">
+        <Link href="/marketing">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Marketing
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Message Blast</h1>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
