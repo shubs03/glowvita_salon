@@ -958,13 +958,9 @@ useEffect(() => {
     currentTime.setHours(startHours, startMinutes, 0, 0);
     
     // Get existing appointments for the staff member
-    const response: any = await (glowvitaApi.endpoints.getAppointments.initiate(
-      { 
-        staffId, 
-        date: formatDateForBackend(date)
-      }
-    ) as any);
-    const existingAppointments = response || [];
+    // Use the existing hook instead of manual dispatch
+    // The existingAppointments hook is already fetching the data we need
+    // We can use the existing data from the hook instead of making a new request
     
     // Check up to 24 hours in the future
     for (let i = 0; i < 96; i++) { // 96 = 24 hours * 4 (15-minute intervals)
@@ -1028,36 +1024,29 @@ useEffect(() => {
         if (prev.staff) {
           const endTime = calculateEndTime(time, prev.duration || 60);
           
-          // Use dispatch to trigger the query
-          dispatch(glowvitaApi.endpoints.getAppointments.initiate(
-            { 
-              staffId: prev.staff, 
-              date: formatDateForBackend(prev.date)
+          // Use the existing hook pattern instead of manual dispatch
+          // The existingAppointments hook is already fetching the data we need
+          // We can use the existing data from the hook instead of making a new request
+          // Check for overlapping appointments using the existing data
+          const hasOverlap = existingAppointments?.some((appt: any) => {
+            // Skip the current appointment when editing
+            if (appointmentData._id && (appt._id === appointmentData._id)) {
+              return false;
             }
-          )).then((result: any) => {
-            const existingAppointments = result.data || [];
-            const hasOverlap = existingAppointments?.some((appt: any) => {
-              // Skip the current appointment when editing
-              if (appointmentData._id && (appt._id === appointmentData._id)) {
-                return false;
-              }
-              
-              const apptStart = new Date(`${appt.date}T${appt.startTime}`).getTime();
-              const apptEnd = new Date(`${appt.date}T${appt.endTime}`).getTime();
-              const newStart = new Date(prev.date);
-              const [hours, mins] = time.split(':').map(Number);
-              newStart.setHours(hours, mins, 0, 0);
-              const newEnd = addMinutes(newStart, prev.duration || 60);
-              
-              return newStart.getTime() < apptEnd && newEnd.getTime() > apptStart;
-            });
             
-            if (hasOverlap) {
-              toast.error('The selected staff member already has an appointment at this time. Please choose a different time or staff member.');
-            }
-          }).catch((error: any) => {
-            console.error('Error checking overlapping appointments:', error);
+            const apptStart = new Date(`${appt.date}T${appt.startTime}`).getTime();
+            const apptEnd = new Date(`${appt.date}T${appt.endTime}`).getTime();
+            const newStart = new Date(prev.date);
+            const [hours, mins] = time.split(':').map(Number);
+            newStart.setHours(hours, mins, 0, 0);
+            const newEnd = addMinutes(newStart, prev.duration || 60);
+            
+            return newStart.getTime() < apptEnd && newEnd.getTime() > apptStart;
           });
+          
+          if (hasOverlap) {
+            toast.error('The selected staff member already has an appointment at this time. Please choose a different time or staff member.');
+          }
         }
         
         return {
