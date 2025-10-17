@@ -146,7 +146,7 @@ export const glowvitaApi = createApi({
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
-    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient"
+    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment"
   ],
 
   endpoints: (builder) => ({
@@ -1061,7 +1061,23 @@ export const glowvitaApi = createApi({
       query: (id) => `/crm/supplier-profile/${id}`,
       providesTags: (result, error, id) => [{ type: 'SupplierProfile', id }],
     }),
+    
+    // Add new endpoint for getting current supplier's profile
+    getCurrentSupplierProfile: builder.query({
+      query: () => ({ url: "/crm/supplier-profile", method: "GET" }),
+      providesTags: ["Supplier"],
+    }),
 
+    // Add new endpoint for updating supplier profile
+    updateSupplierProfile: builder.mutation({
+      query: (supplierData) => ({
+        url: "/crm/supplier-profile",
+        method: "PUT",
+        body: supplierData,
+      }),
+      invalidatesTags: ["Supplier"],
+    }),
+    
     // Orders
     getCrmOrders: builder.query({
       query: () => ({ url: '/crm/orders' }),
@@ -1274,6 +1290,20 @@ export const glowvitaApi = createApi({
     saveCustomizedTemplate: builder.mutation({
       query: (templateData) => ({ url: "/crm/social-media-templates", method: "POST", body: templateData }),
       invalidatesTags: ["CrmSocialMediaTemplate"],
+    }),
+
+    // CRM SMS Purchase Endpoints
+    purchaseSmsPackage: builder.mutation({
+      query: (packageData) => ({ url: "/crm/sms-purchase", method: "POST", body: packageData }),
+      invalidatesTags: ["Vendor"],
+    }),
+    getSmsPurchaseHistory: builder.query({
+      query: (params) => ({ 
+        url: "/crm/sms-purchase", 
+        method: "GET",
+        params
+      }),
+      providesTags: ["Vendor"],
     }),
 
     // Cart Endpoints (CRM - for vendors)
@@ -1514,6 +1544,8 @@ export const {
   useDeleteCrmProductMutation,
   useGetSupplierProductsQuery,
   useGetSupplierProfileQuery,
+  useGetCurrentSupplierProfileQuery,
+  useUpdateSupplierProfileMutation,
   useGetCrmOrdersQuery,
   useCreateCrmOrderMutation,
   useUpdateCrmOrderMutation,
@@ -1550,6 +1582,8 @@ export const {
   useCreateCrmCampaignMutation,
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
+  usePurchaseSmsPackageMutation,
+  useGetSmsPurchaseHistoryQuery,
   // New endpoint for fetching all vendor products
   useGetAllVendorProductsQuery,
   // New endpoints for vendor product operations

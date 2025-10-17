@@ -12,6 +12,7 @@ const supplierSchema = new mongoose.Schema({
   },
   mobile: { type: String, required: true, trim: true },
   shopName: { type: String, required: true, trim: true },
+  description: { type: String, trim: true },
   country: { type: String, required: true, trim: true },
   state: { type: String, required: true, trim: true },
   city: { type: String, required: true, trim: true },
@@ -29,6 +30,7 @@ const supplierSchema = new mongoose.Schema({
   address: { type: String, required: true, trim: true },
   businessRegistrationNo: { type: String, trim: true },
   supplierType: { type: String, required: true },
+  profileImage: { type: String }, // Add profileImage field
   licenseFiles: [{ type: String }], // Changed to array for multiple files
   password: { type: String, required: true, select: false },
   resetPasswordToken: {

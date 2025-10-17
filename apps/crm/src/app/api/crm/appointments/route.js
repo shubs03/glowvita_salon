@@ -99,7 +99,7 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
 // POST a new appointment
 export const POST = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.toString();
+        const vendorId = req.user.userId.toString();
         const body = await req.json();
 
         console.log('POST request - creating appointment:', body);
@@ -176,7 +176,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 // Handle PUT /api/crm/appointments/[id] (update)
 export const PUT = authMiddlewareCrm(async (req, { params }) => {
     try {
-        const vendorId = req.user._id;
+        const vendorId = req.user.userId;
         const appointmentId = params?.id;
         
         if (!appointmentId) {
@@ -270,7 +270,7 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
 export const DELETE = authMiddlewareCrm(async (req, { params }) => {
     try {
         console.log('=== DELETE REQUEST START ===');
-        const vendorId = req.user._id;
+        const vendorId = req.user.userId;
         const appointmentId = extractAppointmentId(req.url, params);
         
         console.log('DELETE Request URL:', req.url);
@@ -320,7 +320,7 @@ export const DELETE = authMiddlewareCrm(async (req, { params }) => {
 // PATCH /api/crm/appointments - Update appointment status
 export const PATCH = authMiddlewareCrm(async (req, { params }) => {
     try {
-        const vendorId = req.user._id;
+        const vendorId = req.user.userId;
         const body = await req.json();
         const appointmentId = extractAppointmentId(req.url, params) || body._id;
         
