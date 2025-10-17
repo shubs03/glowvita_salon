@@ -56,6 +56,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useMemo } from 'react';
 import { SubscriptionPlansDialog } from "@/components/SubscriptionPlansDialog";
 import { useCrmAuth } from '@/hooks/useCrmAuth';
+import { SmsPackagesTab } from '@/components/SmsPackagesTab';
 
 // TYPES
 type SalonCategory = "unisex" | "men" | "women";
@@ -613,29 +614,37 @@ const BankDetailsTab = ({ bankDetails, setVendor }: { bankDetails: BankDetails; 
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Account Holder Name</Label>
+            <Label htmlFor="accountHolder">Account Holder Name</Label>
             <Input 
+              id="accountHolder"
+              placeholder="Enter account holder name"
               value={bankDetails?.accountHolder || ''} 
               onChange={(e) => handleInputChange('accountHolder', e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>Account Number</Label>
+            <Label htmlFor="accountNumber">Account Number</Label>
             <Input 
+              id="accountNumber"
+              placeholder="Enter account number"
               value={bankDetails?.accountNumber || ''} 
               onChange={(e) => handleInputChange('accountNumber', e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>Bank Name</Label>
+            <Label htmlFor="bankName">Bank Name</Label>
             <Input 
+              id="bankName"
+              placeholder="Enter bank name"
               value={bankDetails?.bankName || ''} 
               onChange={(e) => handleInputChange('bankName', e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>IFSC Code</Label>
+            <Label htmlFor="ifscCode">IFSC Code</Label>
             <Input 
+              id="ifscCode"
+              placeholder="Enter IFSC code"
               value={bankDetails?.ifscCode || ''} 
               onChange={(e) => handleInputChange('ifscCode', e.target.value)}
             />
@@ -1577,9 +1586,42 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
+            <Label htmlFor="shopName">Shop Name</Label>
+            <Input
+              id="shopName"
+              placeholder="Enter your shop name"
+              value={supplier.shopName || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, shopName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="supplierType">Supplier Type</Label>
+            <Input
+              id="supplierType"
+              placeholder="Supplier type"
+              value={supplier.supplierType || ''}
+              disabled
+            />
+          </div>
+          
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={supplier.description || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, description: e.target.value })
+              }
+              placeholder="Describe your business..."
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="firstName">First Name</Label>
             <Input
               id="firstName"
+              placeholder="Enter your first name"
               value={supplier.firstName || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, firstName: e.target.value })
@@ -1590,6 +1632,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             <Label htmlFor="lastName">Last Name</Label>
             <Input
               id="lastName"
+              placeholder="Enter your last name"
               value={supplier.lastName || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, lastName: e.target.value })
@@ -1621,6 +1664,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             <Input
               id="email"
               type="email"
+              placeholder="Enter your email address"
               value={supplier.email || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, email: e.target.value })
@@ -1631,6 +1675,8 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             <Label htmlFor="mobile">Mobile</Label>
             <Input
               id="mobile"
+              type="tel"
+              placeholder="Enter your mobile number"
               value={supplier.mobile || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, mobile: e.target.value })
@@ -1644,6 +1690,37 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               value={supplier.country || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, country: e.target.value })
+              id="businessRegistrationNo"
+              placeholder="Enter business registration number"
+              value={supplier.businessRegistrationNo || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, businessRegistrationNo: e.target.value })
+              }
+            />
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="address">Address</Label>
+          <Textarea
+            id="address"
+            placeholder="Enter your full address"
+            value={supplier.address || ''}
+            onChange={(e) =>
+              setSupplier({ ...supplier, address: e.target.value })
+            }
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              placeholder="Enter city"
+              value={supplier.city || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, city: e.target.value })
               }
             />
           </div>
@@ -1651,6 +1728,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             <Label htmlFor="state">State</Label>
             <Input
               id="state"
+              placeholder="Enter state"
               value={supplier.state || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, state: e.target.value })
@@ -1671,6 +1749,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             <Label htmlFor="pincode">Pincode</Label>
             <Input
               id="pincode"
+              placeholder="Enter pincode"
               value={supplier.pincode || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, pincode: e.target.value })
@@ -1682,6 +1761,15 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             <Textarea
               id="address"
               value={supplier.address || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, address: e.target.value })
+              }
+            />
+            <Label htmlFor="country">Country</Label>
+            <Input
+              id="country"
+              placeholder="Enter country"
+              value={supplier.country || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, address: e.target.value })
               }
@@ -1711,6 +1799,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
             <Label htmlFor="referralCode">Referral Code</Label>
             <Input
               id="referralCode"
+              placeholder="Referral code"
               value={supplier.referralCode || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, referralCode: e.target.value })
@@ -2346,11 +2435,13 @@ export default function SalonProfilePage() {
                         <label className="cursor-pointer">
                           <UploadCloud className="h-4 w-4" />
                           <input
+                            id="profile-image-upload"
                             type="file"
                             accept="image/*"
                             className="hidden"
                             onChange={handleProfileImageUpload}
                             disabled={isUploading}
+                            aria-label="Upload profile image"
                           />
                         </label>
                       </Button>
@@ -2425,13 +2516,14 @@ export default function SalonProfilePage() {
 
       {role === 'vendor' ? (
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="subscription">Subscription</TabsTrigger>
             <TabsTrigger value="gallery">Gallery</TabsTrigger>
             <TabsTrigger value="bank-details">Bank Details</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="opening-hours">Opening Hours</TabsTrigger>
+          <TabsTrigger value="sms-packages">SMS Packages</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
           </TabsList>
           <TabsContent value="profile" className="mt-4">
@@ -2472,6 +2564,9 @@ export default function SalonProfilePage() {
               refetchWorkingHours={refetchWorkingHours}
             />
           </TabsContent>
+        <TabsContent value="sms-packages" className="mt-4">
+          <SmsPackagesTab />
+        </TabsContent>
           <TabsContent value="categories" className="mt-4">
             <CategoriesTab />
           </TabsContent>
