@@ -7,6 +7,7 @@ import { setUserAuth, clearUserAuth } from '@repo/store/slices/userAuthSlice';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
+import Cookies from 'js-cookie';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -24,9 +25,39 @@ export default function DashboardPage() {
   }, [data, error, dispatch, router]);
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout');
-    dispatch(clearUserAuth());
-    router.push('/login');
+    try {
+      // Remove all possible auth tokens from cookies
+      Cookies.remove('token', { path: '/' });
+      Cookies.remove('token', { path: '/', domain: window.location.hostname });
+      Cookies.remove('access_token', { path: '/' });
+      Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
+      Cookies.remove('crm_access_token', { path: '/' });
+      Cookies.remove('crm_access_token', { path: '/', domain: window.location.hostname });
+      
+      // Clear all auth-related data from localStorage
+      localStorage.removeItem('userAuthState');
+      localStorage.removeItem('crmAuthState');
+      localStorage.removeItem('adminAuthState');
+      
+      // Clear any other possible tokens
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('token') || key.includes('auth')) {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            console.warn(`Failed to remove localStorage item: ${key}`, e);
+          }
+        }
+      });
+
+      await fetch('/api/auth/logout');
+      dispatch(clearUserAuth());
+      router.push('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still redirect to login even if there was an error
+      router.push('/login');
+    }
   };
 
   if (isLoading) {

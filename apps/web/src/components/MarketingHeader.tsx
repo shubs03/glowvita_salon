@@ -24,6 +24,7 @@ import {
 } from "@repo/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
+import Cookies from 'js-cookie';
 
 interface User {
   firstName?: string;
@@ -33,11 +34,17 @@ interface User {
   profilePicture?: string;
 }
 
+interface MenuItemProps {
+  label: string;
+  href: string;
+}
+
 interface MarketingHeaderProps {
   isMobileMenuOpen: boolean;
   toggleMobileMenu: () => void;
   isHomePage?: boolean;
   hideMenuItems?: boolean;
+  customMenuItems?: MenuItemProps[];
 }
 
 const profileNavItems = [
@@ -51,7 +58,7 @@ const profileNavItems = [
   { id: 'settings', label: 'Account Settings', icon: Settings, href: '/profile/settings' },
 ];
 
-export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage = false, hideMenuItems = false }: MarketingHeaderProps) {
+export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage = false, hideMenuItems = false, customMenuItems }: MarketingHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -62,15 +69,47 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
 
   const handleLogout = () => {
     setIsLoggingOut(true);
-    // Dispatch the client-side action to clear all auth state
-    dispatch(clearUserAuth());
-    // Reset cart to guest mode
-    dispatch(resetToGuest());
-    toast.success("You have been logged out.");
-    // Redirect to login page
-    router.push('/client-login');
-    setIsLoggingOut(false);
-    setShowLogoutModal(false);
+    try {
+      // Remove all possible auth tokens from cookies
+      Cookies.remove('token', { path: '/' });
+      Cookies.remove('token', { path: '/', domain: window.location.hostname });
+      Cookies.remove('access_token', { path: '/' });
+      Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
+      Cookies.remove('crm_access_token', { path: '/' });
+      Cookies.remove('crm_access_token', { path: '/', domain: window.location.hostname });
+      
+      // Clear all auth-related data from localStorage
+      localStorage.removeItem('userAuthState');
+      localStorage.removeItem('crmAuthState');
+      localStorage.removeItem('adminAuthState');
+      
+      // Clear any other possible tokens
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('token') || key.includes('auth')) {
+          try {
+            localStorage.removeItem(key);
+          } catch (e) {
+            console.warn(`Failed to remove localStorage item: ${key}`, e);
+          }
+        }
+      });
+
+      // Dispatch the client-side action to clear all auth state
+      dispatch(clearUserAuth());
+      // Reset cart to guest mode
+      dispatch(resetToGuest());
+      toast.success("You have been logged out.");
+      // Redirect to login page
+      router.push('/client-login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error("Error during logout. Please try again.");
+      // Still redirect to login even if there was an error
+      router.push('/client-login');
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutModal(false);
+    }
   };
 
   const getInitials = (firstName: string = '', lastName: string = '') => {
@@ -117,21 +156,31 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
           <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
             {!hideMenuItems && (
               <>
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/apps">Features</Link>
-                </Button>
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/pricing">Pricing</Link>
-                </Button>
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/about">About Us</Link>
-                </Button>
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/contact">Contact</Link>
-                </Button>
-                <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                  <Link href="/support">Support</Link>
-                </Button>
+                {customMenuItems ? (
+                  customMenuItems.map((item, index) => (
+                    <Button key={index} variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href={item.href}>{item.label}</Link>
+                    </Button>
+                  ))
+                ) : (
+                  <>
+                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href="/apps">Features</Link>
+                    </Button>
+                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href="/pricing">Pricing</Link>
+                    </Button>
+                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href="/about">About Us</Link>
+                    </Button>
+                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href="/contact">Contact</Link>
+                    </Button>
+                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
+                      <Link href="/support">Support</Link>
+                    </Button>
+                  </>
+                )}
               </>
             )}
             <div className="mx-2">
@@ -218,21 +267,31 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
               {!hideMenuItems && (
                 <>
                   <div className="space-y-1">
-                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                      <Link href="/apps">Features</Link>
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                      <Link href="/pricing">Pricing</Link>
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                      <Link href="/about">About Us</Link>
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                      <Link href="/contact">Contact</Link>
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                      <Link href="/support">Support</Link>
-                    </Button>
+                    {customMenuItems ? (
+                      customMenuItems.map((item, index) => (
+                        <Button key={index} variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href={item.href}>{item.label}</Link>
+                        </Button>
+                      ))
+                    ) : (
+                      <>
+                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href="/apps">Features</Link>
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href="/pricing">Pricing</Link>
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href="/about">About Us</Link>
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href="/contact">Contact</Link>
+                        </Button>
+                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
+                          <Link href="/support">Support</Link>
+                        </Button>
+                      </>
+                    )}
                   </div>
                   
                   <div className="border-t border-border/30 my-4"></div>

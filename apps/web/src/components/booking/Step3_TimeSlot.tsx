@@ -14,6 +14,7 @@ import {
 } from "@repo/ui/select";
 import { cn } from '@repo/ui/cn';
 import { StaffMember, WorkingHours, TimeSlot } from '@/hooks/useBookingData';
+import { useGetPublicAppointmentsQuery } from '@repo/store/api';
 
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
@@ -51,6 +52,8 @@ interface Step3TimeSlotProps {
     workingHours: WorkingHours[];
     isLoading: boolean;
     error?: any;
+    vendorId?: string; // Add vendorId for checking existing appointments
+    selectedService?: any; // Add selected service for duration calculation
 }
 
 // Helper function to generate time slots based on working hours
@@ -84,6 +87,119 @@ const generateTimeSlotsFromStaffSlots = (slots: any[]): string[] => {
         }
     });
     return timeSlots;
+};
+
+// Helper function to check if a time slot conflicts with existing appointments FOR A SPECIFIC STAFF
+const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string, staffId: string, serviceDuration: number = 60): boolean => {
+    if (!appointments || appointments.length === 0) {
+        return false;
+    }
+    
+    const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+    const endTimeMinutes = timeMinutes + serviceDuration;
+    const dateString = format(date, 'yyyy-MM-dd');
+    
+    return appointments.some(appointment => {
+        // Check if appointment is on the same date
+        const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
+        if (appointmentDateString !== dateString) {
+            return false;
+        }
+        
+        // Extract staff ID - handle different formats (ObjectId, string, or populated object)
+        let appointmentStaffId = null;
+        if (appointment.staff) {
+            if (typeof appointment.staff === 'string') {
+                appointmentStaffId = appointment.staff;
+            } else if (appointment.staff._id) {
+                appointmentStaffId = appointment.staff._id.toString ? appointment.staff._id.toString() : appointment.staff._id;
+            } else if (appointment.staff.toString) {
+                appointmentStaffId = appointment.staff.toString();
+            }
+        }
+        
+        // Only check appointments for this specific staff member
+        if (appointmentStaffId !== staffId) {
+            return false;
+        }
+        
+        // Check for time overlap
+        const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
+        const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
+        
+        // Check if the new time slot overlaps with existing appointment
+        // Overlap occurs if: newStart < existingEnd AND newEnd > existingStart
+        return (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
+    });
+};
+
+// Helper function to check if a time slot conflicts with existing appointments
+// For specific staff: checks if that staff is booked
+// For "Any Professional": checks if ALL staff members are booked (returns true only if NO staff is available)
+const isTimeSlotBooked = (appointments: any[], date: Date, time: string, staff: StaffMember | null, serviceDuration: number = 60, allStaff: StaffMember[] = []): boolean => {
+    console.log('isTimeSlotBooked called with:', {
+        appointmentsCount: appointments?.length || 0,
+        date: format(date, 'yyyy-MM-dd'),
+        time,
+        staffId: staff?.id,
+        serviceDuration,
+        mode: staff ? 'Specific Staff' : 'Any Professional',
+        totalStaffCount: allStaff.length
+    });
+
+    if (!appointments || appointments.length === 0) {
+        console.log('No appointments to check - slot is available');
+        return false;
+    }
+    
+    // If specific staff is selected, check only their appointments
+    if (staff) {
+        const isBooked = isTimeSlotBookedForStaff(appointments, date, time, staff.id, serviceDuration);
+        console.log(`Specific staff ${staff.name} (${staff.id}): ${isBooked ? 'BOOKED' : 'AVAILABLE'}`);
+        return isBooked;
+    }
+    
+    // If "Any Professional" is selected, check if at least ONE staff member is available
+    // We need to check all staff members and see if ANY of them are free
+    if (allStaff.length === 0) {
+        console.log('No staff list provided for "Any Professional" mode - defaulting to old behavior');
+        // Fallback to old behavior if staff list not provided
+        const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+        const endTimeMinutes = timeMinutes + serviceDuration;
+        const dateString = format(date, 'yyyy-MM-dd');
+        
+        return appointments.some(appointment => {
+            const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
+            if (appointmentDateString !== dateString) return false;
+            
+            const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
+            const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
+            
+            return (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
+        });
+    }
+    
+    // Check each staff member to see if ANY is available
+    console.log('Checking availability for "Any Professional" mode across all staff...');
+    let availableStaffCount = 0;
+    let bookedStaffCount = 0;
+    
+    for (const staffMember of allStaff) {
+        const isStaffBooked = isTimeSlotBookedForStaff(appointments, date, time, staffMember.id, serviceDuration);
+        if (isStaffBooked) {
+            bookedStaffCount++;
+            console.log(`  - ${staffMember.name}: BOOKED`);
+        } else {
+            availableStaffCount++;
+            console.log(`  - ${staffMember.name}: AVAILABLE`);
+        }
+    }
+    
+    // If at least one staff member is available, the slot should be shown
+    const allStaffBooked = availableStaffCount === 0;
+    console.log(`Result: ${availableStaffCount} staff available, ${bookedStaffCount} staff booked. Slot ${allStaffBooked ? 'BLOCKED' : 'AVAILABLE'}`);
+    
+    return allStaffBooked;
 };
 
 // Helper function to get day name from date
@@ -125,7 +241,9 @@ export function Step3_TimeSlot({
   staff,
   workingHours,
   isLoading,
-  error
+  error,
+  vendorId,
+  selectedService
 }: Step3TimeSlotProps) {
   const dateScrollerRef = useRef<HTMLDivElement>(null);
 
@@ -134,8 +252,51 @@ export function Step3_TimeSlot({
   
   const currentMonthYear = useMemo(() => format(selectedDate, 'MMMM yyyy'), [selectedDate]);
 
+  // Fetch existing appointments for the selected date and staff to check availability
+  // When a specific staff is selected: fetch only their appointments
+  // When "Any Professional" is selected: fetch all appointments to check which staff are available
+  const { data: existingAppointments = [], isLoading: isLoadingAppointments } = useGetPublicAppointmentsQuery(
+    {
+      vendorId: vendorId,
+      staffId: selectedStaff?.id || undefined, // undefined means fetch all staff appointments
+      date: format(selectedDate, 'yyyy-MM-dd')
+    },
+    {
+      skip: !vendorId, // Skip if no vendorId provided
+      refetchOnMountOrArgChange: true
+    }
+  );
+
+  console.log('Step3_TimeSlot - Fetching appointments:', {
+    vendorId,
+    staffId: selectedStaff?.id || 'Any Professional (all staff)',
+    date: format(selectedDate, 'yyyy-MM-dd'),
+    existingAppointments: existingAppointments,
+    isLoadingAppointments,
+    mode: selectedStaff ? 'Specific Staff' : 'Any Professional'
+  });
+
+  // Calculate service duration for overlap checking
+  const serviceDuration = useMemo(() => {
+    if (!selectedService) return 60; // Default 60 minutes
+    
+    const match = selectedService.duration?.match(/(\d+)\s*(min|hour|hours)/);
+    if (!match) return 60;
+    
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    
+    if (unit === 'min') return value;
+    if (unit === 'hour' || unit === 'hours') return value * 60;
+    return 60;
+  }, [selectedService]);
+
   // Generate available time slots based on working hours for selected date
   const availableTimeSlots = useMemo(() => {
+    console.log('=== Step3_TimeSlot - availableTimeSlots useMemo START ===');
+    console.log('existingAppointments data:', existingAppointments);
+    console.log('existingAppointments length:', existingAppointments?.length || 0);
+    console.log('isLoadingAppointments:', isLoadingAppointments);
     console.log('Step3_TimeSlot - Working Hours Details:', {
       selectedDate: format(selectedDate, 'EEEE, MMM d, yyyy'),
       workingHours: workingHours,
@@ -186,9 +347,16 @@ export function Step3_TimeSlot({
         const slots = generateTimeSlotsFromStaffSlots(staffSlots);
         console.log('Step3_TimeSlot - Generated slots from staff slots:', slots);
         
-        // Filter out blocked time slots for the selected staff
-        const filteredSlots = slots.filter((slot: string) => !isTimeSlotBlocked(selectedStaff, selectedDate, slot));
-        console.log('Step3_TimeSlot - Filtered slots (after blocking):', filteredSlots);
+        // Filter out blocked time slots and existing appointments
+        const filteredSlots = slots.filter((slot: string) => {
+          const isBlocked = isTimeSlotBlocked(selectedStaff, selectedDate, slot);
+          const isBooked = isTimeSlotBooked(existingAppointments, selectedDate, slot, selectedStaff, serviceDuration, staff);
+          
+          console.log(`Staff slot ${slot}: blocked=${isBlocked}, booked=${isBooked}, willShow=${!isBlocked && !isBooked}`);
+          
+          return !isBlocked && !isBooked;
+        });
+        console.log('Step3_TimeSlot - Filtered slots (after blocking and booking check):', filteredSlots);
         
         return filteredSlots;
       }
@@ -212,12 +380,19 @@ export function Step3_TimeSlot({
     const slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
     console.log('Step3_TimeSlot - Generated slots from vendor hours:', slots);
     
-    // Filter out blocked time slots for the selected staff
-    const filteredSlots = slots.filter((slot: string) => !isTimeSlotBlocked(selectedStaff, selectedDate, slot));
-    console.log('Step3_TimeSlot - Filtered slots (after blocking):', filteredSlots);
+    // Filter out blocked time slots and existing appointments
+    const filteredSlots = slots.filter((slot: string) => {
+      const isBlocked = isTimeSlotBlocked(selectedStaff, selectedDate, slot);
+      const isBooked = isTimeSlotBooked(existingAppointments, selectedDate, slot, selectedStaff, serviceDuration, staff);
+      
+      console.log(`Slot ${slot}: blocked=${isBlocked}, booked=${isBooked}, willShow=${!isBlocked && !isBooked}`);
+      
+      return !isBlocked && !isBooked;
+    });
+    console.log('Step3_TimeSlot - Filtered slots (after blocking and booking check):', filteredSlots);
     
     return filteredSlots;
-  }, [selectedDate, workingHours, selectedStaff]);
+  }, [selectedDate, workingHours, selectedStaff, existingAppointments, serviceDuration]);
 
   // Check if a date is available based on working hours and staff availability
   const isDateAvailable = (date: Date): boolean => {
