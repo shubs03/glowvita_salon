@@ -70,6 +70,29 @@ function BookingPageContent() {
     }
   }, []);
 
+  // Ensure service-staff assignments are properly initialized when selectedServices change
+  useEffect(() => {
+    if (selectedServices.length > 0) {
+      // Create service-staff assignments for all selected services if they don't exist
+      const newAssignments = selectedServices.map(service => {
+        // Check if this service already has an assignment
+        const existingAssignment = serviceStaffAssignments.find(assignment => assignment.service.id === service.id);
+        if (existingAssignment) {
+          return existingAssignment;
+        }
+        // Create a new assignment with no staff selected
+        return { service, staff: null };
+      });
+      
+      // Only update if there are changes
+      if (newAssignments.length !== serviceStaffAssignments.length || 
+          newAssignments.some((newAssignment, index) => 
+            newAssignment.service.id !== serviceStaffAssignments[index]?.service.id)) {
+        setServiceStaffAssignments(newAssignments);
+      }
+    }
+  }, [selectedServices]);
+
   // Calculate service schedule when selectedTime or selectedStaff changes
   useEffect(() => {
     if (selectedTime) {
@@ -190,6 +213,8 @@ function BookingPageContent() {
           if (matchingService) {
             setSelectedServices([matchingService]);
             setSelectedService(matchingService); // Set the selected service
+            // Create a service-staff assignment for the pre-selected service
+            setServiceStaffAssignments([{ service: matchingService, staff: null }]);
             // Clear the stored service after using it
             sessionStorage.removeItem('selectedService');
           }
@@ -256,7 +281,7 @@ function BookingPageContent() {
 
   const handleNextStep = () => {
     // For multi-service bookings, validate assignments before proceeding
-    const isMultiService = selectedServices.length > 1;
+    const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
     
     if (currentStep < 3) {
       // For step 2 in multi-service flow, validate assignments
@@ -514,11 +539,12 @@ function BookingPageContent() {
         );
         return prev.filter(s => s.id !== service.id);
       } else {
-        // When selecting a service, set it as the selected service only if no service is currently selected
+        // When selecting a service, only update the selected service state if we're in single service mode
         // For multiple services, we don't want to override the selectedService state
-        if (!selectedService) {
+        if (selectedServices.length === 0) {
           setSelectedService(service);
         }
+        
         // Add a new service-staff assignment with no staff selected initially
         setServiceStaffAssignments(prevAssignments => {
           // Check if this service is already in assignments to prevent duplicates
@@ -544,7 +570,8 @@ function BookingPageContent() {
 
   const renderStepContent = () => {
     // Use multi-service flow if more than one service is selected
-    const isMultiService = selectedServices.length > 1;
+    // Also use multi-service flow if there are service-staff assignments (which indicates we're in multi-service workflow)
+    const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
     
     switch (currentStep) {
         case 1:
