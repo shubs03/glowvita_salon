@@ -70,7 +70,7 @@ function BookingPageContent() {
     }
   }, []);
 
-  // Calculate service schedule when selectedTime changes
+  // Calculate service schedule when selectedTime or selectedStaff changes
   useEffect(() => {
     if (selectedTime) {
       console.log("Recalculating service schedule...");
@@ -369,7 +369,7 @@ function BookingPageContent() {
         // Create a service schedule entry for the single service
         finalServiceSchedule = [{
           service,
-          staff: selectedStaff,
+          staff: selectedStaff, // This should already be correct
           startTime: selectedTime,
           endTime: calculateEndTime(selectedTime, serviceDuration),
           duration: serviceDuration

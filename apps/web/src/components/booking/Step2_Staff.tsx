@@ -98,8 +98,10 @@ export function Step2_Staff({
             console.log('Step2_Staff - Calling onStaffSelect callback with:', staff);
             onStaffSelect(staff);
         }
-        // Automatically navigate to Step 3
-        setCurrentStep(3);
+        // Automatically navigate to Step 3 after a short delay to ensure state update
+        setTimeout(() => {
+            setCurrentStep(3);
+        }, 100);
     };
 
     // Loading state
