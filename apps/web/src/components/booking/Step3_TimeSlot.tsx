@@ -465,8 +465,17 @@ export function Step3_TimeSlot({
       // If staff has specific slots, use them
       if (staffSlots.length > 0) {
         console.log('Step3_TimeSlot - Using staff slots:', staffSlots);
-        const slots = generateTimeSlotsFromStaffSlots(staffSlots);
+        let slots = generateTimeSlotsFromStaffSlots(staffSlots);
         console.log('Step3_TimeSlot - Generated slots from staff slots:', slots);
+        
+        // Filter out past time slots for current date
+        const today = new Date();
+        const isToday = selectedDate.toDateString() === today.toDateString();
+        if (isToday) {
+          const currentTime = format(today, 'HH:mm');
+          slots = slots.filter(slot => slot > currentTime);
+          console.log('Step3_TimeSlot - Filtered past time slots for today:', slots);
+        }
         
         // Filter out blocked time slots and existing appointments
         const filteredSlots = slots.filter((slot: string) => {
@@ -498,8 +507,17 @@ export function Step3_TimeSlot({
       return [];
     }
 
-    const slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
+    let slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
     console.log('Step3_TimeSlot - Generated slots from vendor hours:', slots);
+    
+    // Filter out past time slots for current date
+    const today = new Date();
+    const isToday = selectedDate.toDateString() === today.toDateString();
+    if (isToday) {
+      const currentTime = format(today, 'HH:mm');
+      slots = slots.filter(slot => slot > currentTime);
+      console.log('Step3_TimeSlot - Filtered past time slots for today:', slots);
+    }
     
     // Filter out blocked time slots and existing appointments
     const filteredSlots = slots.filter((slot: string) => {

@@ -596,8 +596,17 @@ export function Step3_MultiServiceTimeSlot({
       // If staff has specific slots, use them
       if (staffSlots.length > 0) {
         console.log('Step3_MultiServiceTimeSlot - Using staff slots:', staffSlots);
-        const slots = generateTimeSlotsFromStaffSlots(staffSlots);
+        let slots = generateTimeSlotsFromStaffSlots(staffSlots);
         console.log('Step3_MultiServiceTimeSlot - Generated slots from staff slots:', slots);
+        
+        // Filter out past time slots for current date
+        const today = new Date();
+        const isToday = selectedDate.toDateString() === today.toDateString();
+        if (isToday) {
+          const currentTime = format(today, 'HH:mm');
+          slots = slots.filter(slot => slot > currentTime);
+          console.log('Step3_MultiServiceTimeSlot - Filtered past time slots for today:', slots);
+        }
         
         // Filter out blocked time slots for the selected staff and check availability for duration
         const filteredSlots = slots.filter((slot: string) => {
@@ -630,8 +639,17 @@ export function Step3_MultiServiceTimeSlot({
       return [];
     }
 
-    const slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
+    let slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
     console.log('Step3_MultiServiceTimeSlot - Generated slots from vendor hours:', slots);
+    
+    // Filter out past time slots for current date
+    const today = new Date();
+    const isToday = selectedDate.toDateString() === today.toDateString();
+    if (isToday) {
+      const currentTime = format(today, 'HH:mm');
+      slots = slots.filter(slot => slot > currentTime);
+      console.log('Step3_MultiServiceTimeSlot - Filtered past time slots for today:', slots);
+    }
     
     // Filter out blocked time slots and check availability for all assigned staff
     const filteredSlots = slots.filter((slot: string) => {
