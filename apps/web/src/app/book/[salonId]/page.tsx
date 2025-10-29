@@ -62,7 +62,38 @@ function BookingPageContent() {
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  // Calculate service schedule when selectedTime changes
+  // Check if an appointment was just created and clear the flag
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true') {
+      console.log("Detected that an appointment was just created, clearing flag");
+      sessionStorage.removeItem('appointmentJustCreated');
+    }
+  }, []);
+
+  // Ensure service-staff assignments are properly initialized when selectedServices change
+  useEffect(() => {
+    if (selectedServices.length > 0) {
+      // Create service-staff assignments for all selected services if they don't exist
+      const newAssignments = selectedServices.map(service => {
+        // Check if this service already has an assignment
+        const existingAssignment = serviceStaffAssignments.find(assignment => assignment.service.id === service.id);
+        if (existingAssignment) {
+          return existingAssignment;
+        }
+        // Create a new assignment with no staff selected
+        return { service, staff: null };
+      });
+      
+      // Only update if there are changes
+      if (newAssignments.length !== serviceStaffAssignments.length || 
+          newAssignments.some((newAssignment, index) => 
+            newAssignment.service.id !== serviceStaffAssignments[index]?.service.id)) {
+        setServiceStaffAssignments(newAssignments);
+      }
+    }
+  }, [selectedServices]);
+
+  // Calculate service schedule when selectedTime or selectedStaff changes
   useEffect(() => {
     if (selectedTime) {
       console.log("Recalculating service schedule...");
@@ -182,6 +213,8 @@ function BookingPageContent() {
           if (matchingService) {
             setSelectedServices([matchingService]);
             setSelectedService(matchingService); // Set the selected service
+            // Create a service-staff assignment for the pre-selected service
+            setServiceStaffAssignments([{ service: matchingService, staff: null }]);
             // Clear the stored service after using it
             sessionStorage.removeItem('selectedService');
           }
@@ -248,7 +281,7 @@ function BookingPageContent() {
 
   const handleNextStep = () => {
     // For multi-service bookings, validate assignments before proceeding
-    const isMultiService = selectedServices.length > 1;
+    const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
     
     if (currentStep < 3) {
       // For step 2 in multi-service flow, validate assignments
@@ -338,6 +371,9 @@ function BookingPageContent() {
     console.log("Selected payment method:", method);
     console.log("Service schedule length:", serviceSchedule.length);
     console.log("Service schedule:", serviceSchedule);
+    console.log("Selected services:", selectedServices);
+    console.log("Service staff assignments:", serviceStaffAssignments);
+    console.log("Selected staff:", selectedStaff);
     
     // Prevent multiple calls
     if (isCreatingAppointment) {
@@ -346,12 +382,33 @@ function BookingPageContent() {
     }
     
     try {
-      // For multiple services, we'll create one appointment with details of all services in serviceItems
-      if (serviceSchedule.length > 0) {
+      // Check if we have a service schedule or need to create one for single service
+      let finalServiceSchedule = serviceSchedule;
+      
+      // If no service schedule exists, create one for single service appointments
+      if (serviceSchedule.length === 0 && selectedServices.length === 1 && selectedTime) {
+        console.log("Creating service schedule for single service appointment");
+        const service = selectedServices[0];
+        const serviceDuration = convertDurationToMinutes(service.duration);
+        
+        // Create a service schedule entry for the single service
+        finalServiceSchedule = [{
+          service,
+          staff: selectedStaff, // This should already be correct
+          startTime: selectedTime,
+          endTime: calculateEndTime(selectedTime, serviceDuration),
+          duration: serviceDuration
+        }];
+        
+        console.log("Created single service schedule:", finalServiceSchedule);
+      }
+      
+      // For multiple services or single service with schedule, create appointment
+      if (finalServiceSchedule.length > 0) {
         console.log("Creating appointment with method:", method);
         
         // Use the first service as the primary service for the appointment
-        const primarySchedule = serviceSchedule[0];
+        const primarySchedule = finalServiceSchedule[0];
         console.log("Primary schedule:", primarySchedule);
         
         // Format the appointment date with the correct time
@@ -361,7 +418,7 @@ function BookingPageContent() {
         console.log("Appointment date:", appointmentDate);
         
         // Create service items for all services
-        const serviceItems = serviceSchedule.map(schedule => ({
+        const serviceItems = finalServiceSchedule.map(schedule => ({
           service: schedule.service.id,
           serviceName: schedule.service.name,
           staff: schedule.staff ? schedule.staff.id : null,
@@ -375,15 +432,15 @@ function BookingPageContent() {
         console.log("Service items:", serviceItems);
         
         // Calculate total amount for all services
-        const totalAmount = serviceSchedule.reduce((sum, schedule) => sum + parseFloat(schedule.service.price), 0);
+        const totalAmount = finalServiceSchedule.reduce((sum, schedule) => sum + parseFloat(schedule.service.price), 0);
         console.log("Total amount:", totalAmount);
         
         // Calculate total duration
-        const totalDuration = serviceSchedule.reduce((sum, schedule) => sum + schedule.duration, 0);
+        const totalDuration = finalServiceSchedule.reduce((sum, schedule) => sum + schedule.duration, 0);
         console.log("Total duration:", totalDuration);
         
         // Use the last service's end time as the appointment end time
-        const endTime = serviceSchedule[serviceSchedule.length - 1].endTime;
+        const endTime = finalServiceSchedule[finalServiceSchedule.length - 1].endTime;
         console.log("End time:", endTime);
         
         // Handle staff field - it can now be null for "Any Professional"
@@ -391,21 +448,13 @@ function BookingPageContent() {
         let staffName = primarySchedule.staff ? primarySchedule.staff.name : "Any Professional";
         console.log("Staff ID:", staffId, "Staff Name:", staffName);
         
-        // If no staff is assigned, we might need to find a default staff or handle this differently
-        // For now, let's use the first staff member from the salon if available
-        if (!staffId && staff.length > 0) {
-          staffId = staff[0].id;
-          staffName = staff[0].name;
-          console.log("Using default staff:", staffId, staffName);
-        }
-        
         // Prepare appointment data - ensure all required fields are provided
         const appointmentData = {
           vendorId: salonId,
           clientName: "Web Customer", // In a real implementation, this would come from user authentication
           service: primarySchedule.service.id,
           serviceName: primarySchedule.service.name,
-          staff: staffId, // This can now be null
+          staff: staffId, // This can now be null for "Any Professional"
           staffName: staffName,
           date: appointmentDate,
           startTime: primarySchedule.startTime,
@@ -414,9 +463,9 @@ function BookingPageContent() {
           amount: totalAmount,
           totalAmount: totalAmount,
           status: "scheduled",
-          notes: "Multi-service appointment",
+          notes: finalServiceSchedule.length > 1 ? "Multi-service appointment" : "Single service appointment",
           serviceItems: serviceItems,
-          isMultiService: serviceSchedule.length > 1
+          isMultiService: finalServiceSchedule.length > 1
         };
         
         console.log("Final appointment data:", appointmentData);
@@ -430,12 +479,25 @@ function BookingPageContent() {
         setIsPaymentModalOpen(false);
         
         // Show confirmation message
-        alert(`Booking Confirmed! Payment Method: ${method}\nAppointment created successfully with ${serviceSchedule.length} services.`);
+        alert(`Booking Confirmed! Payment Method: ${method}\nAppointment created successfully with ${finalServiceSchedule.length} services.`);
         
-        // Redirect to a confirmation page or back to the salon page
-        router.push(`/salon/${salonId}`);
+        // Set a flag in sessionStorage to indicate that an appointment was just created
+        // This will help the time slot component know to refetch data when it mounts again
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('appointmentJustCreated', 'true');
+        }
+        
+        // Clear the selected time to ensure the time slot component refetches data
+        // This will help ensure that the newly created appointment is reflected in the available time slots
+        setSelectedTime(null);
+        
+        // Redirect to a confirmation page or back to the salon page after a short delay
+        setTimeout(() => {
+          router.push(`/salon/${salonId}`);
+        }, 2000);
       } else {
-        console.log("No service schedule found, skipping appointment creation");
+        console.log("No service schedule found and unable to create one, skipping appointment creation");
+        alert("Unable to create appointment. Please try again.");
       }
     } catch (error: any) {
       console.error("Error creating appointment:", error);
@@ -448,6 +510,21 @@ function BookingPageContent() {
     }
   };
   
+  // Helper function to calculate end time
+  const calculateEndTime = (startTime: string, duration: number): string => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + duration;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  };
+  
+  // Add a function to refetch appointment data after creation
+  const refetchAppointments = async () => {
+    // This function can be called after appointment creation to ensure data is refreshed
+    console.log("Refetching appointment data...");
+  };
+
   const handleSelectService = (service: Service) => {
     setSelectedServices(prev => {
       const isSelected = prev.some(s => s.id === service.id);
@@ -462,11 +539,12 @@ function BookingPageContent() {
         );
         return prev.filter(s => s.id !== service.id);
       } else {
-        // When selecting a service, set it as the selected service only if no service is currently selected
+        // When selecting a service, only update the selected service state if we're in single service mode
         // For multiple services, we don't want to override the selectedService state
-        if (!selectedService) {
+        if (selectedServices.length === 0) {
           setSelectedService(service);
         }
+        
         // Add a new service-staff assignment with no staff selected initially
         setServiceStaffAssignments(prevAssignments => {
           // Check if this service is already in assignments to prevent duplicates
@@ -492,7 +570,8 @@ function BookingPageContent() {
 
   const renderStepContent = () => {
     // Use multi-service flow if more than one service is selected
-    const isMultiService = selectedServices.length > 1;
+    // Also use multi-service flow if there are service-staff assignments (which indicates we're in multi-service workflow)
+    const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
     
     switch (currentStep) {
         case 1:

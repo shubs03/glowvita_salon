@@ -1245,6 +1245,17 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Vendor"],
     }),
 
+    // Doctor Profile Endpoints
+    getDoctorProfile: builder.query({
+      query: () => ({ url: "/crm/doctor-profile", method: "GET" }),
+      providesTags: ["Doctor"],
+    }),
+
+    updateDoctorProfile: builder.mutation({
+      query: (doctorData) => ({ url: "/crm/doctor-profile", method: "PUT", body: doctorData }),
+      invalidatesTags: ["Doctor"],
+    }),
+
     // Doctor Working Hours Endpoints
     getDoctorWorkingHours: builder.query({
       query: (doctorId) => ({ url: `/api/doctor/working-hours?doctorId=${doctorId}`, method: 'GET' }),
@@ -1290,6 +1301,20 @@ export const glowvitaApi = createApi({
     saveCustomizedTemplate: builder.mutation({
       query: (templateData) => ({ url: "/crm/social-media-templates", method: "POST", body: templateData }),
       invalidatesTags: ["CrmSocialMediaTemplate"],
+    }),
+
+    // CRM SMS Purchase Endpoints
+    purchaseSmsPackage: builder.mutation({
+      query: (packageData) => ({ url: "/crm/sms-purchase", method: "POST", body: packageData }),
+      invalidatesTags: ["Vendor"],
+    }),
+    getSmsPurchaseHistory: builder.query({
+      query: (params) => ({ 
+        url: "/crm/sms-purchase", 
+        method: "GET",
+        params
+      }),
+      providesTags: ["Vendor"],
     }),
 
     // Cart Endpoints (CRM - for vendors)
@@ -1557,6 +1582,8 @@ export const {
   useDeleteClientMutation,
   useGetVendorProfileQuery,
   useUpdateVendorProfileMutation,
+  useGetDoctorProfileQuery,
+  useUpdateDoctorProfileMutation,
   useGetDoctorWorkingHoursQuery,
   useUpdateDoctorWorkingHoursMutation,
   useGetCrmReferralsQuery,
@@ -1568,6 +1595,8 @@ export const {
   useCreateCrmCampaignMutation,
   useGetCrmSocialMediaTemplatesQuery,
   useSaveCustomizedTemplateMutation,
+  usePurchaseSmsPackageMutation,
+  useGetSmsPurchaseHistoryQuery,
   // New endpoint for fetching all vendor products
   useGetAllVendorProductsQuery,
   // New endpoints for vendor product operations

@@ -357,6 +357,7 @@ export function Step3_MultiServiceTimeSlot({
   vendorId
 }: Step3MultiServiceTimeSlotProps) {
   const dateScrollerRef = useRef<HTMLDivElement>(null);
+  const lastRefetchTimestamp = useRef<number>(Date.now());
 
   // Generate available dates (next 60 days)
   const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
@@ -372,7 +373,7 @@ export function Step3_MultiServiceTimeSlot({
   }, [serviceStaffAssignments]);
 
   // Fetch existing appointments for all assigned staff on the selected date
-  const { data: existingAppointments = [], isLoading: isLoadingAppointments } = useGetPublicAppointmentsQuery(
+  const { data: existingAppointments = [], isLoading: isLoadingAppointments, refetch } = useGetPublicAppointmentsQuery(
     {
       vendorId: vendorId,
       // For multi-service, we need to check appointments for all assigned staff
@@ -385,13 +386,104 @@ export function Step3_MultiServiceTimeSlot({
     }
   );
 
+  // Refetch appointments when selected date or staff changes to ensure we have the latest data
+  // Also refetch when the component mounts to get the most recent appointments
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchData = async () => {
+      if (vendorId && isMounted) {
+        try {
+          // Check if an appointment was just created
+          const appointmentJustCreated = typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true';
+          
+          // Add a small delay to ensure any pending writes are completed
+          // This is especially important after appointment creation
+          const delay = appointmentJustCreated ? 1500 : 100; // Longer delay if appointment was just created
+          await new Promise(resolve => setTimeout(resolve, delay));
+          
+          console.log('Step3_MultiServiceTimeSlot: Refetching appointments data');
+          await refetch();
+          lastRefetchTimestamp.current = Date.now();
+          
+          // Clear the flag after refetching
+          if (appointmentJustCreated && typeof window !== 'undefined') {
+            console.log('Step3_MultiServiceTimeSlot: Cleared appointmentJustCreated flag after refetching');
+            sessionStorage.removeItem('appointmentJustCreated');
+          }
+        } catch (error) {
+          console.error('Step3_MultiServiceTimeSlot: Error refetching appointments:', error);
+        }
+      }
+    };
+    
+    fetchData();
+    
+    // Refetch when the document becomes visible again (e.g., after switching tabs)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && vendorId && isMounted) {
+        fetchData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Periodically refetch appointments to ensure we have the latest data
+    // This helps catch any appointments that might have been created by other users
+    const intervalId = setInterval(() => {
+      if (vendorId && isMounted && document.visibilityState === 'visible') {
+        fetchData();
+      }
+    }, 30000); // Refetch every 30 seconds
+    
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(intervalId);
+    };
+  }, [vendorId, selectedDate.toISOString(), refetch]); // Add explicit dependencies
+
+  // Additional check for appointment creation flag with a shorter interval
+  useEffect(() => {
+    let isMounted = true;
+    
+    const checkForNewAppointments = async () => {
+      if (vendorId && isMounted && typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true') {
+        console.log('Step3_MultiServiceTimeSlot: Detected new appointment creation, forcing refetch');
+        try {
+          // Add a longer delay to ensure database consistency
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          await refetch();
+          sessionStorage.removeItem('appointmentJustCreated');
+          lastRefetchTimestamp.current = Date.now();
+          console.log('Step3_MultiServiceTimeSlot: Refetch completed after appointment creation');
+        } catch (error) {
+          console.error('Step3_MultiServiceTimeSlot: Error refetching after appointment creation:', error);
+        }
+      }
+    };
+    
+    // Check immediately when component mounts
+    checkForNewAppointments();
+    
+    // Check periodically
+      const intervalId = setInterval(checkForNewAppointments, 5000);
+    
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [vendorId, refetch]);
+
   console.log('Step3_MultiServiceTimeSlot - Fetching appointments:', {
     vendorId,
     assignedStaffIds,
     staffId: assignedStaffIds.length === 1 ? assignedStaffIds[0] : undefined,
     date: format(selectedDate, 'yyyy-MM-dd'),
     existingAppointments: existingAppointments,
-    isLoadingAppointments
+    isLoadingAppointments,
+    lastRefetch: lastRefetchTimestamp.current
   });
 
   // Calculate total duration for all selected services
@@ -510,7 +602,7 @@ export function Step3_MultiServiceTimeSlot({
         // Filter out blocked time slots for the selected staff and check availability for duration
         const filteredSlots = slots.filter((slot: string) => {
           const isBlocked = isTimeSlotBlocked(staffMember, selectedDate, slot);
-          const isAvailable = isTimeSlotAvailableForAllStaff(slot, selectedDate, serviceStaffAssignments, totalDuration);
+          const isAvailable = isTimeSlotAvailableForAllStaff(slot, selectedDate, serviceStaffAssignments, totalDuration, existingAppointments);
           return !isBlocked && isAvailable;
         });
         console.log('Step3_MultiServiceTimeSlot - Filtered slots (after blocking and availability check):', filteredSlots);
@@ -575,7 +667,7 @@ export function Step3_MultiServiceTimeSlot({
     }
     
     return validSlots;
-  }, [selectedDate, workingHours, serviceStaffAssignments, totalDuration, existingAppointments]);
+  }, [selectedDate, workingHours, serviceStaffAssignments, totalDuration, existingAppointments, lastRefetchTimestamp.current]);
 
   // Check if a date is available based on working hours and staff availability
   const isDateAvailable = (date: Date): boolean => {

@@ -1,13 +1,15 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { CreateCampaignModal } from './CreateCampaignModal';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
-import { MessageSquare, Package, FileText, Plus } from 'lucide-react';
+import { MessageSquare, Package, FileText, Plus, ArrowLeft } from 'lucide-react';
 import { useAppSelector } from '@repo/store/hooks';
-import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery } from '@repo/store/services/api';
+import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery, usePurchaseSmsPackageMutation } from '@repo/store/services/api';
+import { toast } from 'sonner';
 
 type SMSPackage = {
   _id: string;
@@ -49,12 +51,18 @@ type Campaign = {
 export default function MessageBlastPage() {
   const [activeTab, setActiveTab] = useState('packages');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [purchaseSmsPackage, { isLoading: isPurchasing }] = usePurchaseSmsPackageMutation();
+  const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
 
   // Get CRM authentication state
-  const { isAuthenticated, token } = useAppSelector((state: any) => ({
+  const { isAuthenticated, token, user } = useAppSelector((state: any) => ({
     isAuthenticated: state.crmAuth.isCrmAuthenticated,
-    token: state.crmAuth.token
+    token: state.crmAuth.token,
+    user: state.crmAuth.user
   }));
+  
+  // Debug authentication state
+  console.log('Auth state - isAuthenticated:', isAuthenticated, 'token:', token, 'user:', user);
   
   // Fetch CRM SMS packages
   const {
@@ -92,11 +100,79 @@ export default function MessageBlastPage() {
   
   const error = isError ? 'Failed to load SMS packages. Please try again.' : null;
 
+  const handlePurchasePackage = async (packageId: string) => {
+    // Validate authentication
+    if (!isAuthenticated) {
+      toast.error('Please log in to purchase SMS packages');
+      return;
+    }
+    
+    // Validate packageId
+    if (!packageId) {
+      toast.error('Invalid package selection');
+      return;
+    }
+    
+    console.log('Attempting to purchase package:', packageId);
+    console.log('User object:', user);
+    console.log('User ID:', user?._id);
+    console.log('Vendor ID:', user?.vendorId);
+    
+    // Set the specific package as purchasing
+    setPurchasingPackageId(packageId);
+    
+    try {
+      console.log('Sending purchase request with packageId:', packageId);
+      const result: any = await purchaseSmsPackage({ packageId }).unwrap();
+      console.log('Purchase response:', result);
+      
+      if (result.success) {
+        // Show success message
+        toast.success(`${result.message} New SMS Balance: ${result.data.newBalance}`);
+        // Refresh packages to update any UI that depends on balance
+        refetchPackages();
+      } else {
+        toast.error(result.message || 'Failed to purchase package');
+      }
+    } catch (error: any) {
+      console.error('Purchase error:', error);
+      
+      // More detailed error handling
+      let errorMessage = 'Failed to purchase package. Please try again.';
+      
+      if (error?.data?.message) {
+        errorMessage = error.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.status === 400) {
+        errorMessage = 'Invalid request. Please check the package details.';
+      } else if (error?.status === 404) {
+        errorMessage = 'Package not found. Please refresh and try again.';
+      } else if (error?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else {
+        errorMessage = 'Error purchasing SMS package. Please try again.';
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      // Reset the purchasing state
+      setPurchasingPackageId(null);
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Message Blast</h1>
-        <p className="text-muted-foreground">Send bulk messages to your customers</p>
+      <div className="flex items-center gap-4 mb-8">
+        <Link href="/marketing">
+          <Button variant="ghost" size="sm">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Marketing
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Message Blast</h1>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -206,8 +282,13 @@ export default function MessageBlastPage() {
                     </ul>
                   </CardContent>
                   <CardFooter>
-                    <Button className="w-full" size="sm" disabled={pkg.status !== 'active'}>
-                      {pkg.status === 'active' ? 'Buy Now' : 'Unavailable'}
+                    <Button 
+                      className="w-full" 
+                      size="sm" 
+                      disabled={pkg.status !== 'active' || purchasingPackageId === pkg._id}
+                      onClick={() => handlePurchasePackage(pkg._id)}
+                    >
+                      {purchasingPackageId === pkg._id ? 'Processing...' : pkg.status === 'active' ? 'Buy Now' : 'Unavailable'}
                     </Button>
                   </CardFooter>
                 </Card>
