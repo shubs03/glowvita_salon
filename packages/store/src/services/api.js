@@ -1409,13 +1409,14 @@ export const glowvitaApi = createApi({
     
     // Public Appointment Endpoints
     getPublicAppointments: builder.query({
-      query: ({ vendorId, staffId, date, startDate, endDate }) => {
+      query: ({ vendorId, staffId, date, startDate, endDate, userId }) => {
         const params = new URLSearchParams();
         if (vendorId) params.append('vendorId', vendorId);
         if (staffId) params.append('staffId', staffId);
         if (date) params.append('date', date);
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
+        if (userId) params.append('userId', userId);
         
         return { 
           url: `/appointments?${params.toString()}`, 

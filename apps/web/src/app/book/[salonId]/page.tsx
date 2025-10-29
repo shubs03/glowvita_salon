@@ -9,17 +9,19 @@ import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot } from "@/components/booking/Step3_TimeSlot";
 import { Step2_MultiService } from "@/components/booking/Step2_MultiService";
 import { Step3_MultiServiceTimeSlot } from "@/components/booking/Step3_MultiServiceTimeSlot";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent } from '@repo/ui/card';
 import { Separator } from '@repo/ui/separator';
 import { format } from 'date-fns';
 import { useBookingData, Service, StaffMember, ServiceStaffAssignment, calculateTotalDuration, convertDurationToMinutes } from '@/hooks/useBookingData';
 import { useCreatePublicAppointmentMutation } from '@repo/store/api';
+import { useAuth } from '@/hooks/useAuth';
 
 function BookingPageContent() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { salonId } = params;
 
   // State for tracking the selected service
@@ -57,8 +59,8 @@ function BookingPageContent() {
   // Mutation for creating appointments
   const [createAppointment, { isLoading: isCreatingAppointment }] = useCreatePublicAppointmentMutation();
 
-  // Set to `true` to test the modal, `false` to test the redirect
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  // Get authentication state from the useAuth hook
+  const { isAuthenticated, user } = useAuth();
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
@@ -69,6 +71,33 @@ function BookingPageContent() {
       sessionStorage.removeItem('appointmentJustCreated');
     }
   }, []);
+
+  // Restore pending booking data after login
+  useEffect(() => {
+    if (isAuthenticated && typeof window !== 'undefined') {
+      const pendingBooking = sessionStorage.getItem('pendingBooking');
+      if (pendingBooking) {
+        try {
+          const bookingData = JSON.parse(pendingBooking);
+          // Only restore if it's for the current salon
+          if (bookingData.salonId === salonId) {
+            setSelectedServices(bookingData.selectedServices);
+            setServiceStaffAssignments(bookingData.serviceStaffAssignments);
+            setSelectedStaff(bookingData.selectedStaff);
+            setSelectedDate(new Date(bookingData.selectedDate));
+            setSelectedTime(bookingData.selectedTime);
+            // Clear the pending booking data
+            sessionStorage.removeItem('pendingBooking');
+            // Set current step to confirmation
+            setIsConfirmationModalOpen(true);
+          }
+        } catch (error) {
+          console.error('Failed to restore pending booking data:', error);
+          sessionStorage.removeItem('pendingBooking');
+        }
+      }
+    }
+  }, [isAuthenticated, salonId]);
 
   // Ensure service-staff assignments are properly initialized when selectedServices change
   useEffect(() => {
@@ -202,8 +231,9 @@ function BookingPageContent() {
   }, [selectedTime, serviceStaffAssignments, selectedServices, selectedStaff]);
 
   // Check for pre-selected service from sessionStorage
+  // Only do this if we don't have pending booking data
   useEffect(() => {
-    if (services.length > 0) {
+    if (services.length > 0 && selectedServices.length === 0) {
       try {
         const storedService = sessionStorage.getItem('selectedService');
         if (storedService) {
@@ -225,7 +255,7 @@ function BookingPageContent() {
         sessionStorage.removeItem('selectedService');
       }
     }
-  }, [services]);
+  }, [services, selectedServices.length]);
 
   // Loading state for the entire page
   if (isLoading) {
@@ -301,7 +331,17 @@ function BookingPageContent() {
       if (isAuthenticated) {
         setIsConfirmationModalOpen(true);
       } else {
-        router.push('/client-login');
+        // Save booking data to sessionStorage before redirecting to login
+        const bookingData = {
+          selectedServices,
+          serviceStaffAssignments,
+          selectedStaff,
+          selectedDate: selectedDate.toISOString(),
+          selectedTime,
+          salonId
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        router.push(`/client-login?redirect=/book/${salonId}`);
       }
     }
   };
@@ -446,12 +486,17 @@ function BookingPageContent() {
         // Handle staff field - it can now be null for "Any Professional"
         let staffId = primarySchedule.staff ? primarySchedule.staff.id : null;
         let staffName = primarySchedule.staff ? primarySchedule.staff.name : "Any Professional";
+        let clientName = user.firstName + " " + user.lastName;
+        console.log("Client Name:", clientName)
+        console.log("Client ID:", user._id);
         console.log("Staff ID:", staffId, "Staff Name:", staffName);
         
+        console.log("user",user);
         // Prepare appointment data - ensure all required fields are provided
         const appointmentData = {
           vendorId: salonId,
-          clientName: "Web Customer", // In a real implementation, this would come from user authentication
+          client: user._id,
+          clientName: clientName, // In a real implementation, this would come from user authentication
           service: primarySchedule.service.id,
           serviceName: primarySchedule.service.name,
           staff: staffId, // This can now be null for "Any Professional"
@@ -491,9 +536,9 @@ function BookingPageContent() {
         // This will help ensure that the newly created appointment is reflected in the available time slots
         setSelectedTime(null);
         
-        // Redirect to a confirmation page or back to the salon page after a short delay
+        // Redirect to the appointments page after a short delay
         setTimeout(() => {
-          router.push(`/salon/${salonId}`);
+          router.push('/profile/appointments');
         }, 2000);
       } else {
         console.log("No service schedule found and unable to create one, skipping appointment creation");

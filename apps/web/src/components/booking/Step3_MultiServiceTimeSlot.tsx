@@ -442,7 +442,7 @@ export function Step3_MultiServiceTimeSlot({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(intervalId);
     };
-  }, [vendorId, selectedDate.toISOString(), refetch]); // Add explicit dependencies
+  }, [vendorId, refetch]); // Simplified dependencies to prevent infinite loops
 
   // Additional check for appointment creation flag with a shorter interval
   useEffect(() => {

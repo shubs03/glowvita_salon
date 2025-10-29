@@ -597,7 +597,12 @@ export function AppointmentDetailView({
     <>
       {renderStatusConfirmDialog()}
       
-      <Dialog open={!!appointment} onOpenChange={(open) => !open && onClose?.()}>
+      <Dialog open={!!appointment} onOpenChange={(open) => {
+        // Only call onClose when the dialog is being closed by the user
+        if (!open && onClose) {
+          onClose();
+        }
+      }}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] h-auto overflow-y-auto p-0">
             <DialogHeader className="px-6 pt-6 pb-4 border-b">
               <div className="flex justify-between items-start">

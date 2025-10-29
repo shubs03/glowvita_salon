@@ -44,6 +44,8 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, isLoading, isAuthenticated } = useAuth();
   const dispatch = useAppDispatch();
   const router = useRouter();
+
+  console.log('User:', user)
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {

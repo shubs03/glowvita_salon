@@ -13,21 +13,33 @@ export const GET = async (req) => {
         const date = searchParams.get('date');
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
+        const userId = searchParams.get('userId'); // New parameter for user appointments
 
-        console.log('GET appointments - vendorId:', vendorId, 'staffId:', staffId, 'date:', date);
+        console.log('GET appointments - vendorId:', vendorId, 'staffId:', staffId, 'date:', date, 'userId:', userId);
 
-        // Base query - must have vendorId
-        if (!vendorId) {
+        // Base query - either vendorId or userId is required
+        const query = { 
+            status: { $nin: ['cancelled'] } // Exclude cancelled appointments
+        };
+
+        // If userId is provided, filter by userId/clientId
+        if (userId) {
+            query.$or = [
+                { client: userId },
+                { userId: userId }
+            ];
+        } 
+        // If vendorId is provided, filter by vendorId (existing behavior)
+        else if (vendorId) {
+            query.vendorId = vendorId;
+        } 
+        // If neither userId nor vendorId is provided, return error
+        else {
             return NextResponse.json(
-                { message: "vendorId is required" },
+                { message: "Either userId or vendorId is required" },
                 { status: 400 }
             );
         }
-
-        const query = { 
-            vendorId, 
-            status: { $nin: ['cancelled'] } // Exclude cancelled appointments
-        };
 
         // Add date filtering
         if (date) {
@@ -50,15 +62,16 @@ export const GET = async (req) => {
             };
         }
 
-        // Add staff filtering
-        if (staffId && staffId !== 'null') {
+        // Add staff filtering (only when vendorId is provided)
+        if (vendorId && staffId && staffId !== 'null') {
             query.staff = staffId;
         }
 
         console.log('Final query:', JSON.stringify(query, null, 2));
+    
 
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems clientId userId')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
         console.log('Found appointments:', appointments.length);
@@ -71,7 +84,9 @@ export const GET = async (req) => {
             endTime: apt.endTime,
             duration: apt.duration,
             service: apt.serviceName || apt.service,
-            status: apt.status
+            status: apt.status,
+            clientId: apt.clientId?.toString(),
+            userId: apt.userId?.toString()
         })));
 
         // Add CORS headers

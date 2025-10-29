@@ -352,7 +352,7 @@ export function Step3_TimeSlot({
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(intervalId);
     };
-  }, [vendorId, selectedDate.toISOString(), selectedStaff?.id, refetch]); // Add explicit dependencies
+  }, [vendorId, refetch]); // Simplified dependencies to prevent infinite loops
 
   // Additional check for appointment creation flag with a shorter interval
   useEffect(() => {
