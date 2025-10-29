@@ -578,10 +578,10 @@ useEffect(() => {
 
   // Check if staff is available at the selected time
   const isStaffAvailable = useCallback((startTime: string, endTime: string, staffId: string, appointmentId?: string) => {
-    if (!staffId) return false;
+    if (!staffId) return { available: false, reason: 'No staff member selected' };
     
     // Check for overlapping appointments (excluding current appointment if editing)
-    const hasOverlappingAppointment = existingAppointments?.some((appt: any) => {
+    const overlappingAppointment = existingAppointments?.find((appt: any) => {
       // Skip the current appointment when editing
       if (appointmentId && (appt._id === appointmentId || appt.id === appointmentId)) {
         return false;
@@ -593,41 +593,56 @@ useEffect(() => {
       const newStart = new Date(`${formatDateForBackend(appointmentData.date)}T${startTime}`).getTime();
       const newEnd = new Date(`${formatDateForBackend(appointmentData.date)}T${endTime}`).getTime();
       
+      // Check for any overlap
       return newStart < apptEnd && newEnd > apptStart;
-    }) || false;
-
-    if (hasOverlappingAppointment) {
-      return false;
+    });
+    
+    if (overlappingAppointment) {
+      return {
+        available: false,
+        reason: `Time slot conflicts with an existing ${overlappingAppointment.status} appointment from ${overlappingAppointment.startTime} to ${overlappingAppointment.endTime}`
+      };
     }
 
-    // Check blocked times
-    if (!blockedTimesData) return true; // If no blocked times data, assume available
-    
-    const [startH, startM] = startTime.split(':').map(Number);
-    const [endH, endM] = endTime.split(':').map(Number);
-    const startMinutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
-    
-    // Check if there are any blocked times that overlap with the selected time
-    const isBlocked = blockedTimesData.some((block: any) => {
-      const [blockStartH, blockStartM] = block.startTime.split(':').map(Number);
-      const [blockEndH, blockEndM] = block.endTime.split(':').map(Number);
-      const blockStartMinutes = blockStartH * 60 + blockStartM;
-      const blockEndMinutes = blockEndH * 60 + blockEndM;
-      
-      // Check for time overlap
-      return startMinutes < blockEndMinutes && endMinutes > blockStartMinutes;
-    });
+    // If we get here, the time slot is available
+    return { available: true };
+  }, [existingAppointments, appointmentData.date]);
 
-    return !isBlocked;
-  }, [blockedTimesData, existingAppointments, appointmentData.staff, appointmentData.date]);
-
-  // Check if time is blocked (using the same logic as isStaffAvailable for now)
+  // Check if time is blocked by staff or system
   const isTimeBlocked = useCallback((startTime: string, endTime: string) => {
-    // We need to pass the staffId to isStaffAvailable
-    const staffId = appointmentData.staff;
-    return !isStaffAvailable(startTime, endTime, staffId);
-  }, [isStaffAvailable, appointmentData.staff]);
+    if (!appointmentData.staff) return false;
+    
+    // Check against blocked times from the API
+    if (blockedTimesData) {
+      const [startH, startM] = startTime.split(':').map(Number);
+      const [endH, endM] = endTime.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+      
+      // Check if there are any blocked times that overlap with the selected time
+      const isBlocked = blockedTimesData.some((block: any) => {
+        // Skip if this block is for a different staff member
+        if (block.staffId && block.staffId !== appointmentData.staff) return false;
+        
+        const [blockStartH, blockStartM] = block.startTime.split(':').map(Number);
+        const [blockEndH, blockEndM] = block.endTime.split(':').map(Number);
+        const blockStartMinutes = blockStartH * 60 + blockStartM;
+        const blockEndMinutes = blockEndH * 60 + blockEndM;
+        
+        // Check for time overlap
+        return startMinutes < blockEndMinutes && endMinutes > blockStartMinutes;
+      });
+      
+      if (isBlocked) {
+        console.log('⛔ Time slot is blocked');
+        return true;
+      }
+    }
+    
+    // Also check staff availability
+    const availability = isStaffAvailable(startTime, endTime, appointmentData.staff);
+    return !availability.available;
+  }, [blockedTimesData, appointmentData.staff, isStaffAvailable]);
   
   // Log the current working hours state when validation starts
   useEffect(() => {
@@ -703,12 +718,12 @@ useEffect(() => {
     // Check staff availability
     const staffId = appointmentData.staff;
     const appointmentId = appointmentData._id || appointmentData.id;
-    const staffAvailable = isStaffAvailable(startTime, endTime, staffId, appointmentId);
-    console.log('👤 Staff availability:', staffAvailable ? '✅ Available' : '❌ Not available');
+    const staffAvailability = isStaffAvailable(startTime, endTime, staffId, appointmentId);
+    console.log('👤 Staff availability:', staffAvailability.available ? '✅ Available' : `❌ Not available: ${staffAvailability.reason}`);
     
-    if (!staffAvailable) {
+    if (!staffAvailability.available) {
       console.groupEnd();
-      return 'Staff member is not available at the selected time';
+      return staffAvailability.reason || 'Staff member is not available at the selected time';
     }
     
     // Check for blocked times
