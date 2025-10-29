@@ -49,13 +49,26 @@ interface AppointmentCardProps {
 }
 
 const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardProps) => {
+    console.log("AppointmentCard received appointment:", appointment);
     const statusConfig = {
         Completed: { icon: CheckCircle, color: 'text-green-500' },
         Confirmed: { icon: Calendar, color: 'text-blue-500' },
         Cancelled: { icon: X, color: 'text-red-500' },
     };
     const StatusIcon = statusConfig[appointment.status]?.icon || CheckCircle;
-
+    console.log("appointment ",appointment);
+    
+    // Safely parse the date
+    let displayDate = 'Invalid Date';
+    try {
+        const dateObj = new Date(appointment.date);
+        if (!isNaN(dateObj.getTime())) {
+            displayDate = dateObj.toLocaleDateString();
+        }
+    } catch (e) {
+        console.error('Error parsing date:', e);
+    }
+    
     return (
         <button
             onClick={onSelect}
@@ -67,7 +80,7 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
             <div className="flex justify-between items-start">
                 <div>
                     <p className="font-semibold">{appointment.service}</p>
-                    <p className="text-sm text-muted-foreground">{new Date(appointment.date).toLocaleDateString()}</p>
+                    <p className="text-sm text-muted-foreground">{displayDate}</p>
                 </div>
                 <div className={`flex items-center text-xs font-medium gap-1 ${statusConfig[appointment.status]?.color}`}>
                     <StatusIcon className="h-3 w-3" />
@@ -87,6 +100,7 @@ interface AppointmentDetailsProps {
 }
 
 const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsProps) => {
+    console.log("AppointmentDetails received appointment:", appointment);
     if (!appointment) return (
         <Card className="sticky top-24">
             <CardContent className="h-96 flex items-center justify-center text-muted-foreground">
@@ -110,6 +124,19 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
         const hoursDifference = (apptDate.getTime() - now.getTime()) / (1000 * 60 * 60);
         return hoursDifference > 24;
     };
+    
+    // Safely parse the date for display
+    let displayDate = 'Invalid Date';
+    let displayDateTime = 'Invalid Date';
+    try {
+        const dateObj = new Date(appointment.date);
+        if (!isNaN(dateObj.getTime())) {
+            displayDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            displayDateTime = `${displayDate} at ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+    } catch (e) {
+        console.error('Error parsing date in AppointmentDetails:', e);
+    }
 
     return (
         <Card className="sticky top-24">
@@ -129,7 +156,7 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
                         <div>
                             <p className="text-sm font-medium">Date & Time</p>
                             <p className="text-sm text-muted-foreground">
-                                {new Date(appointment.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} at {new Date(appointment.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {displayDateTime}
                             </p>
                         </div>
                     </div>
@@ -193,9 +220,12 @@ export default function AppointmentsPage() {
     // Update appointments when user appointments data changes
     // Use a ref to track if we've already set the initial selection to prevent infinite loops
     const hasSetInitialSelection = useRef(false);
+
+    console.log("Appointments:", userAppointments)
     
     useEffect(() => {
         if (userAppointments) {
+            console.log("Raw user appointments data:", userAppointments);
             setAppointments(userAppointments);
             // Set the first appointment as selected if none is selected and there are appointments
             // Only do this once to prevent infinite loops
@@ -204,7 +234,7 @@ export default function AppointmentsPage() {
                 hasSetInitialSelection.current = true;
             }
         }
-    }, [userAppointments, selectedAppointment]); // Add selectedAppointment to dependencies
+    }, [userAppointments]); // Remove selectedAppointment from dependencies
 
     const filteredAppointments = useMemo(() => {
         return appointments.filter(appointment =>
@@ -251,7 +281,14 @@ export default function AppointmentsPage() {
             ) : (
                 <>
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <StatCard icon={Calendar} title="Upcoming" value={appointments.filter(a => new Date(a.date) > new Date() && a.status === 'Confirmed').length} change="Next in 3 days" />
+                        <StatCard icon={Calendar} title="Upcoming" value={appointments.filter(a => {
+                            try {
+                                return new Date(a.date) > new Date() && a.status === 'Confirmed';
+                            } catch (e) {
+                                console.error('Error parsing date for stats:', e);
+                                return false;
+                            }
+                        }).length} change="Next in 3 days" />
                         <StatCard icon={CheckCircle} title="Completed" value={appointments.filter(a => a.status === 'Completed').length} change="All time" />
                         <StatCard icon={X} title="Cancelled" value={appointments.filter(a => a.status === 'Cancelled').length} change="All time" />
                     </div>

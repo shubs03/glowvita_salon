@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import _db from '@repo/lib/db';
 
 await _db();
@@ -70,27 +71,79 @@ export const GET = async (req) => {
         console.log('Final query:', JSON.stringify(query, null, 2));
     
 
+        // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems clientId userId')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount vendorId')
+            .populate('vendorId', 'businessName address')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
-        console.log('Found appointments:', appointments.length);
-        console.log('Appointment details:', appointments.map(apt => ({
-            id: apt._id?.toString(),
-            staffId: apt.staff?.toString(),
-            staffName: apt.staffName,
+        // Transform appointments to match frontend interface
+        const transformedAppointments = appointments.map(apt => {
+            // For multi-service appointments, use the first service as the main service
+            let service = apt.serviceName || apt.service || 'Unknown Service';
+            let staff = apt.staffName || 'Any Professional';
+            let duration = apt.duration || 60;
+            let price = apt.amount || apt.totalAmount || 0;
+            
+            // If there are service items, use the first one for main service info
+            if (apt.serviceItems && apt.serviceItems.length > 0) {
+                const firstService = apt.serviceItems[0];
+                service = firstService.serviceName || service;
+                staff = firstService.staffName || staff;
+                duration = firstService.duration || duration;
+            }
+            
+            // Get salon information from vendor data
+            const salonName = apt.vendorId?.businessName || 'Glowvita Salon';
+            const salonAddress = apt.vendorId?.address || '123 Beauty Street, Salon City';
+            
+            // Status transformation - ensure proper capitalization and allowed values
+            let status = apt.status || 'Confirmed';
+            if (typeof status === 'string') {
+                // Capitalize first letter
+                status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+                // Ensure it's one of the allowed values
+                if (!['Completed', 'Confirmed', 'Cancelled'].includes(status)) {
+                    status = 'Confirmed';
+                }
+            } else {
+                status = 'Confirmed';
+            }
+            
+            return {
+                _id: apt._id,
+                id: apt._id.toString(),
+                service: service,
+                date: apt.date,
+                staff: staff,
+                status: status,
+                price: price,
+                duration: duration,
+                salon: {
+                    name: salonName,
+                    address: salonAddress
+                },
+                serviceItems: apt.serviceItems || [],
+                vendorId: apt.vendorId?._id || apt.vendorId, // Handle both populated and non-populated cases
+                client: apt.client,
+                userId: apt.userId
+            };
+        });
+
+        console.log('Found appointments:', transformedAppointments.length);
+        console.log('Appointment details:', transformedAppointments.map(apt => ({
+            id: apt.id,
+            staff: apt.staff,
             date: apt.date,
-            startTime: apt.startTime,
-            endTime: apt.endTime,
-            duration: apt.duration,
-            service: apt.serviceName || apt.service,
+            service: apt.service,
             status: apt.status,
-            clientId: apt.clientId?.toString(),
-            userId: apt.userId?.toString()
+            price: apt.price,
+            duration: apt.duration,
+            salon: apt.salon
         })));
 
         // Add CORS headers
-        const response = NextResponse.json(appointments, { status: 200 });
+        const response = NextResponse.json(transformedAppointments, { status: 200 });
         
         response.headers.set('Access-Control-Allow-Origin', '*');
         response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');

@@ -64,17 +64,28 @@ export const useUserAppointments = () => {
         duration = firstService.duration || duration;
       }
       
+      // Status transformation - ensure proper capitalization
+      let status = appointment.status || 'Confirmed';
+      if (typeof status === 'string') {
+        // Capitalize first letter if needed
+        status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+        // Ensure it's one of the allowed values
+        if (!['Completed', 'Confirmed', 'Cancelled'].includes(status)) {
+          status = 'Confirmed';
+        }
+      }
+      
       return {
         id: appointment._id || appointment.id,
         service: service,
         date: appointment.date,
         staff: staff,
-        status: appointment.status || 'Confirmed',
-        price: appointment.amount || appointment.totalAmount || 0,
+        status: status,
+        price: appointment.price || appointment.price || 0,
         duration: duration,
         salon: {
-          name: appointment.salonName || appointment.salon?.name || 'Unknown Salon',
-          address: appointment.salonAddress || appointment.salon?.address || 'Unknown Address'
+          name: appointment.salon?.name || 'Unknown Salon',
+          address: appointment.salon?.address || 'Unknown Address'
         },
         serviceItems: appointment.serviceItems || []
       };
