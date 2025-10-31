@@ -1,15 +1,26 @@
-
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Separator } from '@repo/ui/separator';
 import Image from 'next/image';
-import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown, Search, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@repo/ui/cn';
 import { Service, StaffMember, SalonInfo, ServiceStaffAssignment } from '@/hooks/useBookingData';
+
+interface PriceBreakdown {
+  subtotal: number;
+  discountAmount: number;
+  amountAfterDiscount: number;
+  platformFee: number;
+  amountAfterPlatformFee: number;
+  serviceTax: number;
+  vendorServiceTax: number;
+  totalTax: number;
+  finalTotal: number;
+}
 
 interface BookingSummaryProps {
     selectedServices: Service[];
@@ -21,6 +32,7 @@ interface BookingSummaryProps {
     isMobileFooter?: boolean;
     salonInfo?: SalonInfo | null;
     serviceStaffAssignments?: ServiceStaffAssignment[]; // For multi-service bookings
+    priceBreakdown?: PriceBreakdown | null;
 }
 
 export function BookingSummary({ 
@@ -32,12 +44,20 @@ export function BookingSummary({
   currentStep,
   isMobileFooter = false,
   salonInfo,
-  serviceStaffAssignments = []
+  serviceStaffAssignments = [],
+  priceBreakdown
 }: BookingSummaryProps) {
     const [isExpanded, setIsExpanded] = useState(false);
-    const subtotal = selectedServices.reduce((acc, service) => acc + parseFloat(service.price), 0);
-    const serviceTax = subtotal * 0.06; // Example 6% tax
-    const total = subtotal + serviceTax;
+    
+    // Use priceBreakdown values if available, otherwise fallback to static calculations
+    const subtotal = priceBreakdown?.subtotal ?? selectedServices.reduce((acc, service) => {
+      const price = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
+        service.discountedPrice : 
+        (service.price || 0);
+      return acc + parseFloat(String(price) || '0');
+    }, 0);
+    
+    const total = priceBreakdown?.finalTotal ?? subtotal;
 
     // Use provided salon info or fallback
     const currentSalonInfo = salonInfo || {
@@ -208,20 +228,72 @@ export function BookingSummary({
         
         <Separator className="my-4" />
 
-        <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-                <p className="text-muted-foreground">Subtotal</p>
-                <p className="font-medium">₹{subtotal.toFixed(2)}</p>
+        {/* Price Breakdown Section */}
+        <div className="space-y-3">
+          <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
+            <Tag className="h-4 w-4" />Price Breakdown
+          </h4>
+          
+          <div className="bg-secondary/30 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span>₹{subtotal.toFixed(2)}</span>
             </div>
-             <div className="flex justify-between">
-                <p className="text-muted-foreground">Taxes & Fees</p>
-                <p className="font-medium">₹{serviceTax.toFixed(2)}</p>
+            
+            {priceBreakdown && priceBreakdown.discountAmount > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span className="text-muted-foreground">Discount</span>
+                <span>-₹{priceBreakdown.discountAmount.toFixed(2)}</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">
+                Amount After {priceBreakdown && priceBreakdown.discountAmount > 0 ? 'Discount' : 'Subtotal'}
+              </span>
+              <span>
+                ₹{(priceBreakdown?.amountAfterDiscount ?? subtotal).toFixed(2)}
+              </span>
             </div>
-        </div>
-        <Separator className="my-4" />
-        <div className="flex justify-between font-bold text-lg">
-          <p>Total</p>
-          <p>₹{total.toFixed(2)}</p>
+            
+            {priceBreakdown && priceBreakdown.platformFee > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Platform Fee</span>
+                <span>₹{priceBreakdown.platformFee.toFixed(2)}</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">
+                Amount After {priceBreakdown && priceBreakdown.platformFee > 0 ? 'Platform Fee' : 'Discount'}
+              </span>
+              <span>
+                ₹{(priceBreakdown?.amountAfterPlatformFee ?? 
+                   (priceBreakdown?.amountAfterDiscount ?? subtotal)).toFixed(2)}
+              </span>
+            </div>
+            
+            {(priceBreakdown?.serviceTax ?? 0) > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Admin Service Tax</span>
+                <span>₹{priceBreakdown.serviceTax.toFixed(2)}</span>
+              </div>
+            )}
+            
+            {(priceBreakdown?.vendorServiceTax ?? 0) > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Vendor Service Tax</span>
+                <span>₹{priceBreakdown.vendorServiceTax.toFixed(2)}</span>
+              </div>
+            )}
+            
+            <Separator className="my-2" />
+            
+            <div className="flex justify-between font-semibold">
+              <span>Total Amount</span>
+              <span className="text-primary">₹{total.toFixed(2)}</span>
+            </div>
+          </div>
         </div>
       </CardContent>
       <CardFooter className="p-6 flex-shrink-0">

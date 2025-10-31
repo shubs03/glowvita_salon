@@ -1,5 +1,3 @@
-
-      
 {
   "name": "@repo/lib",
   "version": "0.0.0",
@@ -46,7 +44,9 @@
     "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",
     "./models/Marketing/SmsPackage.model": "./src/models/Marketing/SmsPackage.model.js",
     "./models/Marketing/Campaign.model": "./src/models/Marketing/Campaign.model.js",
-    "./models/Marketing/socialMediaTemplate.model": "./src/models/Marketing/socialMediaTemplate.model.js"
+    "./models/Marketing/socialMediaTemplate.model": "./src/models/Marketing/socialMediaTemplate.model.js",
+    "./utils": "./src/utils/index.js",
+    "./utils/paymentCalculator": "./src/utils/paymentCalculator.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -66,5 +66,3 @@
   },
   "type": "module"
 }
-
-    

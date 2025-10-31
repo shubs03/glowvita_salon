@@ -9,18 +9,6 @@ import { cn } from '@repo/ui/cn';
 import { ChevronRight } from 'lucide-react';
 import { Service } from '@/hooks/useBookingData';
 
-// Default categories as fallback
-const defaultCategories = [
-    { name: "All" },
-    { name: "Hair" },
-    { name: "Skin" },
-    { name: "Nails" },
-    { name: "Body" },
-    { name: "Massage" },
-    { name: "Waxing" },
-    { name: "Facials" }
-];
-
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
     const steps = ['Services', 'Select Professional', 'Time Slot'];
     return (
@@ -54,7 +42,7 @@ interface Step1ServicesProps {
     categories: { name: string }[];
     isLoading: boolean;
     error?: any;
-    onServiceSelect?: (service: Service) => void; // Add callback for service selection
+    onServiceSelect?: (service: Service) => void;
 }
 
 export function Step1_Services({ 
@@ -69,6 +57,15 @@ export function Step1_Services({
     error,
     onServiceSelect
 }: Step1ServicesProps) {
+  console.log('Step1_Services - Component rendered with props:', { 
+    selectedServices, 
+    currentStep, 
+    servicesLength: services?.length, 
+    categoriesLength: categories?.length, 
+    isLoading, 
+    error 
+  });
+  
   const [activeCategory, setActiveCategory] = useState("All");
 
   // Use provided categories or fallback to default
@@ -76,7 +73,7 @@ export function Step1_Services({
   
   // Calculate services to display based on category
   const servicesToDisplay = activeCategory === "All" 
-    ? services 
+    ? (services || [])
     : (servicesByCategory[activeCategory] || []);
 
   // Handle service selection
@@ -230,7 +227,27 @@ export function Step1_Services({
                             )}
                         </div>
                         <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-4 text-right">
-                            <span className="font-bold text-lg text-primary">₹{service.price}</span>
+                            <div className="text-right">
+                                {service.discountedPrice !== null && service.discountedPrice !== undefined && service.discountedPrice !== service.price ? (
+                                    <>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <span className="text-muted-foreground line-through text-sm">
+                                                ₹{service.price}
+                                            </span>
+                                            <span className="font-bold text-lg text-primary">
+                                                ₹{service.discountedPrice}
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-green-600 font-medium">
+                                          {Math.round(((parseFloat(service.price || '0') - parseFloat(service.discountedPrice || '0')) / parseFloat(service.price || '1')) * 100)}% OFF
+                                        </div>
+                                    </>
+                                ) : (
+                                    <span className="font-bold text-lg text-primary">
+                                        ₹{service.price}
+                                    </span>
+                                )}
+                            </div>
                             <Button 
                                 size="sm"
                                 variant={isSelected ? "default" : "secondary"}
@@ -240,6 +257,7 @@ export function Step1_Services({
                                 {isSelected ? 'Selected' : 'Add'}
                             </Button>
                         </div>
+
                     </Card>
                 );
             })}
@@ -247,3 +265,15 @@ export function Step1_Services({
     </div>
   );
 }
+
+// Default categories as fallback
+const defaultCategories = [
+    { name: "All" },
+    { name: "Hair" },
+    { name: "Skin" },
+    { name: "Nails" },
+    { name: "Body" },
+    { name: "Massage" },
+    { name: "Waxing" },
+    { name: "Facials" }
+];
