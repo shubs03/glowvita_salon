@@ -863,6 +863,37 @@ function BookingPageContent() {
       // Add a simple test to see if we're getting to this point
       console.log('renderStepContent - About to render step:', currentStep);
       
+      // Show skeleton loader while services are being fetched
+      if (isLoading) {
+        return (
+          <div className="w-full space-y-6">
+            {/* Skeleton for service categories */}
+            <div className="space-y-4">
+              <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-16 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Skeleton for continue button */}
+            <div className="flex justify-end">
+              <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        );
+      }
+      
       // Check if we have services data
       if (!services || services.length === 0) {
         return (
@@ -937,11 +968,22 @@ function BookingPageContent() {
                   // Check if serviceStaffData is still loading
                   if (serviceStaffData?.isLoading) {
                     return (
-                      <div className="w-full">
-                        <div className="flex items-center justify-center py-12">
-                          <div className="flex flex-col items-center gap-4">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            <p className="text-muted-foreground">Loading staff members...</p>
+                      <div className="w-full space-y-6">
+                        {/* Skeleton for staff selection */}
+                        <div className="space-y-4">
+                          <div className="h-6 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {[...Array(3)].map((_, i) => (
+                              <div key={i} className="border rounded-lg p-4 space-y-3">
+                                <div className="flex items-center space-x-4">
+                                  <div className="h-12 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                                  <div className="flex-1 space-y-2">
+                                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>
@@ -1044,11 +1086,21 @@ function BookingPageContent() {
                   // Check if serviceStaffData is still loading
                   if (serviceStaffData?.isLoading) {
                     return (
-                      <div className="w-full">
-                        <div className="flex items-center justify-center py-12">
-                          <div className="flex flex-col items-center gap-4">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            <p className="text-muted-foreground">Loading time slots...</p>
+                      <div className="w-full space-y-6">
+                        {/* Skeleton for calendar and time slots */}
+                        <div className="space-y-4">
+                          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+                          <div className="border rounded-lg p-4">
+                            <div className="grid grid-cols-7 gap-2 mb-4">
+                              {[...Array(7)].map((_, i) => (
+                                <div key={i} className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                              ))}
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                              {[...Array(16)].map((_, i) => (
+                                <div key={i} className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1296,15 +1348,13 @@ function BookingPageContent() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
        <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
-        <Button variant="ghost" onClick={handlePrevStep} className="flex items-center gap-2">
-          <ChevronLeft className="mr-1 h-5 w-5" />
+        <Button variant="ghost" onClick={handlePrevStep} className="flex items-center text-md gap-2">
+          <ChevronLeft className="mr-1 h-6 w-6" />
           {currentStep === 1 ? 'Back' : 'Back'}
         </Button>
-        <div className="font-bold text-lg font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-            GlowVita
-        </div>
+      
         <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
-          <X className="h-5 w-5" />
+          <X className="h-6 w-6" />
         </Button>
       </header>
       <div className="flex-1 grid lg:grid-cols-12 gap-8 px-8">
