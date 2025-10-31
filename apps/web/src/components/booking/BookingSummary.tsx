@@ -15,8 +15,7 @@ interface PriceBreakdown {
   discountAmount: number;
   amountAfterDiscount: number;
   platformFee: number;
-  amountAfterPlatformFee: number;
-  serviceTax: number;
+  serviceTax: number; // This will be GST
   vendorServiceTax: number;
   totalTax: number;
   finalTotal: number;
@@ -247,15 +246,6 @@ export function BookingSummary({
               </div>
             )}
             
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                Amount After {priceBreakdown && priceBreakdown.discountAmount > 0 ? 'Discount' : 'Subtotal'}
-              </span>
-              <span>
-                ₹{(priceBreakdown?.amountAfterDiscount ?? subtotal).toFixed(2)}
-              </span>
-            </div>
-            
             {priceBreakdown && priceBreakdown.platformFee > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Platform Fee</span>
@@ -263,24 +253,14 @@ export function BookingSummary({
               </div>
             )}
             
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">
-                Amount After {priceBreakdown && priceBreakdown.platformFee > 0 ? 'Platform Fee' : 'Discount'}
-              </span>
-              <span>
-                ₹{(priceBreakdown?.amountAfterPlatformFee ?? 
-                   (priceBreakdown?.amountAfterDiscount ?? subtotal)).toFixed(2)}
-              </span>
-            </div>
-            
-            {(priceBreakdown?.serviceTax ?? 0) > 0 && (
+            {priceBreakdown && priceBreakdown.serviceTax > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Admin Service Tax</span>
+                <span className="text-muted-foreground">GST</span>
                 <span>₹{priceBreakdown.serviceTax.toFixed(2)}</span>
               </div>
             )}
             
-            {(priceBreakdown?.vendorServiceTax ?? 0) > 0 && (
+            {priceBreakdown && priceBreakdown.vendorServiceTax > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Vendor Service Tax</span>
                 <span>₹{priceBreakdown.vendorServiceTax.toFixed(2)}</span>

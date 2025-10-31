@@ -1,6 +1,24 @@
-import TaxFeeSettings from '@repo/lib/models/admin/TaxFeeSettings';
-import AdminOfferModel from '@repo/lib/models/admin/AdminOffers';
-import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model';
+import TaxFeeSettings from '@repo/lib/models/admin/TaxFeeSettings.model.js';
+import AdminOfferModel from '@repo/lib/models/admin/AdminOffers.model.js';
+import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model.js';
+
+// Add a function to fetch tax fee settings from the public API endpoint
+async function fetchTaxFeeSettings() {
+  try {
+    // Only attempt to fetch in browser environment
+    if (typeof window !== 'undefined') {
+      const response = await fetch('/api/tax-fees');
+      if (response.ok) {
+        const settings = await response.json();
+        return settings;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching tax fee settings:', error);
+    return null;
+  }
+}
 
 /**
  * Calculate the final booking amount including platform fees, taxes, and discounts
@@ -15,20 +33,28 @@ export async function calculateBookingAmount(
   taxFeeSettings = null
 ) {
   try {
-    // If no tax fee settings provided, get the latest settings
-    if (!taxFeeSettings && TaxFeeSettings && typeof TaxFeeSettings.getLatestSettings === 'function') {
-      taxFeeSettings = await TaxFeeSettings.getLatestSettings();
+    // If no tax fee settings provided, try to fetch them
+    if (!taxFeeSettings) {
+      // First try to get from the Mongoose model (server-side)
+      if (TaxFeeSettings && typeof TaxFeeSettings.getLatestSettings === 'function') {
+        taxFeeSettings = await TaxFeeSettings.getLatestSettings();
+      }
+      
+      // If that didn't work, try to fetch from public API (browser-side)
+      if (!taxFeeSettings) {
+        taxFeeSettings = await fetchTaxFeeSettings();
+      }
     }
     
-    // If still no tax fee settings, use defaults
+    // If still no tax fee settings, use defaults with fees enabled
     if (!taxFeeSettings) {
       taxFeeSettings = {
-        platformFee: 0,
+        platformFee: 15,
         platformFeeType: 'percentage',
-        platformFeeEnabled: false,
-        serviceTax: 0,
+        platformFeeEnabled: true,
+        serviceTax: 18,
         serviceTaxType: 'percentage',
-        serviceTaxEnabled: false
+        serviceTaxEnabled: true
       };
     }
     
@@ -41,16 +67,18 @@ export async function calculateBookingAmount(
       return sum + price;
     }, 0);
     
-    // Calculate discount amount from offer
+    // Calculate discount amount from offer (applied only to subtotal, not to platform fees or taxes)
     let discountAmount = 0;
     // Handle both raw offer data and offer objects with methods
     if (offer && (offer.type && offer.value)) {
       // Handle direct offer properties (raw data from API)
+      console.log('Applying offer to subtotal:', { offer, subtotal });
       if (offer.type === 'percentage') {
         discountAmount = (subtotal * offer.value) / 100;
       } else if (offer.type === 'fixed') {
         discountAmount = Math.min(offer.value, subtotal); // Can't discount more than subtotal
       }
+      console.log('Calculated discount amount:', discountAmount);
     } else if (offer && typeof offer.isApplicable === 'function' && offer.isApplicable()) {
       // Use the offer's calculateDiscount method if available (for Mongoose objects)
       if (typeof offer.calculateDiscount === 'function') {
@@ -65,10 +93,11 @@ export async function calculateBookingAmount(
       }
     }
     
-    // Calculate amount after discount
+    // Calculate amount after discount (this is what platform fee and GST will be calculated on)
     const amountAfterDiscount = subtotal - discountAmount;
+    console.log('Amount after discount:', amountAfterDiscount);
     
-    // Calculate platform fee
+    // Calculate platform fee (calculated on amount after discount)
     let platformFee = 0;
     if (taxFeeSettings && taxFeeSettings.platformFeeEnabled) {
       if (taxFeeSettings.platformFeeType === 'percentage') {
@@ -76,19 +105,20 @@ export async function calculateBookingAmount(
       } else {
         platformFee = taxFeeSettings.platformFee;
       }
+      console.log('Calculated platform fee:', platformFee);
     }
     
-    // Calculate amount after platform fee
-    const amountAfterPlatformFee = amountAfterDiscount + platformFee;
-    
-    // Calculate service tax (this is the admin-level service tax)
-    let serviceTax = 0;
+    // Calculate GST (calculated on amount after discount + platform fee)
+    let serviceTax = 0; // This is GST
     if (taxFeeSettings && taxFeeSettings.serviceTaxEnabled) {
+      // GST is calculated on the amount after discount and platform fee
+      const amountForGST = amountAfterDiscount + platformFee;
       if (taxFeeSettings.serviceTaxType === 'percentage') {
-        serviceTax = (amountAfterPlatformFee * taxFeeSettings.serviceTax) / 100;
+        serviceTax = (amountForGST * taxFeeSettings.serviceTax) / 100;
       } else {
         serviceTax = taxFeeSettings.serviceTax;
       }
+      console.log('Calculated GST:', serviceTax);
     }
     
     // Calculate vendor-specific taxes for each service
@@ -105,22 +135,33 @@ export async function calculateBookingAmount(
         }
       }
     }
+    console.log('Calculated vendor service tax:', vendorServiceTaxTotal);
     
-    // Total tax is the sum of admin service tax and vendor service taxes
+    // Total tax is the sum of GST and vendor service taxes
     const totalTax = serviceTax + vendorServiceTaxTotal;
     
     // Calculate final total
-    const finalTotal = amountAfterPlatformFee + totalTax;
+    const finalTotal = amountAfterDiscount + platformFee + totalTax;
+    
+    console.log('Final calculation breakdown:', {
+      subtotal,
+      discountAmount,
+      amountAfterDiscount,
+      platformFee,
+      serviceTax,
+      vendorServiceTaxTotal,
+      totalTax,
+      finalTotal
+    });
     
     return {
       subtotal: parseFloat(subtotal.toFixed(2)),
       discountAmount: parseFloat(discountAmount.toFixed(2)),
       amountAfterDiscount: parseFloat(amountAfterDiscount.toFixed(2)),
       platformFee: parseFloat(platformFee.toFixed(2)),
-      amountAfterPlatformFee: parseFloat(amountAfterPlatformFee.toFixed(2)),
-      serviceTax: parseFloat(serviceTax.toFixed(2)), // Admin service tax
-      vendorServiceTax: parseFloat(vendorServiceTaxTotal.toFixed(2)), // Vendor service taxes
-      totalTax: parseFloat(totalTax.toFixed(2)), // Total of all taxes
+      serviceTax: parseFloat(serviceTax.toFixed(2)), // This is GST
+      vendorServiceTax: parseFloat(vendorServiceTaxTotal.toFixed(2)),
+      totalTax: parseFloat(totalTax.toFixed(2)),
       finalTotal: parseFloat(finalTotal.toFixed(2)),
       taxFeeSettings
     };
@@ -139,7 +180,6 @@ export async function calculateBookingAmount(
       discountAmount: 0,
       amountAfterDiscount: parseFloat(subtotal.toFixed(2)),
       platformFee: 0,
-      amountAfterPlatformFee: parseFloat(subtotal.toFixed(2)),
       serviceTax: 0,
       vendorServiceTax: 0,
       totalTax: 0,

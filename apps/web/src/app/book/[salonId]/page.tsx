@@ -21,6 +21,36 @@ import { useAuth } from '@/hooks/useAuth';
 import { calculateBookingAmount, validateOfferCode } from '@repo/lib/utils';
 import { toast } from 'sonner';
 
+// Add a custom hook to fetch tax fee settings
+const useTaxFeeSettings = () => {
+  const [taxFeeSettings, setTaxFeeSettings] = useState<null | any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<null | Error>(null);
+
+  useEffect(() => {
+    const fetchTaxFeeSettings = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/tax-fees');
+        if (response.ok) {
+          const data = await response.json();
+          setTaxFeeSettings(data);
+        } else {
+          setError(new Error('Failed to fetch tax fee settings'));
+        }
+      } catch (err: any) {
+        setError(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTaxFeeSettings();
+  }, []);
+
+  return { taxFeeSettings, isLoading, error };
+};
+
 function BookingPageContent() {
   console.log('BookingPageContent - Component rendered');
   
@@ -65,7 +95,10 @@ function BookingPageContent() {
   // Fetch vendor offers
   const { data: vendorOffersData, isLoading: isOffersLoading } = useGetPublicVendorOffersQuery(salonId as string);
   const vendorOffers = vendorOffersData?.data || [];
-
+  
+  // Fetch tax fee settings using our custom hook
+  const { taxFeeSettings, isLoading: isTaxFeeSettingsLoading } = useTaxFeeSettings();
+  
   // State for offer dropdown
   const [isOfferDropdownOpen, setIsOfferDropdownOpen] = useState(false);
   const [offerSearchTerm, setOfferSearchTerm] = useState('');
@@ -1122,8 +1155,9 @@ function BookingPageContent() {
         try {
           console.log('Calculating prices for services:', validServices);
           console.log('Current offer:', offer);
+          console.log('Tax fee settings:', taxFeeSettings);
           // Call calculateBookingAmount and await the result
-          const breakdown = await calculateBookingAmount(validServices, offer);
+          const breakdown = await calculateBookingAmount(validServices, offer, taxFeeSettings);
           console.log('Price breakdown calculated:', breakdown);
           setPriceBreakdown(breakdown);
         } catch (error) {
@@ -1141,7 +1175,6 @@ function BookingPageContent() {
             discountAmount: 0,
             amountAfterDiscount: subtotal,
             platformFee: 0,
-            amountAfterPlatformFee: subtotal,
             serviceTax: 0,
             vendorServiceTax: 0,
             totalTax: 0,
@@ -1156,7 +1189,7 @@ function BookingPageContent() {
     };
 
     calculatePrices();
-  }, [selectedServices, offer]);
+  }, [selectedServices, offer, taxFeeSettings]);
 
   // Check for pre-selected service from salon details page
   useEffect(() => {

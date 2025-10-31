@@ -3,8 +3,9 @@ export interface PriceBreakdown {
   discountAmount: number;
   amountAfterDiscount: number;
   platformFee: number;
-  amountAfterPlatformFee: number;
-  serviceTax: number;
+  serviceTax: number; // This is GST
+  vendorServiceTax: number;
+  totalTax: number;
   finalTotal: number;
   taxFeeSettings: any;
 }
