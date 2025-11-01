@@ -54,6 +54,15 @@ const useTaxFeeSettings = () => {
 function BookingPageContent() {
   console.log('BookingPageContent - Component rendered');
   
+  // Helper function to calculate end time
+  const calculateEndTime = (startTime: string, duration: number): string => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + duration;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  };
+  
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -61,7 +70,7 @@ function BookingPageContent() {
   
   // Add debugging for route parameters
   console.log('BookingPageContent - Route parameters:', { params, salonId });
-
+  
   // State for tracking the selected service
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   
@@ -478,11 +487,9 @@ function BookingPageContent() {
   // Clear applied offer
   const handleClearOffer = () => {
     setOfferCode('');
-    setOffer(null);
-    setShowOfferDropdown(false);
-    toast.success('Offer removed successfully!');
   };
 
+  // Remove the duplicate function definition and fix the syntax
   // Update the handleFinalBookingConfirmation function to include payment details
   const handleFinalBookingConfirmation = async () => {
     if (!selectedTime) {
@@ -507,51 +514,80 @@ function BookingPageContent() {
       return;
     }
 
-    // Create appointment data
+    // Validate that we have at least one service
+    if (selectedServices.length === 0) {
+      toast.error("Please select at least one service");
+      return;
+    }
+
+    // Get the first service as the primary service
+    const primaryService = selectedServices[0];
+    
+    // Validate primary service has required fields
+    if (!primaryService.id || !primaryService.name) {
+      toast.error("Invalid service data. Please try again.");
+      return;
+    }
+
+    // Calculate end time
+    const duration = convertDurationToMinutes(primaryService.duration);
+    const endTime = calculateEndTime(selectedTime, duration);
+
+    // Create appointment data with all required fields
     const appointmentData = {
       vendorId: salonId,
-      client: user?._id,
+      client: user?._id || user?.id, // Try both _id and id
       clientName: `${user?.firstName} ${user?.lastName}`,
-      date: selectedDate,
+      service: primaryService.id,
+      serviceName: primaryService.name,
+      staff: selectedStaff?.id || null, // Can be null for "Any Professional"
+      staffName: selectedStaff?.name || "Any Professional",
+      date: selectedDate instanceof Date ? selectedDate.toISOString() : new Date(selectedDate).toISOString(),
       startTime: selectedTime,
-      endTime: serviceSchedule[serviceSchedule.length - 1].endTime,
-      duration: calculateTotalDuration(selectedServices),
-      amount: selectedServices.reduce((acc, s) => {
-        const price = s.discountedPrice !== null && s.discountedPrice !== undefined ? 
-          parseFloat(s.discountedPrice) : 
-          parseFloat(s.price);
-        return acc + price;
-      }, 0),
-      totalAmount: selectedServices.reduce((acc, s) => {
-        const price = s.discountedPrice !== null && s.discountedPrice !== undefined ? 
-          parseFloat(s.discountedPrice) : 
-          parseFloat(s.price);
-        return acc + price;
-      }, 0),
+      endTime: endTime,
+      duration: duration,
+      amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
+        parseFloat(primaryService.discountedPrice) : 
+        parseFloat(primaryService.price),
+      totalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
+        parseFloat(primaryService.discountedPrice) : 
+        parseFloat(primaryService.price),
       platformFee: priceBreakdown?.platformFee || 0,
       serviceTax: priceBreakdown?.serviceTax || 0,
       discountAmount: priceBreakdown?.discountAmount || 0,
-      finalAmount: priceBreakdown?.finalTotal || selectedServices.reduce((acc, s) => {
-        const price = s.discountedPrice !== null && s.discountedPrice !== undefined ? 
-          parseFloat(s.discountedPrice) : 
-          parseFloat(s.price);
-        return acc + price;
-      }, 0),
+      finalAmount: priceBreakdown?.finalTotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
+        parseFloat(primaryService.discountedPrice) : 
+        parseFloat(primaryService.price)),
       paymentMethod: 'Pay at Salon', // Default to Pay at Salon
       paymentStatus: 'pending',
+      status: 'scheduled',
+      notes: selectedServices.length > 1 ? "Multi-service appointment" : "Single service appointment",
+      serviceItems: selectedServices.map(service => ({
+        service: service.id,
+        serviceName: service.name,
+        staff: selectedStaff?.id || null,
+        staffName: selectedStaff?.name || "Any Professional",
+        startTime: selectedTime, // This would need to be more specific for multi-service
+        endTime: calculateEndTime(selectedTime, convertDurationToMinutes(service.duration)), // This would need to be more specific for multi-service
+        duration: convertDurationToMinutes(service.duration),
+        amount: service.discountedPrice !== null && service.discountedPrice !== undefined ? 
+          parseFloat(service.discountedPrice) : 
+          parseFloat(service.price)
+      })),
+      isMultiService: selectedServices.length > 1
     };
 
     try {
       // Create the appointment in the database
-      console.log("Calling createAppointment...");
+      console.log("Calling createAppointment with data:", appointmentData);
       const result = await createAppointment(appointmentData).unwrap();
       console.log("Appointment created successfully:", result);
       
       // Close the payment modal
       setIsPaymentModalOpen(false);
       
-      // Show confirmation message
-      alert(`Booking Confirmed! Payment Method: ${appointmentData.paymentMethod}\nAppointment created successfully with ${selectedServices.length} services.`);
+      // Show confirmation message with toast
+      toast.success(`Booking Confirmed! Payment Method: ${appointmentData.paymentMethod}\nAppointment created successfully with ${selectedServices.length} services.`);
       
       // Set a flag in sessionStorage to indicate that an appointment was just created
       // This will help the time slot component know to refetch data when it mounts again
@@ -586,10 +622,33 @@ function BookingPageContent() {
     console.log("Selected services:", selectedServices);
     console.log("Service staff assignments:", serviceStaffAssignments);
     console.log("Selected staff:", selectedStaff);
+    console.log("Selected services details:", selectedServices.map(s => ({
+      id: s.id,
+      name: s.name,
+      hasId: !!s.id,
+      hasName: !!s.name,
+      price: s.price,
+      discountedPrice: s.discountedPrice
+    })));
     
     // Prevent multiple calls
     if (isCreatingAppointment) {
       console.log("Appointment creation already in progress, skipping...");
+      return;
+    }
+    
+    // Validate that we have at least one service
+    if (selectedServices.length === 0) {
+      toast.error("Please select at least one service");
+      return;
+    }
+    
+    // Get the first service as the primary service
+    const primaryService = selectedServices[0];
+    
+    // Validate primary service has required fields
+    if (!primaryService.id || !primaryService.name) {
+      toast.error("Invalid service data. Please try again.");
       return;
     }
     
@@ -601,7 +660,40 @@ function BookingPageContent() {
       if (serviceSchedule.length === 0 && selectedServices.length === 1 && selectedTime) {
         console.log("Creating service schedule for single service appointment");
         const service = selectedServices[0];
+        console.log("Service for schedule:", service);
+        console.log("Service properties:", {
+          service: service,
+          serviceType: typeof service,
+          serviceKeys: service ? Object.keys(service) : null,
+          hasId: !!(service && service.id),
+          hasName: !!(service && service.name),
+          hasPrice: !!(service && service.price),
+          id: service?.id,
+          name: service?.name,
+          price: service?.price
+        });
+        
+        // Validate service has required properties
+        if (!service) {
+          console.error("No service selected for schedule creation");
+          toast.error("No service selected. Please try again.");
+          return;
+        }
+        
+        if (!service.id) {
+          console.error("Service missing ID:", service);
+          toast.error("Invalid service data - missing ID. Please try again.");
+          return;
+        }
+        
+        if (!service.name) {
+          console.error("Service missing name:", service);
+          toast.error("Invalid service data - missing name. Please try again.");
+          return;
+        }
+        
         const serviceDuration = convertDurationToMinutes(service.duration);
+        console.log("Service duration:", serviceDuration);
         
         // Create a service schedule entry for the single service
         finalServiceSchedule = [{
@@ -613,7 +705,23 @@ function BookingPageContent() {
         }];
         
         console.log("Created single service schedule:", finalServiceSchedule);
+        console.log("Created schedule service details:", {
+          service: finalServiceSchedule[0].service,
+          staff: finalServiceSchedule[0].staff,
+          staffType: typeof finalServiceSchedule[0].staff,
+          staffKeys: finalServiceSchedule[0].staff ? Object.keys(finalServiceSchedule[0].staff) : null,
+          hasStaff: !!finalServiceSchedule[0].staff,
+          hasStaffId: finalServiceSchedule[0].staff && finalServiceSchedule[0].staff.id,
+          hasStaffName: finalServiceSchedule[0].staff && finalServiceSchedule[0].staff.name,
+          staffId: finalServiceSchedule[0].staff?.id,
+          staffName: finalServiceSchedule[0].staff?.name,
+          startTime: finalServiceSchedule[0].startTime,
+          endTime: finalServiceSchedule[0].endTime,
+          duration: finalServiceSchedule[0].duration
+        });
       }
+      
+      console.log("Final service schedule:", finalServiceSchedule);
       
       // For multiple services or single service with schedule, create appointment
       if (finalServiceSchedule.length > 0) {
@@ -622,26 +730,102 @@ function BookingPageContent() {
         // Use the first service as the primary service for the appointment
         const primarySchedule = finalServiceSchedule[0];
         console.log("Primary schedule:", primarySchedule);
+        console.log("Primary schedule service details:", {
+          service: primarySchedule.service,
+          serviceType: typeof primarySchedule.service,
+          serviceKeys: primarySchedule.service ? Object.keys(primarySchedule.service) : null,
+          hasService: !!primarySchedule.service,
+          hasServiceId: primarySchedule.service && primarySchedule.service.id,
+          hasServiceName: primarySchedule.service && primarySchedule.service.name,
+          serviceId: primarySchedule.service?.id,
+          serviceName: primarySchedule.service?.name
+        });
+        
+        // Validate that we have all required service data
+        if (!primarySchedule.service || !primarySchedule.service.id || !primarySchedule.service.name) {
+          console.error("Missing required service data:", primarySchedule.service);
+          toast.error("Invalid service data. Please try again.");
+          return;
+        }
+        
+        // Validate that we have all required staff data (staff can be null for "Any Professional")
+        console.log("Primary schedule staff details:", {
+          staff: primarySchedule.staff,
+          staffType: typeof primarySchedule.staff,
+          staffKeys: primarySchedule.staff ? Object.keys(primarySchedule.staff) : null,
+          hasStaff: !!primarySchedule.staff,
+          hasStaffId: primarySchedule.staff && primarySchedule.staff.id,
+          hasStaffName: primarySchedule.staff && primarySchedule.staff.name,
+          staffId: primarySchedule.staff?.id,
+          staffName: primarySchedule.staff?.name
+        });
+        
+        if (primarySchedule.staff && (!primarySchedule.staff.id || !primarySchedule.staff.name)) {
+          console.error("Invalid staff data:", primarySchedule.staff);
+          toast.error("Invalid staff data. Please try again.");
+          return;
+        }
+        
+        console.log("Primary service data:", {
+          id: primarySchedule.service.id,
+          name: primarySchedule.service.name,
+          hasId: !!primarySchedule.service.id,
+          hasName: !!primarySchedule.service.name
+        });
+        
+        console.log("Primary staff data:", {
+          id: primarySchedule.staff ? primarySchedule.staff.id : null,
+          name: primarySchedule.staff ? primarySchedule.staff.name : "Any Professional",
+          hasId: primarySchedule.staff ? !!primarySchedule.staff.id : true, // Can be null
+          hasName: primarySchedule.staff ? !!primarySchedule.staff.name : true
+        });
         
         // Format the appointment date with the correct time
-        const appointmentDate = new Date(selectedDate);
-        const [hours, minutes] = primarySchedule.startTime.split(':').map(Number);
-        appointmentDate.setHours(hours, minutes, 0, 0);
-        console.log("Appointment date:", appointmentDate);
+      const appointmentDate = selectedDate instanceof Date ? new Date(selectedDate) : new Date(selectedDate);
+      const [hours, minutes] = primarySchedule.startTime.split(':').map(Number);
+      appointmentDate.setHours(hours, minutes, 0, 0);
+      console.log("Appointment date:", appointmentDate);
         
         // Create service items for all services
-        const serviceItems = finalServiceSchedule.map(schedule => ({
-          service: schedule.service.id,
-          serviceName: schedule.service.name,
-          staff: schedule.staff ? schedule.staff.id : null,
-          staffName: schedule.staff ? schedule.staff.name : "Any Professional",
-          startTime: schedule.startTime,
-          endTime: schedule.endTime,
-          duration: schedule.duration,
-          amount: schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ? 
-            parseFloat(schedule.service.discountedPrice) : 
-            parseFloat(schedule.service.price)
-        }));
+        const serviceItems = finalServiceSchedule.map(schedule => {
+          // Validate service data
+          if (!schedule.service || !schedule.service.id || !schedule.service.name) {
+            console.error("Missing required service data in schedule:", schedule.service);
+            throw new Error("Invalid service data in schedule");
+          }
+          
+          // Validate staff data (staff can be null for "Any Professional")
+          if (schedule.staff && (!schedule.staff.id || !schedule.staff.name)) {
+            console.error("Invalid staff data in schedule:", schedule.staff);
+            throw new Error("Invalid staff data in schedule");
+          }
+          
+          console.log("Creating service item:", {
+            serviceId: schedule.service.id,
+            serviceName: schedule.service.name,
+            staffId: schedule.staff ? schedule.staff.id : null,
+            staffName: schedule.staff ? schedule.staff.name : "Any Professional",
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+            duration: schedule.duration,
+            amount: schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ? 
+              parseFloat(schedule.service.discountedPrice) : 
+              parseFloat(schedule.service.price)
+          });
+          
+          return {
+            service: schedule.service.id,
+            serviceName: schedule.service.name,
+            staff: schedule.staff ? schedule.staff.id : null,
+            staffName: schedule.staff ? schedule.staff.name : "Any Professional",
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+            duration: schedule.duration,
+            amount: schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ? 
+              parseFloat(schedule.service.discountedPrice) : 
+              parseFloat(schedule.service.price)
+          };
+        });
         
         console.log("Service items:", serviceItems);
         
@@ -660,28 +844,47 @@ function BookingPageContent() {
         console.log("Total duration:", totalDuration);
         
         // Use the last service's end time as the appointment end time
-        const endTime = finalServiceSchedule[finalServiceSchedule.length - 1].endTime;
+        const endTime = finalServiceSchedule[finalServiceSchedule.length - 1].endTime || 
+                       calculateEndTime(primarySchedule.startTime, totalDuration);
         console.log("End time:", endTime);
         
         // Handle staff field - it can now be null for "Any Professional"
         let staffId = primarySchedule.staff ? primarySchedule.staff.id : null;
         let staffName = primarySchedule.staff ? primarySchedule.staff.name : "Any Professional";
         let clientName = user.firstName + " " + user.lastName;
+        let clientId = user._id || user.id; // Try both _id and id
         console.log("Client Name:", clientName)
-        console.log("Client ID:", user._id);
+        console.log("Client ID:", clientId);
         console.log("Staff ID:", staffId, "Staff Name:", staffName);
+        console.log("User object:", user);
+        console.log("User properties:", {
+          hasFirstName: !!user.firstName,
+          hasLastName: !!user.lastName,
+          hasId: !!clientId,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          id: clientId
+        });
         
-        console.log("user",user);
+        // Fix salonId if it's an array
+        const vendorId = Array.isArray(salonId) ? salonId[0] : salonId;
+        console.log("Vendor ID check:", {
+          salonId: salonId,
+          vendorId: vendorId,
+          salonIdType: typeof salonId,
+          isSalonIdArray: Array.isArray(salonId)
+        });
+        
         // Prepare appointment data - ensure all required fields are provided
         const appointmentData = {
-          vendorId: salonId,
-          client: user._id,
+          vendorId: vendorId, // Use the fixed vendorId
+          client: clientId, // Use the fixed client ID
           clientName: clientName, // In a real implementation, this would come from user authentication
           service: primarySchedule.service.id,
           serviceName: primarySchedule.service.name,
           staff: staffId, // This can now be null for "Any Professional"
           staffName: staffName,
-          date: appointmentDate,
+          date: appointmentDate.toISOString(), // Ensure date is in ISO format
           startTime: primarySchedule.startTime,
           endTime: endTime,
           duration: totalDuration,
@@ -701,7 +904,55 @@ function BookingPageContent() {
           isMultiService: finalServiceSchedule.length > 1
         };
         
+        // Log all required fields to make sure they're present
+        console.log("Required fields check:", {
+          vendorId: appointmentData.vendorId,
+          client: appointmentData.client,
+          clientName: appointmentData.clientName,
+          service: appointmentData.service,
+          serviceName: appointmentData.serviceName,
+          staff: appointmentData.staff,
+          staffName: appointmentData.staffName,
+          date: appointmentData.date,
+          startTime: appointmentData.startTime,
+          endTime: appointmentData.endTime,
+          duration: appointmentData.duration,
+          amount: appointmentData.amount,
+          totalAmount: appointmentData.totalAmount,
+          hasVendorId: !!appointmentData.vendorId,
+          hasClient: !!appointmentData.client,
+          hasClientName: !!appointmentData.clientName,
+          hasService: !!appointmentData.service,
+          hasServiceName: !!appointmentData.serviceName,
+          hasStaff: appointmentData.staff !== undefined, // Can be null
+          hasStaffName: !!appointmentData.staffName,
+          hasDate: !!appointmentData.date,
+          hasStartTime: !!appointmentData.startTime,
+          hasEndTime: !!appointmentData.endTime,
+          hasDuration: !!appointmentData.duration,
+          hasAmount: !!appointmentData.amount,
+          hasTotalAmount: !!appointmentData.totalAmount
+        });
+        
+        // Double-check that all required fields are present before sending
+        const requiredFields = ['vendorId', 'client', 'clientName', 'service', 'serviceName', 'staff', 'staffName', 'date', 'startTime', 'endTime', 'duration', 'amount', 'totalAmount'];
+        const missingFields = requiredFields.filter(field => {
+          // Special handling for staff field - it can be null but must be present
+          if (field === 'staff') {
+            return appointmentData[field as keyof typeof appointmentData] === undefined;
+          }
+          return !appointmentData[field as keyof typeof appointmentData];
+        });
+        
+        if (missingFields.length > 0) {
+          console.error("Missing required fields:", missingFields);
+          console.error("Appointment data:", appointmentData);
+          toast.error(`Missing required fields: ${missingFields.join(', ')}`);
+          return;
+        }
+        
         console.log("Final appointment data:", appointmentData);
+        console.log("Appointment data being sent:", JSON.stringify(appointmentData, null, 2));
         
         // Create the appointment in the database
         console.log("Calling createAppointment...");
@@ -733,8 +984,8 @@ function BookingPageContent() {
         // Close the payment modal
         setIsPaymentModalOpen(false);
         
-        // Show confirmation message
-        alert(`Booking Confirmed! Payment Method: ${method}\nAppointment created successfully with ${finalServiceSchedule.length} services.`);
+        // Show confirmation message with toast
+        toast.success(`Booking Confirmed! Payment Method: ${method}\nAppointment created successfully with ${finalServiceSchedule.length} services.`);
         
         // Set a flag in sessionStorage to indicate that an appointment was just created
         // This will help the time slot component know to refetch data when it mounts again
@@ -764,16 +1015,7 @@ function BookingPageContent() {
       }
     }
   };
-  
-  // Helper function to calculate end time
-  const calculateEndTime = (startTime: string, duration: number): string => {
-    const [hours, minutes] = startTime.split(':').map(Number);
-    const totalMinutes = hours * 60 + minutes + duration;
-    const endHours = Math.floor(totalMinutes / 60) % 24;
-    const endMinutes = totalMinutes % 60;
-    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
-  };
-  
+
   // Add a function to refetch appointment data after creation
   const refetchAppointments = async () => {
     // This function can be called after appointment creation to ensure data is refreshed
@@ -787,7 +1029,22 @@ function BookingPageContent() {
       return;
     }
     
+    // Ensure service has all required properties
+    if (!service.name) {
+      console.error('Service missing name property:', service);
+      return;
+    }
+    
     console.log('handleSelectService called with:', service);
+    console.log('Service properties:', {
+      id: service.id,
+      name: service.name,
+      price: service.price,
+      hasId: !!service.id,
+      hasName: !!service.name,
+      hasPrice: !!service.price,
+      serviceKeys: Object.keys(service)
+    });
     
     setSelectedServices(prev => {
       const isSelected = prev.some(s => s.id === service.id);
@@ -1679,3 +1936,4 @@ export default function BookingPageWrapper() {
     </Suspense>
   );
 }
+

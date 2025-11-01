@@ -8,8 +8,9 @@ await _db();
 // GET existing appointments for checking availability
 export const GET = async (req) => {
     try {
+        
         const { searchParams } = new URL(req.url);
-        const vendorId = searchParams.get('vendorId');
+        const vendorId = searchParams.get('vendorId'); 
         const staffId = searchParams.get('staffId');
         const date = searchParams.get('date');
         const startDate = searchParams.get('startDate');
@@ -64,13 +65,12 @@ export const GET = async (req) => {
         }
 
         // Add staff filtering (only when vendorId is provided)
-        if (vendorId && staffId && staffId !== 'null') {
+        if (vendorId && staffId && staffId !== 'null' && staffId !== 'undefined') {
             query.staff = staffId;
         }
 
         console.log('Final query:', JSON.stringify(query, null, 2));
     
-
         // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
             .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount vendorId')
@@ -131,16 +131,6 @@ export const GET = async (req) => {
         });
 
         console.log('Found appointments:', transformedAppointments.length);
-        console.log('Appointment details:', transformedAppointments.map(apt => ({
-            id: apt.id,
-            staff: apt.staff,
-            date: apt.date,
-            service: apt.service,
-            status: apt.status,
-            price: apt.price,
-            duration: apt.duration,
-            salon: apt.salon
-        })));
 
         // Add CORS headers
         const response = NextResponse.json(transformedAppointments, { status: 200 });
@@ -152,6 +142,7 @@ export const GET = async (req) => {
         return response;
     } catch (error) {
         console.error('Error fetching appointments:', error);
+        console.error('Error stack:', error.stack);
         
         // Add CORS headers to error response
         const response = NextResponse.json(
@@ -170,6 +161,7 @@ export const GET = async (req) => {
 // POST a new appointment from public web booking
 export const POST = async (req) => {
     try {
+      
         const body = await req.json();
 
         console.log('POST request - creating public appointment:', body);
@@ -193,31 +185,66 @@ export const POST = async (req) => {
         const missingFields = requiredFields.filter(field => {
           // Special handling for staff field - it can be null but must be present
           if (field === 'staff') {
+            // Staff can be null but must be present in the body
             return body[field] === undefined;
           }
-          return !body[field];
+          if (field === 'staffName') {
+            // StaffName can be null/empty but must be present in the body
+            return body[field] === undefined;
+          }
+          // For all other fields, they must be present and not null/undefined
+          return !body[field] && body[field] !== 0 && body[field] !== false;
         });
         
         if (missingFields.length > 0) {
+            console.log('Missing fields:', missingFields);
+            console.log('Body received:', body);
             return NextResponse.json(
                 { message: `Missing required fields: ${missingFields.join(', ')}` }, 
                 { status: 400 }
             );
         }
 
-        // Set default values
+        // Validate client information
+        if (!body.client && !body.userId) {
+            console.log('No client field found in body:', body);
+            return NextResponse.json(
+                { message: "Missing client field (client or userId required)" }, 
+                { status: 400 }
+            );
+        }
+
+        // Set default values and ensure proper data types
         const appointmentData = {
-            ...body,
-            status: body.status || 'scheduled',
+            vendorId: body.vendorId,
+            client: body.client || body.userId,
+            clientName: body.clientName,
+            service: body.service,
+            serviceName: body.serviceName,
+            staff: body.staff !== undefined ? body.staff : null, // This can be null
+            staffName: body.staffName || "Any Professional", // Provide default if not present
+            date: body.date ? new Date(body.date) : new Date(),
+            startTime: body.startTime,
+            endTime: body.endTime,
+            duration: Number(body.duration) || 0,
             amount: Number(body.amount) || 0,
-            discount: Number(body.discount) || 0,
-            tax: Number(body.tax) || 0,
-            totalAmount: (Number(body.amount) || 0) - (Number(body.discount) || 0) + (Number(body.tax) || 0),
+            totalAmount: Number(body.totalAmount) || 0,
+            platformFee: Number(body.platformFee) || 0,
+            serviceTax: Number(body.serviceTax) || 0,
+            discountAmount: Number(body.discountAmount) || 0,
+            finalAmount: Number(body.finalAmount) || Number(body.totalAmount) || 0,
+            paymentMethod: body.paymentMethod || 'Pay at Salon',
+            paymentStatus: body.paymentStatus || 'pending',
+            status: body.status || 'scheduled',
             notes: body.notes || '',
-            isMultiService: body.serviceItems && body.serviceItems.length > 1
+            serviceItems: body.serviceItems || [],
+            isMultiService: body.isMultiService || (body.serviceItems && body.serviceItems.length > 1)
         };
 
+        console.log('Creating appointment with data:', appointmentData);
+
         const newAppointment = await AppointmentModel.create(appointmentData);
+        console.log('Appointment created successfully with ID:', newAppointment._id);
         
         // Populate the appointment with related data
         // For multi-service appointments, we need to populate serviceItems properly
@@ -248,6 +275,7 @@ export const POST = async (req) => {
         return response;
     } catch (error) {
         console.error('Error creating appointment:', error);
+        console.error('Error stack:', error.stack);
         
         // Add CORS headers to error response
         const response = NextResponse.json(

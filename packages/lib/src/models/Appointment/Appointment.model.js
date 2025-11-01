@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import ServiceModel from '../admin/Service.model';
-import StaffModel from '../Vendor/Staff.model';
+import ServiceModel from '../admin/Service.model.js';
+import StaffModel from '../Vendor/Staff.model.js';
 
 // Ensure the Service and Staff models are registered
 const Service = mongoose.models.Service || ServiceModel;
