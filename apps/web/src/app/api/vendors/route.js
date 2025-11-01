@@ -56,7 +56,7 @@ export const GET = async () => {
       }
     )
     .lean() // Returns plain JS objects (10x faster)
-    .limit(20)
+    .limit(4)
     .maxTimeMS(100) // Fail fast if query takes > 100ms
     .hint({ status: 1 }) // Use status index if available
     .exec();
