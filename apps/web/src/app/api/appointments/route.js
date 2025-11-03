@@ -10,24 +10,32 @@ export const GET = async (req) => {
         const { searchParams } = new URL(req.url);
         const vendorId = searchParams.get('vendorId');
         const staffId = searchParams.get('staffId');
+        const doctorId = searchParams.get('doctorId');
         const date = searchParams.get('date');
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
 
-        console.log('GET appointments - vendorId:', vendorId, 'staffId:', staffId, 'date:', date);
+        console.log('GET appointments - vendorId:', vendorId, 'staffId:', staffId, 'doctorId:', doctorId, 'date:', date);
 
-        // Base query - must have vendorId
-        if (!vendorId) {
+        // Base query - must have vendorId OR doctorId
+        if (!vendorId && !doctorId) {
             return NextResponse.json(
-                { message: "vendorId is required" },
+                { message: "vendorId or doctorId is required" },
                 { status: 400 }
             );
         }
 
         const query = { 
-            vendorId, 
             status: { $nin: ['cancelled'] } // Exclude cancelled appointments
         };
+
+        // Add vendor or doctor filtering
+        if (vendorId) {
+            query.vendorId = vendorId;
+        }
+        if (doctorId) {
+            query.doctor = doctorId;
+        }
 
         // Add date filtering
         if (date) {

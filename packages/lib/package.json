@@ -8,6 +8,7 @@
     ".": "./src/index.js",
     "./db": "./src/db.js",
     "./auth": "./src/auth.js",
+    "./utils/upload": "./src/utils/upload.js",
     "./generateTokens": "./src/generateTokens.js",
     "./emailService": "./src/emailService.js",
     "./models/user": "./src/models/user/User.model.js",
@@ -41,12 +42,12 @@
     "./models/Vendor/Shipping.model": "./src/models/Vendor/Shipping.model.js",
     "./models/Vendor/Staff.model": "./src/models/Vendor/Staff.model.js",
     "./models/Vendor/VendorWorkingHours.model": "./src/models/Vendor/VendorWorkingHours.model.js",
-    "./models/Vendor/CRMOffer.model": "./src/models/Vendor/CRMOffer.model.js",
     "./stateCity": "./src/state-city.json",
     "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",
     "./models/Marketing/SmsPackage.model": "./src/models/Marketing/SmsPackage.model.js",
     "./models/Marketing/Campaign.model": "./src/models/Marketing/Campaign.model.js",
-    "./models/Marketing/socialMediaTemplate.model": "./src/models/Marketing/socialMediaTemplate.model.js"
+    "./models/Marketing/socialMediaTemplate.model": "./src/models/Marketing/socialMediaTemplate.model.js",
+    "./models/Vendor/DoctorWorkingHours.model": "./src/models/Vendor/DoctorWorkingHours.model.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

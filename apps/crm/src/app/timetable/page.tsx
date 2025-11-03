@@ -1,14 +1,16 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Switch } from "@repo/ui/switch";
-import { Clock, Plus, Trash2 } from 'lucide-react';
+import { Clock, Plus, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useGetCrmDoctorWorkingHoursQuery, useUpdateCrmDoctorWorkingHoursMutation } from '@repo/store/api';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 type TimeSlot = {
   start: string;
@@ -32,7 +34,30 @@ const initialSchedule: DaySchedule[] = [
 ];
 
 export default function TimetablePage() {
+  const { user, role } = useCrmAuth();
   const [schedule, setSchedule] = useState<DaySchedule[]>(initialSchedule);
+  
+  // Fetch working hours
+  const { data: workingHoursData, isLoading, error, refetch } = useGetCrmDoctorWorkingHoursQuery(undefined, {
+    skip: role !== 'doctor'
+  });
+  
+  // Update working hours mutation
+  const [updateWorkingHours, { isLoading: isSaving }] = useUpdateCrmDoctorWorkingHoursMutation();
+
+  // Transform API data to schedule format
+  useEffect(() => {
+    if (workingHoursData?.workingHoursArray) {
+      const transformedSchedule: DaySchedule[] = workingHoursData.workingHoursArray.map((dayData: any) => ({
+        day: dayData.day,
+        isOpen: dayData.isOpen,
+        slots: dayData.isOpen && dayData.open && dayData.close 
+          ? [{ start: dayData.open, end: dayData.close }] 
+          : []
+      }));
+      setSchedule(transformedSchedule);
+    }
+  }, [workingHoursData]);
 
   const handleToggleDay = (dayIndex: number) => {
     const newSchedule = [...schedule];
@@ -63,11 +88,79 @@ export default function TimetablePage() {
     setSchedule(newSchedule);
   };
 
-  const handleSaveChanges = () => {
-    // Here you would typically dispatch an action to save the schedule
-    console.log("Saving schedule:", schedule);
-    toast.success("Working hours saved successfully!");
+  const handleSaveChanges = async () => {
+    try {
+      // Transform schedule to API format
+      const workingHours: Record<string, any> = {};
+      const dayMapping: Record<string, string> = {
+        'Monday': 'monday',
+        'Tuesday': 'tuesday',
+        'Wednesday': 'wednesday',
+        'Thursday': 'thursday',
+        'Friday': 'friday',
+        'Saturday': 'saturday',
+        'Sunday': 'sunday'
+      };
+
+      schedule.forEach(daySchedule => {
+        const dayKey = dayMapping[daySchedule.day];
+        workingHours[dayKey] = {
+          isOpen: daySchedule.isOpen,
+          hours: daySchedule.isOpen && daySchedule.slots.length > 0
+            ? daySchedule.slots.map(slot => ({
+                openTime: slot.start,
+                closeTime: slot.end
+              }))
+            : []
+        };
+      });
+
+      await updateWorkingHours({ workingHours }).unwrap();
+      toast.success("Working hours saved successfully!");
+      refetch();
+    } catch (error: any) {
+      console.error("Error saving working hours:", error);
+      toast.error(error?.data?.message || "Failed to save working hours");
+    }
   };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle>Working Hours</CardTitle>
+            <CardDescription>
+              Set your weekly availability. This will affect when patients can book consultations.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle>Working Hours</CardTitle>
+            <CardDescription>
+              Set your weekly availability. This will affect when patients can book consultations.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="py-12">
+            <p className="text-center text-destructive">Failed to load working hours. Please try again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -125,7 +218,16 @@ export default function TimetablePage() {
             ))}
         </CardContent>
         <CardFooter className="flex justify-end">
-            <Button onClick={handleSaveChanges}>Save Changes</Button>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
         </CardFooter>
       </Card>
     </div>

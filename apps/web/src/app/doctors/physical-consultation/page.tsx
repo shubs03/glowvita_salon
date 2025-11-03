@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useGetDoctorWorkingHoursQuery } from '@repo/store/services/api';
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Calendar, User, Clock, CheckCircle, Home, Eye, ChevronRight } from "lucide-react";
@@ -63,30 +65,80 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
 };
 
 export default function PhysicalConsultationPage() {
+  const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
+  const [doctorId, setDoctorId] = useState<string>('');
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Initialize doctor data from URL params
   const [consultationData, setConsultationData] = useState<ConsultationData>({
-    // Doctor Details (would come from URL params in real implementation)
-    selectedDoctorId: 'DR-001',
-    selectedDoctorName: 'Dr. Sarah Johnson',
-    selectedDoctorSpecialty: 'Dermatology',
-    consultationFee: 200,
-    doctorImage: '',
-    doctorRating: 4.9,
-    doctorReviewCount: 156,
-    doctorClinic: 'Skin Care Clinic',
-    doctorAddress: '123 Medical Center, Downtown',
-    
-    // Basic Details
     patientName: '',
     phoneNumber: '',
     email: '',
     reason: '',
-    
-    // Notification Preferences
     whatsappNotifications: true,
     smsNotifications: false,
     emailNotifications: false,
   });
+
+  // Parse URL params and set doctor data on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const encoded = urlParams.get('data');
+      console.log('🔍 URL encoded data:', encoded);
+      
+      if (encoded) {
+        try {
+          const decoded = JSON.parse(atob(encoded));
+          console.log('📦 Decoded doctor data:', decoded);
+          console.log('🆔 Doctor ID from decoded:', decoded.id);
+          
+          const doctorParams = {
+            selectedDoctorId: decoded.id || '',
+            selectedDoctorName: decoded.name || '',
+            selectedDoctorSpecialty: decoded.specialty || '',
+            consultationFee: decoded.fee,
+            doctorImage: decoded.image || '',
+            doctorRating: decoded.rating,
+            doctorReviewCount: decoded.reviews,
+            doctorClinic: decoded.clinic || '',
+            doctorAddress: decoded.address || ''
+          };
+          
+          console.log('✅ Final doctorId:', decoded.id);
+          console.log('✅ Doctor params:', doctorParams);
+          
+          setDoctorId(decoded.id || '');
+          setConsultationData(prev => ({ ...prev, ...doctorParams }));
+          setIsInitialized(true);
+        } catch (e) {
+          console.error('❌ Error decoding doctor data:', e);
+          setIsInitialized(true);
+        }
+      } else {
+        console.warn('⚠️ No encoded data found in URL');
+        setIsInitialized(true);
+      }
+    }
+  }, []); // Run only once on mount
+
+  // Redirect to doctors page if no doctor data after initialization
+  useEffect(() => {
+    if (isInitialized && !doctorId) {
+      console.warn('❌ No doctor ID found, redirecting to doctors page');
+      router.push('/doctors');
+    }
+  }, [isInitialized, doctorId, router]);
+
+  const { data: workingHours, isLoading: isWorkingHoursLoading, isError: isWorkingHoursError } = useGetDoctorWorkingHoursQuery(doctorId, { skip: !doctorId });
+
+  useEffect(() => {
+    if (doctorId && workingHours) {
+      console.log('Doctor ID:', doctorId);
+      console.log('Working Hours Data:', workingHours);
+    }
+  }, [doctorId, workingHours]);
 
   const updateConsultationData = (updates: Partial<ConsultationData>) => {
     setConsultationData(prev => ({ ...prev, ...updates }));
@@ -130,19 +182,6 @@ export default function PhysicalConsultationPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-6">
-      <div className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="p-3 bg-primary/10 rounded-full text-primary">
-            <User className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Physical Consultation</h1>
-            <p className="text-lg text-muted-foreground mt-1">
-              Book an in-person appointment with our doctors
-            </p>
-          </div>
-        </div>
-      </div>
 
       <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
       

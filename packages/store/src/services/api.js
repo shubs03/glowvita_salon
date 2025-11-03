@@ -1229,7 +1229,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Vendor"],
     }),
 
-    // Doctor Working Hours Endpoints
+    // Doctor Working Hours Endpoints (Web - for booking)
     getDoctorWorkingHours: builder.query({
       query: (doctorId) => ({ url: `/api/doctor/working-hours?doctorId=${doctorId}`, method: 'GET' }),
       providesTags: ['DoctorWorkingHours'],
@@ -1237,6 +1237,24 @@ export const glowvitaApi = createApi({
     updateDoctorWorkingHours: builder.mutation({
       query: ({ doctorId, hours }) => ({ url: `/api/doctor/working-hours`, method: 'PUT', body: { doctorId, hours } }),
       invalidatesTags: ['DoctorWorkingHours'],
+    }),
+
+    // Doctor Working Hours Endpoints (CRM - for timetable management)
+    getCrmDoctorWorkingHours: builder.query({
+      query: () => ({ url: `/crm/doctor-workinghours`, method: 'GET' }),
+      providesTags: ['CrmDoctorWorkingHours'],
+    }),
+    updateCrmDoctorWorkingHours: builder.mutation({
+      query: (workingHours) => ({ url: `/crm/doctor-workinghours`, method: 'PUT', body: workingHours }),
+      invalidatesTags: ['CrmDoctorWorkingHours'],
+    }),
+    addCrmDoctorSpecialHours: builder.mutation({
+      query: (specialHours) => ({ url: `/crm/doctor-workinghours`, method: 'POST', body: specialHours }),
+      invalidatesTags: ['CrmDoctorWorkingHours'],
+    }),
+    removeCrmDoctorSpecialHours: builder.mutation({
+      query: (date) => ({ url: `/crm/doctor-workinghours?date=${date}`, method: 'DELETE' }),
+      invalidatesTags: ['CrmDoctorWorkingHours'],
     }),
 
     //subscription renewal
@@ -1541,6 +1559,10 @@ export const {
   useUpdateVendorProfileMutation,
   useGetDoctorWorkingHoursQuery,
   useUpdateDoctorWorkingHoursMutation,
+  useGetCrmDoctorWorkingHoursQuery,
+  useUpdateCrmDoctorWorkingHoursMutation,
+  useAddCrmDoctorSpecialHoursMutation,
+  useRemoveCrmDoctorSpecialHoursMutation,
   useGetCrmReferralsQuery,
   useGetCrmReferralSettingsQuery,
   useChangePlanMutation,

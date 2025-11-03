@@ -6,7 +6,7 @@ import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Badge } from "@repo/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
-import { CheckCircle, CreditCard, User, Phone, Activity, Tag, DollarSign } from "lucide-react";
+import { CheckCircle, CreditCard, User, Users, Phone, Activity, Tag, DollarSign, Star, MapPin, Stethoscope } from "lucide-react";
 import { cn } from '@repo/ui/cn';
 import { ConsultationData } from '../page';
 
@@ -88,103 +88,137 @@ export function ConfirmationStep({ data, onUpdate, currentStep, setCurrentStep, 
         <div className="space-y-8">
           {/* Patient Information */}
           <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <User className="h-6 w-6 text-primary" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <User className="h-5 w-5 text-primary" />
                 Patient Information
               </CardTitle>
-              <p className="text-muted-foreground mt-2">Verify the patient details below</p>
             </CardHeader>
-            <CardContent className="pt-0 space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <Label className="text-sm text-muted-foreground">Patient Name</Label>
-                  <p className="font-semibold text-lg">{data.patientName}</p>
+            <CardContent className="pt-0">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 border-b">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Name</span>
+                  </div>
+                  <span className="font-semibold text-sm">{data.patientName}</span>
                 </div>
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <Label className="text-sm text-muted-foreground">Phone Number</Label>
-                  <p className="font-semibold text-lg">+91 {data.phoneNumber}</p>
+                <div className="flex items-center justify-between py-2 border-b">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Phone</span>
+                  </div>
+                  <span className="font-semibold text-sm">+91 {data.phoneNumber}</span>
                 </div>
-                <div className="p-4 bg-muted/30 rounded-lg">
-                  <Label className="text-sm text-muted-foreground">Consultation Type</Label>
-                  <p className="font-semibold text-lg capitalize">{data.consultationType === 'self' ? 'For myself' : 'For someone else'}</p>
+                <div className="flex items-center justify-between py-2 border-b">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Type</span>
+                  </div>
+                  <span className="font-semibold text-sm">{data.consultationType === 'self' ? 'For myself' : 'For someone else'}</span>
                 </div>
                 {data.selectedSpecialty && (
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <Label className="text-sm text-blue-600">Selected Specialty</Label>
-                    <p className="font-semibold text-lg text-blue-900">{data.selectedSpecialty}</p>
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-2">
+                      <Stethoscope className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Specialty</span>
+                    </div>
+                    <span className="font-semibold text-sm">{data.selectedSpecialty}</span>
                   </div>
                 )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Health Concerns */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Activity className="h-6 w-6 text-primary" />
-                Health Concerns
-              </CardTitle>
-              <p className="text-muted-foreground mt-2">Your described symptoms and conditions</p>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground mb-2">Patient's concerns:</p>
-                <p className="text-base">{data.concerns}</p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Doctor Information */}
+          {data.doctorName && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Stethoscope className="h-5 w-5 text-primary" />
+                  Your Doctor
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 py-2 border-b">
+                    <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0">
+                      <User className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">{data.doctorName}</p>
+                      <p className="text-xs text-muted-foreground">{data.doctorSpecialty}</p>
+                    </div>
+                  </div>
+                  
+                  {data.doctorRating && (
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Rating</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="font-semibold text-sm">{data.doctorRating}</span>
+                        <span className="text-xs text-muted-foreground">({data.doctorReviewCount})</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {data.doctorClinic && (
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Clinic</span>
+                      </div>
+                      <span className="font-semibold text-sm text-right">{data.doctorClinic}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right Column - Payment */}
         <div className="space-y-8">
           {/* Coupon Code */}
           <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Tag className="h-6 w-6 text-primary" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Tag className="h-5 w-5 text-primary" />
                 Coupon Code
               </CardTitle>
-              <p className="text-muted-foreground mt-2">
-                Apply a coupon code to get discount on consultation fee
-              </p>
             </CardHeader>
             <CardContent className="pt-0">
               {!data.couponCode ? (
-                <div className="space-y-4">
-                  <div className="flex gap-3">
+                <div className="space-y-3">
+                  <div className="flex gap-2">
                     <Input
                       placeholder="Enter coupon code"
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value)}
-                      className="uppercase h-12 text-base"
+                      className="uppercase h-10 text-sm"
                     />
                     <Button
                       onClick={handleApplyCoupon}
                       disabled={!couponCode.trim() || isApplyingCoupon}
                       variant="outline"
-                      className="h-12 px-6"
+                      className="h-10 px-4"
+                      size="sm"
                     >
                       {isApplyingCoupon ? 'Applying...' : 'Apply'}
                     </Button>
                   </div>
                   {couponError && (
-                    <p className="text-sm text-destructive">{couponError}</p>
+                    <p className="text-xs text-destructive">{couponError}</p>
                   )}
-                  <div className="text-xs text-muted-foreground">
-                    <p className="font-medium mb-1">Available coupons:</p>
-                    <p>• WELCOME10 - ₹15 off</p>
-                    <p>• HEALTH20 - 20% off</p>
-                    <p>• FIRST50 - 50% off</p>
-                  </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Tag className="h-5 w-5 text-green-600" />
-                    <span className="font-semibold text-green-900 text-lg">{data.couponCode}</span>
-                    <span className="text-sm text-green-600">
+                <div className="flex items-center justify-between py-2 border rounded-lg px-3">
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-semibold text-sm">{data.couponCode}</span>
+                    <span className="text-xs text-muted-foreground">
                       (-₹{data.discount})
                     </span>
                   </div>
@@ -192,7 +226,7 @@ export function ConfirmationStep({ data, onUpdate, currentStep, setCurrentStep, 
                     onClick={handleRemoveCoupon}
                     variant="ghost"
                     size="sm"
-                    className="text-green-600 hover:text-green-700"
+                    className="h-7 px-2 text-xs"
                   >
                     Remove
                   </Button>
@@ -203,36 +237,58 @@ export function ConfirmationStep({ data, onUpdate, currentStep, setCurrentStep, 
 
           {/* Payment Summary */}
           <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <DollarSign className="h-6 w-6 text-primary" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <DollarSign className="h-5 w-5 text-primary" />
                 Payment Summary
               </CardTitle>
-              <p className="text-muted-foreground mt-2">Review your consultation charges</p>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-4 bg-muted/30 rounded-lg">
-                  <span className="font-medium">Consultation Fee</span>
-                  <span className="font-semibold text-lg">₹{data.consultationFee}</span>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center py-2 border-b">
+                  <span className="text-sm text-muted-foreground">Consultation Fee</span>
+                  <span className="font-semibold text-sm">₹{data.consultationFee}</span>
                 </div>
                 {data.discount && (
-                  <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
-                    <span className="font-medium text-green-700">Discount ({data.couponCode})</span>
-                    <span className="font-semibold text-lg text-green-700">-₹{data.discount}</span>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-sm text-muted-foreground">Discount ({data.couponCode})</span>
+                    <span className="font-semibold text-sm">-₹{data.discount}</span>
                   </div>
                 )}
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center p-4 bg-primary/10 rounded-lg">
-                    <span className="font-bold text-lg">Total Amount</span>
-                    <span className="font-bold text-2xl text-primary">₹{data.finalAmount}</span>
+                <div className="flex justify-between items-center py-2 border-t-2">
+                  <span className="font-semibold text-sm">Total Amount</span>
+                  <span className="font-bold text-lg">₹{data.finalAmount}</span>
+                </div>
+                <div className="pt-2 border-t space-y-1">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Secure payment processing</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">100% money-back guarantee</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-3 w-3 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">24/7 customer support</p>
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  <p>• Secure payment processing</p>
-                  <p>• 100% money-back guarantee</p>
-                  <p>• 24/7 customer support</p>
-                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Health Concerns */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Activity className="h-5 w-5 text-primary" />
+                Health Concerns
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="py-2">
+                <p className="text-xs text-muted-foreground mb-2">Patient's concerns:</p>
+                <p className="text-sm leading-relaxed">{data.concerns}</p>
               </div>
             </CardContent>
           </Card>
