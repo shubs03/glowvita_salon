@@ -39,6 +39,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'v2winonline.com',
+        port: '',
+        pathname: '/glowvita/uploads/**',
+      },
     ],
   },
 };

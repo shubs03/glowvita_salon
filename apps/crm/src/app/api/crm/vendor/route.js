@@ -5,6 +5,7 @@ import SubscriptionPlanModel from '@repo/lib/models/admin/SubscriptionPlan.model
 import VendorWorkingHours from '@repo/lib/models/Vendor/VendorWorkingHours.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
+import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
 
@@ -27,6 +28,35 @@ const convertTo24HourFormat = (time12) => {
     }
     
     return `${hours.toString().padStart(2, '0')}:${minutes}`;
+};
+
+// Utility function to process base64 image and upload it
+// Also deletes the old image if a new one is uploaded
+const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
+    if (!base64String) return null;
+    
+    // Check if it's already a URL (not base64)
+    if (base64String.startsWith('http')) {
+        return base64String; // Already uploaded, return as is
+    }
+    
+    // Upload the base64 image and return the URL
+    const imageUrl = await uploadBase64(base64String, fileName);
+    
+    // If upload was successful and there's an old image, delete the old one
+    if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
+        try {
+            // Attempt to delete the old file
+            // We don't await this as we don't want to fail the whole operation if deletion fails
+            deleteFile(oldImageUrl).catch(err => {
+                console.warn('Failed to delete old image:', err);
+            });
+        } catch (err) {
+            console.warn('Error deleting old image:', err);
+        }
+    }
+    
+    return imageUrl;
 };
 
 // GET - Fetch vendor profile
@@ -164,10 +194,43 @@ export const PUT = authMiddlewareCrm(async (req) => {
         }
 
         // Update other fields
-        allowedFields.forEach(field => {
+        for (const field of allowedFields) {
             if (body[field] !== undefined) {
+                // Handle profile image upload
+                if (field === 'profileImage') {
+                    // If profileImage is a base64 string, upload it and store the URL
+                    if (body[field] && !body[field].startsWith('http')) {
+                        const imageUrl = await processBase64Image(body[field], `vendor-${vendorId}-profile`, vendor.profileImage);
+                        if (imageUrl) {
+                            vendor.profileImage = imageUrl;
+                        }
+                    } else {
+                        // If it's already a URL or null, keep it as is
+                        vendor.profileImage = body[field];
+                    }
+                }
+                // Handle gallery images upload
+                else if (field === 'gallery' && Array.isArray(body[field])) {
+                    const galleryUrls = [];
+                    for (let i = 0; i < body[field].length; i++) {
+                        const image = body[field][i];
+                        // If image is a base64 string, upload it and store the URL
+                        if (image && !image.startsWith('http')) {
+                            // Get the old image URL for this position if it exists
+                            const oldImageUrl = vendor.gallery && vendor.gallery[i] ? vendor.gallery[i] : null;
+                            const imageUrl = await processBase64Image(image, `vendor-${vendorId}-gallery-${i}`, oldImageUrl);
+                            if (imageUrl) {
+                                galleryUrls.push(imageUrl);
+                            }
+                        } else {
+                            // If it's already a URL or null, keep it as is
+                            galleryUrls.push(image);
+                        }
+                    }
+                    vendor.gallery = galleryUrls;
+                }
                 // Handle nested objects like bankDetails and documents
-                if (field === 'bankDetails' && typeof body[field] === 'object') {
+                else if (field === 'bankDetails' && typeof body[field] === 'object') {
                     Object.keys(body[field]).forEach(key => {
                         if (['bankName', 'accountNumber', 'ifscCode', 'accountHolder'].includes(key)) {
                             vendor.bankDetails[key] = body[field][key];
@@ -175,26 +238,28 @@ export const PUT = authMiddlewareCrm(async (req) => {
                     });
                 } else if (field === 'documents' && typeof body[field] === 'object') {
                     // For documents, we'll handle the specific document types
-                    if (body[field].aadharCard !== undefined) {
-                        vendor.documents.aadharCard = body[field].aadharCard;
+                    // Process each document field if it contains base64 data
+                    const documentFields = ['aadharCard', 'udyogAadhar', 'udhayamCert', 'shopLicense', 'panCard'];
+                    for (const docField of documentFields) {
+                        if (body[field][docField] !== undefined) {
+                            // If document is a base64 string, upload it and store the URL
+                            if (body[field][docField] && !body[field][docField].startsWith('http')) {
+                                const docUrl = await processBase64Image(body[field][docField], `vendor-${vendorId}-${docField}`, vendor.documents[docField]);
+                                if (docUrl) {
+                                    vendor.documents[docField] = docUrl;
+                                }
+                            } else {
+                                // If it's already a URL or null, keep it as is
+                                vendor.documents[docField] = body[field][docField];
+                            }
+                        }
                     }
-                    if (body[field].udyogAadhar !== undefined) {
-                        vendor.documents.udyogAadhar = body[field].udyogAadhar;
-                    }
-                    if (body[field].udhayamCert !== undefined) {
-                        vendor.documents.udhayamCert = body[field].udhayamCert;
-                    }
-                    if (body[field].shopLicense !== undefined) {
-                        vendor.documents.shopLicense = body[field].shopLicense;
-                    }
-                    if (body[field].panCard !== undefined) {
-                        vendor.documents.panCard = body[field].panCard;
-                    }
-                } else {
+                } else if (field !== 'profileImage' && field !== 'gallery') {
+                    // Handle all other fields normally
                     vendor[field] = body[field];
                 }
             }
-        });
+        }
 
         // Update location if provided
         if (body.location && typeof body.location === 'object') {

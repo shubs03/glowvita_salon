@@ -106,7 +106,7 @@ const vendorSchema = new mongoose.Schema({
     default: null,
   },
   profileImage: {
-    type: String, // Base64 encoded image string
+    type: String, // URL to the uploaded image
     default: null,
   },
   services: [
@@ -161,7 +161,7 @@ const vendorSchema = new mongoose.Schema({
   },
   gallery: [
     {
-      type: String, // Base64 encoded image strings or URLs
+      type: String, // URLs to the uploaded images
       default: null,
     },
   ],
@@ -190,7 +190,7 @@ const vendorSchema = new mongoose.Schema({
   },
   documents: {
     aadharCard: {
-      type: String, // File path or base64 string
+      type: String, // URL to the uploaded document
       default: null,
     },
     udyogAadhar: {

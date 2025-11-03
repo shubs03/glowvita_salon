@@ -1245,6 +1245,17 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Vendor"],
     }),
 
+    // Doctor Profile Endpoints
+    getDoctorProfile: builder.query({
+      query: () => ({ url: "/crm/doctor-profile", method: "GET" }),
+      providesTags: ["doctors"],
+    }),
+
+    updateDoctorProfile: builder.mutation({
+      query: (doctorData) => ({ url: "/crm/doctor-profile", method: "PUT", body: doctorData }),
+      invalidatesTags: ["doctors"],
+    }),
+
     // Doctor Working Hours Endpoints (Web - for booking)
     getDoctorWorkingHours: builder.query({
       query: (doctorId) => ({ url: `/api/doctor/working-hours?doctorId=${doctorId}`, method: 'GET' }),
