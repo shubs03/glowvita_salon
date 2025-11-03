@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { useAppSelector } from '@repo/store/hooks';
-import { useGetSubscriptionPlansQuery, useGetVendorProfileQuery, useUpdateVendorProfileMutation, useChangePlanMutation, useRenewPlanMutation, useGetWorkingHoursQuery, useUpdateWorkingHoursMutation } from '@repo/store/api';
+import { useGetSubscriptionPlansQuery, useGetVendorProfileQuery, useUpdateVendorProfileMutation, useChangePlanMutation, useRenewPlanMutation, useGetWorkingHoursQuery, useUpdateWorkingHoursMutation, useGetCurrentSupplierProfileQuery, useUpdateSupplierProfileMutation, useGetDoctorProfileQuery, useUpdateDoctorProfileMutation } from '@repo/store/api';
 import { selectVendor, selectVendorLoading, selectVendorError, selectVendorMessage, clearVendorMessage, clearVendorError } from '@repo/store/slices/vendorSlice';
 import { toast } from 'sonner';
 import {
@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { Checkbox } from "@repo/ui/checkbox";
+import { Switch } from "@repo/ui/switch";
 import {
   Badge,
   Building,
@@ -55,6 +56,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useMemo } from 'react';
 import { SubscriptionPlansDialog } from "@/components/SubscriptionPlansDialog";
 import { useCrmAuth } from '@/hooks/useCrmAuth';
+import { SmsPackagesTab } from '@/components/SmsPackagesTab';
 
 // TYPES
 type SalonCategory = "unisex" | "men" | "women";
@@ -116,6 +118,70 @@ interface OpeningHour {
   open: string;
   close: string;
   isOpen: boolean;
+}
+
+// Update SupplierProfile interface to include licenseFiles
+interface SupplierProfile {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  shopName: string;
+  description?: string;
+  email: string;
+  mobile: string;
+  country: string;
+  state: string;
+  city: string;
+  pincode: string;
+  address: string;
+  supplierType: string;
+  businessRegistrationNo?: string;
+  profileImage?: string;
+  type?: UserType;
+  subscription?: Subscription;
+  referralCode?: string;
+  licenseFiles?: string[];
+}
+
+// Add DoctorProfile interface
+interface DoctorProfile {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  gender: string;
+  registrationNumber: string;
+  doctorType: string;
+  specialties: string[];
+  diseases: string[];
+  experience: string;
+  clinicName: string;
+  clinicAddress: string;
+  state: string;
+  city: string;
+  pincode: string;
+  profileImage?: string;
+  subscription?: Subscription;
+  type?: UserType;
+  qualification?: string;
+  registrationYear?: string;
+  physicalConsultationStartTime?: string;
+  physicalConsultationEndTime?: string;
+  faculty?: string;
+  assistantName?: string;
+  assistantContact?: string;
+  doctorAvailability?: string;
+  landline?: string;
+  workingWithHospital?: boolean;
+  referralCode?: string;
+  status?: string;
+  password?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // New working hours fields
+  physicalConsultation?: Record<string, Array<{startTime: string, endTime: string}>>;
+  videoConsultationEnabled?: boolean;
+  videoConsultation?: Record<string, Array<{startTime: string, endTime: string}>>;
 }
 
 // SUB-COMPONENTS FOR TABS
@@ -548,29 +614,37 @@ const BankDetailsTab = ({ bankDetails, setVendor }: { bankDetails: BankDetails; 
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Account Holder Name</Label>
+            <Label htmlFor="accountHolder">Account Holder Name</Label>
             <Input 
+              id="accountHolder"
+              placeholder="Enter account holder name"
               value={bankDetails?.accountHolder || ''} 
               onChange={(e) => handleInputChange('accountHolder', e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>Account Number</Label>
+            <Label htmlFor="accountNumber">Account Number</Label>
             <Input 
+              id="accountNumber"
+              placeholder="Enter account number"
               value={bankDetails?.accountNumber || ''} 
               onChange={(e) => handleInputChange('accountNumber', e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>Bank Name</Label>
+            <Label htmlFor="bankName">Bank Name</Label>
             <Input 
+              id="bankName"
+              placeholder="Enter bank name"
               value={bankDetails?.bankName || ''} 
               onChange={(e) => handleInputChange('bankName', e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>IFSC Code</Label>
+            <Label htmlFor="ifscCode">IFSC Code</Label>
             <Input 
+              id="ifscCode"
+              placeholder="Enter IFSC code"
               value={bankDetails?.ifscCode || ''} 
               onChange={(e) => handleInputChange('ifscCode', e.target.value)}
             />
@@ -1038,20 +1112,1002 @@ const CategoriesTab = () => (
   </Card>
 );
 
+// Add Doctor Profile Tab Component
+const DoctorProfileTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
+  return (
+    <Tabs defaultValue="basic-info" className="w-full">
+      <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+        <TabsTrigger value="basic-info">Basic Info</TabsTrigger>
+        <TabsTrigger value="professional">Professional</TabsTrigger>
+        <TabsTrigger value="clinic">Clinic Details</TabsTrigger>
+        <TabsTrigger value="assistant">Assistant</TabsTrigger>
+        <TabsTrigger value="documents">Documents</TabsTrigger>
+      </TabsList>
+      <TabsContent value="basic-info" className="mt-4">
+        <DoctorBasicInfoTab doctor={doctor} setDoctor={setDoctor} />
+      </TabsContent>
+      <TabsContent value="professional" className="mt-4">
+        <DoctorProfessionalDetailsTab doctor={doctor} setDoctor={setDoctor} />
+      </TabsContent>
+      <TabsContent value="clinic" className="mt-4">
+        <DoctorClinicDetailsTab doctor={doctor} setDoctor={setDoctor} />
+      </TabsContent>
+      <TabsContent value="assistant" className="mt-4">
+        <DoctorAssistantInfoTab doctor={doctor} setDoctor={setDoctor} />
+      </TabsContent>
+      <TabsContent value="documents" className="mt-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Documents</CardTitle>
+            <CardDescription>Upload and manage your professional documents.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>Document management functionality coming soon.</p>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+    </Tabs>
+  );
+};
+
+const DoctorBasicInfoTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
+  
+  const handleSave = async () => {
+    try {
+      const updateData: any = {
+        _id: doctor._id,
+        name: doctor.name,
+        email: doctor.email,
+        phone: doctor.phone,
+        gender: doctor.gender,
+        registrationNumber: doctor.registrationNumber,
+        doctorType: doctor.doctorType,
+        experience: doctor.experience,
+        status: doctor.status,
+        referralCode: doctor.referralCode,
+      };
+
+      const result: any = await updateDoctorProfile(updateData).unwrap();
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Basic Information</CardTitle>
+        <CardDescription>Manage your basic doctor profile information.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="name">Doctor Name</Label>
+            <Input
+              id="name"
+              value={doctor.name || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, name: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="gender">Gender</Label>
+            <Select
+              value={doctor.gender || ''}
+              onValueChange={(value) => setDoctor({ ...doctor, gender: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Mobile Number</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={doctor.phone || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, phone: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address</Label>
+            <Input
+              id="email"
+              type="email"
+              value={doctor.email || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, email: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="registrationNumber">Registration Number</Label>
+            <Input
+              id="registrationNumber"
+              value={doctor.registrationNumber || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, registrationNumber: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="doctorType">Doctor Type</Label>
+            <Select
+              value={doctor.doctorType || ''}
+              onValueChange={(value) => setDoctor({ ...doctor, doctorType: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select doctor type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Physician">Physician</SelectItem>
+                <SelectItem value="Dermatologist">Dermatologist</SelectItem>
+                <SelectItem value="Surgeon">Surgeon</SelectItem>
+                <SelectItem value="Trichologist">Trichologist</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="experience">Experience (years)</Label>
+            <Input
+              id="experience"
+              type="number"
+              value={doctor.experience || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, experience: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={doctor.status || ''}
+              onValueChange={(value) => setDoctor({ ...doctor, status: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Approved">Approved</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="Rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="referralCode">Referral Code</Label>
+            <Input
+              id="referralCode"
+              value={doctor.referralCode || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, referralCode: e.target.value })
+              }
+            />
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleSave}>Save Changes</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+const DoctorProfessionalDetailsTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
+  
+  const handleSave = async () => {
+    try {
+      const updateData: any = {
+        _id: doctor._id,
+        qualification: doctor.qualification,
+        registrationYear: doctor.registrationYear,
+        faculty: doctor.faculty,
+        specialties: doctor.specialties,
+        diseases: doctor.diseases,
+        workingWithHospital: doctor.workingWithHospital,
+        doctorAvailability: doctor.doctorAvailability,
+      };
+
+      const result: any = await updateDoctorProfile(updateData).unwrap();
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Professional Details</CardTitle>
+        <CardDescription>Manage your professional qualifications and specialties.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="qualification">Qualification</Label>
+            <Input
+              id="qualification"
+              value={doctor.qualification || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, qualification: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="registrationYear">Registration Year</Label>
+            <Input
+              id="registrationYear"
+              value={doctor.registrationYear || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, registrationYear: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="faculty">Faculty / Institution</Label>
+            <Input
+              id="faculty"
+              value={doctor.faculty || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, faculty: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="specialties">Specialties</Label>
+            <Textarea
+              id="specialties"
+              placeholder="Enter specialties separated by commas"
+              value={doctor.specialties?.join(', ') || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, specialties: e.target.value.split(',').map(s => s.trim()).filter(s => s) })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="diseases">Diseases Treated</Label>
+            <Textarea
+              id="diseases"
+              placeholder="Enter diseases treated separated by commas"
+              value={doctor.diseases?.join(', ') || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, diseases: e.target.value.split(',').map(d => d.trim()).filter(d => d) })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Working With Hospital</Label>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="workingWithHospital"
+                checked={doctor.workingWithHospital || false}
+                onCheckedChange={(checked: boolean) => setDoctor({ ...doctor, workingWithHospital: checked })}
+              />
+              <Label htmlFor="workingWithHospital">Yes</Label>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="doctorAvailability">Doctor Availability</Label>
+            <Select
+              value={doctor.doctorAvailability || ''}
+              onValueChange={(value) => setDoctor({ ...doctor, doctorAvailability: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select availability" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Online">Online</SelectItem>
+                <SelectItem value="Offline">Offline</SelectItem>
+                <SelectItem value="On Leave">On Leave</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleSave}>Save Changes</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+const DoctorClinicDetailsTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
+  
+  const handleSave = async () => {
+    try {
+      const updateData: any = {
+        _id: doctor._id,
+        clinicName: doctor.clinicName,
+        clinicAddress: doctor.clinicAddress,
+        state: doctor.state,
+        city: doctor.city,
+        pincode: doctor.pincode,
+        landline: doctor.landline,
+        // Removed physicalConsultationStartTime, physicalConsultationEndTime, and videoConsultation
+        // as these are now managed in the Working Hours tab
+      };
+
+      const result: any = await updateDoctorProfile(updateData).unwrap();
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Clinic / Hospital Details</CardTitle>
+        <CardDescription>Manage your clinic information.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="clinicName">Clinic Name</Label>
+            <Input
+              id="clinicName"
+              value={doctor.clinicName || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, clinicName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="clinicAddress">Clinic Address</Label>
+            <Textarea
+              id="clinicAddress"
+              value={doctor.clinicAddress || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, clinicAddress: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="state">State</Label>
+            <Input
+              id="state"
+              value={doctor.state || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, state: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              value={doctor.city || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, city: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pincode">Pincode</Label>
+            <Input
+              id="pincode"
+              value={doctor.pincode || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, pincode: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="landline">Landline Number</Label>
+            <Input
+              id="landline"
+              value={doctor.landline || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, landline: e.target.value })
+              }
+            />
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleSave}>Save Changes</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+// Add Supplier Profile Tab Component
+const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfile; setSupplier: any }) => {
+  const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+  
+  const handleSave = async () => {
+    try {
+      const updateData: any = {
+        _id: supplier._id,
+        firstName: supplier.firstName,
+        lastName: supplier.lastName,
+        shopName: supplier.shopName,
+        description: supplier.description,
+        email: supplier.email,
+        mobile: supplier.mobile,
+        country: supplier.country,
+        state: supplier.state,
+        city: supplier.city,
+        pincode: supplier.pincode,
+        address: supplier.address,
+        supplierType: supplier.supplierType,
+        businessRegistrationNo: supplier.businessRegistrationNo,
+        referralCode: supplier.referralCode,
+      };
+
+      const result: any = await updateSupplierProfile(updateData).unwrap();
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Supplier Profile</CardTitle>
+        <CardDescription>Manage your supplier information.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="shopName">Shop Name</Label>
+            <Input
+              id="shopName"
+              placeholder="Enter your shop name"
+              value={supplier.shopName || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, shopName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="supplierType">Supplier Type</Label>
+            <Input
+              id="supplierType"
+              placeholder="Supplier type"
+              value={supplier.supplierType || ''}
+              disabled
+            />
+          </div>
+          
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={supplier.description || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, description: e.target.value })
+              }
+              placeholder="Describe your business..."
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="firstName">First Name</Label>
+            <Input
+              id="firstName"
+              placeholder="Enter your first name"
+              value={supplier.firstName || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, firstName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input
+              id="lastName"
+              placeholder="Enter your last name"
+              value={supplier.lastName || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, lastName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="shopName">Shop Name</Label>
+            <Input
+              id="shopName"
+              value={supplier.shopName || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, shopName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={supplier.description || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, description: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email address"
+              value={supplier.email || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, email: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="mobile">Mobile</Label>
+            <Input
+              id="mobile"
+              type="tel"
+              placeholder="Enter your mobile number"
+              value={supplier.mobile || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, mobile: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="country">Country</Label>
+            <Input
+              id="country"
+              value={supplier.country || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, country: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="businessRegistrationNo">Business Registration No</Label>
+            <Input
+              id="businessRegistrationNo"
+              placeholder="Enter business registration number"
+              value={supplier.businessRegistrationNo || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, businessRegistrationNo: e.target.value })
+              }
+            />
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="address">Address</Label>
+          <Textarea
+            id="address"
+            placeholder="Enter your full address"
+            value={supplier.address || ''}
+            onChange={(e) =>
+              setSupplier({ ...supplier, address: e.target.value })
+            }
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              placeholder="Enter city"
+              value={supplier.city || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, city: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="state">State</Label>
+            <Input
+              id="state"
+              placeholder="Enter state"
+              value={supplier.state || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, state: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              value={supplier.city || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, city: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pincode">Pincode</Label>
+            <Input
+              id="pincode"
+              placeholder="Enter pincode"
+              value={supplier.pincode || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, pincode: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Textarea
+              id="address"
+              value={supplier.address || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, address: e.target.value })
+              }
+            />
+            <Label htmlFor="country">Country</Label>
+            <Input
+              id="country"
+              placeholder="Enter country"
+              value={supplier.country || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, country: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="supplierType">Supplier Type</Label>
+            <Input
+              id="supplierType"
+              value={supplier.supplierType || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, supplierType: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="businessRegistrationNo">Business Registration No</Label>
+            <Input
+              id="businessRegistrationNo"
+              value={supplier.businessRegistrationNo || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, businessRegistrationNo: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="referralCode">Referral Code</Label>
+            <Input
+              id="referralCode"
+              placeholder="Referral code"
+              value={supplier.referralCode || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, referralCode: e.target.value })
+              }
+            />
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleSave}>Save Changes</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+const DoctorAssistantInfoTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
+  
+  const handleSave = async () => {
+    try {
+      const updateData: any = {
+        _id: doctor._id,
+        assistantName: doctor.assistantName,
+        assistantContact: doctor.assistantContact,
+      };
+
+      const result: any = await updateDoctorProfile(updateData).unwrap();
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to update profile');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Assistant Information</CardTitle>
+        <CardDescription>Manage your assistant or receptionist information.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label htmlFor="assistantName">Assistant Name</Label>
+            <Input
+              id="assistantName"
+              value={doctor.assistantName || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, assistantName: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assistantContact">Assistant Contact Number</Label>
+            <Input
+              id="assistantContact"
+              value={doctor.assistantContact || ''}
+              onChange={(e) =>
+                setDoctor({ ...doctor, assistantContact: e.target.value })
+              }
+            />
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleSave}>Save Changes</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+
+
+// Add Supplier Documents Tab Component
+const SupplierDocumentsTab = ({ supplier, setSupplier }: { supplier: SupplierProfile; setSupplier: any }) => {
+  const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null); // Add state for preview image
+
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    
+    try {
+      // Convert files to base64 strings
+      const base64Files: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (error) => reject(error);
+        });
+        base64Files.push(base64);
+      }
+
+      // Update supplier profile with new license files
+      const updatedLicenseFiles = [...(supplier.licenseFiles || []), ...base64Files];
+      
+      const result: any = await updateSupplierProfile({
+        _id: supplier._id,
+        licenseFiles: updatedLicenseFiles
+      }).unwrap();
+
+      if (result.success) {
+        // Update local state with new license files
+        setSupplier((prev: SupplierProfile) => ({
+          ...prev,
+          licenseFiles: updatedLicenseFiles
+        }));
+        toast.success('Documents uploaded successfully');
+      } else {
+        toast.error(result.message || 'Failed to upload documents');
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to upload documents');
+    } finally {
+      setIsUploading(false);
+      // Reset the input value to allow uploading the same file again
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveDocument = async (index: number) => {
+    try {
+      const updatedLicenseFiles = [...(supplier.licenseFiles || [])];
+      updatedLicenseFiles.splice(index, 1);
+      
+      const result: any = await updateSupplierProfile({
+        _id: supplier._id,
+        licenseFiles: updatedLicenseFiles
+      }).unwrap();
+
+      if (result.success) {
+        // Update local state
+        setSupplier((prev: SupplierProfile) => ({
+          ...prev,
+          licenseFiles: updatedLicenseFiles
+        }));
+        toast.success('Document removed successfully');
+      } else {
+        toast.error(result.message || 'Failed to remove document');
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to remove document');
+    }
+  };
+
+  // Function to open image preview
+  const openImagePreview = (imageSrc: string) => {
+    setPreviewImage(imageSrc);
+  };
+
+  // Function to close image preview
+  const closeImagePreview = () => {
+    setPreviewImage(null);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Business Documents</CardTitle>
+        <CardDescription>
+          Upload and manage your business documents and licenses.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-6 p-6 border-2 border-dashed rounded-lg text-center">
+          <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">
+            Drag & drop documents here or
+          </p>
+          <Button variant="link" asChild disabled={isUploading}>
+            <label htmlFor="document-upload" className="cursor-pointer">
+              {isUploading ? 'Uploading...' : 'browse to upload'}
+            </label>
+          </Button>
+          <Input
+            id="document-upload"
+            type="file"
+            className="hidden"
+            multiple
+            accept="image/*,.pdf"
+            onChange={handleDocumentUpload}
+            disabled={isUploading}
+          />
+          {isUploading && (
+            <div className="mt-2">
+              <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+            </div>
+          )}
+        </div>
+        
+        {supplier.licenseFiles && supplier.licenseFiles.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {supplier.licenseFiles.map((file, index) => (
+              <div key={index} className="border rounded-lg overflow-hidden relative group">
+                <div className="aspect-video relative">
+                  <Image
+                    src={file}
+                    alt={`License document ${index + 1}`}
+                    layout="fill"
+                    objectFit="cover"
+                    className="cursor-pointer"
+                    onClick={() => openImagePreview(file)}
+                  />
+                </div>
+                <div className="p-2 bg-muted text-center text-sm">
+                  License Document {index + 1}
+                </div>
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => openImagePreview(file)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => handleRemoveDocument(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <FileText className="mx-auto h-12 w-12" />
+            <p className="mt-2">No documents uploaded yet</p>
+          </div>
+        )}
+      </CardContent>
+      
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closeImagePreview}>
+          <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
+            <Button 
+              variant="secondary" 
+              size="icon" 
+              className="absolute -top-12 right-0"
+              onClick={closeImagePreview}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+            <Image
+              src={previewImage}
+              alt="Document Preview"
+              width={800}
+              height={600}
+              className="object-contain max-h-[80vh] mx-auto"
+            />
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+};
+
 // MAIN PAGE COMPONENT
 export default function SalonProfilePage() {
-  const { user } = useCrmAuth();
-  const { data: vendorData, isLoading, isError, refetch, error } = useGetVendorProfileQuery(undefined, {
-    skip: !user?._id
+  const { user, role } = useCrmAuth();
+  
+  // Vendor profile data
+  const { data: vendorData, isLoading: isVendorLoading, isError: isVendorError, refetch: refetchVendor, error: vendorError } = useGetVendorProfileQuery(undefined, {
+    skip: !user?._id || role !== 'vendor'
+  });
+  
+  // Supplier profile data (current supplier's profile)
+  const { data: supplierData, isLoading: isSupplierLoading, isError: isSupplierError, refetch: refetchSupplier, error: supplierError } = useGetCurrentSupplierProfileQuery(undefined, {
+    skip: !user?._id || role !== 'supplier'
+  });
+  
+  // Doctor profile data (current doctor's profile)
+  const { data: doctorData, isLoading: isDoctorLoading, isError: isDoctorError, refetch: refetchDoctor, error: doctorError } = useGetDoctorProfileQuery(undefined, {
+    skip: !user?._id || role !== 'doctor'
   });
   
   const { data: workingHoursData, isLoading: isLoadingWorkingHours, refetch: refetchWorkingHours } = useGetWorkingHoursQuery(undefined, {
-    skip: !user?._id
+    skip: !user?._id || role !== 'vendor'
   });
   
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
+  const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
   
   const [localVendor, setLocalVendor] = useState<VendorProfile | null>(null);
+  const [localSupplier, setLocalSupplier] = useState<SupplierProfile | null>(null);
+  const [localDoctor, setLocalDoctor] = useState<DoctorProfile | null>(null);
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -1062,6 +2118,79 @@ export default function SalonProfilePage() {
       setLocalVendor(vendorData.data);
     }
   }, [vendorData]);
+
+  useEffect(() => {
+    if (supplierData) {
+      console.log("Supplier data received:", supplierData);
+      setLocalSupplier({
+        _id: supplierData._id,
+        firstName: supplierData.firstName || '',
+        lastName: supplierData.lastName || '',
+        shopName: supplierData.shopName || '',
+        description: supplierData.description || '', // Add description field
+        email: supplierData.email || '',
+        mobile: supplierData.mobile || '',
+        country: supplierData.country || '',
+        state: supplierData.state || '',
+        city: supplierData.city || '',
+        pincode: supplierData.pincode || '',
+        address: supplierData.address || '',
+        supplierType: supplierData.supplierType || '',
+        businessRegistrationNo: supplierData.businessRegistrationNo || '',
+        profileImage: supplierData.profileImage || '',
+        type: 'supplier',
+        referralCode: supplierData.referralCode || '',
+        licenseFiles: supplierData.licenseFiles || [],
+      });
+    }
+  }, [supplierData]);
+
+  useEffect(() => {
+    if (doctorData?.data) {
+      console.log("Doctor data received:", doctorData.data);
+      setLocalDoctor({
+        _id: doctorData.data._id,
+        name: doctorData.data.name || '',
+        email: doctorData.data.email || '',
+        phone: doctorData.data.phone || '',
+        gender: doctorData.data.gender || '',
+        registrationNumber: doctorData.data.registrationNumber || '',
+        doctorType: doctorData.data.doctorType || '',
+        specialties: doctorData.data.specialties || [],
+        diseases: doctorData.data.diseases || [],
+        experience: doctorData.data.experience || '',
+        clinicName: doctorData.data.clinicName || '',
+        clinicAddress: doctorData.data.clinicAddress || '',
+        state: doctorData.data.state || '',
+        city: doctorData.data.city || '',
+        pincode: doctorData.data.pincode || '',
+        profileImage: doctorData.data.profileImage || '',
+        subscription: doctorData.data.subscription || undefined,
+        type: 'doctor',
+        qualification: doctorData.data.qualification || '',
+        registrationYear: doctorData.data.registrationYear || '',
+        faculty: doctorData.data.faculty || '',
+        assistantName: doctorData.data.assistantName || '',
+        assistantContact: doctorData.data.assistantContact || '',
+        doctorAvailability: doctorData.data.doctorAvailability || '',
+        landline: doctorData.data.landline || '',
+        workingWithHospital: doctorData.data.workingWithHospital || false,
+        referralCode: doctorData.data.referralCode || '',
+        // New consultation fields
+        physicalConsultation: doctorData.data.physicalConsultation || {
+          startTime: doctorData.data.physicalConsultationStartTime || '',
+          endTime: doctorData.data.physicalConsultationEndTime || '',
+          days: doctorData.data.physicalConsultationDays || []
+        },
+        videoConsultationEnabled: doctorData.data.videoConsultationEnabled || false,
+        videoConsultation: doctorData.data.videoConsultation || {
+          startTime: '',
+          endTime: '',
+          days: []
+        }
+      });
+    }
+  }, [doctorData]);
 
   useEffect(() => {
     if (workingHoursData?.workingHoursArray && workingHoursData.workingHoursArray.length > 0) {
@@ -1094,19 +2223,54 @@ export default function SalonProfilePage() {
         reader.onerror = (error) => reject(error);
       });
 
-      const result: any = await updateVendorProfile({
-        _id: localVendor?._id,
-        profileImage: base64
-      }).unwrap();
-
-      if (result.success) {
-        setLocalVendor((prev: any) => ({
-          ...prev,
+      // Use the appropriate update function based on role
+      if (role === 'vendor') {
+        const result: any = await updateVendorProfile({
+          _id: localVendor?._id,
           profileImage: base64
-        }));
-        toast.success('Profile image updated successfully');
+        }).unwrap();
+
+        if (result.success) {
+          setLocalVendor((prev: any) => ({
+            ...prev,
+            profileImage: base64
+          }));
+          toast.success('Profile image updated successfully');
+        } else {
+          toast.error(result.message || 'Failed to update profile image');
+        }
+      } else if (role === 'supplier') {
+        // For suppliers, use the supplier update function
+        const result: any = await updateSupplierProfile({
+          _id: localSupplier?._id,
+          profileImage: base64
+        }).unwrap();
+
+        if (result.success) {
+          setLocalSupplier((prev: any) => ({
+            ...prev,
+            profileImage: base64
+          }));
+          toast.success('Profile image updated successfully');
+        } else {
+          toast.error(result.message || 'Failed to update profile image');
+        }
       } else {
-        toast.error(result.message || 'Failed to update profile image');
+        // For doctors, use the doctor update function
+        const result: any = await updateDoctorProfile({
+          _id: localDoctor?._id,
+          profileImage: base64
+        }).unwrap();
+
+        if (result.success) {
+          setLocalDoctor((prev: any) => ({
+            ...prev,
+            profileImage: base64
+          }));
+          toast.success('Profile image updated successfully');
+        } else {
+          toast.error(result.message || 'Failed to update profile image');
+        }
       }
     } catch (error: any) {
       toast.error(error?.data?.message || 'Failed to update profile image');
@@ -1117,8 +2281,12 @@ export default function SalonProfilePage() {
   };
 
   const openProfileImagePreview = () => {
-    if (localVendor?.profileImage) {
+    if (role === 'vendor' && localVendor?.profileImage) {
       setPreviewImage(localVendor.profileImage);
+    } else if (role === 'supplier' && localSupplier?.profileImage) {
+      setPreviewImage(localSupplier.profileImage);
+    } else if (role === 'doctor' && localDoctor?.profileImage) {
+      setPreviewImage(localDoctor.profileImage);
     }
   };
 
@@ -1128,33 +2296,47 @@ export default function SalonProfilePage() {
 
   // Auto-retry on error (up to 3 times)
   useEffect(() => {
-    if (isError && retryCount < 3) {
+    const hasError = (role === 'vendor' && isVendorError) || (role === 'supplier' && isSupplierError) || (role === 'doctor' && isDoctorError);
+    if (hasError && retryCount < 3) {
       const retryTimer = setTimeout(() => {
-        refetch();
-        refetchWorkingHours();
+        if (role === 'vendor') {
+          refetchVendor();
+          refetchWorkingHours();
+        } else if (role === 'supplier') {
+          refetchSupplier();
+        } else {
+          refetchDoctor();
+        }
         setRetryCount(prev => prev + 1);
       }, 1000);
       
       return () => clearTimeout(retryTimer);
     }
-  }, [isError, retryCount, refetch, refetchWorkingHours]);
+  }, [isVendorError, isSupplierError, isDoctorError, retryCount, refetchVendor, refetchWorkingHours, refetchSupplier, refetchDoctor, role]);
 
-  if (isLoading || isLoadingWorkingHours) {
+  // Update the loading state to handle doctor profile
+  if ((role === 'vendor' && isVendorLoading) || (role === 'supplier' && isSupplierLoading) || (role === 'doctor' && isDoctorLoading) || (role === 'vendor' && isLoadingWorkingHours)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading vendor profile...</p>
+          <p>Loading profile...</p>
           <p className="text-sm text-muted-foreground mt-2">Please wait while we fetch your data</p>
         </div>
       </div>
     );
   }
 
-  // Show error only if we've exhausted retries or have a critical error
-  if ((isError && retryCount >= 3) || (!isLoading && !localVendor && !isError)) {
+  // Update the error state to handle doctor profile
+  if ((role === 'vendor' && isVendorError && retryCount >= 3) || 
+      (role === 'supplier' && isSupplierError && retryCount >= 3) || 
+      (role === 'doctor' && isDoctorError && retryCount >= 3) ||
+      (role === 'vendor' && !isVendorLoading && !localVendor && !isVendorError) ||
+      (role === 'supplier' && !isSupplierLoading && !localSupplier && !isSupplierError) ||
+      (role === 'doctor' && !isDoctorLoading && !localDoctor && !isDoctorError)) {
     // Extract error message safely
     let errorMessage = 'No profile data available';
+    const error = role === 'vendor' ? vendorError : role === 'supplier' ? supplierError : doctorError;
     if (error) {
       try {
         errorMessage = `Error: ${JSON.stringify(error)}`;
@@ -1166,12 +2348,18 @@ export default function SalonProfilePage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <p className="text-red-600">Error loading vendor profile</p>
+          <p className="text-red-600">Error loading profile</p>
           <p className="text-sm text-muted-foreground mt-2">{errorMessage}</p>
           <Button 
             onClick={() => {
-              refetch();
-              refetchWorkingHours();
+              if (role === 'vendor') {
+                refetchVendor();
+                refetchWorkingHours();
+              } else if (role === 'supplier') {
+                refetchSupplier();
+              } else {
+                refetchDoctor();
+              }
               setRetryCount(0);
             }} 
             className="mt-4"
@@ -1184,12 +2372,12 @@ export default function SalonProfilePage() {
   }
 
   // Show loading state if we have an error but are still retrying
-  if (isError && retryCount < 3) {
+  if (((role === 'vendor' && isVendorError) || (role === 'supplier' && isSupplierError) || (role === 'doctor' && isDoctorError)) && retryCount < 3) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Retrying to load vendor profile...</p>
+          <p>Retrying to load profile...</p>
           <p className="text-sm text-muted-foreground mt-2">Attempt {retryCount + 1} of 3</p>
         </div>
       </div>
@@ -1197,16 +2385,20 @@ export default function SalonProfilePage() {
   }
 
   // If we don't have data yet but aren't loading or in error state, show loading
-  if (!localVendor) {
+  if ((role === 'vendor' && !localVendor) || (role === 'supplier' && !localSupplier) || (role === 'doctor' && !localDoctor)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p>Loading vendor profile...</p>
+          <p>Loading profile...</p>
         </div>
       </div>
     );
   }
+
+  // Use either vendor, supplier, or doctor data based on role
+  const profileData = role === 'vendor' ? localVendor : role === 'supplier' ? localSupplier : localDoctor;
+  const setProfileData = role === 'vendor' ? setLocalVendor : role === 'supplier' ? setLocalSupplier : setLocalDoctor;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -1215,8 +2407,8 @@ export default function SalonProfilePage() {
           <div className="flex flex-col md:flex-row items-start gap-6">
             <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-background shadow-lg flex-shrink-0 group">
               <Image
-                src={localVendor.profileImage || "https://placehold.co/200x200.png"}
-                alt="Salon Logo"
+                src={profileData?.profileImage || "https://placehold.co/200x200.png"}
+                alt={role === 'vendor' ? "Salon Logo" : role === 'supplier' ? "Supplier Logo" : "Doctor Profile"}
                 layout="fill"
                 className="object-cover cursor-pointer"
                 onClick={openProfileImagePreview}
@@ -1227,17 +2419,19 @@ export default function SalonProfilePage() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                   ) : (
                     <>
-                      <Button 
-                        variant="secondary" 
-                        size="icon"
-                        className="rounded-full"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openProfileImagePreview();
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      {profileData?.profileImage && (
+                        <Button 
+                          variant="secondary" 
+                          size="icon"
+                          className="rounded-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openProfileImagePreview();
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button 
                         variant="secondary" 
                         size="icon"
@@ -1247,11 +2441,13 @@ export default function SalonProfilePage() {
                         <label className="cursor-pointer">
                           <UploadCloud className="h-4 w-4" />
                           <input
+                            id="profile-image-upload"
                             type="file"
                             accept="image/*"
                             className="hidden"
                             onChange={handleProfileImageUpload}
                             disabled={isUploading}
+                            aria-label="Upload profile image"
                           />
                         </label>
                       </Button>
@@ -1262,19 +2458,24 @@ export default function SalonProfilePage() {
             </div>
             <div className="flex-grow">
               <CardTitle className="text-2xl md:text-3xl font-bold">
-                {localVendor.businessName || 'Your Salon'}
+                {role === 'vendor' ? (localVendor?.businessName || 'Your Salon') : 
+                 role === 'supplier' ? (localSupplier?.shopName || `${localSupplier?.firstName} ${localSupplier?.lastName}`) : 
+                 (localDoctor?.name || 'Doctor Profile')}
               </CardTitle>
               <CardDescription className="text-base flex items-center gap-2 mt-1">
-                <MapPin className="h-4 w-4" /> {localVendor.address || 'Address not set'}
+                <MapPin className="h-4 w-4" /> 
+                {role === 'vendor' ? (localVendor?.address || 'Address not set') : 
+                 role === 'supplier' ? (localSupplier?.address || `${localSupplier?.city || ''}, ${localSupplier?.state || ''}, ${localSupplier?.country || ''}`) :
+                 (localDoctor?.clinicAddress || `${localDoctor?.city || ''}, ${localDoctor?.state || ''}`)}
               </CardDescription>
               <div className="text-sm text-muted-foreground mt-2">
-                Vendor ID:{" "}
+                {role === 'vendor' ? 'Vendor' : role === 'supplier' ? 'Supplier' : 'Doctor'} ID:{" "}
                 <span className="font-mono bg-secondary px-1.5 py-0.5 rounded">
-                  {localVendor._id?.substring(0, 8) || 'N/A'}
+                  {profileData?._id?.substring(0, 8) || 'N/A'}
                 </span>
               </div>
-              <div className="flex flex-wrap gap-4 mt-4">
-                {localVendor.website && (
+              {role === 'vendor' && localVendor?.website && (
+                <div className="flex flex-wrap gap-4 mt-4">
                   <Button variant="outline" size="sm" asChild>
                     <a
                       href={localVendor.website}
@@ -1284,13 +2485,13 @@ export default function SalonProfilePage() {
                       <Globe className="mr-2 h-4 w-4" /> Website
                     </a>
                   </Button>
-                )}
-                <Button variant="outline" size="sm" asChild>
-                  <a href="/apps">
-                    <Download className="mr-2 h-4 w-4" /> Download App
-                  </a>
-                </Button>
-              </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href="/apps">
+                      <Download className="mr-2 h-4 w-4" /> Download App
+                    </a>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1319,58 +2520,131 @@ export default function SalonProfilePage() {
         </div>
       )}
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="subscription">Subscription</TabsTrigger>
-          <TabsTrigger value="gallery">Gallery</TabsTrigger>
-          <TabsTrigger value="bank-details">Bank Details</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="opening-hours">Opening Hours</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-        </TabsList>
-        <TabsContent value="profile" className="mt-4">
-          <ProfileTab
-            vendor={localVendor}
-            setVendor={setLocalVendor}
-          />
+      {role === 'vendor' ? (
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="subscription">Subscription</TabsTrigger>
+            <TabsTrigger value="gallery">Gallery</TabsTrigger>
+            <TabsTrigger value="bank-details">Bank Details</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="opening-hours">Opening Hours</TabsTrigger>
+          <TabsTrigger value="sms-packages">SMS Packages</TabsTrigger>
+            <TabsTrigger value="categories">Categories</TabsTrigger>
+          </TabsList>
+          <TabsContent value="profile" className="mt-4">
+            <ProfileTab
+              vendor={localVendor as VendorProfile}
+              setVendor={setLocalVendor}
+            />
+          </TabsContent>
+          <TabsContent value="subscription" className="mt-4">
+            <SubscriptionTab 
+              subscription={localVendor?.subscription} 
+              userType={localVendor?.type || 'vendor'}
+            />
+          </TabsContent>
+          <TabsContent value="gallery" className="mt-4">
+            <GalleryTab 
+              gallery={localVendor?.gallery || []} 
+              setVendor={setLocalVendor} 
+            />
+          </TabsContent>
+          <TabsContent value="bank-details" className="mt-4">
+            <BankDetailsTab 
+              bankDetails={localVendor?.bankDetails || {}} 
+              setVendor={setLocalVendor} 
+            />
+          </TabsContent>
+          <TabsContent value="documents" className="mt-4">
+            <DocumentsTab 
+              documents={localVendor?.documents || {}} 
+              setVendor={setLocalVendor} 
+            />
+          </TabsContent>
+          <TabsContent value="opening-hours" className="mt-4">
+            <OpeningHoursWithPropsTab 
+              hours={openingHours} 
+              setHours={setOpeningHours}
+              setVendor={setLocalVendor}
+              refetchWorkingHours={refetchWorkingHours}
+            />
+          </TabsContent>
+        <TabsContent value="sms-packages" className="mt-4">
+          <SmsPackagesTab />
         </TabsContent>
-        <TabsContent value="subscription" className="mt-4">
-          <SubscriptionTab 
-            subscription={localVendor.subscription} 
-            userType={localVendor.type || 'vendor'}
-          />
-        </TabsContent>
-        <TabsContent value="gallery" className="mt-4">
-          <GalleryTab 
-            gallery={localVendor.gallery || []} 
-            setVendor={setLocalVendor} 
-          />
-        </TabsContent>
-        <TabsContent value="bank-details" className="mt-4">
-          <BankDetailsTab 
-            bankDetails={localVendor.bankDetails || {}} 
-            setVendor={setLocalVendor} 
-          />
-        </TabsContent>
-        <TabsContent value="documents" className="mt-4">
-          <DocumentsTab 
-            documents={localVendor.documents || {}} 
-            setVendor={setLocalVendor} 
-          />
-        </TabsContent>
-        <TabsContent value="opening-hours" className="mt-4">
-          <OpeningHoursWithPropsTab 
-            hours={openingHours} 
-            setHours={setOpeningHours}
-            setVendor={setLocalVendor}
-            refetchWorkingHours={refetchWorkingHours}
-          />
-        </TabsContent>
-        <TabsContent value="categories" className="mt-4">
-          <CategoriesTab />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="categories" className="mt-4">
+            <CategoriesTab />
+          </TabsContent>
+        </Tabs>
+      ) : role === 'supplier' && localSupplier ? (
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="subscription">Subscription</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+          </TabsList>
+          <TabsContent value="profile" className="mt-4">
+            <SupplierProfileTab
+              supplier={localSupplier}
+              setSupplier={setLocalSupplier}
+            />
+          </TabsContent>
+          <TabsContent value="subscription" className="mt-4">
+            <SubscriptionTab 
+              subscription={localSupplier.subscription} 
+              userType={localSupplier.type || 'supplier'}
+            />
+          </TabsContent>
+          <TabsContent value="documents" className="mt-4">
+            <SupplierDocumentsTab 
+              supplier={localSupplier}
+              setSupplier={setLocalSupplier}
+            />
+          </TabsContent>
+        </Tabs>
+      ) : role === 'doctor' && localDoctor ? (
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="subscription">Subscription</TabsTrigger>
+            <TabsTrigger value="professional">Professional</TabsTrigger>
+            <TabsTrigger value="clinic">Clinic Details</TabsTrigger>
+            <TabsTrigger value="assistant">Assistant</TabsTrigger>
+          </TabsList>
+          <TabsContent value="profile" className="mt-4">
+            <DoctorBasicInfoTab
+              doctor={localDoctor}
+              setDoctor={setLocalDoctor}
+            />
+          </TabsContent>
+          <TabsContent value="subscription" className="mt-4">
+            <SubscriptionTab 
+              subscription={localDoctor.subscription} 
+              userType={localDoctor.type || 'doctor'}
+            />
+          </TabsContent>
+          <TabsContent value="professional" className="mt-4">
+            <DoctorProfessionalDetailsTab 
+              doctor={localDoctor}
+              setDoctor={setLocalDoctor}
+            />
+          </TabsContent>
+          <TabsContent value="clinic" className="mt-4">
+            <DoctorClinicDetailsTab 
+              doctor={localDoctor}
+              setDoctor={setLocalDoctor}
+            />
+          </TabsContent>
+          <TabsContent value="assistant" className="mt-4">
+            <DoctorAssistantInfoTab 
+              doctor={localDoctor}
+              setDoctor={setLocalDoctor}
+            />
+          </TabsContent>
+        </Tabs>
+      ) : null}
     </div>
   );
 }
+

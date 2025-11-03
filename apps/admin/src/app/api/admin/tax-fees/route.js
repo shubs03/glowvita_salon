@@ -24,7 +24,7 @@ const transformSettings = (settings) => {
     platformFee: settings.platformFee || 15,
     platformFeeType: settings.platformFeeType || 'percentage',
     platformFeeEnabled: settings.platformFeeEnabled !== false,
-    serviceTax: settings.serviceTax || 18,
+    serviceTax: settings.serviceTax || 18, // This is GST
     serviceTaxType: settings.serviceTaxType || 'percentage',
     serviceTaxEnabled: settings.serviceTaxEnabled !== false,
     _id: settings._id
@@ -35,7 +35,7 @@ const transformSettings = (settings) => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     const settings = await TaxFeeSettings.findOne().sort({ updatedAt: -1 });
-    return NextResponse.json(settings || {}, { status: 200 });
+    return NextResponse.json(transformSettings(settings), { status: 200 });
   } catch (error) {
     console.error("Error fetching tax fee settings:", error);
     return NextResponse.json(

@@ -1075,7 +1075,7 @@ export default function DayScheduleView({
                       <div className="flex items-center">
                         <User className={`w-4 h-4 mr-2 ${isAvailable ? textColor : 'text-gray-400'}`} />
                         <span className={`font-semibold ${isAvailable ? textColor : 'text-gray-500'}`}>
-                          {staff.fullName}
+                          {staff.name || staff.fullName}
                         </span>
                       </div>
                       {!isAvailable && (

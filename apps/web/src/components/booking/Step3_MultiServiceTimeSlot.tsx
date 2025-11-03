@@ -52,7 +52,7 @@ interface Step3MultiServiceTimeSlotProps {
     isLoading: boolean;
     error?: any;
     selectedServices: Service[];
-    vendorId?: string; // Add vendorId for checking existing appointments
+    vendorId?: string;
 }
 
 // Helper function to generate time slots based on working hours
@@ -329,15 +329,22 @@ const calculateSequentialTimeSlots = (
 };
 
 // Helper function to convert duration string to minutes (duplicate from hook, but needed here)
-const convertDurationToMinutes = (duration: string): number => {
-  const match = duration.match(/(\d+)\s*(min|hour|hours)/);
-  if (!match) return 60; // default to 60 minutes
+const convertDurationToMinutes = (duration: string | number): number => {
+  // Handle different duration formats
+  if (typeof duration === 'string') {
+    const match = duration.match(/(\d+)\s*(min|hour|hours)/);
+    if (!match) return 60; // default to 60 minutes
+    
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    
+    if (unit === 'min') return value;
+    if (unit === 'hour' || unit === 'hours') return value * 60;
+  } else if (typeof duration === 'number') {
+    // If duration is already a number, assume it's in minutes
+    return duration;
+  }
   
-  const value = parseInt(match[1]);
-  const unit = match[2];
-  
-  if (unit === 'min') return value;
-  if (unit === 'hour' || unit === 'hours') return value * 60;
   return 60; // default to 60 minutes
 };
 
@@ -357,6 +364,7 @@ export function Step3_MultiServiceTimeSlot({
   vendorId
 }: Step3MultiServiceTimeSlotProps) {
   const dateScrollerRef = useRef<HTMLDivElement>(null);
+  const lastRefetchTimestamp = useRef<number>(Date.now());
 
   // Generate available dates (next 60 days)
   const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
@@ -372,7 +380,7 @@ export function Step3_MultiServiceTimeSlot({
   }, [serviceStaffAssignments]);
 
   // Fetch existing appointments for all assigned staff on the selected date
-  const { data: existingAppointments = [], isLoading: isLoadingAppointments } = useGetPublicAppointmentsQuery(
+  const { data: existingAppointments = [], isLoading: isLoadingAppointments, refetch } = useGetPublicAppointmentsQuery(
     {
       vendorId: vendorId,
       // For multi-service, we need to check appointments for all assigned staff
@@ -385,13 +393,104 @@ export function Step3_MultiServiceTimeSlot({
     }
   );
 
+  // Refetch appointments when selected date or staff changes to ensure we have the latest data
+  // Also refetch when the component mounts to get the most recent appointments
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchData = async () => {
+      if (vendorId && isMounted) {
+        try {
+          // Check if an appointment was just created
+          const appointmentJustCreated = typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true';
+          
+          // Add a small delay to ensure any pending writes are completed
+          // This is especially important after appointment creation
+          const delay = appointmentJustCreated ? 1500 : 100; // Longer delay if appointment was just created
+          await new Promise(resolve => setTimeout(resolve, delay));
+          
+          console.log('Step3_MultiServiceTimeSlot: Refetching appointments data');
+          await refetch();
+          lastRefetchTimestamp.current = Date.now();
+          
+          // Clear the flag after refetching
+          if (appointmentJustCreated && typeof window !== 'undefined') {
+            console.log('Step3_MultiServiceTimeSlot: Cleared appointmentJustCreated flag after refetching');
+            sessionStorage.removeItem('appointmentJustCreated');
+          }
+        } catch (error) {
+          console.error('Step3_MultiServiceTimeSlot: Error refetching appointments:', error);
+        }
+      }
+    };
+    
+    fetchData();
+    
+    // Refetch when the document becomes visible again (e.g., after switching tabs)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && vendorId && isMounted) {
+        fetchData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Periodically refetch appointments to ensure we have the latest data
+    // This helps catch any appointments that might have been created by other users
+    const intervalId = setInterval(() => {
+      if (vendorId && isMounted && document.visibilityState === 'visible') {
+        fetchData();
+      }
+    }, 30000); // Refetch every 30 seconds
+    
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(intervalId);
+    };
+  }, [vendorId, refetch]); // Simplified dependencies to prevent infinite loops
+
+  // Additional check for appointment creation flag with a shorter interval
+  useEffect(() => {
+    let isMounted = true;
+    
+    const checkForNewAppointments = async () => {
+      if (vendorId && isMounted && typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true') {
+        console.log('Step3_MultiServiceTimeSlot: Detected new appointment creation, forcing refetch');
+        try {
+          // Add a longer delay to ensure database consistency
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          await refetch();
+          sessionStorage.removeItem('appointmentJustCreated');
+          lastRefetchTimestamp.current = Date.now();
+          console.log('Step3_MultiServiceTimeSlot: Refetch completed after appointment creation');
+        } catch (error) {
+          console.error('Step3_MultiServiceTimeSlot: Error refetching after appointment creation:', error);
+        }
+      }
+    };
+    
+    // Check immediately when component mounts
+    checkForNewAppointments();
+    
+    // Check periodically
+      const intervalId = setInterval(checkForNewAppointments, 5000);
+    
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [vendorId, refetch]);
+
   console.log('Step3_MultiServiceTimeSlot - Fetching appointments:', {
     vendorId,
     assignedStaffIds,
     staffId: assignedStaffIds.length === 1 ? assignedStaffIds[0] : undefined,
     date: format(selectedDate, 'yyyy-MM-dd'),
     existingAppointments: existingAppointments,
-    isLoadingAppointments
+    isLoadingAppointments,
+    lastRefetch: lastRefetchTimestamp.current
   });
 
   // Calculate total duration for all selected services
@@ -504,13 +603,22 @@ export function Step3_MultiServiceTimeSlot({
       // If staff has specific slots, use them
       if (staffSlots.length > 0) {
         console.log('Step3_MultiServiceTimeSlot - Using staff slots:', staffSlots);
-        const slots = generateTimeSlotsFromStaffSlots(staffSlots);
+        let slots = generateTimeSlotsFromStaffSlots(staffSlots);
         console.log('Step3_MultiServiceTimeSlot - Generated slots from staff slots:', slots);
+        
+        // Filter out past time slots for current date
+        const today = new Date();
+        const isToday = selectedDate.toDateString() === today.toDateString();
+        if (isToday) {
+          const currentTime = format(today, 'HH:mm');
+          slots = slots.filter(slot => slot > currentTime);
+          console.log('Step3_MultiServiceTimeSlot - Filtered past time slots for today:', slots);
+        }
         
         // Filter out blocked time slots for the selected staff and check availability for duration
         const filteredSlots = slots.filter((slot: string) => {
           const isBlocked = isTimeSlotBlocked(staffMember, selectedDate, slot);
-          const isAvailable = isTimeSlotAvailableForAllStaff(slot, selectedDate, serviceStaffAssignments, totalDuration);
+          const isAvailable = isTimeSlotAvailableForAllStaff(slot, selectedDate, serviceStaffAssignments, totalDuration, existingAppointments);
           return !isBlocked && isAvailable;
         });
         console.log('Step3_MultiServiceTimeSlot - Filtered slots (after blocking and availability check):', filteredSlots);
@@ -538,8 +646,17 @@ export function Step3_MultiServiceTimeSlot({
       return [];
     }
 
-    const slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
+    let slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
     console.log('Step3_MultiServiceTimeSlot - Generated slots from vendor hours:', slots);
+    
+    // Filter out past time slots for current date
+    const today = new Date();
+    const isToday = selectedDate.toDateString() === today.toDateString();
+    if (isToday) {
+      const currentTime = format(today, 'HH:mm');
+      slots = slots.filter(slot => slot > currentTime);
+      console.log('Step3_MultiServiceTimeSlot - Filtered past time slots for today:', slots);
+    }
     
     // Filter out blocked time slots and check availability for all assigned staff
     const filteredSlots = slots.filter((slot: string) => {
@@ -574,8 +691,9 @@ export function Step3_MultiServiceTimeSlot({
       console.log('====================================');
     }
     
-    return validSlots;
-  }, [selectedDate, workingHours, serviceStaffAssignments, totalDuration, existingAppointments]);
+    // Ensure we always return an array
+    return Array.isArray(validSlots) ? validSlots : [];
+  }, [selectedDate, workingHours, serviceStaffAssignments, totalDuration, existingAppointments, lastRefetchTimestamp.current]);
 
   // Check if a date is available based on working hours and staff availability
   const isDateAvailable = (date: Date): boolean => {
@@ -713,104 +831,90 @@ export function Step3_MultiServiceTimeSlot({
   }
 
   return (
-    <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
-        <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-                <div className="p-3 bg-primary/10 rounded-full text-primary">
-                    <Calendar className="h-6 w-6" />
-                </div>
-                <h2 className="text-3xl font-bold font-headline">Select a Date & Time</h2>
+    <div className="space-y-6">
+      {/* Service-Staff Assignments Summary */}
+      <div className="mb-6 p-4 bg-secondary/30 rounded-lg">
+        <h3 className="font-semibold mb-2">Your Services & Professionals</h3>
+        <div className="space-y-2">
+          {serviceStaffAssignments.map((assignment, index) => (
+            <div key={assignment.service.id} className="flex justify-between text-sm">
+              <span>{assignment.service.name}</span>
+              <span className="text-muted-foreground">
+                {assignment.staff ? assignment.staff.name : 'Any Professional'}
+              </span>
             </div>
-            <p className="text-muted-foreground">Choose a date and time slot that works for you.</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Total appointment duration: {totalDuration} minutes
-            </p>
+          ))}
         </div>
-
-        {/* Service-Staff Assignments Summary */}
-        <div className="mb-6 p-4 bg-secondary/30 rounded-lg">
-          <h3 className="font-semibold mb-2">Your Services & Professionals</h3>
-          <div className="space-y-2">
-            {serviceStaffAssignments.map((assignment, index) => (
-              <div key={assignment.service.id} className="flex justify-between text-sm">
-                <span>{assignment.service.name}</span>
-                <span className="text-muted-foreground">
-                  {assignment.staff ? assignment.staff.name : 'Any Professional'}
-                </span>
-              </div>
-            ))}
+      </div>
+      
+      {/* Date Scroller with Month and Navigation */}
+      <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-lg">{currentMonthYear}</h3>
+          <div className="flex gap-1">
+               <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('left')}>
+                  <ChevronLeft className="h-4 w-4" />
+              </Button>
+               <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('right')}>
+                  <ChevronRight className="h-4 w-4" />
+              </Button>
           </div>
-        </div>
-        
-        {/* Date Scroller with Month and Navigation */}
-        <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-lg">{currentMonthYear}</h3>
-            <div className="flex gap-1">
-                 <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('left')}>
-                    <ChevronLeft className="h-4 w-4" />
-                </Button>
-                 <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('right')}>
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
-            </div>
-        </div>
-        <div id="date-scroller" ref={dateScrollerRef} className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
-            {dates.map((date: Date) => {
-                const isAvailable = isDateAvailable(date);
-                return (
-                    <Button
-                        key={date.toISOString()}
-                        id={`date-${format(date, 'yyyy-MM-dd')}`}
-                        variant={isSameDay(date, selectedDate) ? 'default' : 'outline'}
-                        className={cn(
-                            "flex flex-col h-auto px-4 py-2 flex-shrink-0 rounded-xl shadow-sm",
-                            !isAvailable && "opacity-50 cursor-not-allowed"
-                        )}
-                        onClick={() => isAvailable && onSelectDate(date)}
-                        disabled={!isAvailable}
-                    >
-                        <span className="font-semibold">{format(date, 'EEE')}</span>
-                        <span className="text-2xl font-bold my-1">{format(date, 'd')}</span>
-                        <span className="text-xs">{format(date, 'MMM')}</span>
-                    </Button>
-                );
-            })}
-        </div>
+      </div>
+      <div id="date-scroller" ref={dateScrollerRef} className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
+          {dates.map((date: Date) => {
+              const isAvailable = isDateAvailable(date);
+              return (
+                  <Button
+                      key={date.toISOString()}
+                      id={`date-${format(date, 'yyyy-MM-dd')}`}
+                      variant={isSameDay(date, selectedDate) ? 'default' : 'outline'}
+                      className={cn(
+                          "flex flex-col h-auto px-4 py-2 flex-shrink-0 rounded-xl shadow-sm",
+                          !isAvailable && "opacity-50 cursor-not-allowed"
+                      )}
+                      onClick={() => isAvailable && onSelectDate(date)}
+                      disabled={!isAvailable}
+                  >
+                      <span className="font-semibold">{format(date, 'EEE')}</span>
+                      <span className="text-2xl font-bold my-1">{format(date, 'd')}</span>
+                      <span className="text-xs">{format(date, 'MMM')}</span>
+                  </Button>
+              );
+          })}
+      </div>
 
-        {/* Time Slots */}
-        <div className="mt-6">
-            <div className="flex items-center gap-3 mb-4">
-                 <div className="p-3 bg-primary/10 rounded-full text-primary">
-                    <Clock className="h-5 w-5" />
-                </div>
-                <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
-            </div>
-            <div className="max-h-64 overflow-y-auto pr-2 no-scrollbar">
-                {availableTimeSlots.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                        {availableTimeSlots.map((time: string) => (
-                            <Button
-                                key={time}
-                                variant={selectedTime === time ? 'default' : 'outline'}
-                                className="h-12 text-base font-semibold rounded-lg shadow-sm"
-                                onClick={() => onSelectTime(time)}
-                            >
-                                {time}
-                            </Button>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex items-center justify-center py-8">
-                        <div className="flex flex-col items-center gap-2">
-                            <Clock className="h-8 w-8 text-muted-foreground" />
-                            <p className="text-muted-foreground">No available time slots for this date.</p>
-                            <p className="text-sm text-muted-foreground">Please select a different date.</p>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
+      {/* Time Slots */}
+      <div className="mt-6">
+          <div className="flex items-center gap-3 mb-4">
+               <div className="p-3 bg-primary/10 rounded-full text-primary">
+                  <Clock className="h-5 w-5" />
+              </div>
+              <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
+          </div>
+          <div className="max-h-64 overflow-y-auto pr-2 no-scrollbar">
+              {availableTimeSlots.length > 0 ? (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                      {availableTimeSlots.map((time: string) => (
+                          <Button
+                              key={time}
+                              variant={selectedTime === time ? 'default' : 'outline'}
+                              className="h-12 text-base font-semibold rounded-lg shadow-sm"
+                              onClick={() => onSelectTime(time)}
+                          >
+                              {time}
+                          </Button>
+                      ))}
+                  </div>
+              ) : (
+                  <div className="flex items-center justify-center py-8">
+                      <div className="flex flex-col items-center gap-2">
+                          <Clock className="h-8 w-8 text-muted-foreground" />
+                          <p className="text-muted-foreground">No available time slots for this date.</p>
+                          <p className="text-sm text-muted-foreground">Please select a different date.</p>
+                      </div>
+                  </div>
+              )}
+          </div>
+      </div>
     </div>
   );
 }

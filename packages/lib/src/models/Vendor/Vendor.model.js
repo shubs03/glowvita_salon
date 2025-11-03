@@ -222,6 +222,11 @@ const vendorSchema = new mongoose.Schema({
     unique: true,
     sparse: true, // Allows multiple documents to have a null value for this field
   },
+  smsBalance: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   createdAt: {
     type: Date,
     default: Date.now,

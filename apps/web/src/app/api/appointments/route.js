@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import _db from '@repo/lib/db';
 
 await _db();
@@ -7,34 +8,40 @@ await _db();
 // GET existing appointments for checking availability
 export const GET = async (req) => {
     try {
+        
         const { searchParams } = new URL(req.url);
-        const vendorId = searchParams.get('vendorId');
+        const vendorId = searchParams.get('vendorId'); 
         const staffId = searchParams.get('staffId');
         const doctorId = searchParams.get('doctorId');
         const date = searchParams.get('date');
         const startDate = searchParams.get('startDate');
         const endDate = searchParams.get('endDate');
+        const userId = searchParams.get('userId'); // New parameter for user appointments
 
-        console.log('GET appointments - vendorId:', vendorId, 'staffId:', staffId, 'doctorId:', doctorId, 'date:', date);
+        console.log('GET appointments - vendorId:', vendorId, 'staffId:', staffId, 'date:', date, 'userId:', userId);
 
-        // Base query - must have vendorId OR doctorId
-        if (!vendorId && !doctorId) {
-            return NextResponse.json(
-                { message: "vendorId or doctorId is required" },
-                { status: 400 }
-            );
-        }
-
+        // Base query - either vendorId or userId is required
         const query = { 
             status: { $nin: ['cancelled'] } // Exclude cancelled appointments
         };
 
-        // Add vendor or doctor filtering
-        if (vendorId) {
+        // If userId is provided, filter by userId/clientId
+        if (userId) {
+            query.$or = [
+                { client: userId },
+                { userId: userId }
+            ];
+        } 
+        // If vendorId is provided, filter by vendorId (existing behavior)
+        else if (vendorId) {
             query.vendorId = vendorId;
-        }
-        if (doctorId) {
-            query.doctor = doctorId;
+        } 
+        // If neither userId nor vendorId is provided, return error
+        else {
+            return NextResponse.json(
+                { message: "Either userId or vendorId is required" },
+                { status: 400 }
+            );
         }
 
         // Add date filtering
@@ -58,32 +65,76 @@ export const GET = async (req) => {
             };
         }
 
-        // Add staff filtering
-        if (staffId && staffId !== 'null') {
+        // Add staff filtering (only when vendorId is provided)
+        if (vendorId && staffId && staffId !== 'null' && staffId !== 'undefined') {
             query.staff = staffId;
         }
 
         console.log('Final query:', JSON.stringify(query, null, 2));
-
+    
+        // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount vendorId')
+            .populate('vendorId', 'businessName address')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
-        console.log('Found appointments:', appointments.length);
-        console.log('Appointment details:', appointments.map(apt => ({
-            id: apt._id?.toString(),
-            staffId: apt.staff?.toString(),
-            staffName: apt.staffName,
-            date: apt.date,
-            startTime: apt.startTime,
-            endTime: apt.endTime,
-            duration: apt.duration,
-            service: apt.serviceName || apt.service,
-            status: apt.status
-        })));
+        // Transform appointments to match frontend interface
+        const transformedAppointments = appointments.map(apt => {
+            // For multi-service appointments, use the first service as the main service
+            let service = apt.serviceName || apt.service || 'Unknown Service';
+            let staff = apt.staffName || 'Any Professional';
+            let duration = apt.duration || 60;
+            let price = apt.amount || apt.totalAmount || 0;
+            
+            // If there are service items, use the first one for main service info
+            if (apt.serviceItems && apt.serviceItems.length > 0) {
+                const firstService = apt.serviceItems[0];
+                service = firstService.serviceName || service;
+                staff = firstService.staffName || staff;
+                duration = firstService.duration || duration;
+            }
+            
+            // Get salon information from vendor data
+            const salonName = apt.vendorId?.businessName || 'Glowvita Salon';
+            const salonAddress = apt.vendorId?.address || '123 Beauty Street, Salon City';
+            
+            // Status transformation - ensure proper capitalization and allowed values
+            let status = apt.status || 'Confirmed';
+            if (typeof status === 'string') {
+                // Capitalize first letter
+                status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+                // Ensure it's one of the allowed values
+                if (!['Completed', 'Confirmed', 'Cancelled'].includes(status)) {
+                    status = 'Confirmed';
+                }
+            } else {
+                status = 'Confirmed';
+            }
+            
+            return {
+                _id: apt._id,
+                id: apt._id.toString(),
+                service: service,
+                date: apt.date,
+                staff: staff,
+                status: status,
+                price: price,
+                duration: duration,
+                salon: {
+                    name: salonName,
+                    address: salonAddress
+                },
+                serviceItems: apt.serviceItems || [],
+                vendorId: apt.vendorId?._id || apt.vendorId, // Handle both populated and non-populated cases
+                client: apt.client,
+                userId: apt.userId
+            };
+        });
+
+        console.log('Found appointments:', transformedAppointments.length);
 
         // Add CORS headers
-        const response = NextResponse.json(appointments, { status: 200 });
+        const response = NextResponse.json(transformedAppointments, { status: 200 });
         
         response.headers.set('Access-Control-Allow-Origin', '*');
         response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -92,6 +143,7 @@ export const GET = async (req) => {
         return response;
     } catch (error) {
         console.error('Error fetching appointments:', error);
+        console.error('Error stack:', error.stack);
         
         // Add CORS headers to error response
         const response = NextResponse.json(
@@ -110,6 +162,7 @@ export const GET = async (req) => {
 // POST a new appointment from public web booking
 export const POST = async (req) => {
     try {
+      
         const body = await req.json();
 
         console.log('POST request - creating public appointment:', body);
@@ -133,31 +186,66 @@ export const POST = async (req) => {
         const missingFields = requiredFields.filter(field => {
           // Special handling for staff field - it can be null but must be present
           if (field === 'staff') {
+            // Staff can be null but must be present in the body
             return body[field] === undefined;
           }
-          return !body[field];
+          if (field === 'staffName') {
+            // StaffName can be null/empty but must be present in the body
+            return body[field] === undefined;
+          }
+          // For all other fields, they must be present and not null/undefined
+          return !body[field] && body[field] !== 0 && body[field] !== false;
         });
         
         if (missingFields.length > 0) {
+            console.log('Missing fields:', missingFields);
+            console.log('Body received:', body);
             return NextResponse.json(
                 { message: `Missing required fields: ${missingFields.join(', ')}` }, 
                 { status: 400 }
             );
         }
 
-        // Set default values
+        // Validate client information
+        if (!body.client && !body.userId) {
+            console.log('No client field found in body:', body);
+            return NextResponse.json(
+                { message: "Missing client field (client or userId required)" }, 
+                { status: 400 }
+            );
+        }
+
+        // Set default values and ensure proper data types
         const appointmentData = {
-            ...body,
-            status: body.status || 'scheduled',
+            vendorId: body.vendorId,
+            client: body.client || body.userId,
+            clientName: body.clientName,
+            service: body.service,
+            serviceName: body.serviceName,
+            staff: body.staff !== undefined ? body.staff : null, // This can be null
+            staffName: body.staffName || "Any Professional", // Provide default if not present
+            date: body.date ? new Date(body.date) : new Date(),
+            startTime: body.startTime,
+            endTime: body.endTime,
+            duration: Number(body.duration) || 0,
             amount: Number(body.amount) || 0,
-            discount: Number(body.discount) || 0,
-            tax: Number(body.tax) || 0,
-            totalAmount: (Number(body.amount) || 0) - (Number(body.discount) || 0) + (Number(body.tax) || 0),
+            totalAmount: Number(body.totalAmount) || 0,
+            platformFee: Number(body.platformFee) || 0,
+            serviceTax: Number(body.serviceTax) || 0,
+            discountAmount: Number(body.discountAmount) || 0,
+            finalAmount: Number(body.finalAmount) || Number(body.totalAmount) || 0,
+            paymentMethod: body.paymentMethod || 'Pay at Salon',
+            paymentStatus: body.paymentStatus || 'pending',
+            status: body.status || 'scheduled',
             notes: body.notes || '',
-            isMultiService: body.serviceItems && body.serviceItems.length > 1
+            serviceItems: body.serviceItems || [],
+            isMultiService: body.isMultiService || (body.serviceItems && body.serviceItems.length > 1)
         };
 
+        console.log('Creating appointment with data:', appointmentData);
+
         const newAppointment = await AppointmentModel.create(appointmentData);
+        console.log('Appointment created successfully with ID:', newAppointment._id);
         
         // Populate the appointment with related data
         // For multi-service appointments, we need to populate serviceItems properly
@@ -188,6 +276,7 @@ export const POST = async (req) => {
         return response;
     } catch (error) {
         console.error('Error creating appointment:', error);
+        console.error('Error stack:', error.stack);
         
         // Add CORS headers to error response
         const response = NextResponse.json(

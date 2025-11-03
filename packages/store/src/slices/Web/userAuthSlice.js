@@ -7,10 +7,26 @@ const loadInitialState = () => {
     try {
       const savedState = localStorage.getItem('userAuthState');
       if (savedState) {
-        return JSON.parse(savedState);
+        const parsedState = JSON.parse(savedState);
+        // Validate that the loaded state has the expected structure
+        if (parsedState && typeof parsedState === 'object') {
+          return {
+            isAuthenticated: parsedState.isAuthenticated || false,
+            user: parsedState.user || null,
+            token: parsedState.token || null,
+            role: parsedState.role || null,
+            permissions: parsedState.permissions || [],
+          };
+        }
       }
     } catch (e) {
       console.error("Could not load auth state from localStorage", e);
+      // Clear corrupted state
+      try {
+        localStorage.removeItem('userAuthState');
+      } catch (clearError) {
+        console.error("Could not clear corrupted auth state from localStorage", clearError);
+      }
     }
   }
   return {
@@ -59,8 +75,24 @@ const userAuthSlice = createSlice({
       state.permissions = [];
 
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('userAuthState');
-        Cookies.remove('token', { path: '/' });
+        // Clear all possible auth data from localStorage
+        try {
+          localStorage.removeItem('userAuthState');
+        } catch (e) {
+          console.error("Could not remove userAuthState from localStorage", e);
+        }
+        
+        // Clear all possible auth cookies
+        try {
+          Cookies.remove('token', { path: '/' });
+          Cookies.remove('token', { path: '/', domain: window.location.hostname });
+          Cookies.remove('crm_access_token', { path: '/' });
+          Cookies.remove('crm_access_token', { path: '/', domain: window.location.hostname });
+          Cookies.remove('access_token', { path: '/' });
+          Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
+        } catch (cookieError) {
+          console.error("Could not remove auth cookies", cookieError);
+        }
       }
     },
     rehydrateAuth: (state, action) => {

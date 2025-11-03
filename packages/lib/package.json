@@ -1,5 +1,3 @@
-
-      
 {
   "name": "@repo/lib",
   "version": "0.0.0",
@@ -42,12 +40,15 @@
     "./models/Vendor/Shipping.model": "./src/models/Vendor/Shipping.model.js",
     "./models/Vendor/Staff.model": "./src/models/Vendor/Staff.model.js",
     "./models/Vendor/VendorWorkingHours.model": "./src/models/Vendor/VendorWorkingHours.model.js",
+    "./models/Appointment/Appointment.model": "./src/models/Appointment/Appointment.model.js",
     "./stateCity": "./src/state-city.json",
     "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",
     "./models/Marketing/SmsPackage.model": "./src/models/Marketing/SmsPackage.model.js",
     "./models/Marketing/Campaign.model": "./src/models/Marketing/Campaign.model.js",
     "./models/Marketing/socialMediaTemplate.model": "./src/models/Marketing/socialMediaTemplate.model.js",
-    "./models/Vendor/DoctorWorkingHours.model": "./src/models/Vendor/DoctorWorkingHours.model.js"
+    "./models/Vendor/DoctorWorkingHours.model": "./src/models/Vendor/DoctorWorkingHours.model.js",
+    "./utils": "./src/utils/index.js",
+    "./utils/paymentCalculator": "./src/utils/paymentCalculator.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -67,5 +68,3 @@
   },
   "type": "module"
 }
-
-    

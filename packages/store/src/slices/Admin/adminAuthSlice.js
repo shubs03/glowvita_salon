@@ -1,5 +1,5 @@
-
 import { createSlice } from '@reduxjs/toolkit';
+import Cookies from 'js-cookie';
 
 const initialState = {
   isAdminAuthenticated: false,
@@ -58,9 +58,31 @@ const adminAuthSlice = createSlice({
       state.admin = null;
       state.token = null;
 
-      // Clear localStorage only on the client-side
-      if (typeof localStorage !== 'undefined') {
+      // Clear all possible auth data from localStorage and cookies
+      if (typeof window !== 'undefined') {
+        // Clear all possible auth data from localStorage
         localStorage.removeItem('adminAuthState');
+        localStorage.removeItem('userAuthState');
+        localStorage.removeItem('crmAuthState');
+        
+        // Clear all possible auth cookies
+        Cookies.remove('token', { path: '/' });
+        Cookies.remove('token', { path: '/', domain: window.location.hostname });
+        Cookies.remove('crm_access_token', { path: '/' });
+        Cookies.remove('crm_access_token', { path: '/', domain: window.location.hostname });
+        Cookies.remove('access_token', { path: '/' });
+        Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
+        
+        // Clear any other possible tokens
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('token') || key.includes('auth')) {
+            try {
+              localStorage.removeItem(key);
+            } catch (e) {
+              console.warn(`Failed to remove localStorage item: ${key}`, e);
+            }
+          }
+        });
       }
     },
   },

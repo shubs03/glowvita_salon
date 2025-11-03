@@ -37,8 +37,8 @@ interface Step2StaffProps {
     staff: StaffMember[];
     isLoading: boolean;
     error?: any;
-    selectedService?: Service | null; // Add selected service prop
-    onStaffSelect?: (staff: StaffMember | null) => void; // Add callback for staff selection
+    selectedService?: Service | null;
+    onStaffSelect?: (staff: StaffMember | null) => void;
 }
 
 export function Step2_Staff({ 
@@ -61,6 +61,12 @@ export function Step2_Staff({
         console.log('Step2_Staff - Selected Service:', selectedService);
         console.log('Step2_Staff - All Staff:', staff);
         
+        // If no staff data, return empty array
+        if (!staff || staff.length === 0) {
+            console.log('Step2_Staff - No staff data available');
+            return [];
+        }
+        
         // If no service is selected, show all staff
         if (!selectedService) {
             console.log('Step2_Staff - No service selected, returning all staff');
@@ -75,7 +81,7 @@ export function Step2_Staff({
         
         // Filter staff based on the service's staff array
         // The staff array in the service can contain either staff IDs or staff names
-        const serviceStaff = staff.filter(staffMember => {
+        const serviceStaff = staff.filter((staffMember: StaffMember) => {
             // Check if staff member ID is in the service's staff array
             const isIdMatch = selectedService.staff?.includes(staffMember.id);
             // Check if staff member name is in the service's staff array
@@ -98,8 +104,10 @@ export function Step2_Staff({
             console.log('Step2_Staff - Calling onStaffSelect callback with:', staff);
             onStaffSelect(staff);
         }
-        // Automatically navigate to Step 3
-        setCurrentStep(3);
+        // Automatically navigate to Step 3 after a short delay to ensure state update
+        setTimeout(() => {
+            setCurrentStep(3);
+        }, 100);
     };
 
     // Loading state

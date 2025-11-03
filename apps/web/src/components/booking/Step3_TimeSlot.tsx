@@ -6,7 +6,7 @@ import { Label } from '@repo/ui/label';
 import { addDays, format, isSameDay, getDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Users, Clock, Loader2, AlertCircle } from 'lucide-react';
 import {
-  Select,
+  Select, 
   SelectContent,
   SelectItem,
   SelectTrigger,
@@ -15,46 +15,6 @@ import {
 import { cn } from '@repo/ui/cn';
 import { StaffMember, WorkingHours, TimeSlot } from '@/hooks/useBookingData';
 import { useGetPublicAppointmentsQuery } from '@repo/store/api';
-
-const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
-    const steps = ['Services', 'Select Professional', 'Time Slot'];
-    return (
-        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
-            {steps.map((step, index) => (
-                <React.Fragment key={step}>
-                    <button
-                        onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
-                        className={cn(
-                            "transition-colors",
-                            currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
-                            currentStep === index + 1 && "text-primary font-semibold"
-                        )}
-                    >
-                        {step}
-                    </button>
-                    {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
-                </React.Fragment>
-            ))}
-        </nav>
-    );
-};
-
-interface Step3TimeSlotProps {
-    selectedDate: Date;
-    onSelectDate: (date: Date) => void;
-    selectedTime: string | null;
-    onSelectTime: (time: string | null) => void;
-    currentStep: number;
-    setCurrentStep: (step: number) => void;
-    selectedStaff: StaffMember | null;
-    onSelectStaff: (staff: StaffMember | null) => void;
-    staff: StaffMember[];
-    workingHours: WorkingHours[];
-    isLoading: boolean;
-    error?: any;
-    vendorId?: string; // Add vendorId for checking existing appointments
-    selectedService?: any; // Add selected service for duration calculation
-}
 
 // Helper function to generate time slots based on working hours
 const generateTimeSlots = (startTime: string, endTime: string, interval: number = 30): string[] => {
@@ -87,6 +47,33 @@ const generateTimeSlotsFromStaffSlots = (slots: any[]): string[] => {
         }
     });
     return timeSlots;
+};
+
+// Helper function to get day name from date
+const getDayName = (date: Date): string => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[getDay(date)];
+};
+
+// Helper function to check if a time slot is blocked for a staff member
+const isTimeSlotBlocked = (staff: StaffMember | null, date: Date, time: string): boolean => {
+    if (!staff || !staff.blockedTimes || staff.blockedTimes.length === 0) {
+        return false;
+    }
+    
+    const dateString = format(date, 'yyyy-MM-dd');
+    const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+    
+    return staff.blockedTimes.some(blocked => {
+        const blockedDate = new Date(blocked.date);
+        const blockedDateString = format(blockedDate, 'yyyy-MM-dd');
+        
+        return (
+            blockedDateString === dateString &&
+            timeMinutes >= blocked.startMinutes &&
+            timeMinutes < blocked.endMinutes
+        );
+    });
 };
 
 // Helper function to check if a time slot conflicts with existing appointments FOR A SPECIFIC STAFF
@@ -134,100 +121,73 @@ const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string,
 };
 
 // Helper function to check if a time slot conflicts with existing appointments
-// For specific staff: checks if that staff is booked
-// For "Any Professional": checks if ALL staff members are booked (returns true only if NO staff is available)
-const isTimeSlotBooked = (appointments: any[], date: Date, time: string, staff: StaffMember | null, serviceDuration: number = 60, allStaff: StaffMember[] = []): boolean => {
-    console.log('isTimeSlotBooked called with:', {
-        appointmentsCount: appointments?.length || 0,
-        date: format(date, 'yyyy-MM-dd'),
-        time,
-        staffId: staff?.id,
-        serviceDuration,
-        mode: staff ? 'Specific Staff' : 'Any Professional',
-        totalStaffCount: allStaff.length
-    });
-
+const isTimeSlotBooked = (appointments: any[], date: Date, time: string, staff: StaffMember | null, serviceDuration: number = 60): boolean => {
     if (!appointments || appointments.length === 0) {
-        console.log('No appointments to check - slot is available');
         return false;
     }
     
-    // If specific staff is selected, check only their appointments
+    // For single service, we might have a specific staff assigned
     if (staff) {
-        const isBooked = isTimeSlotBookedForStaff(appointments, date, time, staff.id, serviceDuration);
-        console.log(`Specific staff ${staff.name} (${staff.id}): ${isBooked ? 'BOOKED' : 'AVAILABLE'}`);
-        return isBooked;
+        return isTimeSlotBookedForStaff(appointments, date, time, staff.id, serviceDuration);
     }
     
-    // If "Any Professional" is selected, check if at least ONE staff member is available
-    // We need to check all staff members and see if ANY of them are free
-    if (allStaff.length === 0) {
-        console.log('No staff list provided for "Any Professional" mode - defaulting to old behavior');
-        // Fallback to old behavior if staff list not provided
-        const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-        const endTimeMinutes = timeMinutes + serviceDuration;
-        const dateString = format(date, 'yyyy-MM-dd');
-        
-        return appointments.some(appointment => {
-            const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
-            if (appointmentDateString !== dateString) return false;
-            
-            const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
-            const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
-            
-            return (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
-        });
-    }
-    
-    // Check each staff member to see if ANY is available
-    console.log('Checking availability for "Any Professional" mode across all staff...');
-    let availableStaffCount = 0;
-    let bookedStaffCount = 0;
-    
-    for (const staffMember of allStaff) {
-        const isStaffBooked = isTimeSlotBookedForStaff(appointments, date, time, staffMember.id, serviceDuration);
-        if (isStaffBooked) {
-            bookedStaffCount++;
-            console.log(`  - ${staffMember.name}: BOOKED`);
-        } else {
-            availableStaffCount++;
-            console.log(`  - ${staffMember.name}: AVAILABLE`);
-        }
-    }
-    
-    // If at least one staff member is available, the slot should be shown
-    const allStaffBooked = availableStaffCount === 0;
-    console.log(`Result: ${availableStaffCount} staff available, ${bookedStaffCount} staff booked. Slot ${allStaffBooked ? 'BLOCKED' : 'AVAILABLE'}`);
-    
-    return allStaffBooked;
-};
-
-// Helper function to get day name from date
-const getDayName = (date: Date): string => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[getDay(date)];
-};
-
-// Helper function to check if a time slot is blocked for a staff member
-const isTimeSlotBlocked = (staff: StaffMember | null, date: Date, time: string): boolean => {
-    if (!staff || !staff.blockedTimes || staff.blockedTimes.length === 0) {
-        return false;
-    }
-    
-    const dateString = format(date, 'yyyy-MM-dd');
+    // Fallback: check all appointments
     const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+    const endTimeMinutes = timeMinutes + serviceDuration;
+    const dateString = format(date, 'yyyy-MM-dd');
     
-    return staff.blockedTimes.some(blocked => {
-        const blockedDate = new Date(blocked.date);
-        const blockedDateString = format(blockedDate, 'yyyy-MM-dd');
+    return appointments.some(appointment => {
+        const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
+        if (appointmentDateString !== dateString) {
+            return false;
+        }
         
-        return (
-            blockedDateString === dateString &&
-            timeMinutes >= blocked.startMinutes &&
-            timeMinutes < blocked.endMinutes
-        );
+        const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
+        const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
+        
+        return (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
     });
 };
+
+const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
+    const steps = ['Services', 'Select Professional', 'Time Slot'];
+    return (
+        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
+            {steps.map((step, index) => (
+                <React.Fragment key={step}>
+                    <button
+                        onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+                        className={cn(
+                            "transition-colors",
+                            currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
+                            currentStep === index + 1 && "text-primary font-semibold"
+                        )}
+                    >
+                        {step}
+                    </button>
+                    {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
+                </React.Fragment>
+            ))}
+        </nav>
+    );
+};
+
+interface Step3TimeSlotProps {
+    selectedDate: Date;
+    onSelectDate: (date: Date) => void;
+    selectedTime: string | null;
+    onSelectTime: (time: string | null) => void;
+    currentStep: number;
+    setCurrentStep: (step: number) => void;
+    selectedStaff: StaffMember | null;
+    onSelectStaff: (staff: StaffMember | null) => void;
+    staff: StaffMember[];
+    workingHours: WorkingHours[];
+    isLoading: boolean;
+    error?: any;
+    vendorId?: string;
+    selectedService?: any;
+}
 
 export function Step3_TimeSlot({
   selectedDate,
@@ -246,6 +206,7 @@ export function Step3_TimeSlot({
   selectedService
 }: Step3TimeSlotProps) {
   const dateScrollerRef = useRef<HTMLDivElement>(null);
+  const lastRefetchTimestamp = useRef<number>(Date.now());
 
   // Generate available dates (next 60 days)
   const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
@@ -253,12 +214,13 @@ export function Step3_TimeSlot({
   const currentMonthYear = useMemo(() => format(selectedDate, 'MMMM yyyy'), [selectedDate]);
 
   // Fetch existing appointments for the selected date and staff to check availability
-  // When a specific staff is selected: fetch only their appointments
-  // When "Any Professional" is selected: fetch all appointments to check which staff are available
-  const { data: existingAppointments = [], isLoading: isLoadingAppointments } = useGetPublicAppointmentsQuery(
+  // For single service, we always fetch all appointments to properly handle "Any Professional" case
+  const { data: existingAppointments = [], isLoading: isLoadingAppointments, refetch } = useGetPublicAppointmentsQuery(
     {
       vendorId: vendorId,
-      staffId: selectedStaff?.id || undefined, // undefined means fetch all staff appointments
+      // For single service, we need to check appointments for all staff to properly handle "Any Professional"
+      // When a specific staff is selected, we still fetch all appointments to properly check conflicts
+      staffId: undefined, // Always fetch all appointments for proper conflict detection
       date: format(selectedDate, 'yyyy-MM-dd')
     },
     {
@@ -267,28 +229,126 @@ export function Step3_TimeSlot({
     }
   );
 
+  // Refetch appointments when selected date or staff changes to ensure we have the latest data
+  // Also refetch when the component mounts to get the most recent appointments
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchData = async () => {
+      if (vendorId && isMounted) {
+        try {
+          // Check if an appointment was just created
+          const appointmentJustCreated = typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true';
+          
+          // Add a small delay to ensure any pending writes are completed
+          // This is especially important after appointment creation
+          const delay = appointmentJustCreated ? 1500 : 100; // Longer delay if appointment was just created
+          await new Promise(resolve => setTimeout(resolve, delay));
+          
+          console.log('Step3_TimeSlot: Refetching appointments data');
+          await refetch();
+          lastRefetchTimestamp.current = Date.now();
+          
+          // Clear the flag after refetching
+          if (appointmentJustCreated && typeof window !== 'undefined') {
+            console.log('Step3_TimeSlot: Cleared appointmentJustCreated flag after refetching');
+            sessionStorage.removeItem('appointmentJustCreated');
+          }
+        } catch (error) {
+          console.error('Step3_TimeSlot: Error refetching appointments:', error);
+        }
+      }
+    };
+    
+    fetchData();
+    
+    // Refetch when the document becomes visible again (e.g., after switching tabs)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && vendorId && isMounted) {
+        fetchData();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Periodically refetch appointments to ensure we have the latest data
+    // This helps catch any appointments that might have been created by other users
+    const intervalId = setInterval(() => {
+      if (vendorId && isMounted && document.visibilityState === 'visible') {
+        fetchData();
+      }
+    }, 30000); // Refetch every 30 seconds
+    
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(intervalId);
+    };
+  }, [vendorId, refetch]); // Simplified dependencies to prevent infinite loops
+
+  // Additional check for appointment creation flag with a shorter interval
+  useEffect(() => {
+    let isMounted = true;
+    
+    const checkForNewAppointments = async () => {
+      if (vendorId && isMounted && typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true') {
+        console.log('Step3_TimeSlot: Detected new appointment creation, forcing refetch');
+        try {
+          // Add a longer delay to ensure database consistency
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          await refetch();
+          sessionStorage.removeItem('appointmentJustCreated');
+          lastRefetchTimestamp.current = Date.now();
+          console.log('Step3_TimeSlot: Refetch completed after appointment creation');
+        } catch (error) {
+          console.error('Step3_TimeSlot: Error refetching after appointment creation:', error);
+        }
+      }
+    };
+    
+    // Check immediately when component mounts
+    checkForNewAppointments();
+    
+    // Check periodically
+      const intervalId = setInterval(checkForNewAppointments, 5000);
+    
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, [vendorId, refetch]);
+
   console.log('Step3_TimeSlot - Fetching appointments:', {
     vendorId,
     staffId: selectedStaff?.id || 'Any Professional (all staff)',
     date: format(selectedDate, 'yyyy-MM-dd'),
     existingAppointments: existingAppointments,
     isLoadingAppointments,
-    mode: selectedStaff ? 'Specific Staff' : 'Any Professional'
+    mode: selectedStaff ? 'Specific Staff' : 'Any Professional',
+    lastRefetch: lastRefetchTimestamp.current
   });
 
   // Calculate service duration for overlap checking
   const serviceDuration = useMemo(() => {
     if (!selectedService) return 60; // Default 60 minutes
     
-    const match = selectedService.duration?.match(/(\d+)\s*(min|hour|hours)/);
-    if (!match) return 60;
+    // Handle different duration formats
+    if (typeof selectedService.duration === 'string') {
+      const match = selectedService.duration.match(/(\d+)\s*(min|hour|hours)/);
+      if (!match) return 60;
+      
+      const value = parseInt(match[1]);
+      const unit = match[2];
+      
+      if (unit === 'min') return value;
+      if (unit === 'hour' || unit === 'hours') return value * 60;
+    } else if (typeof selectedService.duration === 'number') {
+      // If duration is already a number, assume it's in minutes
+      return selectedService.duration;
+    }
     
-    const value = parseInt(match[1]);
-    const unit = match[2];
-    
-    if (unit === 'min') return value;
-    if (unit === 'hour' || unit === 'hours') return value * 60;
-    return 60;
+    return 60; // Default to 60 minutes
   }, [selectedService]);
 
   // Generate available time slots based on working hours for selected date
@@ -297,6 +357,7 @@ export function Step3_TimeSlot({
     console.log('existingAppointments data:', existingAppointments);
     console.log('existingAppointments length:', existingAppointments?.length || 0);
     console.log('isLoadingAppointments:', isLoadingAppointments);
+    console.log('Last refetch timestamp:', lastRefetchTimestamp.current);
     console.log('Step3_TimeSlot - Working Hours Details:', {
       selectedDate: format(selectedDate, 'EEEE, MMM d, yyyy'),
       workingHours: workingHours,
@@ -344,21 +405,32 @@ export function Step3_TimeSlot({
       // If staff has specific slots, use them
       if (staffSlots.length > 0) {
         console.log('Step3_TimeSlot - Using staff slots:', staffSlots);
-        const slots = generateTimeSlotsFromStaffSlots(staffSlots);
+        let slots = generateTimeSlotsFromStaffSlots(staffSlots);
         console.log('Step3_TimeSlot - Generated slots from staff slots:', slots);
+        
+        // Filter out past time slots for current date
+        const today = new Date();
+        const isToday = selectedDate.toDateString() === today.toDateString();
+        if (isToday) {
+          const currentTime = format(today, 'HH:mm');
+          slots = slots.filter(slot => slot > currentTime);
+          console.log('Step3_TimeSlot - Filtered past time slots for today:', slots);
+        }
         
         // Filter out blocked time slots and existing appointments
         const filteredSlots = slots.filter((slot: string) => {
-          const isBlocked = isTimeSlotBlocked(selectedStaff, selectedDate, slot);
-          const isBooked = isTimeSlotBooked(existingAppointments, selectedDate, slot, selectedStaff, serviceDuration, staff);
+          const isBlocked: boolean = isTimeSlotBlocked(selectedStaff, selectedDate, slot);
+          const isBooked: boolean = isTimeSlotBooked(existingAppointments, selectedDate, slot, selectedStaff, serviceDuration);
           
           console.log(`Staff slot ${slot}: blocked=${isBlocked}, booked=${isBooked}, willShow=${!isBlocked && !isBooked}`);
           
           return !isBlocked && !isBooked;
         });
+
         console.log('Step3_TimeSlot - Filtered slots (after blocking and booking check):', filteredSlots);
         
-        return filteredSlots;
+        // Ensure we always return an array
+        return Array.isArray(filteredSlots) ? filteredSlots : [];
       }
       
       // If staff has no specific slots, fall back to vendor hours
@@ -377,22 +449,33 @@ export function Step3_TimeSlot({
       return [];
     }
 
-    const slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
+    let slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
     console.log('Step3_TimeSlot - Generated slots from vendor hours:', slots);
+    
+    // Filter out past time slots for current date
+    const today = new Date();
+    const isToday = selectedDate.toDateString() === today.toDateString();
+    if (isToday) {
+      const currentTime = format(today, 'HH:mm');
+      slots = slots.filter(slot => slot > currentTime);
+      console.log('Step3_TimeSlot - Filtered past time slots for today:', slots);
+    }
     
     // Filter out blocked time slots and existing appointments
     const filteredSlots = slots.filter((slot: string) => {
-      const isBlocked = isTimeSlotBlocked(selectedStaff, selectedDate, slot);
-      const isBooked = isTimeSlotBooked(existingAppointments, selectedDate, slot, selectedStaff, serviceDuration, staff);
+      const isBlocked: boolean = isTimeSlotBlocked(selectedStaff, selectedDate, slot);
+      const isBooked: boolean = isTimeSlotBooked(existingAppointments, selectedDate, slot, selectedStaff, serviceDuration);
       
       console.log(`Slot ${slot}: blocked=${isBlocked}, booked=${isBooked}, willShow=${!isBlocked && !isBooked}`);
       
       return !isBlocked && !isBooked;
     });
+
     console.log('Step3_TimeSlot - Filtered slots (after blocking and booking check):', filteredSlots);
     
-    return filteredSlots;
-  }, [selectedDate, workingHours, selectedStaff, existingAppointments, serviceDuration]);
+    // Ensure we always return an array
+    return Array.isArray(filteredSlots) ? filteredSlots : [];
+  }, [selectedDate, workingHours, selectedStaff, existingAppointments, serviceDuration, staff, lastRefetchTimestamp.current]);
 
   // Check if a date is available based on working hours and staff availability
   const isDateAvailable = (date: Date): boolean => {
