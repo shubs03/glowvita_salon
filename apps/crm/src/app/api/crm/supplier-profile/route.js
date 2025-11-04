@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
+import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
 
