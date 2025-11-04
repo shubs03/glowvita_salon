@@ -30,7 +30,7 @@ const supplierSchema = new mongoose.Schema({
   address: { type: String, required: true, trim: true },
   businessRegistrationNo: { type: String, trim: true },
   supplierType: { type: String, required: true },
-  profileImage: { type: String }, // Add profileImage field
+  profileImage: { type: String }, // URL to the uploaded image
   licenseFiles: [{ type: String }], // Changed to array for multiple files
   password: { type: String, required: true, select: false },
   resetPasswordToken: {

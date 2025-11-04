@@ -47,7 +47,7 @@ const clientSchema = new mongoose.Schema(
       default: '',
     },
     profilePicture: {
-      type: String,
+      type: String, // URL to the uploaded image
       default: '',
     },
     address: {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import ClientModel from '@repo/lib/models/Vendor/Client.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm';
+import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
 
@@ -93,6 +94,22 @@ export const POST = authMiddlewareCrm(async (req) => {
             }, { status: 409 });
         }
 
+        // Handle profile picture upload if provided
+        let profilePictureUrl = body.profilePicture || '';
+        if (body.profilePicture) {
+            const fileName = `client-${vendorId}-${Date.now()}`;
+            const imageUrl = await uploadBase64(body.profilePicture, fileName);
+            
+            if (!imageUrl) {
+                return NextResponse.json(
+                    { success: false, message: "Failed to upload profile picture" },
+                    { status: 500 }
+                );
+            }
+            
+            profilePictureUrl = imageUrl;
+        }
+
         // Create client data
         const clientData = {
             vendorId,
@@ -103,7 +120,7 @@ export const POST = authMiddlewareCrm(async (req) => {
             gender: body.gender || 'Other',
             country: body.country?.trim() || '',
             occupation: body.occupation?.trim() || '',
-            profilePicture: body.profilePicture || '',
+            profilePicture: profilePictureUrl,
             address: body.address?.trim() || '',
             status: 'New'
         };
@@ -215,6 +232,37 @@ export const PUT = authMiddlewareCrm(async (req) => {
             }
         });
 
+        // Handle profile picture upload if provided
+        if (updateData.profilePicture !== undefined) {
+            if (updateData.profilePicture) {
+                // Upload new image to VPS
+                const fileName = `client-${vendorId}-${Date.now()}`;
+                const imageUrl = await uploadBase64(updateData.profilePicture, fileName);
+                
+                if (!imageUrl) {
+                    return NextResponse.json(
+                        { success: false, message: "Failed to upload profile picture" },
+                        { status: 500 }
+                    );
+                }
+                
+                // Delete old image from VPS if it exists
+                if (client.profilePicture) {
+                    await deleteFile(client.profilePicture);
+                }
+                
+                sanitizedUpdateData.profilePicture = imageUrl;
+            } else {
+                // If image is null/empty, remove it
+                sanitizedUpdateData.profilePicture = '';
+                
+                // Delete old image from VPS if it exists
+                if (client.profilePicture) {
+                    await deleteFile(client.profilePicture);
+                }
+            }
+        }
+
         if (updateData.birthdayDate) {
             sanitizedUpdateData.birthdayDate = new Date(updateData.birthdayDate);
         }
@@ -281,6 +329,11 @@ export const DELETE = authMiddlewareCrm(async (req) => {
                 success: false,
                 message: "Client not found" 
             }, { status: 404 });
+        }
+        
+        // Delete profile picture from VPS if it exists
+        if (client.profilePicture) {
+            await deleteFile(client.profilePicture);
         }
 
         return NextResponse.json({ 

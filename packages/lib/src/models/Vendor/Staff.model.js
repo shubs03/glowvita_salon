@@ -81,7 +81,7 @@ const staffSchema = new mongoose.Schema(
       index: true, // For login and search
     },
     photo: {
-      type: String,
+      type: String, // URL to the uploaded image
       default: null,
     },
     description: {

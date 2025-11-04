@@ -3,8 +3,38 @@ import _db from "../../../../../../../packages/lib/src/db.js";
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import ProductCategoryModel from "../../../../../../../packages/lib/src/models/admin/ProductCategory.model.js";
 import { authMiddlewareCrm } from "../../../../middlewareCrm";
+import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
+
+// Utility function to process base64 image and upload it
+// Also deletes the old image if a new one is uploaded
+const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
+    if (!base64String) return null;
+    
+    // Check if it's already a URL (not base64)
+    if (base64String.startsWith('http')) {
+        return base64String; // Already uploaded, return as is
+    }
+    
+    // Upload the base64 image and return the URL
+    const imageUrl = await uploadBase64(base64String, fileName);
+    
+    // If upload was successful and there's an old image, delete the old one
+    if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
+        try {
+            // Attempt to delete the old file
+            // We don't await this as we don't want to fail the whole operation if deletion fails
+            deleteFile(oldImageUrl).catch(err => {
+                console.warn('Failed to delete old image:', err);
+            });
+        } catch (err) {
+            console.warn('Error deleting old image:', err);
+        }
+    }
+    
+    return imageUrl;
+};
 
 // GET - Fetch products for the current user (vendor or supplier)
 const getProducts = async (req) => {
@@ -109,6 +139,15 @@ const createProduct = async (req) => {
             );
         }
         
+        // Handle product image upload
+        let productImageUrl = '';
+        if (productImage) {
+            const imageUrl = await processBase64Image(productImage, `product-${vendorId}-${Date.now()}`);
+            if (imageUrl) {
+                productImageUrl = imageUrl;
+            }
+        }
+
         const newProduct = new ProductModel({
             vendorId: vendorId,
             origin: userRole.charAt(0).toUpperCase() + userRole.slice(1),
@@ -119,7 +158,7 @@ const createProduct = async (req) => {
             price: Number(price),
             salePrice: Number(salePrice) || 0,
             stock: Number(stock),
-            productImage: productImage || '',
+            productImage: productImageUrl,
             isActive: Boolean(isActive),
             status: status === 'disapproved' ? 'rejected' : (status || 'pending'),
             createdBy: vendorId,
@@ -203,8 +242,23 @@ export const PUT = authMiddlewareCrm(async (req) => {
         updatedAt: new Date()
     };
 
+    // Handle product image upload
+    if (productImage !== undefined) {
+        if (productImage) {
+            const imageUrl = await processBase64Image(productImage, `product-${vendorId}-${Date.now()}`, existingProduct.productImage);
+            if (imageUrl) {
+                finalUpdateData.productImage = imageUrl;
+            }
+        } else {
+            // If productImage is null/empty, remove it and delete the old image
+            finalUpdateData.productImage = '';
+            if (existingProduct.productImage) {
+                await deleteFile(existingProduct.productImage);
+            }
+        }
+    }
+
     if(categoryId) finalUpdateData.category = categoryId;
-    if(productImage) finalUpdateData.productImage = productImage;
     if(status) finalUpdateData.status = status === 'disapproved' ? 'rejected' : status;
 
     const updatedProduct = await ProductModel.findByIdAndUpdate(id, finalUpdateData, { new: true, runValidators: true }).populate('category', 'name');
@@ -246,6 +300,11 @@ export const DELETE = authMiddlewareCrm(async (req) => {
 
     if (!deletedProduct) {
       return NextResponse.json({ success: false, message: "Product not found or you don't have permission to delete it" }, { status: 404 });
+    }
+    
+    // Delete product image from VPS if it exists
+    if (deletedProduct.productImage) {
+        await deleteFile(deletedProduct.productImage);
     }
     
     return NextResponse.json({ success: true, message: "Product deleted successfully" });

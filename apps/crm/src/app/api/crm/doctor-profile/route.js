@@ -60,6 +60,37 @@ export const PUT = authMiddlewareCrm(async (req) => {
     // Remove _id from body if present to prevent accidental updates
     delete body._id;
 
+    // Handle profile image upload if provided
+    if (body.profileImage !== undefined) {
+      if (body.profileImage) {
+        // Upload new image to VPS
+        const fileName = `doctor-${doctorId}-profile`;
+        const imageUrl = await uploadBase64(body.profileImage, fileName);
+        
+        if (!imageUrl) {
+          return NextResponse.json(
+            { success: false, message: "Failed to upload profile image" },
+            { status: 500 }
+          );
+        }
+        
+        // Delete old image from VPS if it exists
+        if (doctor.profileImage) {
+          await deleteFile(doctor.profileImage);
+        }
+        
+        body.profileImage = imageUrl;
+      } else {
+        // If image is null/empty, remove it
+        body.profileImage = null;
+        
+        // Delete old image from VPS if it exists
+        if (doctor.profileImage) {
+          await deleteFile(doctor.profileImage);
+        }
+      }
+    }
+
     // Update allowed fields only
     const allowedFields = [
       'name', 'email', 'phone', 'gender', 'registrationNumber', 'doctorType',

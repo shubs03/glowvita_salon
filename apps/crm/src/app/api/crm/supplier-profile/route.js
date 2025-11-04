@@ -53,6 +53,59 @@ export const PUT = authMiddlewareCrm(async (req) => {
     // Remove _id from body if present to prevent accidental updates
     delete body._id;
 
+    // Handle profile image upload if provided
+    if (body.profileImage !== undefined) {
+      if (body.profileImage) {
+        // Upload new image to VPS
+        const fileName = `supplier-${supplierId}-profile`;
+        const imageUrl = await uploadBase64(body.profileImage, fileName);
+        
+        if (!imageUrl) {
+          return NextResponse.json(
+            { success: false, message: "Failed to upload profile image" },
+            { status: 500 }
+          );
+        }
+        
+        // Delete old image from VPS if it exists
+        if (supplier.profileImage) {
+          await deleteFile(supplier.profileImage);
+        }
+        
+        body.profileImage = imageUrl;
+      } else {
+        // If image is null/empty, remove it
+        body.profileImage = null;
+        
+        // Delete old image from VPS if it exists
+        if (supplier.profileImage) {
+          await deleteFile(supplier.profileImage);
+        }
+      }
+    }
+
+    // Handle license files upload if provided
+    if (body.licenseFiles !== undefined) {
+      if (Array.isArray(body.licenseFiles)) {
+        const uploadedFiles = [];
+        for (let i = 0; i < body.licenseFiles.length; i++) {
+          const file = body.licenseFiles[i];
+          if (file) {
+            // Upload new file to VPS
+            const fileName = `supplier-${supplierId}-license-${i}`;
+            const fileUrl = await uploadBase64(file, fileName);
+            
+            if (fileUrl) {
+              uploadedFiles.push(fileUrl);
+            }
+          }
+        }
+        body.licenseFiles = uploadedFiles;
+      } else {
+        body.licenseFiles = [];
+      }
+    }
+
     // Update allowed fields only
     const allowedFields = [
       'firstName', 'lastName', 'shopName', 'description', 'email', 'mobile',

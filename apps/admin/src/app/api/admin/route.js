@@ -3,6 +3,7 @@ import _db from "@repo/lib/db";
 import AdminUserModel from "@repo/lib/models/admin/AdminUser";
 import { authMiddlewareAdmin } from "../../../middlewareAdmin.js";
 import bcrypt from "bcryptjs";
+import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
 await _db();
 
@@ -52,6 +53,20 @@ export const POST = authMiddlewareAdmin(
     // 3️⃣ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Handle profile image upload if provided
+    let profileImageUrl = null;
+    if (profileImage) {
+      const fileName = `admin-${Date.now()}`;
+      profileImageUrl = await uploadBase64(profileImage, fileName);
+      
+      if (!profileImageUrl) {
+        return Response.json(
+          { message: "Failed to upload profile image" },
+          { status: 500 }
+        );
+      }
+    }
+
     // 4️⃣ Create admin
     const newAdmin = await AdminUserModel.create({
       fullName,
@@ -59,7 +74,7 @@ export const POST = authMiddlewareAdmin(
       mobileNo,
       address,
       designation,
-      profileImage: profileImage || null,
+      profileImage: profileImageUrl || null,
       password: hashedPassword,
       roleName,
       permissions: permissions || [],
@@ -90,6 +105,43 @@ export const PUT = authMiddlewareAdmin(
   async (req) => {
     const { _id, ...body } = await req.json();
 
+    // Get existing admin to check for old image
+    const existingAdmin = await AdminUserModel.findById(_id);
+    if (!existingAdmin) {
+      return Response.json({ message: "Admin not found" }, { status: 404 });
+    }
+
+    // Handle profile image upload if provided
+    if (body.profileImage !== undefined) {
+      if (body.profileImage) {
+        // Upload new image to VPS
+        const fileName = `admin-${Date.now()}`;
+        const imageUrl = await uploadBase64(body.profileImage, fileName);
+        
+        if (!imageUrl) {
+          return Response.json(
+            { message: "Failed to upload profile image" },
+            { status: 500 }
+          );
+        }
+        
+        // Delete old image from VPS if it exists
+        if (existingAdmin.profileImage) {
+          await deleteFile(existingAdmin.profileImage);
+        }
+        
+        body.profileImage = imageUrl;
+      } else {
+        // If image is null/empty, remove it
+        body.profileImage = null;
+        
+        // Delete old image from VPS if it exists
+        if (existingAdmin.profileImage) {
+          await deleteFile(existingAdmin.profileImage);
+        }
+      }
+    }
+
     const updatedAdmin = await AdminUserModel.findByIdAndUpdate(
       _id,
       { ...body, updatedAt: Date.now() },
@@ -108,10 +160,22 @@ export const PUT = authMiddlewareAdmin(
 export const DELETE = authMiddlewareAdmin(
   async (req) => {
     const { _id } = await req.json();
+    
+    // Get admin to check for profile image
+    const admin = await AdminUserModel.findById(_id);
+    if (!admin) {
+      return Response.json({ message: "Admin not found" }, { status: 404 });
+    }
+
     const deleted = await AdminUserModel.findByIdAndDelete(_id);
 
     if (!deleted) {
       return Response.json({ message: "Admin not found" }, { status: 404 });
+    }
+    
+    // Delete profile image from VPS if it exists
+    if (admin.profileImage) {
+      await deleteFile(admin.profileImage);
     }
 
     return Response.json({ message: "Admin deleted successfully" });
