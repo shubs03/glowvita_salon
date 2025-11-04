@@ -1210,10 +1210,11 @@ export const glowvitaApi = createApi({
 
     // Client Endpoints
     getClients: builder.query({
-      query: ({ search, status, page = 1, limit = 100 } = {}) => {
+      query: ({ search, status, page = 1, limit = 100, source = 'all' } = {}) => {
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (status) params.append('status', status);
+        if (source && source !== 'all') params.append('source', source);
         params.append('page', page.toString());
         params.append('limit', limit.toString());
         return { url: `/crm/clients?${params.toString()}`, method: "GET" };
