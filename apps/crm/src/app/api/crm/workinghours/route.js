@@ -130,21 +130,24 @@ export const PUT = authMiddlewareCrm(async (req) => {
             };
         });
 
-        // Update or create working hours
-        const updatedHours = await VendorWorkingHours.findOneAndUpdate(
-            { vendor: vendorId },
-            { 
-                $set: { 
-                    workingHours: transformedWorkingHours,
-                    timezone: updateData.timezone || 'Asia/Kolkata'
-                } 
-            },
-            { 
-                new: true,
-                upsert: true,
-                runValidators: true 
-            }
-        );
+        // Find the existing working hours document
+        let vendorWorkingHours = await VendorWorkingHours.findOne({ vendor: vendorId });
+        
+        // If it doesn't exist, create a new one
+        if (!vendorWorkingHours) {
+            vendorWorkingHours = new VendorWorkingHours({
+                vendor: vendorId,
+                workingHours: transformedWorkingHours,
+                timezone: updateData.timezone || 'Asia/Kolkata'
+            });
+        } else {
+            // Update existing document
+            vendorWorkingHours.workingHours = transformedWorkingHours;
+            vendorWorkingHours.timezone = updateData.timezone || 'Asia/Kolkata';
+        }
+
+        // Save the document to trigger the post-save hook for staff synchronization
+        const updatedHours = await vendorWorkingHours.save();
 
         return NextResponse.json({ 
             message: "Working hours updated successfully", 
@@ -189,19 +192,22 @@ export const POST = authMiddlewareCrm(async (req) => {
             description: description || ''
         };
 
-        // Add to special hours array
-        const updatedHours = await VendorWorkingHours.findOneAndUpdate(
-            { vendor: vendorId },
-            { 
-                $push: { 
-                    specialHours: specialHour 
-                } 
-            },
-            { 
-                new: true,
-                upsert: true 
-            }
-        );
+        // Find the existing working hours document
+        let vendorWorkingHours = await VendorWorkingHours.findOne({ vendor: vendorId });
+        
+        // If it doesn't exist, create a new one
+        if (!vendorWorkingHours) {
+            vendorWorkingHours = new VendorWorkingHours({
+                vendor: vendorId,
+                specialHours: [specialHour]
+            });
+        } else {
+            // Add to special hours array
+            vendorWorkingHours.specialHours.push(specialHour);
+        }
+
+        // Save the document to trigger the post-save hook for staff synchronization
+        const updatedHours = await vendorWorkingHours.save();
 
         return NextResponse.json({ 
             message: "Special hours added successfully", 
@@ -229,21 +235,22 @@ export const DELETE = authMiddlewareCrm(async (req) => {
             }, { status: 400 });
         }
 
-        const updatedHours = await VendorWorkingHours.findOneAndUpdate(
-            { vendor: vendorId },
-            { 
-                $pull: { 
-                    specialHours: { _id: specialHourId } 
-                } 
-            },
-            { new: true }
-        );
-
-        if (!updatedHours) {
+        // Find the existing working hours document
+        const vendorWorkingHours = await VendorWorkingHours.findOne({ vendor: vendorId });
+        
+        if (!vendorWorkingHours) {
             return NextResponse.json({ 
                 message: "Working hours not found" 
             }, { status: 404 });
         }
+
+        // Remove the special hour
+        vendorWorkingHours.specialHours = vendorWorkingHours.specialHours.filter(
+            hour => hour._id.toString() !== specialHourId
+        );
+
+        // Save the document to trigger the post-save hook for staff synchronization
+        const updatedHours = await vendorWorkingHours.save();
 
         return NextResponse.json({ 
             message: "Special hours removed successfully", 

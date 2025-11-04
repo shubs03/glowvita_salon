@@ -1164,15 +1164,15 @@ export const glowvitaApi = createApi({
     }),
     updateWorkingHours: builder.mutation({
       query: (workingHours) => ({ url: "/crm/workinghours", method: "PUT", body: workingHours }),
-      invalidatesTags: ["WorkingHours"],
+      invalidatesTags: ["WorkingHours", "Staff"],
     }),
     addSpecialHours: builder.mutation({
       query: (specialHours) => ({ url: "/crm/workinghours", method: "POST", body: specialHours }),
-      invalidatesTags: ["WorkingHours"],
+      invalidatesTags: ["WorkingHours", "Staff"],
     }),
     deleteSpecialHours: builder.mutation({
       query: (id) => ({ url: `/crm/workinghours?id=${id}`, method: "DELETE" }),
-      invalidatesTags: ["WorkingHours"],
+      invalidatesTags: ["WorkingHours", "Staff"],
     }),
 
     // appointments endpoints
