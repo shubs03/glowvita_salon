@@ -3,6 +3,7 @@ import StaffModel from '@repo/lib/models/Vendor/Staff.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm';
 import bcrypt from "bcryptjs";
+import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
 
@@ -98,6 +99,21 @@ export const POST = authMiddlewareCrm(async (req) => {
             }, { status: 409 });
         }
 
+        // Handle photo upload if provided
+        if (trimmedBody.photo) {
+            const fileName = `staff-${ownerId}-${Date.now()}`;
+            const imageUrl = await uploadBase64(trimmedBody.photo, fileName);
+            
+            if (!imageUrl) {
+                return NextResponse.json(
+                    { message: "Failed to upload photo" },
+                    { status: 500 }
+                );
+            }
+            
+            trimmedBody.photo = imageUrl;
+        }
+
         const hashedPassword = await bcrypt.hash(trimmedBody.password, 10);
         
         const newStaff = await StaffModel.create({
@@ -187,6 +203,37 @@ export const PUT = authMiddlewareCrm(async (req) => {
             updateData.password = await bcrypt.hash(updateData.password, 10);
         } else {
             delete updateData.password;
+        }
+
+        // Handle photo upload if provided
+        if (updateData.photo !== undefined) {
+            if (updateData.photo) {
+                // Upload new image to VPS
+                const fileName = `staff-${ownerId}-${Date.now()}`;
+                const imageUrl = await uploadBase64(updateData.photo, fileName);
+                
+                if (!imageUrl) {
+                    return NextResponse.json(
+                        { message: "Failed to upload photo" },
+                        { status: 500 }
+                    );
+                }
+                
+                // Delete old image from VPS if it exists
+                if (staff.photo) {
+                    await deleteFile(staff.photo);
+                }
+                
+                updateData.photo = imageUrl;
+            } else {
+                // If image is null/empty, remove it
+                updateData.photo = null;
+                
+                // Delete old image from VPS if it exists
+                if (staff.photo) {
+                    await deleteFile(staff.photo);
+                }
+            }
         }
 
         // Create a temporary staff instance to validate working hours before updating
@@ -284,6 +331,11 @@ export const DELETE = authMiddlewareCrm(async (req) => {
 
         if (!deletedStaff) {
             return NextResponse.json({ message: "Staff not found or access denied" }, { status: 404 });
+        }
+        
+        // Delete photo from VPS if it exists
+        if (deletedStaff.photo) {
+            await deleteFile(deletedStaff.photo);
         }
 
         return NextResponse.json({ message: "Staff deleted successfully" }, { status: 200 });

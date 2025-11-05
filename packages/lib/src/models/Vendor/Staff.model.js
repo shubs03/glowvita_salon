@@ -81,7 +81,7 @@ const staffSchema = new mongoose.Schema(
       index: true, // For login and search
     },
     photo: {
-      type: String,
+      type: String, // URL to the uploaded image
       default: null,
     },
     description: {
@@ -235,9 +235,85 @@ const staffSchema = new mongoose.Schema(
   }
 );
 
+// Convert time string to minutes for faster comparisons
+staffSchema.statics.timeToMinutes = function (timeStr) {
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  return hours * 60 + minutes;
+};
+
+// Convert minutes back to time string
+staffSchema.statics.minutesToTime = function (minutes) {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
+};
+
+// Add a method to adjust staff slots based on vendor hours
+staffSchema.statics.adjustSlotsToVendorHours = function (staffSlots, vendorOpenMinutes, vendorCloseMinutes) {
+  // If no staff slots, return empty array
+  if (!staffSlots || staffSlots.length === 0) {
+    return [];
+  }
+  
+  // If invalid vendor hours, return empty array
+  if (vendorOpenMinutes === undefined || vendorCloseMinutes === undefined || 
+      vendorOpenMinutes >= vendorCloseMinutes) {
+    return [];
+  }
+  
+  const updatedSlots = [];
+  
+  // Adjust each staff slot to fit within vendor hours
+  for (const slot of staffSlots) {
+    // Skip invalid slots
+    if (!slot || slot.startMinutes === undefined || slot.endMinutes === undefined) {
+      continue;
+    }
+    
+    // Only keep slots that fall within the new vendor hours
+    if (slot.startMinutes >= vendorOpenMinutes && slot.endMinutes <= vendorCloseMinutes) {
+      updatedSlots.push(slot);
+    } else if (slot.startMinutes < vendorOpenMinutes && slot.endMinutes > vendorOpenMinutes && slot.endMinutes <= vendorCloseMinutes) {
+      // Slot starts before vendor opens but ends during vendor hours - adjust start time
+      const adjustedSlot = {
+        ...slot,
+        startMinutes: vendorOpenMinutes,
+        startTime: this.minutesToTime(vendorOpenMinutes)
+      };
+      updatedSlots.push(adjustedSlot);
+    } else if (slot.startMinutes >= vendorOpenMinutes && slot.startMinutes < vendorCloseMinutes && slot.endMinutes > vendorCloseMinutes) {
+      // Slot starts during vendor hours but ends after - adjust end time
+      const adjustedSlot = {
+        ...slot,
+        endMinutes: vendorCloseMinutes,
+        endTime: this.minutesToTime(vendorCloseMinutes)
+      };
+      updatedSlots.push(adjustedSlot);
+    } else if (slot.startMinutes < vendorOpenMinutes && slot.endMinutes > vendorCloseMinutes) {
+      // Slot completely encompasses vendor hours - adjust both start and end
+      const adjustedSlot = {
+        ...slot,
+        startMinutes: vendorOpenMinutes,
+        startTime: this.minutesToTime(vendorOpenMinutes),
+        endMinutes: vendorCloseMinutes,
+        endTime: this.minutesToTime(vendorCloseMinutes)
+      };
+      updatedSlots.push(adjustedSlot);
+    }
+    // Slots completely outside vendor hours are discarded
+  }
+  
+  return updatedSlots;
+};
+
 // Pre-save hook to validate staff working hours against vendor hours
 staffSchema.pre("save", async function (next) {
   try {
+    // Skip validation if this is a synchronization update from vendor
+    if (this.$locals.skipValidation) {
+      return next();
+    }
+    
     // Only validate if working hours slots are being modified
     const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     let needsValidation = false;
@@ -259,7 +335,7 @@ staffSchema.pre("save", async function (next) {
         const dayField = `${day}Slots`;
         
         // Only validate if the day is available and has slots defined
-        if (this[dayAvailableField] && this[dayField] && this[dayField].length > 0) {
+        if (this[dayAvailableField] && this.isModified(dayAvailableField) && this[dayField] && this[dayField].length > 0) {
           // Get vendor working hours for the specific day
           const vendorHours = await VendorWorkingHours.getVendorHoursForDay(this.vendorId, day);
           
@@ -297,6 +373,9 @@ staffSchema.pre("save", async function (next) {
 staffSchema.index({ vendorId: 1, status: 1, role: 1 }); // Most common filter
 staffSchema.index({ vendorId: 1, emailAddress: 1 }, { unique: true }); // Login
 staffSchema.index({ vendorId: 1, mobileNo: 1 }, { unique: true }); // Contact uniqueness
+
+// Add index for vendorId to improve update performance
+staffSchema.index({ vendorId: 1 });
 
 // Availability-specific compound indexes
 staffSchema.index({
@@ -339,19 +418,6 @@ staffSchema.index({
 });
 
 // OPTIMIZED HELPER METHODS
-
-// Convert time string to minutes for faster comparisons
-staffSchema.statics.timeToMinutes = function (timeStr) {
-  const [hours, minutes] = timeStr.split(":").map(Number);
-  return hours * 60 + minutes;
-};
-
-// Convert minutes back to time string
-staffSchema.statics.minutesToTime = function (minutes) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
-};
 
 // Optimized availability check
 staffSchema.methods.isAvailableAt = function (date, timeStr) {
@@ -444,6 +510,22 @@ staffSchema.statics.findByAvailabilityPattern = function (vendorId, pattern) {
   if (pattern.minHours) query.totalWeeklyHours = { $gte: pattern.minHours };
 
   return this.find(query);
+};
+
+// Add a static method to update staff availability for a specific day
+staffSchema.statics.updateStaffAvailabilityForDay = async function (vendorId, day, isAvailable, timeSlots = []) {
+  const dayAvailableField = `${day}Available`;
+  const daySlotsField = `${day}Slots`;
+  
+  return await this.updateMany(
+    { vendorId: vendorId },
+    { 
+      $set: { 
+        [dayAvailableField]: isAvailable,
+        [daySlotsField]: isAvailable ? timeSlots : []
+      }
+    }
+  );
 };
 
 const StaffModel =

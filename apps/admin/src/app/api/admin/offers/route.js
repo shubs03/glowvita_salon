@@ -2,6 +2,7 @@
 import _db from "@repo/lib/db";
 import OfferModel from "@repo/lib/models/admin/AdminOffers";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
 // Predefined options for validation
 const validCategories = ['Men', 'Women', 'Unisex'];
@@ -91,12 +92,18 @@ export const POST = authMiddlewareAdmin(
       }
     }
 
-    // Validate image if provided
-    if (offerImage && !isValidBase64Image(offerImage)) {
-      return Response.json(
-        { message: "Invalid image format. Must be base64 encoded image." },
-        { status: 400 }
-      );
+    // Handle image upload if provided
+    let imageUrl = null;
+    if (offerImage && isValidBase64Image(offerImage)) {
+      const fileName = `offer-${Date.now()}`;
+      imageUrl = await uploadBase64(offerImage, fileName);
+      
+      if (!imageUrl) {
+        return Response.json(
+          { message: "Failed to upload image" },
+          { status: 500 }
+        );
+      }
     }
 
     // Create offer
@@ -109,7 +116,7 @@ export const POST = authMiddlewareAdmin(
       expires: expires || null,
       applicableSpecialties: specialties,
       applicableCategories: categories,
-      offerImage: offerImage || null,
+      offerImage: imageUrl || null,
       isCustomCode: isCustom,
     });
 
@@ -155,6 +162,12 @@ export const PUT = authMiddlewareAdmin(
   async (req) => {
     const { id, ...body } = await req.json();
 
+    // Get existing offer to check for old image
+    const existingOffer = await OfferModel.findById(id);
+    if (!existingOffer) {
+      return Response.json({ message: "Offer not found" }, { status: 404 });
+    }
+
     // applicableSpecialties are now dynamic, no server-side validation against a static list.
     const specialties = Array.isArray(body.applicableSpecialties) ? body.applicableSpecialties : [];
 
@@ -170,12 +183,35 @@ export const PUT = authMiddlewareAdmin(
       }
     }
 
-    // Validate image if provided
-    if (body.offerImage && !isValidBase64Image(body.offerImage)) {
-      return Response.json(
-        { message: "Invalid image format. Must be base64 encoded image." },
-        { status: 400 }
-      );
+    // Handle image upload if provided
+    if (body.offerImage !== undefined) {
+      if (body.offerImage && isValidBase64Image(body.offerImage)) {
+        // Upload new image to VPS
+        const fileName = `offer-${Date.now()}`;
+        const imageUrl = await uploadBase64(body.offerImage, fileName);
+        
+        if (!imageUrl) {
+          return Response.json(
+            { message: "Failed to upload image" },
+            { status: 500 }
+          );
+        }
+        
+        // Delete old image from VPS if it exists
+        if (existingOffer.offerImage) {
+          await deleteFile(existingOffer.offerImage);
+        }
+        
+        body.offerImage = imageUrl;
+      } else {
+        // If image is null/empty, remove it
+        body.offerImage = null;
+        
+        // Delete old image from VPS if it exists
+        if (existingOffer.offerImage) {
+          await deleteFile(existingOffer.offerImage);
+        }
+      }
     }
 
     const updateData = {
@@ -227,6 +263,11 @@ export const DELETE = authMiddlewareAdmin(
     const deletedOffer = await OfferModel.findByIdAndDelete(id);
     if (!deletedOffer) {
       return Response.json({ message: "Offer not found" }, { status: 404 });
+    }
+    
+    // Delete image from VPS if it exists
+    if (deletedOffer.offerImage) {
+      await deleteFile(deletedOffer.offerImage);
     }
 
     return Response.json({ message: "Offer deleted successfully" });

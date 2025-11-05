@@ -67,7 +67,7 @@ if (isServer && mongoose && mongoose.model) {
     },
     // New field for offer image
     offerImage: {
-      type: String, // Base64 encoded image string
+      type: String, // URL to the uploaded image
       default: null,
     },
     // New field to track if code is custom or auto-generated

@@ -392,17 +392,17 @@ export const glowvitaApi = createApi({
     }),
 
     updateAdmin: builder.mutation({
-      query: ({ id, ...data }) => ({
-        url: `/admin`,
+      query: ({ id, data }) => ({
+        url: `/admin?id=${id}`,
         method: "PUT",
-        body: { id, ...data },
+        body: data,
       }),
       invalidatesTags: ["admin"],
     }),
 
     deleteAdmin: builder.mutation({
       query: (id) => ({
-        url: `/admin`,
+        url: `/admin?id=${id}`,
         method: "DELETE",
         body: { id },
       }),
@@ -633,6 +633,19 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: "Vendor", id },
+        "Vendor",
+      ],
+    }),
+    
+    // Add new endpoint for updating vendor document status
+    updateVendorDocumentStatus: builder.mutation({
+      query: ({ vendorId, documentType, status, rejectionReason }) => ({
+        url: "/admin/vendor",
+        method: "PATCH",
+        body: { vendorId, documentType, status, rejectionReason },
+      }),
+      invalidatesTags: (result, error, { vendorId }) => [
+        { type: "Vendor", vendorId },
         "Vendor",
       ],
     }),
@@ -1191,15 +1204,15 @@ export const glowvitaApi = createApi({
     }),
     updateWorkingHours: builder.mutation({
       query: (workingHours) => ({ url: "/crm/workinghours", method: "PUT", body: workingHours }),
-      invalidatesTags: ["WorkingHours"],
+      invalidatesTags: ["WorkingHours", "Staff"],
     }),
     addSpecialHours: builder.mutation({
       query: (specialHours) => ({ url: "/crm/workinghours", method: "POST", body: specialHours }),
-      invalidatesTags: ["WorkingHours"],
+      invalidatesTags: ["WorkingHours", "Staff"],
     }),
     deleteSpecialHours: builder.mutation({
       query: (id) => ({ url: `/crm/workinghours?id=${id}`, method: "DELETE" }),
-      invalidatesTags: ["WorkingHours"],
+      invalidatesTags: ["WorkingHours", "Staff"],
     }),
 
     // appointments endpoints
@@ -1237,10 +1250,11 @@ export const glowvitaApi = createApi({
 
     // Client Endpoints
     getClients: builder.query({
-      query: ({ search, status, page = 1, limit = 100 } = {}) => {
+      query: ({ search, status, page = 1, limit = 100, source = 'all' } = {}) => {
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (status) params.append('status', status);
+        if (source && source !== 'all') params.append('source', source);
         params.append('page', page.toString());
         params.append('limit', limit.toString());
         return { url: `/crm/clients?${params.toString()}`, method: "GET" };
@@ -1270,6 +1284,17 @@ export const glowvitaApi = createApi({
     updateVendorProfile: builder.mutation({
       query: (vendorData) => ({ url: "/crm/vendor", method: "PUT", body: vendorData }),
       invalidatesTags: ["Vendor"],
+    }),
+
+    // Doctor Profile Endpoints
+    getDoctorProfile: builder.query({
+      query: () => ({ url: "/crm/doctor-profile", method: "GET" }),
+      providesTags: ["doctors"],
+    }),
+
+    updateDoctorProfile: builder.mutation({
+      query: (doctorData) => ({ url: "/crm/doctor-profile", method: "PUT", body: doctorData }),
+      invalidatesTags: ["doctors"],
     }),
 
     // Doctor Working Hours Endpoints (Web - for booking)
@@ -1580,6 +1605,7 @@ export const {
   useGetVendorByIdQuery,
   useUpdateVendorMutation,
   useUpdateVendorStatusMutation,
+  useUpdateVendorDocumentStatusMutation,
   useDeleteVendorMutation,
   useGetDoctorsQuery,
   useCreateDoctorMutation,

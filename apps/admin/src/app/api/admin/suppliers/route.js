@@ -6,6 +6,7 @@ import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer";
 import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
 // Initialize database connection (assuming _db is a promise-based connection function)
 const initDb = async () => {
@@ -74,17 +75,23 @@ export const POST = async (req) => {
       return NextResponse.json({ message: validationError }, { status: 400 });
     }
 
-    // Store base64 data directly instead of uploading to remote server
-    let licenseFileData = [];
+    // Upload license files to VPS storage
+    let licenseFileUrls = [];
     console.log("Processing license files:", licenseFiles);
     if (licenseFiles && Array.isArray(licenseFiles)) {
-      for (const file of licenseFiles) {
+      for (let i = 0; i < licenseFiles.length; i++) {
+        const file = licenseFiles[i];
         if (file && file.startsWith("data:")) {
-          licenseFileData.push(file);
+          const fileName = `supplier-${Date.now()}-license-${i}`;
+          const fileUrl = await uploadBase64(file, fileName);
+          
+          if (fileUrl) {
+            licenseFileUrls.push(fileUrl);
+          }
         }
       }
     }
-    console.log("License file base64 data:", licenseFileData);
+    console.log("License file URLs:", licenseFileUrls);
 
     // Hash the password before saving
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -103,7 +110,7 @@ export const POST = async (req) => {
     const newSupplier = await SupplierModel.create({
       ...supplierData,
       password: hashedPassword, // save hashed password
-      licenseFiles: licenseFileData,
+      licenseFiles: licenseFileUrls,
       referralCode,
       subscription: {
           plan: trialPlan._id,
@@ -189,6 +196,12 @@ export const PUT = authMiddlewareAdmin(async (req) => {
     // Remove files that were marked for deletion
     if (removedLicenseFiles && Array.isArray(removedLicenseFiles)) {
       console.log("Debug backend - Files to remove:", removedLicenseFiles.length);
+      // Delete files from VPS storage
+      for (const fileUrl of removedLicenseFiles) {
+        if (fileUrl && fileUrl.startsWith('http')) {
+          await deleteFile(fileUrl);
+        }
+      }
       finalLicenseFiles = finalLicenseFiles.filter((file) => !removedLicenseFiles.includes(file));
       console.log("Debug backend - Files after removal:", finalLicenseFiles.length);
     }
@@ -196,9 +209,15 @@ export const PUT = authMiddlewareAdmin(async (req) => {
     // Handle new license files
     if (licenseFiles && Array.isArray(licenseFiles)) {
       console.log("Debug backend - New files to add:", licenseFiles.length);
-      for (const file of licenseFiles) {
+      for (let i = 0; i < licenseFiles.length; i++) {
+        const file = licenseFiles[i];
         if (file && file.startsWith("data:")) {
-          finalLicenseFiles.push(file);
+          const fileName = `supplier-${Date.now()}-license-${i}`;
+          const fileUrl = await uploadBase64(file, fileName);
+          
+          if (fileUrl) {
+            finalLicenseFiles.push(fileUrl);
+          }
         }
       }
       console.log("Debug backend - Final files count:", finalLicenseFiles.length);
@@ -231,6 +250,15 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
 
     if (!deletedSupplier) {
       return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
+    }
+    
+    // Delete license files from VPS storage
+    if (deletedSupplier.licenseFiles && Array.isArray(deletedSupplier.licenseFiles)) {
+      for (const fileUrl of deletedSupplier.licenseFiles) {
+        if (fileUrl && fileUrl.startsWith('http')) {
+          await deleteFile(fileUrl);
+        }
+      }
     }
 
     return NextResponse.json({ message: "Supplier deleted successfully" }, { status: 200 });

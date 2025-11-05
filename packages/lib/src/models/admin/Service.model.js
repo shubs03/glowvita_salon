@@ -17,7 +17,7 @@ const serviceSchema = new mongoose.Schema({
     required: true,
   },
   serviceImage: {
-    type: String,
+    type: String, // URL to the uploaded image
     trim: true,
   },
   createdAt: {

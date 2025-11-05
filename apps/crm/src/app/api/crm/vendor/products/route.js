@@ -4,6 +4,7 @@ import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import ProductCategoryModel from "@repo/lib/models/admin/ProductCategory";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import { authMiddlewareCrm } from "../../../../../middlewareCrm.js";
+import mongoose from 'mongoose';
 
 // GET - Fetch all vendor products (public endpoint)
 const getProducts = async (req) => {
@@ -154,13 +155,31 @@ export const POST = authMiddlewareCrm(createProduct, ["vendor"]);
 export const PUT = authMiddlewareCrm(async (req) => {
   try {
     await _db(); // Ensure database connection
-    const { id, productImage, category, status, ...updateData } = await req.json();
+    const body = await req.json();
+    console.log("Vendor products PUT request body:", body);
+    // Extract ID and other fields from the body object
+    const { id: bodyId, productImage, category, status, ...updateData } = body;
+    const id = bodyId || body._id;
+    console.log("Extracted ID:", id);
 
     if (!id) {
+      console.log("ID is missing from request body");
       return NextResponse.json({ 
         success: false,
         message: "ID is required for update" 
       }, { status: 400 });
+    }
+    
+    // Validate that ID is a string
+    if (typeof id !== 'string') {
+      console.log("ID is not a string:", id);
+      return NextResponse.json({ success: false, message: "ID must be a string" }, { status: 400 });
+    }
+    
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.log("Invalid product ID format:", id);
+      return NextResponse.json({ success: false, message: "Invalid product ID format" }, { status: 400 });
     }
     
     if (updateData.price !== undefined && updateData.price < 0) {
@@ -182,15 +201,21 @@ export const PUT = authMiddlewareCrm(async (req) => {
       categoryId = categoryDoc._id;
     }
     
-    // Remove vendorId filter to allow updating any product with origin 'Vendor'
-    const existingProduct = await ProductModel.findOne({ _id: id, origin: 'Vendor' });
+    // Check that the product belongs to the vendor making the request
+    const vendorId = req.user._id;
+    if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+      console.log("Invalid vendor ID format:", vendorId);
+      return NextResponse.json({ success: false, message: "Invalid vendor ID format" }, { status: 400 });
+    }
+    
+    const existingProduct = await ProductModel.findOne({ _id: id, vendorId: vendorId, origin: 'Vendor' });
     if (!existingProduct) {
       return NextResponse.json({ success: false, message: "Product not found or you don't have permission to update it" }, { status: 404 });
     }
 
     const finalUpdateData = {
         ...updateData,
-        updatedBy: req.user._id,
+        updatedBy: vendorId,
         updatedAt: new Date()
     };
 
@@ -217,15 +242,47 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE a product
 export const DELETE = authMiddlewareCrm(async (req) => {
   try {
-    await _db(); // Ensure database connection
-    const { id } = await req.json();
+    // Ensure database connection
+    await _db();
+    const body = await req.json();
+    console.log("Vendor products DELETE request body:", body);
+    // Extract ID from the body object { id: '...' }
+    const id = body.id || body._id;
+    console.log("Extracted ID:", id);
 
     if (!id) {
+      console.log("ID is missing from request body");
       return NextResponse.json({ success: false, message: "ID is required for deletion" }, { status: 400 });
     }
 
-    // Remove vendorId filter to allow deleting any product with origin 'Vendor'
-    const deletedProduct = await ProductModel.findOneAndDelete({ _id: id, origin: 'Vendor' });
+    // Validate that ID is a string
+    if (typeof id !== 'string') {
+      console.log("ID is not a string:", id);
+      return NextResponse.json({ success: false, message: "ID must be a string" }, { status: 400 });
+    }
+    
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.log("Invalid product ID format:", id);
+      return NextResponse.json({ success: false, message: "Invalid product ID format" }, { status: 400 });
+    }
+    
+    const vendorId = req.user._id;
+    if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+      console.log("Invalid vendor ID format:", vendorId);
+      return NextResponse.json({ success: false, message: "Invalid vendor ID format" }, { status: 400 });
+    }
+
+    // Check that the product belongs to the vendor making the request
+    let deletedProduct;
+    try {
+      deletedProduct = await ProductModel.findOneAndDelete({ _id: id, vendorId: vendorId, origin: 'Vendor' });
+      console.log("Delete operation result:", deletedProduct);
+    } catch (dbError) {
+      console.error("Database error during deletion:", dbError);
+      console.error("Database error stack:", dbError.stack);
+      return NextResponse.json({ success: false, message: "Database error during deletion", error: dbError.message }, { status: 500 });
+    }
 
     if (!deletedProduct) {
       return NextResponse.json({ success: false, message: "Product not found or you don't have permission to delete it" }, { status: 404 });

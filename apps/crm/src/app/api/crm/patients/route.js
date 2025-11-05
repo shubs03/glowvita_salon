@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import PatientModel from '../../../../../../../packages/lib/src/models/Vendor/Patient.model.js';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
+import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
 
@@ -45,9 +46,26 @@ export const POST = authMiddlewareCrm(async (req) => {
       return NextResponse.json({ success: false, message: 'Patient with this email or phone already exists' }, { status: 400 });
     }
 
+    // Handle profile image upload if provided
+    let profileImageUrl = patientData.profileImage || '';
+    if (patientData.profileImage) {
+      const fileName = `patient-${doctorId}-${Date.now()}`;
+      const imageUrl = await uploadBase64(patientData.profileImage, fileName);
+      
+      if (!imageUrl) {
+        return NextResponse.json(
+          { success: false, message: "Failed to upload profile image" },
+          { status: 500 }
+        );
+      }
+      
+      profileImageUrl = imageUrl;
+    }
+
     // Create new patient
     const newPatient = new PatientModel({
       ...patientData,
+      profileImage: profileImageUrl,
       doctorId,
       lastConsultation: new Date(),
     });
@@ -89,6 +107,39 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
     if (existingPatient) {
       return NextResponse.json({ success: false, message: 'Patient with this email or phone already exists' }, { status: 400 });
+    }
+
+    // Handle profile image upload if provided
+    if (updateData.profileImage !== undefined) {
+      if (updateData.profileImage) {
+        // Upload new image to VPS
+        const fileName = `patient-${doctorId}-${Date.now()}`;
+        const imageUrl = await uploadBase64(updateData.profileImage, fileName);
+        
+        if (!imageUrl) {
+          return NextResponse.json(
+            { success: false, message: "Failed to upload profile image" },
+            { status: 500 }
+          );
+        }
+        
+        // Delete old image from VPS if it exists
+        const oldPatient = await PatientModel.findById(id);
+        if (oldPatient && oldPatient.profileImage) {
+          await deleteFile(oldPatient.profileImage);
+        }
+        
+        updateData.profileImage = imageUrl;
+      } else {
+        // If image is null/empty, remove it
+        updateData.profileImage = '';
+        
+        // Delete old image from VPS if it exists
+        const oldPatient = await PatientModel.findById(id);
+        if (oldPatient && oldPatient.profileImage) {
+          await deleteFile(oldPatient.profileImage);
+        }
+      }
     }
 
     const updatedPatient = await PatientModel.findOneAndUpdate(
