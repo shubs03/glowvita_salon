@@ -1,5 +1,3 @@
-
-      
 {
   "name": "@repo/lib",
   "version": "0.0.0",
@@ -45,6 +43,7 @@
     "./stateCity": "./src/state-city.json",
     "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",
     "./models/Marketing/SmsPackage.model": "./src/models/Marketing/SmsPackage.model.js",
+    "./models/Marketing/SmsPurchaseHistory.model": "./src/models/Marketing/SmsPurchaseHistory.model.js",
     "./models/Marketing/Campaign.model": "./src/models/Marketing/Campaign.model.js",
     "./models/Marketing/socialMediaTemplate.model": "./src/models/Marketing/socialMediaTemplate.model.js"
   },
@@ -66,5 +65,3 @@
   },
   "type": "module"
 }
-
-    

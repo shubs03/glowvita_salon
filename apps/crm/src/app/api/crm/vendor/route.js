@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SubscriptionPlanModel from '@repo/lib/models/admin/SubscriptionPlan.model';
 import VendorWorkingHours from '@repo/lib/models/Vendor/VendorWorkingHours.model';
+import SmsTransaction from '@repo/lib/models/Marketing/SmsPurchaseHistory.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 
@@ -45,6 +46,23 @@ export const GET = authMiddlewareCrm(async (req) => {
                 message: "Vendor not found" 
             }, { status: 404 });
         }
+
+        // Get the active SMS package information
+        let activePackageSmsCount = 0;
+        const activePackages = await SmsTransaction.find({ 
+          userId: vendorId,
+          userType: 'vendor',
+          status: 'active',
+          expiryDate: { $gte: new Date() }
+        }).sort({ purchaseDate: -1 });
+        
+        if (activePackages.length > 0) {
+          // Use the most recent active package
+          activePackageSmsCount = activePackages[0].smsCount;
+        }
+
+        // Add the active package SMS count to the response (this represents the current balance)
+        vendor.currentSmsBalance = activePackageSmsCount;  // SMS count from active package
 
         // Fetch working hours for the vendor
         try {
@@ -174,22 +192,45 @@ export const PUT = authMiddlewareCrm(async (req) => {
                         }
                     });
                 } else if (field === 'documents' && typeof body[field] === 'object') {
-                    // For documents, we'll handle the specific document types
-                    if (body[field].aadharCard !== undefined) {
-                        vendor.documents.aadharCard = body[field].aadharCard;
-                    }
-                    if (body[field].udyogAadhar !== undefined) {
-                        vendor.documents.udyogAadhar = body[field].udyogAadhar;
-                    }
-                    if (body[field].udhayamCert !== undefined) {
-                        vendor.documents.udhayamCert = body[field].udhayamCert;
-                    }
-                    if (body[field].shopLicense !== undefined) {
-                        vendor.documents.shopLicense = body[field].shopLicense;
-                    }
-                    if (body[field].panCard !== undefined) {
-                        vendor.documents.panCard = body[field].panCard;
-                    }
+                    // For documents, we'll handle the specific document types and their status fields
+                    const documentFields = [
+                        'aadharCard', 'udyogAadhar', 'udhayamCert', 
+                        'shopLicense', 'panCard', 'otherDocs',
+                        // Status fields
+                        'aadharCardStatus', 'udyogAadharStatus', 'udhayamCertStatus',
+                        'shopLicenseStatus', 'panCardStatus',
+                        // Rejection reason fields
+                        'aadharCardRejectionReason', 'udyogAadharRejectionReason',
+                        'udhayamCertRejectionReason', 'shopLicenseRejectionReason',
+                        'panCardRejectionReason',
+                        // Admin rejection reason fields
+                        'aadharCardAdminRejectionReason', 'udyogAadharAdminRejectionReason',
+                        'udhayamCertAdminRejectionReason', 'shopLicenseAdminRejectionReason',
+                        'panCardAdminRejectionReason'
+                    ];
+                    
+                    documentFields.forEach(docField => {
+                        if (body[field][docField] !== undefined) {
+                            // Special validation for rejection reasons
+                            if (docField.includes('RejectionReason')) {
+                                const baseFieldName = docField.replace('RejectionReason', '').replace('Admin', '');
+                                const status = body[field][`${baseFieldName}Status`];
+                                
+                                // Rejection reason is required when status is rejected
+                                if (status === 'rejected' && !body[field][docField] && !docField.includes('Admin')) {
+                                    throw new Error(`Rejection reason is required for rejected ${baseFieldName}`);
+                                }
+                                
+                                // Clear rejection reason if status is not rejected
+                                if (status !== 'rejected') {
+                                    vendor.documents[docField] = null;
+                                    return;
+                                }
+                            }
+                            
+                            vendor.documents[docField] = body[field][docField];
+                        }
+                    });
                 } else {
                     vendor[field] = body[field];
                 }

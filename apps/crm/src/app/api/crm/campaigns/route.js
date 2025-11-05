@@ -77,7 +77,7 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
       }
     );
   }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // POST: Create a new campaign
 export const POST = authMiddlewareCrm(async (req, ctx) => {
@@ -226,7 +226,7 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       }
     );
   }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // PUT: Update an existing campaign
 export const PUT = authMiddlewareCrm(async (req, ctx) => {
@@ -300,7 +300,7 @@ export const PUT = authMiddlewareCrm(async (req, ctx) => {
       }
     );
   }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // DELETE: Delete a campaign
 export const DELETE = authMiddlewareCrm(async (req, ctx) => {
@@ -368,4 +368,4 @@ export const DELETE = authMiddlewareCrm(async (req, ctx) => {
       }
     );
   }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
