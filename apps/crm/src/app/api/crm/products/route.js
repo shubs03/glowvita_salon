@@ -3,6 +3,7 @@ import _db from "../../../../../../../packages/lib/src/db.js";
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import ProductCategoryModel from "../../../../../../../packages/lib/src/models/admin/ProductCategory.model.js";
 import { authMiddlewareCrm } from "../../../../middlewareCrm";
+import mongoose from 'mongoose';
 import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
@@ -280,25 +281,66 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE a product
 export const DELETE = authMiddlewareCrm(async (req) => {
   try {
-    const { id } = await req.json();
+    console.log("DELETE request received");
+    // Ensure database connection
+    await _db();
+    const body = await req.json();
+    console.log("Request body:", body);
+    // Extract ID from the body object { id: '...' }
+    const id = body.id || body._id;
+    console.log("Extracted ID:", id);
 
     if (!id) {
+      console.log("ID is missing from request body");
       return NextResponse.json({ success: false, message: "ID is required for deletion" }, { status: 400 });
     }
 
+    // Validate that ID is a string
+    if (typeof id !== 'string') {
+      console.log("ID is not a string:", id);
+      return NextResponse.json({ success: false, message: "ID must be a string" }, { status: 400 });
+    }
+
+    console.log("Product ID to delete:", id);
+
     // Make sure we have a valid vendor ID (either from _id or userId field in the JWT payload)
+    console.log("Full user object:", JSON.stringify(req.user, null, 2));
     const vendorId = req.user._id || req.user.userId;
+    console.log("Vendor ID from request:", vendorId);
     
     if (!vendorId) {
+        console.log("Unable to determine vendor ID from authentication");
         return NextResponse.json(
             { success: false, message: "Unable to determine vendor ID from authentication" },
             { status: 400 }
         );
     }
     
-    const deletedProduct = await ProductModel.findOneAndDelete({ _id: id, vendorId: vendorId });
+    console.log("Attempting to delete product with ID:", id, "for vendor:", vendorId);
+    
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.log("Invalid product ID format:", id);
+      return NextResponse.json({ success: false, message: "Invalid product ID format" }, { status: 400 });
+    }
+    
+    if (!mongoose.Types.ObjectId.isValid(vendorId)) {
+      console.log("Invalid vendor ID format:", vendorId);
+      return NextResponse.json({ success: false, message: "Invalid vendor ID format" }, { status: 400 });
+    }
+    
+    let deletedProduct;
+    try {
+      deletedProduct = await ProductModel.findOneAndDelete({ _id: id, vendorId: vendorId });
+      console.log("Delete operation result:", deletedProduct);
+    } catch (dbError) {
+      console.error("Database error during deletion:", dbError);
+      console.error("Database error stack:", dbError.stack);
+      return NextResponse.json({ success: false, message: "Database error during deletion", error: dbError.message }, { status: 500 });
+    }
 
     if (!deletedProduct) {
+      console.log("Product not found or user doesn't have permission to delete it");
       return NextResponse.json({ success: false, message: "Product not found or you don't have permission to delete it" }, { status: 404 });
     }
     
@@ -310,6 +352,7 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     return NextResponse.json({ success: true, message: "Product deleted successfully" });
   } catch (error) {
     console.error("Error deleting product:", error);
+    console.error("Error stack:", error.stack);
     return NextResponse.json({ success: false, message: "Error deleting product", error: error.message }, { status: 500 });
   }
 }, ["vendor", "supplier"]);

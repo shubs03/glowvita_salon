@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import _db from '@repo/lib/db';
-import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
+import _db from '../../../../../../../packages/lib/src/db.js';
+import SupplierModel from '../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js';
+import SmsTransaction from '../../../../../../../packages/lib/src/models/Marketing/SmsPurchaseHistory.model.js';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
@@ -18,7 +19,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         return NextResponse.json({ message: "Supplier ID is required" }, { status: 400 });
     }
 
-    const supplier = await SupplierModel.findById(supplierId).select('firstName lastName shopName description email mobile country state city pincode address supplierType businessRegistrationNo profileImage status referralCode licenseFiles subscription');
+    const supplier = await SupplierModel.findById(supplierId).select('firstName lastName shopName description email mobile country state city pincode address supplierType businessRegistrationNo profileImage status referralCode licenseFiles subscription smsBalance');
     
     console.log("Supplier data from DB:", supplier);
 
@@ -26,7 +27,25 @@ export const GET = authMiddlewareCrm(async (req) => {
         return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
     }
 
-    return NextResponse.json(supplier, { status: 200 });
+    // Get the active SMS package information
+    let activePackageSmsCount = 0;
+    const activePackages = await SmsTransaction.find({ 
+      userId: supplierId,
+      userType: 'supplier',
+      status: 'active',
+      expiryDate: { $gte: new Date() }
+    }).sort({ purchaseDate: -1 });
+    
+    if (activePackages.length > 0) {
+      // Use the most recent active package
+      activePackageSmsCount = activePackages[0].smsCount;
+    }
+
+    // Add the active package SMS count to the response (this represents the current balance)
+    const supplierResponse = supplier.toObject();
+    supplierResponse.currentSmsBalance = activePackageSmsCount;  // SMS count from active package
+
+    return NextResponse.json(supplierResponse, { status: 200 });
   } catch (error) {
     console.error("Error fetching supplier profile:", error);
     return NextResponse.json({ message: "Failed to fetch supplier profile" }, { status: 500 });
@@ -39,9 +58,13 @@ export const PUT = authMiddlewareCrm(async (req) => {
     const supplierId = req.user.userId || req.user._id;
     const body = await req.json();
 
+    console.log('Updating supplier profile for ID:', supplierId);
+    console.log('Update data:', body);
+
     // Find the supplier
     const supplier = await SupplierModel.findById(supplierId);
     if (!supplier) {
+      console.log('Supplier not found with ID:', supplierId);
       return NextResponse.json({ 
         success: false,
         message: "Supplier not found" 
@@ -53,6 +76,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
     // Remove _id from body if present to prevent accidental updates
     delete body._id;
+    delete body.id; // Also remove id if present
 
     // Handle profile image upload if provided
     if (body.profileImage !== undefined) {
@@ -110,19 +134,41 @@ export const PUT = authMiddlewareCrm(async (req) => {
     // Update allowed fields only
     const allowedFields = [
       'firstName', 'lastName', 'shopName', 'description', 'email', 'mobile',
-      'state', 'city', 'pincode', 'address', 'supplierType',
-      'businessRegistrationNo', 'profileImage', 'licenseFiles'
+      'country', 'state', 'city', 'pincode', 'address', 'supplierType',
+      'businessRegistrationNo', 'profileImage', 'licenseFiles', 'referralCode'
     ];
+
+    console.log('Updating fields:', allowedFields);
 
     // Update fields
     allowedFields.forEach(field => {
       if (body[field] !== undefined) {
+        console.log(`Updating field ${field} with value:`, body[field]);
         supplier[field] = body[field];
       }
     });
 
+    // Handle subscription updates carefully
+    if (body.subscription !== undefined) {
+      // Only update subscription if it contains meaningful data
+      if (body.subscription && 
+          (body.subscription.plan || body.subscription.endDate || 
+           body.subscription.startDate || (body.subscription.history && body.subscription.history.length > 0))) {
+        
+        // Validate that required fields are present if any subscription data is provided
+        if (body.subscription.plan && body.subscription.endDate) {
+          supplier.subscription = body.subscription;
+        }
+        // If partial data is provided, we'll let the model's pre-save hook handle assigning a default subscription
+      }
+      // If subscription is explicitly set to null or empty object, let the model's pre-save hook assign a default
+    }
+    // If subscription is not mentioned in the update, preserve existing (do nothing)
+
     // Set updatedAt timestamp
     supplier.updatedAt = new Date();
+
+    console.log('Saving supplier with data:', supplier.toObject());
 
     const updatedSupplier = await supplier.save();
     
@@ -130,6 +176,8 @@ export const PUT = authMiddlewareCrm(async (req) => {
     const supplierResponse = updatedSupplier.toObject();
     delete supplierResponse.password;
     delete supplierResponse.__v;
+
+    console.log('Supplier updated successfully:', supplierResponse);
 
     return NextResponse.json({ 
       success: true,
@@ -145,6 +193,25 @@ export const PUT = authMiddlewareCrm(async (req) => {
         success: false,
         message: `Supplier with this ${field} already exists` 
       }, { status: 409 });
+    }
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return NextResponse.json({ 
+        success: false,
+        message: "Validation error", 
+        errors: errors
+      }, { status: 400 });
+    }
+    
+    // Handle custom validation errors
+    if (error.name === 'Error') {
+      return NextResponse.json({ 
+        success: false,
+        message: "Validation error", 
+        errors: [error.message]
+      }, { status: 400 });
     }
     
     return NextResponse.json({ 

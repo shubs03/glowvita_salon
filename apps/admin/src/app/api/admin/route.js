@@ -143,7 +143,7 @@ export const PUT = authMiddlewareAdmin(
     }
 
     const updatedAdmin = await AdminUserModel.findByIdAndUpdate(
-      _id,
+      adminId,
       { ...body, updatedAt: Date.now() },
       { new: true }
     ).select("-password");
@@ -159,6 +159,27 @@ export const PUT = authMiddlewareAdmin(
 
 export const DELETE = authMiddlewareAdmin(
   async (req) => {
+    const url = new URL(req.url);
+    const adminId = url.searchParams.get('id');
+    
+    if (!adminId) {
+      const body = await req.json();
+      // Fallback to body if ID not in query params
+      const bodyId = body.id || body._id;
+      if (!bodyId) {
+        return Response.json({ message: "Admin ID is required" }, { status: 400 });
+      }
+      // Use body ID if query param not available
+      const deleted = await AdminUserModel.findByIdAndDelete(bodyId);
+
+      if (!deleted) {
+        return Response.json({ message: "Admin not found" }, { status: 404 });
+      }
+
+      return Response.json({ message: "Admin deleted successfully" });
+    }
+
+    const deleted = await AdminUserModel.findByIdAndDelete(adminId);
     const { _id } = await req.json();
     
     // Get admin to check for profile image

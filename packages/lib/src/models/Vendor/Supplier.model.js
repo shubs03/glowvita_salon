@@ -41,6 +41,11 @@ const supplierSchema = new mongoose.Schema({
   },
   products: { type: Number, default: 0 },
   sales: { type: Number, default: 0 },
+  smsBalance: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   status: {
     type: String,
     enum: ["Approved", "Pending", "Rejected"],
@@ -50,12 +55,12 @@ const supplierSchema = new mongoose.Schema({
     plan: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SubscriptionPlan",
-      required: true
+      required: false // Made this not required by default
     },
     status: {
       type: String,
-      enum: ["Active", "Expired"],
-      default: "Active",
+      enum: ["Active", "Expired", "Pending"],
+      default: "Pending",
     },
     startDate: {
       type: Date,
@@ -63,7 +68,7 @@ const supplierSchema = new mongoose.Schema({
     },
     endDate: {
       type: Date,
-      required: true
+      required: false // Made this not required by default
     },
     history: {
       type: [{
@@ -99,7 +104,61 @@ const supplierSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-supplierSchema.pre("save", function (next) {
+// Pre-validate middleware to handle subscription validation properly
+supplierSchema.pre("validate", function(next) {
+  // If subscription object exists but is empty or incomplete, remove it to avoid validation issues
+  if (this.subscription) {
+    const hasValidSubscription = this.subscription.plan && this.subscription.endDate;
+    
+    // If subscription exists but doesn't have required fields, remove it
+    if (!hasValidSubscription) {
+      this.subscription = undefined;
+    }
+  }
+  next();
+});
+
+// Pre-save middleware to ensure suppliers always have a valid subscription
+supplierSchema.pre("save", async function(next) {
+  // Only assign default subscription if none exists or if it's invalid
+  if (!this.subscription || !this.subscription.plan || !this.subscription.endDate) {
+    try {
+      // Import SubscriptionPlan model dynamically to avoid circular dependencies
+      const SubscriptionPlan = (await import("@repo/lib/models/admin/SubscriptionPlan.model")).default;
+      
+      // Check if a trial plan already exists
+      let trialPlan = await SubscriptionPlan.findOne({ name: 'Trial Plan' });
+      
+      // If no trial plan exists, create one
+      if (!trialPlan) {
+        trialPlan = await SubscriptionPlan.create({
+          name: 'Trial Plan',
+          description: 'Default trial plan for new suppliers',
+          price: 0,
+      duration: 30, // 30 days
+          features: ['Basic features'],
+          userType: 'supplier',
+          status: 'active'
+        });
+      }
+      
+      // Set default subscription
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + trialPlan.duration);
+      
+      this.subscription = {
+        plan: trialPlan._id,
+        status: 'Active',
+        startDate: new Date(),
+        endDate: endDate,
+        history: []
+      };
+    } catch (error) {
+      console.error("Error assigning default subscription to supplier:", error);
+      // Don't block supplier creation if subscription assignment fails
+    }
+  }
+  
   this.updatedAt = new Date();
   next();
 });

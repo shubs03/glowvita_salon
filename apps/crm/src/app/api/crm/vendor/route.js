@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SubscriptionPlanModel from '@repo/lib/models/admin/SubscriptionPlan.model';
 import VendorWorkingHours from '@repo/lib/models/Vendor/VendorWorkingHours.model';
+import SmsTransaction from '@repo/lib/models/Marketing/SmsPurchaseHistory.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
@@ -75,6 +76,23 @@ export const GET = authMiddlewareCrm(async (req) => {
                 message: "Vendor not found" 
             }, { status: 404 });
         }
+
+        // Get the active SMS package information
+        let activePackageSmsCount = 0;
+        const activePackages = await SmsTransaction.find({ 
+          userId: vendorId,
+          userType: 'vendor',
+          status: 'active',
+          expiryDate: { $gte: new Date() }
+        }).sort({ purchaseDate: -1 });
+        
+        if (activePackages.length > 0) {
+          // Use the most recent active package
+          activePackageSmsCount = activePackages[0].smsCount;
+        }
+
+        // Add the active package SMS count to the response (this represents the current balance)
+        vendor.currentSmsBalance = activePackageSmsCount;  // SMS count from active package
 
         // Fetch working hours for the vendor
         try {
