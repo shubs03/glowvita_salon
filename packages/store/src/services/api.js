@@ -146,7 +146,8 @@ export const glowvitaApi = createApi({
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
-    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment"
+    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
+    "Consultations", "Consultation", "Expense"
   ],
 
   endpoints: (builder) => ({
@@ -1157,6 +1158,32 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Staff"],
     }),
 
+    // Expense Endpoints
+    getExpenses: builder.query({
+      query: () => ({ url: "/crm/expenses", method: "GET" }),
+      providesTags: ["Expense"],
+    }),
+    createExpense: builder.mutation({
+      query: (expense) => ({ url: "/crm/expenses", method: "POST", body: expense }),
+      invalidatesTags: ["Expense"],
+    }),
+    updateExpense: builder.mutation({
+      query: (expense) => ({ url: "/crm/expenses", method: "PUT", body: expense }),
+      invalidatesTags: ["Expense"],
+    }),
+    deleteExpense: builder.mutation({
+      query: (id) => ({ url: "/crm/expenses", method: "DELETE", body: { id } }),
+      invalidatesTags: ["Expense"],
+    }),
+    getCrmExpenseTypes: builder.query({
+      query: () => ({ url: "/crm/superdata?type=expenseType", method: "GET" }),
+      providesTags: ["SuperData"],
+    }),
+    getCrmPaymentModes: builder.query({
+      query: () => ({ url: "/crm/superdata?type=paymentMode", method: "GET" }),
+      providesTags: ["SuperData"],
+    }),
+
     //working hours endpoint
     getWorkingHours: builder.query({
       query: () => ({ url: "/crm/workinghours", method: "GET" }),
@@ -1399,6 +1426,69 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Patient"],
     }),
 
+    // Doctor Consultation Endpoints (Web App - Physical & Video Consultations)
+    getConsultations: builder.query({
+      query: ({ doctorId, patientId, phoneNumber, status, consultationType, startDate, endDate, page = 1, limit = 50 } = {}) => {
+        const params = new URLSearchParams();
+        if (doctorId) params.append('doctorId', doctorId);
+        if (patientId) params.append('patientId', patientId);
+        if (phoneNumber) params.append('phoneNumber', phoneNumber);
+        if (status) params.append('status', status);
+        if (consultationType) params.append('consultationType', consultationType);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+        return { url: `/consultations?${params.toString()}`, method: "GET" };
+      },
+      providesTags: (result = []) => [
+        'Consultations',
+        ...((result.data?.consultations || []).map(({ _id }) => ({ type: 'Consultation', id: _id })))
+      ],
+    }),
+    getBookedSlots: builder.query({
+      query: ({ doctorId, date }) => {
+        const params = new URLSearchParams();
+        if (doctorId) params.append('doctorId', doctorId);
+        if (date) params.append('date', date);
+        return { url: `/consultations/booked-slots?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ['Consultations'],
+    }),
+    getConsultationById: builder.query({
+      query: (id) => ({ url: `/consultations/${id}`, method: "GET" }),
+      providesTags: (result, error, id) => [{ type: 'Consultation', id }],
+    }),
+    createConsultation: builder.mutation({
+      query: (consultationData) => ({
+        url: "/consultations",
+        method: "POST",
+        body: consultationData,
+      }),
+      invalidatesTags: ['Consultations'], // This will also refetch booked slots
+    }),
+    updateConsultation: builder.mutation({
+      query: ({ consultationId, ...updates }) => ({
+        url: "/consultations",
+        method: "PUT",
+        body: { consultationId, ...updates },
+      }),
+      invalidatesTags: (result, error, { consultationId }) => [
+        { type: 'Consultation', id: consultationId },
+        'Consultations'
+      ],
+    }),
+    cancelConsultation: builder.mutation({
+      query: ({ id, reason }) => ({
+        url: `/consultations?id=${id}&reason=${encodeURIComponent(reason || 'Cancelled by user')}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Consultation', id },
+        'Consultations'
+      ],
+    }),
+
     getClientOrders: builder.query({
       query: () => ({ url: "/client/orders", method: "GET" }),
       providesTags: ["ClientOrder"],
@@ -1576,6 +1666,12 @@ export const {
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
+  useGetExpensesQuery,
+  useCreateExpenseMutation,
+  useUpdateExpenseMutation,
+  useDeleteExpenseMutation,
+  useGetCrmExpenseTypesQuery,
+  useGetCrmPaymentModesQuery,
   useGetWorkingHoursQuery,
   useUpdateWorkingHoursMutation,
   useAddSpecialHoursMutation,
@@ -1637,6 +1733,13 @@ export const {
   useCreatePatientMutation,
   useUpdatePatientMutation,
   useDeletePatientMutation,
+  // Consultation Hooks (Physical & Video)
+  useGetConsultationsQuery,
+  useGetBookedSlotsQuery,
+  useGetConsultationByIdQuery,
+  useCreateConsultationMutation,
+  useUpdateConsultationMutation,
+  useCancelConsultationMutation,
   // Public Appointment Hooks
   useGetPublicAppointmentsQuery,
   useCreatePublicAppointmentMutation,

@@ -437,9 +437,31 @@ export default function DoctorDetailsPage({
                   <Button
                     variant="outline"
                     className="w-full py-3 text-sm font-semibold gap-2 border-2"
-                    onClick={() =>
-                      router.push(`/doctors/${doctor.id}/video-consultation`)
-                    }
+                    onClick={() => {
+                      // Encode doctor data as base64 JSON (same pattern as physical consultation)
+                      console.log('🎥 Video Consultation - Doctor object:', doctor);
+                      console.log('🆔 Doctor ID:', doctor.id);
+                      
+                      const doctorData = {
+                        id: doctor.id,
+                        name: doctor.name,
+                        specialty: doctor.specialty,
+                        fee: doctor.consultationFee,
+                        image: doctor.profileImage || '',
+                        rating: doctor.rating,
+                        reviews: doctor.totalReviews,
+                        clinic: doctor.clinicName || '',
+                        address: doctor.clinicAddress || '',
+                        experience: doctor.experience
+                      };
+                      
+                      console.log('📦 Doctor data to encode:', doctorData);
+                      const encoded = btoa(JSON.stringify(doctorData));
+                      console.log('🔐 Encoded data:', encoded);
+                      console.log('🔗 Navigation URL:', `/doctors/video-consultation?data=${encoded}`);
+                      
+                      router.push(`/doctors/video-consultation?data=${encoded}`);
+                    }}
                   >
                     <Video className="h-4 w-4" />
                     Video Consultation

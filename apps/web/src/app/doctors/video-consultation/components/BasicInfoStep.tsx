@@ -6,15 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { User, FileText } from "lucide-react";
 import { ConsultationData } from '../page';
 
-interface BasicDetailsFormProps {
+interface BasicInfoStepProps {
   data: ConsultationData;
   onUpdate: (updates: Partial<ConsultationData>) => void;
+  currentStep: number;
+  setCurrentStep: (step: number) => void;
 }
 
-export default function BasicDetailsForm({ data, onUpdate }: BasicDetailsFormProps) {
+export function BasicInfoStep({ data, onUpdate }: BasicInfoStepProps) {
   return (
     <div className="w-full">
-      {/* Header */}
+      {/* Simplified Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 bg-primary/10 rounded-full text-primary">
@@ -85,16 +87,16 @@ export default function BasicDetailsForm({ data, onUpdate }: BasicDetailsFormPro
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="reason" className="text-base">Reason for Consultation *</Label>
+                <Label htmlFor="concerns" className="text-base">Reason for Consultation *</Label>
                 <textarea
-                  id="reason"
-                  placeholder="Describe your symptoms, conditions, or reason for visiting the doctor..."
-                  value={data.reason}
-                  onChange={(e) => onUpdate({ reason: e.target.value })}
+                  id="concerns"
+                  placeholder="Describe your symptoms, conditions, or reason for consulting the doctor..."
+                  value={data.concerns}
+                  onChange={(e) => onUpdate({ concerns: e.target.value })}
                   className="w-full min-h-[180px] p-4 text-base border border-input rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Please provide as much detail as possible to help the doctor prepare for your visit
+                  Please provide as much detail as possible to help the doctor prepare for your consultation
                 </p>
               </div>
             </CardContent>
@@ -103,22 +105,16 @@ export default function BasicDetailsForm({ data, onUpdate }: BasicDetailsFormPro
           {/* Summary Card */}
           <Card className="h-fit">
             <CardHeader className="pb-4">
-              <CardTitle className="text-lg">Appointment Summary</CardTitle>
+              <CardTitle className="text-lg">Consultation Summary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Doctor</span>
-                <span className="font-medium">{data.selectedDoctorName}</span>
+                <span className="font-medium">{data.doctorName}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Specialty</span>
-                <span className="font-medium">{data.selectedDoctorSpecialty}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Date & Time</span>
-                <span className="font-medium">
-                  {data.selectedDate} at {data.selectedTime}
-                </span>
+                <span className="font-medium">{data.doctorSpecialty}</span>
               </div>
               <div className="flex justify-between pt-2 border-t">
                 <span className="font-medium">Consultation Fee</span>

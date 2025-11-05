@@ -36,6 +36,8 @@ const initialSchedule: DaySchedule[] = [
 export default function TimetablePage() {
   const { user, role } = useCrmAuth();
   const [schedule, setSchedule] = useState<DaySchedule[]>(initialSchedule);
+  const [slotGap, setSlotGap] = useState<number>(20);
+  const [isSavingSlotGap, setIsSavingSlotGap] = useState(false);
   
   // Fetch working hours
   const { data: workingHoursData, isLoading, error, refetch } = useGetCrmDoctorWorkingHoursQuery(undefined, {
@@ -56,6 +58,11 @@ export default function TimetablePage() {
           : []
       }));
       setSchedule(transformedSchedule);
+      
+      // Set slot gap from API data
+      if (workingHoursData.slotGap !== undefined) {
+        setSlotGap(workingHoursData.slotGap);
+      }
     }
   }, [workingHoursData]);
 
@@ -86,6 +93,49 @@ export default function TimetablePage() {
     const newSchedule = [...schedule];
     newSchedule[dayIndex].slots.splice(slotIndex, 1);
     setSchedule(newSchedule);
+  };
+
+  const handleSaveSlotGap = async () => {
+    try {
+      // Validate slot gap
+      if (slotGap < 0 || slotGap > 60) {
+        toast.error('Invalid Value', { 
+          description: 'Slot gap must be between 0 and 60 minutes.' 
+        });
+        return;
+      }
+
+      console.log('Saving slotGap:', slotGap);
+      setIsSavingSlotGap(true);
+
+      const requestBody = { slotGap: slotGap };
+      console.log('Request body:', requestBody);
+
+      const response = await fetch('/api/crm/doctor-workinghours', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('Response status:', response.status);
+      
+      const responseData = await response.json();
+      console.log('Response data:', responseData);
+
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Failed to save slot gap');
+      }
+
+      toast.success('Slot gap saved successfully!');
+      refetch();
+    } catch (error: any) {
+      console.error('Error saving slot gap:', error);
+      toast.error(error.message || 'Failed to save slot gap.');
+    } finally {
+      setIsSavingSlotGap(false);
+    }
   };
 
   const handleSaveChanges = async () => {
@@ -172,6 +222,54 @@ export default function TimetablePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+            {/* Slot Gap Configuration */}
+            <div className="p-4 bg-muted/50 rounded-lg border border-border">
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="slotGap" className="text-base font-medium mb-2 block">
+                    Gap Between Slots (minutes)
+                  </Label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Set the buffer time between consecutive appointment slots
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 max-w-xs">
+                      <Input
+                        id="slotGap"
+                        type="number"
+                        min="0"
+                        max="60"
+                        value={slotGap}
+                        onChange={(e) => setSlotGap(parseInt(e.target.value) || 0)}
+                        className="text-lg"
+                        placeholder="20"
+                      />
+                    </div>
+                    <span className="text-muted-foreground">minutes</span>
+                    <Button 
+                      onClick={handleSaveSlotGap} 
+                      disabled={isSavingSlotGap}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      {isSavingSlotGap ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Gap'
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Each consultation is 20 minutes. Total interval: {20 + slotGap} minutes
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Weekly Schedule */}
             {schedule.map((daySchedule, dayIndex) => (
                 <div key={daySchedule.day} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between">

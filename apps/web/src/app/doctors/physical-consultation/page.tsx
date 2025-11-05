@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useGetDoctorWorkingHoursQuery } from '@repo/store/services/api';
+import { useGetDoctorWorkingHoursQuery, useCreateConsultationMutation } from '@repo/store/services/api';
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
-import { Calendar, User, Clock, CheckCircle, Home, Eye, ChevronRight } from "lucide-react";
+import { Calendar, User, Clock, CheckCircle, Home, Eye, ChevronRight, Loader2 } from "lucide-react";
 import { cn } from '@repo/ui/cn';
 import { TimeSlotSelection, BasicDetailsForm, NotificationConfirmation, AppointmentConfirmation } from './components';
 
@@ -69,6 +69,7 @@ export default function PhysicalConsultationPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [doctorId, setDoctorId] = useState<string>('');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [createConsultation, { isLoading: isCreating, isSuccess, isError, error }] = useCreateConsultationMutation();
   
   // Initialize doctor data from URL params
   const [consultationData, setConsultationData] = useState<ConsultationData>({
@@ -173,11 +174,50 @@ export default function PhysicalConsultationPage() {
     }
   };
 
-  const handleConfirmAppointment = () => {
-    // Generate a mock appointment ID
-    const appointmentId = `APT-${Date.now()}`;
-    updateConsultationData({ appointmentId });
-    handleNext();
+  const handleConfirmAppointment = async () => {
+    try {
+      // Prepare consultation data for API
+      const consultationPayload = {
+        // Doctor Information
+        doctorId: consultationData.selectedDoctorId,
+        doctorName: consultationData.selectedDoctorName,
+        doctorSpecialty: consultationData.selectedDoctorSpecialty,
+        doctorImage: consultationData.doctorImage,
+        doctorRating: consultationData.doctorRating,
+        doctorReviewCount: consultationData.doctorReviewCount,
+        doctorClinic: consultationData.doctorClinic,
+        doctorAddress: consultationData.doctorAddress,
+        
+        // Patient Information
+        patientName: consultationData.patientName,
+        phoneNumber: consultationData.phoneNumber,
+        email: consultationData.email,
+        reason: consultationData.reason,
+        
+        // Consultation Type & Details
+        consultationType: 'physical',
+        appointmentDate: consultationData.selectedDate,
+        appointmentTime: consultationData.selectedTime,
+        consultationFee: consultationData.consultationFee || 0,
+        duration: 20, // Default duration
+        
+        // Notification Preferences
+        whatsappNotifications: consultationData.whatsappNotifications,
+        smsNotifications: consultationData.smsNotifications,
+        emailNotifications: consultationData.emailNotifications,
+      };
+
+      const result = await createConsultation(consultationPayload).unwrap();
+      
+      if (result.success) {
+        // Update local state with the returned appointment ID
+        updateConsultationData({ appointmentId: result.data._id });
+        handleNext();
+      }
+    } catch (err: any) {
+      console.error('Error creating consultation:', err);
+      alert(err?.data?.message || 'Failed to book consultation. Please try again.');
+    }
   };
 
   return (
@@ -231,11 +271,18 @@ export default function PhysicalConsultationPage() {
           
           {currentStep < 4 ? (
             <Button
-              onClick={handleNext}
-              disabled={!isStepValid()}
+              onClick={currentStep === 3 ? handleConfirmAppointment : handleNext}
+              disabled={!isStepValid() || (currentStep === 3 && isCreating)}
               className="px-6"
             >
-              {currentStep === 3 ? 'Confirm Appointment' : 'Next'}
+              {currentStep === 3 && isCreating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Booking...
+                </>
+              ) : (
+                currentStep === 3 ? 'Confirm Appointment' : 'Next'
+              )}
             </Button>
           ) : (
             <div className="flex gap-3">
