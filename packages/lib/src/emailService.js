@@ -5,10 +5,12 @@ import nodemailer from 'nodemailer';
  * @param {Object} options - Email options
  * @param {string} options.to - Recipient email address
  * @param {string} options.subject - Email subject
- * @param {string} options.html - HTML content of the email
+ * @param {string} options.html - HTML content of the email (optional)
+ * @param {string} options.text - Plain text content of the email (optional)
+ * @param {Array} options.attachments - Array of attachment objects
  * @returns {Promise<Object>} - Result of the email sending operation
  */
-export async function sendEmail({ to, subject, html }) {
+export async function sendEmail({ to, subject, html, text, attachments = [] }) {
   try {
     console.log('Attempting to send email to:', to);
     
@@ -45,13 +47,27 @@ export async function sendEmail({ to, subject, html }) {
     await transporter.verify();
     console.log('SMTP connection verified successfully');
 
-    // Send email
-    const info = await transporter.sendMail({
+    // Prepare email options
+    const mailOptions = {
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
       to,
       subject,
-      html,
-    });
+    };
+
+    // Add HTML or text content
+    if (html) {
+      mailOptions.html = html;
+    } else if (text) {
+      mailOptions.text = text;
+    }
+
+    // Add attachments if provided
+    if (attachments && attachments.length > 0) {
+      mailOptions.attachments = attachments;
+    }
+
+    // Send email
+    const info = await transporter.sendMail(mailOptions);
 
     console.log('Email sent successfully:', info.messageId);
     return { success: true, messageId: info.messageId };

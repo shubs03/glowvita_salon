@@ -143,10 +143,11 @@ export const glowvitaApi = createApi({
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign",
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing",
     "Appointments", "ShippingCharge", "Order", "CrmProducts",
-    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
+    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart", "ClientCart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
-    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment"
+    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
+    "Billing", "VendorServices"
   ],
 
   endpoints: (builder) => ({
@@ -636,6 +637,18 @@ export const glowvitaApi = createApi({
       ],
     }),
 
+    updateVendorDocuments: builder.mutation({
+      query: ({ id, documents }) => ({
+        url: "/admin/vendor",
+        method: "PATCH",
+        body: { id, documents },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Vendor", id },
+        "Vendor",
+      ],
+    }),
+
     deleteVendor: builder.mutation({
       query: ({ id }) => ({
         url: "/admin/vendor",
@@ -1014,7 +1027,11 @@ export const glowvitaApi = createApi({
 
     // Products endpoints
     getCrmProducts: builder.query({
-      query: () => ({ url: "/crm/products", method: "GET" }),
+      query: ({ vendorId } = {}) => ({ 
+        url: "/crm/products", 
+        method: "GET",
+        params: vendorId ? { vendorId } : {}
+      }),
       providesTags: ["CrmProducts"],
       transformResponse: (response) => response.data || [],
     }),
@@ -1214,8 +1231,8 @@ export const glowvitaApi = createApi({
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (status) params.append('status', status);
-        params.append('page', page.toString());
-        params.append('limit', limit.toString());
+        params.append('page', (page || 1).toString());
+        params.append('limit', (limit || 100).toString());
         return { url: `/crm/clients?${params.toString()}`, method: "GET" };
       },
       providesTags: ["Client"],
@@ -1317,7 +1334,7 @@ export const glowvitaApi = createApi({
       providesTags: ["Vendor"],
     }),
 
-    // Cart Endpoints (CRM - for vendors)
+    // Cart Endpoints (CRM)
     getCart: builder.query({
       query: () => ({ url: "/crm/cart", method: "GET" }),
       providesTags: ["Cart"],
@@ -1335,7 +1352,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Cart"],
     }),
 
-    // Client Cart Endpoints (Web App - for customers)
+    // Client Cart Endpoints (Web App)
     getClientCart: builder.query({
       query: () => ({ url: "/client/cart", method: "GET" }),
       providesTags: ["ClientCart"],
@@ -1390,6 +1407,42 @@ export const glowvitaApi = createApi({
         body: { id },
       }),
       invalidatesTags: ["Patient"],
+    }),
+    // Billing Endpoints
+    createBilling: builder.mutation({
+      query: (billingData) => ({
+        url: "/crm/billing",
+        method: "POST",
+        body: billingData,
+      }),
+      invalidatesTags: ["Billing"],
+    }),
+    getBillingRecords: builder.query({
+      query: ({ vendorId, startDate, endDate, page = 1, limit = 50 } = {}) => {
+        const params = new URLSearchParams();
+        if (vendorId) params.append('vendorId', vendorId);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        params.append('page', (page || 1).toString());
+        params.append('limit', (limit || 50).toString());
+        return { url: `/crm/billing?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Billing"],
+    }),
+    getBillingById: builder.query({
+      query: (id) => ({ url: `/crm/billing/${id}`, method: "GET" }),
+      providesTags: (result, error, id) => [{ type: "Billing", id }],
+    }),
+    updateBilling: builder.mutation({
+      query: (billingData) => ({
+        url: "/crm/billing",
+        method: "PUT",
+        body: billingData,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Billing", id },
+        "Billing",
+      ],
     }),
 
     getClientOrders: builder.query({
@@ -1604,7 +1657,6 @@ export const {
   useUpdateVendorProductMutation,
   useDeleteVendorProductMutation,
   useCreateVendorProductMutation,
-
   // Cart Endpoints (CRM)
   useGetCartQuery,
   useAddToCartMutation,
@@ -1621,12 +1673,14 @@ export const {
   useGetBlockedTimesQuery,
   useCreateBlockTimeMutation,
   useDeleteBlockTimeMutation,
-  useUpdateAppointmentStatusMutation,
-  useGetPatientsQuery,
-  useCreatePatientMutation,
-  useUpdatePatientMutation,
-  useDeletePatientMutation,
+  // Billing Endpoints
+  useCreateBillingMutation,
+  useGetBillingRecordsQuery,
+  useGetBillingByIdQuery,
+  useUpdateBillingMutation,
   // Public Appointment Hooks
   useGetPublicAppointmentsQuery,
   useCreatePublicAppointmentMutation,
+  // Vendor Document Hooks
+  useUpdateVendorDocumentsMutation,
 } = glowvitaApi;

@@ -26,7 +26,7 @@ export const POST = authMiddlewareAdmin(
     if (
       !fullName ||
       !emailAddress ||
-      !mobileNo ||
+      !mobileNo ||            
       !address ||
       !designation ||
       !password ||
