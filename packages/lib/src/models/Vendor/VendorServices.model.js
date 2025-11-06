@@ -120,6 +120,27 @@ const serviceSchema = new mongoose.Schema(
   { _id: true }
 );
 
+// Add a method to calculate service price with tax
+serviceSchema.methods.calculatePriceWithTax = function() {
+  if (!this.tax || !this.tax.enabled) {
+    return this.price;
+  }
+  
+  if (this.tax.type === "percentage") {
+    return this.price + (this.price * this.tax.value) / 100;
+  } else {
+    return this.price + this.tax.value;
+  }
+};
+
+// Add a method to calculate discount
+serviceSchema.methods.calculateDiscountedPrice = function() {
+  if (this.discountedPrice !== null && this.discountedPrice !== undefined) {
+    return this.discountedPrice;
+  }
+  return this.price;
+};
+
 const vendorServicesSchema = new mongoose.Schema({
   vendor: {
     type: mongoose.Schema.Types.ObjectId,

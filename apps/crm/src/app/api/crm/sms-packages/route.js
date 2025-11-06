@@ -63,4 +63,4 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
       }
     );
   }
-}, ['vendor']);
+}, ['vendor', 'supplier']);

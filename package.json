@@ -13,10 +13,10 @@
     "dev:admin": "turbo dev --filter=admin --"
   },
   "devDependencies": {
+    "@next/swc-win32-x64-msvc": "^16.0.1",
     "@repo/eslint-config-custom": "*",
     "dotenv": "^16.4.5",
     "prettier": "^3.2.5",
-    "turbo": "^2.0.4",
     "typescript": "^5.4.5"
   },
   "packageManager": "npm@10.5.0",
@@ -30,6 +30,7 @@
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-label": "^2.0.2",
     "@radix-ui/react-separator": "^1.1.0",
+    "@reduxjs/toolkit": "^2.9.2",
     "@types/uuid": "^10.0.0",
     "canvas": "^3.2.0",
     "date-fns": "^4.1.0",
@@ -44,6 +45,7 @@
     "react-toastify": "^11.0.5",
     "sharp": "^0.34.3",
     "sonner": "^2.0.7",
+    "turbo": "^2.5.8",
     "uuid": "^11.1.0",
     "validator": "^13.15.15"
   },

@@ -4,15 +4,15 @@
 export const clearProblematicLocalStorage = () => {
   const problematicKeys = [
     'serviceState', // Old service state that could contain large objects
-    'crmAuthState',
-    'userAuthState',
-    'adminAuthState',
+    // NOTE: We're intentionally NOT clearing current auth state keys:
+    // 'crmAuthState', 'userAuthState', 'adminAuthState' are actively used
     // Add other problematic keys here if found
   ];
 
-  // Also clear any keys that contain 'token' or 'auth'
+  // Only clear keys that contain 'token' or 'auth' but are NOT the current auth state keys
   const authKeys = Object.keys(localStorage).filter(key => 
-    key.includes('token') || key.includes('auth')
+    (key.includes('token') || key.includes('auth')) && 
+    !['crmAuthState', 'userAuthState', 'adminAuthState'].includes(key)
   );
   
   const allKeysToClear = [...problematicKeys, ...authKeys];
@@ -31,6 +31,7 @@ export const clearProblematicLocalStorage = () => {
 };
 
 // Auto-clear on import if running in browser
-if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-  clearProblematicLocalStorage();
-}
+// NOTE: We're disabling auto-clear to prevent clearing active auth state
+// if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+//   clearProblematicLocalStorage();
+// }

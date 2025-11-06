@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import customerImage from '../../../public/images/web_login.jpg';
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   
   const [login, { isLoading: isLoggingIn }] = glowvitaApi.useUserLoginMutation();
@@ -40,10 +41,19 @@ import customerImage from '../../../public/images/web_login.jpg';
       if (response.user && response.token) {
         dispatch(setUserAuth({ user: response.user, token: response.token, role: response.role, permissions: response.permissions }));
         
+        // Check if there's a redirect URL
+        const redirectUrl = searchParams.get('redirect');
+        
         toast.success('Login successful!', {
-          description: 'Redirecting to your profile...',
+          description: redirectUrl ? 'Redirecting to complete your booking...' : 'Redirecting to your profile...',
           duration: 1000,
-          onAutoClose: () => router.push('/profile'),
+          onAutoClose: () => {
+            if (redirectUrl) {
+              router.push(redirectUrl);
+            } else {
+              router.push('/profile');
+            }
+          },
         });
       } else {
         toast.error(response.message || 'Failed to log in.');
@@ -57,7 +67,15 @@ import customerImage from '../../../public/images/web_login.jpg';
   
   // Only redirect if user is authenticated
   if (!isAuthLoading && isAuthenticated) {
-    router.push('/profile');
+    // Check if there's a redirect URL
+    const redirectUrl = searchParams.get('redirect');
+    
+    if (redirectUrl) {
+      router.push(redirectUrl);
+    } else {
+      router.push('/profile');
+    }
+    
     return (
         <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-background to-background/80">
           <div className="relative">

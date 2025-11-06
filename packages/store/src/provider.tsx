@@ -12,8 +12,10 @@ export function StoreProvider({ children }: StoreProviderProps) {
   const storeRef = useRef<ReturnType<typeof makeStore> | null>(null);
   
   if (!storeRef.current) {
+    console.log("Initializing store");
     storeRef.current = makeStore();
     // Rehydrate the store on the client side
+    console.log("Rehydrating store");
     rehydrateStore(storeRef.current);
   }
 

@@ -144,7 +144,21 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow }
                     size="sm" 
                     variant="outline" 
                     className="mt-1" 
-                    onClick={() => onBookNow(service)}
+                    onClick={() => {
+                      // Store complete service data in sessionStorage
+                      const serviceData = {
+                        id: service._id || service.id,
+                        name: service.name,
+                        price: service.price,
+                        duration: service.duration,
+                        category: service.category,
+                        description: service.description,
+                        image: service.image
+                      };
+                      console.log('Storing service in sessionStorage:', serviceData);
+                      sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
+                      onBookNow(service);
+                    }}
                   >
                     Book
                   </Button>

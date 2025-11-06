@@ -17,6 +17,8 @@ import { useGetVendorsQuery, useUpdateVendorStatusMutation } from '@repo/store/a
 import { useGetPendingServicesQuery, useUpdateServiceStatusMutation } from '@repo/store/api';
 import { useGetVendorProductsQuery, useUpdateProductStatusMutation } from '@repo/store/api';
 import { toast } from 'sonner';
+import DocumentStatusManager from '../../components/DocumentStatusManager';
+import DebugVendorDocuments from '../../components/DebugVendorDocuments';
 
 // Vendor type
 type Vendor = {
@@ -42,6 +44,30 @@ type Vendor = {
     plan: string | null;
     status: string;
     expires: string | null;
+  };
+  documents?: {
+    [key: string]: any;
+    aadharCard?: string | null;
+    udyogAadhar?: string | null;
+    udhayamCert?: string | null;
+    shopLicense?: string | null;
+    panCard?: string | null;
+    otherDocs?: string[] | null;
+    aadharCardStatus?: string;
+    udyogAadharStatus?: string;
+    udhayamCertStatus?: string;
+    shopLicenseStatus?: string;
+    panCardStatus?: string;
+    aadharCardRejectionReason?: string | null;
+    udyogAadharRejectionReason?: string | null;
+    udhayamCertRejectionReason?: string | null;
+    shopLicenseRejectionReason?: string | null;
+    panCardRejectionReason?: string | null;
+    aadharCardAdminRejectionReason?: string | null;
+    udyogAadharAdminRejectionReason?: string | null;
+    udhayamCertAdminRejectionReason?: string | null;
+    shopLicenseAdminRejectionReason?: string | null;
+    panCardAdminRejectionReason?: string | null;
   };
 };
 
@@ -109,7 +135,7 @@ type ItemType = 'vendor' | 'service' | 'product' | 'doctor' | 'supplier';
 
 export default function VendorApprovalPage() {
   // RTK Query hooks
-  const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError } = useGetVendorsQuery(undefined);
+  const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError, refetch: refetchVendors } = useGetVendorsQuery(undefined);
   const [updateVendorStatus] = useUpdateVendorStatusMutation();
   const { data: suppliersData = [], isLoading: suppliersLoading } = useGetSuppliersQuery(undefined);
   const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
@@ -141,7 +167,33 @@ export default function VendorApprovalPage() {
 
   const pendingSuppliers = suppliersData.filter((s: Supplier) => s.status === 'Pending');
   const pendingDoctors = doctorsData.filter((d: Doctor) => d.status === 'Pending');
-  const pendingVendors = vendors.filter((v: Vendor) => v.status === 'Pending' || v.status === 'Disabled');
+  const pendingVendors = vendors.filter((v: Vendor) => {
+    // Include vendors with Pending or Disabled status
+    if (v.status === 'Pending' || v.status === 'Disabled') return true;
+    
+    // Also include vendors who have documents with pending status
+    const documents = v.documents;
+    if (documents) {
+      const docTypes = ['aadharCard', 'udyogAadhar', 'udhayamCert', 'shopLicense', 'panCard'] as const;
+      const hasPendingDocuments = docTypes.some(docType => {
+        const status = documents[`${docType}Status`] || 'pending';
+        // Check if document exists (not null or undefined) and not empty string
+        const isUploaded = documents[docType] && documents[docType] !== '';
+        const isPending = status === 'pending' && isUploaded;
+        
+        // Debug logging
+        if (isPending) {
+          console.log(`Vendor ${v.businessName} has pending document: ${docType}`);
+        }
+        
+        return isPending;
+      });
+      
+      return hasPendingDocuments;
+    }
+    
+    return false;
+  });
   const pendingProducts = productsData.filter((p: Product) => p.status === 'pending');
 
   // Pagination logic
@@ -969,6 +1021,21 @@ export default function VendorApprovalPage() {
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Updated At</span>
                   <span className="col-span-2">{(selectedItem as Vendor).updatedAt ? new Date((selectedItem as Vendor).updatedAt).toLocaleString() : 'N/A'}</span>
+                </div>
+                
+                {/* Document Status Manager */}
+                <div className="col-span-3 mt-4">
+                  <DocumentStatusManager 
+                    vendor={selectedItem as Vendor} 
+                    onUpdate={() => {
+                      refetchVendors();
+                    }} 
+                  />
+                </div>
+                
+                {/* Debug Vendor Documents - Remove in production */}
+                <div className="col-span-3 mt-4">
+                  <DebugVendorDocuments vendor={selectedItem as Vendor} />
                 </div>
               </>
             )}

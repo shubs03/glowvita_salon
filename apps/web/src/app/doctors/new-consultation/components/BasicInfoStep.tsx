@@ -5,7 +5,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
-import { User, Users, Phone, Activity, Stethoscope, CheckCircle } from "lucide-react";
+import { User, Users, Phone, Activity, Stethoscope, CheckCircle, Star, MapPin, DollarSign } from "lucide-react";
 import { cn } from '@repo/ui/cn';
 import { ConsultationData } from '../page';
 
@@ -99,7 +99,31 @@ export function BasicInfoStep({ data, onUpdate, currentStep, setCurrentStep }: B
 
   const handleSpecialtySelect = (specialty: string) => {
     setSelectedSpecialty(specialty);
-    onUpdate({ selectedSpecialty: specialty });
+    
+    // Get doctor info preview based on specialty
+    const doctorPreviews: { [key: string]: { name: string; rating: number; reviews: number; clinic: string } } = {
+      'General Medicine': { name: 'Dr. Sarah Johnson', rating: 4.8, reviews: 234, clinic: 'City Medical Center' },
+      'Cardiology': { name: 'Dr. Michael Chen', rating: 4.9, reviews: 189, clinic: 'Heart Care Clinic' },
+      'Dermatology': { name: 'Dr. Emily Rodriguez', rating: 4.7, reviews: 156, clinic: 'Skin Care Clinic' },
+      'Neurology': { name: 'Dr. David Thompson', rating: 4.9, reviews: 201, clinic: 'Neuro Wellness Center' },
+      'Orthopedics': { name: 'Dr. Lisa Wang', rating: 4.8, reviews: 178, clinic: 'Bone & Joint Clinic' },
+      'Psychiatry': { name: 'Dr. James Wilson', rating: 4.6, reviews: 145, clinic: 'Mental Wellness Center' },
+      'Gastroenterology': { name: 'Dr. Maria Garcia', rating: 4.8, reviews: 167, clinic: 'Digestive Health Center' },
+      'Pulmonology': { name: 'Dr. Robert Kim', rating: 4.7, reviews: 142, clinic: 'Respiratory Care Clinic' },
+      'Endocrinology': { name: 'Dr. Jennifer Brown', rating: 4.9, reviews: 198, clinic: 'Hormone Health Clinic' },
+      'Rheumatology': { name: 'Dr. Andrew Davis', rating: 4.7, reviews: 134, clinic: 'Arthritis Care Center' }
+    };
+    
+    const doctorPreview = doctorPreviews[specialty] || doctorPreviews['General Medicine'];
+    
+    onUpdate({ 
+      selectedSpecialty: specialty,
+      doctorName: doctorPreview.name,
+      doctorSpecialty: specialty,
+      doctorRating: doctorPreview.rating,
+      doctorReviewCount: doctorPreview.reviews,
+      doctorClinic: doctorPreview.clinic
+    });
   };
 
   return (
@@ -119,88 +143,86 @@ export function BasicInfoStep({ data, onUpdate, currentStep, setCurrentStep }: B
         </div>
       </div>
 
+      {/* Consultation Type - Horizontal Selection */}
+      <Card className="mb-8">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Users className="h-5 w-5 text-primary" />
+            Who is this consultation for?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <button
+              onClick={() => onUpdate({ consultationType: 'self' })}
+              className={cn(
+                "flex items-center p-4 rounded-lg border-2 transition-all text-left",
+                data.consultationType === 'self'
+                  ? "border-primary"
+                  : "border-border hover:border-primary/50"
+              )}
+            >
+              <User className="mr-3 h-5 w-5 text-muted-foreground" />
+              <div>
+                <div className="font-semibold text-sm">For myself</div>
+                <div className="text-xs text-muted-foreground">Book for yourself</div>
+              </div>
+            </button>
+            <button
+              onClick={() => onUpdate({ consultationType: 'other' })}
+              className={cn(
+                "flex items-center p-4 rounded-lg border-2 transition-all text-left",
+                data.consultationType === 'other'
+                  ? "border-primary"
+                  : "border-border hover:border-primary/50"
+              )}
+            >
+              <Users className="mr-3 h-5 w-5 text-muted-foreground" />
+              <div>
+                <div className="font-semibold text-sm">For someone else</div>
+                <div className="text-xs text-muted-foreground">Book for family member</div>
+              </div>
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column */}
         <div className="space-y-8">
-          {/* Consultation Type */}
-          <Card className="h-fit">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Users className="h-6 w-6 text-primary" />
-                Who is this consultation for?
-              </CardTitle>
-              <p className="text-muted-foreground mt-2">Choose whether you're booking for yourself or someone else</p>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-4">
-                <button
-                  onClick={() => onUpdate({ consultationType: 'self' })}
-                  className={cn(
-                    "w-full flex items-center p-6 rounded-xl border-2 transition-all text-left hover:shadow-md",
-                    data.consultationType === 'self'
-                      ? "border-primary bg-primary/10 text-primary shadow-lg"
-                      : "border-border hover:border-primary/50"
-                  )}
-                >
-                  <User className="mr-4 h-6 w-6" />
-                  <div>
-                    <div className="font-semibold text-lg">For myself</div>
-                    <div className="text-sm text-muted-foreground">Book consultation for yourself</div>
-                  </div>
-                </button>
-                <button
-                  onClick={() => onUpdate({ consultationType: 'other' })}
-                  className={cn(
-                    "w-full flex items-center p-6 rounded-xl border-2 transition-all text-left hover:shadow-md",
-                    data.consultationType === 'other'
-                      ? "border-primary bg-primary/10 text-primary shadow-lg"
-                      : "border-border hover:border-primary/50"
-                  )}
-                >
-                  <Users className="mr-4 h-6 w-6" />
-                  <div>
-                    <div className="font-semibold text-lg">For someone else</div>
-                    <div className="text-sm text-muted-foreground">Book consultation for family member</div>
-                  </div>
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Patient Details */}
           <Card className="h-fit">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <User className="h-6 w-6 text-primary" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <User className="h-5 w-5 text-primary" />
                 Patient Details
               </CardTitle>
-              <p className="text-muted-foreground mt-2">Provide the patient's basic information</p>
             </CardHeader>
-            <CardContent className="pt-0 space-y-6">
+            <CardContent className="pt-0 space-y-4">
               <div>
-                <Label htmlFor="patientName" className="text-base font-medium">Patient Name *</Label>
+                <Label htmlFor="patientName" className="text-sm font-medium">Patient Name *</Label>
                 <Input
                   id="patientName"
                   placeholder="Enter patient's full name"
                   value={data.patientName}
                   onChange={(e) => onUpdate({ patientName: e.target.value })}
-                  className="mt-2 h-12 text-base"
+                  className="mt-1.5 h-10 text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="phoneNumber" className="text-base font-medium">Phone Number *</Label>
-                <div className="flex mt-2">
-                  <span className="inline-flex items-center px-4 text-base text-muted-foreground bg-muted border border-r-0 border-input rounded-l-md">
+                <Label htmlFor="phoneNumber" className="text-sm font-medium">Phone Number *</Label>
+                <div className="flex mt-1.5">
+                  <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted border border-r-0 border-input rounded-l-md">
                     +91
                   </span>
                   <Input
                     id="phoneNumber"
                     type="tel"
-                    placeholder="Enter 10-digit phone number"
+                    placeholder="Enter 10-digit number"
                     value={data.phoneNumber}
                     onChange={(e) => onUpdate({ phoneNumber: e.target.value })}
-                    className="rounded-l-none h-12 text-base"
+                    className="rounded-l-none h-10 text-sm"
                     pattern="[0-9]{10}"
                     maxLength={10}
                   />
@@ -208,45 +230,93 @@ export function BasicInfoStep({ data, onUpdate, currentStep, setCurrentStep }: B
               </div>
             </CardContent>
           </Card>
+
+          {/* Doctor Preview Card - shows when specialty is selected */}
+          {selectedSpecialty && data.doctorName && (
+            <Card className="h-fit">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Stethoscope className="h-5 w-5 text-primary" />
+                  Your Assigned Doctor
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 py-2 border-b">
+                    <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0">
+                      <User className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">{data.doctorName}</p>
+                      <p className="text-xs text-muted-foreground">{data.doctorSpecialty}</p>
+                    </div>
+                  </div>
+                  
+                  {data.doctorRating && (
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <div className="flex items-center gap-2">
+                        <Star className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Rating</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="font-semibold text-sm">{data.doctorRating}</span>
+                        <span className="text-xs text-muted-foreground">({data.doctorReviewCount})</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {data.doctorClinic && (
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Clinic</span>
+                      </div>
+                      <span className="font-semibold text-sm text-right">{data.doctorClinic}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Fee</span>
+                    </div>
+                    <span className="font-bold text-sm">₹{data.consultationFee}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right Column */}
         <div className="space-y-8">
           {/* Health Concerns */}
           <Card className="h-fit">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Activity className="h-6 w-6 text-primary" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Activity className="h-5 w-5 text-primary" />
                 Health Concerns *
               </CardTitle>
-              <p className="text-muted-foreground mt-2">
-                Describe your symptoms, conditions, or health concerns
-              </p>
             </CardHeader>
-            <CardContent className="pt-0 space-y-6">
+            <CardContent className="pt-0 space-y-4">
               {/* Concerns Text Input */}
-              <div className="space-y-3">
-                <Label htmlFor="concerns" className="text-base font-medium">Your Health Concerns</Label>
+              <div className="space-y-2">
+                <Label htmlFor="concerns" className="text-sm font-medium">Describe your symptoms</Label>
                 <textarea
                   id="concerns"
-                  placeholder="Describe your symptoms, conditions, or health concerns (e.g., fever, headache, stomach pain, etc.)"
+                  placeholder="E.g., fever, headache, stomach pain, etc."
                   value={data.concerns}
                   onChange={(e) => handleConcernsChange(e.target.value)}
-                  className="w-full min-h-[120px] p-4 text-base border border-input rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full min-h-[100px] p-3 text-sm border border-input rounded-lg resize-y focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 />
               </div>
 
               {/* Specialty Suggestions */}
               {showSpecialtySelection && (
-                <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="space-y-3 p-3 rounded-lg border">
                   <div className="flex items-center gap-2">
-                    <div className="p-2 bg-blue-100 rounded-full">
-                      <User className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <Label className="text-base font-medium text-blue-900">Recommended Specialties</Label>
-                      <p className="text-sm text-blue-700">Based on your concerns, these specialists can help you best</p>
-                    </div>
+                    <Stethoscope className="h-4 w-4 text-muted-foreground" />
+                    <Label className="text-sm font-medium">Recommended Specialties</Label>
                   </div>
                   
                   <div className="grid grid-cols-1 gap-2">
@@ -255,23 +325,23 @@ export function BasicInfoStep({ data, onUpdate, currentStep, setCurrentStep }: B
                         key={specialty}
                         onClick={() => handleSpecialtySelect(specialty)}
                         className={cn(
-                          "flex items-center justify-between p-3 rounded-lg border-2 transition-all text-left hover:shadow-md",
+                          "flex items-center justify-between p-2.5 rounded-lg border-2 transition-all text-left",
                           selectedSpecialty === specialty
-                            ? "border-blue-500 bg-blue-100 text-blue-900"
-                            : "border-blue-200 bg-white hover:border-blue-400"
+                            ? "border-primary"
+                            : "border-border hover:border-primary/50"
                         )}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <div className={cn(
-                            "w-3 h-3 rounded-full border-2",
+                            "w-2.5 h-2.5 rounded-full border-2",
                             selectedSpecialty === specialty
-                              ? "bg-blue-500 border-blue-500"
-                              : "border-blue-300"
+                              ? "bg-primary border-primary"
+                              : "border-muted-foreground"
                           )} />
-                          <span className="font-medium">{specialty}</span>
+                          <span className="text-sm font-medium">{specialty}</span>
                         </div>
                         {selectedSpecialty === specialty && (
-                          <CheckCircle className="w-5 h-5 text-blue-600" />
+                          <CheckCircle className="w-4 h-4 text-primary" />
                         )}
                       </button>
                     ))}
@@ -279,27 +349,24 @@ export function BasicInfoStep({ data, onUpdate, currentStep, setCurrentStep }: B
 
                   {/* Selected Specialty Indicator */}
                   {selectedSpecialty && (
-                    <div className="flex items-center gap-2 p-3 bg-blue-100 rounded-lg border border-blue-300">
-                      <CheckCircle className="w-5 h-5 text-blue-600" />
-                      <div>
-                        <span className="font-medium">
-                          You'll be connected with a {selectedSpecialty} specialist
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2 p-2 rounded-lg border">
+                      <CheckCircle className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-medium">
+                        Connected with {selectedSpecialty} specialist
+                      </span>
                     </div>
                   )}
 
-                  <div className="text-xs text-blue-600">
-                    <p className="font-medium mb-1">Why these specialties?</p>
-                    <p>Our AI analyzed your symptoms and matched them with the most relevant medical specialties to ensure you get the best care.</p>
+                  <div className="text-xs text-muted-foreground border-t pt-2">
+                    <p>AI-matched specialties based on your symptoms</p>
                   </div>
 
                   {/* Manual Specialty Selection */}
-                  <div className="border-t border-blue-200 pt-3">
-                    <Label className="text-sm font-medium text-blue-900 mb-2 block">
-                      Don't see the right specialty? Choose manually:
+                  <div className="border-t pt-3">
+                    <Label className="text-xs font-medium mb-2 block">
+                      Other specialties:
                     </Label>
-                    <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto">
                       {ALL_SPECIALTIES
                         .filter(specialty => !suggestedSpecialties.includes(specialty))
                         .map((specialty) => (
@@ -307,10 +374,10 @@ export function BasicInfoStep({ data, onUpdate, currentStep, setCurrentStep }: B
                             key={specialty}
                             onClick={() => handleSpecialtySelect(specialty)}
                             className={cn(
-                              "p-2 rounded border text-xs text-left transition-all",
+                              "p-1.5 rounded border text-xs text-left transition-all",
                               selectedSpecialty === specialty
-                                ? "border-blue-500 bg-blue-100 text-blue-900"
-                                : "border-gray-200 hover:border-blue-300 text-gray-700"
+                                ? "border-primary"
+                                : "border-border hover:border-primary/50"
                             )}
                           >
                             {specialty}

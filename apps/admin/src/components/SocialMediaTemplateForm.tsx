@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -248,16 +247,16 @@ function SocialMediaTemplateFormContent({
   }, []);
 
   return (
-    <div className="space-y-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <div className="flex flex-col h-full max-h-[calc(100vh-100px)]">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="basic">Basic Info</TabsTrigger>
           <TabsTrigger value="design">Design Template</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="basic" className="space-y-6">
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+        <TabsContent value="basic" className="flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="flex flex-col h-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 flex-1">
               {/* Left Column */}
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -374,7 +373,7 @@ function SocialMediaTemplateFormContent({
               </div>
             </div>
             
-            <div className="mt-6 flex justify-end space-x-3 p-6 border-t">
+            <div className="mt-auto flex justify-end space-x-3 p-6 border-t bg-background">
               <Button
                 type="button"
                 variant="outline"
@@ -407,8 +406,8 @@ function SocialMediaTemplateFormContent({
           </form>
         </TabsContent>
         
-        <TabsContent value="design" className="space-y-6">
-          <div className="p-6">
+        <TabsContent value="design" className="flex-1 overflow-y-auto">
+          <div className="p-6 h-full flex flex-col">
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-2">Design Your Template</h3>
               <p className="text-muted-foreground">
@@ -416,14 +415,16 @@ function SocialMediaTemplateFormContent({
               </p>
             </div>
             
-            <CanvasTemplateEditor
-              initialImage={imagePreview || undefined}
-              onSaveTemplate={handleCanvasTemplateData}
-              width={900}
-              height={800}
-            />
+            <div className="flex-1 overflow-hidden">
+              <CanvasTemplateEditor
+                initialImage={imagePreview || undefined}
+                onSaveTemplate={handleCanvasTemplateData}
+                width={900}
+                height={800}
+              />
+            </div>
             
-            <div className="mt-6 flex justify-between">
+            <div className="mt-6 flex justify-between bg-background py-4">
               <Button
                 variant="outline"
                 onClick={() => setActiveTab("basic")}

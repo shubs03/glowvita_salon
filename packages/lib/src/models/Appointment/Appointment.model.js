@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
-import ServiceModel from '../admin/Service.model';
-import StaffModel from '../Vendor/Staff.model';
+import ServiceModel from '../admin/Service.model.js';
+import StaffModel from '../Vendor/Staff.model.js';
 
 // Ensure the Service and Staff models are registered
 const Service = mongoose.models.Service || ServiceModel;
@@ -104,6 +104,46 @@ const appointmentSchema = new mongoose.Schema({
     totalAmount: {
         type: Number,
         required: true
+    },
+    // Payment-related fields
+    platformFee: {
+        type: Number,
+        default: 0
+    },
+    serviceTax: {
+        type: Number,
+        default: 0
+    },
+    taxRate: {
+        type: Number,
+        default: 0
+    },
+    discountAmount: {
+        type: Number,
+        default: 0
+    },
+    finalAmount: {
+        type: Number,
+        required: true
+    },
+    paymentMethod: {
+        type: String,
+        enum: ['Pay at Salon', 'Pay Online', 'Pay Later'],
+        default: 'Pay at Salon'
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'completed', 'failed', 'refunded'],
+        default: 'pending'
+    },
+    razorpayOrderId: {
+        type: String
+    },
+    razorpayPaymentId: {
+        type: String
+    },
+    razorpaySignature: {
+        type: String
     },
     status: {
         type: String,

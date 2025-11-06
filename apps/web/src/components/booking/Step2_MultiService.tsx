@@ -62,6 +62,13 @@ export function Step2_MultiService({
             console.log('Step2_MultiService - Current Service:', currentService);
             console.log('Step2_MultiService - All Staff:', staff);
             
+            // If no staff data, return empty array
+            if (!staff || staff.length === 0) {
+                console.log('Step2_MultiService - No staff data available');
+                setFilteredStaff([]);
+                return;
+            }
+            
             // If no service is selected, show all staff
             if (!currentService) {
                 console.log('Step2_MultiService - No service selected, returning all staff');
@@ -78,7 +85,7 @@ export function Step2_MultiService({
             
             // Filter staff based on the service's staff array
             // The staff array in the service can contain either staff IDs or staff names
-            const serviceStaff = staff.filter(staffMember => {
+            const serviceStaff = staff.filter((staffMember: StaffMember) => {
                 // Check if staff member ID is in the service's staff array
                 const isIdMatch = currentService.staff?.includes(staffMember.id);
                 // Check if staff member name is in the service's staff array

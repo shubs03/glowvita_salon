@@ -93,6 +93,7 @@ export const GET = async (request, { params }) => {
           _id: service._id,
           name: service.name,
           price: service.price,
+          discountedPrice: service.discountedPrice,
           duration: service.duration,
           description: service.description,
           category: categoryName,

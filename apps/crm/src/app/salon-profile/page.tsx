@@ -693,7 +693,11 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
       ...prev,
       documents: {
         ...prev.documents,
-        [docType]: base64
+        [docType]: base64,
+        // Reset status when a new document is uploaded
+        [`${docType}Status`]: 'pending',
+        [`${docType}RejectionReason`]: null,
+        [`${docType}AdminRejectionReason`]: null
       }
     }));
   };
@@ -703,7 +707,32 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
       ...prev,
       documents: {
         ...prev.documents,
-        [docType]: null
+        [docType]: null,
+        [`${docType}Status`]: 'pending',
+        [`${docType}RejectionReason`]: null,
+        [`${docType}AdminRejectionReason`]: null
+      }
+    }));
+  };
+
+  const handleStatusChange = (docType: string, status: string) => {
+    setVendor((prev: any) => ({
+      ...prev,
+      documents: {
+        ...prev.documents,
+        [`${docType}Status`]: status,
+        // Clear rejection reason if status is not rejected
+        ...(status !== 'rejected' && { [`${docType}RejectionReason`]: null })
+      }
+    }));
+  };
+
+  const handleRejectionReasonChange = (docType: string, reason: string) => {
+    setVendor((prev: any) => ({
+      ...prev,
+      documents: {
+        ...prev.documents,
+        [`${docType}RejectionReason`]: reason
       }
     }));
   };
@@ -714,6 +743,18 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
 
   const closeDocumentPreview = () => {
     setPreviewDocument(null);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle2 className="mr-1 h-3 w-3" /> Approved</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-100 text-red-800"><X className="mr-1 h-3 w-3" /> Rejected</Badge>;
+      case 'pending':
+      default:
+        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="mr-1 h-3 w-3" /> Pending</Badge>;
+    }
   };
 
   const documentTypes = [
@@ -729,66 +770,119 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
       <CardHeader>
         <CardTitle>Business Documents</CardTitle>
         <CardDescription>
-          Upload and manage your verification documents.
+          Upload and manage your verification documents. Documents will be reviewed by our team.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        <div className="space-y-6">
           {documentTypes.map(({ key, label }) => (
-            <div key={key} className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">{label}</p>
+            <div key={key} className="border rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">{label}</p>
+                    {documents?.[key] ? (
+                      <p className="text-sm text-green-600">Uploaded</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Not uploaded</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
                   {documents?.[key] ? (
-                    <p className="text-sm text-green-600">Uploaded</p>
+                    <>
+                      {getStatusBadge(documents[`${key}Status`] || 'pending')}
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => openDocumentPreview(documents[key], key)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleRemoveDocument(key)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </>
                   ) : (
-                    <p className="text-sm text-muted-foreground">Not uploaded</p>
+                    <>
+                      <Badge className="bg-yellow-100 text-yellow-800">
+                        <Clock className="mr-1 h-3 w-3" />
+                        Pending
+                      </Badge>
+                      <Button variant="ghost" size="sm" asChild>
+                        <label htmlFor={`doc-upload-${key}`} className="cursor-pointer">
+                          Upload
+                        </label>
+                      </Button>
+                      <Input
+                        id={`doc-upload-${key}`}
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.jpg,.png"
+                        onChange={(e) => handleDocumentUpload(key, e.target.files?.[0] || null)}
+                      />
+                    </>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                {documents?.[key] ? (
-                  <>
-                    <Badge className="bg-green-100 text-green-800">
-                      <CheckCircle2 className="mr-1 h-3 w-3" />
-                      Uploaded
-                    </Badge>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => openDocumentPreview(documents[key], key)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => handleRemoveDocument(key)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Badge className="bg-yellow-100 text-yellow-800">
-                      Pending
-                    </Badge>
-                    <Button variant="ghost" size="sm" asChild>
-                      <label htmlFor={`doc-upload-${key}`} className="cursor-pointer">
-                        Upload
-                      </label>
-                    </Button>
-                    <Input
-                      id={`doc-upload-${key}`}
-                      type="file"
-                      className="hidden"
-                      accept=".pdf,.jpg,.png"
-                      onChange={(e) => handleDocumentUpload(key, e.target.files?.[0] || null)}
-                    />
-                  </>
-                )}
-              </div>
+              
+              {/* Status selection and rejection reason */}
+              {documents?.[key] && (
+                <div className="mt-3 pt-3 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor={`status-${key}`}>Document Status</Label>
+                      <Select 
+                        value={documents[`${key}Status`] || 'pending'} 
+                        onValueChange={(value) => handleStatusChange(key, value)}
+                      >
+                        <SelectTrigger id={`status-${key}`}>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {documents[`${key}Status`] === 'rejected' && (
+                      <div>
+                        <Label htmlFor={`reason-${key}`}>Rejection Reason *</Label>
+                        <Textarea
+                          id={`reason-${key}`}
+                          placeholder="Enter reason for rejection"
+                          value={documents[`${key}RejectionReason`] || ''}
+                          onChange={(e) => handleRejectionReasonChange(key, e.target.value)}
+                          required
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Display existing rejection reason if document is rejected */}
+                  {documents[`${key}Status`] === 'rejected' && documents[`${key}RejectionReason`] && (
+                    <div className="mt-3 p-3 bg-red-50 rounded-md">
+                      <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
+                      <p className="text-sm text-red-700">{documents[`${key}RejectionReason`]}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Display admin rejection reason if document is rejected */}
+              {documents?.[`${key}Status`] === 'rejected' && documents[`${key}AdminRejectionReason`] && (
+                <div className="mt-3 p-3 bg-red-50 rounded-md border border-red-200">
+                  <p className="text-sm font-medium text-red-800">Admin Rejection Reason:</p>
+                  <p className="text-sm text-red-700">{documents[`${key}AdminRejectionReason`]}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -805,7 +899,7 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
               >
                 <X className="h-4 w-4" />
               </Button>
-              {previewDocument.src.startsWith('data:application/pdf') ? (
+              {previewDocument.src?.startsWith('data:application/pdf') ? (
                 <iframe
                   src={previewDocument.src}
                   className="w-full h-[80vh]"
@@ -813,7 +907,7 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
                 />
               ) : (
                 <Image
-                  src={previewDocument.src}
+                  src={previewDocument.src || ''}
                   alt="Document Preview"
                   width={800}
                   height={600}
@@ -1565,7 +1659,11 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
         referralCode: supplier.referralCode,
       };
 
+      console.log('Sending supplier update data:', updateData);
+
       const result: any = await updateSupplierProfile(updateData).unwrap();
+      
+      console.log('Supplier update result:', result);
       
       if (result.success) {
         toast.success(result.message);
@@ -1573,7 +1671,15 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
         toast.error(result.message);
       }
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to update profile');
+      console.error('Supplier update error:', error);
+      // Handle validation errors specifically
+      if (error?.data?.errors) {
+        const errorMessages = error.data.errors.join(', ');
+        toast.error(`Validation Error: ${errorMessages}`);
+      } else {
+        const errorMessage = error?.data?.message || 'Failed to update profile';
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -1586,7 +1692,31 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="shopName">Shop Name</Label>
+            <Label htmlFor="firstName">First Name *</Label>
+            <Input
+              id="firstName"
+              placeholder="Enter your first name"
+              value={supplier.firstName || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, firstName: e.target.value })
+              }
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Last Name *</Label>
+            <Input
+              id="lastName"
+              placeholder="Enter your last name"
+              value={supplier.lastName || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, lastName: e.target.value })
+              }
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="shopName">Shop Name *</Label>
             <Input
               id="shopName"
               placeholder="Enter your shop name"
@@ -1594,6 +1724,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               onChange={(e) =>
                 setSupplier({ ...supplier, shopName: e.target.value })
               }
+              required
             />
           </div>
           <div className="space-y-2">
@@ -1617,50 +1748,9 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               placeholder="Describe your business..."
             />
           </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="firstName">First Name</Label>
-            <Input
-              id="firstName"
-              placeholder="Enter your first name"
-              value={supplier.firstName || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, firstName: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name</Label>
-            <Input
-              id="lastName"
-              placeholder="Enter your last name"
-              value={supplier.lastName || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, lastName: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="shopName">Shop Name</Label>
-            <Input
-              id="shopName"
-              value={supplier.shopName || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, shopName: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={supplier.description || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, description: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email *</Label>
             <Input
               id="email"
               type="email"
@@ -1669,10 +1759,11 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               onChange={(e) =>
                 setSupplier({ ...supplier, email: e.target.value })
               }
+              required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="mobile">Mobile</Label>
+            <Label htmlFor="mobile">Mobile *</Label>
             <Input
               id="mobile"
               type="tel"
@@ -1681,19 +1772,74 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               onChange={(e) =>
                 setSupplier({ ...supplier, mobile: e.target.value })
               }
+              required
             />
           </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="country">Country</Label>
+            <Label htmlFor="country">Country *</Label>
             <Input
               id="country"
+              placeholder="Enter country"
               value={supplier.country || ''}
               onChange={(e) =>
                 setSupplier({ ...supplier, country: e.target.value })
               }
+              required
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="state">State *</Label>
+            <Input
+              id="state"
+              placeholder="Enter state"
+              value={supplier.state || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, state: e.target.value })
+              }
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="city">City *</Label>
+            <Input
+              id="city"
+              placeholder="Enter city"
+              value={supplier.city || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, city: e.target.value })
+              }
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pincode">Pincode *</Label>
+            <Input
+              id="pincode"
+              placeholder="Enter pincode"
+              value={supplier.pincode || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, pincode: e.target.value })
+              }
+              required
+            />
+          </div>
+          
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="address">Address *</Label>
+            <Textarea
+              id="address"
+              placeholder="Enter your full address"
+              value={supplier.address || ''}
+              onChange={(e) =>
+                setSupplier({ ...supplier, address: e.target.value })
+              }
+              required
+            />
+          </div>
+          
+          <div className="space-y-2 md:col-span-2">
             <Label htmlFor="businessRegistrationNo">Business Registration No</Label>
             <Input
               id="businessRegistrationNo"
@@ -1704,104 +1850,8 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               }
             />
           </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="address">Address</Label>
-          <Textarea
-            id="address"
-            placeholder="Enter your full address"
-            value={supplier.address || ''}
-            onChange={(e) =>
-              setSupplier({ ...supplier, address: e.target.value })
-            }
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
-            <Input
-              id="city"
-              placeholder="Enter city"
-              value={supplier.city || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, city: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="state">State</Label>
-            <Input
-              id="state"
-              placeholder="Enter state"
-              value={supplier.state || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, state: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
-            <Input
-              id="city"
-              value={supplier.city || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, city: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="pincode">Pincode</Label>
-            <Input
-              id="pincode"
-              placeholder="Enter pincode"
-              value={supplier.pincode || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, pincode: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Textarea
-              id="address"
-              value={supplier.address || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, address: e.target.value })
-              }
-            />
-            <Label htmlFor="country">Country</Label>
-            <Input
-              id="country"
-              placeholder="Enter country"
-              value={supplier.country || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, country: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="supplierType">Supplier Type</Label>
-            <Input
-              id="supplierType"
-              value={supplier.supplierType || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, supplierType: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="businessRegistrationNo">Business Registration No</Label>
-            <Input
-              id="businessRegistrationNo"
-              value={supplier.businessRegistrationNo || ''}
-              onChange={(e) =>
-                setSupplier({ ...supplier, businessRegistrationNo: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
+          
+          <div className="space-y-2 md:col-span-2">
             <Label htmlFor="referralCode">Referral Code</Label>
             <Input
               id="referralCode"
@@ -2579,10 +2629,11 @@ export default function SalonProfilePage() {
         </Tabs>
       ) : role === 'supplier' && localSupplier ? (
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="subscription">Subscription</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="sms-packages">SMS Packages</TabsTrigger>
           </TabsList>
           <TabsContent value="profile" className="mt-4">
             <SupplierProfileTab
@@ -2601,6 +2652,9 @@ export default function SalonProfilePage() {
               supplier={localSupplier}
               setSupplier={setLocalSupplier}
             />
+          </TabsContent>
+          <TabsContent value="sms-packages" className="mt-4">
+            <SmsPackagesTab />
           </TabsContent>
         </Tabs>
       ) : role === 'doctor' && localDoctor ? (

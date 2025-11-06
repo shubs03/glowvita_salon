@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
-import { ChevronLeft, X, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown, Wallet, CreditCard, Hourglass, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, X, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown, Wallet, CreditCard, Hourglass, Loader2, AlertCircle, Search } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { BookingSummary } from "@/components/booking/BookingSummary";
 import { Step1_Services } from "@/components/booking/Step1_Services";
@@ -9,37 +9,72 @@ import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot } from "@/components/booking/Step3_TimeSlot";
 import { Step2_MultiService } from "@/components/booking/Step2_MultiService";
 import { Step3_MultiServiceTimeSlot } from "@/components/booking/Step3_MultiServiceTimeSlot";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent } from '@repo/ui/card';
 import { Separator } from '@repo/ui/separator';
 import { format } from 'date-fns';
 import { useBookingData, Service, StaffMember, ServiceStaffAssignment, calculateTotalDuration, convertDurationToMinutes } from '@/hooks/useBookingData';
-import { useCreatePublicAppointmentMutation } from '@repo/store/api';
+import { useCreatePublicAppointmentMutation, useGetPublicVendorOffersQuery } from '@repo/store/api';
+import { useAuth } from '@/hooks/useAuth';
+// Add import for payment calculator - use cleaner @repo alias
+import { calculateBookingAmount, validateOfferCode } from '@repo/lib/utils';
+import { toast } from 'sonner';
+
+// Add a custom hook to fetch tax fee settings
+const useTaxFeeSettings = () => {
+  const [taxFeeSettings, setTaxFeeSettings] = useState<null | any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<null | Error>(null);
+
+  useEffect(() => {
+    const fetchTaxFeeSettings = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/tax-fees');
+        if (response.ok) {
+          const data = await response.json();
+          setTaxFeeSettings(data);
+        } else {
+          setError(new Error('Failed to fetch tax fee settings'));
+        }
+      } catch (err: any) {
+        setError(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTaxFeeSettings();
+  }, []);
+
+  return { taxFeeSettings, isLoading, error };
+};
 
 function BookingPageContent() {
+  console.log('BookingPageContent - Component rendered');
+  
+  // Helper function to calculate end time
+  const calculateEndTime = (startTime: string, duration: number): string => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + duration;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  };
+  
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { salonId } = params;
-
+  
+  // Add debugging for route parameters
+  console.log('BookingPageContent - Route parameters:', { params, salonId });
+  
   // State for tracking the selected service
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-
-  // Fetch dynamic data using our custom hook
-  const {
-    services,
-    servicesByCategory,
-    categories,
-    staff,
-    workingHours,
-    salonInfo,
-    isLoading,
-    error
-  } = useBookingData(salonId as string);
-
-  // Fetch service-specific staff data when a service is selected
-  const serviceStaffData = useBookingData(salonId as string, selectedService?.id);
-
+  
+  // State declarations
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [serviceStaffAssignments, setServiceStaffAssignments] = useState<ServiceStaffAssignment[]>([]);
@@ -54,231 +89,92 @@ function BookingPageContent() {
     duration: number;
   }>>([]);
 
+  // Fetch dynamic data using our custom hook
+  const {
+    services,
+    servicesByCategory,
+    categories,
+    staff,
+    workingHours,
+    salonInfo,
+    isLoading,
+    error
+  } = useBookingData(salonId as string);
+
+  // Fetch vendor offers
+  const { data: vendorOffersData, isLoading: isOffersLoading } = useGetPublicVendorOffersQuery(salonId as string);
+  const vendorOffers = vendorOffersData?.data || [];
+  
+  // Fetch tax fee settings using our custom hook
+  const { taxFeeSettings, isLoading: isTaxFeeSettingsLoading } = useTaxFeeSettings();
+  
+  // State for offer dropdown
+  const [isOfferDropdownOpen, setIsOfferDropdownOpen] = useState(false);
+  const [offerSearchTerm, setOfferSearchTerm] = useState('');
+  const [showOfferDropdown, setShowOfferDropdown] = useState(false);
+
+  // Add useEffect to handle click outside of offer dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const dropdown = document.getElementById('offer-dropdown');
+      const input = document.getElementById('offer-input');
+      if (dropdown && input && 
+          !dropdown.contains(event.target as Node) && 
+          !input.contains(event.target as Node)) {
+        setShowOfferDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Filter offers based on search term
+  const filteredOffers = useMemo(() => {
+    if (!vendorOffers || vendorOffers.length === 0) return [];
+    if (!offerSearchTerm) return vendorOffers;
+    
+    return vendorOffers.filter((offer: { code: string; type: string; value: number }) => 
+      offer.code.toLowerCase().includes(offerSearchTerm.toLowerCase()) ||
+      (offer.type === 'percentage' && `${offer.value}%`.includes(offerSearchTerm)) ||
+      (offer.type === 'fixed' && `₹${offer.value}`.includes(offerSearchTerm))
+    );
+  }, [vendorOffers, offerSearchTerm]);
+
+  // Fetch service-specific staff data when a service is selected
+  const serviceStaffData = useBookingData(salonId as string, selectedService?.id || (selectedServices.length > 0 ? selectedServices[0]?.id : undefined));
+  
+  // Add additional debugging for serviceStaffData
+  useEffect(() => {
+    console.log('serviceStaffData updated:', serviceStaffData);
+  }, [serviceStaffData]);
+  
+  // Add debugging to see what's happening with serviceStaffData
+  console.log('BookingPage - serviceStaffData:', serviceStaffData);
+  console.log('BookingPage - selectedService:', selectedService);
+
+  // Make sure currentStep is always a valid number
+  if (typeof currentStep !== 'number' || currentStep < 1 || currentStep > 3) {
+    console.warn('Invalid currentStep value, resetting to 1:', currentStep);
+    setCurrentStep(1);
+  }
+
   // Mutation for creating appointments
   const [createAppointment, { isLoading: isCreatingAppointment }] = useCreatePublicAppointmentMutation();
 
-  // Set to `true` to test the modal, `false` to test the redirect
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  // Get authentication state from the useAuth hook
+  const { isAuthenticated, user } = useAuth();
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  // Check if an appointment was just created and clear the flag
-  useEffect(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true') {
-      console.log("Detected that an appointment was just created, clearing flag");
-      sessionStorage.removeItem('appointmentJustCreated');
-    }
-  }, []);
+  // State for offer code and price breakdown
+  const [offerCode, setOfferCode] = useState('');
+  const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
+  const [offer, setOffer] = useState<any>(null);
 
-  // Ensure service-staff assignments are properly initialized when selectedServices change
-  useEffect(() => {
-    if (selectedServices.length > 0) {
-      // Create service-staff assignments for all selected services if they don't exist
-      const newAssignments = selectedServices.map(service => {
-        // Check if this service already has an assignment
-        const existingAssignment = serviceStaffAssignments.find(assignment => assignment.service.id === service.id);
-        if (existingAssignment) {
-          return existingAssignment;
-        }
-        // Create a new assignment with no staff selected
-        return { service, staff: null };
-      });
-      
-      // Only update if there are changes
-      if (newAssignments.length !== serviceStaffAssignments.length || 
-          newAssignments.some((newAssignment, index) => 
-            newAssignment.service.id !== serviceStaffAssignments[index]?.service.id)) {
-        setServiceStaffAssignments(newAssignments);
-      }
-    }
-  }, [selectedServices]);
-
-  // Calculate service schedule when selectedTime or selectedStaff changes
-  useEffect(() => {
-    if (selectedTime) {
-      console.log("Recalculating service schedule...");
-      console.log("Selected time:", selectedTime);
-      console.log("Service staff assignments:", serviceStaffAssignments);
-      console.log("Selected services:", selectedServices);
-      console.log("Selected staff:", selectedStaff);
-      console.log("Is single service?", selectedServices.length === 1);
-      
-      // Calculate the detailed schedule for each service
-      const totalDuration = calculateTotalDuration(selectedServices);
-      console.log("Total duration:", totalDuration);
-      
-      // Calculate start and end times for each service
-      const newServiceSchedule: Array<{
-        service: Service;
-        staff: StaffMember | null;
-        startTime: string;
-        endTime: string;
-        duration: number;
-      }> = [];
-      
-      let currentTimeMinutes = parseInt(selectedTime?.split(':')[0] || '0') * 60 + parseInt(selectedTime?.split(':')[1] || '0');
-      
-      // Check if this is a single service booking (no service-staff assignments)
-      if (selectedServices.length === 1 && serviceStaffAssignments.length === 0) {
-        console.log("Processing SINGLE SERVICE booking");
-        const service = selectedServices[0];
-        const serviceDuration = convertDurationToMinutes(service.duration);
-        const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
-        const endTimeMinutes = currentTimeMinutes + serviceDuration;
-        const endTime = `${Math.floor(endTimeMinutes / 60).toString().padStart(2, '0')}:${(endTimeMinutes % 60).toString().padStart(2, '0')}`;
-        
-        newServiceSchedule.push({
-          service,
-          staff: selectedStaff, // Use the selectedStaff from Step2
-          startTime,
-          endTime,
-          duration: serviceDuration
-        });
-        
-        console.log("Single service schedule created:", newServiceSchedule);
-      } else {
-        // Multi-service flow - use service-staff assignments
-        console.log("Processing MULTI-SERVICE booking");
-        
-        // Group services by staff member to determine the sequence
-        const staffServiceMap: { [key: string]: { staff: StaffMember; services: Service[] } } = {};
-        
-        for (const assignment of serviceStaffAssignments) {
-          if (assignment.staff) {
-            const staffId = assignment.staff.id;
-            if (staffServiceMap[staffId]) {
-              staffServiceMap[staffId].services.push(assignment.service);
-            } else {
-              staffServiceMap[staffId] = {
-                staff: assignment.staff,
-                services: [assignment.service]
-              };
-            }
-          }
-        }
-        
-        console.log("Staff service map:", staffServiceMap);
-        
-        // Process each staff member's services in order
-        Object.keys(staffServiceMap).forEach(staffId => {
-          const entry = staffServiceMap[staffId];
-          entry.services.forEach((service: Service) => {
-            const serviceDuration = convertDurationToMinutes(service.duration);
-            const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
-            currentTimeMinutes += serviceDuration;
-            const endTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
-            
-            newServiceSchedule.push({
-              service,
-              staff: entry.staff,
-              startTime,
-              endTime,
-              duration: serviceDuration
-            });
-          });
-        });
-        
-        // If there are services with "Any Professional", add them at the end
-        const anyProfessionalAssignments = serviceStaffAssignments.filter(assignment => !assignment.staff);
-        anyProfessionalAssignments.forEach((assignment: ServiceStaffAssignment) => {
-          const serviceDuration = convertDurationToMinutes(assignment.service.duration);
-          const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
-          currentTimeMinutes += serviceDuration;
-          const endTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
-          
-          newServiceSchedule.push({
-            service: assignment.service,
-            staff: null,
-            startTime,
-            endTime,
-            duration: serviceDuration
-          });
-        });
-      }
-      
-      console.log("Final service schedule:", newServiceSchedule);
-      setServiceSchedule(newServiceSchedule);
-    }
-  }, [selectedTime, serviceStaffAssignments, selectedServices, selectedStaff]);
-
-  // Check for pre-selected service from sessionStorage
-  useEffect(() => {
-    if (services.length > 0) {
-      try {
-        const storedService = sessionStorage.getItem('selectedService');
-        if (storedService) {
-          const serviceData = JSON.parse(storedService);
-          // Find the service in our fetched services by name
-          const matchingService = services.find((s: Service) => s.name === serviceData.name);
-          if (matchingService) {
-            setSelectedServices([matchingService]);
-            setSelectedService(matchingService); // Set the selected service
-            // Create a service-staff assignment for the pre-selected service
-            setServiceStaffAssignments([{ service: matchingService, staff: null }]);
-            // Clear the stored service after using it
-            sessionStorage.removeItem('selectedService');
-          }
-        }
-      } catch (error) {
-        console.error("Failed to parse service from sessionStorage:", error);
-        // Clear invalid data
-        sessionStorage.removeItem('selectedService');
-      }
-    }
-  }, [services]);
-
-  // Loading state for the entire page
-  if (isLoading) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-        <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
-          <Button variant="ghost" onClick={() => window.history.back()} className="flex items-center gap-2">
-            <ChevronLeft className="mr-1 h-5 w-5" />
-            Back
-          </Button>
-          <div className="font-bold text-lg font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-            GlowVita
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
-            <X className="h-5 w-5" />
-          </Button>
-        </header>
-        
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-lg text-muted-foreground">Loading booking details...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state for the entire page
-  if (error) {
-    return (
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-        <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
-          <Button variant="ghost" onClick={() => window.history.back()} className="flex items-center gap-2">
-            <ChevronLeft className="mr-1 h-5 w-5" />
-            Back
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
-            <X className="h-5 w-5" />
-          </Button>
-        </header>
-        
-        <div className="flex-1 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <AlertCircle className="h-12 w-12 text-destructive" />
-            <p className="text-lg text-muted-foreground">Unable to load salon data</p>
-            <Button onClick={() => window.location.reload()}>Try Again</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Handle navigation between steps
   const handleNextStep = () => {
     // For multi-service bookings, validate assignments before proceeding
     const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
@@ -291,7 +187,7 @@ function BookingPageContent() {
         if (allAssigned) {
           setCurrentStep(currentStep + 1);
         } else {
-          alert('Please assign staff to all services or select "Any Professional".');
+          toast.error('Please assign staff to all services or select "Any Professional".');
           return;
         }
       } else {
@@ -301,7 +197,17 @@ function BookingPageContent() {
       if (isAuthenticated) {
         setIsConfirmationModalOpen(true);
       } else {
-        router.push('/client-login');
+        // Save booking data to sessionStorage before redirecting to login
+        const bookingData = {
+          selectedServices,
+          serviceStaffAssignments,
+          selectedStaff,
+          selectedDate: selectedDate.toISOString(),
+          selectedTime,
+          salonId
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        router.push(`/client-login?redirect=/book/${salonId}`);
       }
     }
   };
@@ -314,56 +220,395 @@ function BookingPageContent() {
     }
   };
 
-  const handleFinalBookingConfirmation = () => {
-    // Log the final booking data for debugging
-    const totalDuration = calculateTotalDuration(selectedServices);
-    const bookingData = {
-      selectedServices,
-      serviceStaffAssignments,
-      selectedStaff,
-      selectedDate,
-      selectedTime,
-      totalDuration,
-      salonInfo,
-      serviceSchedule
+  // Check if an appointment was just created and clear the flag
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true') {
+      console.log("Detected that an appointment was just created, clearing flag");
+      sessionStorage.removeItem('appointmentJustCreated');
+    }
+  }, []);
+
+  // Restore pending booking data after login
+  useEffect(() => {
+    if (isAuthenticated && typeof window !== 'undefined') {
+      const pendingBooking = sessionStorage.getItem('pendingBooking');
+      if (pendingBooking) {
+        try {
+          const bookingData = JSON.parse(pendingBooking);
+          // Only restore if it's for the current salon
+          if (bookingData.salonId === salonId) {
+            setSelectedServices(bookingData.selectedServices);
+            setServiceStaffAssignments(bookingData.serviceStaffAssignments);
+            setSelectedStaff(bookingData.selectedStaff);
+            setSelectedDate(new Date(bookingData.selectedDate));
+            setSelectedTime(bookingData.selectedTime);
+            // Clear the pending booking data
+            sessionStorage.removeItem('pendingBooking');
+            // Set current step to confirmation
+            setIsConfirmationModalOpen(true);
+          }
+        } catch (error) {
+          console.error('Failed to restore pending booking data:', error);
+          sessionStorage.removeItem('pendingBooking');
+        }
+      }
+    }
+  }, [isAuthenticated, salonId]);
+
+  // Ensure service-staff assignments are properly initialized when selectedServices change
+  useEffect(() => {
+    console.log('useEffect - Ensuring service-staff assignments', { selectedServicesLength: selectedServices.length, serviceStaffAssignmentsLength: serviceStaffAssignments.length });
+    if (selectedServices.length > 0) {
+      // Create service-staff assignments for all selected services if they don't exist
+      const newAssignments = selectedServices.map(service => {
+        // Validate service data
+        if (!service || !service.id) {
+          console.warn('Invalid service data found:', service);
+          return null;
+        }
+        
+        // Check if this service already has an assignment
+        const existingAssignment = serviceStaffAssignments.find(assignment => assignment.service.id === service.id);
+        if (existingAssignment) {
+          return existingAssignment;
+        }
+        // Create a new assignment with no staff selected
+        return { service, staff: null };
+      }).filter(Boolean) as ServiceStaffAssignment[]; // Filter out any null values
+      
+      // Only update if there are changes
+      if (newAssignments.length !== serviceStaffAssignments.length || 
+          newAssignments.some((newAssignment, index) => 
+            newAssignment?.service?.id !== serviceStaffAssignments[index]?.service?.id)) {
+        console.log('useEffect - Updating service-staff assignments', { newAssignments, serviceStaffAssignments });
+        setServiceStaffAssignments(newAssignments);
+      }
+    } else if (serviceStaffAssignments.length > 0) {
+      // If no services are selected but we have assignments, clear them
+      console.log('useEffect - Clearing service-staff assignments');
+      setServiceStaffAssignments([]);
+    }
+  }, [selectedServices, serviceStaffAssignments]);
+
+  // Calculate service schedule when selectedTime or selectedStaff changes
+  useEffect(() => {
+    if (selectedTime) {
+      try {
+        console.log("Recalculating service schedule...");
+        console.log("Selected time:", selectedTime);
+        console.log("Service staff assignments:", serviceStaffAssignments);
+        console.log("Selected services:", selectedServices);
+        console.log("Selected staff:", selectedStaff);
+        console.log("Is single service?", selectedServices.length === 1);
+        
+        // Validate inputs
+        if (!selectedTime || !selectedServices || selectedServices.length === 0) {
+          console.warn("Missing required data for service schedule calculation");
+          setServiceSchedule([]);
+          return;
+        }
+        
+        // Calculate the detailed schedule for each service
+        const totalDuration = calculateTotalDuration(selectedServices);
+        console.log("Total duration:", totalDuration);
+        
+        // Calculate start and end times for each service
+        const newServiceSchedule: Array<{
+          service: Service;
+          staff: StaffMember | null;
+          startTime: string;
+          endTime: string;
+          duration: number;
+        }> = [];
+        
+        let currentTimeMinutes = parseInt(selectedTime?.split(':')[0] || '0') * 60 + parseInt(selectedTime?.split(':')[1] || '0');
+        
+        // Check if this is a single service booking
+        const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
+        
+        if (!isMultiService) {
+          console.log("Processing SINGLE SERVICE booking");
+          const service = selectedServices[0];
+          
+          // Validate service
+          if (!service || !service.duration) {
+            console.error("Invalid service data for single service booking:", service);
+            setServiceSchedule([]);
+            return;
+          }
+          
+          const serviceDuration = convertDurationToMinutes(service.duration);
+          const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
+          const endTimeMinutes = currentTimeMinutes + serviceDuration;
+          const endTime = `${Math.floor(endTimeMinutes / 60).toString().padStart(2, '0')}:${(endTimeMinutes % 60).toString().padStart(2, '0')}`;
+          
+          newServiceSchedule.push({
+            service,
+            staff: selectedStaff, // Use the selectedStaff from Step2
+            startTime,
+            endTime,
+            duration: serviceDuration
+          });
+          
+          console.log("Single service schedule created:", newServiceSchedule);
+        } else {
+          // Multi-service flow - use service-staff assignments
+          console.log("Processing MULTI-SERVICE booking");
+          
+          // Validate service-staff assignments
+          if (!serviceStaffAssignments || serviceStaffAssignments.length === 0) {
+            console.warn("No service-staff assignments found for multi-service booking");
+            setServiceSchedule([]);
+            return;
+          }
+          
+          // Process services in the order they were assigned
+          serviceStaffAssignments.forEach(assignment => {
+            // Validate assignment
+            if (!assignment || !assignment.service) {
+              console.warn("Invalid assignment found:", assignment);
+              return;
+            }
+            
+            const service = assignment.service;
+            
+            // Validate service
+            if (!service || !service.duration) {
+              console.warn("Invalid service data:", service);
+              return;
+            }
+            
+            const serviceDuration = convertDurationToMinutes(service.duration);
+            const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
+            currentTimeMinutes += serviceDuration;
+            const endTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
+            
+            newServiceSchedule.push({
+              service,
+              staff: assignment.staff, // Use the staff from the assignment
+              startTime,
+              endTime,
+              duration: serviceDuration
+            });
+          });
+        }
+        
+        console.log("Final service schedule:", newServiceSchedule);
+        setServiceSchedule(newServiceSchedule);
+      } catch (error) {
+        console.error("Error calculating service schedule:", error);
+        setServiceSchedule([]); // Set empty schedule on error to prevent blank screen
+      }
+    }
+  }, [selectedTime, serviceStaffAssignments, selectedServices, selectedStaff]);
+
+  // Handle offer code application
+  const handleApplyOffer = async () => {
+    if (!offerCode) return;
+    
+    try {
+      // Validate the offer code using the API endpoint
+      const response = await fetch('/api/validate-offer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          offerCode,
+          vendorId: salonId
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setOffer(result.data); // Set the offer data directly
+        // Use toast instead of alert
+        toast.success('Offer applied successfully!');
+      } else {
+        toast.error(result.message || 'Invalid or expired offer code');
+      }
+    } catch (error) {
+      console.error('Error applying offer:', error);
+      toast.error('Failed to validate offer code. Please try again.');
+    }
+  };
+
+  // Handle offer selection from dropdown
+  const handleSelectOffer = (selectedOffer: { code: string }) => {
+    setOfferCode(selectedOffer.code);
+    setOffer(selectedOffer);
+    setShowOfferDropdown(false);
+    setOfferSearchTerm('');
+    toast.success('Offer applied successfully!');
+  };
+
+  // Clear applied offer
+  const handleClearOffer = () => {
+    setOfferCode('');
+  };
+
+  // Update the handleFinalBookingConfirmation function to include payment details
+  const handleFinalBookingConfirmation = async () => {
+    if (!selectedTime) {
+      toast.error("Please select a time slot");
+      return;
+    }
+
+    if (!isAuthenticated) {
+      // Save booking data to sessionStorage
+      const bookingData = {
+        salonId,
+        selectedServices,
+        serviceStaffAssignments,
+        selectedStaff,
+        selectedDate,
+        selectedTime,
+      };
+      sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+      
+      // Redirect to login
+      router.push(`/login?redirect=/book/${salonId}`);
+      return;
+    }
+
+    // Validate that we have at least one service
+    if (selectedServices.length === 0) {
+      toast.error("Please select at least one service");
+      return;
+    }
+
+    // Check if this is a multi-service booking
+    const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
+    
+    let staffId, staffName;
+    
+    if (isMultiService) {
+      // For multi-service, use the first service assignment
+      const firstAssignment = serviceStaffAssignments[0];
+      if (firstAssignment) {
+        staffId = firstAssignment.staff ? firstAssignment.staff.id : null;
+        staffName = firstAssignment.staff ? firstAssignment.staff.name : "Any Professional";
+      } else {
+        staffId = null;
+        staffName = "Any Professional";
+      }
+    } else {
+      // For single service, use the selectedStaff
+      staffId = selectedStaff?.id || null;
+      staffName = selectedStaff?.name || "Any Professional";
+    }
+
+    // Get the first service as the primary service
+    const primaryService = selectedServices[0];
+    
+    // Validate primary service has required fields
+    if (!primaryService.id || !primaryService.name) {
+      toast.error("Invalid service data. Please try again.");
+      return;
+    }
+
+    // Calculate end time
+    const duration = convertDurationToMinutes(primaryService.duration);
+    const endTime = calculateEndTime(selectedTime, duration);
+
+    // Create appointment data with all required fields
+    const appointmentData = {
+      vendorId: salonId,
+      client: user?._id || user?.id, // Try both _id and id
+      clientName: `${user?.firstName} ${user?.lastName}`,
+      service: primaryService.id,
+      serviceName: primaryService.name,
+      staff: staffId, // Use the properly determined staffId
+      staffName: staffName, // Use the properly determined staffName
+      date: selectedDate instanceof Date ? selectedDate.toISOString() : new Date(selectedDate).toISOString(),
+      startTime: selectedTime,
+      endTime: endTime,
+      duration: duration,
+      amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
+        parseFloat(primaryService.discountedPrice) : 
+        parseFloat(primaryService.price),
+      totalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
+        parseFloat(primaryService.discountedPrice) : 
+        parseFloat(primaryService.price),
+      platformFee: priceBreakdown?.platformFee || 0,
+      serviceTax: priceBreakdown?.serviceTax || 0,
+      discountAmount: priceBreakdown?.discountAmount || 0,
+      finalAmount: priceBreakdown?.finalTotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
+        parseFloat(primaryService.discountedPrice) : 
+        parseFloat(primaryService.price)),
+      paymentMethod: 'Pay at Salon', // Default to Pay at Salon
+      paymentStatus: 'pending',
+      status: 'scheduled',
+      notes: isMultiService ? "Multi-service appointment" : "Single service appointment",
+      serviceItems: selectedServices.map(service => {
+        // For multi-service, find the specific staff assignment for this service
+        let serviceStaffId = null;
+        let serviceStaffName = "Any Professional";
+        
+        if (isMultiService) {
+          const assignment = serviceStaffAssignments.find(a => a.service.id === service.id);
+          if (assignment) {
+            serviceStaffId = assignment.staff ? assignment.staff.id : null;
+            serviceStaffName = assignment.staff ? assignment.staff.name : "Any Professional";
+          }
+        } else {
+          // For single service, use the selectedStaff
+          serviceStaffId = selectedStaff?.id || null;
+          serviceStaffName = selectedStaff?.name || "Any Professional";
+        }
+        
+        return {
+          service: service.id,
+          serviceName: service.name,
+          staff: serviceStaffId,
+          staffName: serviceStaffName,
+          startTime: selectedTime, // This would need to be more specific for multi-service
+          endTime: calculateEndTime(selectedTime, convertDurationToMinutes(service.duration)), // This would need to be more specific for multi-service
+          duration: convertDurationToMinutes(service.duration),
+          amount: service.discountedPrice !== null && service.discountedPrice !== undefined ? 
+            parseFloat(service.discountedPrice) : 
+            parseFloat(service.price)
+        };
+      }),
+      isMultiService: isMultiService
     };
-    
-    console.log("=== FINAL BOOKING DATA ===");
-    console.log("Booking Details:", JSON.stringify(bookingData, null, 2));
-    
-    // Log detailed service-staff assignments with times
-    console.log("Service Schedule:");
-    serviceSchedule.forEach((schedule, index) => {
-      console.log(`  ${index + 1}. Service: ${schedule.service.name}`);
-      console.log(`     Staff: ${schedule.staff ? schedule.staff.name : 'Any Professional'}`);
-      console.log(`     Time: ${schedule.startTime} - ${schedule.endTime}`);
-      console.log(`     Duration: ${schedule.duration} minutes`);
-      console.log(`     Price: ₹${schedule.service.price}`);
-    });
-    
-    // Log time slot information
-    console.log("Appointment Details:");
-    console.log(`  Date: ${format(selectedDate, 'EEEE, MMMM d, yyyy')}`);
-    console.log(`  Start Time: ${selectedTime}`);
-    if (serviceSchedule.length > 0) {
-      const endTime = serviceSchedule[serviceSchedule.length - 1].endTime;
-      console.log(`  End Time: ${endTime}`);
+
+    try {
+      // Create the appointment in the database
+      console.log("Calling createAppointment with data:", appointmentData);
+      const result = await createAppointment(appointmentData).unwrap();
+      console.log("Appointment created successfully:", result);
+      
+      // Close the payment modal
+      setIsPaymentModalOpen(false);
+      
+      // Show confirmation message with toast
+      toast.success(`Booking Confirmed! Payment Method: ${appointmentData.paymentMethod}\nAppointment created successfully with ${selectedServices.length} services.`);
+      
+      // Set a flag in sessionStorage to indicate that an appointment was just created
+      // This will help the time slot component know to refetch data when it mounts again
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('appointmentJustCreated', 'true');
+      }
+      
+      // Clear the selected time to ensure the time slot component refetches data
+      // This will help ensure that the newly created appointment is reflected in the available time slots
+      setSelectedTime(null);
+      
+      // Redirect to the appointments page after a short delay
+      setTimeout(() => {
+        router.push('/profile/appointments');
+      }, 2000);
+    } catch (error: any) {
+      console.error("Error creating appointment:", error);
+      // Check if it's a validation error from the API
+      if (error?.data?.message) {
+        toast.error(`Failed to create appointment: ${error.data.message}`);
+      } else {
+        toast.error("Failed to create appointment. Please try again.");
+      }
     }
-    console.log(`  Total Duration: ${totalDuration} minutes`);
-    
-    // Log total amount
-    const totalAmount = selectedServices.reduce((acc, s) => acc + parseFloat(s.price), 0);
-    console.log(`  Total Amount: ₹${totalAmount.toFixed(2)}`);
-    
-    console.log("==========================");
-    
-    // Check if service schedule is properly calculated
-    if (serviceSchedule.length === 0 && selectedTime) {
-      console.warn("Service schedule is empty but selectedTime is set. This might indicate a calculation issue.");
-    }
-    
-    setIsConfirmationModalOpen(false);
-    setIsPaymentModalOpen(true);
   };
 
   const handlePaymentMethodSelection = async (method: string) => {
@@ -374,10 +619,36 @@ function BookingPageContent() {
     console.log("Selected services:", selectedServices);
     console.log("Service staff assignments:", serviceStaffAssignments);
     console.log("Selected staff:", selectedStaff);
+    console.log("Selected services details:", selectedServices.map(s => ({
+      id: s.id,
+      name: s.name,
+      hasId: !!s.id,
+      hasName: !!s.name,
+      price: s.price,
+      discountedPrice: s.discountedPrice
+    })));
     
     // Prevent multiple calls
     if (isCreatingAppointment) {
       console.log("Appointment creation already in progress, skipping...");
+      return;
+    }
+    
+    // Validate that we have at least one service
+    if (selectedServices.length === 0) {
+      toast.error("Please select at least one service");
+      return;
+    }
+    
+    // Check if this is a multi-service booking
+    const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
+    
+    // Get the first service as the primary service
+    const primaryService = selectedServices[0];
+    
+    // Validate primary service has required fields
+    if (!primaryService.id || !primaryService.name) {
+      toast.error("Invalid service data. Please try again.");
       return;
     }
     
@@ -389,19 +660,77 @@ function BookingPageContent() {
       if (serviceSchedule.length === 0 && selectedServices.length === 1 && selectedTime) {
         console.log("Creating service schedule for single service appointment");
         const service = selectedServices[0];
+        console.log("Service for schedule:", service);
+        console.log("Service properties:", {
+          service: service,
+          serviceType: typeof service,
+          serviceKeys: service ? Object.keys(service) : null,
+          hasId: !!(service && service.id),
+          hasName: !!(service && service.name),
+          hasPrice: !!(service && service.price),
+          id: service?.id,
+          name: service?.name,
+          price: service?.price
+        });
+        
+        // Validate service has required properties
+        if (!service) {
+          console.error("No service selected for schedule creation");
+          toast.error("No service selected. Please try again.");
+          return;
+        }
+        
+        if (!service.id) {
+          console.error("Service missing ID:", service);
+          toast.error("Invalid service data - missing ID. Please try again.");
+          return;
+        }
+        
+        if (!service.name) {
+          console.error("Service missing name:", service);
+          toast.error("Invalid service data - missing name. Please try again.");
+          return;
+        }
+        
+        // Determine staff for single service
+        let staffForSchedule = selectedStaff;
+        if (isMultiService && serviceStaffAssignments.length > 0) {
+          const assignment = serviceStaffAssignments.find(a => a.service.id === service.id);
+          if (assignment) {
+            staffForSchedule = assignment.staff;
+          }
+        }
+        
         const serviceDuration = convertDurationToMinutes(service.duration);
+        console.log("Service duration:", serviceDuration);
         
         // Create a service schedule entry for the single service
         finalServiceSchedule = [{
           service,
-          staff: selectedStaff, // This should already be correct
+          staff: staffForSchedule, // Use the properly determined staff
           startTime: selectedTime,
           endTime: calculateEndTime(selectedTime, serviceDuration),
           duration: serviceDuration
         }];
         
         console.log("Created single service schedule:", finalServiceSchedule);
+        console.log("Created schedule service details:", {
+          service: finalServiceSchedule[0].service,
+          staff: finalServiceSchedule[0].staff,
+          staffType: typeof finalServiceSchedule[0].staff,
+          staffKeys: finalServiceSchedule[0].staff ? Object.keys(finalServiceSchedule[0].staff) : null,
+          hasStaff: !!finalServiceSchedule[0].staff,
+          hasStaffId: finalServiceSchedule[0].staff && finalServiceSchedule[0].staff.id,
+          hasStaffName: finalServiceSchedule[0].staff && finalServiceSchedule[0].staff.name,
+          staffId: finalServiceSchedule[0].staff?.id,
+          staffName: finalServiceSchedule[0].staff?.name,
+          startTime: finalServiceSchedule[0].startTime,
+          endTime: finalServiceSchedule[0].endTime,
+          duration: finalServiceSchedule[0].duration
+        });
       }
+      
+      console.log("Final service schedule:", finalServiceSchedule);
       
       // For multiple services or single service with schedule, create appointment
       if (finalServiceSchedule.length > 0) {
@@ -410,29 +739,113 @@ function BookingPageContent() {
         // Use the first service as the primary service for the appointment
         const primarySchedule = finalServiceSchedule[0];
         console.log("Primary schedule:", primarySchedule);
+        console.log("Primary schedule service details:", {
+          service: primarySchedule.service,
+          serviceType: typeof primarySchedule.service,
+          serviceKeys: primarySchedule.service ? Object.keys(primarySchedule.service) : null,
+          hasService: !!primarySchedule.service,
+          hasServiceId: primarySchedule.service && primarySchedule.service.id,
+          hasServiceName: primarySchedule.service && primarySchedule.service.name,
+          serviceId: primarySchedule.service?.id,
+          serviceName: primarySchedule.service?.name
+        });
+        
+        // Validate that we have all required service data
+        if (!primarySchedule.service || !primarySchedule.service.id || !primarySchedule.service.name) {
+          console.error("Missing required service data:", primarySchedule.service);
+          toast.error("Invalid service data. Please try again.");
+          return;
+        }
+        
+        // Validate that we have all required staff data (staff can be null for "Any Professional")
+        console.log("Primary schedule staff details:", {
+          staff: primarySchedule.staff,
+          staffType: typeof primarySchedule.staff,
+          staffKeys: primarySchedule.staff ? Object.keys(primarySchedule.staff) : null,
+          hasStaff: !!primarySchedule.staff,
+          hasStaffId: primarySchedule.staff && primarySchedule.staff.id,
+          hasStaffName: primarySchedule.staff && primarySchedule.staff.name,
+          staffId: primarySchedule.staff?.id,
+          staffName: primarySchedule.staff?.name
+        });
+        
+        if (primarySchedule.staff && (!primarySchedule.staff.id || !primarySchedule.staff.name)) {
+          console.error("Invalid staff data:", primarySchedule.staff);
+          toast.error("Invalid staff data. Please try again.");
+          return;
+        }
+        
+        console.log("Primary service data:", {
+          id: primarySchedule.service.id,
+          name: primarySchedule.service.name,
+          hasId: !!primarySchedule.service.id,
+          hasName: !!primarySchedule.service.name
+        });
+        
+        console.log("Primary staff data:", {
+          id: primarySchedule.staff ? primarySchedule.staff.id : null,
+          name: primarySchedule.staff ? primarySchedule.staff.name : "Any Professional",
+          hasId: primarySchedule.staff ? !!primarySchedule.staff.id : true, // Can be null
+          hasName: primarySchedule.staff ? !!primarySchedule.staff.name : true
+        });
         
         // Format the appointment date with the correct time
-        const appointmentDate = new Date(selectedDate);
-        const [hours, minutes] = primarySchedule.startTime.split(':').map(Number);
-        appointmentDate.setHours(hours, minutes, 0, 0);
-        console.log("Appointment date:", appointmentDate);
+      const appointmentDate = selectedDate instanceof Date ? new Date(selectedDate) : new Date(selectedDate);
+      const [hours, minutes] = primarySchedule.startTime.split(':').map(Number);
+      appointmentDate.setHours(hours, minutes, 0, 0);
+      console.log("Appointment date:", appointmentDate);
         
         // Create service items for all services
-        const serviceItems = finalServiceSchedule.map(schedule => ({
-          service: schedule.service.id,
-          serviceName: schedule.service.name,
-          staff: schedule.staff ? schedule.staff.id : null,
-          staffName: schedule.staff ? schedule.staff.name : "Any Professional",
-          startTime: schedule.startTime,
-          endTime: schedule.endTime,
-          duration: schedule.duration,
-          amount: parseFloat(schedule.service.price)
-        }));
+        const serviceItems = finalServiceSchedule.map(schedule => {
+          // Validate service data
+          if (!schedule.service || !schedule.service.id || !schedule.service.name) {
+            console.error("Missing required service data in schedule:", schedule.service);
+            throw new Error("Invalid service data in schedule");
+          }
+          
+          // Validate staff data (staff can be null for "Any Professional")
+          if (schedule.staff && (!schedule.staff.id || !schedule.staff.name)) {
+            console.error("Invalid staff data in schedule:", schedule.staff);
+            throw new Error("Invalid staff data in schedule");
+          }
+          
+          console.log("Creating service item:", {
+            serviceId: schedule.service.id,
+            serviceName: schedule.service.name,
+            staffId: schedule.staff ? schedule.staff.id : null,
+            staffName: schedule.staff ? schedule.staff.name : "Any Professional",
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+            duration: schedule.duration,
+            amount: schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ? 
+              parseFloat(schedule.service.discountedPrice) : 
+              parseFloat(schedule.service.price)
+          });
+          
+          return {
+            service: schedule.service.id,
+            serviceName: schedule.service.name,
+            staff: schedule.staff ? schedule.staff.id : null,
+            staffName: schedule.staff ? schedule.staff.name : "Any Professional",
+            startTime: schedule.startTime,
+            endTime: schedule.endTime,
+            duration: schedule.duration,
+            amount: schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ? 
+              parseFloat(schedule.service.discountedPrice) : 
+              parseFloat(schedule.service.price)
+          };
+        });
         
         console.log("Service items:", serviceItems);
         
         // Calculate total amount for all services
-        const totalAmount = finalServiceSchedule.reduce((sum, schedule) => sum + parseFloat(schedule.service.price), 0);
+        const totalAmount = finalServiceSchedule.reduce((sum, schedule) => {
+          const price = schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ? 
+            parseFloat(schedule.service.discountedPrice) : 
+            parseFloat(schedule.service.price);
+          return sum + price;
+        }, 0);
+
         console.log("Total amount:", totalAmount);
         
         // Calculate total duration
@@ -440,46 +853,148 @@ function BookingPageContent() {
         console.log("Total duration:", totalDuration);
         
         // Use the last service's end time as the appointment end time
-        const endTime = finalServiceSchedule[finalServiceSchedule.length - 1].endTime;
+        const endTime = finalServiceSchedule[finalServiceSchedule.length - 1].endTime || 
+                       calculateEndTime(primarySchedule.startTime, totalDuration);
         console.log("End time:", endTime);
         
         // Handle staff field - it can now be null for "Any Professional"
         let staffId = primarySchedule.staff ? primarySchedule.staff.id : null;
         let staffName = primarySchedule.staff ? primarySchedule.staff.name : "Any Professional";
+        let clientName = user.firstName + " " + user.lastName;
+        let clientId = user._id || user.id; // Try both _id and id
+        console.log("Client Name:", clientName)
+        console.log("Client ID:", clientId);
         console.log("Staff ID:", staffId, "Staff Name:", staffName);
+        console.log("User object:", user);
+        console.log("User properties:", {
+          hasFirstName: !!user.firstName,
+          hasLastName: !!user.lastName,
+          hasId: !!clientId,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          id: clientId
+        });
+        
+        // Fix salonId if it's an array
+        const vendorId = Array.isArray(salonId) ? salonId[0] : salonId;
+        console.log("Vendor ID check:", {
+          salonId: salonId,
+          vendorId: vendorId,
+          salonIdType: typeof salonId,
+          isSalonIdArray: Array.isArray(salonId)
+        });
         
         // Prepare appointment data - ensure all required fields are provided
         const appointmentData = {
-          vendorId: salonId,
-          clientName: "Web Customer", // In a real implementation, this would come from user authentication
+          vendorId: vendorId, // Use the fixed vendorId
+          client: clientId, // Use the fixed client ID
+          clientName: clientName, // In a real implementation, this would come from user authentication
           service: primarySchedule.service.id,
           serviceName: primarySchedule.service.name,
           staff: staffId, // This can now be null for "Any Professional"
           staffName: staffName,
-          date: appointmentDate,
+          date: appointmentDate.toISOString(), // Ensure date is in ISO format
           startTime: primarySchedule.startTime,
           endTime: endTime,
           duration: totalDuration,
           amount: totalAmount,
           totalAmount: totalAmount,
+          // Add payment details
+          platformFee: priceBreakdown?.platformFee || 0,
+          serviceTax: priceBreakdown?.serviceTax || 0,
+          taxRate: priceBreakdown?.taxFeeSettings?.serviceTax || 0,
+          discountAmount: priceBreakdown?.discountAmount || 0,
+          finalAmount: priceBreakdown?.finalTotal || totalAmount,
+          paymentMethod: method,
+          paymentStatus: method === 'Pay Online' ? 'pending' : 'pending',
           status: "scheduled",
           notes: finalServiceSchedule.length > 1 ? "Multi-service appointment" : "Single service appointment",
           serviceItems: serviceItems,
           isMultiService: finalServiceSchedule.length > 1
         };
         
+        // Log all required fields to make sure they're present
+        console.log("Required fields check:", {
+          vendorId: appointmentData.vendorId,
+          client: appointmentData.client,
+          clientName: appointmentData.clientName,
+          service: appointmentData.service,
+          serviceName: appointmentData.serviceName,
+          staff: appointmentData.staff,
+          staffName: appointmentData.staffName,
+          date: appointmentData.date,
+          startTime: appointmentData.startTime,
+          endTime: appointmentData.endTime,
+          duration: appointmentData.duration,
+          amount: appointmentData.amount,
+          totalAmount: appointmentData.totalAmount,
+          hasVendorId: !!appointmentData.vendorId,
+          hasClient: !!appointmentData.client,
+          hasClientName: !!appointmentData.clientName,
+          hasService: !!appointmentData.service,
+          hasServiceName: !!appointmentData.serviceName,
+          hasStaff: appointmentData.staff !== undefined, // Can be null
+          hasStaffName: !!appointmentData.staffName,
+          hasDate: !!appointmentData.date,
+          hasStartTime: !!appointmentData.startTime,
+          hasEndTime: !!appointmentData.endTime,
+          hasDuration: !!appointmentData.duration,
+          hasAmount: !!appointmentData.amount,
+          hasTotalAmount: !!appointmentData.totalAmount
+        });
+        
+        // Double-check that all required fields are present before sending
+        const requiredFields = ['vendorId', 'client', 'clientName', 'service', 'serviceName', 'staff', 'staffName', 'date', 'startTime', 'endTime', 'duration', 'amount', 'totalAmount'];
+        const missingFields = requiredFields.filter(field => {
+          // Special handling for staff field - it can be null but must be present
+          if (field === 'staff') {
+            return appointmentData[field as keyof typeof appointmentData] === undefined;
+          }
+          return !appointmentData[field as keyof typeof appointmentData];
+        });
+        
+        if (missingFields.length > 0) {
+          console.error("Missing required fields:", missingFields);
+          console.error("Appointment data:", appointmentData);
+          toast.error(`Missing required fields: ${missingFields.join(', ')}`);
+          return;
+        }
+        
         console.log("Final appointment data:", appointmentData);
+        console.log("Appointment data being sent:", JSON.stringify(appointmentData, null, 2));
         
         // Create the appointment in the database
         console.log("Calling createAppointment...");
         const result = await createAppointment(appointmentData).unwrap();
         console.log("Appointment created successfully:", result);
         
+        // Handle online payment if selected
+        if (method === 'Pay Online' && priceBreakdown?.finalTotal > 0) {
+          try {
+            // In a real implementation, you would integrate with Razorpay or another payment gateway here
+            // For now, we'll simulate this
+            console.log("Processing online payment...");
+            
+            // Simulate payment processing
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Update payment status to completed
+            // In a real implementation, you would call an API to update the appointment
+            console.log("Payment processed successfully");
+          } catch (paymentError) {
+            console.error("Payment processing error:", paymentError);
+            // Update payment status to failed
+            // In a real implementation, you would call an API to update the appointment
+            toast.error("Payment failed. Please try again or pay at the salon.");
+            return;
+          }
+        }
+        
         // Close the payment modal
         setIsPaymentModalOpen(false);
         
-        // Show confirmation message
-        alert(`Booking Confirmed! Payment Method: ${method}\nAppointment created successfully with ${finalServiceSchedule.length} services.`);
+        // Show confirmation message with toast
+        toast.success(`Booking Confirmed! Payment Method: ${method}\nAppointment created successfully with ${finalServiceSchedule.length} services.`);
         
         // Set a flag in sessionStorage to indicate that an appointment was just created
         // This will help the time slot component know to refetch data when it mounts again
@@ -491,34 +1006,25 @@ function BookingPageContent() {
         // This will help ensure that the newly created appointment is reflected in the available time slots
         setSelectedTime(null);
         
-        // Redirect to a confirmation page or back to the salon page after a short delay
+        // Redirect to the appointments page after a short delay
         setTimeout(() => {
-          router.push(`/salon/${salonId}`);
+          router.push('/profile/appointments');
         }, 2000);
       } else {
         console.log("No service schedule found and unable to create one, skipping appointment creation");
-        alert("Unable to create appointment. Please try again.");
+        toast.error("Unable to create appointment. Please try again.");
       }
     } catch (error: any) {
       console.error("Error creating appointment:", error);
       // Check if it's a validation error from the API
       if (error?.data?.message) {
-        alert(`Failed to create appointment: ${error.data.message}`);
+        toast.error(`Failed to create appointment: ${error.data.message}`);
       } else {
-        alert("Failed to create appointment. Please try again.");
+        toast.error("Failed to create appointment. Please try again.");
       }
     }
   };
-  
-  // Helper function to calculate end time
-  const calculateEndTime = (startTime: string, duration: number): string => {
-    const [hours, minutes] = startTime.split(':').map(Number);
-    const totalMinutes = hours * 60 + minutes + duration;
-    const endHours = Math.floor(totalMinutes / 60) % 24;
-    const endMinutes = totalMinutes % 60;
-    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
-  };
-  
+
   // Add a function to refetch appointment data after creation
   const refetchAppointments = async () => {
     // This function can be called after appointment creation to ensure data is refreshed
@@ -526,8 +1032,33 @@ function BookingPageContent() {
   };
 
   const handleSelectService = (service: Service) => {
+    // Validate service data before processing
+    if (!service || !service.id) {
+      console.error('Invalid service data:', service);
+      return;
+    }
+    
+    // Ensure service has all required properties
+    if (!service.name) {
+      console.error('Service missing name property:', service);
+      return;
+    }
+    
+    console.log('handleSelectService called with:', service);
+    console.log('Service properties:', {
+      id: service.id,
+      name: service.name,
+      price: service.price,
+      hasId: !!service.id,
+      hasName: !!service.name,
+      hasPrice: !!service.price,
+      serviceKeys: Object.keys(service)
+    });
+    
     setSelectedServices(prev => {
       const isSelected = prev.some(s => s.id === service.id);
+      console.log('Service is already selected:', isSelected);
+      
       if (isSelected) {
         // If deselecting the service, clear the selected service if it matches
         if (selectedService?.id === service.id) {
@@ -539,22 +1070,25 @@ function BookingPageContent() {
         );
         return prev.filter(s => s.id !== service.id);
       } else {
-        // When selecting a service, only update the selected service state if we're in single service mode
-        // For multiple services, we don't want to override the selectedService state
-        if (selectedServices.length === 0) {
-          setSelectedService(service);
-        }
+        // When selecting a service, update the selected service state
+        setSelectedService(service);
+        console.log('Updated selectedService state to:', service);
         
         // Add a new service-staff assignment with no staff selected initially
         setServiceStaffAssignments(prevAssignments => {
           // Check if this service is already in assignments to prevent duplicates
           const isAlreadyAssigned = prevAssignments.some(assignment => assignment.service.id === service.id);
           if (isAlreadyAssigned) {
-            return prevAssignments;
+            // Update the existing assignment
+            return prevAssignments.map(assignment => 
+              assignment.service.id === service.id ? { ...assignment, service } : assignment
+            );
           }
+          const newAssignment = { service, staff: null };
+          console.log('Adding new service-staff assignment:', newAssignment);
           return [
             ...prevAssignments,
-            { service, staff: null }
+            newAssignment
           ];
         });
         return [...prev, service];
@@ -569,128 +1103,538 @@ function BookingPageContent() {
   };
 
   const renderStepContent = () => {
-    // Use multi-service flow if more than one service is selected
-    // Also use multi-service flow if there are service-staff assignments (which indicates we're in multi-service workflow)
-    const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
-    
-    switch (currentStep) {
-        case 1:
-            return (
-              <Step1_Services 
-                selectedServices={selectedServices}
-                onSelectService={handleSelectService}
-                currentStep={currentStep}
-                setCurrentStep={setCurrentStep}
-                services={services}
-                servicesByCategory={servicesByCategory}
-                categories={categories}
-                isLoading={false} // Already handled at page level
-                error={null}
-                onServiceSelect={setSelectedService} // Pass the callback to set selected service
-              />
-            );
-        case 2:
-            if (isMultiService) {
-                // Multi-service flow
-                return (
-                  <Step2_MultiService 
-                    serviceStaffAssignments={serviceStaffAssignments}
-                    onUpdateAssignment={(serviceId: string, staff: StaffMember | null) => {
-                      setServiceStaffAssignments(prev => 
-                        prev.map(assignment => 
-                          assignment.service.id === serviceId 
-                            ? { ...assignment, staff } 
-                            : assignment
-                        )
-                      );
-                    }}
-                    currentStep={currentStep}
-                    setCurrentStep={setCurrentStep}
-                    staff={staff}
-                    isLoading={false}
-                    error={null}
-                    onNext={() => setCurrentStep(3)}
-                  />
-                );
-            } else {
-                // Single service flow
-                return (
-                  <Step2_Staff 
-                    selectedStaff={selectedStaff}
-                    onSelectStaff={handleSelectStaff}
-                    currentStep={currentStep}
-                    setCurrentStep={setCurrentStep}
-                    staff={serviceStaffData.staff} // Use service-specific staff data
-                    isLoading={serviceStaffData.isLoading} // Use service-specific loading state
-                    error={serviceStaffData.error} // Use service-specific error state
-                    selectedService={selectedService} // Pass the selected service
-                    onStaffSelect={setSelectedStaff} // Pass the callback to set selected staff
-                  />
-                );
-            }
-        case 3:
-            if (isMultiService) {
-                // Multi-service time slot selection
-                return (
-                  <Step3_MultiServiceTimeSlot 
-                    selectedDate={selectedDate}
-                    onSelectDate={setSelectedDate}
-                    selectedTime={selectedTime}
-                    onSelectTime={setSelectedTime}
-                    currentStep={currentStep}
-                    setCurrentStep={setCurrentStep}
-                    serviceStaffAssignments={serviceStaffAssignments}
-                    staff={staff}
-                    workingHours={workingHours}
-                    isLoading={false}
-                    error={null}
-                    selectedServices={selectedServices}
-                    vendorId={salonId as string}
-                  />
-                );
-            } else {
-                // Single service time slot selection
-                return (
-                  <Step3_TimeSlot 
-                    selectedDate={selectedDate}
-                    onSelectDate={setSelectedDate}
-                    selectedTime={selectedTime}
-                    onSelectTime={setSelectedTime}
-                    currentStep={currentStep}
-                    setCurrentStep={setCurrentStep}
-                    selectedStaff={selectedStaff}
-                    onSelectStaff={setSelectedStaff}
-                    staff={serviceStaffData.staff} // Use service-specific staff data
-                    workingHours={workingHours}
-                    isLoading={serviceStaffData.isLoading} // Use service-specific loading state
-                    error={serviceStaffData.error} // Use service-specific error state
-                    vendorId={salonId as string}
-                    selectedService={selectedService}
-                  />
-                );
-            }
-        default:
-            return <div>Step not found</div>;
+    try {
+      // Use multi-service flow if more than one service is selected
+      // Also use multi-service flow if there are service-staff assignments (which indicates we're in multi-service workflow)
+      const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
+      
+      // Add debugging
+      console.log('renderStepContent - Current state:', { 
+        currentStep, 
+        isMultiService, 
+        selectedServicesLength: selectedServices.length,
+        serviceStaffAssignmentsLength: serviceStaffAssignments.length,
+        selectedService: selectedService?.id,
+        serviceStaffDataLoading: serviceStaffData?.isLoading,
+        serviceStaffDataError: serviceStaffData?.error,
+        serviceStaffData: serviceStaffData
+      });
+      
+      // Add a simple test to ensure we always return something
+      if (currentStep < 1 || currentStep > 3) {
+        console.warn('Invalid currentStep value:', currentStep);
+        return <div className="w-full py-12 text-center">Invalid step: {currentStep}</div>;
+      }
+      
+      // Add a simple test to see if we're getting to this point
+      console.log('renderStepContent - About to render step:', currentStep);
+      
+      // Show skeleton loader while services are being fetched
+      if (isLoading) {
+        return (
+          <div className="w-full space-y-6">
+            {/* Skeleton for service categories */}
+            <div className="space-y-4">
+              <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center space-x-4">
+                      <div className="h-16 w-16 bg-gray-200 rounded animate-pulse"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Skeleton for continue button */}
+            <div className="flex justify-end">
+              <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        );
+      }
+      
+      // Check if we have services data
+      if (!services || services.length === 0) {
+        return (
+          <div className="w-full py-12 text-center">
+            <div className="flex flex-col items-center gap-4">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+              <p className="text-muted-foreground">No services available at this salon.</p>
+              <Button onClick={() => window.location.reload()}>Reload</Button>
+            </div>
+          </div>
+        );
+      }
+      
+      switch (currentStep) {
+          case 1:
+              console.log('Rendering Step1_Services');
+              return (
+                <Step1_Services 
+                  selectedServices={selectedServices}
+                  onSelectService={handleSelectService}
+                  currentStep={currentStep}
+                  setCurrentStep={setCurrentStep}
+                  services={services}
+                  servicesByCategory={servicesByCategory}
+                  categories={categories}
+                  isLoading={false} // Already handled at page level
+                  error={null}
+                  onServiceSelect={setSelectedService} // Pass the callback to set selected service
+                />
+              );
+          case 2:
+              console.log('Rendering Step2 - isMultiService:', isMultiService);
+              if (isMultiService) {
+                  // Multi-service flow
+                  console.log('Rendering Step2_MultiService');
+                  // Check if we have staff data
+                  if (!staff || staff.length === 0) {
+                    return (
+                      <div className="w-full py-12 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <AlertCircle className="h-8 w-8 text-destructive" />
+                          <p className="text-muted-foreground">No staff available at this salon.</p>
+                          <Button onClick={() => window.location.reload()}>Reload</Button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <Step2_MultiService 
+                      serviceStaffAssignments={serviceStaffAssignments}
+                      onUpdateAssignment={(serviceId: string, staff: StaffMember | null) => {
+                        setServiceStaffAssignments(prev => 
+                          prev.map(assignment => 
+                            assignment.service.id === serviceId 
+                              ? { ...assignment, staff } 
+                              : assignment
+                          )
+                        );
+                      }}
+                      currentStep={currentStep}
+                      setCurrentStep={setCurrentStep}
+                      staff={staff}
+                      isLoading={false}
+                      error={null}
+                      onNext={() => setCurrentStep(3)}
+                    />
+                  );
+              } else {
+                  // Single service flow
+                  console.log('Rendering Step2_Staff');
+                  
+                  // Check if serviceStaffData is still loading
+                  if (serviceStaffData?.isLoading) {
+                    return (
+                      <div className="w-full space-y-6">
+                        {/* Skeleton for staff selection */}
+                        <div className="space-y-4">
+                          <div className="h-6 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {[...Array(3)].map((_, i) => (
+                              <div key={i} className="border rounded-lg p-4 space-y-3">
+                                <div className="flex items-center space-x-4">
+                                  <div className="h-12 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                                  <div className="flex-1 space-y-2">
+                                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse"></div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Check if there's an error with serviceStaffData
+                  if (serviceStaffData?.error) {
+                    return (
+                      <div className="w-full">
+                        <div className="flex items-center justify-center py-12">
+                          <div className="flex flex-col items-center gap-4">
+                            <AlertCircle className="h-8 w-8 text-destructive" />
+                            <p className="text-muted-foreground">Unable to load staff members. Please try again.</p>
+                            <Button onClick={() => window.location.reload()}>Reload</Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Check if we have staff data
+                  const staffData = serviceStaffData.staff || [];
+                  if (!staffData || staffData.length === 0) {
+                    return (
+                      <div className="w-full py-12 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <AlertCircle className="h-8 w-8 text-destructive" />
+                          <p className="text-muted-foreground">No staff available for this service.</p>
+                          <Button onClick={() => window.location.reload()}>Reload</Button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <Step2_Staff 
+                      selectedStaff={selectedStaff}
+                      onSelectStaff={handleSelectStaff}
+                      currentStep={currentStep}
+                      setCurrentStep={setCurrentStep}
+                      staff={staffData}
+                      isLoading={serviceStaffData.isLoading || false}
+                      error={serviceStaffData.error}
+                      selectedService={selectedService}
+                      onStaffSelect={setSelectedStaff}
+                    />
+                  );
+              }
+          case 3:
+              console.log('Rendering Step3 - isMultiService:', isMultiService);
+              if (isMultiService) {
+                  // Multi-service time slot selection
+                  console.log('Rendering Step3_MultiServiceTimeSlot');
+                  // Check if we have staff data
+                  if (!staff || staff.length === 0) {
+                    return (
+                      <div className="w-full py-12 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <AlertCircle className="h-8 w-8 text-destructive" />
+                          <p className="text-muted-foreground">No staff available at this salon.</p>
+                          <Button onClick={() => window.location.reload()}>Reload</Button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  // Check if we have working hours data
+                  if (!workingHours || workingHours.length === 0) {
+                    return (
+                      <div className="w-full py-12 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <AlertCircle className="h-8 w-8 text-destructive" />
+                          <p className="text-muted-foreground">Working hours not configured for this salon.</p>
+                          <Button onClick={() => window.location.reload()}>Reload</Button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <Step3_MultiServiceTimeSlot 
+                      selectedDate={selectedDate}
+                      onSelectDate={setSelectedDate}
+                      selectedTime={selectedTime}
+                      onSelectTime={setSelectedTime}
+                      currentStep={currentStep}
+                      setCurrentStep={setCurrentStep}
+                      serviceStaffAssignments={serviceStaffAssignments}
+                      staff={staff}
+                      workingHours={workingHours}
+                      isLoading={false}
+                      error={null}
+                      selectedServices={selectedServices}
+                      vendorId={salonId as string}
+                    />
+                  );
+              } else {
+                  // Single service time slot selection
+                  console.log('Rendering Step3_TimeSlot');
+                  
+                  // Check if serviceStaffData is still loading
+                  if (serviceStaffData?.isLoading) {
+                    return (
+                      <div className="w-full space-y-6">
+                        {/* Skeleton for calendar and time slots */}
+                        <div className="space-y-4">
+                          <div className="h-6 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+                          <div className="border rounded-lg p-4">
+                            <div className="grid grid-cols-7 gap-2 mb-4">
+                              {[...Array(7)].map((_, i) => (
+                                <div key={i} className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                              ))}
+                            </div>
+                            <div className="grid grid-cols-4 gap-2">
+                              {[...Array(16)].map((_, i) => (
+                                <div key={i} className="h-10 bg-gray-200 rounded animate-pulse"></div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Check if there's an error with serviceStaffData
+                  if (serviceStaffData?.error) {
+                    return (
+                      <div className="w-full">
+                        <div className="flex items-center justify-center py-12">
+                          <div className="flex flex-col items-center gap-4">
+                            <AlertCircle className="h-8 w-8 text-destructive" />
+                            <p className="text-muted-foreground">Unable to load time slots. Please try again.</p>
+                            <Button onClick={() => window.location.reload()}>Reload</Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Check if we have staff data
+                  const staffData = serviceStaffData.staff || [];
+                  if (!staffData || staffData.length === 0) {
+                    return (
+                      <div className="w-full py-12 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <AlertCircle className="h-8 w-8 text-destructive" />
+                          <p className="text-muted-foreground">No staff available for this service.</p>
+                          <Button onClick={() => window.location.reload()}>Reload</Button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Check if we have working hours data
+                  if (!workingHours || workingHours.length === 0) {
+                    return (
+                      <div className="w-full py-12 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <AlertCircle className="h-8 w-8 text-destructive" />
+                          <p className="text-muted-foreground">Working hours not configured for this salon.</p>
+                          <Button onClick={() => window.location.reload()}>Reload</Button>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <Step3_TimeSlot 
+                      selectedDate={selectedDate}
+                      onSelectDate={setSelectedDate}
+                      selectedTime={selectedTime}
+                      onSelectTime={setSelectedTime}
+                      currentStep={currentStep}
+                      setCurrentStep={setCurrentStep}
+                      selectedStaff={selectedStaff}
+                      onSelectStaff={setSelectedStaff}
+                      staff={staffData}
+                      workingHours={workingHours}
+                      isLoading={serviceStaffData.isLoading || false}
+                      error={serviceStaffData.error}
+                      vendorId={salonId as string}
+                      selectedService={selectedService}
+                    />
+                  );
+              }
+          default:
+              console.log('Rendering default case - step not found');
+              return <div className="w-full py-12 text-center">Step not found: {currentStep}</div>;
+      }
+    } catch (error) {
+      console.error('Error rendering step content:', error);
+      return (
+        <div className="w-full">
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-4">
+              <AlertCircle className="h-8 w-8 text-destructive" />
+              <p className="text-muted-foreground">Unable to load booking step. Please try again.</p>
+              <Button onClick={() => window.location.reload()}>Reload Page</Button>
+            </div>
+          </div>
+        </div>
+      );
     }
   };
+
+  // Calculate price breakdown when selected services change
+  useEffect(() => {
+    const calculatePrices = async () => {
+      // Validate that we have valid services before calculating prices
+      if (selectedServices && selectedServices.length > 0) {
+        // Filter out any invalid services
+        const validServices = selectedServices.filter(service => 
+          service && service.id && (service.price !== undefined && service.price !== null) && !isNaN(parseFloat(String(service.price)))
+        );
+        
+        if (validServices.length === 0) {
+          console.warn('No valid services found for price calculation');
+          setPriceBreakdown(null);
+          return;
+        }
+        
+        try {
+          console.log('Calculating prices for services:', validServices);
+          console.log('Current offer:', offer);
+          console.log('Tax fee settings:', taxFeeSettings);
+          // Call calculateBookingAmount and await the result
+          const breakdown = await calculateBookingAmount(validServices, offer, taxFeeSettings);
+          console.log('Price breakdown calculated:', breakdown);
+          setPriceBreakdown(breakdown);
+        } catch (error) {
+          console.error('Error calculating prices:', error);
+          // Set a default price breakdown to prevent blank screen
+          const subtotal = validServices.reduce((sum, service) => {
+            const price = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
+              parseFloat(service.discountedPrice) : 
+              parseFloat(service.price || '0');
+            return sum + price;
+          }, 0);
+          
+          const defaultBreakdown = {
+            subtotal: subtotal,
+            discountAmount: 0,
+            amountAfterDiscount: subtotal,
+            platformFee: 0,
+            serviceTax: 0,
+            vendorServiceTax: 0,
+            totalTax: 0,
+            finalTotal: subtotal,
+            taxFeeSettings: null
+          };
+          setPriceBreakdown(defaultBreakdown);
+        }
+      } else {
+        setPriceBreakdown(null);
+      }
+    };
+
+    calculatePrices();
+  }, [selectedServices, offer, taxFeeSettings]);
+
+  // Check for pre-selected service from salon details page
+  useEffect(() => {
+    console.log('Pre-selected service useEffect running with:', { 
+      hasWindow: typeof window !== 'undefined',
+      servicesLength: services?.length,
+      isLoading,
+      hasStoredService: typeof window !== 'undefined' ? sessionStorage.getItem('selectedService') : null,
+      currentStep
+    });
+    
+    if (typeof window !== 'undefined' && services && services.length > 0 && !isLoading) {
+      const storedService = sessionStorage.getItem('selectedService');
+      console.log('Checking for stored service:', storedService);
+      
+      if (storedService) {
+        try {
+          const serviceData = JSON.parse(storedService);
+          console.log('Found pre-selected service in sessionStorage:', serviceData);
+          console.log('Available services:', services);
+          
+          // Find the corresponding service in the loaded services
+          // Check multiple possible ID fields since the data might have different structures
+          let service = services.find(s => 
+            s.id === (serviceData.id || serviceData._id) || 
+            s.id === serviceData._id ||
+            s.id === serviceData.id
+          );
+          
+          console.log('Found service match by ID:', service);
+          
+          // If we still haven't found a match, try matching by name as a fallback
+          if (!service) {
+            service = services.find(s => s.name === serviceData.name);
+            console.log('Fallback - Found service match by name:', service);
+          }
+          
+          if (service) {
+            console.log('Found matching service in loaded services:', service);
+            // Select the service
+            handleSelectService(service);
+            // Make sure we're on step 1
+            if (currentStep !== 1) {
+              console.log('Setting current step to 1');
+              setCurrentStep(1);
+            }
+          } else {
+            console.warn('Could not find matching service in loaded services, creating new service object');
+            console.log('Service data keys:', Object.keys(serviceData));
+            // If we can't find the service by ID, try to create a service object from the stored data
+            const newService: Service = {
+              id: serviceData.id || serviceData._id || '',
+              name: serviceData.name || '',
+              duration: serviceData.duration || '60 min',
+              price: String(serviceData.price || 0),
+              discountedPrice: serviceData.discountedPrice !== undefined && serviceData.discountedPrice !== null ? 
+                String(serviceData.discountedPrice) : null,
+              category: serviceData.category || 'General',
+              image: serviceData.image,
+              description: serviceData.description,
+              staff: serviceData.staff || []
+            };
+            
+            // Select the service
+            handleSelectService(newService);
+            // Make sure we're on step 1
+            if (currentStep !== 1) {
+              console.log('Setting current step to 1');
+              setCurrentStep(1);
+            }
+          }
+          
+          // Remove the stored service to prevent it from being processed again
+          sessionStorage.removeItem('selectedService');
+        } catch (error) {
+          console.error('Error parsing selected service from sessionStorage:', error);
+          sessionStorage.removeItem('selectedService');
+        }
+      }
+    }
+  }, [salonId, services, isLoading, currentStep]); // Run when salonId, services, isLoading, or currentStep change
+
+  // Additional useEffect to handle service selection when services are first loaded
+  useEffect(() => {
+    console.log('Services loaded useEffect running with:', { 
+      servicesLength: services?.length,
+      isLoading,
+      selectedServicesLength: selectedServices.length
+    });
+    
+    // Only run this if we haven't already selected a service and there are services loaded
+    if (services && services.length > 0 && !isLoading && selectedServices.length === 0) {
+      const storedService = typeof window !== 'undefined' ? sessionStorage.getItem('selectedService') : null;
+      console.log('Checking for stored service in services loaded effect:', storedService);
+      
+      if (storedService) {
+        // Trigger the main useEffect by ensuring all conditions are met
+        // This will cause the main useEffect to run again
+        console.log('Services loaded and stored service found, will trigger selection in main useEffect');
+      }
+    }
+  }, [services, isLoading, selectedServices.length]);
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
        <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
-        <Button variant="ghost" onClick={handlePrevStep} className="flex items-center gap-2">
-          <ChevronLeft className="mr-1 h-5 w-5" />
+        <Button variant="ghost" onClick={handlePrevStep} className="flex items-center text-md gap-2">
+          <ChevronLeft className="mr-1 h-6 w-6" />
           {currentStep === 1 ? 'Back' : 'Back'}
         </Button>
-        <div className="font-bold text-lg font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-            GlowVita
-        </div>
+      
         <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
-          <X className="h-5 w-5" />
+          <X className="h-6 w-6" />
         </Button>
       </header>
       <div className="flex-1 grid lg:grid-cols-12 gap-8 px-8">
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto no-scrollbar">
             <div className="max-w-4xl mx-auto pb-24 lg:pb-8 pt-8">
+                {/* Debug info
+                <div className="mb-4 p-3 bg-secondary/30 rounded-lg text-sm">
+                  <div>Current step: {currentStep}</div>
+                  <div>Is loading: {isLoading ? 'true' : 'false'}</div>
+                  <div>Has error: {error ? 'true' : 'false'}</div>
+                  <div>Services length: {services?.length || 0}</div>
+                  <div>Staff length: {staff?.length || 0}</div>
+                  <div>Selected services: {selectedServices.length}</div>
+                </div> */}
                 {renderStepContent()}
             </div>
         </main>
@@ -706,6 +1650,7 @@ function BookingPageContent() {
               currentStep={currentStep}
               salonInfo={salonInfo}
               serviceStaffAssignments={serviceStaffAssignments}
+              priceBreakdown={priceBreakdown}
             />
           </div>
         </aside>
@@ -722,106 +1667,229 @@ function BookingPageContent() {
             isMobileFooter={true}
             salonInfo={salonInfo}
             serviceStaffAssignments={serviceStaffAssignments}
+            priceBreakdown={priceBreakdown}
         />
       </div>
 
       <Dialog open={isConfirmationModalOpen} onOpenChange={setIsConfirmationModalOpen}>
-        <DialogContent className="sm:max-w-4xl bg-secondary/80 backdrop-blur-md border-border/30 rounded-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-center">Confirm Your Booking</DialogTitle>
-              <DialogDescription className="text-center">
-                Please review your appointment details before confirming.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4 grid md:grid-cols-2 gap-6 max-h-[60vh] md:max-h-none overflow-y-auto">
-                <Card className="bg-background/80 flex flex-col">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Scissors className="h-5 w-5 text-primary" />
-                      Selected Services
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 overflow-y-auto space-y-2">
-                    {selectedServices.map(s => (
-                      <div key={s.name} className="flex justify-between items-center text-sm border-b pb-2 last:border-0 last:pb-0">
-                        <span className="text-muted-foreground">{s.name}</span>
-                        <span className="font-semibold">₹{s.price}</span>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Confirm Your Booking</DialogTitle>
+            <DialogDescription>Review your appointment details before confirming.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-6">
+              <div className="space-y-4">
+                  {/* Salon Info Card */}
+                  <Card className="bg-background/80">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Scissors className="h-5 w-5 text-primary" />
+                        {salonInfo?.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        {salonInfo?.address}
                       </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                <div className="space-y-4">
-                    <Card className="bg-background/80">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <Calendar className="h-5 w-5 text-primary" />
-                          Appointment Details
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-semibold">Date:</span> {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                  {/* Offer Code Section */}
+                  <Card className="bg-background/80">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Star className="h-5 w-5 text-primary" />
+                        Apply Offer
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {/* Offer Code Input with Dropdown */}
+                      <div className="relative">
+                        <div className="flex gap-2">
+                          <div className="flex-1 relative">
+                            <input
+                              id="offer-input"
+                              type="text"
+                              placeholder="Enter offer code or select from dropdown"
+                              value={offerCode}
+                              onChange={(e) => setOfferCode(e.target.value)}
+                              onFocus={() => setShowOfferDropdown(true)}
+                              className="w-full px-3 py-2 border rounded-md text-sm pr-10"
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => setShowOfferDropdown(!showOfferDropdown)}
+                              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground"
+                            >
+                              <Search className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <Button onClick={handleApplyOffer} size="sm">Apply</Button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-semibold">Start Time:</span> {selectedTime}
-                        </div>
-                        {serviceSchedule.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-semibold">End Time:</span> {serviceSchedule[serviceSchedule.length - 1].endTime}
+
+                        {/* Offer Dropdown */}
+                        {showOfferDropdown && (
+                          <div id="offer-dropdown" className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg">
+                            <div className="p-2 border-b">
+                              <input
+                                type="text"
+                                placeholder="Search offers..."
+                                value={offerSearchTerm}
+                                onChange={(e) => setOfferSearchTerm(e.target.value)}
+                                className="w-full px-2 py-1 text-sm border rounded"
+                              />
+                            </div>
+                            <div className="max-h-60 overflow-y-auto">
+                              {isOffersLoading ? (
+                                <div className="p-4 text-center text-sm text-muted-foreground">
+                                  Loading offers...
+                                </div>
+                              ) : filteredOffers.length > 0 ? (
+                                filteredOffers.map((offer: { _id: string; code: string; type: string; value: number }) => (
+                                  <div
+                                    key={offer._id}
+                                    className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                                    onClick={() => handleSelectOffer(offer)}
+                                  >
+                                    <div className="font-medium">{offer.code}</div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="p-4 text-center text-sm text-muted-foreground">
+                                  No offers found
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
 
-                    {/* Service Schedule Card */}
-                    <Card className="bg-background/80">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <User className="h-5 w-5 text-primary" />
-                          Service Schedule
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3 text-sm">
-                        {serviceSchedule.map((schedule, index) => (
-                          <div key={index} className="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
-                            <div>
-                              <div className="font-semibold">{schedule.service.name}</div>
-                              <div className="text-muted-foreground text-xs">
-                                with {schedule.staff ? schedule.staff.name : 'Any Professional'} | {schedule.startTime} - {schedule.endTime}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-semibold">₹{schedule.service.price}</div>
-                              <div className="text-muted-foreground text-xs">
-                                {schedule.duration} min
-                              </div>
+                      {offer && (
+                        <div className="flex items-center justify-between bg-green-50 p-3 rounded-md">
+                          <div className="text-sm text-green-700">
+                            <div>Offer applied: {offer.code}</div>
+                            <div className="font-medium">
+                              {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
                             </div>
                           </div>
-                        ))}
-                      </CardContent>
-                    </Card>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={handleClearOffer}
+                            className="text-green-700 hover:text-green-900 hover:bg-green-100"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
 
-                    <Card className="bg-primary/10 border-primary/20">
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-center">
-                            <span className="text-lg font-bold text-primary">Total Amount</span>
-                            <span className="text-2xl font-bold text-primary">
-                              ₹{selectedServices.reduce((acc, s) => acc + parseFloat(s.price), 0).toFixed(2)}
-                            </span>
+                  {/* Appointment Details Card */}
+                  <Card className="bg-background/80">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-primary" />
+                        Appointment Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold">Date:</span> {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold">Start Time:</span> {selectedTime}
+                      </div>
+                      {serviceSchedule.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-semibold">End Time:</span> {serviceSchedule[serviceSchedule.length - 1].endTime}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Service Schedule Card */}
+                  <Card className="bg-background/80">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <User className="h-5 w-5 text-primary" />
+                        Service Schedule
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      {serviceSchedule.map((schedule, index) => (
+                        <div key={index} className="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
+                          <div>
+                            <div className="font-semibold">{schedule.service.name}</div>
+                            <div className="text-muted-foreground text-xs">
+                              with {schedule.staff ? schedule.staff.name : 'Any Professional'} | {schedule.startTime} - {schedule.endTime}
+                            </div>
                           </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)}>Edit Booking</Button>
-              <Button onClick={handleFinalBookingConfirmation}>Confirm & Pay</Button>
-            </DialogFooter>
-          </DialogContent>
+                          <div className="text-right">
+                            {schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined && schedule.service.discountedPrice !== schedule.service.price ? (
+                              <>
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className="text-muted-foreground line-through text-sm">
+                                    ₹{schedule.service.price}
+                                  </span>
+                                  <span className="font-semibold">
+                                    ₹{schedule.service.discountedPrice}
+                                  </span>
+                                </div>
+                                <div className="text-xs text-green-600 font-medium">
+                                  {(() => {
+                                    const originalPrice = parseFloat(schedule.service.price);
+                                    const discountedPrice = parseFloat(schedule.service.discountedPrice || '0');
+                                    if (originalPrice > 0) {
+                                      return Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
+                                    }
+                                    return 0;
+                                  })()}% OFF
+                                </div>
+                              </>
+                            ) : (
+                              <div className="font-semibold">
+                                ₹{schedule.service.price}
+                              </div>
+                            )}
+                            <div className="text-muted-foreground text-xs">
+                              {schedule.duration} min
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-primary/10 border-primary/20">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-bold text-primary">Total Amount</span>
+                          <span className="text-2xl font-bold text-primary">
+                            ₹{priceBreakdown?.finalTotal.toFixed(2) || selectedServices.reduce((acc, s) => {
+                              const price = s.discountedPrice !== null && s.discountedPrice !== undefined ? 
+                                parseFloat(s.discountedPrice) : 
+                                parseFloat(s.price || '0');
+                              return acc + price;
+                            }, 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </CardContent>
+                  </Card>
+              </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)}>Edit Booking</Button>
+            <Button onClick={handleFinalBookingConfirmation}>Confirm & Pay</Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
       <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
         <DialogContent className="sm:max-w-xl">
@@ -870,9 +1938,11 @@ function BookingPageContent() {
 }
 
 export default function BookingPageWrapper() {
+  console.log('BookingPageWrapper - Component rendered');
   return (
     <Suspense fallback={<div>Loading...</div>}>
       <BookingPageContent />
     </Suspense>
   );
 }
+

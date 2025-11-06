@@ -1,381 +1,315 @@
 "use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
-import { Button } from '@repo/ui/button';
-import { Badge } from '@repo/ui/badge';
-import { Input } from '@repo/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { 
-  Video, 
-  Clock, 
-  Calendar, 
-  User, 
-  Star, 
-  Phone, 
-  MessageSquare, 
-  Search, 
-  Filter,
-  CheckCircle,
-  Shield,
-  Monitor,
-  Users,
-  ArrowRight,
-  MapPin
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from "@repo/ui/button";
+import { BasicInfoStep } from './components/BasicInfoStep';
+import { ConfirmationStep } from './components/ConfirmationStep';
+import { ChatPanel } from './components/ChatPanel';
+import { ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
+import { useCreateConsultationMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation } from '@repo/store/services/api';
 
-interface Doctor {
-  id: string;
-  name: string;
-  specialty: string;
-  experience: number;
-  rating: number;
-  totalReviews: number;
-  fee: number;
-  image: string;
-  languages: string[];
-  availableSlots: string[];
-  isOnline: boolean;
-}
+export type ConsultationData = {
+  // Basic Info
+  patientName: string;
+  consultationType: 'self' | 'other';
+  concerns: string;
+  phoneNumber: string;
+  selectedSpecialty?: string;
+  
+  // Payment Info
+  consultationFee: number;
+  couponCode?: string;
+  discount?: number;
+  finalAmount: number;
+  
+  // Chat Info
+  consultationId?: string;
+  
+  // Doctor Info
+  doctorId?: string;
+  doctorName?: string;
+  doctorSpecialty?: string;
+  doctorRating?: number;
+  doctorReviewCount?: number;
+  doctorClinic?: string;
+  doctorYearsOfExperience?: number;
+};
 
-const sampleDoctors: Doctor[] = [
-  {
-    id: "DR-001",
-    name: "Dr. Sarah Johnson",
-    specialty: "Dermatology",
-    experience: 8,
-    rating: 4.9,
-    totalReviews: 234,
-    fee: 150,
-    image: "/images/doctors/dr-sarah.jpg",
-    languages: ["English", "Spanish"],
-    availableSlots: ["10:00 AM", "2:30 PM", "4:00 PM"],
-    isOnline: true
-  },
-  {
-    id: "DR-002",
-    name: "Dr. Michael Chen",
-    specialty: "General Medicine",
-    experience: 12,
-    rating: 4.8,
-    totalReviews: 156,
-    fee: 120,
-    image: "/images/doctors/dr-michael.jpg",
-    languages: ["English", "Mandarin"],
-    availableSlots: ["9:00 AM", "11:30 AM", "3:00 PM"],
-    isOnline: true
-  },
-  {
-    id: "DR-003",
-    name: "Dr. Emily Rodriguez",
-    specialty: "Pediatrics",
-    experience: 6,
-    rating: 4.9,
-    totalReviews: 189,
-    fee: 140,
-    image: "/images/doctors/dr-emily.jpg",
-    languages: ["English", "Spanish"],
-    availableSlots: ["8:30 AM", "1:00 PM", "5:00 PM"],
-    isOnline: false
-  },
-  {
-    id: "DR-004",
-    name: "Dr. James Wilson",
-    specialty: "Cardiology",
-    experience: 15,
-    rating: 4.7,
-    totalReviews: 298,
-    fee: 200,
-    image: "/images/doctors/dr-james.jpg",
-    languages: ["English"],
-    availableSlots: ["10:30 AM", "2:00 PM"],
-    isOnline: true
-  }
-];
+// Breadcrumb Navigation Component (matching salon booking style)
+const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
+  const steps = ['Basic Information', 'Confirmation & Payment', 'Consultation'];
+  return (
+    <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
+      {steps.map((step, index) => (
+        <div key={step} className="flex items-center">
+          <button
+            onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+            className={cn(
+              "transition-colors",
+              currentStep > index + 1 ? "hover:text-primary cursor-pointer" : "cursor-default",
+              currentStep === index + 1 && "text-primary font-semibold"
+            )}
+            disabled={currentStep < index + 1}
+          >
+            {step}
+          </button>
+          {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
+        </div>
+      ))}
+    </nav>
+  );
+};
 
-const specialties = [
-  "All Specialties",
-  "Dermatology",
-  "General Medicine",
-  "Pediatrics",
-  "Cardiology",
-  "Neurology",
-  "Orthopedics",
-  "Gynecology"
-];
-
-export default function VideoConsultationPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSpecialty, setSelectedSpecialty] = useState('All Specialties');
-  const [selectedFeeRange, setSelectedFeeRange] = useState('All');
-
-  const filteredDoctors = sampleDoctors.filter(doctor => {
-    const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSpecialty = selectedSpecialty === 'All Specialties' || doctor.specialty === selectedSpecialty;
-    const matchesFeeRange = selectedFeeRange === 'All' || 
-                           (selectedFeeRange === 'Under $150' && doctor.fee < 150) ||
-                           (selectedFeeRange === '$150-$200' && doctor.fee >= 150 && doctor.fee <= 200) ||
-                           (selectedFeeRange === 'Over $200' && doctor.fee > 200);
-    
-    return matchesSearch && matchesSpecialty && matchesFeeRange;
+export default function NewConsultationPage() {
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [consultationData, setConsultationData] = useState<ConsultationData>({
+    patientName: '',
+    consultationType: 'self',
+    concerns: '',
+    phoneNumber: '',
+    consultationFee: 150,
+    finalAmount: 150
   });
 
+  // API Mutations
+  const [createConsultation, { isLoading: isCreating }] = useCreateConsultationMutation();
+  const [createPaymentOrder] = useCreatePaymentOrderMutation();
+  const [verifyPayment] = useVerifyPaymentMutation();
+
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
+  // Parse URL params and set doctor data on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const encoded = urlParams.get('data');
+      console.log('🔍 URL encoded data:', encoded);
+      
+      if (encoded) {
+        try {
+          const decoded = JSON.parse(atob(encoded));
+          console.log('📦 Decoded doctor data:', decoded);
+          
+          const doctorParams = {
+            doctorId: decoded.id || '',
+            doctorName: decoded.name || '',
+            doctorSpecialty: decoded.specialty || '',
+            consultationFee: decoded.fee || 150,
+            finalAmount: decoded.fee || 150,
+            doctorImage: decoded.image || '',
+            doctorRating: decoded.rating,
+            doctorReviewCount: decoded.reviews,
+            doctorClinic: decoded.clinic || '',
+            doctorYearsOfExperience: decoded.experience
+          };
+          
+          console.log('✅ Doctor params:', doctorParams);
+          
+          setConsultationData(prev => ({ ...prev, ...doctorParams }));
+          setIsInitialized(true);
+        } catch (e) {
+          console.error('❌ Error decoding doctor data:', e);
+          setIsInitialized(true);
+        }
+      } else {
+        console.warn('⚠️ No encoded data found in URL');
+        setIsInitialized(true);
+      }
+    }
+  }, []); // Run only once on mount
+
+  // Redirect to doctors page if no doctor data after initialization
+  useEffect(() => {
+    if (isInitialized && !consultationData.doctorId) {
+      console.warn('❌ No doctor ID found, redirecting to doctors page');
+      router.push('/doctors');
+    } else if (isInitialized && consultationData.doctorId) {
+      console.log('✅ Doctor data loaded successfully:', {
+        doctorId: consultationData.doctorId,
+        doctorName: consultationData.doctorName,
+        doctorSpecialty: consultationData.doctorSpecialty,
+        consultationFee: consultationData.consultationFee,
+      });
+    }
+  }, [isInitialized, consultationData.doctorId, router, consultationData]);
+
+  const updateConsultationData = (updates: Partial<ConsultationData>) => {
+    setConsultationData(prev => ({ ...prev, ...updates }));
+  };
+
+  const handleNext = () => {
+    if (currentStep < 3 && isStepValid()) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const isStepValid = () => {
+    switch (currentStep) {
+      case 1:
+        // Validate basic information: name, phone, and health concerns are required
+        return consultationData.patientName.trim() && 
+               consultationData.phoneNumber.trim() && 
+               consultationData.concerns.trim();
+      case 2:
+        return true; // Payment step is always valid once reached
+      case 3:
+        return true; // Chat step is always valid once reached
+      default:
+        return false;
+    }
+  };
+
+  const handlePaymentSuccess = async () => {
+    try {
+      console.log('💳 Creating video consultation booking...');
+      console.log('📋 Consultation Data:', consultationData);
+      
+      // Prepare consultation data for API (similar to physical consultation)
+      const consultationPayload = {
+        // Doctor Information
+        doctorId: consultationData.doctorId,
+        doctorName: consultationData.doctorName,
+        doctorSpecialty: consultationData.doctorSpecialty,
+        
+        // Patient Information
+        patientName: consultationData.patientName,
+        phoneNumber: consultationData.phoneNumber,
+        reason: consultationData.concerns, // API expects 'reason' field
+        concerns: consultationData.concerns, // Keep for compatibility
+        
+        // Consultation Type & Details
+        consultationType: 'video',
+        appointmentDate: new Date().toISOString(), // Video consultations start immediately
+        appointmentTime: new Date().toTimeString().split(' ')[0].substring(0, 5), // Current time in HH:mm format
+        consultationFee: consultationData.consultationFee,
+        finalAmount: consultationData.finalAmount,
+        discountAmount: consultationData.discount || 0,
+        couponCode: consultationData.couponCode,
+        duration: 30, // Default 30 min for video consultations
+        
+        // Payment Information - For now, marking as pending until Razorpay is configured
+        paymentStatus: 'pending', // Will be 'completed' when Razorpay is integrated
+        paymentMethod: 'online',
+        
+        // Additional Info
+        selectedSpecialty: consultationData.selectedSpecialty,
+      };
+
+      console.log('📤 Creating consultation with payload:', consultationPayload);
+      
+      // Create consultation in database
+      const result = await createConsultation(consultationPayload).unwrap();
+      
+      if (result.success) {
+        console.log('✅ Consultation created successfully:', result.data._id);
+        
+        // Update local state with the consultation ID
+        updateConsultationData({ 
+          consultationId: result.data._id,
+        });
+        
+        // Move to next step (Chat Panel)
+        handleNext();
+      } else {
+        throw new Error('Failed to create consultation');
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Consultation creation error:', error);
+      alert(error?.data?.message || error?.message || 'Failed to book consultation. Please try again.');
+    }
+  };
+
+  // Show loading state while initializing
+  if (!isInitialized) {
+    return (
+      <div className="max-w-6xl mx-auto p-6 md:p-8 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading consultation details...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="relative py-20 lg:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-secondary/5"></div>
-        <div className="container mx-auto px-4 max-w-7xl relative">
-          <div className="text-center max-w-4xl mx-auto">
-            <Badge className="mb-6 bg-primary/10 text-primary border-primary/20">
-              Video Consultation Available
-            </Badge>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent pb-3 mb-6">
-              Video Consultation with Expert Doctors
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Connect with certified doctors from the comfort of your home. Get professional medical advice through secure video calls.
-            </p>
-            <div className="mb-8">
-              <Link href="/doctors/physical-consultation">
-                <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Prefer in-person consultation?
-                </Button>
-              </Link>
-            </div>
-            
-            {/* Features */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-              <div className="flex items-center gap-3 justify-center md:justify-start">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Video className="h-5 w-5 text-primary" />
-                </div>
-                <span className="text-sm font-medium">HD Video Quality</span>
-              </div>
-              <div className="flex items-center gap-3 justify-center md:justify-start">
-                <div className="p-2 bg-green-500/10 rounded-lg">
-                  <Shield className="h-5 w-5 text-green-500" />
-                </div>
-                <span className="text-sm font-medium">Secure & Private</span>
-              </div>
-              <div className="flex items-center gap-3 justify-center md:justify-start">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <Clock className="h-5 w-5 text-blue-500" />
-                </div>
-                <span className="text-sm font-medium">24/7 Available</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+    <div className="max-w-6xl mx-auto p-6 md:p-8">
+      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+      
+      {currentStep === 1 && (
+        <BasicInfoStep
+          data={consultationData}
+          onUpdate={updateConsultationData}
+          currentStep={currentStep}
+          setCurrentStep={setCurrentStep}
+        />
+      )}
+      
+      {currentStep === 2 && (
+        <ConfirmationStep
+          data={consultationData}
+          onUpdate={updateConsultationData}
+          currentStep={currentStep}
+          setCurrentStep={setCurrentStep}
+          onNext={handlePaymentSuccess}
+        />
+      )}
+      
+      {currentStep === 3 && (
+        <ChatPanel
+          consultationData={consultationData}
+          currentStep={currentStep}
+          setCurrentStep={setCurrentStep}
+        />
+      )}
 
-      {/* Search and Filter Section */}
-      <section className="py-12 border-b">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="flex flex-col lg:flex-row gap-4 mb-8">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search doctors by name or specialty..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-4">
-              <Select value={selectedSpecialty} onValueChange={setSelectedSpecialty}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select specialty" />
-                </SelectTrigger>
-                <SelectContent>
-                  {specialties.map((specialty) => (
-                    <SelectItem key={specialty} value={specialty}>
-                      {specialty}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Select value={selectedFeeRange} onValueChange={setSelectedFeeRange}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Fee range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All Fees</SelectItem>
-                  <SelectItem value="Under $150">Under $150</SelectItem>
-                  <SelectItem value="$150-$200">$150-$200</SelectItem>
-                  <SelectItem value="Over $200">Over $200</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Doctors List */}
-      <section className="py-12">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold mb-2">Available Doctors ({filteredDoctors.length})</h2>
-            <p className="text-muted-foreground">Choose from our verified doctors for video consultation</p>
-          </div>
-
-          <div className="grid gap-6">
-            {filteredDoctors.map((doctor) => (
-              <Card key={doctor.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Doctor Info */}
-                    <div className="flex gap-4 flex-1">
-                      <div className="relative">
-                        <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center">
-                          <User className="h-10 w-10 text-primary" />
-                        </div>
-                        {doctor.isOnline && (
-                          <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                            <CheckCircle className="h-4 w-4 text-white" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="text-xl font-semibold">{doctor.name}</h3>
-                            <p className="text-primary font-medium">{doctor.specialty}</p>
-                          </div>
-                          <Badge className={cn(
-                            "ml-2",
-                            doctor.isOnline 
-                              ? "bg-green-500/10 text-green-500 border-green-500/20" 
-                              : "bg-gray-500/10 text-gray-500 border-gray-500/20"
-                          )}>
-                            {doctor.isOnline ? "Online" : "Offline"}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                          <span className="flex items-center gap-1">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            {doctor.rating} ({doctor.totalReviews} reviews)
-                          </span>
-                          <span>{doctor.experience} years experience</span>
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {doctor.languages.map((language) => (
-                            <Badge key={language} variant="outline" className="text-xs">
-                              {language}
-                            </Badge>
-                          ))}
-                        </div>
-                        
-                        {doctor.isOnline && doctor.availableSlots.length > 0 && (
-                          <div>
-                            <p className="text-sm font-medium mb-2">Available slots today:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {doctor.availableSlots.map((slot) => (
-                                <Badge key={slot} variant="outline" className="text-xs">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  {slot}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Consultation Options */}
-                    <div className="lg:w-80 space-y-4">
-                      <div className="text-center lg:text-right">
-                        <p className="text-2xl font-bold">${doctor.fee}</p>
-                        <p className="text-sm text-muted-foreground">Video consultation fee</p>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <Button 
-                          className="w-full bg-primary hover:bg-primary/90" 
-                          disabled={!doctor.isOnline}
-                        >
-                          <Video className="h-4 w-4 mr-2" />
-                          {doctor.isOnline ? "Start Video Call" : "Currently Offline"}
-                        </Button>
-                        
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button variant="outline" size="sm" disabled={!doctor.isOnline}>
-                            <Phone className="h-4 w-4 mr-1" />
-                            Call
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <MessageSquare className="h-4 w-4 mr-1" />
-                            Message
-                          </Button>
-                        </div>
-                        
-                        <Button variant="outline" className="w-full">
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Schedule Later
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          
-          {filteredDoctors.length === 0 && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">No doctors found</h3>
-              <p className="text-muted-foreground">Try adjusting your search criteria or filters</p>
-            </div>
+      {/* Navigation Buttons (matching salon booking style) */}
+      <div className="flex justify-between mt-8">
+        <Button
+          variant="outline"
+          onClick={handleBack}
+          disabled={currentStep === 1 || isCreating}
+          className="px-6"
+        >
+          Back
+        </Button>
+        <Button
+          onClick={currentStep === 2 ? handlePaymentSuccess : handleNext}
+          disabled={!isStepValid() || isCreating}
+          className="px-6"
+        >
+          {isCreating ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            currentStep === 3 ? 'End Consultation' : currentStep === 2 ? 'Proceed to Payment' : 'Next'
           )}
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="py-20 bg-muted/50">
-        <div className="container mx-auto px-4 max-w-7xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">How Video Consultation Works</h2>
-            <p className="text-lg text-muted-foreground">Simple steps to connect with your doctor</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">1. Choose Doctor</h3>
-              <p className="text-muted-foreground">Browse and select from our verified doctors based on specialty and availability</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Calendar className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">2. Book Appointment</h3>
-              <p className="text-muted-foreground">Select a convenient time slot or start an instant consultation if available</p>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Video className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">3. Video Consultation</h3>
-              <p className="text-muted-foreground">Connect with your doctor through secure video call and get professional advice</p>
-            </div>
-          </div>
-        </div>
-      </section>
+        </Button>
+      </div>
     </div>
   );
 }

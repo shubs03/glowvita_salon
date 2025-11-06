@@ -1,9 +1,13 @@
 import mongoose from "mongoose";
 
-const smsPurchaseHistorySchema = new mongoose.Schema({
-  vendorId: {
+const smsTransactionSchema = new mongoose.Schema({
+  userType: {
+    type: String,
+    required: true,
+    enum: ["vendor", "supplier"]
+  },
+  userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Vendor",
     required: true,
     index: true
   },
@@ -50,15 +54,59 @@ const smsPurchaseHistorySchema = new mongoose.Schema({
   }
 });
 
-smsPurchaseHistorySchema.pre("save", function (next) {
+// Add virtual fields for vendorId and supplierId for easier access
+smsTransactionSchema.virtual('vendorId').get(function() {
+  return this.userType === 'vendor' ? this.userId : null;
+});
+
+smsTransactionSchema.virtual('supplierId').get(function() {
+  return this.userType === 'supplier' ? this.userId : null;
+});
+
+// Add custom validation to ensure proper user ID based on userType
+smsTransactionSchema.pre("validate", function(next) {
+  // Clear any existing validation errors for vendorId and supplierId virtual fields
+  if (this.errors) {
+    delete this.errors.vendorId;
+    delete this.errors.supplierId;
+  }
+  
+  // Ensure userId is provided
+  if (!this.userId) {
+    return next(new Error("userId is required"));
+  }
+  
+  next();
+});
+
+smsTransactionSchema.pre("save", function (next) {
   this.updatedAt = new Date();
   next();
 });
 
 // Index for efficient querying
-smsPurchaseHistorySchema.index({ vendorId: 1, status: 1 });
-smsPurchaseHistorySchema.index({ expiryDate: 1 });
+smsTransactionSchema.index({ userId: 1, status: 1 });
+smsTransactionSchema.index({ expiryDate: 1 });
 
-const SmsPurchaseHistory = mongoose.models.SmsPurchaseHistory || mongoose.model("SmsPurchaseHistory", smsPurchaseHistorySchema);
+// Compound indexes to prevent duplicate purchases
+// For vendors: userId + packageId + purchaseDate (when userType is vendor)
+smsTransactionSchema.index({ userId: 1, packageId: 1, purchaseDate: 1 }, { 
+  unique: true,
+  partialFilterExpression: { userType: "vendor" }
+});
 
-export default SmsPurchaseHistory;
+// For suppliers: userId + packageId + purchaseDate (when userType is supplier)
+smsTransactionSchema.index({ userId: 1, packageId: 1, purchaseDate: 1 }, { 
+  unique: true,
+  partialFilterExpression: { userType: "supplier" }
+});
+
+// Delete any existing model to prevent caching issues
+if (mongoose.models.SmsTransaction) {
+  delete mongoose.models.SmsTransaction;
+}
+
+// Create new model with different name
+const SmsTransaction = mongoose.model("SmsTransaction", smsTransactionSchema);
+
+export default SmsTransaction;

@@ -186,28 +186,27 @@ export const POST = authMiddlewareAdmin(
           accountHolder: null,
         };
 
-    // Transform documents
-    const documentsData = documents
-      ? {
-          aadharCard: documents.find((d) => d.type === "aadhar")?.file || null,
-          panCard: documents.find((d) => d.type === "pan")?.file || null,
-          udyogAadhar: documents.find((d) => d.type === "gst")?.file || null,
-          shopLicense:
-            documents.find((d) => d.type === "license")?.file || null,
-          udhayamCert:
-            documents.find((d) => d.type === "udhayam")?.file || null,
-          otherDocs:
-            documents.filter((d) => d.type === "other").map((d) => d.file) ||
-            [],
-        }
-      : {
-          aadharCard: null,
-          panCard: null,
-          udyogAadhar: null,
-          shopLicense: null,
-          udhayamCert: null,
-          otherDocs: [],
-        };
+    // Transform documents safely
+    const documentsArray = Array.isArray(documents) ? documents : [];
+
+    const documentsData = {
+      aadharCard: documentsArray.find((d) => d.type === "aadhar")?.file || null,
+      panCard: documentsArray.find((d) => d.type === "pan")?.file || null,
+      udyogAadhar: documentsArray.find((d) => d.type === "gst")?.file || null,
+      shopLicense:
+        documentsArray.find((d) => d.type === "license")?.file || null,
+      udhayamCert:
+        documentsArray.find((d) => d.type === "udhayam")?.file || null,
+      otherDocs:
+        documentsArray.filter((d) => d.type === "other").map((d) => d.file) ||
+        [],
+      // Initialize document status fields for new documents
+      aadharCardStatus: documentsArray.find((d) => d.type === "aadhar")?.file ? "pending" : undefined,
+      panCardStatus: documentsArray.find((d) => d.type === "pan")?.file ? "pending" : undefined,
+      udyogAadharStatus: documentsArray.find((d) => d.type === "gst")?.file ? "pending" : undefined,
+      shopLicenseStatus: documentsArray.find((d) => d.type === "license")?.file ? "pending" : undefined,
+      udhayamCertStatus: documentsArray.find((d) => d.type === "udhayam")?.file ? "pending" : undefined,
+    };
 
     // Create vendor
     const newVendor = await VendorModel.create({
@@ -482,42 +481,6 @@ export const PUT = authMiddlewareAdmin(
   ["superadmin"]
 );
 
-// Approve or Disapprove Vendor
-export const PATCH = authMiddlewareAdmin(
-  async (req) => {
-    const { id, status } = await req.json();
-
-    // Validate required fields
-    if (!id || !status) {
-      return Response.json(
-        { message: "Vendor ID and action (approve/disapprove) are required" },
-        { status: 400 }
-      );
-    }
-
-    // Prepare update data
-    const updateData = {
-      status: status,
-    };
-
-    const updatedVendor = await VendorModel.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true }
-    ).select("-password");
-
-    if (!updatedVendor) {
-      return Response.json({ message: "Vendor not found" }, { status: 404 });
-    }
-
-    return Response.json({
-      message: `Vendor ${status === "Approved" ? "Approved" : "Disapproved"} successfully`,
-      vendor: updatedVendor,
-    });
-  },
-  ["superadmin"]
-);
-
 // Delete Vendor
 export const DELETE = authMiddlewareAdmin(
   async (req) => {
@@ -529,6 +492,122 @@ export const DELETE = authMiddlewareAdmin(
     }
 
     return Response.json({ message: "Vendor deleted successfully" });
+  },
+  ["superadmin"]
+);
+
+// Update Vendor Status or Document Status
+export const PATCH = authMiddlewareAdmin(
+  async (req) => {
+    const body = await req.json();
+    const { id, status, vendorId, documentType, rejectionReason } = body;
+
+    // Check if this is a vendor status update
+    if (id && status && !documentType) {
+      // Validate required fields
+      if (!id || !status) {
+        return Response.json(
+          { message: "Vendor ID and action (approve/disapprove) are required" },
+          { status: 400 }
+        );
+      }
+
+      // Prepare update data
+      const updateData = {
+        status: status,
+      };
+
+      const updatedVendor = await VendorModel.findByIdAndUpdate(
+        id,
+        { $set: updateData },
+        { new: true }
+      ).select("-password");
+
+      if (!updatedVendor) {
+        return Response.json({ message: "Vendor not found" }, { status: 404 });
+      }
+
+      return Response.json({
+        message: `Vendor ${status === "Approved" ? "Approved" : "Disapproved"} successfully`,
+        vendor: updatedVendor,
+      });
+    }
+    
+    // Check if this is a document status update
+    else if (vendorId && documentType && status) {
+      // Validate required fields
+      if (!vendorId || !documentType || !status) {
+        return Response.json(
+          { message: "Vendor ID, document type, and status are required" },
+          { status: 400 }
+        );
+      }
+
+      // Validate document type
+      const validDocumentTypes = [
+        'aadharCard', 'udyogAadhar', 'udhayamCert', 
+        'shopLicense', 'panCard'
+      ];
+      
+      if (!validDocumentTypes.includes(documentType)) {
+        return Response.json(
+          { message: "Invalid document type" },
+          { status: 400 }
+        );
+      }
+
+      // Validate status
+      if (!['pending', 'approved', 'rejected'].includes(status)) {
+        return Response.json(
+          { message: "Invalid status. Must be pending, approved, or rejected" },
+          { status: 400 }
+        );
+      }
+
+      // Validate rejection reason for rejected status
+      if (status === 'rejected' && (!rejectionReason || rejectionReason.trim() === '')) {
+        return Response.json(
+          { message: "Rejection reason is required when status is rejected" },
+          { status: 400 }
+        );
+      }
+
+      // Prepare update data
+      const updateData = {
+        [`documents.${documentType}Status`]: status,
+      };
+
+      // Add rejection reason if status is rejected
+      if (status === 'rejected') {
+        updateData[`documents.${documentType}AdminRejectionReason`] = rejectionReason;
+      } else {
+        // Clear rejection reason if status is not rejected
+        updateData[`documents.${documentType}AdminRejectionReason`] = null;
+      }
+
+      const updatedVendor = await VendorModel.findByIdAndUpdate(
+        vendorId,
+        { $set: updateData },
+        { new: true }
+      ).select("-password");
+
+      if (!updatedVendor) {
+        return Response.json({ message: "Vendor not found" }, { status: 404 });
+      }
+
+      return Response.json({
+        message: `Document ${status === "approved" ? "Approved" : status === "rejected" ? "Rejected" : "Reset to Pending"} successfully`,
+        vendor: updatedVendor,
+      });
+    }
+    
+    // Invalid request
+    else {
+      return Response.json(
+        { message: "Invalid request parameters" },
+        { status: 400 }
+      );
+    }
   },
   ["superadmin"]
 );

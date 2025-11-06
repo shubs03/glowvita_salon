@@ -70,7 +70,8 @@ export function SmsPackagesTab() {
     });
   };
 
-  const currentBalance = purchaseHistoryData?.data?.currentBalance || 0;
+  // Use the active package SMS count as the "current balance"
+  const currentBalance = purchaseHistoryData?.data?.activePackageInfo?.packageSmsCount || 0;
 
   return (
     <Card>
@@ -84,7 +85,7 @@ export function SmsPackagesTab() {
             <div className="flex items-center">
               <MessageSquare className="h-5 w-5 text-primary mr-2" />
               <div>
-                <p className="text-sm text-muted-foreground">Current Balance</p>
+                <p className="text-sm text-muted-foreground">Active Package SMS Count</p>
                 <p className="text-2xl font-bold">{currentBalance.toLocaleString()} SMS</p>
               </div>
             </div>

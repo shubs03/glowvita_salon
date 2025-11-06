@@ -1,4 +1,3 @@
-
 import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import { glowvitaApi } from '../src/services/api.js';
 import adminAuthReducer from './slices/Admin/adminAuthSlice.js';
@@ -105,8 +104,10 @@ export const rehydrateStore = (store) => {
   try {
     const userAuthState = localStorage.getItem('userAuthState');
     if (userAuthState) {
+      console.log("Rehydrating user auth state from localStorage");
       store.dispatch(rehydrateUserAuth(JSON.parse(userAuthState)));
     } else {
+      console.log("No user auth state found in localStorage, setting to unauthenticated");
       // Explicitly set auth to false if nothing is in storage
       store.dispatch(rehydrateUserAuth(null));
     }
@@ -118,8 +119,10 @@ export const rehydrateStore = (store) => {
   try {
     const crmAuthState = localStorage.getItem('crmAuthState');
     if (crmAuthState) {
+      console.log("Rehydrating CRM auth state from localStorage");
       store.dispatch(rehydrateCrmAuth(JSON.parse(crmAuthState)));
     } else {
+      console.log("No CRM auth state found in localStorage");
       store.dispatch(rehydrateCrmAuth(null));
     }
   } catch (e) {

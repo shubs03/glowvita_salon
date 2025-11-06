@@ -7,7 +7,7 @@ const userCartItemSchema = new mongoose.Schema({
     required: true
   },
   productName: { type: String, required: true },
-  productImage: { type: String },
+  productImage: { type: String }, // URL to the uploaded image
   quantity: {
     type: Number,
     required: true,

@@ -24,6 +24,7 @@ export interface Service {
   name: string;
   duration: string;
   price: string;
+  discountedPrice?: string | null;
   category: string;
   image?: string;
   description?: string;
@@ -87,15 +88,22 @@ export interface ServiceStaffAssignment {
 }
 
 // Helper function to convert duration string to minutes
-export const convertDurationToMinutes = (duration: string): number => {
-  const match = duration.match(/(\d+)\s*(min|hour|hours)/);
-  if (!match) return 60; // default to 60 minutes
+export const convertDurationToMinutes = (duration: string | number): number => {
+  // Handle different duration formats
+  if (typeof duration === 'string') {
+    const match = duration.match(/(\d+)\s*(min|hour|hours)/);
+    if (!match) return 60; // default to 60 minutes
+    
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    
+    if (unit === 'min') return value;
+    if (unit === 'hour' || unit === 'hours') return value * 60;
+  } else if (typeof duration === 'number') {
+    // If duration is already a number, assume it's in minutes
+    return duration;
+  }
   
-  const value = parseInt(match[1]);
-  const unit = match[2];
-  
-  if (unit === 'min') return value;
-  if (unit === 'hour' || unit === 'hours') return value * 60;
   return 60; // default to 60 minutes
 };
 
@@ -160,13 +168,13 @@ export const findOverlappingAvailability = (assignments: ServiceStaffAssignment[
 export const useSalonServices = (salonId: string) => {
   const { data: rawServices, isLoading, error } = useGetPublicVendorServicesQuery(salonId);
   
-  const services = useMemo(() => {
+  const services = useMemo((): Service[] => {
     if (!rawServices) return [];
     
     console.log('useSalonServices - Raw services data:', rawServices);
     
     // Handle different possible response structures
-    let servicesArray = [];
+    let servicesArray: any[] = [];
     
     if (rawServices.data && Array.isArray(rawServices.data)) {
       servicesArray = rawServices.data;
@@ -181,13 +189,21 @@ export const useSalonServices = (salonId: string) => {
     
     console.log('useSalonServices - Services array:', servicesArray);
     
+    // Ensure we always return an array
+    if (!Array.isArray(servicesArray)) {
+      return [];
+    }
+    
     return servicesArray.map((service: any): Service => {
       console.log(`Service ${service.name || service.serviceName} has staff array:`, service.staff);
       return {
         id: service._id || service.id,
         name: service.serviceName || service.name,
-        duration: `${service.duration || 60} min`,
+        duration: `${service.duration || 60} min` || '60 min',
         price: (service.price || 0).toString(),
+        discountedPrice: service.discountedPrice !== null && service.discountedPrice !== undefined ? 
+          service.discountedPrice.toString() : 
+          null,
         category: service.category || 'General',
         image: service.image || `https://picsum.photos/seed/${service.serviceName}/200/200`,
         description: service.description,
@@ -198,16 +214,21 @@ export const useSalonServices = (salonId: string) => {
 
   const servicesByCategory = useMemo(() => {
     const grouped: { [key: string]: Service[] } = {};
-    services.forEach((service: Service) => {
-      if (!grouped[service.category]) {
-        grouped[service.category] = [];
-      }
-      grouped[service.category].push(service);
-    });
+    if (services && Array.isArray(services)) {
+      services.forEach((service: Service) => {
+        if (!grouped[service.category]) {
+          grouped[service.category] = [];
+        }
+        grouped[service.category].push(service);
+      });
+    }
     return grouped;
   }, [services]);
 
   const categories = useMemo(() => {
+    if (!services || !Array.isArray(services)) {
+      return [{ name: "All" }];
+    }
     const uniqueCategories = Array.from(new Set(services.map((s: Service) => s.category)));
     return [{ name: "All" }, ...uniqueCategories.map(cat => ({ name: cat as string }))];
   }, [services]);
@@ -258,6 +279,11 @@ export const useSalonStaff = (salonId: string, serviceId?: string) => {
     }
     
     console.log('useSalonStaff - Staff array:', staffArray);
+    
+    // Ensure we always return an array
+    if (!Array.isArray(staffArray)) {
+      return [];
+    }
     
     return staffArray.map((member: any): StaffMember => ({
       id: member._id || member.id,
@@ -353,7 +379,8 @@ export const useSalonWorkingHours = (salonId: string) => {
     });
     
     console.log('useSalonWorkingHours - Transformed hours:', transformedHours);
-    return transformedHours;
+    // Ensure we always return an array
+    return Array.isArray(transformedHours) ? transformedHours : [];
   }, [rawWorkingHours]);
 
   return {
@@ -383,6 +410,11 @@ export const useSalonInfo = (salonId: string) => {
       vendorsArray = rawSalonData;
     } else {
       console.warn('Unexpected salon data structure:', rawSalonData);
+      return null;
+    }
+    
+    // Ensure we always work with an array
+    if (!Array.isArray(vendorsArray)) {
       return null;
     }
     

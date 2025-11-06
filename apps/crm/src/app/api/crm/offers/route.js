@@ -7,6 +7,7 @@ import {
   authMiddlewareCrm,
   authMiddlewareCRM,
 } from "../../../../middlewareCrm";
+import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
 // Predefined options for validation
 const validSpecialties = [
@@ -157,12 +158,18 @@ export const POST = authMiddlewareCrm(
       }
     }
 
-    // Validate image if provided
-    if (offerImage && !isValidBase64Image(offerImage)) {
-      return Response.json(
-        { message: "Invalid image format. Must be base64 encoded image." },
-        { status: 400 }
-      );
+    // Handle image upload if provided
+    let imageUrl = null;
+    if (offerImage && isValidBase64Image(offerImage)) {
+      const fileName = `crm-offer-${Date.now()}`;
+      imageUrl = await uploadBase64(offerImage, fileName);
+      
+      if (!imageUrl) {
+        return Response.json(
+          { message: "Failed to upload image" },
+          { status: 500 }
+        );
+      }
     }
 
     // Determine business type and ID for the offer
@@ -187,7 +194,7 @@ export const POST = authMiddlewareCrm(
       applicableServices: services,
       applicableServiceCategories: serviceCategories,
       minOrderAmount: orderAmount,
-      offerImage: offerImage || null,
+      offerImage: imageUrl || null,
       isCustomCode: isCustom,
       businessType: businessType,
       businessId: businessId,
@@ -275,159 +282,180 @@ export const GET = authMiddlewareCrm(async (req) => {
   }
 }, ['vendor', 'doctor', 'supplier']);
 
-// Update Offer
+// PUT - Update an existing offer
 export const PUT = authMiddlewareCrm(
   async (req) => {
-    const { id, ...body } = await req.json();
-    const user = req.user;
-    const userRole = req.user.role; // Get user role from middleware
+    try {
+      const ownerId = req.user.userId;
+      const userRole = req.user.role;
+      const body = await req.json();
+      const { id, ...updateData } = body;
 
-    // Determine business type and ID for filtering
-    const businessType = userRole === 'staff' ? 'vendor' : userRole;
-    let businessId = user.userId;
-    if (userRole === 'staff' && user.vendorId) {
-      businessId = user.vendorId;
-    }
-
-    // Check if the offer belongs to the current user's business
-    const existingOffer = await CRMOfferModel.findOne({ 
-      _id: id, 
-      businessType: businessType,
-      businessId: businessId
-    });
-    
-    if (!existingOffer) {
-      return Response.json({ message: "Offer not found or unauthorized" }, { status: 404 });
-    }
-
-    // Validate fields based on user role
-    let specialties = [];
-    let categories = [];
-    let diseases = [];
-    let services = [];
-    let serviceCategories = [];
-    let orderAmount = existingOffer.minOrderAmount;
-
-    if (userRole === 'vendor') {
-      // Handle new services and service categories
-      if (Array.isArray(body.applicableServices)) {
-        services = body.applicableServices;
-      }
-      
-      if (Array.isArray(body.applicableServiceCategories)) {
-        serviceCategories = body.applicableServiceCategories;
+      if (!id) {
+        return Response.json({ message: "Offer ID is required" }, { status: 400 });
       }
 
-      // Keep legacy specialty validation for backward compatibility
-      if (Array.isArray(body.applicableSpecialties) && body.applicableSpecialties.length > 0) {
-        specialties = body.applicableSpecialties;
-        if (!specialties.every((s) => validSpecialties.includes(s))) {
-          return Response.json(
-            {
-              message: `Invalid specialties. Must be one of: ${validSpecialties.join(", ")}`,
-            },
-            { status: 400 }
-          );
+      // Find the existing offer and verify ownership
+      const offer = await CRMOfferModel.findOne({ _id: id, businessId: ownerId });
+      if (!offer) {
+        return Response.json({ message: "Offer not found or access denied" }, { status: 404 });
+      }
+
+      // Handle image upload if provided
+      if (updateData.offerImage !== undefined) {
+        if (updateData.offerImage && isValidBase64Image(updateData.offerImage)) {
+          // Upload new image to VPS
+          const fileName = `crm-offer-${Date.now()}`;
+          const imageUrl = await uploadBase64(updateData.offerImage, fileName);
+          
+          if (!imageUrl) {
+            return Response.json(
+              { message: "Failed to upload image" },
+              { status: 500 }
+            );
+          }
+          
+          // Delete old image from VPS if it exists
+          if (offer.offerImage) {
+            await deleteFile(offer.offerImage);
+          }
+          
+          updateData.offerImage = imageUrl;
+        } else {
+          // If image is null/empty, remove it
+          updateData.offerImage = null;
+          
+          // Delete old image from VPS if it exists
+          if (offer.offerImage) {
+            await deleteFile(offer.offerImage);
+          }
         }
       }
 
-      // Keep legacy category validation for backward compatibility
-      if (Array.isArray(body.applicableCategories) && body.applicableCategories.length > 0) {
-        categories = body.applicableCategories;
-        if (!categories.every((c) => validCategories.includes(c))) {
-          return Response.json(
-            {
-              message: `Invalid categories. Must be one of: ${validCategories.join(", ")}`,
-            },
-            { status: 400 }
-          );
+      // Validate applicable fields based on user role
+      if (userRole === 'vendor') {
+        // Handle new services and service categories
+        if (Array.isArray(updateData.applicableServices)) {
+          updateData.applicableServices = updateData.applicableServices;
+        }
+        
+        if (Array.isArray(updateData.applicableServiceCategories)) {
+          updateData.applicableServiceCategories = updateData.applicableServiceCategories;
+        }
+
+        // Keep legacy specialty validation for backward compatibility
+        if (Array.isArray(updateData.applicableSpecialties)) {
+          const specialties = updateData.applicableSpecialties;
+          if (specialties.length > 0 && !specialties.every((s) => validSpecialties.includes(s))) {
+            return Response.json(
+              {
+                message: `Invalid specialties. Must be one of: ${validSpecialties.join(", ")}`,
+              },
+              { status: 400 }
+            );
+          }
+          updateData.applicableSpecialties = specialties;
+        }
+
+        // Keep legacy category validation for backward compatibility
+        if (Array.isArray(updateData.applicableCategories)) {
+          const categories = updateData.applicableCategories;
+          if (categories.length > 0 && !categories.every((c) => validCategories.includes(c))) {
+            return Response.json(
+              {
+                message: `Invalid categories. Must be one of: ${validCategories.join(", ")}`,
+              },
+              { status: 400 }
+            );
+          }
+          updateData.applicableCategories = categories;
+        }
+      } else if (userRole === 'doctor') {
+        // For doctors, validate diseases
+        if (Array.isArray(updateData.applicableDiseases)) {
+          updateData.applicableDiseases = updateData.applicableDiseases;
+        }
+      } else if (userRole === 'supplier') {
+        // For suppliers, validate minimum order amount
+        if (updateData.minOrderAmount !== undefined) {
+          updateData.minOrderAmount = updateData.minOrderAmount > 0 ? updateData.minOrderAmount : null;
         }
       }
-    } else if (userRole === 'doctor') {
-      // For doctors, handle diseases
-      if (Array.isArray(body.applicableDiseases)) {
-        diseases = body.applicableDiseases;
-      }
-    } else if (userRole === 'supplier') {
-      // For suppliers, handle minimum order amount
-      if (body.minOrderAmount !== undefined) {
-        orderAmount = body.minOrderAmount;
-      }
-    }
 
-    // Validate image if provided
-    if (body.offerImage && !isValidBase64Image(body.offerImage)) {
-      return Response.json(
-        { message: "Invalid image format. Must be base64 encoded image." },
-        { status: 400 }
+      // Handle code update only if a new, non-empty code is provided.
+      if (updateData.code && updateData.code.trim()) {
+        const existingOffer = await CRMOfferModel.findOne({ 
+          code: updateData.code.toUpperCase().trim(),
+          _id: { $ne: id }
+        });
+        if (existingOffer) {
+          return Response.json({ message: "Offer code already exists" }, { status: 400 });
+        }
+        updateData.code = updateData.code.toUpperCase().trim();
+        updateData.isCustomCode = true;
+      } else {
+        // If code is not provided or empty in the body, remove it from the updateData
+        delete updateData.code;
+      }
+
+      const updatedOffer = await CRMOfferModel.findByIdAndUpdate(
+        id,
+        { ...updateData, updatedAt: new Date() },
+        { new: true }
       );
+
+      return Response.json({ 
+        success: true,
+        message: "Offer updated successfully",
+        data: updatedOffer 
+      }, { status: 200 });
+    } catch (error) {
+      console.error('Error updating offer:', error);
+      return Response.json({ 
+        success: false,
+        message: "Failed to update offer", 
+        error: error.message 
+      }, { status: 500 });
     }
-
-    // Exclude code and other sensitive fields from body spread
-    const { code, isCustomCode, ...bodyWithoutCode } = body;
-
-    const updateData = {
-      ...bodyWithoutCode,
-      applicableSpecialties: specialties,
-      applicableCategories: categories,
-      applicableDiseases: diseases,
-      applicableServices: services,
-      applicableServiceCategories: serviceCategories,
-      minOrderAmount: orderAmount,
-      updatedAt: Date.now(),
-    };
-
-    // Handle code update if provided and not empty
-    if (code && code.trim()) {
-      const existingOfferWithCode = await CRMOfferModel.findOne({
-        code: code.toUpperCase().trim(),
-        _id: { $ne: id },
-      });
-      if (existingOfferWithCode) {
-        return Response.json(
-          { message: "Offer code already exists" },
-          { status: 400 }
-        );
-      }
-      updateData.code = code.toUpperCase().trim();
-      updateData.isCustomCode = true;
-    }
-
-    const updatedOffer = await CRMOfferModel.findByIdAndUpdate(id, updateData, {
-      new: true,
-    });
-
-    return Response.json(updatedOffer);
   },
-  ['vendor', 'doctor', 'supplier']
+  ['vendor', 'doctor', 'supplier', 'staff']
 );
 
-// Delete Offer
+// DELETE - Delete an offer
 export const DELETE = authMiddlewareCrm(
   async (req) => {
-    const { id } = await req.json();
-    const user = req.user;
-    const userRole = req.user.role;
+    try {
+      const ownerId = req.user.userId;
+      const url = new URL(req.url);
+      const id = url.searchParams.get('id') || (await req.json()).id;
 
-    // Determine business type and ID for filtering
-    const businessType = userRole === 'staff' ? 'vendor' : userRole;
-    let businessId = user.userId;
-    if (userRole === 'staff' && user.vendorId) {
-      businessId = user.vendorId;
+      if (!id) {
+        return Response.json({ message: "Offer ID is required" }, { status: 400 });
+      }
+
+      const deletedOffer = await CRMOfferModel.findOneAndDelete({ _id: id, businessId: ownerId });
+
+      if (!deletedOffer) {
+        return Response.json({ message: "Offer not found or access denied" }, { status: 404 });
+      }
+      
+      // Delete image from VPS if it exists
+      if (deletedOffer.offerImage) {
+        await deleteFile(deletedOffer.offerImage);
+      }
+
+      return Response.json({ 
+        success: true,
+        message: "Offer deleted successfully" 
+      }, { status: 200 });
+    } catch (error) {
+      console.error('Error deleting offer:', error);
+      return Response.json({ 
+        success: false,
+        message: "Failed to delete offer", 
+        error: error.message 
+      }, { status: 500 });
     }
-
-    // Check if the offer belongs to the current user's business
-    const deletedOffer = await CRMOfferModel.findOneAndDelete({ 
-      _id: id, 
-      businessType: businessType,
-      businessId: businessId
-    });
-    
-    if (!deletedOffer) {
-      return Response.json({ message: "Offer not found or unauthorized" }, { status: 404 });
-    }
-
-    return Response.json({ message: "Offer deleted successfully" });
   },
-  ['vendor', 'doctor', 'supplier']
+  ['vendor', 'doctor', 'supplier', 'staff']
 );

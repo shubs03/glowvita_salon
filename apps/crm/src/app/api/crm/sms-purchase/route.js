@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import _db from '../../../../../../../packages/lib/src/db.js';
 import SmsPackage from '../../../../../../../packages/lib/src/models/Marketing/SmsPackage.model.js';
-import SmsPurchaseHistory from '../../../../../../../packages/lib/src/models/Marketing/SmsPurchaseHistory.model.js';
+import SmsTransaction from '../../../../../../../packages/lib/src/models/Marketing/SmsPurchaseHistory.model.js';
 import VendorModel from '../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js';
+import SupplierModel from '../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js';
 import { authMiddlewareCrm } from '../../../../middlewareCrm.js';
 
 // POST: Purchase an SMS package
@@ -23,23 +24,46 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
     
     // Try multiple ways to get the vendor ID with better error handling
     let vendorId = null;
+    let supplierId = null;
+    let userType = null;
+    
     if (req.user) {
-      // Try different possible fields in order of preference
-      const possibleFields = ['vendorId', '_id', 'id', 'userId'];
-      for (const field of possibleFields) {
-        if (req.user[field]) {
-          vendorId = req.user[field];
-          console.log(`Found vendor ID in field '${field}':`, vendorId);
-          break;
+      // Determine user type
+      if (req.user.userType) {
+        userType = req.user.userType;
+      } else if (req.user.role === 'supplier') {
+        userType = 'supplier';
+      } else {
+        userType = 'vendor';
+      }
+      
+      // Extract ID based on user type
+      if (userType === 'supplier') {
+        const possibleFields = ['supplierId', '_id', 'id', 'userId'];
+        for (const field of possibleFields) {
+          if (req.user[field]) {
+            supplierId = req.user[field];
+            console.log(`Found supplier ID in field '${field}':`, supplierId);
+            break;
+          }
+        }
+      } else {
+        const possibleFields = ['vendorId', '_id', 'id', 'userId'];
+        for (const field of possibleFields) {
+          if (req.user[field]) {
+            vendorId = req.user[field];
+            console.log(`Found vendor ID in field '${field}':`, vendorId);
+            break;
+          }
         }
       }
     }
     
-    console.log('Final extracted Vendor ID:', vendorId);
+    console.log('Final extracted IDs - Vendor ID:', vendorId, 'Supplier ID:', supplierId, 'User Type:', userType);
     
-    // Verify vendorId
-    if (!vendorId) {
-      console.error('No vendor ID found in user object');
+    // Verify we have the appropriate ID
+    if (userType === 'supplier' && !supplierId) {
+      console.error('No supplier ID found in user object for supplier user');
       return NextResponse.json(
         { 
           success: false,
@@ -49,22 +73,21 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       );
     }
     
-    // Validate MongoDB ObjectId format
-    const objectIdRegex = /^[0-9a-fA-F]{24}$/;
-    if (!objectIdRegex.test(vendorId)) {
-      console.error('Invalid vendor ID format:', vendorId);
+    if (userType === 'vendor' && !vendorId) {
+      console.error('No vendor ID found in user object for vendor user');
       return NextResponse.json(
         { 
           success: false,
-          message: 'Invalid vendor ID format. Please contact support.' 
+          message: 'Authentication required. Please log in again.' 
         },
-        { status: 400 }
+        { status: 401 }
       );
     }
     
-    const validatedVendorId = vendorId;
+    const validatedVendorId = userType === 'vendor' ? vendorId : null;
+    const validatedSupplierId = userType === 'supplier' ? supplierId : null;
     
-    // Get package ID from request body
+    // Parse request body
     let body;
     try {
       body = await req.json();
@@ -130,10 +153,98 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
     
     console.log('Purchase date:', purchaseDate);
     console.log('Expiry date:', expiryDate);
+
+    // Check if supplier already has an active SMS package
+    if (userType === 'supplier') {
+      const activePackage = await SmsTransaction.findOne({
+        userId: validatedSupplierId,
+        userType: 'supplier',
+        status: 'active',
+        expiryDate: { $gte: new Date() }
+      });
+      
+      if (activePackage) {
+        console.log('Supplier already has an active SMS package:', activePackage);
+        return NextResponse.json(
+          { 
+            success: false,
+            message: 'You already have an active SMS package.' 
+          },
+          { status: 409 }
+        );
+      }
+    }
+    
+    // Check if vendor already has an active SMS package (same restriction as supplier)
+    if (userType === 'vendor') {
+      const activePackage = await SmsTransaction.findOne({
+        userId: validatedVendorId,
+        userType: 'vendor',
+        status: 'active',
+        expiryDate: { $gte: new Date() }
+      });
+      
+      if (activePackage) {
+        console.log('Vendor already has an active SMS package:', activePackage);
+        return NextResponse.json(
+          { 
+            success: false,
+            message: 'You already have an active SMS package.' 
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Check if this purchase already exists to prevent duplicates (same package on same day)
+    let existingPurchase = null;
+    if (userType === 'supplier') {
+      const startOfDay = new Date(purchaseDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(purchaseDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      existingPurchase = await SmsTransaction.findOne({
+        userId: validatedSupplierId,
+        userType: 'supplier',
+        packageId: smsPackage._id,
+        purchaseDate: {
+          $gte: startOfDay,
+          $lt: endOfDay
+        }
+      });
+    } else {
+      const startOfDay = new Date(purchaseDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(purchaseDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      existingPurchase = await SmsTransaction.findOne({
+        userId: validatedVendorId,
+        userType: 'vendor',
+        packageId: smsPackage._id,
+        purchaseDate: {
+          $gte: startOfDay,
+          $lt: endOfDay
+        }
+      });
+    }
+    
+    if (existingPurchase) {
+      console.log('Duplicate purchase detected:', existingPurchase);
+      return NextResponse.json(
+        { 
+          success: false,
+          message: 'You have already purchased this package today. Please try again tomorrow.' 
+        },
+        { status: 409 }
+      );
+    }
     
     // Create purchase history record
     console.log('Creating purchase history record with data:', {
-      vendorId: validatedVendorId,
+      userId: userType === 'supplier' ? validatedSupplierId : validatedVendorId,
+      userType,
       packageId: smsPackage._id,
       packageName: smsPackage.name,
       smsCount: smsPackage.smsCount,
@@ -143,8 +254,10 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       status: 'active'
     });
     
-    const purchaseHistory = new SmsPurchaseHistory({
-      vendorId: validatedVendorId,
+    // Create purchase history with the new schema structure
+    const purchaseHistoryData = {
+      userId: userType === 'supplier' ? validatedSupplierId : validatedVendorId,
+      userType,
       packageId: smsPackage._id,
       packageName: smsPackage.name,
       smsCount: smsPackage.smsCount,
@@ -152,43 +265,104 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       purchaseDate,
       expiryDate,
       status: 'active'
-    });
+    };
+    
+    const purchaseHistory = new SmsTransaction(purchaseHistoryData);
     
     await purchaseHistory.save();
     console.log('Purchase history saved:', purchaseHistory);
     
-    // Update vendor's SMS balance
-    console.log('Searching for vendor with ID:', validatedVendorId);
-    const vendor = await VendorModel.findById(validatedVendorId);
-    console.log('Found vendor:', vendor);
-    
-    if (!vendor) {
-      console.error('Vendor not found with ID:', validatedVendorId);
-      return NextResponse.json(
-        { 
-          success: false,
-          message: 'Vendor not found' 
-        },
-        { status: 404 }
-      );
+    // Update user's SMS balance based on user type
+    if (userType === 'supplier') {
+      console.log('Searching for supplier with ID:', validatedSupplierId);
+      const supplier = await SupplierModel.findById(validatedSupplierId);
+      console.log('Found supplier:', supplier);
+      
+      if (!supplier) {
+        console.error('Supplier not found with ID:', validatedSupplierId);
+        return NextResponse.json(
+          { 
+            success: false,
+            message: 'Supplier not found' 
+          },
+          { status: 404 }
+        );
+      }
+      
+      console.log('Current supplier SMS balance:', supplier.smsBalance);
+      
+      // Add SMS count to supplier's balance
+      console.log('Current supplier SMS balance:', supplier.smsBalance);
+      supplier.smsBalance = (supplier.smsBalance || 0) + smsPackage.smsCount;
+      console.log('New supplier SMS balance:', supplier.smsBalance);
+      await supplier.save();
+      
+      console.log('Updated SMS balance:', supplier.smsBalance);
+    } else {
+      console.log('Searching for vendor with ID:', validatedVendorId);
+      const vendor = await VendorModel.findById(validatedVendorId);
+      console.log('Found vendor:', vendor);
+      
+      if (!vendor) {
+        console.error('Vendor not found with ID:', validatedVendorId);
+        return NextResponse.json(
+          { 
+            success: false,
+            message: 'Vendor not found' 
+          },
+          { status: 404 }
+        );
+      }
+      
+      console.log('Current SMS balance:', vendor.smsBalance);
+      
+      // Add SMS count to vendor's balance
+      console.log('Current vendor SMS balance:', vendor.smsBalance);
+      vendor.smsBalance = (vendor.smsBalance || 0) + smsPackage.smsCount;
+      console.log('New vendor SMS balance:', vendor.smsBalance);
+      await vendor.save();
+      
+      console.log('Updated SMS balance:', vendor.smsBalance);
     }
     
-    console.log('Current SMS balance:', vendor.smsBalance);
+    const newBalance = userType === 'supplier' ? 
+      (await SupplierModel.findById(validatedSupplierId)).smsBalance :
+      (await VendorModel.findById(validatedVendorId)).smsBalance;
     
-    // Add SMS count to vendor's balance
-    console.log('Current vendor SMS balance:', vendor.smsBalance);
-    vendor.smsBalance = (vendor.smsBalance || 0) + smsPackage.smsCount;
-    console.log('New vendor SMS balance:', vendor.smsBalance);
-    await vendor.save();
-    
-    console.log('Updated SMS balance:', vendor.smsBalance);
+    // For consistency, use the active package SMS count as the "current balance" in the response
+    let currentBalanceInResponse = 0;
+    if (userType === 'supplier') {
+      const supplier = await SupplierModel.findById(validatedSupplierId);
+      const activePackages = await SmsTransaction.find({ 
+        userId: validatedSupplierId,
+        userType: 'supplier',
+        status: 'active',
+        expiryDate: { $gte: new Date() }
+      }).sort({ purchaseDate: -1 });
+      
+      if (activePackages.length > 0) {
+        currentBalanceInResponse = activePackages[0].smsCount;
+      }
+    } else {
+      const vendor = await VendorModel.findById(validatedVendorId);
+      const activePackages = await SmsTransaction.find({ 
+        userId: validatedVendorId,
+        userType: 'vendor',
+        status: 'active',
+        expiryDate: { $gte: new Date() }
+      }).sort({ purchaseDate: -1 });
+      
+      if (activePackages.length > 0) {
+        currentBalanceInResponse = activePackages[0].smsCount;
+      }
+    }
     
     return NextResponse.json({
       success: true,
       message: 'SMS package purchased successfully',
       data: {
         purchaseHistory,
-        newBalance: vendor.smsBalance
+        newBalance: currentBalanceInResponse
       }
     }, { 
       status: 200,
@@ -208,7 +382,7 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
     } else if (error.name === 'CastError') {
       errorMessage = 'Invalid data format';
     } else if (error.code === 11000) {
-      errorMessage = 'Duplicate entry error';
+      errorMessage = 'You already have an active SMS package.';
     }
     
     return NextResponse.json(
@@ -225,7 +399,7 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       }
     );
   }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // GET: Retrieve purchase history for the vendor
 export const GET = authMiddlewareCrm(async (req, ctx) => {
@@ -245,23 +419,46 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
     
     // Try multiple ways to get the vendor ID with better error handling
     let vendorId = null;
+    let supplierId = null;
+    let userType = null;
+    
     if (req.user) {
-      // Try different possible fields in order of preference
-      const possibleFields = ['vendorId', '_id', 'id', 'userId'];
-      for (const field of possibleFields) {
-        if (req.user[field]) {
-          vendorId = req.user[field];
-          console.log(`Found vendor ID in field '${field}':`, vendorId);
-          break;
+      // Determine user type
+      if (req.user.userType) {
+        userType = req.user.userType;
+      } else if (req.user.role === 'supplier') {
+        userType = 'supplier';
+      } else {
+        userType = 'vendor';
+      }
+      
+      // Extract ID based on user type
+      if (userType === 'supplier') {
+        const possibleFields = ['supplierId', '_id', 'id', 'userId'];
+        for (const field of possibleFields) {
+          if (req.user[field]) {
+            supplierId = req.user[field];
+            console.log(`Found supplier ID in field '${field}':`, supplierId);
+            break;
+          }
+        }
+      } else {
+        const possibleFields = ['vendorId', '_id', 'id', 'userId'];
+        for (const field of possibleFields) {
+          if (req.user[field]) {
+            vendorId = req.user[field];
+            console.log(`Found vendor ID in field '${field}':`, vendorId);
+            break;
+          }
         }
       }
     }
     
-    console.log('Final extracted Vendor ID:', vendorId);
+    console.log('Final extracted IDs - Vendor ID:', vendorId, 'Supplier ID:', supplierId, 'User Type:', userType);
     
-    // Verify vendorId
-    if (!vendorId) {
-      console.error('No vendor ID found in user object');
+    // Verify we have the appropriate ID
+    if (userType === 'supplier' && !supplierId) {
+      console.error('No supplier ID found in user object for supplier user');
       return NextResponse.json(
         { 
           success: false,
@@ -271,9 +468,34 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
       );
     }
     
-    // Validate MongoDB ObjectId format
+    if (userType === 'vendor' && !vendorId) {
+      console.error('No vendor ID found in user object for vendor user');
+      return NextResponse.json(
+        { 
+          success: false,
+          message: 'Authentication required. Please log in again.' 
+        },
+        { status: 401 }
+      );
+    }
+    
+    const validatedVendorId = userType === 'vendor' ? vendorId : null;
+    const validatedSupplierId = userType === 'supplier' ? supplierId : null;
+    
+    // Validate ObjectId format
     const objectIdRegex = /^[0-9a-fA-F]{24}$/;
-    if (!objectIdRegex.test(vendorId)) {
+    if (userType === 'supplier' && supplierId && !objectIdRegex.test(supplierId)) {
+      console.error('Invalid supplier ID format:', supplierId);
+      return NextResponse.json(
+        { 
+          success: false,
+          message: 'Invalid supplier ID format. Please contact support.' 
+        },
+        { status: 400 }
+      );
+    }
+    
+    if (userType === 'vendor' && vendorId && !objectIdRegex.test(vendorId)) {
       console.error('Invalid vendor ID format:', vendorId);
       return NextResponse.json(
         { 
@@ -284,8 +506,6 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
       );
     }
     
-    const validatedVendorId = vendorId;
-    
     // Get query parameters for pagination
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page')) || 1;
@@ -293,23 +513,143 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
     
     console.log('Pagination params - Page:', page, 'Limit:', limit);
     
-    // Find purchase history for this vendor
-    console.log('Searching purchase history for vendor ID:', validatedVendorId);
-    const total = await SmsPurchaseHistory.countDocuments({ vendorId: validatedVendorId });
-    console.log('Total purchase history records found:', total);
-    const purchases = await SmsPurchaseHistory.find({ vendorId: validatedVendorId })
-      .sort({ purchaseDate: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
-    console.log('Purchase history records retrieved:', purchases.length);
+    // Find purchase history for this user based on user type
+    let total, purchases;
+    if (userType === 'supplier') {
+      console.log('Searching purchase history for supplier ID:', validatedSupplierId);
+      
+      // For suppliers, get all packages but only show the most recent active one plus expired ones
+      const allPurchases = await SmsTransaction.find({ 
+        userId: validatedSupplierId,
+        userType: 'supplier'
+      })
+        .sort({ purchaseDate: -1 });
+      
+      // Separate active and expired packages
+      const activePackages = allPurchases.filter(p => 
+        p.status === 'active' && p.expiryDate >= new Date()
+      );
+      
+      const expiredPackages = allPurchases.filter(p => 
+        p.status === 'expired' || p.status === 'used' || p.expiryDate < new Date()
+      );
+      
+      // Only show one active package (the most recent one) if there are any
+      let displayPurchases = [...expiredPackages];
+      if (activePackages.length > 0) {
+        // Sort active packages by purchase date and take the most recent one
+        const mostRecentActive = activePackages.sort((a, b) => 
+          new Date(b.purchaseDate) - new Date(a.purchaseDate)
+        )[0];
+        displayPurchases.unshift(mostRecentActive);
+      }
+      
+      // Apply pagination to the filtered results
+      total = displayPurchases.length;
+      purchases = displayPurchases.slice((page - 1) * limit, page * limit);
+      
+      console.log('Total purchase history records found:', total);
+      console.log('Purchase history records retrieved:', purchases.length);
+    } else {
+      console.log('Searching purchase history for vendor ID:', validatedVendorId);
+      
+      // For vendors, apply the same logic as suppliers - only show one active package plus expired ones
+      const allVendorPurchases = await SmsTransaction.find({ 
+        userId: validatedVendorId,
+        userType: 'vendor'
+      })
+        .sort({ purchaseDate: -1 });
+      
+      // Separate active and expired packages for vendors
+      const activeVendorPackages = allVendorPurchases.filter(p => 
+        p.status === 'active' && p.expiryDate >= new Date()
+      );
+      
+      const expiredVendorPackages = allVendorPurchases.filter(p => 
+        p.status === 'expired' || p.status === 'used' || p.expiryDate < new Date()
+      );
+      
+      // Only show one active package (the most recent one) if there are any
+      let displayVendorPurchases = [...expiredVendorPackages];
+      if (activeVendorPackages.length > 0) {
+        // Sort active packages by purchase date and take the most recent one
+        const mostRecentActive = activeVendorPackages.sort((a, b) => 
+          new Date(b.purchaseDate) - new Date(a.purchaseDate)
+        )[0];
+        displayVendorPurchases.unshift(mostRecentActive);
+      }
+      
+      // Apply pagination to the filtered results
+      total = displayVendorPurchases.length;
+      purchases = displayVendorPurchases.slice((page - 1) * limit, page * limit);
+      
+      console.log('Total purchase history records found:', total);
+      console.log('Purchase history records retrieved:', purchases.length);
+    }
     
     console.log(`Found ${purchases.length} purchases out of ${total} total`);
     
-    // Get vendor's current SMS balance
-    console.log('Retrieving vendor for balance check with ID:', validatedVendorId);
-    const vendor = await VendorModel.findById(validatedVendorId);
-    console.log('Vendor found for balance check:', vendor);
-    const currentBalance = vendor ? vendor.smsBalance : 0;
+    // Get user's current SMS balance based on user type
+    let currentBalance = 0;
+    let activePackageInfo = null;
+    if (userType === 'supplier') {
+      console.log('Retrieving supplier for balance check with ID:', validatedSupplierId);
+      const supplier = await SupplierModel.findById(validatedSupplierId);
+      console.log('Supplier found for balance check:', supplier);
+      
+      // Get the active package information
+      const activePackages = await SmsTransaction.find({ 
+        userId: validatedSupplierId,
+        userType: 'supplier',
+        status: 'active',
+        expiryDate: { $gte: new Date() }
+      }).sort({ purchaseDate: -1 });
+      
+      if (activePackages.length > 0) {
+        // Use the most recent active package
+        const activePackage = activePackages[0];
+        activePackageInfo = {
+          packageName: activePackage.packageName,
+          packageSmsCount: activePackage.smsCount, // Original SMS count in the package
+          remainingSmsCount: supplier ? supplier.smsBalance : 0, // Current remaining balance
+          expiryDate: activePackage.expiryDate,
+          purchaseDate: activePackage.purchaseDate
+        };
+        
+        // Use the active package SMS count as the "current balance" for suppliers
+        currentBalance = activePackage.smsCount;
+      }
+    } else {
+      console.log('Retrieving vendor for balance check with ID:', validatedVendorId);
+      const vendor = await VendorModel.findById(validatedVendorId);
+      console.log('Vendor found for balance check:', vendor);
+      
+      // Get the active SMS package information for vendors (same logic as suppliers)
+      const activeVendorPackages = await SmsTransaction.find({ 
+        userId: validatedVendorId,
+        userType: 'vendor',
+        status: 'active',
+        expiryDate: { $gte: new Date() }
+      }).sort({ purchaseDate: -1 });
+      
+      if (activeVendorPackages.length > 0) {
+        // Use the most recent active package
+        const activePackage = activeVendorPackages[0];
+        activePackageInfo = {
+          packageName: activePackage.packageName,
+          packageSmsCount: activePackage.smsCount, // Original SMS count in the package
+          remainingSmsCount: vendor ? vendor.smsBalance : 0, // Current remaining balance
+          expiryDate: activePackage.expiryDate,
+          purchaseDate: activePackage.purchaseDate
+        };
+        
+        // Use the active package SMS count as the "current balance" for vendors (same as suppliers)
+        currentBalance = activePackage.smsCount;
+      } else {
+        currentBalance = 0;
+      }
+    }
+    
     console.log('Current balance:', currentBalance);
     
     return NextResponse.json({
@@ -317,6 +657,7 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
       data: {
         purchases,
         currentBalance,
+        activePackageInfo,
         pagination: {
           page,
           limit,
@@ -355,4 +696,4 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
       }
     );
   }
-}, ['vendor']);
+}, ['vendor', 'supplier']);

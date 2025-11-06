@@ -26,7 +26,7 @@ const socialMediaTemplateSchema = new mongoose.Schema({
   
   // imageUrl for preview cards
   imageUrl: {
-    type: String,
+    type: String, // URL to the uploaded image
     default: '',
     trim: true
   },

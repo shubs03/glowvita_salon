@@ -31,7 +31,7 @@ const adminUserSchema = new mongoose.Schema({
     trim: true,
   },
   profileImage: {
-    type: String,
+    type: String, // URL to the uploaded image
     trim: true,
   },
   password: {
