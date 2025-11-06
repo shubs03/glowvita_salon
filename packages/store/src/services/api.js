@@ -140,7 +140,7 @@ export const glowvitaApi = createApi({
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
     "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
-    "Billing", "VendorServices"
+    "Billing", "VendorServices",
     "Consultations", "Consultation", "Expense", "PublicAppointments"
   ],
 
