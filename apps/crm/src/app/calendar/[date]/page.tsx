@@ -57,17 +57,64 @@ import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { setWorkingHours } from '@repo/store/slices/workingHoursSlice';
 import { selectBlockedTimes } from '@repo/store/slices/blockTimeSlice';
 
-// Helper function to parse time string (e.g., "09:00AM") to hours and minutes
-const parseTimeString = (timeStr: string) => {
-  const [time, period] = timeStr.match(/\d+|AM|PM/gi) || [];
-  if (!time) return [0, 0];
+// Helper function to parse time string (e.g., "09:00AM" or "09:00") to hours and minutes
+const parseTimeString = (timeStr: string): [number, number] => {
+  if (!timeStr) return [0, 0];
   
-  let [hours, minutes] = time.split(':').map(Number);
-  
-  if (period === 'PM' && hours < 12) hours += 12;
-  if (period === 'AM' && hours === 12) hours = 0;
-  
-  return [hours, minutes || 0];
+  try {
+    // Remove all whitespace and convert to uppercase
+    const cleanTime = timeStr.replace(/\s+/g, '').toUpperCase();
+    
+    // Check if time has AM/PM
+    const hasAM = cleanTime.includes('AM');
+    const hasPM = cleanTime.includes('PM');
+    const hasPeriod = hasAM || hasPM;
+    
+    // Extract the time part (without AM/PM)
+    const timePart = hasPeriod ? cleanTime.replace(/[AP]M$/, '') : cleanTime;
+    
+    // Split by colon or period
+    const parts = timePart.split(/[:.]/);
+    if (parts.length < 1 || parts.length > 2) {
+      console.warn('Invalid time format (splitting failed):', timeStr);
+      return [0, 0];
+    }
+    
+    // Parse hours and minutes
+    let hours = parseInt(parts[0], 10);
+    const minutes = parts[1] ? parseInt(parts[1], 10) : 0;
+    
+    // Handle 12-hour format
+    if (hasPeriod) {
+      if (hasPM && hours < 12) hours += 12;
+      if (hasAM && hours === 12) hours = 0;
+    }
+    
+    // Validate values
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      console.warn('Invalid time values:', timeStr, { hours, minutes });
+      return [0, 0];
+    }
+    
+    // Debug log for time parsing
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Parsed time:', {
+        input: timeStr,
+        cleanInput: cleanTime,
+        hasAM,
+        hasPM,
+        timePart,
+        hours,
+        minutes,
+        output: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+      });
+    }
+    
+    return [hours, minutes];
+  } catch (error) {
+    console.error('Error parsing time string:', timeStr, error);
+    return [0, 0];
+  }
 };
 
 // Helper function to format dates without timezone issues
@@ -161,6 +208,10 @@ export default function DailySchedulePage() {
         discount: appt.discount || 0,
         tax: appt.tax || 0,
         totalAmount: appt.totalAmount || appt.amount || 0,
+        // Multi-service appointment fields
+        isMultiService: appt.isMultiService || false,
+        serviceItems: appt.serviceItems || [],
+        payment: appt.payment,
       }));
   }, [appointmentsData]);
   
@@ -426,16 +477,23 @@ export default function DailySchedulePage() {
 
   // Get working hours for the current day from the response
   const dayWorkingHours = useMemo(() => {
+    // Default working hours if none found
+    const defaultHours = {
+      startTime: '09:00',
+      endTime: '18:00',
+      isWorking: true
+    };
+
     if (!workingHoursData?.workingHours) {
-      console.log('No working hours data available');
-      return null;
+      console.log('No working hours data available, using defaults');
+      return defaultHours;
     }
     
     const workingHoursArray = workingHoursData.workingHours;
     
     if (!Array.isArray(workingHoursArray)) {
-      console.log('Working hours is not an array:', workingHoursArray);
-      return null;
+      console.log('Working hours is not an array, using defaults');
+      return defaultHours;
     }
 
     // Find the day - convert dayName to match API format (Monday, Tuesday, etc.)
@@ -445,10 +503,9 @@ export default function DailySchedulePage() {
       (dayData: any) => dayData.day === targetDay
     );
     
-    console.log('Target day:', targetDay);
-    console.log('Found working hours for', targetDay, ':', found);
+    console.log('Working hours for', targetDay, ':', found || 'Not found, using defaults');
     
-    return found || null;
+    return found || defaultHours;
   }, [workingHoursData, dayName]);
   
   // Get blocked times for the selected date with proper timezone handling
@@ -615,86 +672,143 @@ export default function DailySchedulePage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
-        <Button variant="ghost" onClick={handleBackClick}>
-          <ChevronLeft className="mr-2 h-4 w-4" />
+    <div className="container mx-auto p-6 max-w-7xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-5">
+        <Button 
+          variant="ghost" 
+          onClick={handleBackClick} 
+          className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full px-5 py-3 text-gray-800 dark:text-gray-200 font-bold text-lg shadow-sm"
+        >
+          <ChevronLeft className="mr-3 h-5 w-5" />
           Back to Calendar
         </Button>
         
-        <div className="flex items-center space-x-4">
-          <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Select staff" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="All Staff">All Staff</SelectItem>
-              {staffList.map(staff => (
-                <SelectItem key={staff.id} value={staff.name}>
-                  {staff.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Button onClick={handleNewAppointment}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Appointment
-          </Button>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+          <div className="flex items-center gap-4">
+            <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+              <SelectTrigger className="w-[200px] rounded-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 shadow-sm text-base font-bold">
+                <SelectValue placeholder="Select staff" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-gray-200 dark:border-gray-700 shadow-lg">
+                <SelectItem value="All Staff" className="rounded-lg py-2 font-medium">All Staff</SelectItem>
+                {staffList.map(staff => (
+                  <SelectItem key={staff.id} value={staff.name} className="rounded-lg py-2 font-medium">
+                    {staff.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Button 
+              onClick={handleNewAppointment} 
+              className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-extrabold shadow-xl hover:shadow-2xl transition-all duration-300 px-6 py-3 text-base"
+            >
+              <Plus className="mr-3 h-5 w-5" />
+              New Appointment
+            </Button>
+          </div>
         </div>
       </div>
 
-      <DayScheduleView
-        selectedDate={selectedDate}
-        appointments={filteredAppointments}
-        staffList={staffList}
-        workingHours={dayWorkingHours}
-        blockedTimes={blockedTimes}
-        isLoading={isLoading || isLoadingAppointments || isLoadingWorkingHours || isLoadingStaff}
-        error={staffError || workingHoursError}
-        onAppointmentClick={handleAppointmentClick}
-        onTimeSlotClick={handleTimeSlotClick}
-        timeSlots={
-          dayWorkingHours?.startTime && dayWorkingHours?.endTime
-            ? (() => {
-                // Generate time slots based on working hours (every 30 minutes)
-                const slots = [];
-                const [startHour, startMinute] = parseTimeString(dayWorkingHours.startTime);
-                const [endHour, endMinute] = parseTimeString(dayWorkingHours.endTime);
-                const start = new Date(selectedDate);
-                start.setHours(startHour, startMinute, 0, 0);
-                const end = new Date(selectedDate);
-                end.setHours(endHour, endMinute, 0, 0);
-                let current = new Date(start);
-                while (current <= end) {
-                  const time = format(current, 'hh:mmaaa').toLowerCase();
-                  slots.push({
-                    id: `${formatDateForAPI(selectedDate)}-${time}`,
-                    time,
-                    formattedTime: time,
-                    isAvailable: true, // Default to available
-                    staffId: 'default' // Default staff ID
-                  });
-                  current = addMinutes(current, 30);
-                }
-                return slots;
-              })()
-            : [
-                "09:00am", "09:30am", "10:00am", "10:30am", "11:00am", "11:30am",
-                "12:00pm", "12:30pm", "01:00pm", "01:30pm", "02:00pm", "02:30pm",
-                "03:00pm", "03:30pm", "04:00pm", "04:30pm", "05:00pm", "05:30pm",
-                "06:00pm", "06:30pm", "07:00pm"
-              ].map((time) => ({
+      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-2 border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <DayScheduleView
+          selectedDate={selectedDate}
+          appointments={filteredAppointments}
+          staffList={staffList}
+          workingHours={dayWorkingHours}
+          blockedTimes={blockedTimes}
+          isLoading={isLoading || isLoadingAppointments || isLoadingWorkingHours || isLoadingStaff}
+          error={staffError || workingHoursError}
+          onAppointmentClick={handleAppointmentClick}
+          onTimeSlotClick={handleTimeSlotClick}
+          timeSlots={useMemo(() => {
+            try {
+              // Get working hours with fallbacks
+              const startTime = dayWorkingHours?.startTime || '09:00';
+              const endTime = dayWorkingHours?.endTime || '18:00';
+              const isWorking = dayWorkingHours?.isWorking !== false;
+              
+              // Parse start and end times
+              const [startHour, startMinute] = parseTimeString(startTime);
+              const [endHour, endMinute] = parseTimeString(endTime);
+              
+              // Create date objects in local timezone
+              const startDate = new Date(selectedDate);
+              startDate.setHours(startHour, startMinute, 0, 0);
+              
+              const endDate = new Date(selectedDate);
+              endDate.setHours(endHour, endMinute, 0, 0);
+              
+              // Handle case where end time is on the next day
+              if (endDate <= startDate) {
+                endDate.setDate(endDate.getDate() + 1);
+              }
+              
+              const slots = [];
+              let current = new Date(startDate);
+              const slotDuration = 30; // minutes
+              
+              // Generate slots every 30 minutes within working hours
+              while (current < endDate) {
+                const hours = current.getHours();
+                const minutes = current.getMinutes();
+                
+                // Format time in 24-hour format for internal use (HH:MM)
+                const time24 = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                
+                // Format time in 12-hour format for display (h:MM AM/PM)
+                const displayHours = hours % 12 || 12;
+                const period = hours >= 12 ? 'PM' : 'AM';
+                const formattedTime = `${displayHours}:${String(minutes).padStart(2, '0')}${period}`;
+                
+                slots.push({
+                  id: `${formatDateForAPI(selectedDate)}-${time24}`,
+                  time: time24, // Internal: 24-hour format (HH:MM)
+                  formattedTime: formattedTime, // Display: 12-hour format (h:MM AM/PM)
+                  isAvailable: isWorking, // Respect working/non-working day
+                  staffId: 'default',
+                  date: new Date(current) // Store the exact date object for this slot
+                });
+                
+                // Move to next time slot
+                current = new Date(current.getTime() + slotDuration * 60000);
+              }
+              
+              console.log('Generated time slots:', {
+                date: selectedDate.toISOString().split('T')[0],
+                startTime: startTime,
+                endTime: endTime,
+                isWorking,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                slotCount: slots.length,
+                firstSlot: slots[0],
+                lastSlot: slots[slots.length - 1] || 'No slots'
+              });
+              
+              return slots;
+              
+            } catch (error) {
+              console.error('Error generating time slots:', error);
+              // Fallback to default time slots if there's an error
+              return [
+                '09:00am', '09:30am', '10:00am', '10:30am', '11:00am', '11:30am',
+                '12:00pm', '12:30pm', '01:00pm', '01:30pm', '02:00pm', '02:30pm',
+                '03:00pm', '03:30pm', '04:00pm', '04:30pm', '05:00pm', '05:30pm',
+                '06:00pm', '06:30pm', '07:00pm'
+              ].map(time => ({
                 id: `${formatDateForAPI(selectedDate)}-${time}`,
-                time,
+                time: time,
                 formattedTime: time,
-                isAvailable: true, // Default to available
-                staffId: 'default' // Default staff ID
-              }))
-        }
-        onCreateAppointment={handleCreateNewAppointment}
-        onDateChange={handleDateChange}
-      />
+                isAvailable: true,
+                staffId: 'default',
+                date: new Date(selectedDate)
+              }));
+            }
+          }, [dayWorkingHours, selectedDate])}
+          onCreateAppointment={handleCreateNewAppointment}
+          onDateChange={handleDateChange}
+        />
+      </div>
 
       <Dialog 
         open={isNewAppointmentOpen} 
@@ -708,9 +822,9 @@ export default function DailySchedulePage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto rounded-3xl border-gray-200 dark:border-gray-700 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-2xl font-extrabold text-gray-900 dark:text-white">
               {selectedAppointment ? 'Edit Appointment' : 'New Appointment'}
             </DialogTitle>
           </DialogHeader>
@@ -760,26 +874,28 @@ export default function DailySchedulePage() {
 
       {/* Cancel Appointment Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent>
+        <DialogContent className="rounded-3xl border-gray-200 dark:border-gray-700 shadow-2xl">
           <DialogHeader>
-            <DialogTitle>Cancel Appointment</DialogTitle>
+            <DialogTitle className="text-2xl font-extrabold text-gray-900 dark:text-white">Cancel Appointment</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <p>Are you sure you want to cancel this appointment?</p>
-            <div className="space-y-2">
-              <Label htmlFor="cancelReason">Reason for cancellation</Label>
+          <div className="space-y-5">
+            <p className="text-gray-700 dark:text-gray-300 text-lg">Are you sure you want to cancel this appointment?</p>
+            <div className="space-y-3">
+              <Label htmlFor="cancelReason" className="text-gray-800 dark:text-gray-200 font-bold text-base">Reason for cancellation</Label>
               <Textarea
                 id="cancelReason"
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="Please provide a reason for cancellation"
+                className="border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl text-base p-4"
               />
             </div>
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-end space-x-4 pt-3">
               <Button 
                 variant="outline" 
                 onClick={() => setShowCancelDialog(false)}
                 disabled={isLoading}
+                className="rounded-full border-gray-300 dark:border-gray-600 px-6 py-3 text-base font-bold"
               >
                 No, Keep It
               </Button>
@@ -787,8 +903,16 @@ export default function DailySchedulePage() {
                 variant="destructive" 
                 onClick={() => handleUpdateStatus('cancelled', cancelReason)}
                 disabled={isLoading || !cancelReason.trim()}
+                className="rounded-full px-6 py-3 text-base font-bold"
               >
-                {isLoading ? 'Cancelling...' : 'Yes, Cancel'}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                    Cancelling...
+                  </>
+                ) : (
+                  'Yes, Cancel'
+                )}
               </Button>
             </div>
           </div>

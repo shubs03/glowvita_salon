@@ -18,10 +18,23 @@ type Appointment = {
   date: Date;
   startTime: string;
   endTime: string;
+  duration?: number;
   notes?: string;
   status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending';
   isBlocked?: boolean;
   description?: string;
+  isMultiService?: boolean;
+  serviceItems?: Array<{
+    _id?: string;
+    service: string;
+    serviceName: string;
+    staff: string;
+    staffName: string;
+    startTime: string;
+    endTime: string;
+    duration: number;
+    amount: number;
+  }>;
 };
 
 interface StaffMember {
@@ -118,10 +131,6 @@ interface DayScheduleViewProps {
   onDateChange?: (date: Date) => void;
 }
 
-const timeToMinutes = (time: string) => {
-  const [hours, minutes] = time.split(':').map(Number);
-  return hours * 60 + minutes;
-};
 
 const getStatusConfig = (status: Appointment['status']) => {
   switch (status) {
@@ -191,6 +200,12 @@ const groupAppointmentsByStaff = (appointments: Appointment[]) => {
   );
 };
 
+// Constants
+const PIXELS_PER_HOUR = 160; // Increased height for one hour (160px for more spacing)
+const MIN_APPOINTMENT_HEIGHT = 50; // Balanced minimum height
+const MINUTES_PER_SLOT = 15; // 15-minute intervals
+const PIXELS_PER_MINUTE = PIXELS_PER_HOUR / 60; // ~2.67px per minute
+
 // Employee color mapping
 const employeeColors = [
   'text-blue-600 dark:text-blue-400',
@@ -242,6 +257,109 @@ function validateDate(date: Date | null | undefined): date is Date {
   return date instanceof Date && !isNaN(date.getTime());
 }
 
+/**
+ * Convert time string to minutes since midnight in local time
+ * Supports multiple time formats:
+ * - 12-hour format: 9:00 AM, 9:00AM, 9:00 am, 9:00am, 9:00 A, 9:00P
+ * - 24-hour format: 09:00, 9:00, 21:00
+ * - With or without leading zeros
+ */
+const timeToMinutes = (timeStr: string): number => {
+  if (!timeStr) {
+    console.error('Empty time string provided');
+    return 0;
+  }
+  
+  try {
+    // Clean and normalize the time string
+    const cleanTime = timeStr.toString().trim().toUpperCase();
+    
+    // Debug the raw input
+    console.log('Raw time input:', { timeStr, cleanTime });
+    
+    // Handle empty string
+    if (!cleanTime) {
+      console.error('Empty time string after cleaning');
+      return 0;
+    }
+    
+    // Extract period (AM/PM) if it exists
+    let period = '';
+    let timePart = cleanTime;
+    
+    if (cleanTime.endsWith('AM') || cleanTime.endsWith('PM')) {
+      period = cleanTime.slice(-2);
+      timePart = cleanTime.slice(0, -2).trim();
+    } else if (cleanTime.endsWith('A') || cleanTime.endsWith('P')) {
+      // Handle single letter period (A/P)
+      period = cleanTime.slice(-1) + 'M';
+      timePart = cleanTime.slice(0, -1).trim();
+    }
+    
+    // Split into hours and minutes
+    const [hoursStr, minutesStr = '00'] = timePart.split(/[:.\s]+/);
+    
+    // Parse hours and minutes
+    let hours = parseInt(hoursStr, 10);
+    const minutes = parseInt(minutesStr, 10) || 0;
+    
+    // Debug parsing
+    console.log('Time parts:', { 
+      timeStr, 
+      cleanTime, 
+      period, 
+      timePart, 
+      hoursStr, 
+      minutesStr, 
+      parsedHours: hours, 
+      parsedMinutes: minutes 
+    });
+    
+    // Handle 12-hour to 24-hour conversion
+    if (period) {
+      if (period === 'PM' && hours < 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+    }
+    
+    // Validate the time values
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      console.error('Invalid time values:', { 
+        timeStr, 
+        cleanTime, 
+        hours, 
+        minutes, 
+        period,
+        error: 'Invalid hour or minute value'
+      });
+      return 0;
+    }
+    
+    // Calculate total minutes since midnight
+    const totalMinutes = (hours * 60) + minutes;
+    
+    // Debug the final calculation
+    console.log('Time calculation:', {
+      input: timeStr,
+      cleanInput: cleanTime,
+      period,
+      hours24: hours,
+      minutes,
+      totalMinutes,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      currentTime: new Date().toLocaleTimeString(),
+      timezoneOffset: new Date().getTimezoneOffset()
+    });
+    
+    return totalMinutes;
+  } catch (error) {
+    console.error('Error parsing time:', { 
+      timeStr, 
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return 0;
+  }
+};
+
 export default function DayScheduleView({ 
   selectedDate, 
   appointments = [], 
@@ -262,6 +380,8 @@ export default function DayScheduleView({
   const [newAppointmentDate, setNewAppointmentDate] = useState<Date | null>(null);
   const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Removed current time indicator functionality
   const [isClient, setIsClient] = useState(false);
 
   // Validate date after hooks
@@ -269,10 +389,13 @@ export default function DayScheduleView({
 
   useEffect(() => {
     setIsClient(true);
+    
+    // Set up interval to update current time every minute
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000); // Update every minute
 
+    // Clear interval on component unmount
     return () => clearInterval(timer);
   }, []);
 
@@ -559,11 +682,48 @@ export default function DayScheduleView({
     if (transformedStaffList.length > 0) {
       return transformedStaffList
         .filter(staff => staff.isActive)
-        .map(staff => ({
-          staff,
-          appointments: appointments.filter(appt => appt.staffName === staff.name || appt.staffName === staff.id),
-          availability: getStaffAvailabilityForDay(staff, safeSelectedDate)
-        }));
+        .map(staff => {
+          // Get appointments for this staff
+          const staffAppointments: Appointment[] = [];
+          
+          appointments.forEach(appt => {
+            // Check if this is a multi-service appointment
+            if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
+              // Find if this staff has a service in this multi-service appointment
+              const staffServiceItem = appt.serviceItems.find(
+                item => item.staffName === staff.name || item.staff === staff.id
+              );
+              
+              if (staffServiceItem) {
+                // Create a specialized appointment entry for this staff's service
+                staffAppointments.push({
+                  ...appt,
+                  // Override with staff-specific times from serviceItem
+                  startTime: staffServiceItem.startTime,
+                  endTime: staffServiceItem.endTime,
+                  duration: staffServiceItem.duration,
+                  serviceName: staffServiceItem.serviceName,
+                  service: staffServiceItem.service,
+                  staffName: staffServiceItem.staffName,
+                  // Keep the multi-service flag and items for detail view
+                  isMultiService: true,
+                  serviceItems: appt.serviceItems
+                } as Appointment);
+              }
+            } else {
+              // Regular single-service appointment
+              if (appt.staffName === staff.name || appt.staffName === staff.id) {
+                staffAppointments.push(appt);
+              }
+            }
+          });
+          
+          return {
+            staff,
+            appointments: staffAppointments,
+            availability: getStaffAvailabilityForDay(staff, safeSelectedDate)
+          };
+        });
     }
     
     // Fallback to grouping by staff name if no staff data is available
@@ -593,10 +753,10 @@ export default function DayScheduleView({
           isAvailable: true, 
           slots: [], 
           workingHours: {
-            startTime: '09:00',
-            endTime: '18:00',
-            startHour: 9,
-            endHour: 18
+            startTime: '08:00',
+            endTime: '20:00',
+            startHour: 8,
+            endHour: 20
           }
         }
       };
@@ -767,159 +927,366 @@ export default function DayScheduleView({
     };
   }, [staffAppointmentsWithAvailability, getStaffWorkingHours]);
   
-  // Generate global hours array for the time column
+  // Generate global hours array for the time column with 15-minute intervals
   const { startHour: globalStartHour, endHour: globalEndHour } = getGlobalWorkingHours();
   const workingHoursArray = useMemo(() => {
     const result = [];
-    for (let i = globalStartHour; i <= globalEndHour; i++) {
-      result.push(i);
-    }
-    return result;
-  }, [globalStartHour, globalEndHour]);
-  
-  // Calculate current time position for the time indicator
-  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-  const isWithinWorkingHours = currentMinutes >= globalStartHour * 60 && currentMinutes <= globalEndHour * 60;
-  const currentTimePosition = ((currentMinutes - globalStartHour * 60) * (80 / 60)) + 64; // 64px for header
-
-  const getCurrentTimePosition = useCallback(() => {
-    if (!isToday(safeSelectedDate)) return null;
-    
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    
-    // Calculate position in pixels (assuming each hour is 80px)
-    const position = (currentHour - globalStartHour) * 80 + (currentMinute * 80 / 60);
-    
-    // Only show if within the visible hours
-    if (position < 0 || position > (globalEndHour - globalStartHour) * 80) return null;
-    
-    return position;
-  }, [safeSelectedDate, globalStartHour, globalEndHour]);
-
-  const isCurrentDate = isToday(safeSelectedDate);
-
-  useEffect(() => {
-    if (isToday(safeSelectedDate)) {
-      const currentTimePosition = getCurrentTimePosition();
-      if (currentTimePosition !== null) {
-        const scrollContainer = document.querySelector('.time-slots-container');
-        if (scrollContainer) {
-          // Scroll to show the current time indicator, with some padding
-          scrollContainer.scrollTop = Math.max(0, currentTimePosition - 60);
-        }
+    for (let hour = globalStartHour; hour <= globalEndHour; hour++) {
+      // Generate 15-minute intervals for each hour with additional spacing
+      for (let minute = 0; minute < 60; minute += 15) {
+        result.push({
+          hour: hour,
+          minute: minute,
+          timeString: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+          isHourMark: minute === 0, // Mark the top of the hour
+          height: (PIXELS_PER_HOUR / 4) + 5, // 25px for 15 minutes (20px + 5px spacing)
+          isGap: minute !== 0 && minute !== 30 // Gaps are 15 and 45 minute marks
+        });
       }
     }
-  }, [safeSelectedDate, getCurrentTimePosition]);
+    // Filter out any slots that would be after the end hour
+    return result.filter(slot => slot.hour < globalEndHour || (slot.hour === globalEndHour && slot.minute === 0));
+  }, [globalStartHour, globalEndHour]);
+  
+  // Define the time slot height as a constant for consistency
+  const TIME_SLOT_HEIGHT = (PIXELS_PER_HOUR / 4) + 10; // 50px for 15 minutes (40px + 10px spacing)
+  
+  const isCurrentDate = isToday(safeSelectedDate);
 
   const renderAppointment = (appointment: Appointment, index: number, staffIndex: number) => {
-    // Get the staff's working hours or use default
-    const staffData = staffAppointmentsWithAvailability[staffIndex];
-    const staffWorkingHours = staffData?.availability?.workingHours || workingHours;
-    const startHour = staffWorkingHours.startHour || 9; // Default to 9 AM if not set
+    // Define constants for time calculations
+    const MINUTES_IN_HOUR = 60;
+    const startHour = globalStartHour;
     
-    if (appointment.isBlocked) {
-      const startTime = new Date(`${selectedDate.toISOString().split('T')[0]}T${appointment.startTime}`);
-      const endTime = new Date(`${selectedDate.toISOString().split('T')[0]}T${appointment.endTime}`);
+    // Format time for display (12-hour format with AM/PM)
+  const formatTimeDisplay = (timeStr: string): string => {
+    if (!timeStr) return '';
+    
+    try {
+      // First try to parse as 24-hour format (HH:MM)
+      if (/^\d{1,2}:\d{2}$/.test(timeStr)) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+          const period = hours >= 12 ? 'PM' : 'AM';
+          const displayHours = hours % 12 || 12;
+          return `${displayHours}:${minutes.toString().padStart(2, '0')}${period}`;
+        }
+      }
       
-      return (
-        <div 
-          key={`blocked-${index}`}
-          className="absolute left-0 right-0 mx-1 p-2 rounded-lg border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/20 text-amber-800 dark:text-amber-200 text-xs shadow-sm"
-          style={{
-            top: `${(timeToMinutes(appointment.startTime) - startHour * 60) * (80 / 60)}px`,
-            height: `${Math.max(60, (timeToMinutes(appointment.endTime) - timeToMinutes(appointment.startTime)) * (80 / 60))}px`,
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-            <div className="font-medium truncate">Blocked: {appointment.description || 'Not Available'}</div>
-          </div>
-          <div className="mt-1 text-[10px] text-amber-600 dark:text-amber-300/80">
-            {format(startTime, 'h:mma')} - {format(endTime, 'h:mma')}
-          </div>
-        </div>
-      );
+      // If not in 24-hour format, try to parse as 12-hour format
+      const cleanTime = timeStr.trim().toUpperCase();
+      const hasAM = cleanTime.includes('AM');
+      const hasPM = cleanTime.includes('PM');
+      const timePart = cleanTime.replace(/[AP]M$/, '').trim();
+      
+      // If it's already in 12-hour format with AM/PM, just return it
+      if ((hasAM || hasPM) && /^\d{1,2}:?\d{0,2}$/.test(timePart)) {
+        return cleanTime;
+      }
+      
+      // If we can't parse it, return the original string
+      console.warn('Could not parse time string for display:', timeStr);
+      return timeStr;
+    } catch (error) {
+      console.error('Error formatting time:', { timeStr, error });
+      return timeStr; // Return original string if parsing fails
     }
+  };
+
+    // Calculate position and size for an appointment
+    const calculateAppointmentLayout = (appointment: any) => {
+      if (!appointment?.startTime || !appointment?.endTime || !selectedDate) {
+        return { 
+          top: 0, 
+          height: MIN_APPOINTMENT_HEIGHT,
+          startMinutes: 0,
+          endMinutes: 0
+        };
+      }
+
+      try {
+        const startTime = appointment.startTime;
+        const endTime = appointment.endTime;
+        
+        // Parse times to minutes since midnight in local time
+        const startMinutes = timeToMinutes(startTime);
+        const endMinutes = timeToMinutes(endTime);
+        
+        if (endMinutes <= startMinutes) {
+          console.error('Invalid time range (end time before start):', { 
+            appointmentId: appointment.id,
+            startTime, 
+            endTime, 
+            startMinutes, 
+            endMinutes 
+          });
+          return { 
+            top: 0, 
+            height: MIN_APPOINTMENT_HEIGHT,
+            startMinutes: 0,
+            endMinutes: 0
+          };
+        }
+        
+        // Calculate working day start in minutes (convert globalStartHour to minutes)
+        const workDayStartMinutes = globalStartHour * 60;
+        
+        // Calculate minutes from start of work day
+        const minutesFromStart = startMinutes - workDayStartMinutes;
+        
+        // Calculate position and height in pixels with consistent spacing
+        // Each 15-minute slot is now 25px (20px + 5px spacing)
+        const pixelsPerMinute = TIME_SLOT_HEIGHT / 15; // ~1.67px per minute
+        
+        // Calculate position without border offset to ensure accurate positioning
+        const startPosition = Math.max(0, minutesFromStart * pixelsPerMinute);
+        
+        // Calculate height, ensuring it's at least the minimum height
+        const minHeight = Math.max(MIN_APPOINTMENT_HEIGHT, (endMinutes - startMinutes) * pixelsPerMinute);
+        const height = Math.max(MIN_APPOINTMENT_HEIGHT, minHeight);
+        
+        // Debug log for pixel calculations
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Pixel calculation:', {
+            appointmentId: appointment.id,
+            clientName: appointment.clientName,
+            startTime: appointment.startTime,
+            endTime: appointment.endTime,
+            startMinutes,
+            endMinutes,
+            workDayStartMinutes,
+            minutesFromStart,
+            pixelsPerMinute,
+            TIME_SLOT_HEIGHT,
+            PIXELS_PER_HOUR,
+            calculatedTop: startPosition,
+            calculatedHeight: height,
+            minHeight,
+            calculation: {
+              startTime: `${startMinutes} minutes`,
+              workDayStart: `${workDayStartMinutes} minutes`,
+              minutesFromStart: `${minutesFromStart} minutes`,
+              position: `${minutesFromStart} * ${pixelsPerMinute} = ${startPosition}px`,
+              height: `max(${MIN_APPOINTMENT_HEIGHT}px, ${endMinutes - startMinutes}min * ${pixelsPerMinute}px/min) = ${height}px`
+            },
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+          });
+        }
+        
+        // Debug log for layout calculation
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Appointment layout calculation:', {
+            appointmentId: appointment.id,
+            clientName: appointment.clientName,
+            date: selectedDate.toISOString().split('T')[0],
+            startTime,
+            endTime,
+            startMinutes,
+            endMinutes,
+            workDayStartMinutes,
+            workDayStartHour: globalStartHour,
+            calculatedTop: startPosition,
+            calculatedHeight: height,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            currentTime: new Date().toLocaleTimeString(),
+            timezoneOffset: new Date().getTimezoneOffset()
+          });
+        }
+        
+        return {
+          top: startPosition,
+          height: height,
+          startMinutes,
+          endMinutes
+        };
+      } catch (error) {
+        console.error('Error calculating appointment layout:', {
+          error,
+          appointment: {
+            id: appointment?.id,
+            startTime: appointment?.startTime,
+            endTime: appointment?.endTime
+          }
+        });
+        return { 
+          top: 0, 
+          height: MIN_APPOINTMENT_HEIGHT,
+          startMinutes: 0,
+          endMinutes: 0
+        };
+      }
+    };
+
+    // Calculate layout and get display times
+    const { top, height, startMinutes, endMinutes } = calculateAppointmentLayout(appointment);
+    const startTime = formatTimeDisplay(appointment.startTime);
+    const endTime = formatTimeDisplay(appointment.endTime);
     
-    const top = (timeToMinutes(appointment.startTime) - startHour * 60) * (80 / 60);
-    const height = Math.max(60, (timeToMinutes(appointment.endTime) - timeToMinutes(appointment.startTime)) * (80 / 60));
+    // Calculate duration in minutes for better debugging
+    const durationMinutes = endMinutes - startMinutes;
+    
+    // Debug log for appointment positioning
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`Appointment: ${appointment.clientName || 'Unnamed'}`, {
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+        formatted: `${startTime} - ${endTime}`,
+        startMinutes,
+        endMinutes,
+        durationMinutes,
+        globalStartHour,
+        calculatedTop: top,
+        calculatedHeight: height,
+        expectedHeight: durationMinutes * (PIXELS_PER_HOUR / 60),
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        currentTime: new Date().toLocaleTimeString()
+      });
+    }
     
     // Get status configuration
     const statusConfig = getStatusConfig(appointment.status);
     const serviceTheme = {
       hair: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
-      facial: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
-      nail: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
-      massage: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
-      default: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
+      facial: 'from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20 border-l-purple-400',
+      nail: 'from-pink-50 to-pink-100 dark:from-pink-900/30 dark:to-pink-800/20 border-l-pink-400',
+      massage: 'from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20 border-l-green-400',
+      default: 'from-gray-50 to-gray-100 dark:from-gray-900/30 dark:to-gray-800/20 border-l-gray-400',
     };
     
-    const serviceType = appointment.service?.toLowerCase() || 'default';
+    const serviceType = (appointment.service?.toLowerCase() || 'default').trim();
     const themeClass = 
       serviceType.includes('hair') ? serviceTheme.hair :
       serviceType.includes('facial') || serviceType.includes('skin') ? serviceTheme.facial :
       serviceType.includes('nail') || serviceType.includes('manicure') || serviceType.includes('pedicure') ? serviceTheme.nail :
       serviceType.includes('massage') || serviceType.includes('spa') ? serviceTheme.massage :
       serviceTheme.default;
+      
+    // Debug log for service type theming
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Appointment service theming:', {
+        serviceType,
+        themeClass,
+        serviceName: appointment.service
+      });
+    }
     
+    if (appointment.isBlocked) {
+      return (
+        <div 
+          key={`blocked-${index}`}
+          className="absolute left-0 right-0 mx-4 p-2.5 rounded-lg border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/40 dark:to-amber-800/30 text-amber-800 dark:text-amber-200 shadow-md hover:shadow-lg transition-all duration-200"
+          style={{
+            top: `${top + 12}px`,
+            height: `${Math.max(height - 24, MIN_APPOINTMENT_HEIGHT)}px`,
+          }}
+        >
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+            <div className="font-semibold truncate text-amber-700 dark:text-amber-300 text-sm">Blocked Time</div>
+          </div>
+          <div className="text-sm text-amber-600 dark:text-amber-300/90 font-medium mb-1.5">
+            {appointment.description || 'Not Available'}
+          </div>
+          <div className="text-sm text-amber-600 dark:text-amber-300/90 font-medium flex items-center">
+            <Clock className="w-3.5 h-3.5 mr-1.5" />
+            {startTime} - {endTime}
+          </div>
+        </div>
+      );
+    }
+    
+    // Check if this is a web appointment (you can adjust this logic based on your data structure)
+    const isWebAppointment = appointment.notes?.toLowerCase().includes('web') || 
+                            appointment.notes?.toLowerCase().includes('online') ||
+                            (appointment as any).source === 'web' ||
+                            (appointment as any).bookingType === 'web';
+    
+    // Return statement for regular appointments
     return (
-      <div
+      <div 
         key={appointment.id}
-        className={`absolute left-1 right-1 p-3 rounded-lg border-l-4 ${themeClass} bg-white/95 dark:bg-blue-900/20 backdrop-blur-sm hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden group`}
+        className={`absolute left-0 right-0 mx-4 p-2.5 rounded-lg border-l-4 shadow-md group cursor-pointer transition-all duration-200 hover:shadow-lg transform hover:-translate-y-0.5 ${
+          themeClass
+        }`}
         style={{
-          top: `${top}px`,
-          height: `${height + 4}px`, // Slightly increase height
+          top: `${top + 12}px`,
+          height: `${Math.max(height - 24, MIN_APPOINTMENT_HEIGHT)}px`,
         }}
-        onClick={() => onAppointmentClickProp?.(appointment) || handleAppointmentClick(appointment)}
+        onClick={() => handleAppointmentClick(appointment)}
       >
         <div className="h-full flex flex-col">
-          {/* Header with client name and status */}
-          <div className="flex justify-between items-start mb-1.5">
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white truncate pr-2">
-              {appointment.clientName}
-            </h4>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${statusConfig.className} whitespace-nowrap`}>
+          {/* Client Name & Status */}
+          <div className="flex items-start justify-between mb-1.5 gap-2">
+            <div className="font-semibold text-sm truncate pr-1 text-gray-900 dark:text-gray-100">
+              {appointment.clientName || 'Unnamed Client'}
+            </div>
+            <div className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${statusConfig.className} flex-shrink-0`}>
               {statusConfig.label}
-            </span>
+            </div>
           </div>
           
-          {/* Service and time */}
-          <div className="mb-1.5">
-            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+          {/* Service Name(s) - Show multi-service or single */}
+          {/* For multi-service appointments in staff columns, show only this staff's service */}
+          {(appointment.isMultiService || (appointment.serviceItems && appointment.serviceItems.length > 1)) ? (
+            // Multi-service appointment - check if we're in a staff-specific view
+            (() => {
+              // If serviceItems exist and this card is for a specific staff's service,
+              // show only that service (the serviceName is already set to the staff's specific service)
+              const isStaffSpecificView = appointment.serviceName && 
+                                         appointment.serviceItems?.some(item => item.serviceName === appointment.serviceName);
+              
+              if (isStaffSpecificView) {
+                // Show only this staff's service in their column
+                return (
+                  <div className="text-sm text-gray-800 dark:text-gray-200 font-medium mb-1.5 truncate leading-snug">
+                    {appointment.serviceName}
+                  </div>
+                );
+              } else {
+                // Show multi-service badge (fallback for non-staff-specific views)
+                return (
+                  <div className="mb-1.5">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">
+                      Multi-Service ({appointment.serviceItems?.length || 0} services)
+                    </div>
+                    <div className="space-y-0.5">
+                      {appointment.serviceItems?.map((item: any, idx: number) => (
+                        <div key={item._id || idx} className="text-xs text-gray-800 dark:text-gray-200 truncate">
+                          • {item.serviceName}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+            })()
+          ) : (
+            <div className="text-sm text-gray-800 dark:text-gray-200 font-medium mb-1.5 truncate leading-snug">
               {appointment.serviceName || appointment.service}
-            </p>
-            <div className="flex items-center text-xs text-blue-600 dark:text-blue-300 mt-1">
-              <Clock className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
-              <span>
-                {format(new Date(`2000-01-01T${appointment.startTime}`), 'h:mma').toLowerCase()} - 
-                {format(new Date(`2000-01-01T${appointment.endTime}`), 'h:mma').toLowerCase()}
+            </div>
+          )}
+          
+          {/* Time - Medium size with better visibility */}
+          <div className="text-sm text-gray-700 dark:text-gray-300 font-medium flex items-center mb-1.5">
+            <Clock className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
+            <span>{startTime} - {endTime}</span>
+          </div>
+          
+          {/* Web Appointment Badge */}
+          {isWebAppointment && (
+            <div className="mb-1.5">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium border border-green-200 dark:border-green-800">
+                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM9 9a1 1 0 112 0v4a1 1 0 11-2 0V9zm1-5a1 1 0 100 2 1 1 0 000-2z"/>
+                </svg>
+                Web Booking
               </span>
             </div>
-          </div>
-          
-          {/* Staff and notes (if any) */}
-          <div className="mt-auto pt-2 border-t border-blue-100 dark:border-blue-800/50">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center mr-2 flex-shrink-0">
-                  <User className="w-3 h-3 text-blue-600 dark:text-blue-300" />
-                </div>
-                <span className="text-xs font-medium text-blue-700 dark:text-blue-200 truncate">
-                  {appointment.staffName}
-                </span>
-              </div>
-              
-              {appointment.notes && (
-                <div className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0 group-hover:bg-blue-300 transition-colors" />
-              )}
-            </div>
-          </div>
+          )}
         </div>
         
         {/* Hover effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/50 to-transparent dark:from-blue-800/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-white/40 to-transparent dark:from-blue-800/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-lg"></div>
       </div>
     );
   };
@@ -1009,28 +1376,28 @@ export default function DayScheduleView({
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="flex flex-col h-full w-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-2xl overflow-hidden shadow-xl">
       <div className="flex flex-col h-full w-full">
         {/* Top header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm flex-shrink-0 rounded-t-2xl">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {format(safeSelectedDate, 'EEEE, MMMM d, yyyy')}
+            </h2>
+            <div className="flex items-center space-x-3">
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => handleDateChange('prev')}
-                className="rounded-full"
+                className="rounded-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {format(safeSelectedDate, 'EEEE, MMMM d, yyyy')}
-              </h2>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={() => handleDateChange('next')}
-                className="rounded-full"
+                className="rounded-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
@@ -1039,12 +1406,12 @@ export default function DayScheduleView({
         </div>
         
         {/* Calendar grid container */}
-        <div className="flex-grow bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex flex-col relative overflow-hidden">
-          {/* Fixed header row */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm z-20">
+        <div className="flex-grow bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm flex flex-col relative overflow-hidden">
+          {/* Fixed header row - sticky at top */}
+          <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-20 sticky top-0">
             {/* Fixed time header */}
-            <div className="w-20 border-r border-gray-200 dark:border-gray-700 p-3 font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex-shrink-0">
-              Time
+            <div className="w-20 border-r border-gray-200 dark:border-gray-700 p-4 font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex-shrink-0 rounded-tl-2xl flex items-center justify-center" style={{ minHeight: '80px' }}>
+              <div className="text-center font-bold">Time</div>
             </div>
             {/* Scrollable staff headers */}
             <div 
@@ -1067,24 +1434,32 @@ export default function DayScheduleView({
                 return (
                   <div 
                     key={staff.id} 
-                    className={`min-w-[250px] p-3 font-medium border-r border-gray-200 dark:border-gray-700 ${
+                    className={`min-w-[250px] p-4 font-semibold border-r border-gray-200 dark:border-gray-700 ${
                       isAvailable ? bgColor : 'bg-gray-100 dark:bg-gray-800'
-                    } flex-shrink-0 ${!isAvailable ? 'opacity-60' : ''}`}
+                    } flex-shrink-0 ${!isAvailable ? 'opacity-60' : ''} flex items-center`}
+                    style={{ minHeight: '80px' }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
-                        <User className={`w-4 h-4 mr-2 ${isAvailable ? textColor : 'text-gray-400'}`} />
-                        <span className={`font-semibold ${isAvailable ? textColor : 'text-gray-500'}`}>
-                          {staff.name || staff.fullName}
-                        </span>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center mr-3 flex-shrink-0 shadow-sm">
+                          <User className={`w-5 h-5 ${isAvailable ? textColor : 'text-gray-400'}`} />
+                        </div>
+                        <div>
+                          <span className={`font-bold ${isAvailable ? textColor : 'text-gray-500'}`}>
+                            {staff.name || staff.fullName}
+                          </span>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {staff.position || 'Staff Member'}
+                          </div>
+                        </div>
                       </div>
                       {!isAvailable && (
-                        <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full">
+                        <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full font-bold shadow-sm">
                           Unavailable
                         </span>
                       )}
                       {isAvailable && availability?.workingHours && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full shadow-sm">
                           {availability.workingHours.startTime} - {availability.workingHours.endTime}
                         </span>
                       )}
@@ -1092,24 +1467,39 @@ export default function DayScheduleView({
                   </div>
                 );
               })}
+              {/* Add empty column for scrollbar spacing */}
+              <div className="w-4 flex-shrink-0"></div>
             </div>
           </div>
           
-          {/* Scrollable content area */}
           <div className="flex-grow overflow-y-auto relative">
             <div className="flex h-full">
               {/* Fixed time column */}
               <div className="w-20 border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex-shrink-0 sticky left-0 z-10">
-                {workingHoursArray.map(hour => {
-                  const timeString = `${hour.toString().padStart(2, '0')}:00`;
+                {workingHoursArray.map((timeSlot, timeIndex) => {
+                  // Use consistent time slot height
+                  const slotHeight = TIME_SLOT_HEIGHT;
+                  
                   return (
                     <div 
-                      key={`time-${hour}`}
-                      className="h-20 border-b border-gray-100 dark:border-gray-800 flex items-center justify-center"
+                      key={`time-${timeSlot.hour}-${timeSlot.minute}-${timeIndex}`}
+                      className={`${timeSlot.isGap ? 'bg-gray-50 dark:bg-gray-800/50' : ''} border-b border-gray-100 dark:border-gray-800 flex items-center justify-center`}
+                      style={{ 
+                        height: `${slotHeight}px`,
+                        boxSizing: 'border-box',
+                        position: 'relative'
+                      }}
                     >
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                        {timeString}
-                      </span>
+                      {timeSlot.isHourMark && (
+                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                          {timeSlot.timeString}
+                        </span>
+                      )}
+                      {timeSlot.isGap && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600"></div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1136,10 +1526,10 @@ export default function DayScheduleView({
                       {/* Unavailable overlay */}
                       {!isAvailable && (
                         <div className="absolute inset-0 bg-gray-200/50 dark:bg-gray-800/50 z-30 flex items-center justify-center">
-                          <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <div className="bg-white dark:bg-gray-800 px-6 py-4 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-4 h-4 bg-red-500 rounded-full"></div>
+                              <span className="text-base font-bold text-gray-700 dark:text-gray-300">
                                 Not Available Today
                               </span>
                             </div>
@@ -1150,22 +1540,27 @@ export default function DayScheduleView({
                       {/* Hour lines - use staff-specific working hours */}
                       {(() => {
                         const staffHours = getStaffWorkingHours(staff);
-                        const filteredWorkingHours = workingHoursArray
-                          .filter(hour => hour >= staffHours.startHour && hour <= staffHours.endHour);
+                        const filteredWorkingHours = workingHoursArray;
                         
-                        return filteredWorkingHours.map(hour => {
-                          const timeString = `${hour.toString().padStart(2, '0')}:00`;
+                        return filteredWorkingHours.map(timeSlot => {
+                          const timeString = timeSlot.timeString;
                           const isBlocked = isTimeBlocked(timeString, staff.blockedTimes || []);
-                          const isWithinWorkingHours = staff.workingHours
-                            ? hour >= staff.workingHours.startHour && hour < staff.workingHours.endHour
-                            : false;
+                          const slotTimeInMinutes = timeSlot.hour * 60 + timeSlot.minute;
+                          const staffStartMinutes = staff.workingHours?.startHour ? staff.workingHours.startHour * 60 : 13 * 60; // Default to 1 PM if not set
+                          const staffEndMinutes = staff.workingHours?.endHour ? staff.workingHours.endHour * 60 : 18 * 60; // Default to 6 PM if not set
+                          
+                          const isWithinWorkingHours = slotTimeInMinutes >= staffStartMinutes && 
+                                                    slotTimeInMinutes < staffEndMinutes;
                           
                           const isClickable = isAvailable && isWithinWorkingHours && !isBlocked;
                           
+                          // Use consistent time slot height
+                          const height = TIME_SLOT_HEIGHT;
+                            
                           return (
                             <div 
-                              key={`${staff.name}-${hour}`}
-                              className={`h-20 border-b border-gray-100 dark:border-gray-800 relative transition-colors ${
+                              key={`${staff.name}-${timeSlot.hour}-${timeSlot.minute}`}
+                              className={`border-b border-gray-100 dark:border-gray-800 relative transition-all duration-150 ${
                                 !isAvailable 
                                   ? 'bg-gray-200/70 dark:bg-gray-800/70' 
                                   : isBlocked
@@ -1174,6 +1569,10 @@ export default function DayScheduleView({
                                       ? 'bg-gray-100/50 dark:bg-gray-700/30 cursor-not-allowed'
                                       : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
                               }`}
+                              style={{ 
+                                height: `${height}px`,
+                                boxSizing: 'border-box'
+                              }}
                               onClick={(e) => {
                                 if (isClickable) {
                                   handleTimeSlotClick(timeString, e);
@@ -1187,8 +1586,8 @@ export default function DayScheduleView({
                                   : isBlocked
                                     ? `This time slot is blocked`
                                     : !isWithinWorkingHours 
-                                      ? `${staff.name} is not working at ${hour}:00 (Working hours: ${staff.workingHours?.startTime || '09:00'} - ${staff.workingHours?.endTime || '18:00'})` 
-                                      : `Book appointment with ${staff.name} at ${hour}:00`
+                                      ? `${staff.name} is not working at ${timeSlot.timeString} (Working hours: ${staff.workingHours?.startTime || '09:00'} - ${staff.workingHours?.endTime || '18:00'})` 
+                                      : `Book appointment with ${staff.name} at ${timeSlot.timeString}`
                               }
                           >
                               {/* Dashed line for time separation */}
@@ -1196,26 +1595,26 @@ export default function DayScheduleView({
                               
                               {isClickable && (
                                 <div className="absolute top-2 right-2">
-                                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                               </div>
                             )}
                             
                             {/* Not working hours indicator */}
                             {isAvailable && !isWithinWorkingHours && (
                               <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-xs text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm">
-                                  Not Working
+                                <span className="text-xs text-gray-400 dark:text-gray-500 bg-white/80 dark:bg-gray-800/80 px-2 py-1 rounded shadow-sm font-bold">
+                                  {timeSlot.hour < (staff.workingHours?.startHour || 13) ? 'Not Started' : 'Not Working'}
                                 </span>
                               </div>
                             )}
                             
                             {/* Blocked time indicator */}
                             {isAvailable && isWithinWorkingHours && isTimeBlocked(
-                              `${hour.toString().padStart(2, '0')}:00`, 
+                              timeSlot.timeString, 
                               staff.blockedTimes || []
                             ) && (
                               <div className="absolute inset-0 flex items-center justify-center bg-red-50/50 dark:bg-red-900/20">
-                                <span className="text-xs text-red-500 dark:text-red-300 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm">
+                                <span className="text-xs text-red-500 dark:text-red-300 bg-white dark:bg-gray-800 px-2 py-1 rounded shadow-sm font-bold">
                                   Blocked
                                 </span>
                               </div>
@@ -1224,7 +1623,7 @@ export default function DayScheduleView({
                               {/* Completely unavailable indicator */}
                               {!isAvailable && (
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                  <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded shadow-sm">
+                                  <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded shadow-sm font-bold">
                                     Unavailable
                                   </span>
                                 </div>
@@ -1233,7 +1632,7 @@ export default function DayScheduleView({
                               {/* Blocked time indicator */}
                               {isBlocked && isAvailable && (
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                  <span className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded shadow-sm">
+                                  <span className="text-xs text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded shadow-sm font-bold">
                                     Blocked
                                   </span>
                                 </div>
@@ -1250,21 +1649,12 @@ export default function DayScheduleView({
                     </div>
                   );
                 })}
+                {/* Add empty column for scrollbar spacing */}
+                <div className="w-4 flex-shrink-0"></div>
               </div>
             </div>
             
-            {/* Current Time Indicator */}
-            {isCurrentDate && isWithinWorkingHours && (
-              <div 
-                className="absolute left-0 right-0 h-px bg-red-500 z-50 flex items-center"
-                style={{ top: `${currentTimePosition}px` }}
-              >
-                <div className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-r">
-                  {format(new Date(), 'h:mm a')}
-                </div>
-                <div className="h-px bg-red-500 flex-1"></div>
-              </div>
-            )}
+            {/* Current Time Indicator - Removed */}
           </div>
         </div>
       </div>
@@ -1282,9 +1672,9 @@ export default function DayScheduleView({
       
       {/* New Appointment Dialog */}
       <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
-        <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl">
+        <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white">
+            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
               New Appointment for {newAppointmentDate && format(newAppointmentDate, 'EEEE, MMMM d, yyyy')}
             </DialogTitle>
           </DialogHeader>
@@ -1299,7 +1689,7 @@ export default function DayScheduleView({
       {selectedAppointment && (
         <Dialog open={isDetailViewOpen} onOpenChange={(open) => !open && handleCloseDetailView()}>
           <DialogContent 
-            className="max-w-3xl"
+            className="max-w-3xl rounded-2xl border-gray-200 dark:border-gray-700"
             onInteractOutside={(e) => {
               e.preventDefault();
               handleCloseDetailView();

@@ -827,19 +827,55 @@ export function AppointmentDetailView({
                     </div>
                   </div>
                   
-                  <div className="bg-background p-3 rounded-lg border shadow-sm">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                        <Scissors className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service</p>
-                        <p className="text-lg font-semibold text-foreground">
-                          {appointment.serviceName || 'No service specified'}
-                        </p>
+                  {/* Show single service or multi-service header */}
+                  {!(appointment.isMultiService || (appointment.serviceItems && appointment.serviceItems.length > 1)) ? (
+                    <div className="bg-background p-3 rounded-lg border shadow-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                          <Scissors className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service</p>
+                          <p className="text-lg font-semibold text-foreground">
+                            {appointment.serviceName || 'No service specified'}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-background p-3 rounded-lg border shadow-sm">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                          <ClipboardList className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Services</p>
+                          <p className="text-lg font-semibold text-foreground">
+                            Multi-Service ({appointment.serviceItems?.length || 0} Services)
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Display all service items */}
+                      {appointment.serviceItems && appointment.serviceItems.length > 0 && (
+                        <div className="space-y-2 mt-3">
+                          {appointment.serviceItems.map((item: ServiceItem, index: number) => (
+                            <div key={item._id || index} className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-muted">
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{item.serviceName}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {item.staffName} • {item.startTime} - {item.endTime} ({item.duration} min)
+                                </div>
+                              </div>
+                              <div className="text-right ml-2">
+                                <div className="font-semibold text-sm">₹{item.amount?.toFixed(2) || '0.00'}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   
                   <div className="bg-background p-3 rounded-lg border shadow-sm">
                     <div className="flex items-center space-x-3">
@@ -869,43 +905,12 @@ export function AppointmentDetailView({
                           <div className="flex items-center text-foreground/80">
                             <Clock className="h-4 w-4 mr-1.5 text-muted-foreground" />
                             <span>{appointment.startTime} - {appointment.endTime}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">({appointment.duration} min)</span>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Service Items for Multi-Service Appointments */}
-                  {appointment.isMultiService && appointment.serviceItems && appointment.serviceItems.length > 0 && (
-                    <div className="bg-background p-3 rounded-lg border shadow-sm">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                          <ClipboardList className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Services</p>
-                          <p className="text-lg font-semibold text-foreground">Multi-Service Appointment</p>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        {appointment.serviceItems.map((item: ServiceItem, index: number) => (
-                          <div key={item._id || index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                            <div className="flex-1">
-                              <div className="font-medium">{item.serviceName}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {item.staffName} • {item.startTime} - {item.endTime}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-medium">₹{item.amount?.toFixed(2) || '0.00'}</div>
-                              <div className="text-xs text-muted-foreground">{item.duration} min</div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                   
                   <div className="bg-background p-3 rounded-lg border shadow-sm">
                     <div className="flex items-center space-x-3">
