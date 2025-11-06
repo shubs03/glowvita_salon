@@ -155,7 +155,6 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow }
                         description: service.description,
                         image: service.image
                       };
-                      console.log('Storing service in sessionStorage:', serviceData);
                       sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
                       onBookNow(service);
                     }}

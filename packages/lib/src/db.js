@@ -32,8 +32,15 @@ const _db = async () => {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 10000, // 10 seconds
-      socketTimeoutMS: 45000, // 45 seconds
+      serverSelectionTimeoutMS: 30000, // 30 seconds (increased)
+      socketTimeoutMS: 75000, // 75 seconds (increased)
+      connectTimeoutMS: 30000, // 30 seconds
+      maxPoolSize: 10, // Connection pool size
+      minPoolSize: 2,
+      maxIdleTimeMS: 60000, // Close idle connections after 60s
+      retryWrites: true,
+      retryReads: true,
+      family: 4, // Force IPv4 (fixes IPv6 issues)
     };
 
     try {

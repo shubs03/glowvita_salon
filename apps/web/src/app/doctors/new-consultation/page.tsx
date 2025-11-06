@@ -24,9 +24,15 @@ export type ConsultationData = {
   
   // Chat Info
   consultationId?: string;
+  
+  // Doctor Info
   doctorId?: string;
   doctorName?: string;
   doctorSpecialty?: string;
+  doctorRating?: number;
+  doctorReviewCount?: number;
+  doctorClinic?: string;
+  doctorYearsOfExperience?: number;
 };
 
 // Breadcrumb Navigation Component (matching salon booking style)
@@ -100,27 +106,91 @@ export default function NewConsultationPage() {
 
   const handlePaymentSuccess = () => {
     // Simulate successful payment and doctor assignment based on specialty
-    const doctorNames = {
-      'General Medicine': 'Dr. Sarah Johnson',
-      'Cardiology': 'Dr. Michael Chen',
-      'Dermatology': 'Dr. Emily Rodriguez',
-      'Neurology': 'Dr. David Thompson',
-      'Orthopedics': 'Dr. Lisa Wang',
-      'Psychiatry': 'Dr. James Wilson',
-      'Gastroenterology': 'Dr. Maria Garcia',
-      'Pulmonology': 'Dr. Robert Kim',
-      'Endocrinology': 'Dr. Jennifer Brown',
-      'Rheumatology': 'Dr. Andrew Davis'
+    const doctorProfiles = {
+      'General Medicine': { 
+        name: 'Dr. Sarah Johnson', 
+        rating: 4.8, 
+        reviews: 234, 
+        clinic: 'City Medical Center',
+        experience: 15
+      },
+      'Cardiology': { 
+        name: 'Dr. Michael Chen', 
+        rating: 4.9, 
+        reviews: 189, 
+        clinic: 'Heart Care Clinic',
+        experience: 20
+      },
+      'Dermatology': { 
+        name: 'Dr. Emily Rodriguez', 
+        rating: 4.7, 
+        reviews: 156, 
+        clinic: 'Skin Care Clinic',
+        experience: 12
+      },
+      'Neurology': { 
+        name: 'Dr. David Thompson', 
+        rating: 4.9, 
+        reviews: 201, 
+        clinic: 'Neuro Wellness Center',
+        experience: 18
+      },
+      'Orthopedics': { 
+        name: 'Dr. Lisa Wang', 
+        rating: 4.8, 
+        reviews: 178, 
+        clinic: 'Bone & Joint Clinic',
+        experience: 16
+      },
+      'Psychiatry': { 
+        name: 'Dr. James Wilson', 
+        rating: 4.6, 
+        reviews: 145, 
+        clinic: 'Mental Wellness Center',
+        experience: 14
+      },
+      'Gastroenterology': { 
+        name: 'Dr. Maria Garcia', 
+        rating: 4.8, 
+        reviews: 167, 
+        clinic: 'Digestive Health Center',
+        experience: 13
+      },
+      'Pulmonology': { 
+        name: 'Dr. Robert Kim', 
+        rating: 4.7, 
+        reviews: 142, 
+        clinic: 'Respiratory Care Clinic',
+        experience: 11
+      },
+      'Endocrinology': { 
+        name: 'Dr. Jennifer Brown', 
+        rating: 4.9, 
+        reviews: 198, 
+        clinic: 'Hormone Health Clinic',
+        experience: 17
+      },
+      'Rheumatology': { 
+        name: 'Dr. Andrew Davis', 
+        rating: 4.7, 
+        reviews: 134, 
+        clinic: 'Arthritis Care Center',
+        experience: 10
+      }
     };
 
     const selectedSpecialty = consultationData.selectedSpecialty || 'General Medicine';
-    const doctorName = doctorNames[selectedSpecialty as keyof typeof doctorNames] || 'Dr. Sarah Johnson';
+    const doctorProfile = doctorProfiles[selectedSpecialty as keyof typeof doctorProfiles] || doctorProfiles['General Medicine'];
 
     updateConsultationData({
       consultationId: `CONS-${Date.now()}`,
       doctorId: `DR-${Math.floor(Math.random() * 1000)}`,
-      doctorName: doctorName,
-      doctorSpecialty: selectedSpecialty
+      doctorName: doctorProfile.name,
+      doctorSpecialty: selectedSpecialty,
+      doctorRating: doctorProfile.rating,
+      doctorReviewCount: doctorProfile.reviews,
+      doctorClinic: doctorProfile.clinic,
+      doctorYearsOfExperience: doctorProfile.experience
     });
     handleNext();
   };

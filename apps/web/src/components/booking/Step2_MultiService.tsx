@@ -59,26 +59,21 @@ export function Step2_MultiService({
     useEffect(() => {
         if (serviceStaffAssignments.length > 0 && currentAssignmentIndex < serviceStaffAssignments.length) {
             const currentService = serviceStaffAssignments[currentAssignmentIndex].service;
-            console.log('Step2_MultiService - Current Service:', currentService);
-            console.log('Step2_MultiService - All Staff:', staff);
             
             // If no staff data, return empty array
             if (!staff || staff.length === 0) {
-                console.log('Step2_MultiService - No staff data available');
                 setFilteredStaff([]);
                 return;
             }
             
             // If no service is selected, show all staff
             if (!currentService) {
-                console.log('Step2_MultiService - No service selected, returning all staff');
                 setFilteredStaff(staff);
                 return;
             }
             
             // If the service doesn't have a staff array, show all staff
             if (!currentService.staff || currentService.staff.length === 0) {
-                console.log('Step2_MultiService - Service has no staff array, returning all staff');
                 setFilteredStaff(staff);
                 return;
             }
@@ -91,11 +86,8 @@ export function Step2_MultiService({
                 // Check if staff member name is in the service's staff array
                 const isNameMatch = currentService.staff?.includes(staffMember.name);
                 const result = isIdMatch || isNameMatch;
-                console.log(`Step2_MultiService - Checking staff ${staffMember.name} (${staffMember.id}): ID match: ${isIdMatch}, Name match: ${isNameMatch}, Result: ${result}`);
                 return result;
             });
-            
-            console.log('Step2_MultiService - Filtered staff based on service:', serviceStaff);
             // Preserve selection state from previous assignments
             const updatedStaff = serviceStaff.map(staffMember => {
                 const assignment = serviceStaffAssignments.find(a => 

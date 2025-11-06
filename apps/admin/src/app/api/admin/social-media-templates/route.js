@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import _db from "@repo/lib/db";
 import mongoose from 'mongoose';
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
 // Import the social media template model
 const { default: SocialMediaTemplateModel, modelName } = await import("@repo/lib/models/Marketing/socialMediaTemplate.model");
@@ -156,6 +157,31 @@ export const POST = authMiddlewareAdmin(async (req) => {
       return NextResponse.json({ success: false, message: "A template with this title already exists" }, { status: 400 });
     }
 
+    // Handle image upload if provided
+    let imageUrl = '';
+    if (image) {
+      if (!image.startsWith('data:image/')) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Invalid image format. Must be a base64 encoded image.'
+          },
+          { status: 400 }
+        );
+      }
+      
+      // Upload image to VPS
+      const fileName = `social-media-template-${Date.now()}`;
+      imageUrl = await uploadBase64(image, fileName);
+      
+      if (!imageUrl) {
+        return NextResponse.json(
+          { success: false, message: "Failed to upload image" },
+          { status: 500 }
+        );
+      }
+    }
+
     const templateData = {
       title: title.toString().trim(),
       category: category.toString().trim(),
@@ -165,7 +191,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
       createdBy: user._id,
       updatedBy: user._id,
       isActive: body.isActive !== undefined ? Boolean(body.isActive) : true,
-      imageUrl: image, // Save the image url for preview cards
+      imageUrl: imageUrl, // Save the image url for preview cards
       jsonData: {
           "version": "5.3.0",
           "objects": [
@@ -262,7 +288,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
         ],
         "background": {
           "type": "image",
-          "src": image // Correctly format for Fabric.js
+          "src": imageUrl // Correctly format for Fabric.js
         }
     }};
     
@@ -401,28 +427,64 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
       isActive: body.isActive !== undefined ? body.isActive : existingTemplate.isActive
     };
 
-    // Only update image if provided and valid
-    if (image) {
-      if (!image.startsWith('data:image/')) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Invalid image format. Must be a base64 encoded image.'
-          },
-          { status: 400 }
-        );
-      }
-      // Update the imageUrl for the card preview
-      updateData.imageUrl = image;
-      
-      // Update the background in jsonData
-      updateData.jsonData = {
-        ...existingTemplate.jsonData,
-        "background": {
-          "type": "image",
-          "src": image
+    // Handle image upload if provided
+    if (image !== undefined) {
+      if (image) {
+        if (!image.startsWith('data:image/')) {
+          return NextResponse.json(
+            {
+              success: false,
+              message: 'Invalid image format. Must be a base64 encoded image.'
+            },
+            { status: 400 }
+          );
         }
-      };
+        
+        // Upload new image to VPS
+        const fileName = `social-media-template-${Date.now()}`;
+        const imageUrl = await uploadBase64(image, fileName);
+        
+        if (!imageUrl) {
+          return NextResponse.json(
+            { success: false, message: "Failed to upload image" },
+            { status: 500 }
+          );
+        }
+        
+        // Delete old image from VPS if it exists
+        if (existingTemplate.imageUrl) {
+          await deleteFile(existingTemplate.imageUrl);
+        }
+        
+        // Update the imageUrl for the card preview
+        updateData.imageUrl = imageUrl;
+        
+        // Update the background in jsonData
+        updateData.jsonData = {
+          ...existingTemplate.jsonData,
+          "background": {
+            "type": "image",
+            "src": imageUrl
+          }
+        };
+      } else {
+        // If image is null/empty, remove it
+        updateData.imageUrl = '';
+        
+        // Delete old image from VPS if it exists
+        if (existingTemplate.imageUrl) {
+          await deleteFile(existingTemplate.imageUrl);
+        }
+        
+        // Update the background in jsonData
+        updateData.jsonData = {
+          ...existingTemplate.jsonData,
+          "background": {
+            "type": "image",
+            "src": ''
+          }
+        };
+      }
     }
     
     // Update the template
@@ -521,6 +583,11 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     }
 
     await SocialMediaTemplate.findByIdAndDelete(id);
+    
+    // Delete image from VPS if it exists
+    if (template.imageUrl) {
+      await deleteFile(template.imageUrl);
+    }
 
     return NextResponse.json({ success: true, message: 'Template deleted successfully' }, { status: 200 });
 

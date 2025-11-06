@@ -3,6 +3,7 @@ import _db from "../../../../../../../packages/lib/src/db.js";
 import VendorServicesModel from '@repo/lib/models/Vendor/VendorServices.model';
 import CategoryModel from "../../../../../../../packages/lib/src/models/admin/Category.model.js";
 import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
+import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
 
@@ -24,12 +25,30 @@ export const POST = authMiddlewareCrm(async (req) => {
   }
 
   // 2️⃣ Validate each service and set status to pending
-  const servicesToInsert = services.map(service => {
+  const servicesToInsert = await Promise.all(services.map(async service => {
     if (!service.name || !service.category || !service.price || !service.duration || !service.description || !service.gender) {
       throw new Error("Each service must have name, category, price, duration, description, and gender");
     }
-    return { ...service, status: 'pending', createdAt: new Date(), updatedAt: new Date() };
-  });
+    
+    // Handle image upload if provided
+    let imageUrl = null;
+    if (service.image) {
+      const fileName = `vendor-service-${vendorId}-${Date.now()}`;
+      imageUrl = await uploadBase64(service.image, fileName);
+      
+      if (!imageUrl) {
+        console.warn('Failed to upload service image for service:', service.name);
+      }
+    }
+    
+    return { 
+      ...service, 
+      image: imageUrl || null,
+      status: 'pending', 
+      createdAt: new Date(), 
+      updatedAt: new Date() 
+    };
+  }));
 
   // 3️⃣ Create or update VendorServices document
   const vendorServices = await VendorServicesModel.findOneAndUpdate(
@@ -124,9 +143,40 @@ export const PUT = authMiddlewareCrm(async (req) => {
   }
 
   // Update each service individually
-  const updatePromises = services.map((service) => {
+  const updatePromises = services.map(async (service) => {
     // If service was disapproved, resubmitting sets it back to pending
     const status = service.status === 'disapproved' ? 'pending' : service.status;
+    
+    // Handle image upload if provided
+    let imageUrl = service.image;
+    if (service.image !== undefined) {
+      // Get existing service to check for old image
+      const vendorServices = await VendorServicesModel.findOne({ vendor: vendorId });
+      if (vendorServices) {
+        const existingService = vendorServices.services.id(service._id);
+        if (service.image) {
+          // Upload new image to VPS
+          const fileName = `vendor-service-${vendorId}-${Date.now()}`;
+          imageUrl = await uploadBase64(service.image, fileName);
+          
+          if (!imageUrl) {
+            console.warn('Failed to upload service image for service:', service.name);
+            imageUrl = service.image; // Keep the original value if upload failed
+          }
+          
+          // Delete old image from VPS if it exists and is different
+          if (existingService && existingService.image && existingService.image !== imageUrl) {
+            await deleteFile(existingService.image);
+          }
+        } else {
+          // If image is null/empty, delete the old image
+          if (existingService && existingService.image) {
+            await deleteFile(existingService.image);
+          }
+          imageUrl = null;
+        }
+      }
+    }
     
     return VendorServicesModel.findOneAndUpdate(
       { vendor: vendorId, "services._id": service._id },
@@ -138,7 +188,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
           "services.$.discountedPrice": service.discountedPrice,
           "services.$.duration": service.duration,
           "services.$.description": service.description,
-          "services.$.image": service.image,
+          "services.$.image": imageUrl,
           "services.$.gender": service.gender,
           "services.$.staff": service.staff,
           "services.$.commission": service.commission,
@@ -192,6 +242,14 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     );
   }
 
+  // Get the service to be deleted to check for image
+  const vendorServices = await VendorServicesModel.findOne({ vendor: vendorId });
+  let serviceToDelete = null;
+  
+  if (vendorServices) {
+    serviceToDelete = vendorServices.services.id(serviceId);
+  }
+  
   // Delete the specific service from vendor's services array
   const result = await VendorServicesModel.findOneAndUpdate(
     { vendor: vendorId },
@@ -201,6 +259,11 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     },
     { new: true }
   ).populate("services.category");
+  
+  // Delete image from VPS if it exists
+  if (serviceToDelete && serviceToDelete.image) {
+    await deleteFile(serviceToDelete.image);
+  }
 
   if (!result) {
     return Response.json(

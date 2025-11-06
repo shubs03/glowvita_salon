@@ -13,7 +13,7 @@ const categorySchema = new mongoose.Schema({
     trim: true,
   },
   categoryImage: {
-    type: String,
+    type: String, // URL to the uploaded image
     trim: true,
   },
   createdAt: {

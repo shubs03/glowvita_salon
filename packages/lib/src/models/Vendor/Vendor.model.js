@@ -106,7 +106,7 @@ const vendorSchema = new mongoose.Schema({
     default: null,
   },
   profileImage: {
-    type: String, // Base64 encoded image string
+    type: String, // URL to the uploaded image
     default: null,
   },
   services: [
@@ -161,7 +161,7 @@ const vendorSchema = new mongoose.Schema({
   },
   gallery: [
     {
-      type: String, // Base64 encoded image strings or URLs
+      type: String, // URLs to the uploaded images
       default: null,
     },
   ],
@@ -190,7 +190,7 @@ const vendorSchema = new mongoose.Schema({
   },
   documents: {
     aadharCard: {
-      type: String, // File path or base64 string
+      type: String, // URL to the uploaded document
       default: null,
     },
     udyogAadhar: {
@@ -215,6 +215,74 @@ const vendorSchema = new mongoose.Schema({
         default: null,
       },
     ],
+    // Add document status fields
+    aadharCardStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    udyogAadharStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    udhayamCertStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    shopLicenseStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    panCardStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    // Add rejection reason fields
+    aadharCardRejectionReason: {
+      type: String,
+      default: null,
+    },
+    udyogAadharRejectionReason: {
+      type: String,
+      default: null,
+    },
+    udhayamCertRejectionReason: {
+      type: String,
+      default: null,
+    },
+    shopLicenseRejectionReason: {
+      type: String,
+      default: null,
+    },
+    panCardRejectionReason: {
+      type: String,
+      default: null,
+    },
+    // Add admin rejection reason fields (separate from vendor rejection reasons)
+    aadharCardAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    udyogAadharAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    udhayamCertAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    shopLicenseAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    panCardAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
   },
   referralCode: {
     type: String,
@@ -235,6 +303,40 @@ const vendorSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+});
+
+// Add validation to ensure rejection reasons are provided when status is rejected
+vendorSchema.pre('validate', function(next) {
+  const docs = this.documents;
+  
+  if (docs) {
+    // Check Aadhar Card
+    if (docs.aadharCardStatus === 'rejected' && !docs.aadharCardRejectionReason) {
+      return next(new Error('Rejection reason is required for rejected Aadhar Card'));
+    }
+    
+    // Check Udyog Aadhar
+    if (docs.udyogAadharStatus === 'rejected' && !docs.udyogAadharRejectionReason) {
+      return next(new Error('Rejection reason is required for rejected Udyog Aadhar'));
+    }
+    
+    // Check Udhayam Certificate
+    if (docs.udhayamCertStatus === 'rejected' && !docs.udhayamCertRejectionReason) {
+      return next(new Error('Rejection reason is required for rejected Udhayam Certificate'));
+    }
+    
+    // Check Shop License
+    if (docs.shopLicenseStatus === 'rejected' && !docs.shopLicenseRejectionReason) {
+      return next(new Error('Rejection reason is required for rejected Shop License'));
+    }
+    
+    // Check PAN Card
+    if (docs.panCardStatus === 'rejected' && !docs.panCardRejectionReason) {
+      return next(new Error('Rejection reason is required for rejected PAN Card'));
+    }
+  }
+  
+  next();
 });
 
 vendorSchema.index({ status: 1 });

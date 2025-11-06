@@ -1,6 +1,7 @@
 import _db from "@repo/lib/db";
 import CategoryModel from "@repo/lib/models/admin/Category";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
 await _db();
 
@@ -28,7 +29,26 @@ export const POST =
     }
 
     try {
-      const newCategory = await CategoryModel.create({ name, description, categoryImage: image });
+      let imageUrl = null;
+      
+      // Upload image to VPS if provided
+      if (image) {
+        const fileName = `category-${Date.now()}`;
+        imageUrl = await uploadBase64(image, fileName);
+        
+        if (!imageUrl) {
+          return Response.json(
+            { message: "Failed to upload image" },
+            { status: 500 }
+          );
+        }
+      }
+      
+      const newCategory = await CategoryModel.create({ 
+        name, 
+        description, 
+        categoryImage: imageUrl 
+      });
       return Response.json(newCategory, { status: 201 });
     } catch (error) {
       return Response.json(
@@ -50,24 +70,54 @@ export const PUT = authMiddlewareAdmin(
       );
     }
 
-    // Rename 'image' to 'categoryImage' if it exists in updateData
-    if (updateData.image !== undefined) {
-      updateData.categoryImage = updateData.image;
-      delete updateData.image;
-    }
-
     try {
-      const updatedCategory = await CategoryModel.findByIdAndUpdate(
-        id,
-        updateData,
-        { new: true }
-      );
-      if (!updatedCategory) {
+      // Get existing category to check for old image
+      const existingCategory = await CategoryModel.findById(id);
+      if (!existingCategory) {
         return Response.json(
           { message: "Category not found" },
           { status: 404 }
         );
       }
+
+      // Handle image upload if new image is provided
+      if (updateData.image !== undefined) {
+        if (updateData.image) {
+          // Upload new image to VPS
+          const fileName = `category-${Date.now()}`;
+          const imageUrl = await uploadBase64(updateData.image, fileName);
+          
+          if (!imageUrl) {
+            return Response.json(
+              { message: "Failed to upload image" },
+              { status: 500 }
+            );
+          }
+          
+          // Delete old image from VPS if it exists
+          if (existingCategory.categoryImage) {
+            await deleteFile(existingCategory.categoryImage);
+          }
+          
+          updateData.categoryImage = imageUrl;
+        } else {
+          // If image is null/empty, remove it
+          updateData.categoryImage = null;
+          
+          // Delete old image from VPS if it exists
+          if (existingCategory.categoryImage) {
+            await deleteFile(existingCategory.categoryImage);
+          }
+        }
+        delete updateData.image;
+      }
+
+      const updatedCategory = await CategoryModel.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true }
+      );
+      
       return Response.json(updatedCategory, { status: 200 });
     } catch (error) {
       return Response.json(
@@ -99,6 +149,12 @@ export const DELETE = authMiddlewareAdmin(
           { status: 404 }
         );
       }
+      
+      // Delete image from VPS if it exists
+      if (deletedCategory.categoryImage) {
+        await deleteFile(deletedCategory.categoryImage);
+      }
+      
       return Response.json(
         { message: "Category deleted successfully" },
         { status: 200 }

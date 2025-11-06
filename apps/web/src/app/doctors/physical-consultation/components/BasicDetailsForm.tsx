@@ -3,7 +3,7 @@
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
-import { User, Phone, Mail, FileText } from "lucide-react";
+import { User, FileText } from "lucide-react";
 import { ConsultationData } from '../page';
 
 interface BasicDetailsFormProps {
@@ -66,21 +66,6 @@ export default function BasicDetailsForm({ data, onUpdate }: BasicDetailsFormPro
                     className="rounded-l-none h-12 text-base"
                     pattern="[0-9]{10}"
                     maxLength={10}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-base">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    value={data.email || ''}
-                    onChange={(e) => onUpdate({ email: e.target.value })}
-                    className="pl-10 h-12 text-base"
                   />
                 </div>
               </div>

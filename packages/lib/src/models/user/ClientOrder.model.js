@@ -11,7 +11,7 @@ const OrderItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   quantity: { type: Number, required: true, min: 1 },
   price: { type: Number, required: true },
-  image: { type: String },
+  image: { type: String }, // URL to the uploaded image
 }, { _id: false });
 
 const ClientOrderSchema = new mongoose.Schema({

@@ -92,7 +92,7 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
       }
     );
   }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // POST - Create a customized version of a template
 export const POST = authMiddlewareCrm(async (req, ctx) => {
@@ -163,4 +163,4 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       { status: 500 }
     );
   }
-}, ['vendor']);
+}, ['vendor', 'supplier']);

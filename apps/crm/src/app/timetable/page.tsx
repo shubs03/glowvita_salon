@@ -1,14 +1,16 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Switch } from "@repo/ui/switch";
-import { Clock, Plus, Trash2 } from 'lucide-react';
+import { Clock, Plus, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useGetCrmDoctorWorkingHoursQuery, useUpdateCrmDoctorWorkingHoursMutation } from '@repo/store/api';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 type TimeSlot = {
   start: string;
@@ -32,7 +34,37 @@ const initialSchedule: DaySchedule[] = [
 ];
 
 export default function TimetablePage() {
+  const { user, role } = useCrmAuth();
   const [schedule, setSchedule] = useState<DaySchedule[]>(initialSchedule);
+  const [slotGap, setSlotGap] = useState<number>(20);
+  const [isSavingSlotGap, setIsSavingSlotGap] = useState(false);
+  
+  // Fetch working hours
+  const { data: workingHoursData, isLoading, error, refetch } = useGetCrmDoctorWorkingHoursQuery(undefined, {
+    skip: role !== 'doctor'
+  });
+  
+  // Update working hours mutation
+  const [updateWorkingHours, { isLoading: isSaving }] = useUpdateCrmDoctorWorkingHoursMutation();
+
+  // Transform API data to schedule format
+  useEffect(() => {
+    if (workingHoursData?.workingHoursArray) {
+      const transformedSchedule: DaySchedule[] = workingHoursData.workingHoursArray.map((dayData: any) => ({
+        day: dayData.day,
+        isOpen: dayData.isOpen,
+        slots: dayData.isOpen && dayData.open && dayData.close 
+          ? [{ start: dayData.open, end: dayData.close }] 
+          : []
+      }));
+      setSchedule(transformedSchedule);
+      
+      // Set slot gap from API data
+      if (workingHoursData.slotGap !== undefined) {
+        setSlotGap(workingHoursData.slotGap);
+      }
+    }
+  }, [workingHoursData]);
 
   const handleToggleDay = (dayIndex: number) => {
     const newSchedule = [...schedule];
@@ -63,11 +95,122 @@ export default function TimetablePage() {
     setSchedule(newSchedule);
   };
 
-  const handleSaveChanges = () => {
-    // Here you would typically dispatch an action to save the schedule
-    console.log("Saving schedule:", schedule);
-    toast.success("Working hours saved successfully!");
+  const handleSaveSlotGap = async () => {
+    try {
+      // Validate slot gap
+      if (slotGap < 0 || slotGap > 60) {
+        toast.error('Invalid Value', { 
+          description: 'Slot gap must be between 0 and 60 minutes.' 
+        });
+        return;
+      }
+
+      console.log('Saving slotGap:', slotGap);
+      setIsSavingSlotGap(true);
+
+      const requestBody = { slotGap: slotGap };
+      console.log('Request body:', requestBody);
+
+      const response = await fetch('/api/crm/doctor-workinghours', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log('Response status:', response.status);
+      
+      const responseData = await response.json();
+      console.log('Response data:', responseData);
+
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Failed to save slot gap');
+      }
+
+      toast.success('Slot gap saved successfully!');
+      refetch();
+    } catch (error: any) {
+      console.error('Error saving slot gap:', error);
+      toast.error(error.message || 'Failed to save slot gap.');
+    } finally {
+      setIsSavingSlotGap(false);
+    }
   };
+
+  const handleSaveChanges = async () => {
+    try {
+      // Transform schedule to API format
+      const workingHours: Record<string, any> = {};
+      const dayMapping: Record<string, string> = {
+        'Monday': 'monday',
+        'Tuesday': 'tuesday',
+        'Wednesday': 'wednesday',
+        'Thursday': 'thursday',
+        'Friday': 'friday',
+        'Saturday': 'saturday',
+        'Sunday': 'sunday'
+      };
+
+      schedule.forEach(daySchedule => {
+        const dayKey = dayMapping[daySchedule.day];
+        workingHours[dayKey] = {
+          isOpen: daySchedule.isOpen,
+          hours: daySchedule.isOpen && daySchedule.slots.length > 0
+            ? daySchedule.slots.map(slot => ({
+                openTime: slot.start,
+                closeTime: slot.end
+              }))
+            : []
+        };
+      });
+
+      await updateWorkingHours({ workingHours }).unwrap();
+      toast.success("Working hours saved successfully!");
+      refetch();
+    } catch (error: any) {
+      console.error("Error saving working hours:", error);
+      toast.error(error?.data?.message || "Failed to save working hours");
+    }
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle>Working Hours</CardTitle>
+            <CardDescription>
+              Set your weekly availability. This will affect when patients can book consultations.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <Card className="max-w-4xl mx-auto">
+          <CardHeader>
+            <CardTitle>Working Hours</CardTitle>
+            <CardDescription>
+              Set your weekly availability. This will affect when patients can book consultations.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="py-12">
+            <p className="text-center text-destructive">Failed to load working hours. Please try again.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -79,6 +222,54 @@ export default function TimetablePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+            {/* Slot Gap Configuration */}
+            <div className="p-4 bg-muted/50 rounded-lg border border-border">
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="slotGap" className="text-base font-medium mb-2 block">
+                    Gap Between Slots (minutes)
+                  </Label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Set the buffer time between consecutive appointment slots
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 max-w-xs">
+                      <Input
+                        id="slotGap"
+                        type="number"
+                        min="0"
+                        max="60"
+                        value={slotGap}
+                        onChange={(e) => setSlotGap(parseInt(e.target.value) || 0)}
+                        className="text-lg"
+                        placeholder="20"
+                      />
+                    </div>
+                    <span className="text-muted-foreground">minutes</span>
+                    <Button 
+                      onClick={handleSaveSlotGap} 
+                      disabled={isSavingSlotGap}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      {isSavingSlotGap ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        'Save Gap'
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Each consultation is 20 minutes. Total interval: {20 + slotGap} minutes
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Weekly Schedule */}
             {schedule.map((daySchedule, dayIndex) => (
                 <div key={daySchedule.day} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between">
@@ -125,7 +316,16 @@ export default function TimetablePage() {
             ))}
         </CardContent>
         <CardFooter className="flex justify-end">
-            <Button onClick={handleSaveChanges}>Save Changes</Button>
+            <Button onClick={handleSaveChanges} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
         </CardFooter>
       </Card>
     </div>

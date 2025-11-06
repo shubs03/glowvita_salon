@@ -42,7 +42,7 @@ const productSchema = new mongoose.Schema({
     default: 0,
   },
   productImage: {
-    type: String,
+    type: String, // URL to the uploaded image
     default: '',
   },
   isActive: {

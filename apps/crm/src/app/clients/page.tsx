@@ -38,11 +38,24 @@ type Client = {
 
 export default function ClientsPage() {
     const { user } = useCrmAuth();
-    const { data: clientList = [], isLoading, isError, refetch } = useGetClientsQuery({
+    // Fetch offline clients
+    const { data: offlineClients = [], isLoading: isOfflineLoading, isError: isOfflineError, refetch: refetchOffline } = useGetClientsQuery({
         search: '',
         status: '',
         page: 1,
-        limit: 100
+        limit: 100,
+        source: 'offline'
+    }, {
+        skip: !user?._id,
+    });
+    
+    // Fetch online clients
+    const { data: onlineClients = [], isLoading: isOnlineLoading, isError: isOnlineError, refetch: refetchOnline } = useGetClientsQuery({
+        search: '',
+        status: '',
+        page: 1,
+        limit: 100,
+        source: 'online'
     }, {
         skip: !user?._id,
     });
@@ -105,52 +118,22 @@ export default function ClientsPage() {
         preferences: ''
     });
 
-    const getStatusColor = (status: Client['status']) => {
-        switch (status) {
-          case 'Active': return 'bg-green-100 text-green-800';
-          case 'Inactive': return 'bg-gray-100 text-gray-800';
-          case 'New': return 'bg-blue-100 text-blue-800';
-          default: return 'bg-gray-100 text-gray-800';
+    // Combine clients based on selected segment
+    const combinedClients = useMemo(() => {
+        if (clientSegment === 'online') {
+            return onlineClients;
         }
-    };
-
-    // Helper function to format dates for display
-    const formatDateForDisplay = (dateString: string | null | undefined): string => {
-        if (!dateString) return 'Not provided';
-        try {
-            const date = new Date(dateString);
-            // Check if the date is valid
-            if (isNaN(date.getTime())) return 'Invalid date';
-            return date.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-            });
-        } catch (e) {
-            console.error('Error formatting date:', e);
-            return 'Invalid date';
-        }
-    };
-
-    // Segment clients by source; default unknown to offline
-    const segmentedClients = useMemo(() => {
-        if (!clientList) return [];
-        return clientList.filter((client: any) => {
-            const src = (client?.source != null ? client.source.toString() : '').toLowerCase();
-            if (clientSegment === 'online') return src === 'online';
-            // offline: explicit 'offline' OR no source provided
-            return src === 'offline' || !src;
-        });
-    }, [clientList, clientSegment]);
+        return offlineClients;
+    }, [offlineClients, onlineClients, clientSegment]);
 
     const filteredClients = useMemo(() => {
-        if (!segmentedClients) return [];
-        return segmentedClients.filter((client: Client) => 
+        if (!combinedClients) return [];
+        return combinedClients.filter((client: Client) => 
             client.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
             client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
             client.phone.includes(searchTerm)
         );
-    }, [segmentedClients, searchTerm]);
+    }, [combinedClients, searchTerm]);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -294,7 +277,7 @@ export default function ClientsPage() {
                 toast.success("Client created successfully.");
             }
             
-            refetch();
+            refetchOffline();
             setIsModalOpen(false);
         } catch (err: any) {
             const errorMessage = err?.data?.message || "Failed to save client.";
@@ -366,19 +349,21 @@ export default function ClientsPage() {
     };
     
     const filteredClientsForAppointment = useMemo(() => {
-        return clientList.filter((client: Client) => 
+        // Use combinedClients for search functionality
+        const allClients = [...offlineClients, ...onlineClients];
+        return allClients.filter((client: Client) => 
             client.fullName.toLowerCase().includes(clientSearchTerm.toLowerCase()) || 
             client.email.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
             client.phone.includes(clientSearchTerm)
         );
-    }, [clientList, clientSearchTerm]);
+    }, [offlineClients, onlineClients, clientSearchTerm]);
     
     const handleConfirmDelete = async () => {
         if(selectedClient) {
             try {
                 await deleteClient(selectedClient._id).unwrap();
                 toast.success("Client deleted successfully.");
-                refetch();
+                refetchOffline();
             } catch (err: any) {
                 const errorMessage = err?.data?.message || "Failed to delete client.";
                 toast.error(errorMessage);
@@ -389,7 +374,16 @@ export default function ClientsPage() {
         }
     };
     
-    if(isLoading) {
+    const getStatusColor = (status: Client['status']) => {
+        switch (status) {
+          case 'Active': return 'bg-green-100 text-green-800';
+          case 'Inactive': return 'bg-gray-100 text-gray-800';
+          case 'New': return 'bg-blue-100 text-blue-800';
+          default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    if(isOfflineLoading || isOnlineLoading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 sm:p-6 lg:p-8">
                 <div className="max-w-7xl mx-auto">
@@ -491,7 +485,7 @@ export default function ClientsPage() {
         );
     }
 
-    if(isError) {
+    if(isOfflineError || isOnlineError) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
                 <div className="text-center">
@@ -499,7 +493,7 @@ export default function ClientsPage() {
                         <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
                         <p>Error loading clients data</p>
                     </div>
-                    <Button onClick={() => refetch()} variant="outline">
+                    <Button onClick={() => { refetchOffline(); refetchOnline(); }} variant="outline">
                         Try Again
                     </Button>
                 </div>
@@ -517,54 +511,54 @@ export default function ClientsPage() {
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
                     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                            <CardTitle className="text-sm font-semibold text-gray-700">Total Clients</CardTitle>
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                                <Users className="h-4 w-4 text-blue-600" />
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{clientList.length}</div>
-                            <p className="text-xs text-gray-500">All registered clients</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                            <CardTitle className="text-sm font-semibold text-gray-700">New Clients (30d)</CardTitle>
-                            <div className="p-2 bg-green-100 rounded-lg">
-                                <UserPlus className="h-4 w-4 text-green-600" />
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{clientList.filter((c: Client) => c.status === 'New').length}</div>
-                            <p className="text-xs text-gray-500">New clients this month</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                            <CardTitle className="text-sm font-semibold text-gray-700">Total Bookings</CardTitle>
-                            <div className="p-2 bg-purple-100 rounded-lg">
-                                <ShoppingBag className="h-4 w-4 text-purple-600" />
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-gray-900">{appointments.length}</div>
-                            <p className="text-xs text-gray-500">All time bookings</p>
-                        </CardContent>
-                    </Card>
-                     <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                            <CardTitle className="text-sm font-semibold text-gray-700">Inactive Clients</CardTitle>
-                            <div className="p-2 bg-red-100 rounded-lg">
-                                <UserX className="h-4 w-4 text-red-600" />
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-red-600">{clientList.filter((c: Client) => c.status === 'Inactive').length}</div>
-                            <p className="text-xs text-gray-500">Clients with no recent activity</p>
-                        </CardContent>
-                    </Card>
-                </div>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-gray-700">Total Clients</CardTitle>
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                            <Users className="h-4 w-4 text-blue-600" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-gray-900">{offlineClients.length + onlineClients.length}</div>
+                        <p className="text-xs text-green-600 font-medium">+2 from last month</p>
+                    </CardContent>
+                </Card>
+                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-gray-700">New Clients (30d)</CardTitle>
+                        <div className="p-2 bg-green-100 rounded-lg">
+                            <UserPlus className="h-4 w-4 text-green-600" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-gray-900">{[...offlineClients, ...onlineClients].filter((c: Client) => c.status === 'New').length}</div>
+                        <p className="text-xs text-gray-500">New clients this month</p>
+                    </CardContent>
+                </Card>
+                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-gray-700">Total Bookings</CardTitle>
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                            <ShoppingBag className="h-4 w-4 text-purple-600" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-gray-900">{appointments.length}</div>
+                        <p className="text-xs text-gray-500">All time bookings</p>
+                    </CardContent>
+                </Card>
+                 <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                        <CardTitle className="text-sm font-semibold text-gray-700">Inactive Clients</CardTitle>
+                        <div className="p-2 bg-red-100 rounded-lg">
+                            <UserX className="h-4 w-4 text-red-600" />
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-red-600">{[...offlineClients, ...onlineClients].filter((c: Client) => c.status === 'Inactive').length}</div>
+                        <p className="text-xs text-gray-500">Clients with no recent activity</p>
+                    </CardContent>
+                </Card>
+            </div>
 
                 <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
                     <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100">

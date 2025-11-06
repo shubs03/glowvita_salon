@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const orderItemSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Product' },
   productName: { type: String, required: true },
-  productImage: { type: String },
+  productImage: { type: String }, // URL to the uploaded image
   quantity: { type: Number, required: true, min: 1 },
   price: { type: Number, required: true },
 }, { _id: false });

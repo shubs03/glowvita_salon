@@ -74,7 +74,6 @@ const baseQuery = async (args, api, extraOptions) => {
   let requestUrl = typeof args === "string" ? args : args.url;
 
   if (typeof requestUrl !== "string") {
-    console.error("Request URL is not a string:", requestUrl);
     return { error: { status: "CUSTOM_ERROR", error: "Invalid URL provided" } };
   }
 
@@ -89,11 +88,6 @@ const baseQuery = async (args, api, extraOptions) => {
 
   const baseUrl = API_BASE_URLS[targetService];
   const fullUrl = `${baseUrl}${requestUrl}`;
-
-  console.log("Target Service:", targetService);
-  console.log("Original Request URL:", requestUrl);
-  console.log("Base URL:", baseUrl);
-  console.log("API Request URL:", fullUrl);
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
@@ -126,7 +120,6 @@ const baseQuery = async (args, api, extraOptions) => {
 
     return result;
   } catch (error) {
-    console.error("API Error:", error);
     return { error: { status: "CUSTOM_ERROR", error: error.message } };
   }
 };
@@ -148,6 +141,7 @@ export const glowvitaApi = createApi({
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
     "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
     "Billing", "VendorServices"
+    "Consultations", "Consultation", "Expense", "PublicAppointments"
   ],
 
   endpoints: (builder) => ({
@@ -392,17 +386,17 @@ export const glowvitaApi = createApi({
     }),
 
     updateAdmin: builder.mutation({
-      query: ({ id, ...data }) => ({
-        url: `/admin`,
+      query: ({ id, data }) => ({
+        url: `/admin?id=${id}`,
         method: "PUT",
-        body: { id, ...data },
+        body: data,
       }),
       invalidatesTags: ["admin"],
     }),
 
     deleteAdmin: builder.mutation({
       query: (id) => ({
-        url: `/admin`,
+        url: `/admin?id=${id}`,
         method: "DELETE",
         body: { id },
       }),
@@ -633,6 +627,19 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: "Vendor", id },
+        "Vendor",
+      ],
+    }),
+    
+    // Add new endpoint for updating vendor document status
+    updateVendorDocumentStatus: builder.mutation({
+      query: ({ vendorId, documentType, status, rejectionReason }) => ({
+        url: "/admin/vendor",
+        method: "PATCH",
+        body: { vendorId, documentType, status, rejectionReason },
+      }),
+      invalidatesTags: (result, error, { vendorId }) => [
+        { type: "Vendor", vendorId },
         "Vendor",
       ],
     }),
@@ -1174,6 +1181,32 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Staff"],
     }),
 
+    // Expense Endpoints
+    getExpenses: builder.query({
+      query: () => ({ url: "/crm/expenses", method: "GET" }),
+      providesTags: ["Expense"],
+    }),
+    createExpense: builder.mutation({
+      query: (expense) => ({ url: "/crm/expenses", method: "POST", body: expense }),
+      invalidatesTags: ["Expense"],
+    }),
+    updateExpense: builder.mutation({
+      query: (expense) => ({ url: "/crm/expenses", method: "PUT", body: expense }),
+      invalidatesTags: ["Expense"],
+    }),
+    deleteExpense: builder.mutation({
+      query: (id) => ({ url: "/crm/expenses", method: "DELETE", body: { id } }),
+      invalidatesTags: ["Expense"],
+    }),
+    getCrmExpenseTypes: builder.query({
+      query: () => ({ url: "/crm/superdata?type=expenseType", method: "GET" }),
+      providesTags: ["SuperData"],
+    }),
+    getCrmPaymentModes: builder.query({
+      query: () => ({ url: "/crm/superdata?type=paymentMode", method: "GET" }),
+      providesTags: ["SuperData"],
+    }),
+
     //working hours endpoint
     getWorkingHours: builder.query({
       query: () => ({ url: "/crm/workinghours", method: "GET" }),
@@ -1181,15 +1214,15 @@ export const glowvitaApi = createApi({
     }),
     updateWorkingHours: builder.mutation({
       query: (workingHours) => ({ url: "/crm/workinghours", method: "PUT", body: workingHours }),
-      invalidatesTags: ["WorkingHours"],
+      invalidatesTags: ["WorkingHours", "Staff"],
     }),
     addSpecialHours: builder.mutation({
       query: (specialHours) => ({ url: "/crm/workinghours", method: "POST", body: specialHours }),
-      invalidatesTags: ["WorkingHours"],
+      invalidatesTags: ["WorkingHours", "Staff"],
     }),
     deleteSpecialHours: builder.mutation({
       query: (id) => ({ url: `/crm/workinghours?id=${id}`, method: "DELETE" }),
-      invalidatesTags: ["WorkingHours"],
+      invalidatesTags: ["WorkingHours", "Staff"],
     }),
 
     // appointments endpoints
@@ -1227,12 +1260,13 @@ export const glowvitaApi = createApi({
 
     // Client Endpoints
     getClients: builder.query({
-      query: ({ search, status, page = 1, limit = 100 } = {}) => {
+      query: ({ search, status, page = 1, limit = 100, source = 'all' } = {}) => {
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (status) params.append('status', status);
-        params.append('page', (page || 1).toString());
-        params.append('limit', (limit || 100).toString());
+        if (source && source !== 'all') params.append('source', source);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
         return { url: `/crm/clients?${params.toString()}`, method: "GET" };
       },
       providesTags: ["Client"],
@@ -1265,15 +1299,15 @@ export const glowvitaApi = createApi({
     // Doctor Profile Endpoints
     getDoctorProfile: builder.query({
       query: () => ({ url: "/crm/doctor-profile", method: "GET" }),
-      providesTags: ["Doctor"],
+      providesTags: ["doctors"],
     }),
 
     updateDoctorProfile: builder.mutation({
       query: (doctorData) => ({ url: "/crm/doctor-profile", method: "PUT", body: doctorData }),
-      invalidatesTags: ["Doctor"],
+      invalidatesTags: ["doctors"],
     }),
 
-    // Doctor Working Hours Endpoints
+    // Doctor Working Hours Endpoints (Web - for booking)
     getDoctorWorkingHours: builder.query({
       query: (doctorId) => ({ url: `/api/doctor/working-hours?doctorId=${doctorId}`, method: 'GET' }),
       providesTags: ['DoctorWorkingHours'],
@@ -1281,6 +1315,24 @@ export const glowvitaApi = createApi({
     updateDoctorWorkingHours: builder.mutation({
       query: ({ doctorId, hours }) => ({ url: `/api/doctor/working-hours`, method: 'PUT', body: { doctorId, hours } }),
       invalidatesTags: ['DoctorWorkingHours'],
+    }),
+
+    // Doctor Working Hours Endpoints (CRM - for timetable management)
+    getCrmDoctorWorkingHours: builder.query({
+      query: () => ({ url: `/crm/doctor-workinghours`, method: 'GET' }),
+      providesTags: ['CrmDoctorWorkingHours'],
+    }),
+    updateCrmDoctorWorkingHours: builder.mutation({
+      query: (workingHours) => ({ url: `/crm/doctor-workinghours`, method: 'PUT', body: workingHours }),
+      invalidatesTags: ['CrmDoctorWorkingHours'],
+    }),
+    addCrmDoctorSpecialHours: builder.mutation({
+      query: (specialHours) => ({ url: `/crm/doctor-workinghours`, method: 'POST', body: specialHours }),
+      invalidatesTags: ['CrmDoctorWorkingHours'],
+    }),
+    removeCrmDoctorSpecialHours: builder.mutation({
+      query: (date) => ({ url: `/crm/doctor-workinghours?date=${date}`, method: 'DELETE' }),
+      invalidatesTags: ['CrmDoctorWorkingHours'],
     }),
 
     //subscription renewal
@@ -1445,6 +1497,69 @@ export const glowvitaApi = createApi({
       ],
     }),
 
+    // Doctor Consultation Endpoints (Web App - Physical & Video Consultations)
+    getConsultations: builder.query({
+      query: ({ doctorId, patientId, phoneNumber, status, consultationType, startDate, endDate, page = 1, limit = 50 } = {}) => {
+        const params = new URLSearchParams();
+        if (doctorId) params.append('doctorId', doctorId);
+        if (patientId) params.append('patientId', patientId);
+        if (phoneNumber) params.append('phoneNumber', phoneNumber);
+        if (status) params.append('status', status);
+        if (consultationType) params.append('consultationType', consultationType);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+        return { url: `/consultations?${params.toString()}`, method: "GET" };
+      },
+      providesTags: (result = []) => [
+        'Consultations',
+        ...((result.data?.consultations || []).map(({ _id }) => ({ type: 'Consultation', id: _id })))
+      ],
+    }),
+    getBookedSlots: builder.query({
+      query: ({ doctorId, date }) => {
+        const params = new URLSearchParams();
+        if (doctorId) params.append('doctorId', doctorId);
+        if (date) params.append('date', date);
+        return { url: `/consultations/booked-slots?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ['Consultations'],
+    }),
+    getConsultationById: builder.query({
+      query: (id) => ({ url: `/consultations/${id}`, method: "GET" }),
+      providesTags: (result, error, id) => [{ type: 'Consultation', id }],
+    }),
+    createConsultation: builder.mutation({
+      query: (consultationData) => ({
+        url: "/consultations",
+        method: "POST",
+        body: consultationData,
+      }),
+      invalidatesTags: ['Consultations'], // This will also refetch booked slots
+    }),
+    updateConsultation: builder.mutation({
+      query: ({ consultationId, ...updates }) => ({
+        url: "/consultations",
+        method: "PUT",
+        body: { consultationId, ...updates },
+      }),
+      invalidatesTags: (result, error, { consultationId }) => [
+        { type: 'Consultation', id: consultationId },
+        'Consultations'
+      ],
+    }),
+    cancelConsultation: builder.mutation({
+      query: ({ id, reason }) => ({
+        url: `/consultations?id=${id}&reason=${encodeURIComponent(reason || 'Cancelled by user')}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Consultation', id },
+        'Consultations'
+      ],
+    }),
+
     getClientOrders: builder.query({
       query: () => ({ url: "/client/orders", method: "GET" }),
       providesTags: ["ClientOrder"],
@@ -1470,17 +1585,35 @@ export const glowvitaApi = createApi({
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
         if (userId) params.append('userId', userId);
+        // Add cache buster
+        params.append('_t', Date.now().toString());
         
         return { 
           url: `/appointments?${params.toString()}`, 
           method: "GET" 
         };
       },
-      providesTags: ['PublicAppointments'],
+      providesTags: (result, error, arg) => [
+        'PublicAppointments',
+        { type: 'PublicAppointments', id: `${arg.vendorId || 'all'}-${arg.date || 'all'}` }
+      ],
+      // DISABLE ALL CACHING - always fetch fresh data
+      keepUnusedDataFor: 0,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
     }),
     createPublicAppointment: builder.mutation({
       query: (appointmentData) => ({ url: "/appointments", method: "POST", body: appointmentData }),
       invalidatesTags: ['PublicAppointments'],
+      // Force immediate refetch after mutation
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          // Invalidate all appointment queries
+          dispatch(glowvitaApi.util.invalidateTags(['PublicAppointments']));
+        } catch {}
+      },
     }),
 
   }),
@@ -1536,6 +1669,7 @@ export const {
   useGetVendorByIdQuery,
   useUpdateVendorMutation,
   useUpdateVendorStatusMutation,
+  useUpdateVendorDocumentStatusMutation,
   useDeleteVendorMutation,
   useGetDoctorsQuery,
   useCreateDoctorMutation,
@@ -1622,6 +1756,12 @@ export const {
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
+  useGetExpensesQuery,
+  useCreateExpenseMutation,
+  useUpdateExpenseMutation,
+  useDeleteExpenseMutation,
+  useGetCrmExpenseTypesQuery,
+  useGetCrmPaymentModesQuery,
   useGetWorkingHoursQuery,
   useUpdateWorkingHoursMutation,
   useAddSpecialHoursMutation,
@@ -1640,6 +1780,10 @@ export const {
   useUpdateDoctorProfileMutation,
   useGetDoctorWorkingHoursQuery,
   useUpdateDoctorWorkingHoursMutation,
+  useGetCrmDoctorWorkingHoursQuery,
+  useUpdateCrmDoctorWorkingHoursMutation,
+  useAddCrmDoctorSpecialHoursMutation,
+  useRemoveCrmDoctorSpecialHoursMutation,
   useGetCrmReferralsQuery,
   useGetCrmReferralSettingsQuery,
   useChangePlanMutation,
@@ -1678,6 +1822,18 @@ export const {
   useGetBillingRecordsQuery,
   useGetBillingByIdQuery,
   useUpdateBillingMutation,
+  useUpdateAppointmentStatusMutation,
+  useGetPatientsQuery,
+  useCreatePatientMutation,
+  useUpdatePatientMutation,
+  useDeletePatientMutation,
+  // Consultation Hooks (Physical & Video)
+  useGetConsultationsQuery,
+  useGetBookedSlotsQuery,
+  useGetConsultationByIdQuery,
+  useCreateConsultationMutation,
+  useUpdateConsultationMutation,
+  useCancelConsultationMutation,
   // Public Appointment Hooks
   useGetPublicAppointmentsQuery,
   useCreatePublicAppointmentMutation,

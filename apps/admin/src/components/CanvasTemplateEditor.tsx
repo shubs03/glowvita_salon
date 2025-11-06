@@ -15,15 +15,8 @@ import {
   Move,
 } from "lucide-react";
 import { toast } from "sonner";
+// Import fabric without types
 import fabric from "fabric";
-import type {
-  TEvent,
-  FabricImage,
-  ImageProps,
-  SerializedImageProps,
-  ObjectEvents,
-  TPointerEvent,
-} from "fabric";
 
 interface CanvasTemplateEditorProps {
   initialImage?: string;
@@ -41,10 +34,8 @@ export default function CanvasTemplateEditor({
   width = 900,
   height = 800,
 }: CanvasTemplateEditorProps) {
-  const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
-  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(
-    null
-  );
+  const [fabricCanvas, setFabricCanvas] = useState<any>(null);
+  const [selectedObject, setSelectedObject] = useState<any>(null);
 
   // This state will track if the component has mounted on the client
   const [isClient, setIsClient] = useState(false);
@@ -65,14 +56,14 @@ export default function CanvasTemplateEditor({
   const [textAlign, setTextAlign] = useState("center");
 
   const initCanvas = useCallback(() => {
-    if (!canvasContainerRef.current) return;
+    if (!canvasContainerRef.current || !isClient) return;
 
     const canvasEl = document.createElement("canvas");
     canvasContainerRef.current.innerHTML = "";
     canvasContainerRef.current.appendChild(canvasEl);
 
-    // Use fabric.Canvas instead of new Canvas
-    const canvas = new fabric.Canvas(canvasEl, {
+    // Fixed initialization - using fabric.Canvas properly
+    const canvas = new (fabric as any).Canvas(canvasEl, {
       width: width,
       height: height,
       backgroundColor: "#ffffff",
@@ -80,22 +71,18 @@ export default function CanvasTemplateEditor({
 
     // Load initial background image if provided
     if (initialImage) {
-      fabric.Image.fromURL(initialImage)
-        .then((img: FabricImage) => {
-          img.set({
-            scaleX: (canvas.width || 1) / width,
-            scaleY: (canvas.height || 1) / height,
-          });
-          canvas.backgroundImage = img;
-          canvas.renderAll();
-        })
-        .catch((error) => {
-          console.error('Failed to load background image:', error);
+      (fabric as any).Image.fromURL(initialImage, (img: any) => {
+        img.set({
+          scaleX: (canvas.width || 1) / width,
+          scaleY: (canvas.height || 1) / height,
         });
+        canvas.backgroundImage = img;
+        canvas.renderAll();
+      });
     }
 
     // Add default text elements
-    const titleText = new fabric.Textbox("Your Title Here", {
+    const titleText = new (fabric as any).Textbox("Your Title Here", {
       left: width / 2,
       top: 100,
       fontSize: 48,
@@ -110,7 +97,7 @@ export default function CanvasTemplateEditor({
       editable: true,
     });
 
-    const subtitleText = new fabric.Textbox("Add your message here", {
+    const subtitleText = new (fabric as any).Textbox("Add your message here", {
       left: width / 2,
       top: 200,
       fontSize: 24,
@@ -142,7 +129,7 @@ export default function CanvasTemplateEditor({
     }
 
     // Set up event listeners
-    canvas.on("selection:created", (e: { selected: any[] }) => {
+    canvas.on("selection:created", (e: any) => {
       const selected = e.selected[0];
       setSelectedObject(selected || null);
       if (selected && selected.type === "textbox") {
@@ -150,7 +137,7 @@ export default function CanvasTemplateEditor({
       }
     });
 
-    canvas.on("selection:updated", (e: { selected: any[] }) => {
+    canvas.on("selection:updated", (e: any) => {
       const selected = e.selected[0];
       setSelectedObject(selected || null);
     });
@@ -161,15 +148,15 @@ export default function CanvasTemplateEditor({
 
     setFabricCanvas(canvas);
     return canvas;
-  }, [initialImage, width, height]);
+  }, [initialImage, width, height, isClient]);
 
-  const updateTextControls = (textbox: fabric.Object) => {
-    if (textbox instanceof fabric.Textbox) {
+  const updateTextControls = (textbox: any) => {
+    if (textbox.type === "textbox") {
       setText(textbox.text || "");
       setFontSize(textbox.fontSize || 24);
-      setFill((textbox.fill as string) || "#000000");
+      setFill(textbox.fill || "#000000");
       setFontFamily(textbox.fontFamily || "Arial");
-      setFontWeight((textbox.fontWeight as string) || "normal");
+      setFontWeight(textbox.fontWeight || "normal");
       setTextAlign(textbox.textAlign || "center");
     }
   };
@@ -189,7 +176,7 @@ export default function CanvasTemplateEditor({
   const addText = () => {
     if (!fabricCanvas) return;
 
-    const newText = new fabric.Textbox("New Text", {
+    const newText = new (fabric as any).Textbox("New Text", {
       left: 100,
       top: 100,
       fontSize: 30,
@@ -212,36 +199,32 @@ export default function CanvasTemplateEditor({
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl)
-          .then((img: FabricImage) => {
-            const maxWidth = 150;
-            const maxHeight = 150;
+        (fabric as any).Image.fromURL(dataUrl, (img: any) => {
+          const maxWidth = 150;
+          const maxHeight = 150;
 
-            if (
-              img.width &&
-              img.height &&
-              (img.width > maxWidth || img.height > maxHeight)
-            ) {
-              const scale = Math.min(
-                maxWidth / img.width,
-                maxHeight / img.height
-              );
-              img.scale(scale);
-            }
+          if (
+            img.width &&
+            img.height &&
+            (img.width > maxWidth || img.height > maxHeight)
+          ) {
+            const scale = Math.min(
+              maxWidth / img.width,
+              maxHeight / img.height
+            );
+            img.scale(scale);
+          }
 
-            img.set({
-              left: 50,
-              top: 50,
-              selectable: true,
-            });
-
-            fabricCanvas.add(img);
-            fabricCanvas.setActiveObject(img);
-            fabricCanvas.renderAll();
-          })
-          .catch((error) => {
-            console.error('Failed to load image:', error);
+          img.set({
+            left: 50,
+            top: 50,
+            selectable: true,
           });
+
+          fabricCanvas.add(img);
+          fabricCanvas.setActiveObject(img);
+          fabricCanvas.renderAll();
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -251,7 +234,7 @@ export default function CanvasTemplateEditor({
     const newText = e.target.value;
     setText(newText);
     if (selectedObject && selectedObject.type === "textbox" && fabricCanvas) {
-      (selectedObject as fabric.Textbox).set("text", newText);
+      selectedObject.set("text", newText);
       fabricCanvas.requestRenderAll();
     }
   };
@@ -413,6 +396,7 @@ export default function CanvasTemplateEditor({
                       setFontFamily(e.target.value);
                       handlePropertyChange("fontFamily", e.target.value);
                     }}
+                    aria-label="Font family"
                   >
                     <option value="Arial">Arial</option>
                     <option value="Times New Roman">Times New Roman</option>
@@ -434,6 +418,7 @@ export default function CanvasTemplateEditor({
                         setFontWeight(e.target.value);
                         handlePropertyChange("fontWeight", e.target.value);
                       }}
+                      aria-label="Font weight"
                     >
                       <option value="normal">Normal</option>
                       <option value="bold">Bold</option>
@@ -450,6 +435,7 @@ export default function CanvasTemplateEditor({
                         setTextAlign(e.target.value);
                         handlePropertyChange("textAlign", e.target.value);
                       }}
+                      aria-label="Text alignment"
                     >
                       <option value="left">Left</option>
                       <option value="center">Center</option>
