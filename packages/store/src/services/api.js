@@ -74,7 +74,6 @@ const baseQuery = async (args, api, extraOptions) => {
   let requestUrl = typeof args === "string" ? args : args.url;
 
   if (typeof requestUrl !== "string") {
-    console.error("Request URL is not a string:", requestUrl);
     return { error: { status: "CUSTOM_ERROR", error: "Invalid URL provided" } };
   }
 
@@ -89,11 +88,6 @@ const baseQuery = async (args, api, extraOptions) => {
 
   const baseUrl = API_BASE_URLS[targetService];
   const fullUrl = `${baseUrl}${requestUrl}`;
-
-  console.log("Target Service:", targetService);
-  console.log("Original Request URL:", requestUrl);
-  console.log("Base URL:", baseUrl);
-  console.log("API Request URL:", fullUrl);
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
@@ -126,7 +120,6 @@ const baseQuery = async (args, api, extraOptions) => {
 
     return result;
   } catch (error) {
-    console.error("API Error:", error);
     return { error: { status: "CUSTOM_ERROR", error: error.message } };
   }
 };
@@ -147,7 +140,7 @@ export const glowvitaApi = createApi({
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
     "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
-    "Consultations", "Consultation", "Expense"
+    "Consultations", "Consultation", "Expense", "PublicAppointments"
   ],
 
   endpoints: (builder) => ({
@@ -1539,17 +1532,35 @@ export const glowvitaApi = createApi({
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
         if (userId) params.append('userId', userId);
+        // Add cache buster
+        params.append('_t', Date.now().toString());
         
         return { 
           url: `/appointments?${params.toString()}`, 
           method: "GET" 
         };
       },
-      providesTags: ['PublicAppointments'],
+      providesTags: (result, error, arg) => [
+        'PublicAppointments',
+        { type: 'PublicAppointments', id: `${arg.vendorId || 'all'}-${arg.date || 'all'}` }
+      ],
+      // DISABLE ALL CACHING - always fetch fresh data
+      keepUnusedDataFor: 0,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
     }),
     createPublicAppointment: builder.mutation({
       query: (appointmentData) => ({ url: "/appointments", method: "POST", body: appointmentData }),
       invalidatesTags: ['PublicAppointments'],
+      // Force immediate refetch after mutation
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          // Invalidate all appointment queries
+          dispatch(glowvitaApi.util.invalidateTags(['PublicAppointments']));
+        } catch {}
+      },
     }),
 
   }),
