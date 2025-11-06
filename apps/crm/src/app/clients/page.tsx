@@ -36,6 +36,25 @@ type Client = {
   updatedAt?: string;
 };
 
+// Helper function to format dates for display
+const formatDateForDisplay = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'Not provided';
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Invalid date';
+    
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Invalid date';
+  }
+};
+
 export default function ClientsPage() {
     const { user } = useCrmAuth();
     // Fetch offline clients
