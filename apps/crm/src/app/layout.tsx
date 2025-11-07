@@ -28,6 +28,7 @@ export default function RootLayout({
     '/orders',
     '/shipping',
     '/settlements',
+    '/expenses',
     '/salon-profile',
     '/offers-coupons',
     '/referrals',

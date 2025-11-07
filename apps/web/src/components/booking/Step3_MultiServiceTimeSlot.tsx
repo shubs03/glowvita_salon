@@ -117,7 +117,10 @@ const isTimeSlotBlocked = (staff: StaffMember | null, date: Date, time: string):
 
 // Helper function to check if a time slot conflicts with existing appointments FOR A SPECIFIC STAFF
 const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string, staffId: string, serviceDuration: number = 60): boolean => {
+    console.log(`\n🔍 isTimeSlotBookedForStaff - Checking ${time} for staff ${staffId} (duration: ${serviceDuration}min)`);
+    
     if (!appointments || appointments.length === 0) {
+        console.log('  ✅ No appointments to check');
         return false;
     }
     
@@ -125,10 +128,33 @@ const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string,
     const endTimeMinutes = timeMinutes + serviceDuration;
     const dateString = format(date, 'yyyy-MM-dd');
     
-    return appointments.some(appointment => {
+    console.log(`  📅 Checking slot: ${time} (${timeMinutes}min) to ${Math.floor(endTimeMinutes/60)}:${String(endTimeMinutes%60).padStart(2,'0')} (${endTimeMinutes}min)`);
+    console.log(`  📆 Date: ${dateString}`);
+    console.log(`  👤 Staff ID to match: ${staffId}`);
+    console.log(`  📋 Total appointments: ${appointments.length}`);
+    
+    const result = appointments.some((appointment, idx) => {
+        console.log(`\n  Checking appointment ${idx + 1}:`, {
+            id: appointment._id,
+            startTime: appointment.startTime,
+            endTime: appointment.endTime,
+            staff: appointment.staff,
+            status: appointment.status
+        });
+        
+        // Check if appointment status is active (confirmed, pending, or scheduled)
+        const status = (appointment.status || appointment.appointmentStatus || '').toLowerCase();
+        const isActive = status === 'confirmed' || status === 'pending' || status === 'scheduled';
+        
+        if (!isActive) {
+            console.log(`    ⏭️ Skipping - status is "${status}" (not active)`);
+            return false;
+        }
+        
         // Check if appointment is on the same date
         const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
         if (appointmentDateString !== dateString) {
+            console.log(`    ⏭️ Skipping - different date (${appointmentDateString} vs ${dateString})`);
             return false;
         }
         
@@ -139,13 +165,18 @@ const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string,
                 appointmentStaffId = appointment.staff;
             } else if (appointment.staff._id) {
                 appointmentStaffId = appointment.staff._id.toString ? appointment.staff._id.toString() : appointment.staff._id;
+            } else if (appointment.staff.id) {
+                appointmentStaffId = appointment.staff.id.toString ? appointment.staff.id.toString() : appointment.staff.id;
             } else if (appointment.staff.toString) {
                 appointmentStaffId = appointment.staff.toString();
             }
         }
         
+        console.log(`    👤 Appointment staff ID: ${appointmentStaffId}`);
+        
         // Only check appointments for this specific staff member
         if (appointmentStaffId !== staffId) {
+            console.log(`    ⏭️ Skipping - different staff (${appointmentStaffId} vs ${staffId})`);
             return false;
         }
         
@@ -153,21 +184,42 @@ const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string,
         const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
         const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
         
+        console.log(`    ⏰ Appointment time: ${appointment.startTime} (${appointmentStartMinutes}min) to ${appointment.endTime} (${appointmentEndMinutes}min)`);
+        console.log(`    🔄 Checking overlap: (${timeMinutes} < ${appointmentEndMinutes}) && (${endTimeMinutes} > ${appointmentStartMinutes})`);
+        
         // Check if the new time slot overlaps with existing appointment
         // Overlap occurs if: newStart < existingEnd AND newEnd > existingStart
-        return (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
+        const hasOverlap = (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
+        console.log(`    ${hasOverlap ? '❌ OVERLAP DETECTED!' : '✅ No overlap'}`);
+        
+        return hasOverlap;
     });
+    
+    console.log(`\n  📊 Final result for ${time}: ${result ? '❌ BOOKED (unavailable)' : '✅ AVAILABLE'}\n`);
+    return result;
 };
 
 // Helper function to check if a time slot conflicts with existing appointments
 const isTimeSlotBooked = (appointments: any[], date: Date, time: string, staff: StaffMember | null, serviceDuration: number = 60): boolean => {
+    console.log('isTimeSlotBooked called:', {
+      appointmentsReceived: appointments?.length || 0,
+      appointmentsData: appointments?.slice(0, 3), // Log first 3 appointments
+      date: format(date, 'yyyy-MM-dd'),
+      time,
+      staffId: staff?.id,
+      staffName: staff?.name
+    });
+    
     if (!appointments || appointments.length === 0) {
+        console.log('isTimeSlotBooked: No appointments, slot is available');
         return false;
     }
     
     // For multi-service, we always have a specific staff assigned, so use the simpler check
     if (staff) {
-        return isTimeSlotBookedForStaff(appointments, date, time, staff.id, serviceDuration);
+        const result = isTimeSlotBookedForStaff(appointments, date, time, staff.id, serviceDuration);
+        console.log(`isTimeSlotBooked: Result for staff ${staff.name} at ${time} = ${result}`);
+        return result;
     }
     
     // Fallback: check all appointments
@@ -176,6 +228,14 @@ const isTimeSlotBooked = (appointments: any[], date: Date, time: string, staff: 
     const dateString = format(date, 'yyyy-MM-dd');
     
     return appointments.some(appointment => {
+        // Check if appointment status is active (confirmed, pending, or scheduled)
+        const status = (appointment.status || appointment.appointmentStatus || '').toLowerCase();
+        const isActive = status === 'confirmed' || status === 'pending' || status === 'scheduled';
+        
+        if (!isActive) {
+            return false;
+        }
+        
         const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
         if (appointmentDateString !== dateString) {
             return false;
@@ -196,91 +256,92 @@ const isTimeSlotAvailableForAllStaff = (
   duration: number,
   existingAppointments: any[] = []
 ): boolean => {
-  console.log('Checking time slot availability for all staff:', { time, date, duration });
-  
-  // Get all assigned staff members
-  const assignedStaff = assignments
-    .map(assignment => assignment.staff)
-    .filter(staff => staff !== null && staff !== undefined) as StaffMember[];
-  
-  console.log('Assigned staff members:', assignedStaff.map(s => s.name));
+  console.log('\n🔍 === Checking time slot availability for all staff ===');
+  console.log(`  Time: ${time}`);
+  console.log(`  Date: ${format(date, 'yyyy-MM-dd')}`);
+  console.log(`  Total Duration: ${duration} min`);
+  console.log(`  Appointments to check: ${existingAppointments?.length || 0}`);
   
   // If no staff assigned, time slot is available
-  if (assignedStaff.length === 0) {
-    console.log('No staff assigned, time slot is available');
+  if (!assignments || assignments.length === 0) {
+    console.log('  ✅ No assignments, time slot is available\n');
     return true;
   }
   
-  // Check availability for each staff member
-  for (const staffMember of assignedStaff) {
-    // Check if time slot is blocked for this staff member
-    if (isTimeSlotBlocked(staffMember, date, time)) {
-      console.log(`Time slot ${time} is blocked for staff ${staffMember.name}`);
-      return false;
+  // CORRECTED LOGIC FOR MULTI-SERVICE WITH DIFFERENT STAFF:
+  // We need to check each service's time range with its assigned staff
+  // Calculate sequential service times starting from the selected time
+  let currentStartTime = time;
+  let currentStartMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+  
+  console.log('\n  📋 Service Schedule:');
+  
+  // Check each service assignment sequentially
+  for (let i = 0; i < assignments.length; i++) {
+    const assignment = assignments[i];
+    const serviceDuration = convertDurationToMinutes(assignment.service.duration);
+    const serviceEndMinutes = currentStartMinutes + serviceDuration;
+    const serviceEndHours = Math.floor(serviceEndMinutes / 60);
+    const serviceEndMins = serviceEndMinutes % 60;
+    const serviceEndTime = `${String(serviceEndHours).padStart(2, '0')}:${String(serviceEndMins).padStart(2, '0')}`;
+    
+    console.log(`\n  Service ${i + 1}: ${assignment.service.name}`);
+    console.log(`    Staff: ${assignment.staff ? assignment.staff.name : 'Any Professional'}`);
+    console.log(`    Time: ${currentStartTime} - ${serviceEndTime} (${serviceDuration} min)`);
+    
+    // Calculate how many 30-min slots this service needs
+    const slotsNeeded = Math.ceil(serviceDuration / 30);
+    console.log(`    Slots needed: ${slotsNeeded}`);
+    
+    // Generate time slots to check for THIS service
+    const timeSlotsToCheck: string[] = [];
+    for (let j = 0; j < slotsNeeded; j++) {
+      const slotMinutes = currentStartMinutes + (j * 30);
+      const hours = Math.floor(slotMinutes / 60);
+      const minutes = slotMinutes % 60;
+      const slotTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      timeSlotsToCheck.push(slotTime);
     }
     
-    // Check if staff member has existing appointments at this time
-    if (isTimeSlotBooked(existingAppointments, date, time, staffMember, duration)) {
-      console.log(`Time slot ${time} is already booked for staff ${staffMember.name}`);
-      return false;
-    }
+    console.log(`    Checking slots: ${timeSlotsToCheck.join(', ')}`);
     
-    // Check if staff member has sufficient availability for the service duration
-    const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-    const endTimeMinutes = timeMinutes + duration;
-    
-    // Check if the staff member's slots can accommodate the service duration
-    const dayName = getDayName(date);
-    let staffSlots: TimeSlot[] = [];
-    
-    switch (dayName.toLowerCase()) {
-      case 'monday':
-        staffSlots = staffMember.mondaySlots || [];
-        break;
-      case 'tuesday':
-        staffSlots = staffMember.tuesdaySlots || [];
-        break;
-      case 'wednesday':
-        staffSlots = staffMember.wednesdaySlots || [];
-        break;
-      case 'thursday':
-        staffSlots = staffMember.thursdaySlots || [];
-        break;
-      case 'friday':
-        staffSlots = staffMember.fridaySlots || [];
-        break;
-      case 'saturday':
-        staffSlots = staffMember.saturdaySlots || [];
-        break;
-      case 'sunday':
-        staffSlots = staffMember.sundaySlots || [];
-        break;
-    }
-    
-    console.log(`Staff ${staffMember.name} slots for ${dayName}:`, staffSlots);
-    
-    // Check if any slot can accommodate the duration
-    let canAccommodate = false;
-    for (const slot of staffSlots) {
-      const slotStartMinutes = slot.startMinutes;
-      const slotEndMinutes = slot.endMinutes;
+    // Check if this staff member is available for THEIR specific service time
+    if (assignment.staff) {
+      const staffMember = assignment.staff;
       
-      // Check if the requested time falls within this slot and has enough duration
-      if (timeMinutes >= slotStartMinutes && 
-          endTimeMinutes <= slotEndMinutes &&
-          (endTimeMinutes - timeMinutes) >= duration) {
-        canAccommodate = true;
-        break;
+      // Check EACH time slot needed for THIS service
+      for (const slotTime of timeSlotsToCheck) {
+        console.log(`      ⏱️  Checking slot: ${slotTime} for ${staffMember.name}`);
+        
+        // Check if this specific time slot is blocked for this staff member
+        const isBlocked = isTimeSlotBlocked(staffMember, date, slotTime);
+        if (isBlocked) {
+          console.log(`      ❌ Slot ${slotTime} is BLOCKED for ${staffMember.name}`);
+          console.log('  ❌ Time slot NOT available\n');
+          return false;
+        }
+        
+        // Check if staff member has existing appointments overlapping this slot
+        // Use a 30-minute duration for each slot check
+        const isBooked = isTimeSlotBooked(existingAppointments, date, slotTime, staffMember, 30);
+        if (isBooked) {
+          console.log(`      ❌ Slot ${slotTime} is already BOOKED for ${staffMember.name}`);
+          console.log('  ❌ Time slot NOT available\n');
+          return false;
+        }
+        
+        console.log(`      ✅ Slot ${slotTime} is available for ${staffMember.name}`);
       }
+      
+      console.log(`    ✅ All slots available for ${staffMember.name}`);
     }
     
-    if (!canAccommodate) {
-      console.log(`Staff ${staffMember.name} cannot accommodate service duration at ${time}`);
-      return false;
-    }
+    // Move to next service's start time
+    currentStartTime = serviceEndTime;
+    currentStartMinutes = serviceEndMinutes;
   }
   
-  console.log('Time slot is available for all staff members');
+  console.log('\n  ✅ All services can be scheduled - time slot is AVAILABLE\n');
   return true;
 };
 
@@ -512,6 +573,19 @@ export function Step3_MultiServiceTimeSlot({
       totalDuration: totalDuration
     });
     
+    console.log('Step3_MultiServiceTimeSlot - Appointments data for filtering:', {
+      existingAppointmentsCount: existingAppointments?.length || 0,
+      existingAppointments: existingAppointments,
+      appointmentsDetails: existingAppointments?.map((apt: any) => ({
+        id: apt._id,
+        date: apt.date,
+        startTime: apt.startTime,
+        endTime: apt.endTime,
+        staff: apt.staff?.name || apt.staff,
+        service: apt.service?.name || apt.serviceName
+      }))
+    });
+    
     // Group services by staff member for sequential scheduling information
     const staffServiceMap: { [key: string]: { staff: StaffMember; services: Service[] } } = {};
     
@@ -616,21 +690,28 @@ export function Step3_MultiServiceTimeSlot({
         }
         
         // Filter out blocked time slots for the selected staff and check availability for duration
+        console.log(`\n🔍 Checking ${slots.length} staff-specific time slots for total duration of ${totalDuration} minutes...`);
         const filteredSlots = slots.filter((slot: string) => {
           const isBlocked = isTimeSlotBlocked(staffMember, selectedDate, slot);
+          if (isBlocked) {
+            console.log(`❌ ${slot} is BLOCKED for ${staffMember.name}`);
+            return false;
+          }
+          
+          // Check if ALL required time slots are available for the full duration
           const isAvailable = isTimeSlotAvailableForAllStaff(slot, selectedDate, serviceStaffAssignments, totalDuration, existingAppointments);
-          return !isBlocked && isAvailable;
+          if (isAvailable) {
+            console.log(`✅ ${slot} is available for ${staffMember.name} (all ${Math.ceil(totalDuration / 30)} slots checked)`);
+          } else {
+            console.log(`❌ ${slot} is NOT available for ${staffMember.name}`);
+          }
+          return isAvailable;
         });
-        console.log('Step3_MultiServiceTimeSlot - Filtered slots (after blocking and availability check):', filteredSlots);
+        console.log(`\n📋 Step3_MultiServiceTimeSlot - Final available slots: ${filteredSlots.length} slots`);
+        console.log('Available times:', filteredSlots);
         
-        // Filter slots to ensure enough time for all services
-        const durationSlotsNeeded = Math.ceil(totalDuration / 30);
-        const validSlots = [];
-        for (let i = 0; i <= filteredSlots.length - durationSlotsNeeded; i++) {
-          validSlots.push(filteredSlots[i]);
-        }
-        
-        return validSlots;
+        // Return the filtered slots (no need for additional filtering since isTimeSlotAvailableForAllStaff already checks all required slots)
+        return filteredSlots;
       }
     }
     
@@ -659,18 +740,24 @@ export function Step3_MultiServiceTimeSlot({
     }
     
     // Filter out blocked time slots and check availability for all assigned staff
+    // The isTimeSlotAvailableForAllStaff function now checks ALL required time slots for the full duration
+    console.log(`\n🔍 Checking ${slots.length} time slots for total duration of ${totalDuration} minutes...`);
     const filteredSlots = slots.filter((slot: string) => {
       // Check if time slot is available for all assigned staff members including existing appointments
-      return isTimeSlotAvailableForAllStaff(slot, selectedDate, serviceStaffAssignments, totalDuration, existingAppointments);
+      // This function will check ALL 30-min intervals needed for the full duration
+      const isAvailable = isTimeSlotAvailableForAllStaff(slot, selectedDate, serviceStaffAssignments, totalDuration, existingAppointments);
+      if (isAvailable) {
+        console.log(`✅ ${slot} is available (all ${Math.ceil(totalDuration / 30)} slots checked)`);
+      } else {
+        console.log(`❌ ${slot} is NOT available`);
+      }
+      return isAvailable;
     });
-    console.log('Step3_MultiServiceTimeSlot - Filtered slots (after availability and booking check):', filteredSlots);
+    console.log(`\n📋 Step3_MultiServiceTimeSlot - Final available slots: ${filteredSlots.length} slots`);
+    console.log('Available times:', filteredSlots);
     
-    // Filter slots to ensure enough time for all services
-    const durationSlotsNeeded = Math.ceil(totalDuration / 30);
-    const validSlots = [];
-    for (let i = 0; i <= filteredSlots.length - durationSlotsNeeded; i++) {
-      validSlots.push(filteredSlots[i]);
-    }
+    // Return the filtered slots (no need for additional filtering since isTimeSlotAvailableForAllStaff already checks all required slots)
+    const validSlots = filteredSlots;
     
     // Log the corrected understanding of how services will be sequenced
     if (validSlots.length > 0 && assignedStaff.length > 1) {

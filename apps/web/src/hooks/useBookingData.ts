@@ -171,8 +171,6 @@ export const useSalonServices = (salonId: string) => {
   const services = useMemo((): Service[] => {
     if (!rawServices) return [];
     
-    console.log('useSalonServices - Raw services data:', rawServices);
-    
     // Handle different possible response structures
     let servicesArray: any[] = [];
     
@@ -183,11 +181,8 @@ export const useSalonServices = (salonId: string) => {
     } else if (Array.isArray(rawServices)) {
       servicesArray = rawServices;
     } else {
-      console.warn('Unexpected services data structure:', rawServices);
       return [];
     }
-    
-    console.log('useSalonServices - Services array:', servicesArray);
     
     // Ensure we always return an array
     if (!Array.isArray(servicesArray)) {
@@ -195,7 +190,6 @@ export const useSalonServices = (salonId: string) => {
     }
     
     return servicesArray.map((service: any): Service => {
-      console.log(`Service ${service.name || service.serviceName} has staff array:`, service.staff);
       return {
         id: service._id || service.id,
         name: service.serviceName || service.name,
@@ -257,12 +251,8 @@ export const useSalonStaff = (salonId: string, serviceId?: string) => {
     ? useGetPublicVendorStaffByServiceQuery({ vendorId: salonId, serviceId: serviceId! })
     : useGetPublicVendorStaffQuery(salonId);
   
-  console.log('useSalonStaff - API response:', { rawStaff, isLoading, error, shouldUseServiceSpecificEndpoint });
-  
   const staff = useMemo(() => {
     if (!rawStaff) return [];
-    
-    console.log('useSalonStaff - Raw staff data:', rawStaff);
     
     // Handle different possible response structures
     let staffArray = [];
@@ -274,11 +264,8 @@ export const useSalonStaff = (salonId: string, serviceId?: string) => {
     } else if (Array.isArray(rawStaff)) {
       staffArray = rawStaff;
     } else {
-      console.warn('Unexpected staff data structure:', rawStaff);
       return [];
     }
-    
-    console.log('useSalonStaff - Staff array:', staffArray);
     
     // Ensure we always return an array
     if (!Array.isArray(staffArray)) {
@@ -343,14 +330,10 @@ export const useSalonWorkingHours = (salonId: string) => {
     } else if (Array.isArray(rawWorkingHours)) {
       workingHoursData = rawWorkingHours;
     } else {
-      console.warn('Unexpected working hours data structure:', rawWorkingHours);
       return [];
     }
     
-    console.log('useSalonWorkingHours - Working hours data:', workingHoursData);
-    
     if (!Array.isArray(workingHoursData)) {
-      console.warn('Working hours data is not an array:', workingHoursData);
       return [];
     }
     
@@ -378,7 +361,6 @@ export const useSalonWorkingHours = (salonId: string) => {
       };
     });
     
-    console.log('useSalonWorkingHours - Transformed hours:', transformedHours);
     // Ensure we always return an array
     return Array.isArray(transformedHours) ? transformedHours : [];
   }, [rawWorkingHours]);
@@ -459,8 +441,6 @@ export const useBookingData = (salonId: string, serviceId?: string) => {
                staffQuery.error || 
                workingHoursQuery.error || 
                salonInfoQuery.error;
-
-  console.log('useBookingData - Queries:', { servicesQuery, staffQuery, workingHoursQuery, salonInfoQuery });
   
   return {
     services: servicesQuery.services,

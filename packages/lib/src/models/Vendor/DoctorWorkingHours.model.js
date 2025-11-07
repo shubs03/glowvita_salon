@@ -44,6 +44,20 @@ const doctorWorkingHoursSchema = new mongoose.Schema(
       default: 'Asia/Kolkata',
       trim: true,
     },
+    // Duration of each consultation in minutes
+    consultationDuration: {
+      type: Number,
+      default: 20,
+      min: 5,
+      max: 120,
+    },
+    // Gap between appointment slots in minutes (buffer time)
+    slotGap: {
+      type: Number,
+      default: 20,
+      min: 0,
+      max: 60,
+    },
     // Standard working hours for each day
     workingHours: {
       monday: workingDaySchema,

@@ -74,7 +74,6 @@ const baseQuery = async (args, api, extraOptions) => {
   let requestUrl = typeof args === "string" ? args : args.url;
 
   if (typeof requestUrl !== "string") {
-    console.error("Request URL is not a string:", requestUrl);
     return { error: { status: "CUSTOM_ERROR", error: "Invalid URL provided" } };
   }
 
@@ -89,11 +88,6 @@ const baseQuery = async (args, api, extraOptions) => {
 
   const baseUrl = API_BASE_URLS[targetService];
   const fullUrl = `${baseUrl}${requestUrl}`;
-
-  console.log("Target Service:", targetService);
-  console.log("Original Request URL:", requestUrl);
-  console.log("Base URL:", baseUrl);
-  console.log("API Request URL:", fullUrl);
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
@@ -126,7 +120,6 @@ const baseQuery = async (args, api, extraOptions) => {
 
     return result;
   } catch (error) {
-    console.error("API Error:", error);
     return { error: { status: "CUSTOM_ERROR", error: error.message } };
   }
 };
@@ -143,10 +136,12 @@ export const glowvitaApi = createApi({
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign",
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing",
     "Appointments", "ShippingCharge", "Order", "CrmProducts",
-    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
+    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart", "ClientCart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
-    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment"
+    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
+    "Billing", "VendorServices",
+    "Consultations", "Consultation", "Expense", "PublicAppointments"
   ],
 
   endpoints: (builder) => ({
@@ -649,6 +644,18 @@ export const glowvitaApi = createApi({
       ],
     }),
 
+    updateVendorDocuments: builder.mutation({
+      query: ({ id, documents }) => ({
+        url: "/admin/vendor",
+        method: "PATCH",
+        body: { id, documents },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Vendor", id },
+        "Vendor",
+      ],
+    }),
+
     deleteVendor: builder.mutation({
       query: ({ id }) => ({
         url: "/admin/vendor",
@@ -1027,7 +1034,11 @@ export const glowvitaApi = createApi({
 
     // Products endpoints
     getCrmProducts: builder.query({
-      query: () => ({ url: "/crm/products", method: "GET" }),
+      query: ({ vendorId } = {}) => ({ 
+        url: "/crm/products", 
+        method: "GET",
+        params: vendorId ? { vendorId } : {}
+      }),
       providesTags: ["CrmProducts"],
       transformResponse: (response) => response.data || [],
     }),
@@ -1168,6 +1179,32 @@ export const glowvitaApi = createApi({
     deleteStaff: builder.mutation({
       query: (id) => ({ url: "/crm/staff", method: "DELETE", body: { id } }),
       invalidatesTags: ["Staff"],
+    }),
+
+    // Expense Endpoints
+    getExpenses: builder.query({
+      query: () => ({ url: "/crm/expenses", method: "GET" }),
+      providesTags: ["Expense"],
+    }),
+    createExpense: builder.mutation({
+      query: (expense) => ({ url: "/crm/expenses", method: "POST", body: expense }),
+      invalidatesTags: ["Expense"],
+    }),
+    updateExpense: builder.mutation({
+      query: (expense) => ({ url: "/crm/expenses", method: "PUT", body: expense }),
+      invalidatesTags: ["Expense"],
+    }),
+    deleteExpense: builder.mutation({
+      query: (id) => ({ url: "/crm/expenses", method: "DELETE", body: { id } }),
+      invalidatesTags: ["Expense"],
+    }),
+    getCrmExpenseTypes: builder.query({
+      query: () => ({ url: "/crm/superdata?type=expenseType", method: "GET" }),
+      providesTags: ["SuperData"],
+    }),
+    getCrmPaymentModes: builder.query({
+      query: () => ({ url: "/crm/superdata?type=paymentMode", method: "GET" }),
+      providesTags: ["SuperData"],
     }),
 
     //working hours endpoint
@@ -1349,7 +1386,7 @@ export const glowvitaApi = createApi({
       providesTags: ["Vendor"],
     }),
 
-    // Cart Endpoints (CRM - for vendors)
+    // Cart Endpoints (CRM)
     getCart: builder.query({
       query: () => ({ url: "/crm/cart", method: "GET" }),
       providesTags: ["Cart"],
@@ -1367,7 +1404,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Cart"],
     }),
 
-    // Client Cart Endpoints (Web App - for customers)
+    // Client Cart Endpoints (Web App)
     getClientCart: builder.query({
       query: () => ({ url: "/client/cart", method: "GET" }),
       providesTags: ["ClientCart"],
@@ -1423,6 +1460,105 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Patient"],
     }),
+    // Billing Endpoints
+    createBilling: builder.mutation({
+      query: (billingData) => ({
+        url: "/crm/billing",
+        method: "POST",
+        body: billingData,
+      }),
+      invalidatesTags: ["Billing"],
+    }),
+    getBillingRecords: builder.query({
+      query: ({ vendorId, startDate, endDate, page = 1, limit = 50 } = {}) => {
+        const params = new URLSearchParams();
+        if (vendorId) params.append('vendorId', vendorId);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        params.append('page', (page || 1).toString());
+        params.append('limit', (limit || 50).toString());
+        return { url: `/crm/billing?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Billing"],
+    }),
+    getBillingById: builder.query({
+      query: (id) => ({ url: `/crm/billing/${id}`, method: "GET" }),
+      providesTags: (result, error, id) => [{ type: "Billing", id }],
+    }),
+    updateBilling: builder.mutation({
+      query: (billingData) => ({
+        url: "/crm/billing",
+        method: "PUT",
+        body: billingData,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Billing", id },
+        "Billing",
+      ],
+    }),
+
+    // Doctor Consultation Endpoints (Web App - Physical & Video Consultations)
+    getConsultations: builder.query({
+      query: ({ doctorId, patientId, phoneNumber, status, consultationType, startDate, endDate, page = 1, limit = 50 } = {}) => {
+        const params = new URLSearchParams();
+        if (doctorId) params.append('doctorId', doctorId);
+        if (patientId) params.append('patientId', patientId);
+        if (phoneNumber) params.append('phoneNumber', phoneNumber);
+        if (status) params.append('status', status);
+        if (consultationType) params.append('consultationType', consultationType);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+        return { url: `/consultations?${params.toString()}`, method: "GET" };
+      },
+      providesTags: (result = []) => [
+        'Consultations',
+        ...((result.data?.consultations || []).map(({ _id }) => ({ type: 'Consultation', id: _id })))
+      ],
+    }),
+    getBookedSlots: builder.query({
+      query: ({ doctorId, date }) => {
+        const params = new URLSearchParams();
+        if (doctorId) params.append('doctorId', doctorId);
+        if (date) params.append('date', date);
+        return { url: `/consultations/booked-slots?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ['Consultations'],
+    }),
+    getConsultationById: builder.query({
+      query: (id) => ({ url: `/consultations/${id}`, method: "GET" }),
+      providesTags: (result, error, id) => [{ type: 'Consultation', id }],
+    }),
+    createConsultation: builder.mutation({
+      query: (consultationData) => ({
+        url: "/consultations",
+        method: "POST",
+        body: consultationData,
+      }),
+      invalidatesTags: ['Consultations'], // This will also refetch booked slots
+    }),
+    updateConsultation: builder.mutation({
+      query: ({ consultationId, ...updates }) => ({
+        url: "/consultations",
+        method: "PUT",
+        body: { consultationId, ...updates },
+      }),
+      invalidatesTags: (result, error, { consultationId }) => [
+        { type: 'Consultation', id: consultationId },
+        'Consultations'
+      ],
+    }),
+    cancelConsultation: builder.mutation({
+      query: ({ id, reason }) => ({
+        url: `/consultations?id=${id}&reason=${encodeURIComponent(reason || 'Cancelled by user')}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Consultation', id },
+        'Consultations'
+      ],
+    }),
 
     getClientOrders: builder.query({
       query: () => ({ url: "/client/orders", method: "GET" }),
@@ -1449,17 +1585,35 @@ export const glowvitaApi = createApi({
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
         if (userId) params.append('userId', userId);
+        // Add cache buster
+        params.append('_t', Date.now().toString());
         
         return { 
           url: `/appointments?${params.toString()}`, 
           method: "GET" 
         };
       },
-      providesTags: ['PublicAppointments'],
+      providesTags: (result, error, arg) => [
+        'PublicAppointments',
+        { type: 'PublicAppointments', id: `${arg.vendorId || 'all'}-${arg.date || 'all'}` }
+      ],
+      // DISABLE ALL CACHING - always fetch fresh data
+      keepUnusedDataFor: 0,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
     }),
     createPublicAppointment: builder.mutation({
       query: (appointmentData) => ({ url: "/appointments", method: "POST", body: appointmentData }),
       invalidatesTags: ['PublicAppointments'],
+      // Force immediate refetch after mutation
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          // Invalidate all appointment queries
+          dispatch(glowvitaApi.util.invalidateTags(['PublicAppointments']));
+        } catch {}
+      },
     }),
 
   }),
@@ -1602,6 +1756,12 @@ export const {
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
+  useGetExpensesQuery,
+  useCreateExpenseMutation,
+  useUpdateExpenseMutation,
+  useDeleteExpenseMutation,
+  useGetCrmExpenseTypesQuery,
+  useGetCrmPaymentModesQuery,
   useGetWorkingHoursQuery,
   useUpdateWorkingHoursMutation,
   useAddSpecialHoursMutation,
@@ -1641,7 +1801,6 @@ export const {
   useUpdateVendorProductMutation,
   useDeleteVendorProductMutation,
   useCreateVendorProductMutation,
-
   // Cart Endpoints (CRM)
   useGetCartQuery,
   useAddToCartMutation,
@@ -1658,12 +1817,26 @@ export const {
   useGetBlockedTimesQuery,
   useCreateBlockTimeMutation,
   useDeleteBlockTimeMutation,
+  // Billing Endpoints
+  useCreateBillingMutation,
+  useGetBillingRecordsQuery,
+  useGetBillingByIdQuery,
+  useUpdateBillingMutation,
   useUpdateAppointmentStatusMutation,
   useGetPatientsQuery,
   useCreatePatientMutation,
   useUpdatePatientMutation,
   useDeletePatientMutation,
+  // Consultation Hooks (Physical & Video)
+  useGetConsultationsQuery,
+  useGetBookedSlotsQuery,
+  useGetConsultationByIdQuery,
+  useCreateConsultationMutation,
+  useUpdateConsultationMutation,
+  useCancelConsultationMutation,
   // Public Appointment Hooks
   useGetPublicAppointmentsQuery,
   useCreatePublicAppointmentMutation,
+  // Vendor Document Hooks
+  useUpdateVendorDocumentsMutation,
 } = glowvitaApi;

@@ -57,15 +57,6 @@ export function Step1_Services({
     error,
     onServiceSelect
 }: Step1ServicesProps) {
-  console.log('Step1_Services - Component rendered with props:', { 
-    selectedServices, 
-    currentStep, 
-    servicesLength: services?.length, 
-    categoriesLength: categories?.length, 
-    isLoading, 
-    error 
-  });
-  
   const [activeCategory, setActiveCategory] = useState("All");
 
   // Use provided categories or fallback to default

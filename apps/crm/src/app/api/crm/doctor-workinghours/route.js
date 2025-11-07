@@ -223,6 +223,75 @@ export const POST = authMiddlewareCrm(async (req) => {
     }
 }, ['doctor']);
 
+// PATCH - Update specific settings like slotGap
+export const PATCH = authMiddlewareCrm(async (req) => {
+    try {
+        const doctorId = req.user.userId;
+        const updateData = await req.json();
+
+        console.log('PATCH - Doctor ID:', doctorId);
+        console.log('PATCH - Update Data:', updateData);
+
+        // Build update object dynamically
+        const updateFields = {};
+        
+        // Handle slotGap update
+        if (updateData.slotGap !== undefined) {
+            // Validate slotGap
+            const slotGap = parseInt(updateData.slotGap);
+            console.log('PATCH - Parsed slotGap:', slotGap);
+            
+            if (isNaN(slotGap) || slotGap < 0 || slotGap > 60) {
+                return NextResponse.json({ 
+                    message: "Slot gap must be between 0 and 60 minutes" 
+                }, { status: 400 });
+            }
+            updateFields.slotGap = slotGap;
+        }
+
+        // Handle timezone update
+        if (updateData.timezone) {
+            updateFields.timezone = updateData.timezone;
+        }
+
+        console.log('PATCH - Update Fields:', updateFields);
+
+        // Update the working hours document
+        const updatedHours = await DoctorWorkingHours.findOneAndUpdate(
+            { doctor: doctorId },
+            { $set: updateFields },
+            { 
+                new: true,
+                upsert: true,
+                runValidators: true 
+            }
+        );
+
+        console.log('PATCH - Updated Hours:', updatedHours ? {
+            id: updatedHours._id,
+            slotGap: updatedHours.slotGap,
+            doctor: updatedHours.doctor
+        } : 'null');
+
+        return NextResponse.json({ 
+            message: "Settings updated successfully", 
+            data: updatedHours 
+        }, { status: 200 });
+
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            return NextResponse.json({ 
+                message: "Validation error", 
+                error: error.message 
+            }, { status: 400 });
+        }
+        return NextResponse.json({ 
+            message: "Error updating settings", 
+            error: error.message 
+        }, { status: 500 });
+    }
+}, ['doctor']);
+
 // DELETE special hours
 export const DELETE = authMiddlewareCrm(async (req) => {
     try {

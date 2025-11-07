@@ -1118,6 +1118,8 @@ export default function DropdownManagementPage() {
         { key: 'faqCategory', title: 'FAQ Categories', description: 'Manage categories for organizing FAQs.', tab: 'general' },
         { key: 'bank', title: 'Bank Names', description: 'Manage a list of supported banks.', tab: 'general' },
         { key: 'documentType', title: 'Document Types', description: 'Manage types of documents required for verification.', tab: 'general' },
+        { key: 'expenseType', title: 'Expense Types', description: 'Manage types of expenses for tracking and reporting.', tab: 'general' },
+        { key: 'paymentMode', title: 'Payment Modes', description: 'Manage payment methods for transactions.', tab: 'general' },
         { key: 'designation', title: 'Admin Designations', description: 'Manage the list of available staff designations.', tab: 'admin' },
         { key: 'smsType', title: 'SMS Template Types', description: 'Manage types for SMS templates.', tab: 'marketing' },
         { key: 'socialPlatform', title: 'Social Media Platforms', description: 'Manage platforms for social posts.', tab: 'marketing' },

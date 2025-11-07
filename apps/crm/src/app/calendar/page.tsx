@@ -196,6 +196,10 @@ export default function CalendarPage() {
       discount: appt.discount || 0,
       tax: appt.tax || 0,
       totalAmount: appt.totalAmount || appt.amount || 0,
+      // Multi-service appointment fields
+      isMultiService: appt.isMultiService || false,
+      serviceItems: appt.serviceItems || [],
+      payment: appt.payment,
     }));
   }, [appointmentsData]);
 
@@ -278,18 +282,32 @@ export default function CalendarPage() {
   const handleFormSubmit = useCallback(
     async (appointmentData: Appointment) => {
       try {
+        console.log('📝 Form submission - received data:', appointmentData);
+        
+        // Prepare the appointment data
+        let dataToSubmit = { ...appointmentData };
+        
+        // If creating a new appointment, ensure the date is properly formatted
+        if (!isEditing) {
+          // For new appointments, preserve the date from the form data
+          // The form should already have the correct date set
+          console.log('📝 Creating new appointment with date:', dataToSubmit.date);
+        }
+        
         if (isEditing && selectedAppointment) {
           // For updates, use the original ID
           const updateData = {
-            ...appointmentData,
+            ...dataToSubmit,
             id: selectedAppointment.id || selectedAppointment._id,
             _id: selectedAppointment._id || selectedAppointment.id,
           };
+          console.log('📝 Updating appointment with data:', updateData);
           await updateAppointment(updateData).unwrap();
           toast.success('Appointment updated successfully');
         } else {
           // For new appointments
-          await createAppointment(appointmentData).unwrap();
+          console.log('📝 Creating appointment with data:', dataToSubmit);
+          await createAppointment(dataToSubmit).unwrap();
           toast.success('Appointment created successfully');
         }
         
@@ -898,11 +916,38 @@ interface AppointmentMenuProps {
                         <h4 className="text-base font-medium text-gray-900">
                           {appointment.clientName || 'No Name'}
                         </h4>
+                        
                         <div className="mt-1 text-sm text-gray-600">
-                          <div className="flex items-center">
-                            <Scissors className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                            <span className="truncate">{appointment.serviceName || 'No service specified'}</span>
-                          </div>
+                          {/* Show multi-service or single service */}
+                          {(() => {
+                            const appt = appointment as any;
+                            const isMulti = appt.isMultiService || (appt.serviceItems && appt.serviceItems.length > 1);
+                            
+                            if (isMulti) {
+                              return (
+                                <div className="space-y-1">
+                                  <div className="flex items-center text-xs font-medium text-indigo-600">
+                                    <Scissors className="h-4 w-4 mr-2 flex-shrink-0" />
+                                    Multi-Service ({appt.serviceItems?.length || 0} services)
+                                  </div>
+                                  <div className="ml-6 space-y-0.5">
+                                    {appt.serviceItems?.map((item: any, idx: number) => (
+                                      <div key={item._id || idx} className="text-xs text-gray-600">
+                                        • {item.serviceName}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <div className="flex items-center">
+                                  <Scissors className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                                  <span className="truncate">{appointment.serviceName || 'No service specified'}</span>
+                                </div>
+                              );
+                            }
+                          })()}
                           <div className="flex items-center mt-1">
                             <User className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
                             <span className="truncate">{appointment.staffName || 'No staff assigned'}</span>
@@ -964,6 +1009,7 @@ interface AppointmentMenuProps {
             </DialogHeader>
             <div className="py-4">
               <NewAppointmentForm
+                defaultDate={selectedAppointment?.date ? new Date(selectedAppointment.date) : new Date()}
                 defaultValues={selectedAppointment || undefined}
                 isEditing={isEditing}
                 onSubmit={handleFormSubmit}
