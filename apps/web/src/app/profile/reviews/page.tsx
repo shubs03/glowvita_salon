@@ -1,70 +1,76 @@
-
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
-import { Star, Search } from 'lucide-react';
+import { Star, Search, Loader2 } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { Pagination } from '@repo/ui/pagination';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Review {
   id: string;
-  type: 'product' | 'service';
+  type: 'product' | 'service' | 'salon';
   item: string;
   rating: number;
   review: string;
+  date: string;
 }
-
-const allReviews: Review[] = [
-  { id: "REV-001", type: "service", item: "Signature Facial", rating: 5, review: "Absolutely amazing experience. My skin has never felt better!" },
-  { id: "REV-002", type: "product", item: "Aura Revitalizing Serum", rating: 4, review: "Great product, noticed a difference in a week. A bit pricey though." },
-  { id: "REV-003", type: "service", item: "Haircut & Style", rating: 4, review: "Great haircut, but the wait was a bit long." },
-  { id: "REV-004", type: "product", item: "Chroma Hydrating Balm", rating: 5, review: "Love this lip balm! So hydrating and the color is perfect." },
-  { id: "REV-005", type: "service", item: "Deep Tissue Massage", rating: 5, review: "Incredibly relaxing and professional." },
-  { id: "REV-006", type: "product", item: "Terra Scrub", rating: 3, review: "It's okay, but a bit too harsh for my sensitive skin." },
-];
-
-interface ReviewItemProps {
-  review: Review;
-}
-
-const ReviewItem = ({ review }: ReviewItemProps) => (
-  <div className="border-b pb-4">
-    <div className="flex justify-between items-center mb-1">
-      <div>
-        <p className="font-semibold">{review.item}</p>
-        <p className="text-xs text-muted-foreground capitalize">{review.type} Review</p>
-      </div>
-      <div className="flex items-center">
-        {[...Array(5)].map((_, i) => (
-          <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-blue-400 fill-current' : 'text-gray-300'}`} />
-        ))}
-      </div>
-    </div>
-    <p className="text-sm text-muted-foreground">{review.review}</p>
-  </div>
-);
 
 export default function ReviewsPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { isAuthenticated, user } = useAuth();
+
+  // Fetch reviews from API
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!isAuthenticated || !user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/client/reviews`);
+        const result = await response.json();
+        
+        if (result.success) {
+          setReviews(result.reviews);
+        } else {
+          setError(result.message || 'Failed to fetch reviews');
+        }
+      } catch (err) {
+        setError('Failed to fetch reviews');
+        console.error('Error fetching reviews:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [isAuthenticated, user]);
 
   const filteredReviews = useMemo(() => {
-    let reviews = allReviews;
+    let reviewsList = reviews;
     if (activeTab === 'products') {
-      reviews = allReviews.filter(r => r.type === 'product');
+      reviewsList = reviews.filter(r => r.type === 'product');
     } else if (activeTab === 'services') {
-      reviews = allReviews.filter(r => r.type === 'service');
+      reviewsList = reviews.filter(r => r.type === 'service');
+    } else if (activeTab === 'salons') {
+      reviewsList = reviews.filter(r => r.type === 'salon');
     }
 
-    return reviews.filter(review =>
+    return reviewsList.filter(review =>
       review.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
       review.review.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [activeTab, searchTerm]);
+  }, [activeTab, searchTerm, reviews]);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -75,6 +81,38 @@ export default function ReviewsPage() {
     setActiveTab(tab);
     setCurrentPage(1); // Reset to first page on tab change
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>My Reviews</CardTitle>
+          <CardDescription>Your feedback on our products and services.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center items-center p-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>My Reviews</CardTitle>
+          <CardDescription>Your feedback on our products and services.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center text-red-500 py-8">
+            {error}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -98,10 +136,11 @@ export default function ReviewsPage() {
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="all">All ({allReviews.length})</TabsTrigger>
-            <TabsTrigger value="products">Product Reviews ({allReviews.filter(r => r.type === 'product').length})</TabsTrigger>
-            <TabsTrigger value="services">Service Reviews ({allReviews.filter(r => r.type === 'service').length})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="all">All ({reviews.length})</TabsTrigger>
+            <TabsTrigger value="products">Products ({reviews.filter(r => r.type === 'product').length})</TabsTrigger>
+            <TabsTrigger value="services">Services ({reviews.filter(r => r.type === 'service').length})</TabsTrigger>
+            <TabsTrigger value="salons">Salons ({reviews.filter(r => r.type === 'salon').length})</TabsTrigger>
           </TabsList>
           <TabsContent value={activeTab} className="mt-4">
             {currentItems.length > 0 ? (
@@ -130,3 +169,27 @@ export default function ReviewsPage() {
     </Card>
   );
 }
+
+interface ReviewItemProps {
+  review: Review;
+}
+
+const ReviewItem = ({ review }: ReviewItemProps) => (
+  <div className="border-b pb-4">
+    <div className="flex justify-between items-center mb-1">
+      <div>
+        <p className="font-semibold">{review.item}</p>
+        <p className="text-xs text-muted-foreground capitalize">{review.type} Review</p>
+      </div>
+      <div className="flex items-center">
+        {[...Array(5)].map((_, i) => (
+          <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-blue-400 fill-current' : 'text-gray-300'}`} />
+        ))}
+      </div>
+    </div>
+    <p className="text-sm text-muted-foreground">{review.review}</p>
+    {review.date && (
+      <p className="text-xs text-muted-foreground mt-1">{new Date(review.date).toLocaleDateString()}</p>
+    )}
+  </div>
+);
