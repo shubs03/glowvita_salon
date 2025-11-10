@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { useGetBillingRecordsQuery, useGetVendorProfileQuery } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import html2pdf from 'html2pdf.js';
+import { Pagination } from "@repo/ui/pagination";
 
 // Billing interface
 interface BillingItem {
@@ -89,7 +90,7 @@ export default function InvoiceManagementPage() {
   
   // States
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedClient, setSelectedClient] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
   const [selectedItemType, setSelectedItemType] = useState<"all" | "Service" | "Product">("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -97,7 +98,7 @@ export default function InvoiceManagementPage() {
   const [selectedBilling, setSelectedBilling] = useState<Billing | null>(null);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   
   // Fetch billings
   const { data: billingsData, isLoading, isError, refetch } = useGetBillingRecordsQuery(
@@ -126,9 +127,9 @@ export default function InvoiceManagementPage() {
         );
       }
       
-      // Apply client filter
-      if (selectedClient && selectedClient !== "all") {
-        filtered = filtered.filter((billing: Billing) => billing.clientInfo.fullName === selectedClient);
+      // Apply payment method filter
+      if (selectedPaymentMethod && selectedPaymentMethod !== "all") {
+        filtered = filtered.filter((billing: Billing) => billing.paymentMethod === selectedPaymentMethod);
       }
       
       // Apply item type filter
@@ -157,7 +158,7 @@ export default function InvoiceManagementPage() {
       
       setBillings(filtered);
     }
-  }, [billingsData, searchTerm, selectedClient, selectedItemType, startDate, endDate]);
+  }, [billingsData, searchTerm, selectedPaymentMethod, selectedItemType, startDate, endDate]);
 
   // Get unique clients for the client filter dropdown
   const uniqueClients: ClientInfo[] = billingsData?.data ? 
@@ -168,6 +169,19 @@ export default function InvoiceManagementPage() {
           .map((b: Billing) => [b.clientId, b.clientInfo])
       ).values()
     ) as ClientInfo[] : [];
+  
+  // Get unique payment methods for the payment method filter dropdown
+  const uniquePaymentMethods: string[] = billingsData?.data ? 
+    Array.from(
+      new Set(
+        billingsData.data
+          .filter((b: Billing) => b.paymentMethod)
+          .map((b: Billing) => b.paymentMethod)
+      )
+    ) as string[] : [];
+  
+  // Ensure "Net Banking" is always available as an option
+  const paymentMethodsIncludingDefaults = [...new Set([...uniquePaymentMethods, "Net Banking"])];
 
   // Get item type for display
   const getItemTypeDisplay = (itemType: 'Service' | 'Product') => {
@@ -413,18 +427,15 @@ export default function InvoiceManagementPage() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-                <Select value={selectedClient} onValueChange={setSelectedClient}>
+                <Select value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
                   <SelectTrigger className="w-full lg:w-[200px]">
-                    <SelectValue placeholder="All Clients" />
+                    <SelectValue placeholder="All Payment Methods" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Clients</SelectItem>
-                    {uniqueClients.map((client: ClientInfo) => (
-                      <SelectItem key={client.fullName} value={client.fullName}>
-                        <div className="flex items-center">
-                          <User className="w-4 h-4 mr-2" />
-                          {client.fullName}
-                        </div>
+                    <SelectItem value="all">All Payment Methods</SelectItem>
+                    {paymentMethodsIncludingDefaults.map((method: string) => (
+                      <SelectItem key={method} value={method}>
+                        {method}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -666,27 +677,15 @@ export default function InvoiceManagementPage() {
 
               {/* Pagination */}
               {billings.length > 0 && (
-                <div className="mt-8 flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {firstItemIndex + 1} to {Math.min(lastItemIndex, billings.length)} of {billings.length} results
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
+                <Pagination
+                  className="mt-8"
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  itemsPerPage={itemsPerPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                  totalItems={billings.length}
+                />
               )}
             </>
           </CardContent>
@@ -702,6 +701,7 @@ export default function InvoiceManagementPage() {
               <button 
                 onClick={closeInvoiceModal}
                 className="text-gray-500 hover:text-gray-700"
+                title="Close"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
