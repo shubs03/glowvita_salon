@@ -23,6 +23,7 @@ export const vendorNavItems: NavItem[] = [
   { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
   { title: "Marketplace", href: "/marketplace", Icon: FaStore, permission: 'marketplace_view' },
   { title: "Sales", href: "/sales", Icon: FaDollarSign, permission: 'sales_view' },
+  { title: "Invoice Management", href: "/invoice-management", Icon: FaReceipt, permission: 'invoice_management_view' },
   { title: "Orders", href: "/orders", Icon: FaShoppingCart, permission: 'orders_view' },
   { title: "Shipping", href: "/shipping", Icon: FaShippingFast, permission: 'shipping_view' },
   { title: "Settlements", href: "/settlements", Icon: FaMoneyCheckAlt, permission: 'settlements_view' },

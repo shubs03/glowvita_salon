@@ -383,7 +383,7 @@ export default function ProductsTab({
   const [paymentStep, setPaymentStep] = useState<'options' | 'method' | 'link'>('options');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
 
-  // Handle save order with timeout
+  // Handle save order with improved timeout handling
   const handleSaveOrder = async () => {
     // Check if payment method is selected for Save Order
     if (!selectedPaymentMethod) {
@@ -434,19 +434,18 @@ export default function ProductsTab({
         billingType: "Counter Bill"
       };
       
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Request timeout')), 10000) // 10 second timeout
-      );
+      // Execute the billing mutation with proper error handling and timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
       
-      // Execute the billing mutation and get the promise
-      const billingPromise = createBilling(billingData);
-      
-      // Race the API call against the timeout
-      const result: any = await Promise.race([
-        billingPromise.unwrap(), // Call unwrap on the promise, not directly in the race
-        timeoutPromise
-      ]);
+      let result: any;
+      try {
+        result = await createBilling(billingData).unwrap();
+        clearTimeout(timeoutId);
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        throw error;
+      }
       
       // Prepare invoice data for display
       const invoice = {
@@ -489,10 +488,15 @@ export default function ProductsTab({
     } catch (error: any) {
       console.error("Failed to save billing record:", error);
       toast.dismiss(); // Dismiss loading toast
-      if (error.message === 'Request timeout') {
+      // More specific error handling
+      if (error?.name === 'AbortError') {
         toast.error("Request timeout. Please check your connection and try again.");
+      } else if (error?.data?.message) {
+        toast.error(`Failed to save billing record: ${error.data.message}`);
+      } else if (error?.message) {
+        toast.error(`Failed to save billing record: ${error.message}`);
       } else {
-        toast.error("Failed to save billing record: " + (error?.data?.message || error?.message || "Unknown error"));
+        toast.error("Failed to save billing record. Please check your connection and try again.");
       }
     }
   };
@@ -553,7 +557,7 @@ export default function ProductsTab({
     messageId?: string;
   }
   
-  // Handle email sending
+  // Handle email sending with improved error handling
   const handleSendEmail = async () => {
     if (!emailData.to || !emailData.subject || !emailData.message) {
       toast.error('Please fill in all required fields');
@@ -577,8 +581,20 @@ export default function ProductsTab({
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
         
-        // Generate PDF as blob
-        pdfBlob = await html2pdf().set(pdfOptions).from(invoiceElement).outputPdf('blob');
+        // Generate PDF as blob with timeout handling
+        const pdfController = new AbortController();
+        const pdfTimeoutId = setTimeout(() => pdfController.abort(), 60000); // 60 second timeout for PDF generation
+        
+        try {
+          pdfBlob = await html2pdf().set(pdfOptions).from(invoiceElement).outputPdf('blob');
+        } catch (pdfError) {
+          if (pdfController.signal.aborted) {
+            throw new Error('PDF generation timed out');
+          }
+          throw pdfError;
+        } finally {
+          clearTimeout(pdfTimeoutId);
+        }
       }
       
       // Send email using API endpoint (only plain text message, no HTML content)
@@ -591,9 +607,9 @@ export default function ProductsTab({
         formData.append('attachment', pdfBlob, `Sales_Invoice_${invoiceData.invoiceNumber}.pdf`);
       }
       
-      // Send email using API endpoint with timeout
+      // Send email using API endpoint with proper timeout handling
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
       
       const response = await fetch('/api/send-email', {
         method: 'POST',
@@ -626,8 +642,10 @@ export default function ProductsTab({
       toast.dismiss(); // Dismiss loading toast
       if (error.name === 'AbortError') {
         toast.error('Email sending timed out. Please check your connection and try again.');
+      } else if (error.name === 'TypeError') {
+        toast.error('Email sending failed. Please check your connection and try again.');
       } else {
-        toast.error(`Failed to send email: ${error.message}`);
+        toast.error(`Failed to send email: ${error.message || 'Unknown error'}`);
       }
     }
   };
@@ -669,9 +687,23 @@ export default function ProductsTab({
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
         
-        // Generate and download PDF automatically
-        await html2pdf().set(pdfOptions).from(invoiceElement).save();
-        toast.success('Invoice downloaded successfully');
+        // Generate and download PDF automatically with timeout handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+        
+        try {
+          await html2pdf().set(pdfOptions).from(invoiceElement).save();
+          toast.success('Invoice downloaded successfully');
+        } catch (error) {
+          if (controller.signal.aborted) {
+            toast.error('Download timed out. Please try again.');
+          } else {
+            toast.error('Failed to download invoice');
+          }
+          console.error('Download error:', error);
+        } finally {
+          clearTimeout(timeoutId);
+        }
       }
     } catch (error) {
       toast.error('Failed to download invoice');
@@ -752,7 +784,7 @@ export default function ProductsTab({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Left Side - Product Listing */}
       <Card>
         <CardHeader>
@@ -1318,17 +1350,17 @@ export default function ProductsTab({
           setInvoiceData(null);
         }
       }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4">
           {invoiceData && (
             <>
               <DialogHeader className="border-b pb-4">
-                <DialogTitle className="text-xl font-bold text-center text-gray-900">Invoice Summary</DialogTitle>
+                <DialogTitle className="text-2xl font-bold text-center text-gray-900">Invoice Summary</DialogTitle>
               </DialogHeader>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 py-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
                 {/* Left Section - Invoice Info & Actions */}
                 <div className="space-y-6">
-                  <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-5 text-white shadow-sm">
+                  <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-4 text-white shadow-sm">
                     <div className="flex justify-between items-start">
                       <div>
                         <h2 className="text-xl font-bold">{invoiceData.invoiceNumber}</h2>
@@ -1349,7 +1381,7 @@ export default function ProductsTab({
                   </div>
                   
                   <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-                    <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Quick Actions</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Quick Actions</h3>
                     <div className="space-y-3">
                       {/* Rebook button on its own line */}
                       <div className="w-full">
@@ -1376,7 +1408,7 @@ export default function ProductsTab({
                       </div>
                       
                       {/* Other buttons in a row below */}
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <Button 
                           className="w-full py-2 text-sm" 
                           variant="outline"
@@ -1422,11 +1454,11 @@ export default function ProductsTab({
                     </div>
                   </div>
                   
-                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-                    <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Client Information</h3>
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Client Information</h3>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-dashed border-gray-300 rounded-xl w-16 h-16 flex items-center justify-center overflow-hidden">
+                        <div className="bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-dashed border-gray-300 rounded-xl w-12 h-12 flex items-center justify-center overflow-hidden">
                           {invoiceData.client?.profilePicture ? (
                             <img 
                               src={invoiceData.client.profilePicture} 
@@ -1463,26 +1495,26 @@ export default function ProductsTab({
                 </div>
                 
                 {/* Right Section - Invoice Details */}
-                <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-                  <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Invoice Details</h3>
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Invoice Details</h3>
                   
                   <div className="space-y-5">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-500 text-xs">Invoice Number</p>
+                        <p className="text-gray-500 text-sm">Invoice Number</p>
                         <p className="font-semibold text-sm">{invoiceData.invoiceNumber}</p>
                       </div>
                       <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-500 text-xs">Date</p>
+                        <p className="text-gray-500 text-sm">Date</p>
                         <p className="font-semibold text-sm">{invoiceData.date}</p>
                       </div>
                       <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-500 text-xs">Payment Method</p>
+                        <p className="text-gray-500 text-sm">Payment Method</p>
                         <p className="font-semibold text-sm">{invoiceData.paymentMethod || 'Not specified'}</p>
                       </div>
                       <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-500 text-xs">Status</p>
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        <p className="text-gray-500 text-sm">Status</p>
+                        <span className={`px-2 py-1 rounded-full text-sm font-semibold ${
                           invoiceData.status === "Completed" 
                             ? "bg-green-100 text-green-800" 
                             : "bg-yellow-100 text-yellow-800"
@@ -1493,12 +1525,12 @@ export default function ProductsTab({
                     </div>
                     
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">Products</h4>
+                      <h4 className="font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200 text-lg">Products</h4>
                       <div className="space-y-2 max-h-52 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 rounded">
                         {invoiceData.items.map((item: any, index: number) => (
                           <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 rounded px-2">
                             <div className="flex-1">
-                              <p className="font-semibold text-gray-900">{item.productName}</p>
+                              <p className="font-semibold text-gray-900 text-xs">{item.productName}</p>
                               <div className="flex flex-wrap gap-1 mt-1">
                                 <span className="text-xs bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded-full">
                                   Qty: {item.quantity}
@@ -1524,28 +1556,28 @@ export default function ProductsTab({
                     
                     <div className="space-y-2 bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl">
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-sm">Subtotal</span>
-                        <span className="font-medium">₹{invoiceData.originalSubtotal?.toFixed(2) || invoiceData.subtotal.toFixed(2)}</span>
+                        <span className="text-gray-600 text-xs">Subtotal</span>
+                        <span className="font-medium text-xs">₹{invoiceData.originalSubtotal?.toFixed(2) || invoiceData.subtotal.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-green-600 text-sm font-medium">Discount</span>
-                        <span className="font-medium text-green-600">-₹{(invoiceData.discount || 0).toFixed(2)}</span>
+                        <span className="text-green-600 text-xs font-medium">Discount</span>
+                        <span className="font-medium text-green-600 text-xs">-₹{(invoiceData.discount || 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-sm">Tax ({taxRate}%)</span>
-                        <span className="font-medium">₹{invoiceData.tax.toFixed(2)}</span>
+                        <span className="text-gray-600 text-xs">Tax ({taxRate}%)</span>
+                        <span className="font-medium text-xs">₹{invoiceData.tax.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-sm">Platform Fee</span>
-                        <span className="font-medium">₹{invoiceData.platformFee.toFixed(2)}</span>
+                        <span className="text-gray-600 text-xs">Platform Fee</span>
+                        <span className="font-medium text-xs">₹{invoiceData.platformFee.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center pt-2 border-t border-gray-300">
-                        <span className="font-semibold text-gray-900">Total</span>
-                        <span className="font-bold text-lg text-gray-900">₹{invoiceData.total.toFixed(2)}</span>
+                        <span className="font-semibold text-gray-900 text-sm">Total</span>
+                        <span className="font-bold text-gray-900 text-base">₹{invoiceData.total.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center pt-1">
-                        <span className="font-semibold text-gray-900">Balance</span>
-                        <span className="font-bold text-lg text-red-600">₹{invoiceData.balance.toFixed(2)}</span>
+                        <span className="font-semibold text-gray-900 text-sm">Balance</span>
+                        <span className="font-bold text-red-600 text-base">₹{invoiceData.balance.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>

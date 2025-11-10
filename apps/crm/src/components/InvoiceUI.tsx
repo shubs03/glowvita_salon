@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from 'sonner';
 
 interface InvoiceData {
-  invoiceNumber: number;
+  invoiceNumber: string | number;
   date: string;
   time: string;
   client: any;
