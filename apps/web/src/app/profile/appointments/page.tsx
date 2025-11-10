@@ -14,6 +14,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { Label } from '@repo/ui/label';
 import { cn } from '@repo/ui/cn';
 import { useUserAppointments } from '@/hooks/useUserAppointments';
+import { useRouter } from 'next/navigation';
 
 // Initial appointments are now fetched from the API
 const initialAppointments: Appointment[] = [];
@@ -30,6 +31,9 @@ interface Appointment {
     name: string;
     address: string;
   };
+  vendorId?: string;
+  startTime?: string;
+  endTime?: string;
   serviceItems?: Array<{
     service: string;
     serviceName: string;
@@ -100,6 +104,7 @@ interface AppointmentDetailsProps {
 }
 
 const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsProps) => {
+    const router = useRouter();
     console.log("AppointmentDetails received appointment:", appointment);
     if (!appointment) return (
         <Card className="sticky top-24">
@@ -138,6 +143,55 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
         console.error('Error parsing date in AppointmentDetails:', e);
     }
 
+    // Handler: Add to Calendar
+    const handleAddToCalendar = () => {
+        try {
+            const dateObj = new Date(appointment.date);
+            
+            // Format date for calendar event (YYYYMMDDTHHMMSS)
+            const startDateTime = dateObj.toISOString().replace(/-|:|\.\d+/g, '');
+            
+            // Calculate end time based on duration
+            const endDate = new Date(dateObj.getTime() + appointment.duration * 60000);
+            const endDateTime = endDate.toISOString().replace(/-|:|\.\d+/g, '');
+            
+            // Create Google Calendar URL
+            const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(appointment.service + ' - ' + appointment.salon.name)}&dates=${startDateTime}/${endDateTime}&details=${encodeURIComponent(`Professional: ${appointment.staff}\nLocation: ${appointment.salon.address}`)}&location=${encodeURIComponent(appointment.salon.address)}`;
+            
+            window.open(calendarUrl, '_blank');
+        } catch (error) {
+            console.error('Error adding to calendar:', error);
+            alert('Unable to add to calendar. Please try again.');
+        }
+    };
+
+    // Handler: Get Directions
+    const handleGetDirections = () => {
+        try {
+            const address = appointment.salon.address;
+            // Open Google Maps with the salon address
+            const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+            window.open(mapsUrl, '_blank');
+        } catch (error) {
+            console.error('Error opening directions:', error);
+            alert('Unable to open directions. Please try again.');
+        }
+    };
+
+    // Handler: Salon Details
+    const handleSalonDetails = () => {
+        try {
+            if (appointment.vendorId) {
+                router.push(`/salon-details/${appointment.vendorId}`);
+            } else {
+                alert('Salon information not available.');
+            }
+        } catch (error) {
+            console.error('Error navigating to salon details:', error);
+            alert('Unable to open salon details. Please try again.');
+        }
+    };
+
     return (
         <Card className="sticky top-24">
             <CardHeader>
@@ -174,12 +228,18 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
                 <div className="space-y-3">
                     <h4 className="font-semibold">Options</h4>
                     <div className="grid grid-cols-2 gap-2">
-                        <Button variant="outline" className="justify-start gap-2"><Calendar className="h-4 w-4"/> Add to Calendar</Button>
-                        <Button variant="outline" className="justify-start gap-2"><MapPin className="h-4 w-4"/> Get Directions</Button>
+                        <Button variant="outline" className="justify-start gap-2" onClick={handleAddToCalendar}>
+                            <Calendar className="h-4 w-4"/> Add to Calendar
+                        </Button>
+                        <Button variant="outline" className="justify-start gap-2" onClick={handleGetDirections}>
+                            <MapPin className="h-4 w-4"/> Get Directions
+                        </Button>
                         <Button variant="outline" className="justify-start gap-2" disabled={!isAppointmentCancellable(appointment.date)} onClick={() => onCancelClick(appointment)}>
                             <Edit className="h-4 w-4"/> Manage Appointment
                         </Button>
-                         <Button variant="outline" className="justify-start gap-2"><LinkIcon className="h-4 w-4"/> Salon Details</Button>
+                        <Button variant="outline" className="justify-start gap-2" onClick={handleSalonDetails} disabled={!appointment.vendorId}>
+                            <LinkIcon className="h-4 w-4"/> Salon Details
+                        </Button>
                     </div>
                 </div>
                 

@@ -23,6 +23,7 @@ export default function RootLayout({
     '/clients',
     '/services',
     '/products',
+    '/product-questions',
     '/marketplace',
     '/sales',
     '/invoice-management',

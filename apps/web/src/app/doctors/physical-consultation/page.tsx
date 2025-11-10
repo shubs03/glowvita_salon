@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGetDoctorWorkingHoursQuery, useCreateConsultationMutation } from '@repo/store/services/api';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Calendar, User, Clock, CheckCircle, Home, Eye, ChevronRight, Loader2 } from "lucide-react";
@@ -66,6 +67,7 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
 
 export default function PhysicalConsultationPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [doctorId, setDoctorId] = useState<string>('');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -193,6 +195,9 @@ export default function PhysicalConsultationPage() {
         phoneNumber: consultationData.phoneNumber,
         email: consultationData.email,
         reason: consultationData.reason,
+        
+        // User ID (if logged in)
+        userId: user?._id || null,
         
         // Consultation Type & Details
         consultationType: 'physical',

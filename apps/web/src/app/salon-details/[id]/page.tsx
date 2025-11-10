@@ -1084,7 +1084,8 @@ export default function SalonDetailsPage() {
                     salonProducts.map((product: any) => (
                       <Card
                         key={product.id}
-                        className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left"
+                        className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left cursor-pointer"
+                        onClick={() => router.push(`/product-details/${product.id}`)}
                       >
                         <div className="relative aspect-square overflow-hidden rounded-md m-3">
                           <Image
@@ -1131,7 +1132,10 @@ export default function SalonDetailsPage() {
                                 size="sm"
                                 variant="outline"
                                 className="w-full text-xs lg:mr-3"
-                                onClick={() => handleBuyNow(product)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBuyNow(product);
+                                }}
                               >
                                 Buy Now
                               </Button>
@@ -1140,7 +1144,10 @@ export default function SalonDetailsPage() {
                                 size="sm"
                                 variant="outline"
                                 className="w-fit text-xs"
-                                onClick={() => handleAddToCart(product)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddToCart(product);
+                                }}
                               >
                                 <ShoppingCart className="h-4 w-4" />
                               </Button>

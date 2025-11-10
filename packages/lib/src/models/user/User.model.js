@@ -54,6 +54,8 @@ const userSchema = new mongoose.Schema({
   refferalCode: {
     type: String,
     trim: true,
+    unique: true,
+    sparse: true, // Allow multiple null values but unique non-null values
   },
   referredBy: {
     type: mongoose.Schema.Types.ObjectId,
