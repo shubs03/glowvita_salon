@@ -40,6 +40,8 @@
     "./models/Vendor/Shipping.model": "./src/models/Vendor/Shipping.model.js",
     "./models/Vendor/Staff.model": "./src/models/Vendor/Staff.model.js",
     "./models/Vendor/VendorWorkingHours.model": "./src/models/Vendor/VendorWorkingHours.model.js",
+    "./models/Vendor/CRMOffer.model": "./src/models/Vendor/CRMOffer.model.js",
+    "./models/Vendor/Billing.model": "./src/models/Vendor/Billing.model.js",
     "./models/Appointment/Appointment.model": "./src/models/Appointment/Appointment.model.js",
     "./stateCity": "./src/state-city.json",
     "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",

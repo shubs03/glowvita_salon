@@ -8,11 +8,33 @@ import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
 
+// GET - Fetch all clients for a vendor or a single client by ID
 // GET - Fetch all clients for a vendor (both offline and online)
 export const GET = authMiddlewareCrm(async (req) => {
     try {
         const vendorId = req.user.userId.toString();
         const url = new URL(req.url);
+        const clientId = url.searchParams.get('id');
+        
+        // If client ID is provided, fetch single client with all details
+        if (clientId) {
+            const client = await ClientModel.findOne({ _id: clientId, vendorId }).lean();
+
+            if (!client) {
+                return NextResponse.json({ 
+                    success: false,
+                    message: "Client not found" 
+                }, { status: 404 });
+            }
+
+            // Ensure birthdayDate is included in the response
+            return NextResponse.json({ 
+                success: true,
+                data: client
+            }, { status: 200 });
+        }
+        
+        // Otherwise fetch all clients (existing functionality)
         const searchTerm = url.searchParams.get('search');
         const status = url.searchParams.get('status');
         const limit = parseInt(url.searchParams.get('limit')) || 100;
@@ -153,7 +175,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 // POST - Create a new client
 export const POST = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.toString();
+        const vendorId = req.user.userId.toString();
         const body = await req.json();
 
         // Validate required fields
@@ -218,7 +240,7 @@ export const POST = authMiddlewareCrm(async (req) => {
         const client = new ClientModel(clientData);
         await client.save();
 
-        // Exclude removed fields from response
+        // Include all fields in response for view action
         const clientResponse = client.toObject();
         delete clientResponse.emergencyContact;
         delete clientResponse.socialMediaLinks;
@@ -253,7 +275,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 // PUT - Update an existing client
 export const PUT = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.toString();
+        const vendorId = req.user.userId.toString();
         const body = await req.json();
         const { _id: clientId, ...updateData } = body;
 
@@ -363,7 +385,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
             { new: true, runValidators: true }
         );
 
-        // Exclude removed fields from response
+        // Include all fields in response for view action
         const clientResponse = updatedClient.toObject();
         delete clientResponse.emergencyContact;
         delete clientResponse.socialMediaLinks;
@@ -398,7 +420,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE - Delete a client
 export const DELETE = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.toString();
+        const vendorId = req.user.userId.toString();
         const body = await req.json();
         const { id: clientId } = body;
 

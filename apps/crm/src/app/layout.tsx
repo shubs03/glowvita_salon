@@ -26,6 +26,7 @@ export default function RootLayout({
     '/product-questions',
     '/marketplace',
     '/sales',
+    '/invoice-management',
     '/orders',
     '/shipping',
     '/settlements',

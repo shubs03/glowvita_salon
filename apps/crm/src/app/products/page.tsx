@@ -160,7 +160,8 @@ export default function ProductsPage() {
     const handleDeleteProduct = async () => {
         if (selectedProduct) {
             try {
-                await deleteProduct({ id: selectedProduct._id }).unwrap();
+                // delete data
+            await deleteProduct(selectedProduct._id).unwrap();
                 toast.success('Product deleted successfully!');
                 setIsDeleteModalOpen(false);
                 refetchProducts();

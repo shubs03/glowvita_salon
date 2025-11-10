@@ -72,6 +72,7 @@ import { useCartSync } from "@/hooks/useCartSync";
 import { toast } from "sonner";
 import ServicesSection from "./components/ServicesSection";
 import Link from "next/link";
+import { ReviewForm } from '@/components/ReviewForm';
 
 // Skeleton Components
 const Skeleton = ({ className }: { className?: string }) => (
@@ -345,6 +346,7 @@ export default function SalonDetailsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   const [mainImage, setMainImage] = useState("");
+  const [showReviewForm, setShowReviewForm] = useState(false);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -1244,11 +1246,32 @@ export default function SalonDetailsPage() {
                     )}
                   </CardContent>
                   <CardFooter>
-                    <Button variant="outline" className="w-full">
-                      {vendorData?.reviews?.length > 0
-                        ? "Read All Reviews"
-                        : "Write a Review"}
-                    </Button>
+                    {showReviewForm ? (
+                      <div className="w-full">
+                        <ReviewForm 
+                          entityId={vendorData?._id || ''}
+                          entityType="salon"
+                          onSubmitSuccess={() => setShowReviewForm(false)}
+                        />
+                        <Button 
+                          variant="outline" 
+                          className="w-full mt-4"
+                          onClick={() => setShowReviewForm(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setShowReviewForm(true)}
+                      >
+                        {vendorData?.reviews?.length > 0
+                          ? "Read All Reviews"
+                          : "Write a Review"}
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               </section>
