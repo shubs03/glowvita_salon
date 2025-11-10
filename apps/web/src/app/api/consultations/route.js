@@ -25,7 +25,8 @@ export const POST = async (req) => {
       consultationType,
       appointmentDate,
       appointmentTime,
-      consultationFee
+      consultationFee,
+      userId
     } = body;
 
     if (!doctorId || !patientName || !phoneNumber || !reason || !consultationType || !appointmentDate || !appointmentTime) {
@@ -87,6 +88,7 @@ export const POST = async (req) => {
       doctorAddress: body.doctorAddress || doctor.clinicAddress,
       
       patientId: patient._id,
+      userId: userId || null,
       patientName,
       phoneNumber,
       email: body.email,
@@ -163,6 +165,7 @@ export const GET = async (req) => {
     
     const doctorId = searchParams.get('doctorId');
     const patientId = searchParams.get('patientId');
+    const userId = searchParams.get('userId');
     const phoneNumber = searchParams.get('phoneNumber');
     const status = searchParams.get('status');
     const consultationType = searchParams.get('consultationType');
@@ -179,6 +182,10 @@ export const GET = async (req) => {
 
     if (patientId) {
       query.patientId = patientId;
+    }
+
+    if (userId) {
+      query.userId = userId;
     }
 
     if (phoneNumber) {

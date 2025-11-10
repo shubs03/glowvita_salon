@@ -50,6 +50,7 @@ interface MarketingHeaderProps {
 const profileNavItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
   { id: 'appointments', label: 'My Appointments', icon: Calendar, href: '/profile/appointments' },
+  { id: 'consultations', label: 'My Consultations', icon: Calendar, href: '/profile/consultations' },
   { id: 'orders', label: 'My Orders', icon: ShoppingCart, href: '/profile/orders' },
   { id: 'cart', label: 'My Cart', icon: ShoppingCart, href: '/profile/cart' },
   { id: 'reviews', label: 'My Reviews', icon: Star, href: '/profile/reviews' },
