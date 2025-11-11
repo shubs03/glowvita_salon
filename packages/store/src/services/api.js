@@ -1557,6 +1557,16 @@ export const glowvitaApi = createApi({
       ],
     }),
 
+    // Add the delete billing mutation
+    deleteBilling: builder.mutation({
+      query: (id) => ({
+        url: "/crm/billing",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Billing"],
+    }),
+
     // Doctor Consultation Endpoints (Web App - Physical & Video Consultations)
     getConsultations: builder.query({
       query: ({ doctorId, patientId, userId, phoneNumber, status, consultationType, startDate, endDate, page = 1, limit = 50 } = {}) => {
@@ -1892,6 +1902,7 @@ export const {
   useGetBillingRecordsQuery,
   useGetBillingByIdQuery,
   useUpdateBillingMutation,
+  useDeleteBillingMutation,
   useUpdateAppointmentStatusMutation,
   useGetPatientsQuery,
   useCreatePatientMutation,

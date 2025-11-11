@@ -7,10 +7,10 @@ import { Input } from "@repo/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Label } from "@repo/ui/label";
-import { Search, Calendar, User, Package, Scissors, Eye, Download } from "lucide-react";
+import { Search, Calendar, User, Package, Scissors, Eye, Download, Trash2 } from "lucide-react";
 import InvoiceUI from "@/components/InvoiceUI";
 import { toast } from 'sonner';
-import { useGetBillingRecordsQuery, useGetVendorProfileQuery } from "@repo/store/api";
+import { useGetBillingRecordsQuery, useGetVendorProfileQuery, useDeleteBillingMutation } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import html2pdf from 'html2pdf.js';
 import { Pagination } from "@repo/ui/pagination";
@@ -111,6 +111,9 @@ export default function InvoiceManagementPage() {
     skip: !VENDOR_ID
   });
   
+  // Delete billing mutation
+  const [deleteBilling] = useDeleteBillingMutation();
+  
   // Get vendor name from profile
   const vendorName = vendorProfile?.data?.businessName || vendorProfile?.data?.shopName || "Your Salon";
 
@@ -172,16 +175,15 @@ export default function InvoiceManagementPage() {
   
   // Get unique payment methods for the payment method filter dropdown
   const uniquePaymentMethods: string[] = billingsData?.data ? 
-    Array.from(
-      new Set(
-        billingsData.data
-          .filter((b: Billing) => b.paymentMethod)
-          .map((b: Billing) => b.paymentMethod)
-      )
-    ) as string[] : [];
+    billingsData.data
+      .filter((b: Billing) => b.paymentMethod)
+      .map((b: Billing) => b.paymentMethod)
+      .filter((method, index, self) => self.indexOf(method) === index) : [];
   
   // Ensure "Net Banking" is always available as an option
-  const paymentMethodsIncludingDefaults = [...new Set([...uniquePaymentMethods, "Net Banking"])];
+  const paymentMethodsIncludingDefaults = uniquePaymentMethods.includes("Net Banking") 
+    ? uniquePaymentMethods 
+    : [...uniquePaymentMethods, "Net Banking"];
 
   // Get item type for display
   const getItemTypeDisplay = (itemType: 'Service' | 'Product') => {
@@ -268,6 +270,18 @@ export default function InvoiceManagementPage() {
   const closeInvoiceModal = () => {
     setIsInvoiceModalOpen(false);
     setSelectedBilling(null);
+  };
+
+  // Delete billing record
+  const deleteBillingRecord = async (billing: Billing) => {
+    try {
+      await deleteBilling(billing._id).unwrap();
+      toast.success(`Invoice ${billing.invoiceNumber} deleted successfully`);
+      refetch(); // Refresh the data
+    } catch (error: any) {
+      toast.error(`Failed to delete invoice ${billing.invoiceNumber}`);
+      console.error('Delete error:', error);
+    }
   };
 
   // Clear date filters
@@ -576,6 +590,13 @@ export default function InvoiceManagementPage() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => deleteBillingRecord(billing)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -666,6 +687,15 @@ export default function InvoiceManagementPage() {
                             >
                               <Eye className="mr-1 h-4 w-4" />
                               View
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => deleteBillingRecord(billing)}
+                              className="rounded-lg"
+                            >
+                              <Trash2 className="mr-1 h-4 w-4" />
+                              Delete
                             </Button>
                           </div>
                         </div>
