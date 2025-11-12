@@ -2,7 +2,7 @@
 import { 
     FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut, 
     FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn, 
-    FaBell, FaGift, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock, FaTruck, FaShoppingCart, FaShippingFast, FaMoneyCheckAlt, FaStore, FaReceipt, FaQuestionCircle
+    FaBell, FaGift, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock, FaTruck, FaShoppingCart, FaShippingFast, FaMoneyCheckAlt, FaStore, FaReceipt, FaQuestionCircle, FaStar
 } from "react-icons/fa";
 import { IconType } from "react-icons";
 
@@ -22,6 +22,7 @@ export const vendorNavItems: NavItem[] = [
   { title: "Services", href: "/services", Icon: FaCut, permission: 'services_view' },
   { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
   { title: "Product Questions", href: "/product-questions", Icon: FaQuestionCircle, permission: 'product_questions_view' },
+  { title: "Reviews", href: "/reviews", Icon: FaStar, permission: 'reviews_view' },
   { title: "Marketplace", href: "/marketplace", Icon: FaStore, permission: 'marketplace_view' },
   { title: "Sales", href: "/sales", Icon: FaDollarSign, permission: 'sales_view' },
   { title: "Invoice Management", href: "/invoice-management", Icon: FaReceipt, permission: 'invoice_management_view' },
@@ -56,6 +57,7 @@ export const supplierNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
   { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
   { title: "Product Questions", href: "/product-questions", Icon: FaQuestionCircle, permission: 'product_questions_view' },
+  { title: "Reviews", href: "/reviews", Icon: FaStar, permission: 'reviews_view' },
   { title: "Orders", href: "/orders", Icon: FaShoppingCart, permission: 'orders_view' },
   { title: "Sales", href: "/sales", Icon: FaDollarSign, permission: 'sales_view' },
   { title: "Expenses", href: "/expenses", Icon: FaReceipt, permission: 'expenses_view' },

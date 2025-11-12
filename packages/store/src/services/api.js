@@ -319,6 +319,30 @@ export const glowvitaApi = createApi({
       invalidatesTags: (result, error, { productId }) => [{ type: "ProductQuestions", id: productId }],
     }),
 
+    // Product Reviews - Get all reviews for a product (Web)
+    getProductReviews: builder.query({
+      query: (productId) => ({ url: `/products/reviews/${productId}`, method: "GET" }),
+      providesTags: (result, error, productId) => [{ type: "ProductReviews", id: productId }],
+      transformResponse: (response) => response,
+    }),
+
+    // Product Reviews - Submit a new review (Web)
+    submitProductReview: builder.mutation({
+      query: ({ productId, rating, comment }) => ({ 
+        url: `/products/reviews/${productId}`, 
+        method: "POST", 
+        body: { productId, rating, comment } 
+      }),
+      invalidatesTags: (result, error, { productId }) => [{ type: "ProductReviews", id: productId }],
+    }),
+
+    // Salon Reviews - Get all reviews for a salon (Web)
+    getSalonReviews: builder.query({
+      query: (salonId) => ({ url: `/salons/reviews/${salonId}`, method: "GET" }),
+      providesTags: (result, error, salonId) => [{ type: "SalonReviews", id: salonId }],
+      transformResponse: (response) => response,
+    }),
+
     // Public Services for vendor details page
     getPublicVendorServices: builder.query({
       query: (vendorId) => ({ url: `/services/vendor/${vendorId}`, method: "GET" }),
@@ -1109,6 +1133,32 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["CrmProductQuestions"],
     }),
 
+    // CRM Reviews - Get all reviews for vendor's products/services/salons
+    getCrmReviews: builder.query({
+      query: ({ filter = 'all', entityType = 'all' }) => ({ 
+        url: `/crm/reviews?filter=${filter}&entityType=${entityType}`, 
+        method: "GET" 
+      }),
+      providesTags: ["CrmReviews"],
+      transformResponse: (response) => response,
+    }),
+
+    // CRM Reviews - Approve/Reject a review
+    approveReview: builder.mutation({
+      query: ({ reviewId, isApproved }) => ({ 
+        url: `/crm/reviews/${reviewId}`, 
+        method: "PATCH", 
+        body: { isApproved } 
+      }),
+      invalidatesTags: ["CrmReviews"],
+    }),
+
+    // CRM Reviews - Delete a review
+    deleteReview: builder.mutation({
+      query: (reviewId) => ({ url: `/crm/reviews/${reviewId}`, method: "DELETE" }),
+      invalidatesTags: ["CrmReviews"],
+    }),
+
     // New endpoint to fetch all vendor products with origin 'Vendor'
     getAllVendorProducts: builder.query({
       query: () => ({ url: "/products", method: "GET" }),
@@ -1689,6 +1739,9 @@ export const {
   useGetPublicProductByIdQuery,
   useGetProductQuestionsQuery,
   useSubmitProductQuestionMutation,
+  useGetProductReviewsQuery,
+  useSubmitProductReviewMutation,
+  useGetSalonReviewsQuery,
   useGetPublicVendorServicesQuery,
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorStaffQuery,
@@ -1808,6 +1861,9 @@ export const {
   useGetCrmProductQuestionsQuery,
   useAnswerProductQuestionMutation,
   useDeleteProductQuestionMutation,
+  useGetCrmReviewsQuery,
+  useApproveReviewMutation,
+  useDeleteReviewMutation,
   useGetSupplierProductsQuery,
   useGetSupplierProfileQuery,
   useGetCurrentSupplierProfileQuery,

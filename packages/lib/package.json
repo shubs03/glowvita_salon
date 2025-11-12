@@ -53,6 +53,7 @@
     "./models/Vendor/Expense.model": "./src/models/Vendor/Expense.model.js",
     "./models/admin/SuperData.model": "./src/models/admin/SuperData.model.js",
     "./models/Vendor/ProductQuestion.model": "./src/models/Vendor/ProductQuestion.model.js",
+    "./models/Review/Review.model": "./src/models/Review/Review.model.js",
     "./utils": "./src/utils/index.js",
     "./utils/paymentCalculator": "./src/utils/paymentCalculator.js"
   },

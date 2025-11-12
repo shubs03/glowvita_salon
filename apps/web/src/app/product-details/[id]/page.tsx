@@ -11,19 +11,14 @@ import { useState } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
-import { useGetPublicProductByIdQuery, useAddToClientCartMutation, useGetProductQuestionsQuery, useSubmitProductQuestionMutation } from '@repo/store/api';
+import { Textarea } from '@repo/ui/textarea';
+import { useGetPublicProductByIdQuery, useAddToClientCartMutation, useGetProductQuestionsQuery, useSubmitProductQuestionMutation, useGetProductReviewsQuery, useSubmitProductReviewMutation } from '@repo/store/api';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart as addToLocalCart } from "@repo/store/slices/cartSlice";
 import { useAuth } from '@/hooks/useAuth';
 import { useCartSync } from "@/hooks/useCartSync";
 import { toast } from 'sonner';
-
-const reviews = [
-    { id: 1, author: 'Emily R.', rating: 5, date: '2 weeks ago', text: 'This product is magic in a bottle! My skin has never looked better. It feels brighter, smoother, and so hydrated. I\'ve gotten so many compliments since I started using it.' },
-    { id: 2, author: 'Jessica M.', rating: 4, date: '1 month ago', text: 'I like this product a lot. It\'s not greasy and absorbs quickly. I\'ve noticed a reduction in my fine lines. The only downside is the price, but a little goes a long way.' },
-    { id: 3, author: 'Sarah L.', rating: 5, date: '3 months ago', text: 'Absolutely obsessed! I have sensitive skin and this didn\'t irritate it at all. My dark spots have visibly faded. I will definitely be repurchasing this forever!' },
-];
 
 export default function ProductDetailsPage() {
   const params = useParams();
@@ -39,6 +34,12 @@ export default function ProductDetailsPage() {
   const [questionText, setQuestionText] = useState('');
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
   
+  // Review states
+  const [reviewRating, setReviewRating] = useState(0);
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  
   // Fetch product data
   const { data: productResponse, isLoading, error } = useGetPublicProductByIdQuery(id as string);
   const [addToCartAPI] = useAddToClientCartMutation();
@@ -47,7 +48,12 @@ export default function ProductDetailsPage() {
   const { data: questionsResponse, refetch: refetchQuestions } = useGetProductQuestionsQuery(id as string);
   const [submitQuestion] = useSubmitProductQuestionMutation();
 
+  // Fetch product reviews
+  const { data: reviewsResponse, refetch: refetchReviews } = useGetProductReviewsQuery(id as string);
+  const [submitReview] = useSubmitProductReviewMutation();
+
   const productQuestions = questionsResponse?.questions || [];
+  const productReviews = reviewsResponse?.reviews || [];
 
   console.log("Product Response:", productResponse);
   
@@ -242,7 +248,7 @@ export default function ProductDetailsPage() {
       toast.error("Please log in to ask a question", {
         action: {
           label: "Log In",
-          onClick: () => router.push("/login"),
+          onClick: () => router.push("/client-login"),
         },
       });
       return;
@@ -277,6 +283,61 @@ export default function ProductDetailsPage() {
       toast.error(error?.data?.message || "Failed to submit question. Please try again.");
     } finally {
       setIsSubmittingQuestion(false);
+    }
+  };
+
+  // Handle review submission
+  const handleSubmitReview = async () => {
+    // Check if user is logged in
+    if (!isAuthenticated || !user) {
+      toast.error("Please log in to write a review", {
+        action: {
+          label: "Log In",
+          onClick: () => router.push("/client-login"),
+        },
+      });
+      return;
+    }
+
+    // Validate rating
+    if (!reviewRating || reviewRating < 1) {
+      toast.error("Please select a rating");
+      return;
+    }
+
+    // Validate comment
+    if (!reviewComment.trim()) {
+      toast.error("Please write a review");
+      return;
+    }
+
+    if (reviewComment.trim().length < 10) {
+      toast.error("Review must be at least 10 characters long");
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      await submitReview({
+        productId: id as string,
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+      }).unwrap();
+
+      toast.success("Review submitted successfully!", {
+        description: "Thank you for your feedback!",
+      });
+      
+      // Reset form
+      setReviewRating(0);
+      setHoveredRating(0);
+      setReviewComment('');
+      refetchReviews();
+    } catch (error: any) {
+      console.error("Failed to submit review:", error);
+      toast.error(error?.data?.message || "Failed to submit review. Please try again.");
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -514,20 +575,107 @@ export default function ProductDetailsPage() {
             <h2 className="text-2xl font-bold mb-4">Ratings & Reviews</h2>
             <Card>
               <CardContent className="p-6 space-y-6">
-                {reviews.map(review => (
-                  <div key={review.id} className="border-b pb-4 last:border-b-0">
-                    <div className="flex items-center justify-between mb-2">
+                {productReviews.length > 0 ? (
+                  productReviews.map((review: any) => (
+                    <div key={review._id} className="border-b pb-4 last:border-b-0">
+                      <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                                <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                            ))}
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                          ))}
                         </div>
-                        <p className="text-xs text-muted-foreground">{review.date}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(review.createdAt).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </p>
+                      </div>
+                      <p className="font-semibold">{review.userName}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{review.comment}</p>
                     </div>
-                    <p className="font-semibold">{review.author}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{review.text}</p>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No reviews yet. Be the first to review!
+                  </p>
+                )}
+                
+                {/* Review Submission Form */}
+                <div className="pt-4 border-t">
+                  <Label htmlFor="write-review" className="font-semibold mb-2 block">Write a Review</Label>
+                  
+                  {/* Star Rating Input */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-sm text-muted-foreground">Your Rating:</span>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewRating(star)}
+                          onMouseEnter={() => setHoveredRating(star)}
+                          onMouseLeave={() => setHoveredRating(0)}
+                          className="focus:outline-none transition-transform hover:scale-110"
+                        >
+                          <Star 
+                            className={`h-6 w-6 ${
+                              star <= (hoveredRating || reviewRating) 
+                                ? 'text-yellow-400 fill-current' 
+                                : 'text-gray-300'
+                            }`} 
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    {reviewRating > 0 && (
+                      <span className="text-sm text-muted-foreground">
+                        ({reviewRating} {reviewRating === 1 ? 'star' : 'stars'})
+                      </span>
+                    )}
                   </div>
-                ))}
+
+                  {/* Review Text Input */}
+                  <Textarea 
+                    id="write-review" 
+                    placeholder="Share your experience with this product..." 
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    rows={4}
+                    className="mb-2"
+                  />
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleSubmitReview}
+                      disabled={isSubmittingReview || !reviewComment.trim() || !reviewRating}
+                      className="flex-1"
+                    >
+                      {isSubmittingReview ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        'Submit Review'
+                      )}
+                    </Button>
+                  </div>
+                  
+                  {!isAuthenticated && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Please{' '}
+                      <button
+                        onClick={() => router.push('/client-login')}
+                        className="text-blue-600 hover:underline font-medium"
+                      >
+                        log in
+                      </button>
+                      {' '}to write a review
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -598,7 +746,7 @@ export default function ProductDetailsPage() {
                     <p className="text-xs text-muted-foreground mt-2">
                       Please{' '}
                       <button
-                        onClick={() => router.push('/login')}
+                        onClick={() => router.push('/client-login')}
                         className="text-blue-600 hover:underline font-medium"
                       >
                         log in

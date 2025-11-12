@@ -35,6 +35,15 @@ const reviewSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  isApproved: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  approvedAt: {
+    type: Date,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now,
