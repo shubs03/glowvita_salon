@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -13,17 +12,16 @@ import { Avatar, AvatarImage, AvatarFallback } from '@repo/ui/avatar';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
-    const { user } = useAuth();
+    const { user, updateUser } = useAuth();
     const [formData, setFormData] = useState({
-        name: '',
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
-        address: '',
+        state: '',
+        city: '',
+        pincode: '',
     });
-
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [passwords, setPasswords] = useState({
         currentPassword: '',
@@ -33,16 +31,20 @@ export default function SettingsPage() {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [isProfileLoading, setIsProfileLoading] = useState(false);
+    const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
     useEffect(() => {
         if (user) {
             setFormData({
-                name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
                 email: user.emailAddress || '',
                 phone: user.mobileNo || '',
-                address: user.address || '',
+                state: user.state || '',
+                city: user.city || '',
+                pincode: user.pincode || '',
             });
-            setImagePreview(user.profilePicture || null);
         }
     }, [user]);
     
@@ -55,28 +57,47 @@ export default function SettingsPage() {
         const { name, value } = e.target;
         setPasswords(prev => ({ ...prev, [name]: value }));
     };
-
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
     
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, you would dispatch an action to update the user profile
-        // including converting the imageFile to base64 or uploading it
-        console.log("Updating profile with:", { ...formData, imageFile });
-        toast.success("Profile updated successfully!");
+        setIsProfileLoading(true);
+        
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    mobileNo: formData.phone,
+                    state: formData.state,
+                    city: formData.city,
+                    pincode: formData.pincode,
+                }),
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                // Update the user in context with the full user data from the response
+                if (data.user) {
+                    updateUser(data.user);
+                }
+                toast.success("Profile updated successfully!");
+            } else {
+                toast.error(data.message || "Failed to update profile");
+            }
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            toast.error("An error occurred while updating profile");
+        } finally {
+            setIsProfileLoading(false);
+        }
     };
     
-    const handlePasswordUpdate = (e: React.FormEvent) => {
+    const handlePasswordUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (passwords.newPassword !== passwords.confirmPassword) {
             toast.error("New passwords do not match.");
@@ -86,9 +107,36 @@ export default function SettingsPage() {
             toast.error("New password must be at least 6 characters long.");
             return;
         }
-        console.log("Updating password...");
-        toast.success("Password updated successfully!");
-        setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        
+        setIsPasswordLoading(true);
+        
+        try {
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    currentPassword: passwords.currentPassword,
+                    newPassword: passwords.newPassword,
+                    confirmPassword: passwords.confirmPassword,
+                }),
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                toast.success("Password updated successfully!");
+                setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            } else {
+                toast.error(data.message || "Failed to update password");
+            }
+        } catch (error) {
+            console.error("Error updating password:", error);
+            toast.error("An error occurred while updating password");
+        } finally {
+            setIsPasswordLoading(false);
+        }
     };
 
     return (
@@ -99,62 +147,95 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-8">
                 <form onSubmit={handleProfileUpdate} className="space-y-6">
-                    <div className="flex items-center gap-6">
-                        <div className="relative group">
-                            <Avatar className="w-24 h-24 text-4xl">
-                                <AvatarImage src={imagePreview || undefined} alt={formData.name} />
-                                <AvatarFallback>
-                                    {formData.name.split(' ').map(n => n[0]).join('') || <User />}
-                                </AvatarFallback>
-                            </Avatar>
-                            <Button
-                                type="button"
-                                size="icon"
-                                className="absolute bottom-0 right-0 rounded-full h-8 w-8 bg-primary text-primary-foreground group-hover:bg-primary/90"
-                                onClick={() => fileInputRef.current?.click()}
-                            >
-                                <Camera className="h-4 w-4" />
-                            </Button>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleImageChange}
-                                accept="image/*"
-                                className="hidden"
-                            />
-                        </div>
-                        <div className="flex-grow">
-                            <h3 className="text-xl font-semibold">{formData.name}</h3>
-                            <p className="text-muted-foreground">{formData.email}</p>
-                        </div>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="name">Full Name</Label>
-                            <Input id="name" name="name" value={formData.name} onChange={handleInputChange} />
+                            <Label htmlFor="firstName">First Name</Label>
+                            <Input 
+                                id="firstName" 
+                                name="firstName" 
+                                value={formData.firstName} 
+                                onChange={handleInputChange} 
+                                required 
+                            />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} disabled />
+                            <Label htmlFor="lastName">Last Name</Label>
+                            <Input 
+                                id="lastName" 
+                                name="lastName" 
+                                value={formData.lastName} 
+                                onChange={handleInputChange} 
+                                required 
+                            />
                         </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input 
+                            id="email" 
+                            name="email" 
+                            type="email" 
+                            value={formData.email} 
+                            onChange={handleInputChange} 
+                            disabled 
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="phone">Phone</Label>
-                        <Input id="phone" name="phone" value={formData.phone} onChange={handleInputChange} />
+                        <Input 
+                            id="phone" 
+                            name="phone" 
+                            value={formData.phone} 
+                            onChange={handleInputChange} 
+                            required 
+                        />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="address">Address</Label>
-                        <Input id="address" name="address" value={formData.address} onChange={handleInputChange} />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="state">State</Label>
+                            <Input 
+                                id="state" 
+                                name="state" 
+                                value={formData.state} 
+                                onChange={handleInputChange} 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="city">City</Label>
+                            <Input 
+                                id="city" 
+                                name="city" 
+                                value={formData.city} 
+                                onChange={handleInputChange} 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="pincode">Pincode</Label>
+                            <Input 
+                                id="pincode" 
+                                name="pincode" 
+                                value={formData.pincode} 
+                                onChange={handleInputChange} 
+                            />
+                        </div>
                     </div>
-                    <Button type="submit">Save Profile Changes</Button>
+                    <Button type="submit" disabled={isProfileLoading}>
+                        {isProfileLoading ? "Saving..." : "Save Profile Changes"}
+                    </Button>
                 </form>
                 <Separator />
                 <form onSubmit={handlePasswordUpdate} className="space-y-4">
                     <h3 className="font-semibold">Change Password</h3>
                     <div className="space-y-2 relative">
-                        <Label>Current Password</Label>
-                        <Input name="currentPassword" type={showCurrentPassword ? "text" : "password"} value={passwords.currentPassword} onChange={handlePasswordChange} />
+                        <Label htmlFor="currentPassword">Current Password</Label>
+                        <Input 
+                            id="currentPassword"
+                            name="currentPassword" 
+                            type={showCurrentPassword ? "text" : "password"} 
+                            value={passwords.currentPassword} 
+                            onChange={handlePasswordChange} 
+                            required 
+                        />
                         <Button
                             type="button"
                             variant="ghost"
@@ -167,8 +248,15 @@ export default function SettingsPage() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 relative">
-                            <Label>New Password</Label>
-                            <Input name="newPassword" type={showNewPassword ? "text" : "password"} value={passwords.newPassword} onChange={handlePasswordChange} />
+                            <Label htmlFor="newPassword">New Password</Label>
+                            <Input 
+                                id="newPassword"
+                                name="newPassword" 
+                                type={showNewPassword ? "text" : "password"} 
+                                value={passwords.newPassword} 
+                                onChange={handlePasswordChange} 
+                                required 
+                            />
                              <Button
                                 type="button"
                                 variant="ghost"
@@ -180,8 +268,15 @@ export default function SettingsPage() {
                             </Button>
                         </div>
                         <div className="space-y-2 relative">
-                            <Label>Confirm New Password</Label>
-                            <Input name="confirmPassword" type={showConfirmPassword ? "text" : "password"} value={passwords.confirmPassword} onChange={handlePasswordChange} />
+                            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                            <Input 
+                                id="confirmPassword"
+                                name="confirmPassword" 
+                                type={showConfirmPassword ? "text" : "password"} 
+                                value={passwords.confirmPassword} 
+                                onChange={handlePasswordChange} 
+                                required 
+                            />
                              <Button
                                 type="button"
                                 variant="ghost"
@@ -193,7 +288,9 @@ export default function SettingsPage() {
                             </Button>
                         </div>
                     </div>
-                    <Button type="submit">Update Password</Button>
+                    <Button type="submit" disabled={isPasswordLoading}>
+                        {isPasswordLoading ? "Updating..." : "Update Password"}
+                    </Button>
                 </form>
             </CardContent>
         </Card>
