@@ -158,3 +158,50 @@ export const PUT = authMiddlewareCrm(async (req) => {
         );
     }
 }, ['vendor']);
+
+// DELETE - Delete a billing record
+export const DELETE = authMiddlewareCrm(async (req) => {
+    try {
+        const vendorId = req.user.userId.toString();
+        const body = await req.json();
+        
+        // Validate required fields
+        if (!body.id) {
+            return NextResponse.json(
+                { success: false, message: 'Missing required field: id' },
+                { status: 400 }
+            );
+        }
+
+        // Delete billing record
+        const deletedRecord = await BillingModel.findOneAndDelete(
+            { _id: body.id, vendorId }
+        );
+
+        if (!deletedRecord) {
+            return NextResponse.json(
+                { success: false, message: 'Billing record not found' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json(
+            { 
+                success: true, 
+                message: 'Billing record deleted successfully',
+                data: deletedRecord
+            },
+            { status: 200 }
+        );
+    } catch (error) {
+        console.error('Error deleting billing record:', error);
+        return NextResponse.json(
+            { 
+                success: false, 
+                message: 'Failed to delete billing record',
+                error: error.message 
+            },
+            { status: 500 }
+        );
+    }
+}, ['vendor']);
