@@ -3,6 +3,25 @@ import dbConnect from '@repo/lib/db';
 import User from '@repo/lib/models/user';
 import { hashPassword, createJwt } from '@repo/lib/auth';
 import { cookies } from 'next/headers';
+import { ReferralModel, C2CSettingsModel } from '@repo/lib/models/admin/Reffer';
+
+// Function to generate unique referral code
+const generateReferralCode = async (firstName, lastName) => {
+  // Generate base code with first 3 letters of first name and last name
+  const baseCode = `${firstName.substring(0, 3)}${lastName.substring(0, 3)}`.toUpperCase();
+  
+  // Add random 3-digit number
+  const randomNum = Math.floor(100 + Math.random() * 900); // Generates number between 100-999
+  let referralCode = `${baseCode}${randomNum}`;
+  
+  // Check if code exists and generate unique one
+  while (await User.findOne({ refferalCode: referralCode })) {
+    const newRandomNum = Math.floor(100 + Math.random() * 900);
+    referralCode = `${baseCode}${newRandomNum}`;
+  }
+  
+  return referralCode;
+};
 
 export async function POST(req) {
   try {
@@ -57,6 +76,9 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Service unavailable. Please try again later.' }, { status: 503 });
     }
 
+    // Generate unique referral code for the new user
+    const newUserReferralCode = await generateReferralCode(firstName, lastName);
+
     // Prepare user data
     const userData = {
       firstName,
@@ -66,7 +88,7 @@ export async function POST(req) {
       state,
       city,
       pincode,
-      refferalCode: referralCode || undefined, // Handle empty string as undefined
+      refferalCode: newUserReferralCode, // Assign generated referral code
       password: hashedPassword,
       role: 'USER', // Default role for web signup
     };
@@ -98,9 +120,10 @@ export async function POST(req) {
     }
 
     // Handle referral code - check if it refers to an existing user
+    let referringUser = null;
     if (referralCode) {
       try {
-        const referringUser = await User.findOne({ refferalCode: referralCode });
+        referringUser = await User.findOne({ refferalCode: referralCode });
         if (referringUser) {
           userData.referredBy = referringUser._id;
         }
@@ -134,6 +157,36 @@ export async function POST(req) {
       return NextResponse.json({ 
         message: 'Internal server error. Please try again later.'
       }, { status: 500 });
+    }
+
+    // Create referral entry if user was referred by someone
+    if (referringUser && referralCode) {
+      try {
+        // Get C2C settings to determine bonus amount
+        const c2cSettings = await C2CSettingsModel.findOne();
+        const bonusAmount = c2cSettings?.referrerBonus?.bonusValue || 100;
+        const bonusType = c2cSettings?.referrerBonus?.bonusType || 'amount';
+        const bonusString = bonusType === 'amount' ? `₹${bonusAmount}` : `${bonusAmount}%`;
+
+        // Generate unique referral ID
+        const referralId = `REF${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
+        // Create referral record
+        await ReferralModel.create({
+          referralType: 'C2C',
+          referralId: referralId,
+          referrer: referringUser._id.toString(),
+          referee: user._id.toString(),
+          date: new Date(),
+          status: 'Pending',
+          bonus: bonusString,
+        });
+
+        console.log('Referral entry created successfully');
+      } catch (referralError) {
+        console.error('Error creating referral entry:', referralError);
+        // Don't fail the signup if referral creation fails
+      }
     }
     
     let token;

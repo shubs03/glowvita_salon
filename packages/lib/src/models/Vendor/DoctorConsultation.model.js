@@ -46,6 +46,11 @@ const doctorConsultationSchema = new mongoose.Schema({
     ref: 'Patient',
     index: true
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
   patientName: {
     type: String,
     required: true,
@@ -211,6 +216,7 @@ const doctorConsultationSchema = new mongoose.Schema({
 // Compound indexes for efficient queries
 doctorConsultationSchema.index({ doctorId: 1, appointmentDate: 1, status: 1 });
 doctorConsultationSchema.index({ patientId: 1, appointmentDate: -1 });
+doctorConsultationSchema.index({ userId: 1, appointmentDate: -1 });
 doctorConsultationSchema.index({ phoneNumber: 1, appointmentDate: -1 });
 doctorConsultationSchema.index({ consultationType: 1, status: 1, appointmentDate: 1 });
 

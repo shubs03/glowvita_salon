@@ -19,7 +19,8 @@ import {
   Star,
   Heart,
   MessageSquare,
-  Gift
+  Gift,
+  Stethoscope
 } from "lucide-react";
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
@@ -31,6 +32,7 @@ import Cookies from 'js-cookie';
 const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
   { id: 'appointments', label: 'My Appointments', icon: Calendar, href: '/profile/appointments' },
+  { id: 'consultations', label: 'My Consultations', icon: Stethoscope, href: '/profile/consultations' },
   { id: 'orders', label: 'My Orders', icon: ShoppingCart, href: '/profile/orders' },
   { id: 'cart', label: 'My Cart', icon: ShoppingCart, href: '/profile/cart' },
   { id: 'reviews', label: 'My Reviews', icon: Star, href: '/profile/reviews' },

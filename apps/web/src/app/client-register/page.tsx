@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
-import { Eye, EyeOff, Map } from 'lucide-react';
+import { Eye, EyeOff, Map, Gift } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_registration.jpg';
@@ -34,7 +34,9 @@ interface MapboxFeature {
   }>;
 }
 
-export default function ClientRegisterPage() {
+function ClientRegisterForm() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -48,7 +50,17 @@ export default function ClientRegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const router = useRouter();
+
+  // Extract referral code from URL on component mount
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setReferralCode(refCode);
+      toast.success('Referral code applied!', {
+        description: `You're signing up with referral code: ${refCode}`
+      });
+    }
+  }, [searchParams]);
 
   // Map functionality states
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -573,14 +585,23 @@ export default function ClientRegisterPage() {
                     <label htmlFor="referralCode" className="block text-sm font-medium text-gray-700 mb-1">
                       Referral Code (Optional)
                     </label>
-                    <input
-                      id="referralCode"
-                      type="text"
-                      placeholder="Enter referral code"
-                      value={referralCode}
-                      onChange={(e) => setReferralCode(e.target.value)}
-                      className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
-                    />
+                    <div className="relative">
+                      <Gift className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <input
+                        id="referralCode"
+                        type="text"
+                        placeholder="Enter referral code"
+                        value={referralCode}
+                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                        className="w-full h-11 pl-10 pr-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                      />
+                    </div>
+                    {referralCode && (
+                      <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                        <Gift className="h-3 w-3" />
+                        You'll earn rewards when you complete your first booking!
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -753,5 +774,20 @@ export default function ClientRegisterPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ClientRegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading registration form...</p>
+        </div>
+      </div>
+    }>
+      <ClientRegisterForm />
+    </Suspense>
   );
 }

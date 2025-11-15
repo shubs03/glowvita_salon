@@ -64,6 +64,7 @@ import {
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorServicesQuery,
   useAddToClientCartMutation,
+  useGetSalonReviewsQuery,
 } from "@repo/store/api";
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart, setCurrentUser } from "@repo/store/slices/cartSlice";
@@ -404,11 +405,40 @@ export default function SalonDetailsPage() {
     skip: !id,
   });
 
+  // Fetch salon reviews
+  const {
+    data: reviewsData,
+    isLoading: isLoadingReviews,
+    error: reviewsError,
+    refetch: refetchReviews,
+  } = useGetSalonReviewsQuery(id, {
+    skip: !id,
+  });
+
   // Cart mutation for authenticated users
   const [addToCartAPI] = useAddToClientCartMutation();
 
   // Initialize cart sync
   useCartSync();
+
+  // Get salon reviews and calculate metrics
+  const salonReviews = useMemo(() => {
+    return reviewsData?.reviews || [];
+  }, [reviewsData]);
+
+  const reviewMetrics = useMemo(() => {
+    if (salonReviews.length === 0) {
+      return { averageRating: 0, totalReviews: 0 };
+    }
+    
+    const totalRating = salonReviews.reduce((sum: number, review: any) => sum + (review.rating || 0), 0);
+    const averageRating = totalRating / salonReviews.length;
+    
+    return {
+      averageRating: parseFloat(averageRating.toFixed(1)),
+      totalReviews: salonReviews.length
+    };
+  }, [salonReviews]);
 
   const salon = useMemo(() => {
     if (vendorData) {
@@ -416,8 +446,8 @@ export default function SalonDetailsPage() {
         ...defaultSalon,
         id: vendorData._id || defaultSalon.id,
         name: vendorData.businessName || "No Name Available",
-        rating: vendorData.rating || 4.8,
-        reviewCount: vendorData.clientCount || 250,
+        rating: reviewMetrics.averageRating || vendorData.rating || 4.8,
+        reviewCount: reviewMetrics.totalReviews || vendorData.clientCount || 0,
         address: `${vendorData.city || ""}, ${vendorData.state || ""}`,
         email: vendorData.email || "",
         website: vendorData.website || "",
@@ -437,7 +467,7 @@ export default function SalonDetailsPage() {
       return salonData;
     }
     return defaultSalon;
-  }, [vendorData]);
+  }, [vendorData, reviewMetrics]);
 
   const salonProducts = useMemo(() => {
     if (!productsData?.products) return [];
@@ -1084,7 +1114,8 @@ export default function SalonDetailsPage() {
                     salonProducts.map((product: any) => (
                       <Card
                         key={product.id}
-                        className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left"
+                        className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left cursor-pointer"
+                        onClick={() => router.push(`/product-details/${product.id}`)}
                       >
                         <div className="relative aspect-square overflow-hidden rounded-md m-3">
                           <Image
@@ -1131,7 +1162,10 @@ export default function SalonDetailsPage() {
                                 size="sm"
                                 variant="outline"
                                 className="w-full text-xs lg:mr-3"
-                                onClick={() => handleBuyNow(product)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBuyNow(product);
+                                }}
                               >
                                 Buy Now
                               </Button>
@@ -1140,7 +1174,10 @@ export default function SalonDetailsPage() {
                                 size="sm"
                                 variant="outline"
                                 className="w-fit text-xs"
-                                onClick={() => handleAddToCart(product)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddToCart(product);
+                                }}
                               >
                                 <ShoppingCart className="h-4 w-4" />
                               </Button>
@@ -1190,36 +1227,42 @@ export default function SalonDetailsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {vendorData?.reviews?.length > 0 ? (
-                      vendorData.reviews.map((review: any, index: number) => (
-                        <div key={index} className="border-t pt-4">
+                    {isLoadingReviews ? (
+                      <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="border-t pt-4">
+                            <Skeleton className="h-20 w-full" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : salonReviews.length > 0 ? (
+                      salonReviews.map((review: any) => (
+                        <div key={review._id} className="border-t pt-4">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
-                                {review.author?.charAt(0) || "U"}
+                                {review.userName?.charAt(0) || "U"}
                               </div>
                               <div>
                                 <p className="font-semibold text-sm">
-                                  {review.author || "Anonymous"}
+                                  {review.userName || "Anonymous"}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {review.date
-                                    ? new Date(review.date).toLocaleDateString(
-                                        "en-US",
-                                        {
-                                          day: "numeric",
-                                          month: "short",
-                                          year: "numeric",
-                                        }
-                                      )
-                                    : "Date not available"}
+                                  {new Date(review.createdAt).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    }
+                                  )}
                                 </p>
                               </div>
                             </div>
                             <StarRating rating={review.rating || 0} />
                           </div>
                           <p className="text-sm text-muted-foreground italic">
-                            "{review.text || "No review text available"}"
+                            "{review.comment || "No review text available"}"
                           </p>
                         </div>
                       ))
@@ -1244,7 +1287,10 @@ export default function SalonDetailsPage() {
                         <ReviewForm 
                           entityId={vendorData?._id || ''}
                           entityType="salon"
-                          onSubmitSuccess={() => setShowReviewForm(false)}
+                          onSubmitSuccess={() => {
+                            setShowReviewForm(false);
+                            refetchReviews();
+                          }}
                         />
                         <Button 
                           variant="outline" 
@@ -1260,8 +1306,8 @@ export default function SalonDetailsPage() {
                         className="w-full"
                         onClick={() => setShowReviewForm(true)}
                       >
-                        {vendorData?.reviews?.length > 0
-                          ? "Read All Reviews"
+                        {salonReviews.length > 0
+                          ? "Write a Review"
                           : "Write a Review"}
                       </Button>
                     )}

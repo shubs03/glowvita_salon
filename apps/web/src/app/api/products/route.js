@@ -67,7 +67,9 @@ export const GET = async (request) => {
       description: product.description || '',
       price: product.price,
       salePrice: product.salePrice > 0 ? product.salePrice : null,
-      image: product.productImage || 'https://placehold.co/320x224/e2e8f0/64748b?text=Product',
+      image: product.productImages && product.productImages.length > 0 
+        ? product.productImages[0] 
+        : 'https://placehold.co/320x224/e2e8f0/64748b?text=Product',
       vendorId: product.vendorId?._id || product.vendorId,
       vendorName: product.vendorId?.businessName || 'Unknown Vendor',
       category: 'Beauty Products',

@@ -113,8 +113,8 @@ export default function CheckoutPage() {
         return;
       }
       
-      // For UPI and Credit/Debit Card payments, use Razorpay
-      if (paymentMethod === 'upi' || paymentMethod === 'credit-card') {
+      // For UPI, Credit/Debit Card, and Net Banking payments, use Razorpay
+      if (paymentMethod === 'upi' || paymentMethod === 'credit-card' || paymentMethod === 'netbanking') {
         // Create Razorpay payment order
         const paymentOrderResponse = await createPaymentOrder({
           amount: totalAmount,
@@ -146,6 +146,13 @@ export default function CheckoutPage() {
             card: false,
             upi: true,
             netbanking: false,
+            wallet: false,
+          };
+        } else if (paymentMethod === 'netbanking') {
+          paymentMethods = {
+            card: false,
+            upi: false,
+            netbanking: true,
             wallet: false,
           };
         }
@@ -354,6 +361,11 @@ export default function CheckoutPage() {
                       <span>UPI</span>
                     </Label>
                     <Label className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
+                      <RadioGroupItem value="netbanking" id="netbanking" />
+                      <Landmark className="h-5 w-5" />
+                      <span>Net Banking</span>
+                    </Label>
+                    <Label className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
                       <RadioGroupItem value="cash-on-delivery" id="cash-on-delivery" />
                       <Wallet className="h-5 w-5" />
                       <span>Cash on Delivery</span>
@@ -372,6 +384,7 @@ export default function CheckoutPage() {
                    paymentMethod === 'cash-on-delivery' ? 'Place Order' :
                    paymentMethod === 'credit-card' ? 'Pay with Card' :
                    paymentMethod === 'upi' ? 'Pay with UPI' :
+                   paymentMethod === 'netbanking' ? 'Pay with Net Banking' :
                    'Place Order'
                   }
                 </Button>
