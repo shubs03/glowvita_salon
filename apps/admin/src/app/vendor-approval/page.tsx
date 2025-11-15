@@ -18,7 +18,6 @@ import { useGetPendingServicesQuery, useUpdateServiceStatusMutation } from '@rep
 import { useGetVendorProductsQuery, useUpdateProductStatusMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 import DocumentStatusManager from '../../components/DocumentStatusManager';
-import DebugVendorDocuments from '../../components/DebugVendorDocuments';
 
 // Vendor type
 type Vendor = {
@@ -1033,10 +1032,7 @@ export default function VendorApprovalPage() {
                   />
                 </div>
                 
-                {/* Debug Vendor Documents - Remove in production */}
-                <div className="col-span-3 mt-4">
-                  <DebugVendorDocuments vendor={selectedItem as Vendor} />
-                </div>
+                
               </>
             )}
             {itemType === 'service' && selectedItem && (

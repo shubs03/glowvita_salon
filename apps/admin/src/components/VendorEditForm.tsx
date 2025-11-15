@@ -3,6 +3,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
+import { useUpdateVendorDocumentStatusMutation } from '@repo/store/api';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@repo/ui/tabs';
 import { Button } from '@repo/ui/button';
@@ -12,7 +14,8 @@ import { Textarea } from '@repo/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Checkbox } from '@repo/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
-import { Trash2, UploadCloud, CheckCircle2, Users, Eye, EyeOff, Map } from 'lucide-react';
+import { Badge } from '@repo/ui/badge';
+import { Trash2, UploadCloud, CheckCircle2, Users, Eye, EyeOff, Map, X, FileText, Clock } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../packages/config/config';
@@ -28,7 +31,7 @@ interface Subscription {
 }
 
 interface BankDetails {
-  accountHolderName: string;
+  accountHolder: string;
   accountNumber: string;
   bankName: string;
   branchName: string;
@@ -47,6 +50,7 @@ interface Document {
   notes?: string;
 }
 
+// Update type definitions
 export type SalonCategory = 'unisex' | 'men' | 'women';
 type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
 
@@ -69,8 +73,8 @@ export interface Vendor {
   address: string;
   password?: string;
   subscription?: Subscription;
-  gallery?: string[];
-  documents?: Document[];
+  gallery?: string[]; // Add gallery field
+  documents?: Record<string, any>; // Add documents field to match vendor model
   bankDetails?: BankDetails;
   location?: { lat: number; lng: number } | null;
   confirmPassword?: string;
@@ -326,6 +330,11 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                     src={formData.profileImage} 
                     alt="Profile" 
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.log('Profile image failed to load in VendorEditForm:', formData.profileImage);
+                      // Set a fallback image on error
+                      (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full bg-gray-100 flex items-center justify-center">
@@ -617,12 +626,444 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
     </>
   );
 };
-// Stub components for other tabs
-const SubscriptionTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Subscription Info</div>;
-const GalleryTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Gallery</div>;
-const BankDetailsTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Bank Details</div>;
-const DocumentsTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => <div>Documents</div>;
-const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => <div>Clients</div>;
+
+const SubscriptionTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle>Subscription Information</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p>Subscription management functionality would be implemented here.</p>
+    </CardContent>
+  </Card>
+);
+
+// Add GalleryTab component for view-only mode
+const GalleryTab = ({ vendor }: { vendor: Vendor | null }) => {
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  
+  if (!vendor) return <div>No vendor data available</div>;
+  
+  const openPreview = (src: string) => {
+    setPreviewImage(src);
+  };
+
+  const closePreview = () => {
+    setPreviewImage(null);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Salon Gallery</CardTitle>
+        {/* <CardDescription>View salon's photo gallery.</CardDescription> */}
+      </CardHeader>
+      <CardContent>
+        {vendor.gallery && vendor.gallery.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {vendor.gallery.map((src, index) => (
+              <div key={index} className="relative group aspect-video">
+                <img
+                  src={src}
+                  alt={`Salon image ${index + 1}`}
+                  className="object-cover rounded-lg cursor-pointer w-full h-full"
+                  onClick={() => openPreview(src)}
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Button 
+                    variant="secondary" 
+                    size="icon"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openPreview(src);
+                    }}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground py-4">No images uploaded yet</p>
+        )}
+        
+        {/* Image Preview Modal */}
+        {previewImage && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closePreview}>
+            <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
+              <Button 
+                variant="secondary" 
+                size="icon" 
+                className="absolute -top-12 right-0"
+                onClick={closePreview}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <img
+                src={previewImage}
+                alt="Preview"
+                className="object-contain max-h-[80vh] mx-auto max-w-full"
+                onError={(e) => {
+                  console.log('Gallery image failed to load in VendorEditForm:', previewImage);
+                  // Set a fallback image on error
+                  (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Add BankDetailsTab component for view-only mode
+const BankDetailsTab = ({ vendor }: { vendor: Vendor | null }) => {
+  if (!vendor) return <div>No vendor data available</div>;
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Bank Details</CardTitle>
+        {/* <CardDescription>View vendor's bank account information.</CardDescription> */}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Account Holder Name</Label>
+            <Input 
+              value={vendor.bankDetails?.accountHolder || ''} 
+              readOnly
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Account Number</Label>
+            <Input 
+              value={vendor.bankDetails?.accountNumber || ''} 
+              readOnly
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Bank Name</Label>
+            <Input 
+              value={vendor.bankDetails?.bankName || ''} 
+              readOnly
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>IFSC Code</Label>
+            <Input 
+              value={vendor.bankDetails?.ifscCode || ''} 
+              readOnly
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Add DocumentsTab component for view-only mode
+const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
+  const [previewDocument, setPreviewDocument] = useState<{ src: string; type: string } | null>(null);
+  const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
+  const [selectedDocumentType, setSelectedDocumentType] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [updateDocumentStatus] = useUpdateVendorDocumentStatusMutation();
+  
+  if (!vendor) return <div>No vendor data available</div>;
+  
+  const openDocumentPreview = (src: string, type: string) => {
+    setPreviewDocument({ src, type });
+  };
+
+  const closeDocumentPreview = () => {
+    setPreviewDocument(null);
+  };
+
+  // Document types based on the Vendor model
+  const documentTypes = [
+    { key: 'aadharCard', label: 'Aadhar Card' },
+    { key: 'panCard', label: 'PAN Card' },
+    { key: 'udyogAadhar', label: 'Udyog Aadhar' },
+    { key: 'udhayamCert', label: 'Udhayam Certificate' },
+    { key: 'shopLicense', label: 'Shop License' }
+  ];
+
+  // Get document status for a specific document type
+  const getDocumentStatus = (docType: string) => {
+    if (vendor.documents && typeof vendor.documents === 'object') {
+      const statusKey = `${docType}Status`;
+      return (vendor.documents as any)[statusKey] || 'pending';
+    }
+    return 'pending';
+  };
+
+  // Get rejection reason for a specific document type
+  const getRejectionReason = (docType: string) => {
+    if (vendor.documents && typeof vendor.documents === 'object') {
+      const reasonKey = `${docType}RejectionReason`;
+      return (vendor.documents as any)[reasonKey] || '';
+    }
+    return '';
+  };
+
+  // Get document value for a specific document type
+  const getDocumentValue = (docType: string) => {
+    if (vendor.documents && typeof vendor.documents === 'object') {
+      return (vendor.documents as any)[docType] || null;
+    }
+    return null;
+  };
+
+  // Get status badge based on document status
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle2 className="mr-1 h-3 w-3" /> Approved</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-100 text-red-800"><X className="mr-1 h-3 w-3" /> Rejected</Badge>;
+      case 'pending':
+      default:
+        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="mr-1 h-3 w-3" /> Pending</Badge>;
+    }
+  };
+
+  // Handle approve document
+  const handleApproveDocument = async (docType: string) => {
+    try {
+      await updateDocumentStatus({
+        vendorId: vendor._id!,
+        documentType: docType,
+        status: 'approved',
+        rejectionReason: ''
+      }).unwrap();
+      
+      // Add toast notification for successful approval
+      const documentLabel = documentTypes.find(d => d.key === docType)?.label || docType;
+      toast.success(`${documentLabel} approved successfully`);
+    } catch (error) {
+      console.error('Failed to approve document:', error);
+      toast.error('Failed to approve document');
+    }
+  };
+
+  // Handle reject document - open modal
+  const handleRejectDocument = (docType: string) => {
+    setSelectedDocumentType(docType);
+    setRejectionReason('');
+    setIsRejectionModalOpen(true);
+  };
+
+  // Handle confirm rejection
+  const handleConfirmRejection = async () => {
+    if (!selectedDocumentType) return;
+    
+    try {
+      await updateDocumentStatus({
+        vendorId: vendor._id!,
+        documentType: selectedDocumentType,
+        status: 'rejected',
+        rejectionReason
+      }).unwrap();
+      
+      // Add toast notification for successful rejection
+      const documentLabel = documentTypes.find(d => d.key === selectedDocumentType)?.label || selectedDocumentType;
+      toast.success(`${documentLabel} rejected successfully`);
+      
+      setIsRejectionModalOpen(false);
+      setSelectedDocumentType(null);
+      setRejectionReason('');
+    } catch (error) {
+      console.error('Failed to reject document:', error);
+      toast.error('Failed to reject document');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Business Documents</CardTitle>
+        {/* <CardDescription>
+          Review vendor's verification documents.
+        </CardDescription> */}
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {documentTypes.map(({ key, label }) => {
+            const docValue = getDocumentValue(key);
+            const docStatus = getDocumentStatus(key);
+            const rejectionReasonText = getRejectionReason(key);
+            
+            return (
+              <div key={key} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{label}</p>
+                      {docValue ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center text-sm text-green-600">
+                            <CheckCircle2 className="mr-1 h-3 w-3" />
+                            Uploaded
+                          </span>
+                          {docStatus === 'pending' && (
+                            <Badge className="bg-yellow-100 text-yellow-800 text-xs">
+                              <Clock className="mr-1 h-2 w-2" />
+                              Pending
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center text-sm text-muted-foreground">
+                          <X className="mr-1 h-3 w-3" />
+                          Not uploaded
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {docValue ? (
+                      <>
+                        {docStatus !== 'pending' && getStatusBadge(docStatus)}
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => openDocumentPreview(docValue as string, key)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {docStatus === 'pending' && (
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 px-2 text-xs"
+                              onClick={() => handleApproveDocument(key)}
+                            >
+                              Approve
+                            </Button>
+                            <Button 
+                              variant="destructive" 
+                              size="sm" 
+                              className="h-8 px-2 text-xs"
+                              onClick={() => handleRejectDocument(key)}
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No action</span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Display rejection reason if document is rejected */}
+                {docStatus === 'rejected' && rejectionReasonText && (
+                  <div className="mt-3 p-3 bg-red-50 rounded-md border border-red-200">
+                    <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
+                    <p className="text-sm text-red-700">{rejectionReasonText}</p>
+                  </div>
+                )}
+                
+                {/* Display admin rejection reason if document is rejected */}
+                {docStatus === 'rejected' && vendor.documents && typeof vendor.documents === 'object' && (vendor.documents as any)[`${key}AdminRejectionReason`] && (
+                  <div className="mt-3 p-3 bg-red-50 rounded-md border border-red-200">
+                    <p className="text-sm font-medium text-red-800">Admin Rejection Reason:</p>
+                    <p className="text-sm text-red-700">{(vendor.documents as any)[`${key}AdminRejectionReason`]}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Document Preview Modal */}
+        {previewDocument && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closeDocumentPreview}>
+            <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
+              <Button 
+                variant="secondary" 
+                size="icon" 
+                className="absolute -top-12 right-0"
+                onClick={closeDocumentPreview}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              {previewDocument.src?.startsWith('data:application/pdf') ? (
+                <iframe
+                  src={previewDocument.src}
+                  className="w-full h-[80vh]"
+                  title="Document Preview"
+                />
+              ) : (
+                <img
+                  src={previewDocument.src || ''}
+                  alt="Document Preview"
+                  className="object-contain max-h-[80vh] mx-auto max-w-full"
+                  onError={(e) => {
+                    console.log('Document image failed to load in VendorEditForm:', previewDocument.src);
+                    // Set a fallback image on error
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Rejection Reason Modal */}
+        <Dialog open={isRejectionModalOpen} onOpenChange={setIsRejectionModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reject Document</DialogTitle>
+              <DialogDescription>
+                Please provide a reason for rejecting this document.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Label htmlFor="rejectionReason">Rejection Reason</Label>
+              <Textarea
+                id="rejectionReason"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Enter reason for rejection..."
+                className="min-h-[100px]"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsRejectionModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleConfirmRejection}
+                disabled={!rejectionReason.trim()}
+              >
+                Reject Document
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </CardContent>
+    </Card>
+  );
+};
+
+const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => (
+  <Card>
+    <CardHeader>
+      <CardTitle>Clients</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <p>Client management functionality would be implemented here.</p>
+    </CardContent>
+  </Card>
+);
 
 interface VendorEditFormProps {
   isOpen: boolean;
@@ -744,12 +1185,37 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
                 isEditMode={isEditMode}
               />
             </TabsContent>
-            {/* Other Tabs would be here */}
-             <TabsContent value="subscription"><SubscriptionTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
-            <TabsContent value="gallery"><GalleryTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
-            <TabsContent value="bank"><BankDetailsTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
-            <TabsContent value="documents"><DocumentsTab formData={formData} handleInputChange={handleInputChange} errors={errors} /></TabsContent>
-            <TabsContent value="clients"><ClientsTab vendor={vendor} /></TabsContent>
+            <TabsContent value="subscription">
+              {isEditMode ? (
+                <SubscriptionTab formData={vendor} handleInputChange={handleInputChange} errors={errors} />
+              ) : (
+                <SubscriptionTab formData={formData} handleInputChange={handleInputChange} errors={errors} />
+              )}
+            </TabsContent>
+            <TabsContent value="gallery">
+              {isEditMode ? (
+                <GalleryTab vendor={vendor} />
+              ) : (
+                <GalleryTab vendor={formData} />
+              )}
+            </TabsContent>
+            <TabsContent value="bank">
+              {isEditMode ? (
+                <BankDetailsTab vendor={vendor} />
+              ) : (
+                <BankDetailsTab vendor={formData} />
+              )}
+            </TabsContent>
+            <TabsContent value="documents">
+              {isEditMode ? (
+                <DocumentsTab vendor={vendor} />
+              ) : (
+                <DocumentsTab vendor={formData} />
+              )}
+            </TabsContent>
+            <TabsContent value="clients">
+              <ClientsTab vendor={vendor} />
+            </TabsContent>
           </Tabs>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
