@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -44,7 +43,7 @@ type Supplier = {
 };
 
 export default function MarketplacePage() {
-  const { data: productsData = [], isLoading, isError, refetch } = useGetSupplierProductsQuery(undefined);
+  const { data: productsData, isLoading, isError, refetch } = useGetSupplierProductsQuery(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -60,12 +59,20 @@ export default function MarketplacePage() {
   const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
   const [createOrder, { isLoading: isCreatingOrder }] = useCreateCrmOrderMutation();
   
+  // Extract the products array from the API response
+  const productsArray = useMemo(() => {
+    if (!productsData) return [];
+    if (Array.isArray(productsData)) return productsData;
+    if (productsData.data && Array.isArray(productsData.data)) return productsData.data;
+    return [];
+  }, [productsData]);
+
   const filteredProducts = useMemo(() => {
-    return productsData.filter((product: any) =>
+    return productsArray.filter((product: any) =>
       (product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
        product.supplierName?.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [productsData, searchTerm]);
+  }, [productsArray, searchTerm]);
 
   const handleViewDetails = (product: Product) => {
     setSelectedProduct(product);
@@ -454,7 +461,7 @@ export default function MarketplacePage() {
             </div>
           )}
           
-          {productsData.length > 20 && filteredProducts.length >= 20 && (
+          {productsArray.length > 20 && filteredProducts.length >= 20 && (
             <div className="text-center mt-12">
               <Button 
                 variant="outline" 
