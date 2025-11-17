@@ -1031,6 +1031,8 @@ export default function VendorApprovalPage() {
                     }} 
                   />
                 </div>
+                
+                
               </>
             )}
             {itemType === 'service' && selectedItem && (

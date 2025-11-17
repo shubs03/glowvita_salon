@@ -1,8 +1,10 @@
 import _db from "@repo/lib/db";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
+import ClientModel from "@repo/lib/models/Vendor/Client.model";
 import PlanModel from "@repo/lib/models/admin/SubscriptionPlan";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin";
 import bcrypt from "bcryptjs";
+import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
 await _db();
 
@@ -13,6 +15,34 @@ const isValidBase64Image = (str) => {
   return base64Regex.test(str);
 };
 
+// Utility function to process base64 image and upload it
+// Also deletes the old image if a new one is uploaded
+const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
+    if (!base64String) return null;
+    
+    // Check if it's already a URL (not base64)
+    if (base64String.startsWith('http')) {
+        return base64String; // Already uploaded, return as is
+    }
+    
+    // Upload the base64 image and return the URL
+    const imageUrl = await uploadBase64(base64String, fileName);
+    
+    // If upload was successful and there's an old image, delete the old one
+    if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
+        try {
+            // Attempt to delete the old file
+            // We don't await this as we don't want to fail the whole operation if deletion fails
+            deleteFile(oldImageUrl).catch(err => {
+                console.warn('Failed to delete old image:', err);
+            });
+        } catch (err) {
+            console.warn('Error deleting old image:', err);
+        }
+    }
+    
+    return imageUrl;
+};
 // Create Vendor
 export const POST = authMiddlewareAdmin(
   async (req) => {
@@ -107,7 +137,7 @@ export const POST = authMiddlewareAdmin(
         { status: 400 }
       );
     }
-    if (profileImage && !isValidBase64Image(profileImage)) {
+    if (profileImage && !profileImage.startsWith("http") && !isValidBase64Image(profileImage)) {
       return Response.json(
         {
           message:
@@ -118,12 +148,13 @@ export const POST = authMiddlewareAdmin(
     }
     if (gallery && Array.isArray(gallery)) {
       for (const image of gallery) {
-        if (image && !isValidBase64Image(image)) {
+        if (
+          image &&
+          !image.startsWith("http") && // allow existing uploaded URLs
+          !isValidBase64Image(image)   // validate only new Base64 uploads
+        ) {
           return Response.json(
-            {
-              message:
-                "Invalid gallery image format. Must be base64 encoded image.",
-            },
+            { message: "Invalid gallery image format. Must be base64 encoded image." },
             { status: 400 }
           );
         }
@@ -177,7 +208,7 @@ export const POST = authMiddlewareAdmin(
           bankName: bankDetails.bankName || null,
           accountNumber: bankDetails.accountNumber || null,
           ifscCode: bankDetails.ifscCode || null,
-          accountHolder: bankDetails.accountHolderName || null,
+          accountHolder: bankDetails.accountHolder || null,
         }
       : {
           bankName: null,
@@ -186,9 +217,45 @@ export const POST = authMiddlewareAdmin(
           accountHolder: null,
         };
 
+    // Handle profile image upload if provided
+    let profileImageUrl = profileImage;
+    if (profileImage) {
+      const fileName = `vendor-${Date.now()}-profile`;
+      profileImageUrl = await processBase64Image(profileImage, fileName);
+      
+      if (!profileImageUrl) {
+        return Response.json(
+          { message: "Failed to upload profile image" },
+          { status: 500 }
+        );
+      }
+    }
+    
+    // Handle gallery images upload if provided
+    let galleryUrls = gallery || [];
+    if (gallery && Array.isArray(gallery)) {
+      galleryUrls = [];
+      for (let i = 0; i < gallery.length; i++) {
+        const image = gallery[i];
+        if (image) {
+          const fileName = `vendor-${Date.now()}-gallery-${i}`;
+          const imageUrl = await processBase64Image(image, fileName);
+          
+          if (imageUrl) {
+            galleryUrls.push(imageUrl);
+          } else {
+            galleryUrls.push(image);
+          }
+        } else {
+          galleryUrls.push(image);
+        }
+      }
+    }
+    
     // Transform documents safely
     const documentsArray = Array.isArray(documents) ? documents : [];
-
+    
+    // Handle document uploads if provided
     const documentsData = {
       aadharCard: documentsArray.find((d) => d.type === "aadhar")?.file || null,
       panCard: documentsArray.find((d) => d.type === "pan")?.file || null,
@@ -207,6 +274,29 @@ export const POST = authMiddlewareAdmin(
       shopLicenseStatus: documentsArray.find((d) => d.type === "license")?.file ? "pending" : undefined,
       udhayamCertStatus: documentsArray.find((d) => d.type === "udhayam")?.file ? "pending" : undefined,
     };
+    
+    // Process document uploads
+    if (documentsArray.length > 0) {
+      for (const doc of documentsArray) {
+        if (doc.file && !doc.file.startsWith('http')) {
+          const fileName = `vendor-${Date.now()}-${doc.type}`;
+          const docUrl = await processBase64Image(doc.file, fileName);
+          
+          if (docUrl) {
+            // Update the document field with the uploaded URL
+            const docField = doc.type === 'aadhar' ? 'aadharCard' : 
+                           doc.type === 'pan' ? 'panCard' : 
+                           doc.type === 'gst' ? 'udyogAadhar' : 
+                           doc.type === 'license' ? 'shopLicense' : 
+                           doc.type === 'udhayam' ? 'udhayamCert' : null;
+            
+            if (docField) {
+              documentsData[docField] = docUrl;
+            }
+          }
+        }
+      }
+    }
 
     // Create vendor
     const newVendor = await VendorModel.create({
@@ -225,9 +315,9 @@ export const POST = authMiddlewareAdmin(
       address,
       location,
       description: description || null,
-      profileImage: profileImage || null,
+      profileImage: profileImageUrl || null,
       subscription: subscriptionData,
-      gallery: gallery || [],
+      gallery: galleryUrls,
       bankDetails: bankDetailsData,
       documents: documentsData,
       createdAt: Date.now(),
@@ -247,7 +337,26 @@ export const POST = authMiddlewareAdmin(
 );
 
 // Get All Vendors
-export const GET = (async () => {
+export const GET = (async (req) => {
+  const url = new URL(req.url);
+  const vendorIdParam = url.searchParams.get('vendorId');
+  
+  // If vendorId is provided, fetch clients for that vendor
+  if (vendorIdParam) {
+    try {
+      const clients = await ClientModel.find({ vendorId: vendorIdParam })
+        .sort({ lastVisit: -1, createdAt: -1 })
+        .select('-emergencyContact -socialMediaLinks -tags -notes')
+        .lean();
+      
+      return Response.json(clients);
+    } catch (error) {
+      console.error('Error fetching vendor clients:', error);
+      return Response.json({ error: 'Failed to fetch clients' }, { status: 500 });
+    }
+  }
+  
+  // Otherwise fetch all vendors
   const vendors = await VendorModel.find().select("-password");
   return Response.json(vendors);
 });
@@ -343,7 +452,7 @@ export const PUT = authMiddlewareAdmin(
         { status: 400 }
       );
     }
-    if (profileImage && !isValidBase64Image(profileImage)) {
+    if (profileImage && !profileImage.startsWith("http") && !isValidBase64Image(profileImage)) {
       return Response.json(
         {
           message:
@@ -354,12 +463,13 @@ export const PUT = authMiddlewareAdmin(
     }
     if (gallery && Array.isArray(gallery)) {
       for (const image of gallery) {
-        if (image && !isValidBase64Image(image)) {
+        if (
+          image &&
+          !image.startsWith("http") && // allow existing uploaded URLs
+          !isValidBase64Image(image)   // validate only new Base64 uploads
+        ) {
           return Response.json(
-            {
-              message:
-                "Invalid gallery image format. Must be base64 encoded image.",
-            },
+            { message: "Invalid gallery image format. Must be base64 encoded image." },
             { status: 400 }
           );
         }
@@ -413,7 +523,7 @@ export const PUT = authMiddlewareAdmin(
           bankName: bankDetails.bankName || null,
           accountNumber: bankDetails.accountNumber || null,
           ifscCode: bankDetails.ifscCode || null,
-          accountHolder: bankDetails.accountHolderName || null,
+          accountHolder: bankDetails.accountHolder || null,
         }
       : {
           bankName: null,
@@ -438,6 +548,80 @@ export const PUT = authMiddlewareAdmin(
         [],
     };
 
+    // Handle profile image upload if provided
+    let profileImageUrl = profileImage;
+    if (profileImage && !profileImage.startsWith('http')) {
+      // Get existing vendor to get old image URL for deletion
+      const existingVendor = await VendorModel.findById(id);
+      const fileName = `vendor-${id}-profile`;
+      profileImageUrl = await processBase64Image(profileImage, fileName, existingVendor?.profileImage);
+      
+      if (profileImageUrl === null && profileImage) {
+        return Response.json(
+          { message: "Failed to upload profile image" },
+          { status: 500 }
+        );
+      }
+    }
+    
+    // Handle gallery images upload if provided
+    let galleryUrls = gallery || [];
+    if (gallery && Array.isArray(gallery)) {
+      galleryUrls = [];
+      // Get existing vendor to get old gallery URLs for deletion
+      const existingVendor = await VendorModel.findById(id);
+      
+      for (let i = 0; i < gallery.length; i++) {
+        const image = gallery[i];
+        if (image && !image.startsWith('http')) {
+          const fileName = `vendor-${id}-gallery-${i}`;
+          // Get the old image URL for this position if it exists
+          const oldImageUrl = existingVendor?.gallery && existingVendor.gallery[i] ? existingVendor.gallery[i] : null;
+          const imageUrl = await processBase64Image(image, fileName, oldImageUrl);
+          
+          if (imageUrl) {
+            galleryUrls.push(imageUrl);
+          } else {
+            galleryUrls.push(image);
+          }
+        } else {
+          galleryUrls.push(image);
+        }
+      }
+    }
+    
+    // Handle document uploads if provided
+    const documentsDataWithUrls = { ...documentsData };
+    if (documents && Array.isArray(documents)) {
+      // Get existing vendor to get old document URLs for deletion
+      const existingVendor = await VendorModel.findById(id);
+      
+      for (const doc of documents) {
+        if (doc.file && !doc.file.startsWith('http')) {
+          const fileName = `vendor-${id}-${doc.type}`;
+          // Get the old document URL if it exists
+          const docField = doc.type === 'aadhar' ? 'aadharCard' : 
+                         doc.type === 'pan' ? 'panCard' : 
+                         doc.type === 'gst' ? 'udyogAadhar' : 
+                         doc.type === 'license' ? 'shopLicense' : 
+                         doc.type === 'udhayam' ? 'udhayamCert' : null;
+          
+          const oldDocUrl = docField && existingVendor?.documents ? existingVendor.documents[docField] : null;
+          const docUrl = await processBase64Image(doc.file, fileName, oldDocUrl);
+          
+          if (docUrl) {
+            documentsDataWithUrls[docField] = docUrl;
+          }
+        }
+      }
+    } else {
+      // If no documents provided, keep existing document data
+      const existingVendor = await VendorModel.findById(id);
+      if (existingVendor?.documents) {
+        Object.assign(documentsDataWithUrls, existingVendor.documents);
+      }
+    }
+
     // Hash password if provided
     const updateData = {
       firstName,
@@ -454,11 +638,11 @@ export const PUT = authMiddlewareAdmin(
       website: website || null,
       address,
       description: description || null,
-      profileImage: profileImage || null,
+      profileImage: profileImageUrl || null,
       subscription: subscriptionData,
-      gallery: gallery || [],
+      gallery: galleryUrls,
       bankDetails: bankDetailsData,
-      documents: documentsData,
+      documents: documentsDataWithUrls,
       updatedAt: Date.now(),
     };
 

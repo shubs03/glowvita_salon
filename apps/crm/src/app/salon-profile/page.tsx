@@ -510,13 +510,23 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {gallery.map((src, index) => (
               <div key={index} className="relative group aspect-video">
-                <Image
-                  src={src}
-                  alt={`Salon image ${index + 1}`}
-                  layout="fill"
-                  className="object-cover rounded-lg cursor-pointer"
-                  onClick={() => openPreview(src)}
-                />
+                {src && (src?.startsWith('data:') || src?.startsWith('http')) ? (
+                  <img
+                    src={src}
+                    alt={`Salon image ${index + 1}`}
+                    className="object-cover rounded-lg cursor-pointer w-full h-full"
+                    onClick={() => openPreview(src)}
+                    onError={(e) => {
+                      console.log('Gallery image failed to load:', src);
+                      // Set a fallback image on error
+                      (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                    }}
+                  />
+                ) : (
+                  <div className="bg-gray-200 border-2 border-dashed rounded-lg w-full h-full flex items-center justify-center">
+                    <FileText className="h-8 w-8 text-gray-400" />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <div className="flex gap-2">
                     <Button 
@@ -560,13 +570,17 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
               >
                 <X className="h-4 w-4" />
               </Button>
-              <Image
-                src={previewImage}
-                alt="Preview"
-                width={800}
-                height={600}
-                className="object-contain max-h-[80vh] mx-auto"
-              />
+              {previewImage?.startsWith('data:') || previewImage?.startsWith('http') ? (
+                <img
+                  src={previewImage}
+                  alt="Preview"
+                  className="object-contain max-h-[80vh] mx-auto max-w-full"
+                />
+              ) : (
+                <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-full flex items-center justify-center">
+                  <FileText className="h-8 w-8 text-gray-400" />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -579,6 +593,7 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
 };
 
 const BankDetailsTab = ({ bankDetails, setVendor }: { bankDetails: BankDetails; setVendor: any }) => {
+  console.log("BankDetailsTab received bankDetails:", bankDetails);
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
   
   const handleSave = async () => {
@@ -717,28 +732,6 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
     }));
   };
 
-  const handleStatusChange = (docType: string, status: string) => {
-    setVendor((prev: any) => ({
-      ...prev,
-      documents: {
-        ...prev.documents,
-        [`${docType}Status`]: status,
-        // Clear rejection reason if status is not rejected
-        ...(status !== 'rejected' && { [`${docType}RejectionReason`]: null })
-      }
-    }));
-  };
-
-  const handleRejectionReasonChange = (docType: string, reason: string) => {
-    setVendor((prev: any) => ({
-      ...prev,
-      documents: {
-        ...prev.documents,
-        [`${docType}RejectionReason`]: reason
-      }
-    }));
-  };
-
   const openDocumentPreview = (src: string, type: string) => {
     setPreviewDocument({ src, type });
   };
@@ -750,12 +743,12 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <Badge className="bg-green-100 text-green-800"><CheckCircle2 className="mr-1 h-3 w-3" /> Approved</Badge>;
+        return <Check className="h-5 w-5 text-green-600" />;
       case 'rejected':
-        return <Badge className="bg-red-100 text-red-800"><X className="mr-1 h-3 w-3" /> Rejected</Badge>;
+        return <X className="h-5 w-5 text-red-600" />;
       case 'pending':
       default:
-        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="mr-1 h-3 w-3" /> Pending</Badge>;
+        return <Clock className="h-5 w-5 text-yellow-600" />;
     }
   };
 
@@ -779,6 +772,19 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
         <div className="space-y-6">
           {documentTypes.map(({ key, label }) => (
             <div key={key} className="border rounded-lg p-4">
+              {/* Hidden file input for each document type */}
+              <input
+                id={`doc-upload-${key}`}
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  handleDocumentUpload(key, file);
+                  // Reset the input value to allow uploading the same file again
+                  e.target.value = '';
+                }}
+              />
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <FileText className="h-5 w-5 text-muted-foreground" />
@@ -811,77 +817,19 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
                       </Button>
                     </>
                   ) : (
-                    <>
-                      <Badge className="bg-yellow-100 text-yellow-800">
-                        <Clock className="mr-1 h-3 w-3" />
-                        Pending
-                      </Badge>
-                      <Button variant="ghost" size="sm" asChild>
-                        <label htmlFor={`doc-upload-${key}`} className="cursor-pointer">
-                          Upload
-                        </label>
-                      </Button>
-                      <Input
-                        id={`doc-upload-${key}`}
-                        type="file"
-                        className="hidden"
-                        accept=".pdf,.jpg,.png"
-                        onChange={(e) => handleDocumentUpload(key, e.target.files?.[0] || null)}
-                      />
-                    </>
+                    <Button variant="ghost" size="sm" asChild>
+                      <label htmlFor={`doc-upload-${key}`} className="cursor-pointer">
+                        Upload
+                      </label>
+                    </Button>
                   )}
                 </div>
               </div>
               
-              {/* Status selection and rejection reason */}
-              {documents?.[key] && (
-                <div className="mt-3 pt-3 border-t">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor={`status-${key}`}>Document Status</Label>
-                      <Select 
-                        value={documents[`${key}Status`] || 'pending'} 
-                        onValueChange={(value) => handleStatusChange(key, value)}
-                      >
-                        <SelectTrigger id={`status-${key}`}>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="rejected">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    {documents[`${key}Status`] === 'rejected' && (
-                      <div>
-                        <Label htmlFor={`reason-${key}`}>Rejection Reason *</Label>
-                        <Textarea
-                          id={`reason-${key}`}
-                          placeholder="Enter reason for rejection"
-                          value={documents[`${key}RejectionReason`] || ''}
-                          onChange={(e) => handleRejectionReasonChange(key, e.target.value)}
-                          required
-                        />
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Display existing rejection reason if document is rejected */}
-                  {documents[`${key}Status`] === 'rejected' && documents[`${key}RejectionReason`] && (
-                    <div className="mt-3 p-3 bg-red-50 rounded-md">
-                      <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
-                      <p className="text-sm text-red-700">{documents[`${key}RejectionReason`]}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              
               {/* Display admin rejection reason if document is rejected */}
               {documents?.[`${key}Status`] === 'rejected' && documents[`${key}AdminRejectionReason`] && (
                 <div className="mt-3 p-3 bg-red-50 rounded-md border border-red-200">
-                  <p className="text-sm font-medium text-red-800">Admin Rejection Reason:</p>
+                  <p className="text-sm font-medium text-red-800">Rejection Reason:</p>
                   <p className="text-sm text-red-700">{documents[`${key}AdminRejectionReason`]}</p>
                 </div>
               )}
@@ -908,13 +856,22 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
                   title="Document Preview"
                 />
               ) : (
-                <Image
-                  src={previewDocument.src || ''}
-                  alt="Document Preview"
-                  width={800}
-                  height={600}
-                  className="object-contain max-h-[80vh] mx-auto"
-                />
+                previewDocument.src?.startsWith('data:') || previewDocument.src?.startsWith('http') ? (
+                  <img
+                    src={previewDocument.src || ''}
+                    alt="Document Preview"
+                    className="object-contain max-h-[80vh] mx-auto max-w-full"
+                    onError={(e) => {
+                      console.log('Document image failed to load:', previewDocument.src);
+                      // Set a fallback image on error
+                      (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                    }}
+                  />
+                ) : (
+                  <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-full flex items-center justify-center">
+                    <FileText className="h-8 w-8 text-gray-400" />
+                  </div>
+                )
               )}
             </div>
           </div>
@@ -2063,14 +2020,23 @@ const SupplierDocumentsTab = ({ supplier, setSupplier }: { supplier: SupplierPro
             {supplier.licenseFiles.map((file, index) => (
               <div key={index} className="border rounded-lg overflow-hidden relative group">
                 <div className="aspect-video relative">
-                  <Image
-                    src={file}
-                    alt={`License document ${index + 1}`}
-                    layout="fill"
-                    objectFit="cover"
-                    className="cursor-pointer"
-                    onClick={() => openImagePreview(file)}
-                  />
+                  {file && (file?.startsWith('data:') || file?.startsWith('http')) ? (
+                    <img
+                      src={file}
+                      alt={`License document ${index + 1}`}
+                      className="object-cover cursor-pointer w-full h-full"
+                      onClick={() => openImagePreview(file)}
+                      onError={(e) => {
+                        console.log('Supplier document image failed to load:', file);
+                        // Set a fallback image on error
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                      }}
+                    />
+                  ) : (
+                    <div className="bg-gray-200 border-2 border-dashed rounded-lg w-full h-full flex items-center justify-center">
+                      <FileText className="h-8 w-8 text-gray-400" />
+                    </div>
+                  )}
                 </div>
                 <div className="p-2 bg-muted text-center text-sm">
                   License Document {index + 1}
@@ -2116,13 +2082,17 @@ const SupplierDocumentsTab = ({ supplier, setSupplier }: { supplier: SupplierPro
             >
               <X className="h-4 w-4" />
             </Button>
-            <Image
-              src={previewImage}
-              alt="Document Preview"
-              width={800}
-              height={600}
-              className="object-contain max-h-[80vh] mx-auto"
-            />
+            {previewImage?.startsWith('data:') || previewImage?.startsWith('http') ? (
+              <img
+                src={previewImage}
+                alt="Document Preview"
+                className="object-contain max-h-[80vh] mx-auto max-w-full"
+              />
+            ) : (
+              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-full flex items-center justify-center">
+                <FileText className="h-8 w-8 text-gray-400" />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2169,7 +2139,13 @@ export default function SalonProfilePage() {
 
   useEffect(() => {
     if (vendorData?.data) {
-      setLocalVendor(vendorData.data);
+      console.log("Vendor data received:", vendorData.data);
+      // Ensure bankDetails is properly initialized
+      const vendorWithBankDetails = {
+        ...vendorData.data,
+        bankDetails: vendorData.data.bankDetails || {}
+      };
+      setLocalVendor(vendorWithBankDetails);
     }
   }, [vendorData]);
 
@@ -2522,13 +2498,23 @@ export default function SalonProfilePage() {
         <div className="bg-muted/30 p-6">
           <div className="flex flex-col md:flex-row items-start gap-6">
             <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-background shadow-lg flex-shrink-0 group">
-              <Image
-                src={profileData?.profileImage || "https://placehold.co/200x200.png"}
-                alt={role === 'vendor' ? "Salon Logo" : role === 'supplier' ? "Supplier Logo" : "Doctor Profile"}
-                layout="fill"
-                className="object-cover cursor-pointer"
-                onClick={openProfileImagePreview}
-              />
+              {profileData?.profileImage && (profileData?.profileImage?.startsWith('data:') || profileData?.profileImage?.startsWith('http')) ? (
+                <img
+                  src={profileData?.profileImage}
+                  alt={role === 'vendor' ? "Salon Logo" : role === 'supplier' ? "Supplier Logo" : "Doctor Profile"}
+                  className="object-cover cursor-pointer w-full h-full"
+                  onClick={openProfileImagePreview}
+                  onError={(e) => {
+                    console.log('Profile image failed to load:', profileData?.profileImage);
+                    // Set a fallback image on error
+                    (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                  }}
+                />
+              ) : (
+                <div className="bg-gray-200 border-2 border-dashed rounded-full w-full h-full flex items-center justify-center">
+                  <ImageIcon className="h-8 w-8 text-gray-400" />
+                </div>
+              )}
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                 <div className="flex gap-2">
                   {isUploading ? (
@@ -2628,13 +2614,17 @@ export default function SalonProfilePage() {
             >
               <X className="h-4 w-4" />
             </Button>
-            <Image
-              src={previewImage}
-              alt="Profile Preview"
-              width={800}
-              height={600}
-              className="object-contain max-h-[80vh] mx-auto"
-            />
+            {previewImage?.startsWith('data:') || previewImage?.startsWith('http') ? (
+              <img
+                src={previewImage}
+                alt="Profile Preview"
+                className="object-contain max-h-[80vh] mx-auto max-w-full"
+              />
+            ) : (
+              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-full flex items-center justify-center">
+                <FileText className="h-8 w-8 text-gray-400" />
+              </div>
+            )}
           </div>
         </div>
       )}
