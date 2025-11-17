@@ -178,7 +178,7 @@ export default function InvoiceManagementPage() {
     billingsData.data
       .filter((b: Billing) => b.paymentMethod)
       .map((b: Billing) => b.paymentMethod)
-      .filter((method, index, self) => self.indexOf(method) === index) : [];
+      .filter((method: string, index: number, self: string[]) => self.indexOf(method) === index) : [];
   
   // Ensure "Net Banking" is always available as an option
   const paymentMethodsIncludingDefaults = uniquePaymentMethods.includes("Net Banking") 
