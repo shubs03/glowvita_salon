@@ -993,6 +993,19 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Faq"],
     }),
 
+    // Admin Clients Endpoints
+    getAdminClients: builder.query({
+      query: ({ vendorId, page = 1, limit = 100 } = {}) => {
+        const params = new URLSearchParams();
+        if (vendorId) params.append('vendorId', vendorId);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+        return { url: `/admin/clients?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Client"],
+      transformResponse: (response) => (response && response.success ? response.data || [] : []),
+    }),
+
     // Admin Product Categories 
 
     getAdminProductCategories: builder.query({
@@ -1849,6 +1862,7 @@ export const {
   useDeleteFaqMutation,
   useGetVendorProductsQuery,
   useUpdateProductStatusMutation,
+  useGetAdminClientsQuery,
 
   // CRM Endpoints
   useVendorLoginMutation,
