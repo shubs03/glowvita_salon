@@ -10,11 +10,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@repo/ui/textarea";
 import { Search, Plus, Minus, Trash2, ShoppingCart, UserCheck, CheckCircle, X, Mail, Printer, DownloadCloud, Calendar, Paperclip } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useGetAdminProductCategoriesQuery, useGetCrmProductsQuery, useGetClientsQuery, useCreateClientMutation, useGetVendorProfileQuery, useCreateBillingMutation, useGetStaffQuery } from "@repo/store/api";
+import { useGetAdminProductCategoriesQuery, useGetCrmProductsQuery, useGetSupplierProductsQuery, useGetClientsQuery, useCreateClientMutation, useGetVendorProfileQuery, useCreateBillingMutation, useGetStaffQuery, useGetCurrentSupplierProfileQuery } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { toast } from 'sonner';
 import InvoiceUI from "@/components/InvoiceUI";
-import html2pdf from 'html2pdf.js';
+// Dynamically import html2pdf to avoid compilation issues
+let html2pdf: any;
+if (typeof window !== 'undefined') {
+  html2pdf = require('html2pdf.js').default;
+}
 
 // Product interface
 
@@ -81,15 +85,21 @@ export default function ProductsTab({
 }: ProductsTabProps) {
   const { user } = useCrmAuth();
   const VENDOR_ID = user?._id || "";
-  const invoiceRef = useRef<any>(null);
+  const userRole = user?.role;
   
-  // Fetch vendor profile
+  // Fetch profile based on user role
   const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
-    skip: !user?._id
+    skip: !user?._id || userRole === 'supplier'
   });
   
-  // Get vendor name from profile
-  const vendorName = vendorProfile?.data?.businessName || vendorProfile?.data?.shopName || "Your Salon";
+  const { data: supplierProfile } = useGetCurrentSupplierProfileQuery(undefined, {
+    skip: !user?._id || userRole !== 'supplier'
+  });
+  
+  // Get business name from profile based on user role
+  const businessName = userRole === 'supplier' 
+    ? (supplierProfile?.data?.shopName || "Your Supplier Business")
+    : (vendorProfile?.data?.businessName || vendorProfile?.data?.shopName || "Your Salon");
   
   // Product listing states
   const [searchTerm, setSearchTerm] = useState("");
@@ -118,10 +128,23 @@ export default function ProductsTab({
   const [taxRate, setTaxRate] = useState(0); // 0% tax rate
   
   // Fetch products with better loading state
-  const { data: productsData, isLoading: productsLoading, isFetching: productsFetching } = useGetCrmProductsQuery(
+  // Use different endpoints for vendors and suppliers
+  const { data: crmProductsData, isLoading: crmProductsLoading, isFetching: crmProductsFetching } = useGetCrmProductsQuery(
     { vendorId: VENDOR_ID },
-    { skip: !VENDOR_ID }
+    { skip: !VENDOR_ID || userRole === 'supplier' }
   );
+  
+  const { data: supplierProductsData, isLoading: supplierProductsLoading, isFetching: supplierProductsFetching } = useGetSupplierProductsQuery(
+    undefined,
+    { skip: !VENDOR_ID || userRole !== 'supplier' }
+  );
+  
+  // Use appropriate data based on user role and extract the data array
+  const productsData = userRole === 'supplier' 
+    ? (supplierProductsData?.data || supplierProductsData) 
+    : (crmProductsData?.data || crmProductsData);
+  const productsLoading = userRole === 'supplier' ? supplierProductsLoading : crmProductsLoading;
+  const productsFetching = userRole === 'supplier' ? supplierProductsFetching : crmProductsFetching;
   
   // Fetch clients
   const { data: clientList = [], isLoading: clientsLoading } = useGetClientsQuery({
@@ -169,7 +192,7 @@ export default function ProductsTab({
       
       setProducts(filtered);
     }
-  }, [productsData, searchTerm, selectedCategory]);
+  }, [productsData, searchTerm, selectedCategory, categories]);
   
   // Filter clients based on search term
   const filteredClients = useMemo(() => {
@@ -654,8 +677,8 @@ export default function ProductsTab({
   const onEmailClick = () => {
     // Pre-fill email data
     const clientEmail = invoiceData?.client?.email || '';
-    const subject = `Sales Invoice ${invoiceData?.invoiceNumber} From ${vendorName}`;
-    const message = `Hi ${invoiceData?.client?.fullName || 'Customer'}, Please see attached sales invoice ${invoiceData?.invoiceNumber}. Thank you. ${vendorName}`;
+    const subject = `Sales Invoice ${invoiceData?.invoiceNumber} From ${businessName}`;
+    const message = `Hi ${invoiceData?.client?.fullName || 'Customer'}, Please see attached sales invoice ${invoiceData?.invoiceNumber}. Thank you. ${businessName}`;
     
     setEmailData({
       to: clientEmail,
@@ -1013,31 +1036,30 @@ export default function ProductsTab({
                       </TableCell>
                       <TableCell>₹{item.price.toFixed(2)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
                             onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
                           >
-                            <Minus className="h-4 w-4" />
+                            <Minus className="h-3 w-3" />
                           </Button>
-                          <span className="mx-2 w-8 text-center">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
+                          <span className="w-8 text-center">{item.quantity}</span>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
                             onClick={() => updateQuantity(item._id, item.quantity + 1)}
                           >
-                            <Plus className="h-4 w-4" />
+                            <Plus className="h-3 w-3" />
                           </Button>
                         </div>
                       </TableCell>
                       <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
                           onClick={() => removeFromCart(item._id)}
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
@@ -1050,25 +1072,30 @@ export default function ProductsTab({
             </Table>
           </div>
           
-          {/* Cart Summary */}
-          <div className="space-y-4 mb-6">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span>₹{originalSubtotal.toFixed(2)}</span>
-            </div>
-            {totalDiscount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>Discount:</span>
-                <span>-₹{totalDiscount.toFixed(2)}</span>
+          {/* Order Summary */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <h3 className="text-lg font-semibold mb-3">Order Summary</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>₹{subtotal.toFixed(2)}</span>
               </div>
-            )}
-            <div className="flex justify-between">
-              <span>Tax ({taxRate}%)</span>
-              <span>₹{taxAmount.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between font-semibold text-lg">
-              <span>Total:</span>
-              <span>₹{total.toFixed(2)}</span>
+              {totalDiscount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount</span>
+                  <span>-₹{totalDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              {taxAmount > 0 && (
+                <div className="flex justify-between">
+                  <span>Tax ({taxRate}%)</span>
+                  <span>₹{taxAmount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="border-t border-gray-200 pt-2 flex justify-between font-semibold">
+                <span>Total</span>
+                <span className="text-lg">₹{total.toFixed(2)}</span>
+              </div>
             </div>
           </div>
           
@@ -1076,665 +1103,365 @@ export default function ProductsTab({
           <div className="flex flex-col sm:flex-row gap-3">
             <Button 
               variant="outline" 
-              className="flex-1"
               onClick={clearCart}
               disabled={cart.length === 0}
+              className="flex-1"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear Cart
             </Button>
             <Button 
-              className="flex-1"
               onClick={processPayment}
               disabled={cart.length === 0}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
             >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Proceed to Payment
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Process Payment
             </Button>
           </div>
         </CardContent>
       </Card>
       
-      {/* Add Client Modal */}
-      <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
-        <DialogContent className="max-w-md">
+      {/* Payment Options Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Client</DialogTitle>
+            <DialogTitle>Payment Options</DialogTitle>
             <DialogDescription>
-              Enter client details to create a new client profile.
+              Select a payment method to complete the transaction
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="fullName" className="text-right">
-                Full Name
-              </Label>
-              <Input
-                id="fullName"
-                name="fullName"
-                value={clientFormData.fullName}
-                onChange={handleClientInputChange}
-                className="col-span-3"
-                placeholder="Enter full name"
-              />
+          {paymentStep === 'options' && (
+            <div className="space-y-4">
+              <Button 
+                className="w-full justify-start"
+                variant="outline"
+                onClick={() => handlePaymentMethodSelect('Cash')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-100 p-2 rounded-lg">
+                    <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium">Cash</div>
+                    <div className="text-sm text-muted-foreground">Pay with cash</div>
+                  </div>
+                </div>
+              </Button>
+              
+              <Button 
+                className="w-full justify-start"
+                variant="outline"
+                onClick={() => handlePaymentMethodSelect('Card')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-green-100 p-2 rounded-lg">
+                    <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium">Card</div>
+                    <div className="text-sm text-muted-foreground">Credit or debit card</div>
+                  </div>
+                </div>
+              </Button>
+              
+              <Button 
+                className="w-full justify-start"
+                variant="outline"
+                onClick={() => handlePaymentMethodSelect('Net Banking')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-purple-100 p-2 rounded-lg">
+                    <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium">Net Banking</div>
+                    <div className="text-sm text-muted-foreground">Bank transfer</div>
+                  </div>
+                </div>
+              </Button>
+              
+              <Button 
+                className="w-full justify-start"
+                variant="outline"
+                onClick={() => handlePaymentMethodSelect('UPI')}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-orange-100 p-2 rounded-lg">
+                    <svg className="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium">UPI</div>
+                    <div className="text-sm text-muted-foreground">Unified Payments Interface</div>
+                  </div>
+                </div>
+              </Button>
+            </div>
+          )}
+          
+          {paymentStep === 'link' && (
+            <div className="space-y-4">
+              <div className="text-center py-4">
+                <div className="bg-blue-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                  <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                  </svg>
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Generate Payment Link</h3>
+                <p className="text-muted-foreground text-sm">
+                  A payment link will be generated and sent to the client's email or phone number.
+                </p>
+              </div>
+              <Button 
+                className="w-full"
+                onClick={handleGeneratePaymentLink}
+              >
+                Generate Payment Link
+              </Button>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsPaymentDialogOpen(false);
+                setPaymentStep('options');
+                setSelectedPaymentMethod(null);
+              }}
+            >
+              Cancel
+            </Button>
+            {paymentStep === 'options' && (
+              <Button 
+                onClick={handleSaveOrder}
+                disabled={!selectedPaymentMethod}
+              >
+                Save Order
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add Client Modal */}
+      <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Client</DialogTitle>
+            <DialogDescription>
+              Enter client details to add them to your client list
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <Label htmlFor="fullName">Full Name *</Label>
+                <Input
+                  id="fullName"
+                  name="fullName"
+                  value={clientFormData.fullName}
+                  onChange={handleClientInputChange}
+                  placeholder="John Doe"
+                />
+              </div>
+              <div className="flex-1">
+                <Label htmlFor="phone">Phone *</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  value={clientFormData.phone}
+                  onChange={handleClientInputChange}
+                  placeholder="1234567890"
+                  maxLength={10}
+                />
+              </div>
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
-              </Label>
+            <div>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 value={clientFormData.email}
                 onChange={handleClientInputChange}
-                className="col-span-3"
-                placeholder="Enter email (optional)"
+                placeholder="john@example.com"
               />
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="phone" className="text-right">
-                Phone *
-              </Label>
-              <Input
-                id="phone"
-                name="phone"
-                value={clientFormData.phone}
-                onChange={handleClientInputChange}
-                className="col-span-3"
-                placeholder="Enter 10-digit phone number"
-                maxLength={10}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="gender">Gender</Label>
+                <Select 
+                  value={clientFormData.gender} 
+                  onValueChange={(value) => handleClientSelectChange('gender', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="birthdayDate">Birthday</Label>
+                <Input
+                  id="birthdayDate"
+                  name="birthdayDate"
+                  type="date"
+                  value={clientFormData.birthdayDate}
+                  onChange={handleClientInputChange}
+                />
+              </div>
             </div>
             
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="gender" className="text-right">
-                Gender
-              </Label>
-              <Select 
-                value={clientFormData.gender} 
-                onValueChange={(value) => handleClientSelectChange('gender', value)}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="address" className="text-right">
-                Address
-              </Label>
+            <div>
+              <Label htmlFor="address">Address</Label>
               <Textarea
                 id="address"
                 name="address"
                 value={clientFormData.address}
                 onChange={handleClientInputChange}
-                className="col-span-3"
-                placeholder="Enter address"
+                placeholder="123 Main St, City, State"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="country">Country</Label>
+                <Input
+                  id="country"
+                  name="country"
+                  value={clientFormData.country}
+                  onChange={handleClientInputChange}
+                  placeholder="India"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="occupation">Occupation</Label>
+                <Input
+                  id="occupation"
+                  name="occupation"
+                  value={clientFormData.occupation}
+                  onChange={handleClientInputChange}
+                  placeholder="Software Engineer"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label htmlFor="preferences">Preferences</Label>
+              <Textarea
+                id="preferences"
+                name="preferences"
+                value={clientFormData.preferences}
+                onChange={handleClientInputChange}
+                placeholder="Client preferences and notes"
               />
             </div>
           </div>
           
           <DialogFooter>
             <Button 
-              type="button" 
               variant="outline" 
               onClick={() => setIsAddClientModalOpen(false)}
             >
               Cancel
             </Button>
             <Button 
-              type="button" 
               onClick={handleSaveClient}
-              disabled={isCreatingClient}
+              disabled={isCreatingClient || !clientFormData.fullName || !clientFormData.phone || clientFormData.phone.length !== 10}
             >
-              {isCreatingClient ? "Saving..." : "Save Client"}
+              {isCreatingClient ? 'Saving...' : 'Save Client'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Payment Options Dialog */}
-      <Dialog open={isPaymentDialogOpen} onOpenChange={(open) => {
-        setIsPaymentDialogOpen(open);
-        if (!open) {
-          // Reset when dialog is closed
-          setPaymentStep('options');
-          setSelectedPaymentMethod(null);
-        }
-      }}>
-        <DialogContent className="max-w-md">
-          {paymentStep === 'options' && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Payment Options</DialogTitle>
-                <DialogDescription className="text-center py-2">
-                  <div className="text-lg font-bold">Total Amount: ₹{total.toFixed(2)}</div>
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="py-4 space-y-4">
-                <div className="flex gap-3">
-                  <Button 
-                    onClick={handleSaveOrder}
-                    className="flex-1"
-                    disabled={!selectedPaymentMethod}
-                  >
-                    Save Order
-                  </Button>
-                </div>
-                
-                <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Payment Methods</span>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-3">
-                  {['Cash', 'QR Code', 'Debit Card', 'Credit Card', 'Net Banking'].map((method) => (
-                    <Button
-                      key={method}
-                      variant={selectedPaymentMethod === method ? "default" : "outline"}
-                      className="flex-1 text-xs h-16 flex-col justify-center items-center gap-1"
-                      onClick={() => setSelectedPaymentMethod(method)}
-                    >
-                      {method}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-          
-          {paymentStep === 'method' && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Select Payment Method</DialogTitle>
-                <DialogDescription>
-                  Total Amount: <span className="font-bold">₹{total.toFixed(2)}</span>
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="py-4 space-y-3">
-                {['Cash', 'QR Code', 'Debit Card', 'Credit Card', 'Net Banking'].map((method) => (
-                  <Button
-                    key={method}
-                    variant={selectedPaymentMethod === method ? "default" : "outline"}
-                    className="w-full justify-start"
-                    onClick={() => handlePaymentMethodSelect(method)}
-                  >
-                    {method}
-                  </Button>
-                ))}
-              </div>
-              
-              <DialogFooter>
-                <Button
-                  variant="secondary"
-                  onClick={() => setPaymentStep('options')}
-                >
-                  Back
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-          
-          {paymentStep === 'link' && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Generate Net Banking</DialogTitle>
-                <DialogDescription>
-                  Total Amount: <span className="font-bold">₹{total.toFixed(2)}</span>
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="py-4">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="client-phone">Client Phone Number</Label>
-                    <Input
-                      id="client-phone"
-                      type="tel"
-                      placeholder="Enter client's phone number"
-                      className="mt-1"
-                      value={selectedClient?.phone || ''}
-                      readOnly
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="client-email">Client Email (Optional)</Label>
-                    <Input
-                      id="client-email"
-                      type="email"
-                      placeholder="Enter client's email"
-                      className="mt-1"
-                      value={selectedClient?.email || ''}
-                      readOnly
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button
-                  variant="secondary"
-                  onClick={() => setPaymentStep('options')}
-                >
-                  Back
-                </Button>
-                <Button onClick={handleGeneratePaymentLink}>
-                  Generate Link
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* Invoice Summary Dialog */}
-      <Dialog open={isInvoiceDialogOpen} onOpenChange={(open) => {
-        setIsInvoiceDialogOpen(open);
-        if (!open) {
-          setInvoiceData(null);
-        }
-      }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4">
-          {invoiceData && (
-            <>
-              <DialogHeader className="border-b pb-4">
-                <DialogTitle className="text-2xl font-bold text-center text-gray-900">Invoice Summary</DialogTitle>
-              </DialogHeader>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-                {/* Left Section - Invoice Info & Actions */}
-                <div className="space-y-6">
-                  <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-4 text-white shadow-sm">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h2 className="text-xl font-bold">{invoiceData.invoiceNumber}</h2>
-                        <p className="text-blue-100 text-sm mt-1">
-                          {isOrderSaved 
-                            ? `Saved on ${invoiceData.date} at ${vendorName} by ${invoiceData.client?.fullName || 'Client'}`
-                            : `Saved Unpaid on ${invoiceData.date} at ${vendorName} by ${invoiceData.client?.fullName || 'Client'}`}
-                        </p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        invoiceData.status === "Completed" 
-                          ? "bg-green-500 text-white" 
-                          : "bg-yellow-500 text-gray-900"
-                      }`}>
-                        {invoiceData.status}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Quick Actions</h3>
-                    <div className="space-y-3">
-                      {/* Rebook button on its own line */}
-                      <div className="w-full">
-                        <Button 
-                          className="w-full py-2 text-sm"
-                          onClick={() => {
-                            // Clear all invoice data and close dialog
-                            setInvoiceData(null);
-                            setIsInvoiceDialogOpen(false);
-                            setIsOrderSaved(false);
-                            // Reset payment related state
-                            setSelectedPaymentMethod(null);
-                            setIsPaymentDialogOpen(false);
-                            setPaymentStep('options');
-                            // Clear cart
-                            setCart([]);
-                            // Clear selected client
-                            setSelectedClient(null);
-                          }}
-                        >
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Rebook
-                        </Button>
-                      </div>
-                      
-                      {/* Other buttons in a row below */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <Button 
-                          className="w-full py-2 text-sm" 
-                          variant="outline"
-                          onClick={() => {
-                            // Pre-fill email data
-                            const clientEmail = invoiceData.client?.email || '';
-                            const subject = `Sales Invoice ${invoiceData.invoiceNumber} From ${vendorName}`;
-                            const message = `Hi ${invoiceData.client?.fullName || 'Customer'}, Please see attached sales invoice ${invoiceData.invoiceNumber}. Thank you. ${vendorName}`;
-                            
-                            setEmailData({
-                              to: clientEmail,
-                              from: '', // Keep empty by default as requested
-                              subject: subject,
-                              message: message
-                            });
-                            
-                            setIsEmailDialogOpen(true);
-                          }}
-                        >
-                          <Mail className="h-4 w-4 mr-2" />
-                          Email
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="w-full py-2 text-sm"
-                          onClick={() => {
-                            // Print functionality - show professional invoice
-                            window.print();
-                          }}
-                        >
-                          <Printer className="h-4 w-4 mr-2" />
-                          Print
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="w-full py-2 text-sm"
-                          onClick={onDownloadClick}
-                        >
-                          <DownloadCloud className="h-5 w-5 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Client Information</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-dashed border-gray-300 rounded-xl w-12 h-12 flex items-center justify-center overflow-hidden">
-                          {invoiceData.client?.profilePicture ? (
-                            <img 
-                              src={invoiceData.client.profilePicture} 
-                              alt={invoiceData.client.fullName || 'Client'} 
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <UserCheck className="h-8 w-8 text-gray-500" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{invoiceData.client?.fullName || 'N/A'}</p>
-                          <p className="text-gray-600 text-sm flex items-center mt-1">
-                            <span className="flex items-center">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-                              </svg>
-                              {invoiceData.client?.phone || 'No phone'}
-                            </span>
-                          </p>
-                          <p className="text-gray-600 text-sm flex items-center">
-                            <span className="flex items-center">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                              </svg>
-                              {invoiceData.client?.email || 'No email'}
-                            </span>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Right Section - Invoice Details */}
-                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Invoice Details</h3>
-                  
-                  <div className="space-y-5">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-500 text-sm">Invoice Number</p>
-                        <p className="font-semibold text-sm">{invoiceData.invoiceNumber}</p>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-500 text-sm">Date</p>
-                        <p className="font-semibold text-sm">{invoiceData.date}</p>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-500 text-sm">Payment Method</p>
-                        <p className="font-semibold text-sm">{invoiceData.paymentMethod || 'Not specified'}</p>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <p className="text-gray-500 text-sm">Status</p>
-                        <span className={`px-2 py-1 rounded-full text-sm font-semibold ${
-                          invoiceData.status === "Completed" 
-                            ? "bg-green-100 text-green-800" 
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}>
-                          {invoiceData.status}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200 text-lg">Products</h4>
-                      <div className="space-y-2 max-h-52 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 rounded">
-                        {invoiceData.items.map((item: any, index: number) => (
-                          <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 rounded px-2">
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-900 text-xs">{item.productName}</p>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                <span className="text-xs bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded-full">
-                                  Qty: {item.quantity}
-                                </span>
-                                <span className="text-xs bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded-full">
-                                  Stock: {item.stock}
-                                </span>
-                                <span className="text-xs bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded-full">
-                                  Discount: {item.discount ? (item.discountType === 'percentage' ? `${item.discount}%` : `₹${item.discount}`) : '0'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="text-right ml-2">
-                              {item.discount && item.discount > 0 && (
-                                <p className="text-xs text-gray-500 line-through">₹{(item.price * item.quantity).toFixed(2)}</p>
-                              )}
-                              <p className="font-semibold text-gray-900">₹{item.totalPrice.toFixed(2)}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2 bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-xs">Subtotal</span>
-                        <span className="font-medium text-xs">₹{invoiceData.originalSubtotal?.toFixed(2) || invoiceData.subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-green-600 text-xs font-medium">Discount</span>
-                        <span className="font-medium text-green-600 text-xs">-₹{(invoiceData.discount || 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-xs">Tax ({taxRate}%)</span>
-                        <span className="font-medium text-xs">₹{invoiceData.tax.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-xs">Platform Fee</span>
-                        <span className="font-medium text-xs">₹{invoiceData.platformFee.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-2 border-t border-gray-300">
-                        <span className="font-semibold text-gray-900 text-sm">Total</span>
-                        <span className="font-bold text-gray-900 text-base">₹{invoiceData.total.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-1">
-                        <span className="font-semibold text-gray-900 text-sm">Balance</span>
-                        <span className="font-bold text-red-600 text-base">₹{invoiceData.balance.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button onClick={() => setIsInvoiceDialogOpen(false)}>
-                  Close
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* Email Dialog */}
-      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Send Invoice via Email</DialogTitle>
-            <DialogDescription>
-              Send the invoice to your client via email
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="to">To</Label>
-              <Input 
-                id="to" 
-                type="email" 
-                placeholder="client@example.com" 
-                value={emailData.to}
-                onChange={(e) => setEmailData({...emailData, to: e.target.value})}
-              />
-            </div>
-            
-            {/* <div className="space-y-2">
-              <Label htmlFor="from">Your Email (Optional)</Label>
-              <Input 
-                id="from" 
-                type="email" 
-                placeholder="your@email.com" 
-                value={emailData.from}
-                onChange={(e) => setEmailData({...emailData, from: e.target.value})}
-              />
-            </div> */}
-            
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input 
-                id="subject" 
-                placeholder="Sales Invoice" 
-                value={emailData.subject}
-                onChange={(e) => setEmailData({...emailData, subject: e.target.value})}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="message">Message</Label>
-              <Textarea 
-                id="message" 
-                placeholder="Enter your message" 
-                rows={5}
-                value={emailData.message}
-                onChange={(e) => setEmailData({...emailData, message: e.target.value})}
-              />
-            </div>
-            
-            <div className="text-sm text-muted-foreground flex items-center">
-              <Paperclip className="h-4 w-4 mr-1" />
-              <p>Sales Invoice {invoiceData?.invoiceNumber}.PDF will be attached</p>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsEmailDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSendEmail}>
-              Send Email
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Edit Cart Item Dialog */}
+      {/* Edit Cart Item Modal */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Cart Item</DialogTitle>
+            <DialogTitle>Edit Item</DialogTitle>
             <DialogDescription>
-              Modify item details
+              Modify quantity, discount, and staff assignment
             </DialogDescription>
           </DialogHeader>
           
           {editingItem && (
-            <div className="py-4 space-y-4">
+            <div className="space-y-4">
               <div>
-                <h3 className="font-medium">{editingItem.productName}</h3>
-                <p className="text-sm text-muted-foreground">₹{editingItem.price.toFixed(2)}</p>
+                <Label>Item</Label>
+                <div className="font-medium">{editingItem.productName}</div>
               </div>
               
-              <div className="space-y-2">
+              <div>
                 <Label htmlFor="quantity">Quantity</Label>
-                <Input 
-                  id="quantity" 
-                  type="number" 
-                  min="1" 
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="1"
                   value={editFormData.quantity}
-                  onChange={(e) => setEditFormData({...editFormData, quantity: parseInt(e.target.value) || 1})}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="discount">Discount</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    id="discount" 
-                    type="number" 
-                    min="0" 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="discount">Discount</Label>
+                  <Input
+                    id="discount"
+                    type="number"
+                    min="0"
                     value={editFormData.discount}
-                    onChange={(e) => setEditFormData({...editFormData, discount: parseFloat(e.target.value) || 0})}
-                    className="flex-1"
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, discount: parseFloat(e.target.value) || 0 }))}
                   />
+                </div>
+                
+                <div>
+                  <Label htmlFor="discountType">Type</Label>
                   <Select 
                     value={editFormData.discountType} 
-                    onValueChange={(value) => setEditFormData({...editFormData, discountType: value as 'flat' | 'percentage'})}
+                    onValueChange={(value) => setEditFormData(prev => ({ ...prev, discountType: value as 'flat' | 'percentage' }))}
                   >
-                    <SelectTrigger className="w-24">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="flat">₹</SelectItem>
-                      <SelectItem value="percentage">%</SelectItem>
+                      <SelectItem value="flat">Flat (₹)</SelectItem>
+                      <SelectItem value="percentage">Percentage (%)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="staffMember">
-                  Staff Member 
-                  {editFormData.discount > 0 && (
-                    <span className="text-red-500">*</span>
-                  )}
-                </Label>
+              <div>
+                <Label htmlFor="staffMember">Staff Member</Label>
                 <Select 
                   value={editFormData.staffMemberId} 
-                  onValueChange={(value) => setEditFormData({...editFormData, staffMemberId: value})}
+                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, staffMemberId: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select staff member" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Select staff member</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {staffData.map((staff: any) => (
                       <SelectItem key={staff._id} value={staff._id}>
                         {staff.fullName}
@@ -1743,75 +1470,169 @@ export default function ProductsTab({
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="flex justify-between font-medium">
-                <span>Total:</span>
-                <span>₹{calculateItemTotalPrice(editingItem, editFormData.quantity, editFormData.discount, editFormData.discountType).toFixed(2)}</span>
-              </div>
             </div>
           )}
           
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsEditDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditDialogOpen(false)}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSaveEditedItem}>
+            <Button 
+              onClick={handleSaveEditedItem}
+            >
               Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Hidden print area for professional invoice */}
-      <div className="hidden print:block">
-        <style>{`
-          @media print {
-            body * {
-              visibility: hidden;
-            }
-            .print\\:block,
-            .print\\:block * {
-              visibility: visible;
-            }
-            .print\\:block {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-            }
-          }
-        `}</style>
+      {/* Invoice Dialog */}
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Invoice</DialogTitle>
+            <DialogDescription>
+              Review and send the invoice to your client
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {invoiceData && (
+              <div>
+                <InvoiceUI 
+                  invoiceData={invoiceData}
+                  vendorName={businessName}
+                  vendorProfile={vendorProfile || supplierProfile}
+                  taxRate={taxRate}
+                  isOrderSaved={isOrderSaved}
+                  onEmailClick={onEmailClick}
+                  onPrintClick={onPrintClick}
+                  onDownloadClick={onDownloadClick}
+                  onRebookClick={onRebookClick}
+                />
+              </div>
+            )}
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button 
+                variant="outline" 
+                onClick={onEmailClick}
+                className="flex-1"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Email
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={onPrintClick}
+                className="flex-1"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={onDownloadClick}
+                className="flex-1"
+              >
+                <DownloadCloud className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsInvoiceDialogOpen(false)}
+            >
+              Close
+            </Button>
+            <Button 
+              onClick={onRebookClick}
+            >
+              New Order
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Email Dialog */}
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Invoice via Email</DialogTitle>
+            <DialogDescription>
+              Send the invoice to your client's email address
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="to">To *</Label>
+              <Input
+                id="to"
+                value={emailData.to}
+                onChange={(e) => setEmailData(prev => ({ ...prev, to: e.target.value }))}
+                placeholder="client@example.com"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="subject">Subject *</Label>
+              <Input
+                id="subject"
+                value={emailData.subject}
+                onChange={(e) => setEmailData(prev => ({ ...prev, subject: e.target.value }))}
+                placeholder="Sales Invoice"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="message">Message *</Label>
+              <Textarea
+                id="message"
+                value={emailData.message}
+                onChange={(e) => setEmailData(prev => ({ ...prev, message: e.target.value }))}
+                placeholder="Dear client, please find attached your sales invoice."
+                rows={4}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEmailDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSendEmail}
+            >
+              Send Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Hidden Invoice for PDF Generation */}
+      <div id="invoice-to-pdf" className="hidden">
         {invoiceData && (
-          <InvoiceUI
+          <InvoiceUI 
             invoiceData={invoiceData}
-            vendorName={vendorName}
-            vendorProfile={vendorProfile}
+            vendorName={businessName}
+            vendorProfile={vendorProfile || supplierProfile}
             taxRate={taxRate}
             isOrderSaved={isOrderSaved}
-            onEmailClick={() => {}}
-            onPrintClick={() => {}}
-            onDownloadClick={() => {}}
-            onRebookClick={() => {}}
+            onEmailClick={onEmailClick}
+            onPrintClick={onPrintClick}
+            onDownloadClick={onDownloadClick}
+            onRebookClick={onRebookClick}
           />
-        )}
-      </div>
-      
-      {/* Hidden PDF generation area */}
-      <div className="hidden">
-        {invoiceData && (
-          <div id="invoice-to-pdf">
-            <InvoiceUI
-              invoiceData={invoiceData}
-              vendorName={vendorName}
-              vendorProfile={vendorProfile}
-              taxRate={taxRate}
-              isOrderSaved={isOrderSaved}
-              onEmailClick={() => {}}
-              onPrintClick={() => {}}
-              onDownloadClick={() => {}}
-              onRebookClick={() => {}}
-            />
-          </div>
         )}
       </div>
     </div>

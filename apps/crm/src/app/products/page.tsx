@@ -189,21 +189,18 @@ export default function ProductsPage() {
     
     // Enhanced status badge with better styling
     const getStatusBadge = (status: string) => {
-        const statusConfig: Record<string, { bg: string; text: string; icon: string }> = {
+        const statusConfig: Record<string, { variant: "secondary" | "outline" | "destructive"; dotColor: string }> = {
             pending: { 
-                bg: 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-400/30', 
-                text: 'text-yellow-700 dark:text-yellow-300', 
-                icon: '⏳' 
+                variant: 'outline', 
+                dotColor: 'bg-yellow-500' 
             },
             approved: { 
-                bg: 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-400/30', 
-                text: 'text-green-700 dark:text-green-300', 
-                icon: '✅' 
+                variant: 'secondary', 
+                dotColor: 'bg-green-500' 
             },
             disapproved: { 
-                bg: 'bg-gradient-to-r from-red-500/20 to-rose-500/20 border-red-400/30', 
-                text: 'text-red-700 dark:text-red-300', 
-                icon: '❌' 
+                variant: 'destructive', 
+                dotColor: 'bg-red-500' 
             }
         };
         
@@ -211,9 +208,10 @@ export default function ProductsPage() {
         
         return (
             <Badge 
-                className={`${config.bg} ${config.text} border backdrop-blur-sm px-3 py-1 font-medium text-xs rounded-full shadow-sm`}
+                variant={config.variant}
+                className="rounded-full text-xs"
             >
-                <span className="mr-1">{config.icon}</span>
+                <div className={`w-1.5 h-1.5 rounded-full mr-1 ${config.dotColor}`} />
                 {status.charAt(0).toUpperCase() + status.slice(1)}
             </Badge>
         );
@@ -407,7 +405,7 @@ export default function ProductsPage() {
                                     {product.stock > 0 ? `In Stock` : "Out of Stock"}
                                   </Badge>
                                   {/* Status Badge */}
-                                  <div className="absolute top-2 left-2">
+                                  <div className="absolute top-2 left-2 text-xs">
                                     {getStatusBadge(product.status)}
                                   </div>
                                 </div>

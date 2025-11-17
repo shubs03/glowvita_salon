@@ -8,7 +8,8 @@ await _db();
 // GET - Retrieve a specific billing record by ID
 export const GET = authMiddlewareCrm(async (req, { params }) => {
     try {
-        const vendorId = req.user.userId.toString();
+        const userId = req.user.userId.toString();
+        const userRole = req.user.role;
         const { id } = params;
         
         // Validate ID format
@@ -22,7 +23,7 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
         // Find billing record
         const billingRecord = await BillingModel.findOne({
             _id: id,
-            vendorId
+            vendorId: userId
         }).populate('clientId', 'fullName email phone profilePicture address');
 
         if (!billingRecord) {
@@ -50,4 +51,4 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
             { status: 500 }
         );
     }
-}, ['vendor']);
+}, ['vendor', 'supplier']);

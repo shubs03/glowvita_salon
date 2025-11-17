@@ -202,17 +202,6 @@ export function Services() {
             </div>
           ))}
         </div>
-        
-        {/* Call to Action */}
-        <div className={cn(
-          "text-center mt-16 transition-all duration-1000 delay-500",
-          isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-        )}>
-          <div className="inline-flex items-center gap-4 bg-gradient-to-r from-primary to-primary/80 text-white px-6 py-3 rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 group cursor-pointer hover-lift">
-            <span className="text-base font-semibold">Explore All Features</span>
-            <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-          </div>
-        </div>
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { useAppSelector } from '@repo/store/hooks';
 import { useGetSubscriptionPlansQuery, useGetVendorProfileQuery, useUpdateVendorProfileMutation, useChangePlanMutation, useRenewPlanMutation, useGetWorkingHoursQuery, useUpdateWorkingHoursMutation, useGetCurrentSupplierProfileQuery, useUpdateSupplierProfileMutation, useGetDoctorProfileQuery, useUpdateDoctorProfileMutation } from '@repo/store/api';
@@ -49,9 +49,11 @@ import {
   Zap,
   RefreshCw,
   History,
-  Star
+  Star,
+  QrCode
 } from "lucide-react";
 import Image from "next/image";
+import QRCode from "qrcode";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/dialog";
 import { useMemo } from 'react';
 import { SubscriptionPlansDialog } from "@/components/SubscriptionPlansDialog";
@@ -2161,6 +2163,8 @@ export default function SalonProfilePage() {
   const [openingHours, setOpeningHours] = useState<OpeningHour[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
@@ -2259,7 +2263,69 @@ export default function SalonProfilePage() {
     }
   }, [workingHoursData]);
 
-  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+      const generateQRCode = async () => {
+        if (isQrModalOpen && localVendor?._id) {
+          try {
+            // Generate the URL for the salon details page
+            const salonUrl = `${window.location.origin}/salon-details/${localVendor._id}`;
+            // Generate QR code as data URL
+            const qrDataUrl = await QRCode.toDataURL(salonUrl, { width: 200 });
+            setQrCodeDataUrl(qrDataUrl);
+          } catch (err) {
+            console.error('Error generating QR code:', err);
+            // Fallback to placeholder
+            setQrCodeDataUrl('');
+          }
+        }
+      };
+  
+      generateQRCode();
+    }, [isQrModalOpen, localVendor?._id]);
+  
+    const handlePrintQrCode = () => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      const businessName = localVendor?.businessName || 'Your Salon';
+      printWindow.document.write(
+        `<html>
+          <head>
+            <title>Print QR Code</title>
+            <style>
+              body { 
+                display: flex; 
+                flex-direction: column; 
+                align-items: center; 
+                justify-content: center; 
+                margin: 20px; 
+                font-family: Arial, sans-serif; 
+              }
+              img { margin-bottom: 20px; }
+              .info { text-align: center; }
+            </style>
+          </head>
+          <body>
+            <img src="${qrCodeDataUrl}" alt="QR Code" style="width: 200px; height: 200px;" />
+            <div class="info">
+              <h2>${businessName}</h2>
+              <p>Scan this QR code to view salon details</p>
+            </div>
+            <script>
+              window.onload = function() {
+                window.print();
+                window.onafterprint = function() {
+                  window.close();
+                };
+              };
+            </script>
+          </body>
+        </html>`
+      );
+      printWindow.document.close();
+    }
+  };
+    
+      const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -2540,6 +2606,9 @@ export default function SalonProfilePage() {
                       <Download className="mr-2 h-4 w-4" /> Download App
                     </a>
                   </Button>
+                  <Button variant="outline" size="sm" onClick={() => setIsQrModalOpen(true)}>
+                    <QrCode className="mr-2 h-4 w-4" /> QR Code
+                  </Button>
                 </div>
               )}
             </div>
@@ -2569,6 +2638,46 @@ export default function SalonProfilePage() {
           </div>
         </div>
       )}
+
+      {/* QR Code Modal */}
+      <Dialog open={isQrModalOpen} onOpenChange={setIsQrModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Salon QR Code</DialogTitle>
+            <DialogDescription>
+              Scan this QR code to access your salon details page
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center p-6">
+            <div className="bg-white p-4 rounded-lg">
+              {qrCodeDataUrl ? (
+                <Image 
+                  src={qrCodeDataUrl} 
+                  alt="Salon QR Code" 
+                  width={200} 
+                  height={200} 
+                  className="rounded"
+                />
+              ) : (
+                <div className="w-48 h-48 flex items-center justify-center bg-gray-100 rounded">
+                  <QrCode className="h-24 w-24 text-gray-400" />
+                  <span className="absolute text-xs text-gray-500">Generating QR...</span>
+                </div>
+              )}
+            </div>
+            <p className="mt-4 text-sm text-center text-muted-foreground">
+              Salon ID: {localVendor?._id?.substring(0, 8) || 'N/A'}
+            </p>
+            <p className="mt-2 text-sm text-center">
+              Scan this code to view {localVendor?.businessName || 'your salon'} on GlowVita
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handlePrintQrCode}>Print</Button>
+            <Button onClick={() => setIsQrModalOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {role === 'vendor' ? (
         <Tabs defaultValue="profile" className="w-full">

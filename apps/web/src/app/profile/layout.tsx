@@ -35,6 +35,7 @@ const navItems = [
   { id: 'consultations', label: 'My Consultations', icon: Stethoscope, href: '/profile/consultations' },
   { id: 'orders', label: 'My Orders', icon: ShoppingCart, href: '/profile/orders' },
   { id: 'cart', label: 'My Cart', icon: ShoppingCart, href: '/profile/cart' },
+  { id: 'wishlist', label: 'My Wishlist', icon: Heart, href: '/profile/wishlist' },
   { id: 'reviews', label: 'My Reviews', icon: Star, href: '/profile/reviews' },
   { id: 'referrals', label: 'Refer & Earn', icon: Gift, href: '/profile/referrals' },
   { id: 'wallet', label: 'Wallet', icon: Wallet, href: '/profile/wallet' },
