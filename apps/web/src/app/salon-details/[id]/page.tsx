@@ -334,6 +334,175 @@ const defaultSalon = {
   images: ["https://placehold.co/1200x800/e2e8f0/64748b?text=Loading..."],
 };
 
+const ProductCard = ({ product, onBuyNow, onAddToCart, vendorId, vendorName }: { 
+  product: any; 
+  onBuyNow: (product: any) => void; 
+  onAddToCart: (product: any) => void;
+  vendorId: string;
+  vendorName: string;
+}) => {
+  const [isLiked, setIsLiked] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+
+  // Check if product is in wishlist on component mount
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (isAuthenticated && user?._id) {
+        try {
+          const response = await fetch(`/api/client/wishlist/${product.id}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setIsLiked(data.isInWishlist);
+          }
+        } catch (error) {
+          console.error('Error checking wishlist status:', error);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    checkWishlistStatus();
+  }, [product.id, isAuthenticated, user]);
+
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      toast.error("Please login to add items to wishlist");
+      router.push("/client-login");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const url = isLiked ? `/api/client/wishlist/${product.id}/remove` : '/api/client/wishlist';
+      const method = isLiked ? 'DELETE' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ productId: product.id }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsLiked(!isLiked);
+        toast.success(isLiked ? "Removed from Wishlist" : "Added to Wishlist", {
+          description: isLiked ? "Product removed from your wishlist" : "Product added to your wishlist"
+        });
+      } else {
+        const errorData = await response.json();
+        toast.error("Wishlist Update Failed", {
+          description: errorData.message || "Failed to update wishlist"
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update wishlist:", error);
+      toast.error("Wishlist Update Failed", {
+        description: "Failed to update wishlist. Please try again."
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card
+      className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left cursor-pointer relative"
+      onClick={() => router.push(`/product-details/${product.id}`)}
+    >
+      <div className="relative aspect-square overflow-hidden rounded-md m-3">
+        <Image
+          src={product.image}
+          alt={product.name}
+          fill
+          className="group-hover:scale-105 transition-transform duration-300 object-cover"
+          data-ai-hint={product.hint}
+        />
+        <Badge
+          variant={
+            product.stock > 0 ? "secondary" : "default"
+          }
+          className="absolute top-2 right-2 text-xs"
+        >
+          {product.stock > 0 ? `In Stock` : "Out of Stock"}
+        </Badge>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-2 left-2 h-8 w-8 rounded-full bg-white/20 text-blue-500 backdrop-blur-sm hover:bg-white/30 transition-all"
+          onClick={handleWishlistToggle}
+          disabled={isLoading}
+        >
+          <Heart
+            className={`h-4 w-4 ${isLiked ? "fill-current text-blue-500" : ""}`}
+          />
+        </Button>
+      </div>
+      <div className="p-3 flex flex-col flex-grow">
+        <p className="text-xs font-bold text-primary mb-1">
+          {product.category}
+        </p>
+        <h4 className="text-sm font-semibold flex-grow mb-2">
+          {product.name}
+        </h4>
+        <p className="text-xs text-muted-foreground line-clamp-2">
+          {product.description}
+        </p>
+        <div className="flex justify-between items-center mt-auto">
+          <p className="font-bold text-primary">
+            ₹{product.price.toFixed(2)}
+          </p>
+          <div className="flex items-center gap-1">
+            <Star className="h-3 w-3 text-blue-400 fill-current" />
+            <span className="text-xs text-muted-foreground font-medium">
+              {product.rating}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 mt-2">
+          <div className="flex justify-between w-full">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-xs lg:mr-3"
+              onClick={(e) => {
+                e.stopPropagation();
+                onBuyNow(product);
+              }}
+            >
+              Buy Now
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-fit text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCart(product);
+              }}
+            >
+              <ShoppingCart className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 // Function to get the salon data dynamically
 export default function SalonDetailsPage() {
   const params = useParams();
@@ -1112,79 +1281,14 @@ export default function SalonDetailsPage() {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {salonProducts.length > 0 ? (
                     salonProducts.map((product: any) => (
-                      <Card
-                        key={product.id}
-                        className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left cursor-pointer"
-                        onClick={() => router.push(`/product-details/${product.id}`)}
-                      >
-                        <div className="relative aspect-square overflow-hidden rounded-md m-3">
-                          <Image
-                            src={product.image}
-                            alt={product.name}
-                            fill
-                            className="group-hover:scale-105 transition-transform duration-300 object-cover"
-                            data-ai-hint={product.hint}
-                          />
-                          <Badge
-                            variant={
-                              product.stock > 0 ? "secondary" : "default"
-                            }
-                            className="absolute top-2 right-2 text-xs"
-                          >
-                            {product.stock > 0 ? `In Stock` : "Out of Stock"}
-                          </Badge>
-                        </div>
-                        <div className="p-3 flex flex-col flex-grow">
-                          <p className="text-xs font-bold text-primary mb-1">
-                            {product.category}
-                          </p>
-                          <h4 className="text-sm font-semibold flex-grow mb-2">
-                            {product.name}
-                          </h4>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {product.description}
-                          </p>
-                          <div className="flex justify-between items-center mt-auto">
-                            <p className="font-bold text-primary">
-                              ₹{product.price.toFixed(2)}
-                            </p>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-3 w-3 text-blue-400 fill-current" />
-                              <span className="text-xs text-muted-foreground font-medium">
-                                {product.rating}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2 mt-2">
-                            <div className="flex justify-between w-full">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-full text-xs lg:mr-3"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleBuyNow(product);
-                                }}
-                              >
-                                Buy Now
-                              </Button>
-
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-fit text-xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAddToCart(product);
-                                }}
-                              >
-                                <ShoppingCart className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
+                      <ProductCard 
+                        key={product.id} 
+                        product={product} 
+                        onBuyNow={handleBuyNow} 
+                        onAddToCart={handleAddToCart}
+                        vendorId={id}
+                        vendorName={vendorData?.businessName || "Unknown Vendor"}
+                      />
                     ))
                   ) : (
                     <div className="col-span-full text-center py-8">

@@ -8,7 +8,8 @@ await _db();
 // POST - Create a new billing record
 export const POST = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user.userId.toString();
+        const userId = req.user.userId.toString();
+        const userRole = req.user.role;
         const body = await req.json();
         
         // Validate required fields
@@ -20,12 +21,12 @@ export const POST = authMiddlewareCrm(async (req) => {
         }
 
         // Generate unique invoice number
-        const invoiceNumber = await BillingModel.generateInvoiceNumber(vendorId);
+        const invoiceNumber = await BillingModel.generateInvoiceNumber(userId);
         
         // Create billing record
         const billingRecord = new BillingModel({
             ...body,
-            vendorId,
+            vendorId: userId,
             invoiceNumber,
         });
 
@@ -51,12 +52,13 @@ export const POST = authMiddlewareCrm(async (req) => {
             { status: 500 }
         );
     }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // GET - Retrieve billing records
 export const GET = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user.userId.toString();
+        const userId = req.user.userId.toString();
+        const userRole = req.user.role;
         
         // Parse query parameters
         const url = new URL(req.url);
@@ -66,7 +68,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         const endDate = url.searchParams.get('endDate');
         
         // Build query
-        const query = { vendorId };
+        const query = { vendorId: userId };
         
         if (startDate && endDate) {
             query.createdAt = {
@@ -108,12 +110,13 @@ export const GET = authMiddlewareCrm(async (req) => {
             { status: 500 }
         );
     }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // PUT - Update a billing record
 export const PUT = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user.userId.toString();
+        const userId = req.user.userId.toString();
+        const userRole = req.user.role;
         const body = await req.json();
         
         // Validate required fields
@@ -126,7 +129,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
         // Update billing record
         const updatedRecord = await BillingModel.findOneAndUpdate(
-            { _id: body.id, vendorId },
+            { _id: body.id, vendorId: userId },
             { $set: body },
             { new: true, runValidators: true }
         );
@@ -157,12 +160,13 @@ export const PUT = authMiddlewareCrm(async (req) => {
             { status: 500 }
         );
     }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // DELETE - Delete a billing record
 export const DELETE = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user.userId.toString();
+        const userId = req.user.userId.toString();
+        const userRole = req.user.role;
         const body = await req.json();
         
         // Validate required fields
@@ -175,7 +179,7 @@ export const DELETE = authMiddlewareCrm(async (req) => {
 
         // Delete billing record
         const deletedRecord = await BillingModel.findOneAndDelete(
-            { _id: body.id, vendorId }
+            { _id: body.id, vendorId: userId }
         );
 
         if (!deletedRecord) {
@@ -204,4 +208,4 @@ export const DELETE = authMiddlewareCrm(async (req) => {
             { status: 500 }
         );
     }
-}, ['vendor']);
+}, ['vendor', 'supplier']);

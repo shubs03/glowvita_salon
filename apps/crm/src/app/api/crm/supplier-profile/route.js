@@ -45,10 +45,18 @@ export const GET = authMiddlewareCrm(async (req) => {
     const supplierResponse = supplier.toObject();
     supplierResponse.currentSmsBalance = activePackageSmsCount;  // SMS count from active package
 
-    return NextResponse.json(supplierResponse, { status: 200 });
+    // Return in the same format as vendor profile API
+    return NextResponse.json({ 
+      success: true,
+      data: supplierResponse
+    }, { status: 200 });
   } catch (error) {
     console.error("Error fetching supplier profile:", error);
-    return NextResponse.json({ message: "Failed to fetch supplier profile" }, { status: 500 });
+    return NextResponse.json({ 
+      success: false,
+      message: "Failed to fetch supplier profile",
+      error: error.message
+    }, { status: 500 });
   }
 }, ['supplier']);
 

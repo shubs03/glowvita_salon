@@ -170,7 +170,7 @@ export const GET = authMiddlewareCrm(async (req) => {
             error: error.message 
         }, { status: 500 });
     }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // POST - Create a new client
 export const POST = authMiddlewareCrm(async (req) => {
@@ -270,7 +270,7 @@ export const POST = authMiddlewareCrm(async (req) => {
             error: error.message 
         }, { status: 500 });
     }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // PUT - Update an existing client
 export const PUT = authMiddlewareCrm(async (req) => {
@@ -415,7 +415,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
             error: error.message 
         }, { status: 500 });
     }
-}, ['vendor']);
+}, ['vendor', 'supplier']);
 
 // DELETE - Delete a client
 export const DELETE = authMiddlewareCrm(async (req) => {
@@ -460,4 +460,4 @@ export const DELETE = authMiddlewareCrm(async (req) => {
             error: error.message 
         }, { status: 500 });
     }
-}, ['vendor']);
+}, ['vendor', 'supplier']);

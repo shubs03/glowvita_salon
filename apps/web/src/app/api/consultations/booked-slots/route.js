@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from 'next/server';
 import DoctorConsultation from '@repo/lib/models/Vendor/DoctorConsultation.model';
 import _db from '@repo/lib/db';

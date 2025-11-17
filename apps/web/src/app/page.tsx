@@ -421,10 +421,10 @@ export default function HomePage() {
             {products && products.length > 0 && (
               <div className="text-center mt-8">
                 <Button 
-                  variant="default" 
+                  variant="outline" 
                   size="lg"
-                  className="rounded-full px-8 py-6 text-lg font-semibold shadow-lg hover:shadow-xl transition-all"
-                  onClick={() => window.location.href = '/products'}
+                  className="rounded-md px-8 py-6 text-sm font-semibold shadow-sm hover:shadow-md transition-all"
+                  onClick={() => window.location.href = '/all-products'}
                 >
                   View All Products
                   <ArrowRight className="ml-2 h-5 w-5" />

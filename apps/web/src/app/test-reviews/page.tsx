@@ -42,7 +42,7 @@ export default function TestReviewsPage() {
             {showServiceReview ? (
               <ReviewForm 
                 entityId="test-service-id"
-                entityType="service"
+                entityType="product" // Changed from "service" to "product" as only "salon" and "product" are valid
                 onSubmitSuccess={() => setShowServiceReview(false)}
               />
             ) : (

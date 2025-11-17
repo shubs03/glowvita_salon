@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
+import { useGetPublicProductsQuery } from "@repo/store/api";
 import {
   Select,
   SelectContent,
@@ -198,17 +199,18 @@ const ProductHighlightCard = ({
 };
 
 export default function AllProductsPage() {
+  // Fetch approved products from API
+  const { data: productsApiData, isLoading, error: apiError } = useGetPublicProductsQuery(undefined);
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [filteblueProducts, setFilteblueProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid");
 
   // New state for filters
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedBrand, setSelectedBrand] = useState("all");
-  const [priceRange, setPriceRange] = useState([0, 200]);
+  const [priceRange, setPriceRange] = useState([0, 10000]);
   const [sortBy, setSortBy] = useState("featublue");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
@@ -229,180 +231,14 @@ export default function AllProductsPage() {
     { id: "serenity", name: "Serenity Skincare" },
     { id: "earthly", name: "Earthly Essentials" },
   ];
-  // Mock products data
-  const mockProducts: Product[] = [
-    {
-      id: "1",
-      name: "Radiant Glow Serum",
-      price: 45.99,
-      image: "https://placehold.co/320x224.png",
-      hint: "Brightening vitamin C serum",
-      rating: 4.8,
-      reviewCount: 324,
-      vendorName: "Aura Cosmetics",
-      vendorId: "vendor-1",
-      isNew: true,
-      description:
-        "A powerful vitamin C serum that brightens and evens skin tone",
-      category: "skincare",
-    },
-    {
-      id: "2",
-      name: "Luxury Face Cream",
-      price: 78.5,
-      image: "https://placehold.co/320x224.png",
-      hint: "Anti-aging moisturizer",
-      rating: 4.9,
-      reviewCount: 567,
-      vendorName: "Serenity Skincare",
-      vendorId: "vendor-2",
-      description: "Rich anti-aging cream with peptides and hyaluronic acid",
-      category: "skincare",
-    },
-    {
-      id: "3",
-      name: "Matte Lipstick Set",
-      price: 32.0,
-      image: "https://placehold.co/320x224.png",
-      hint: "Long-lasting matte lipsticks",
-      rating: 4.7,
-      reviewCount: 892,
-      vendorName: "Chroma Beauty",
-      vendorId: "vendor-3",
-      isNew: true,
-      description: "Set of 6 long-lasting matte lipsticks in trending shades",
-      category: "cosmetics",
-    },
-    {
-      id: "4",
-      name: "Gentle Cleansing Oil",
-      price: 28.75,
-      image: "https://placehold.co/320x224.png",
-      hint: "Removes makeup effortlessly",
-      rating: 4.6,
-      reviewCount: 445,
-      vendorName: "Earthly Essentials",
-      vendorId: "vendor-4",
-      description: "Natural cleansing oil that removes makeup and impurities",
-      category: "facecare",
-    },
-    {
-      id: "5",
-      name: "Body Butter Trio",
-      price: 56.99,
-      image: "https://placehold.co/320x224.png",
-      hint: "Nourishing body care set",
-      rating: 4.8,
-      reviewCount: 234,
-      vendorName: "Earthly Essentials",
-      vendorId: "vendor-4",
-      description: "Set of 3 rich body butters with natural ingredients",
-      category: "bodycare",
-    },
-    {
-      id: "6",
-      name: "Eye Shadow Palette",
-      price: 42.25,
-      image: "https://placehold.co/320x224.png",
-      hint: "12 versatile shades",
-      rating: 4.9,
-      reviewCount: 678,
-      vendorName: "Chroma Beauty",
-      vendorId: "vendor-3",
-      description: "Professional eyeshadow palette with 12 blendable shades",
-      category: "cosmetics",
-    },
-    {
-      id: "7",
-      name: "Hydrating Toner",
-      price: 24.5,
-      image: "https://placehold.co/320x224.png",
-      hint: "Balances and hydrates",
-      rating: 4.5,
-      reviewCount: 321,
-      vendorName: "Serenity Skincare",
-      vendorId: "vendor-2",
-      description: "Alcohol-free toner that balances and hydrates skin",
-      category: "skincare",
-    },
-    {
-      id: "8",
-      name: "Floral Perfume",
-      price: 89.99,
-      image: "https://placehold.co/320x224.png",
-      hint: "Elegant floral fragrance",
-      rating: 4.7,
-      reviewCount: 156,
-      vendorName: "Aura Cosmetics",
-      vendorId: "vendor-1",
-      description:
-        "Sophisticated floral fragrance with notes of jasmine and rose",
-      category: "fragrance",
-    },
-    {
-      id: "9",
-      name: "Exfoliating Scrub",
-      price: 19.95,
-      image: "https://placehold.co/320x224.png",
-      hint: "Gentle face scrub",
-      rating: 4.4,
-      reviewCount: 289,
-      vendorName: "Earthly Essentials",
-      vendorId: "vendor-4",
-      description: "Natural exfoliating scrub with bamboo particles",
-      category: "facecare",
-    },
-    {
-      id: "10",
-      name: "Foundation Stick",
-      price: 38.0,
-      image: "https://placehold.co/320x224.png",
-      hint: "Full coverage foundation",
-      rating: 4.6,
-      reviewCount: 445,
-      vendorName: "Chroma Beauty",
-      vendorId: "vendor-3",
-      description: "Buildable full-coverage foundation stick",
-      category: "cosmetics",
-    },
-    {
-      id: "11",
-      name: "Night Repair Serum",
-      price: 65.0,
-      image: "https://placehold.co/320x224.png",
-      hint: "Overnight skin renewal",
-      rating: 4.8,
-      reviewCount: 512,
-      vendorName: "Serenity Skincare",
-      vendorId: "vendor-2",
-      isNew: true,
-      description: "Advanced night serum with retinol and peptides",
-      category: "skincare",
-    },
-    {
-      id: "12",
-      name: "Lip Gloss Collection",
-      price: 25.5,
-      image: "https://placehold.co/320x224.png",
-      hint: "Shimmery lip glosses",
-      rating: 4.3,
-      reviewCount: 178,
-      vendorName: "Aura Cosmetics",
-      vendorId: "vendor-1",
-      description: "Set of 4 high-shine lip glosses with mirror finish",
-      category: "cosmetics",
-    },
-  ];
-  // Initialize products with mock data
+  
+  // Initialize products with API data
   useEffect(() => {
-    setLoading(true);
-    // Simulate loading delay
-    setTimeout(() => {
-      setProducts(mockProducts);
-      setFilteblueProducts(mockProducts);
-      setLoading(false);
-    }, 500);
-  }, []);
+    if (productsApiData?.products) {
+      setProducts(productsApiData.products);
+      setFilteblueProducts(productsApiData.products);
+    }
+  }, [productsApiData]);
 
   // Filter and sort products
   useEffect(() => {
@@ -474,6 +310,13 @@ export default function AllProductsPage() {
     sortBy,
   ]);
 
+  // Calculate dynamic stats
+  const uniqueVendors = new Set(products.map(p => p.vendorId)).size;
+  const totalProducts = products.length;
+  const averageRating = products.length > 0 
+    ? (products.reduce((acc, p) => acc + p.rating, 0) / products.length).toFixed(1)
+    : '0.0';
+
   const bentoGridProducts = {
     newArrivals: products.slice(0, 3),
     topRated: products.slice(3, 6),
@@ -527,15 +370,15 @@ export default function AllProductsPage() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-md border border-border/20">
-              <p className="text-3xl font-bold text-primary">1,000+</p>
+              <p className="text-3xl font-bold text-primary">{isLoading ? '...' : uniqueVendors > 0 ? `${uniqueVendors}+` : '0'}</p>
               <p className="text-sm text-muted-foreground">Verified Vendors</p>
             </div>
             <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-md border border-border/20">
-              <p className="text-3xl font-bold text-primary">50,000+</p>
+              <p className="text-3xl font-bold text-primary">{isLoading ? '...' : totalProducts > 0 ? `${totalProducts.toLocaleString()}+` : '0'}</p>
               <p className="text-sm text-muted-foreground">Products Listed</p>
             </div>
             <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-md border border-border/20">
-              <p className="text-3xl font-bold text-primary">4.9/5</p>
+              <p className="text-3xl font-bold text-primary">{isLoading ? '...' : averageRating}/5</p>
               <p className="text-sm text-muted-foreground">Average Rating</p>
             </div>
             <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-md border border-border/20">
@@ -676,10 +519,18 @@ export default function AllProductsPage() {
                 </p>
               </div>
 
-              {loading ? (
-                <p>Loading products...</p>
-              ) : error ? (
-                <p className="text-blue-500">{error}</p>
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">Loading products...</p>
+                </div>
+              ) : apiError ? (
+                <div className="text-center py-12">
+                  <p className="text-destructive">Failed to load products. Please try again later.</p>
+                </div>
+              ) : filteblueProducts.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No products found.</p>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
                   {filteblueProducts.map((product) => (

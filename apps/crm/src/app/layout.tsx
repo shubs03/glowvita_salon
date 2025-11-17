@@ -21,6 +21,7 @@ export default function RootLayout({
     '/calendar',
     '/appointments',
     '/clients',
+    '/customers/summary',
     '/services',
     '/products',
     '/product-questions',

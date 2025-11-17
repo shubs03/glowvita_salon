@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@repo/ui/components/ui/button";
-import { Textarea } from "@repo/ui/components/ui/textarea";
-import { useToast } from "@repo/ui/components/ui/use-toast";
+import { Button } from "@repo/ui/button";
+import { Textarea } from "@repo/ui/textarea";
 import { StarRating } from "../ui/star-rating";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from 'sonner';
 
 interface ReviewFormProps {
   entityId: string;
@@ -20,7 +20,6 @@ export function ReviewForm({ entityId, entityType, onSubmitSuccess }: ReviewForm
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { isAuthenticated, user } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,20 +30,12 @@ export function ReviewForm({ entityId, entityType, onSubmitSuccess }: ReviewForm
     }
 
     if (rating === 0) {
-      toast({
-        title: "Error",
-        description: "Please select a rating",
-        variant: "destructive",
-      });
+      toast.error("Please select a rating");
       return;
     }
 
     if (!comment.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter your review",
-        variant: "destructive",
-      });
+      toast.error("Please enter your review");
       return;
     }
 
@@ -70,10 +61,7 @@ export function ReviewForm({ entityId, entityType, onSubmitSuccess }: ReviewForm
         throw new Error(data.error || "Failed to submit review");
       }
 
-      toast({
-        title: "Success",
-        description: "Review submitted successfully!",
-      });
+      toast.success("Review submitted successfully!");
 
       // Reset form
       setRating(0);
@@ -84,11 +72,7 @@ export function ReviewForm({ entityId, entityType, onSubmitSuccess }: ReviewForm
         onSubmitSuccess();
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit review",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Failed to submit review");
     } finally {
       setIsSubmitting(false);
     }
