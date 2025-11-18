@@ -6,6 +6,11 @@ await _db();
 // GET all approved doctors (public endpoint for web app)
 export const GET = async (req) => {
   try {
+    // During build phase, return empty array
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return Response.json([], { status: 200 });
+    }
+
     // Only return approved doctors with active subscriptions for public viewing
     const doctors = await DoctorModel.find({ 
       status: 'Approved',

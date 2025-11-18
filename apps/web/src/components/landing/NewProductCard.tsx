@@ -234,7 +234,10 @@ export function NewProductCard({
         <Button
           size="icon"
           variant="ghost"
-          className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 text-blue-500 backdrop-blur-sm hover:bg-white/30 transition-all opacity-0 group-hover:opacity-100"
+          className={cn(
+            "absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 text-blue-500 backdrop-blur-sm hover:bg-white/30 transition-all",
+            isLiked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}
           onClick={handleWishlistToggle}
           disabled={isLoading}
         >

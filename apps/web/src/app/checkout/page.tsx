@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation } from '@repo/store/api';
+import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Product {
@@ -32,9 +32,16 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('credit-card');
   
   const { user } = useAuth();
+  const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
+  const { data: shippingConfig } = useGetPublicShippingConfigQuery(undefined);
   const [createOrder, { isLoading }] = useCreateClientOrderMutation();
   const [createPaymentOrder] = useCreatePaymentOrderMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
+
+  console.log('Shipping Config Full Data: ', shippingConfig);
+  console.log('Shipping Config Amount: ', shippingConfig?.amount);
+  console.log('Shipping Config ChargeType: ', shippingConfig?.chargeType);
+  console.log('Shipping Config IsEnabled: ', shippingConfig?.isEnabled);
 
   // Load Razorpay script
   useEffect(() => {
@@ -81,7 +88,7 @@ export default function CheckoutPage() {
     }
     if (!product) return;
 
-    const totalAmount = (product.price * product.quantity) + 5.00 + (product.price * product.quantity * 0.08);
+    const totalAmount = (product.price * product.quantity) + shipping + (product.price * product.quantity * 0.08);
 
     try {
       // For cash on delivery, directly create order
@@ -254,8 +261,30 @@ export default function CheckoutPage() {
   }
 
   const subtotal = product.price * product.quantity;
-  const shipping = 5.00;
-  const tax = subtotal * 0.08;
+  
+  // Calculate dynamic shipping based on config
+  const shipping = subtotal > 0 && shippingConfig?.isEnabled
+    ? shippingConfig.chargeType === 'percentage'
+      ? (subtotal * shippingConfig.amount) / 100
+      : shippingConfig.amount
+    : 0;
+  
+  // Calculate tax based on dynamic tax settings from API
+  const productGST = taxSettings?.productGST || 18;
+  const productGSTType = taxSettings?.productGSTType || 'percentage';
+  const productPlatformFee = taxSettings?.productPlatformFee || 10;
+  const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
+  const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
+  const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
+  
+  const gst = productGSTEnabled 
+    ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+    : 0;
+  const platformFee = productPlatformFeeEnabled
+    ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+    : 0;
+  const tax = gst + platformFee;
+  
   const total = subtotal + shipping + tax;
 
   return (
@@ -337,10 +366,18 @@ export default function CheckoutPage() {
                     <span>Shipping</span>
                     <span>₹{shipping.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Tax (8%)</span>
-                    <span>₹{tax.toFixed(2)}</span>
-                  </div>
+                  {productGSTEnabled && (
+                    <div className="flex justify-between">
+                      <span>GST ({productGSTType === 'percentage' ? `${productGST}%` : '₹' + productGST})</span>
+                      <span>₹{gst.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {productPlatformFeeEnabled && (
+                    <div className="flex justify-between">
+                      <span>Platform Fee ({productPlatformFeeType === 'percentage' ? `${productPlatformFee}%` : '₹' + productPlatformFee})</span>
+                      <span>₹{platformFee.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
                     <span>Total</span>
                     <span>₹{total.toFixed(2)}</span>

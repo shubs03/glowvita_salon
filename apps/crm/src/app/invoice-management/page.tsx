@@ -12,8 +12,13 @@ import InvoiceUI from "@/components/InvoiceUI";
 import { toast } from 'sonner';
 import { useGetBillingRecordsQuery, useGetVendorProfileQuery, useDeleteBillingMutation } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
-import html2pdf from 'html2pdf.js';
 import { Pagination } from "@repo/ui/pagination";
+
+// Dynamically import html2pdf to avoid SSR issues
+let html2pdf: any;
+if (typeof window !== 'undefined') {
+  html2pdf = require('html2pdf.js');
+}
 
 // Billing interface
 interface BillingItem {
