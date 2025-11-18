@@ -264,8 +264,6 @@ export default function WishlistPage() {
                         clinicName={doctor.clinicName}
                         city={doctor.city}
                         state={doctor.state}
-                        showRemoveButton={true}
-                        onRemove={() => removeFromDoctorWishlist(doctor.doctorId)}
                       />
                     ))}
                   </div>
