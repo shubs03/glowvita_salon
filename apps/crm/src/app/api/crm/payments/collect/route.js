@@ -20,7 +20,8 @@ export const POST = authMiddlewareCrm(async (req) => {
       amount, 
       paymentMethod, 
       notes,
-      transactionId 
+      transactionId,
+      paymentDate
     } = body;
     
     console.log('Received payment request with appointmentId:', appointmentId);
@@ -28,6 +29,16 @@ export const POST = authMiddlewareCrm(async (req) => {
     console.log('Payment Method:', paymentMethod);
     console.log('Notes:', notes);
     console.log('Transaction ID:', transactionId);
+    console.log('Client-sent paymentDate:', paymentDate);
+
+    // Normalize client-sent date if provided
+    const paymentAt = paymentDate ? new Date(paymentDate) : new Date();
+    if (isNaN(paymentAt.getTime())) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid paymentDate format' },
+        { status: 400 }
+      );
+    }
     
     // Validate amount is a number
     if (typeof amount !== 'number' || amount <= 0) {
@@ -198,7 +209,7 @@ export const POST = authMiddlewareCrm(async (req) => {
             paymentHistory: {
               amount: amount,
               paymentMethod: paymentMethod,
-              paymentDate: new Date(),
+              paymentDate: paymentAt,
               notes: notes || '',
               transactionId: transactionId || null
             }
@@ -230,7 +241,8 @@ export const POST = authMiddlewareCrm(async (req) => {
         serviceTax: appointment.serviceTax || 0,
         platformFee: appointment.platformFee || 0,
         notes: notes || '',
-        transactionId: transactionId || null
+        transactionId: transactionId || null,
+        paymentDate: paymentAt
       });
       
       const paymentCollection = new PaymentCollectionModel({
@@ -251,7 +263,8 @@ export const POST = authMiddlewareCrm(async (req) => {
         serviceTax: appointment.serviceTax || 0,
         platformFee: appointment.platformFee || 0,
         notes: notes || '',
-        transactionId: transactionId || null
+        transactionId: transactionId || null,
+        paymentDate: paymentAt
       });
 
       // Save payment collection record
@@ -304,7 +317,7 @@ export const POST = authMiddlewareCrm(async (req) => {
           paymentHistory: {
             amount: amount,
             paymentMethod: paymentMethod,
-            paymentDate: new Date(),
+            paymentDate: paymentAt,
             notes: notes || '',
             transactionId: transactionId || null
           }

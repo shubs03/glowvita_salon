@@ -238,6 +238,16 @@ export default function AppointmentCard({
           <span className={`text-sm font-extrabold ${statusConfig.color} px-4 py-2 rounded-full shadow-md`}>
             {statusConfig.label}
           </span>
+          {(() => {
+            const totalAmount = (appointment as any).finalAmount || (appointment as any).totalAmount || 0;
+            const paidAmount = (appointment as any).amountPaid || (appointment as any).payment?.paid || 0;
+            const isPartial = totalAmount > 0 && paidAmount > 0 && paidAmount < totalAmount;
+            return isPartial ? (
+              <span className="text-xs font-semibold px-2 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                Partial
+              </span>
+            ) : null;
+          })()}
         </div>
         <div className="flex items-center text-sm text-gray-700 dark:text-gray-300 font-bold bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
           <Clock className="w-5 h-5 mr-2 text-gray-600 dark:text-gray-400" />
