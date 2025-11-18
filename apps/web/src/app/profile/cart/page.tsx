@@ -65,9 +65,11 @@ export default function CartPage() {
       if (isAuthenticated && user?._id) {
         // User is authenticated, use API
         if (quantity > 0) {
-          await updateCartItem({ productId, quantity }).unwrap();
+          const result = await updateCartItem({ productId, quantity }).unwrap();
+          toast.success('Cart updated successfully');
         } else {
           await removeFromCartAPI({ productId }).unwrap();
+          toast.success('Item removed from cart');
         }
       } else {
         // User is not authenticated, use local Redux store
@@ -77,8 +79,15 @@ export default function CartPage() {
           dispatch(removeFromLocalCart(productId));
         }
       }
-    } catch (error) {
-      toast.error('Failed to update quantity.');
+    } catch (error: any) {
+      // Handle stock validation errors from the API
+      const errorMessage = error?.data?.message || 'Failed to update quantity.';
+      toast.error(errorMessage);
+      
+      // If there's an available stock value, show it
+      if (error?.data?.availableStock !== undefined) {
+        toast.warning(`Only ${error.data.availableStock} units available in stock.`);
+      }
     }
   };
 

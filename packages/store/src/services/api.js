@@ -74,7 +74,6 @@ const baseQuery = async (args, api, extraOptions) => {
   let requestUrl = typeof args === "string" ? args : args.url;
 
   if (typeof requestUrl !== "string") {
-    console.error("Request URL is not a string:", requestUrl);
     return { error: { status: "CUSTOM_ERROR", error: "Invalid URL provided" } };
   }
 
@@ -89,11 +88,6 @@ const baseQuery = async (args, api, extraOptions) => {
 
   const baseUrl = API_BASE_URLS[targetService];
   const fullUrl = `${baseUrl}${requestUrl}`;
-
-  console.log("Target Service:", targetService);
-  console.log("Original Request URL:", requestUrl);
-  console.log("Base URL:", baseUrl);
-  console.log("API Request URL:", fullUrl);
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
@@ -126,7 +120,6 @@ const baseQuery = async (args, api, extraOptions) => {
 
     return result;
   } catch (error) {
-    console.error("API Error:", error);
     return { error: { status: "CUSTOM_ERROR", error: error.message } };
   }
 };
@@ -143,11 +136,12 @@ export const glowvitaApi = createApi({
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign",
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing",
     "Appointments", "ShippingCharge", "Order", "CrmProducts",
-    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart",
+    "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart", "ClientCart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
     "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
-    "Consultations", "Consultation", "Expense"
+    "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
+    "Billing", "VendorServices"
   ],
 
   endpoints: (builder) => ({
@@ -298,6 +292,54 @@ export const glowvitaApi = createApi({
     getPublicVendorProducts: builder.query({
       query: (vendorId) => ({ url: `/products?vendorId=${vendorId}`, method: "GET" }),
       providesTags: (result, error, vendorId) => [{ type: "PublicVendorProducts", id: vendorId }],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Single Product by ID
+    getPublicProductById: builder.query({
+      query: (productId) => ({ url: `/products/${productId}`, method: "GET" }),
+      providesTags: (result, error, productId) => [{ type: "PublicProduct", id: productId }],
+      transformResponse: (response) => response,
+    }),
+
+    // Product Questions - Get all published questions for a product (Web)
+    getProductQuestions: builder.query({
+      query: (productId) => ({ url: `/products/questions/${productId}`, method: "GET" }),
+      providesTags: (result, error, productId) => [{ type: "ProductQuestions", id: productId }],
+      transformResponse: (response) => response,
+    }),
+
+    // Product Questions - Submit a new question (Web)
+    submitProductQuestion: builder.mutation({
+      query: ({ productId, question }) => ({ 
+        url: `/products/questions/${productId}`, 
+        method: "POST", 
+        body: { productId, question } 
+      }),
+      invalidatesTags: (result, error, { productId }) => [{ type: "ProductQuestions", id: productId }],
+    }),
+
+    // Product Reviews - Get all reviews for a product (Web)
+    getProductReviews: builder.query({
+      query: (productId) => ({ url: `/products/reviews/${productId}`, method: "GET" }),
+      providesTags: (result, error, productId) => [{ type: "ProductReviews", id: productId }],
+      transformResponse: (response) => response,
+    }),
+
+    // Product Reviews - Submit a new review (Web)
+    submitProductReview: builder.mutation({
+      query: ({ productId, rating, comment }) => ({ 
+        url: `/products/reviews/${productId}`, 
+        method: "POST", 
+        body: { productId, rating, comment } 
+      }),
+      invalidatesTags: (result, error, { productId }) => [{ type: "ProductReviews", id: productId }],
+    }),
+
+    // Salon Reviews - Get all reviews for a salon (Web)
+    getSalonReviews: builder.query({
+      query: (salonId) => ({ url: `/salons/reviews/${salonId}`, method: "GET" }),
+      providesTags: (result, error, salonId) => [{ type: "SalonReviews", id: salonId }],
       transformResponse: (response) => response,
     }),
 
@@ -650,6 +692,18 @@ export const glowvitaApi = createApi({
       ],
     }),
 
+    updateVendorDocuments: builder.mutation({
+      query: ({ id, documents }) => ({
+        url: "/admin/vendor",
+        method: "PATCH",
+        body: { id, documents },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Vendor", id },
+        "Vendor",
+      ],
+    }),
+
     deleteVendor: builder.mutation({
       query: ({ id }) => ({
         url: "/admin/vendor",
@@ -939,6 +993,19 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Faq"],
     }),
 
+    // Admin Clients Endpoints
+    getAdminClients: builder.query({
+      query: ({ vendorId, page = 1, limit = 100 } = {}) => {
+        const params = new URLSearchParams();
+        if (vendorId) params.append('vendorId', vendorId);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+        return { url: `/admin/clients?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Client"],
+      transformResponse: (response) => (response && response.success ? response.data || [] : []),
+    }),
+
     // Admin Product Categories 
 
     getAdminProductCategories: builder.query({
@@ -1028,7 +1095,11 @@ export const glowvitaApi = createApi({
 
     // Products endpoints
     getCrmProducts: builder.query({
-      query: () => ({ url: "/crm/products", method: "GET" }),
+      query: ({ vendorId } = {}) => ({ 
+        url: "/crm/products", 
+        method: "GET",
+        params: vendorId ? { vendorId } : {}
+      }),
       providesTags: ["CrmProducts"],
       transformResponse: (response) => response.data || [],
     }),
@@ -1041,8 +1112,64 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["CrmProducts"],
     }),
     deleteCrmProduct: builder.mutation({
-      query: (id) => ({ url: "/crm/products", method: "DELETE", body: { id } }),
+      query: (data) => ({ 
+        url: "/crm/products", 
+        method: "DELETE", 
+        body: typeof data === 'object' && data.id ? data : { id: data }
+      }),
       invalidatesTags: ["CrmProducts"],
+    }),
+
+    // CRM Product Questions - Get all questions for vendor's products
+    getCrmProductQuestions: builder.query({
+      query: (filter = 'all') => ({ url: `/crm/product-questions?filter=${filter}`, method: "GET" }),
+      providesTags: ["CrmProductQuestions"],
+      transformResponse: (response) => response,
+    }),
+
+    // CRM Product Questions - Answer a question
+    answerProductQuestion: builder.mutation({
+      query: ({ questionId, answer, isPublished }) => ({ 
+        url: `/crm/product-questions/${questionId}`, 
+        method: "PATCH", 
+        body: { answer, isPublished } 
+      }),
+      invalidatesTags: ["CrmProductQuestions"],
+    }),
+
+    // CRM Product Questions - Delete a question
+    deleteProductQuestion: builder.mutation({
+      query: (questionId) => ({ 
+        url: `/crm/product-questions/${questionId}`, 
+        method: "DELETE"
+      }),
+      invalidatesTags: ["CrmProductQuestions"],
+    }),
+
+    // CRM Reviews - Get all reviews for vendor's products/services/salons
+    getCrmReviews: builder.query({
+      query: ({ filter = 'all', entityType = 'all' }) => ({ 
+        url: `/crm/reviews?filter=${filter}&entityType=${entityType}`, 
+        method: "GET" 
+      }),
+      providesTags: ["CrmReviews"],
+      transformResponse: (response) => response,
+    }),
+
+    // CRM Reviews - Approve/Reject a review
+    approveReview: builder.mutation({
+      query: ({ reviewId, isApproved }) => ({ 
+        url: `/crm/reviews/${reviewId}`, 
+        method: "PATCH", 
+        body: { isApproved } 
+      }),
+      invalidatesTags: ["CrmReviews"],
+    }),
+
+    // CRM Reviews - Delete a review
+    deleteReview: builder.mutation({
+      query: (reviewId) => ({ url: `/crm/reviews/${reviewId}`, method: "DELETE" }),
+      invalidatesTags: ["CrmReviews"],
     }),
 
     // New endpoint to fetch all vendor products with origin 'Vendor'
@@ -1376,7 +1503,7 @@ export const glowvitaApi = createApi({
       providesTags: ["Vendor"],
     }),
 
-    // Cart Endpoints (CRM - for vendors)
+    // Cart Endpoints (CRM)
     getCart: builder.query({
       query: () => ({ url: "/crm/cart", method: "GET" }),
       providesTags: ["Cart"],
@@ -1394,7 +1521,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Cart"],
     }),
 
-    // Client Cart Endpoints (Web App - for customers)
+    // Client Cart Endpoints (Web App)
     getClientCart: builder.query({
       query: () => ({ url: "/client/cart", method: "GET" }),
       providesTags: ["ClientCart"],
@@ -1410,6 +1537,12 @@ export const glowvitaApi = createApi({
     removeFromClientCart: builder.mutation({
       query: ({ productId }) => ({ url: "/client/cart", method: "DELETE", body: { productId } }),
       invalidatesTags: ["ClientCart"],
+    }),
+
+    // Client Referrals Endpoint (Web App - for customers)
+    getClientReferrals: builder.query({
+      query: () => ({ url: "/client/referrals", method: "GET" }),
+      providesTags: ["ClientReferrals"],
     }),
 
     // Web App Login
@@ -1450,13 +1583,60 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Patient"],
     }),
+    // Billing Endpoints
+    createBilling: builder.mutation({
+      query: (billingData) => ({
+        url: "/crm/billing",
+        method: "POST",
+        body: billingData,
+      }),
+      invalidatesTags: ["Billing"],
+    }),
+    getBillingRecords: builder.query({
+      query: ({ vendorId, startDate, endDate, page = 1, limit = 50 } = {}) => {
+        const params = new URLSearchParams();
+        if (vendorId) params.append('vendorId', vendorId);
+        if (startDate) params.append('startDate', startDate);
+        if (endDate) params.append('endDate', endDate);
+        params.append('page', (page || 1).toString());
+        params.append('limit', (limit || 50).toString());
+        return { url: `/crm/billing?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Billing"],
+    }),
+    getBillingById: builder.query({
+      query: (id) => ({ url: `/crm/billing/${id}`, method: "GET" }),
+      providesTags: (result, error, id) => [{ type: "Billing", id }],
+    }),
+    updateBilling: builder.mutation({
+      query: (billingData) => ({
+        url: "/crm/billing",
+        method: "PUT",
+        body: billingData,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Billing", id },
+        "Billing",
+      ],
+    }),
+
+    // Add the delete billing mutation
+    deleteBilling: builder.mutation({
+      query: (id) => ({
+        url: "/crm/billing",
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["Billing"],
+    }),
 
     // Doctor Consultation Endpoints (Web App - Physical & Video Consultations)
     getConsultations: builder.query({
-      query: ({ doctorId, patientId, phoneNumber, status, consultationType, startDate, endDate, page = 1, limit = 50 } = {}) => {
+      query: ({ doctorId, patientId, userId, phoneNumber, status, consultationType, startDate, endDate, page = 1, limit = 50 } = {}) => {
         const params = new URLSearchParams();
         if (doctorId) params.append('doctorId', doctorId);
         if (patientId) params.append('patientId', patientId);
+        if (userId) params.append('userId', userId);
         if (phoneNumber) params.append('phoneNumber', phoneNumber);
         if (status) params.append('status', status);
         if (consultationType) params.append('consultationType', consultationType);
@@ -1539,17 +1719,35 @@ export const glowvitaApi = createApi({
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
         if (userId) params.append('userId', userId);
+        // Add cache buster
+        params.append('_t', Date.now().toString());
         
         return { 
           url: `/appointments?${params.toString()}`, 
           method: "GET" 
         };
       },
-      providesTags: ['PublicAppointments'],
+      providesTags: (result, error, arg) => [
+        'PublicAppointments',
+        { type: 'PublicAppointments', id: `${arg.vendorId || 'all'}-${arg.date || 'all'}` }
+      ],
+      // DISABLE ALL CACHING - always fetch fresh data
+      keepUnusedDataFor: 0,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
     }),
     createPublicAppointment: builder.mutation({
       query: (appointmentData) => ({ url: "/appointments", method: "POST", body: appointmentData }),
       invalidatesTags: ['PublicAppointments'],
+      // Force immediate refetch after mutation
+      async onQueryStarted(arg, { dispatch, queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          // Invalidate all appointment queries
+          dispatch(glowvitaApi.util.invalidateTags(['PublicAppointments']));
+        } catch {}
+      },
     }),
 
     // Payment Collection Endpoint
@@ -1580,6 +1778,12 @@ export const {
   useGetPublicVendorsQuery,
   useGetPublicProductsQuery,
   useGetPublicVendorProductsQuery,
+  useGetPublicProductByIdQuery,
+  useGetProductQuestionsQuery,
+  useSubmitProductQuestionMutation,
+  useGetProductReviewsQuery,
+  useSubmitProductReviewMutation,
+  useGetSalonReviewsQuery,
   useGetPublicVendorServicesQuery,
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorStaffQuery,
@@ -1677,6 +1881,7 @@ export const {
   useDeleteFaqMutation,
   useGetVendorProductsQuery,
   useUpdateProductStatusMutation,
+  useGetAdminClientsQuery,
 
   // CRM Endpoints
   useVendorLoginMutation,
@@ -1696,6 +1901,12 @@ export const {
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
   useDeleteCrmProductMutation,
+  useGetCrmProductQuestionsQuery,
+  useAnswerProductQuestionMutation,
+  useDeleteProductQuestionMutation,
+  useGetCrmReviewsQuery,
+  useApproveReviewMutation,
+  useDeleteReviewMutation,
   useGetSupplierProductsQuery,
   useGetSupplierProfileQuery,
   useGetCurrentSupplierProfileQuery,
@@ -1756,7 +1967,6 @@ export const {
   useUpdateVendorProductMutation,
   useDeleteVendorProductMutation,
   useCreateVendorProductMutation,
-
   // Cart Endpoints (CRM)
   useGetCartQuery,
   useAddToCartMutation,
@@ -1769,10 +1979,19 @@ export const {
   useUpdateClientCartItemMutation,
   useRemoveFromClientCartMutation,
 
+  // Client Referrals Endpoint (Web App)
+  useGetClientReferralsQuery,
+
   // Block Time Endpoints
   useGetBlockedTimesQuery,
   useCreateBlockTimeMutation,
   useDeleteBlockTimeMutation,
+  // Billing Endpoints
+  useCreateBillingMutation,
+  useGetBillingRecordsQuery,
+  useGetBillingByIdQuery,
+  useUpdateBillingMutation,
+  useDeleteBillingMutation,
   useUpdateAppointmentStatusMutation,
   useGetPatientsQuery,
   useCreatePatientMutation,

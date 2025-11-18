@@ -13,7 +13,7 @@ export const POST = authMiddlewareCrm(async (req) => {
   const body = await req.json();
   const { title, channels, content, targetType, targets } = body;
 
-  const vendorId = vendor._id.toString();
+  const vendorId = vendor.userId.toString();
 
   // 1️⃣ Validate required fields
   if (!vendorId || !title || !channels || !Array.isArray(channels) || !content || !targetType) {
@@ -125,7 +125,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 
 // DELETE: Remove specific notifications from the VendorNotifications document
 export const DELETE = authMiddlewareCrm(async (req) => {
-  const vendor = req.user._id.toString();
+  const vendor = req.user.userId.toString();
 
   const body = await req.json();
   const { notificationId } = body;

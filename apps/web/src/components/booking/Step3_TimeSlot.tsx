@@ -78,7 +78,13 @@ const isTimeSlotBlocked = (staff: StaffMember | null, date: Date, time: string):
 
 // Helper function to check if a time slot conflicts with existing appointments FOR A SPECIFIC STAFF
 const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string, staffId: string, serviceDuration: number = 60): boolean => {
+    console.log('=== isTimeSlotBookedForStaff Debug ===');
+    console.log('Checking for specific staff ID:', staffId);
+    console.log('Time slot:', time, 'Date:', format(date, 'yyyy-MM-dd'));
+    console.log('Service duration:', serviceDuration);
+    
     if (!appointments || appointments.length === 0) {
+        console.log('No appointments to check');
         return false;
     }
     
@@ -86,9 +92,22 @@ const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string,
     const endTimeMinutes = timeMinutes + serviceDuration;
     const dateString = format(date, 'yyyy-MM-dd');
     
-    return appointments.some(appointment => {
+    const isBooked = appointments.some((appointment, index) => {
+        console.log(`\nChecking appointment ${index + 1}:`, appointment);
+        
+        // Check if appointment status is active (confirmed, pending, or scheduled)
+        const status = (appointment.status || appointment.appointmentStatus || '').toLowerCase();
+        const isActive = status === 'confirmed' || status === 'pending' || status === 'scheduled';
+        
+        if (!isActive) {
+            console.log(`Skipping appointment - Status is not active: ${status}`);
+            return false;
+        }
+        
         // Check if appointment is on the same date
         const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
+        console.log('Date match:', appointmentDateString === dateString);
+        
         if (appointmentDateString !== dateString) {
             return false;
         }
@@ -100,10 +119,14 @@ const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string,
                 appointmentStaffId = appointment.staff;
             } else if (appointment.staff._id) {
                 appointmentStaffId = appointment.staff._id.toString ? appointment.staff._id.toString() : appointment.staff._id;
+            } else if (appointment.staff.id) {
+                appointmentStaffId = appointment.staff.id.toString ? appointment.staff.id.toString() : appointment.staff.id;
             } else if (appointment.staff.toString) {
                 appointmentStaffId = appointment.staff.toString();
             }
         }
+        
+        console.log('Staff ID comparison:', appointmentStaffId, 'vs', staffId, '=', appointmentStaffId === staffId);
         
         // Only check appointments for this specific staff member
         if (appointmentStaffId !== staffId) {
@@ -114,39 +137,121 @@ const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string,
         const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
         const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
         
+        console.log('Time comparison: checking slot', timeMinutes, '-', endTimeMinutes, 'vs appointment', appointmentStartMinutes, '-', appointmentEndMinutes);
+        
         // Check if the new time slot overlaps with existing appointment
         // Overlap occurs if: newStart < existingEnd AND newEnd > existingStart
-        return (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
+        const hasOverlap = (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
+        console.log('Overlap detected:', hasOverlap);
+        
+        return hasOverlap;
     });
+    
+    console.log('Final result for staff-specific check:', isBooked ? 'BOOKED' : 'AVAILABLE');
+    console.log('=== End isTimeSlotBookedForStaff Debug ===\n');
+    
+    return isBooked;
 };
 
-// Helper function to check if a time slot conflicts with existing appointments
+// SIMPLIFIED: Check if a time slot is booked
 const isTimeSlotBooked = (appointments: any[], date: Date, time: string, staff: StaffMember | null, serviceDuration: number = 60): boolean => {
+    console.log('\n🔍 === isTimeSlotBooked DEBUG START ===');
+    console.log('Checking time:', time);
+    console.log('Date:', format(date, 'yyyy-MM-dd'));
+    console.log('Staff:', staff ? `${staff.name} (ID: ${staff.id})` : 'No staff (Any Professional)');
+    console.log('Service duration:', serviceDuration, 'minutes');
+    console.log('Total appointments received:', appointments?.length || 0);
+    
     if (!appointments || appointments.length === 0) {
+        console.log('❌ No appointments - returning false');
+        console.log('=== isTimeSlotBooked DEBUG END ===\n');
         return false;
     }
     
-    // For single service, we might have a specific staff assigned
-    if (staff) {
-        return isTimeSlotBookedForStaff(appointments, date, time, staff.id, serviceDuration);
-    }
-    
-    // Fallback: check all appointments
     const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
     const endTimeMinutes = timeMinutes + serviceDuration;
     const dateString = format(date, 'yyyy-MM-dd');
     
-    return appointments.some(appointment => {
-        const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
-        if (appointmentDateString !== dateString) {
-            return false;
+    console.log('Checking slot range:', `${time} (${timeMinutes} min) to ${Math.floor(endTimeMinutes/60)}:${String(endTimeMinutes%60).padStart(2,'0')} (${endTimeMinutes} min)`);
+    
+    // Filter appointments for the selected date AND active status
+    const dateAppointments = appointments.filter(apt => {
+        const aptDate = format(new Date(apt.date), 'yyyy-MM-dd');
+        const dateMatches = aptDate === dateString;
+        
+        // Check if appointment status is active (confirmed, pending, or scheduled)
+        const status = (apt.status || apt.appointmentStatus || '').toLowerCase();
+        const isActive = status === 'confirmed' || status === 'pending' || status === 'scheduled';
+        
+        console.log(`  Appointment ${apt.startTime}-${apt.endTime} on ${aptDate} [${status}]: Date: ${dateMatches ? '✅' : '❌'}, Active: ${isActive ? '✅' : '❌'}`);
+        
+        return dateMatches && isActive;
+    });
+    
+    console.log(`Found ${dateAppointments.length} ACTIVE appointments on ${dateString}`);
+    
+    // If specific staff selected, further filter by staff
+    const relevantAppointments = staff 
+        ? dateAppointments.filter(apt => {
+            let aptStaffId = apt.staff;
+            console.log('  Raw staff data from appointment:', apt.staff);
+            
+            // Handle different staff ID formats
+            if (typeof aptStaffId === 'object' && aptStaffId?._id) {
+                aptStaffId = String(aptStaffId._id);
+            } else if (typeof aptStaffId === 'object' && aptStaffId?.id) {
+                aptStaffId = String(aptStaffId.id);
+            } else {
+                aptStaffId = String(aptStaffId);
+            }
+            
+            const staffIdToMatch = String(staff.id);
+            const matches = aptStaffId === staffIdToMatch;
+            
+            console.log(`  Appointment staff: "${aptStaffId}" vs Selected staff: "${staffIdToMatch}" → ${matches ? '✅ MATCH' : '❌ NO MATCH'}`);
+            
+            return matches;
+          })
+        : dateAppointments;
+    
+    console.log(`After staff filtering: ${relevantAppointments.length} relevant appointments`);
+    
+    if (relevantAppointments.length > 0) {
+        console.log('Relevant appointments details:');
+        relevantAppointments.forEach((apt, idx) => {
+            console.log(`  ${idx + 1}. ${apt.startTime}-${apt.endTime} | Staff: ${apt.staffName || 'Unknown'} | Status: ${apt.status}`);
+        });
+    }
+    
+    // Check for time overlap
+    const isBooked = relevantAppointments.some(apt => {
+        // Parse appointment times
+        const aptStartParts = apt.startTime.split(':');
+        const aptEndParts = apt.endTime.split(':');
+        
+        const aptStartMinutes = parseInt(aptStartParts[0]) * 60 + parseInt(aptStartParts[1]);
+        const aptEndMinutes = parseInt(aptEndParts[0]) * 60 + parseInt(aptEndParts[1]);
+        
+        console.log(`\n  Checking overlap with ${apt.startTime}-${apt.endTime} (${aptStartMinutes}-${aptEndMinutes} min):`);
+        console.log(`    New slot: ${timeMinutes} < ${aptEndMinutes}? ${timeMinutes < aptEndMinutes}`);
+        console.log(`    New end: ${endTimeMinutes} > ${aptStartMinutes}? ${endTimeMinutes > aptStartMinutes}`);
+        
+        // Overlap check: new slot starts before existing ends AND new slot ends after existing starts
+        const hasOverlap = (timeMinutes < aptEndMinutes && endTimeMinutes > aptStartMinutes);
+        
+        console.log(`    Result: ${hasOverlap ? '❌ OVERLAP DETECTED!' : '✅ No overlap'}`);
+        
+        if (hasOverlap) {
+            console.log(`❌ ${time} BLOCKED - conflicts with ${apt.startTime}-${apt.endTime}`);
         }
         
-        const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
-        const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
-        
-        return (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
+        return hasOverlap;
     });
+    
+    console.log(`\n📌 FINAL RESULT: ${isBooked ? '🔴 BOOKED (slot unavailable)' : '🟢 AVAILABLE (slot free)'}`);
+    console.log('=== isTimeSlotBooked DEBUG END ===\n');
+    
+    return isBooked;
 };
 
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
@@ -215,7 +320,7 @@ export function Step3_TimeSlot({
 
   // Fetch existing appointments for the selected date and staff to check availability
   // For single service, we always fetch all appointments to properly handle "Any Professional" case
-  const { data: existingAppointments = [], isLoading: isLoadingAppointments, refetch } = useGetPublicAppointmentsQuery(
+  const { data: rawAppointmentsData = [], isLoading: isLoadingAppointments, refetch } = useGetPublicAppointmentsQuery(
     {
       vendorId: vendorId,
       // For single service, we need to check appointments for all staff to properly handle "Any Professional"
@@ -225,67 +330,80 @@ export function Step3_TimeSlot({
     },
     {
       skip: !vendorId, // Skip if no vendorId provided
-      refetchOnMountOrArgChange: true
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
     }
   );
 
-  // Refetch appointments when selected date or staff changes to ensure we have the latest data
-  // Also refetch when the component mounts to get the most recent appointments
+  // CRITICAL: Filter to only include active appointments (confirmed/pending/scheduled)
+  const existingAppointments = useMemo(() => {
+    if (!rawAppointmentsData || !Array.isArray(rawAppointmentsData)) return [];
+    
+    const filtered = rawAppointmentsData.filter(apt => {
+      const status = (apt.status || apt.appointmentStatus || '').toLowerCase();
+      // Include all active booking statuses: confirmed, pending, and scheduled
+      return status === 'confirmed' || status === 'pending' || status === 'scheduled';
+    });
+    
+    console.log(`✅ Filtered appointments for ${format(selectedDate, 'yyyy-MM-dd')}:`, {
+      total: rawAppointmentsData.length,
+      active: filtered.length,
+      excluded: rawAppointmentsData.length - filtered.length,
+      statuses: rawAppointmentsData.map(apt => apt.status)
+    });
+    
+    return filtered;
+  }, [rawAppointmentsData, selectedDate]);
+
+  // AGGRESSIVE REFETCH: Ensure we always have fresh appointment data
   useEffect(() => {
+    if (!vendorId) return;
+    
     let isMounted = true;
     
-    const fetchData = async () => {
-      if (vendorId && isMounted) {
-        try {
-          // Check if an appointment was just created
-          const appointmentJustCreated = typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true';
-          
-          // Add a small delay to ensure any pending writes are completed
-          // This is especially important after appointment creation
-          const delay = appointmentJustCreated ? 1500 : 100; // Longer delay if appointment was just created
-          await new Promise(resolve => setTimeout(resolve, delay));
-          
-          console.log('Step3_TimeSlot: Refetching appointments data');
-          await refetch();
-          lastRefetchTimestamp.current = Date.now();
-          
-          // Clear the flag after refetching
-          if (appointmentJustCreated && typeof window !== 'undefined') {
-            console.log('Step3_TimeSlot: Cleared appointmentJustCreated flag after refetching');
-            sessionStorage.removeItem('appointmentJustCreated');
-          }
-        } catch (error) {
-          console.error('Step3_TimeSlot: Error refetching appointments:', error);
-        }
-      }
+    // Refetch immediately on mount and when date/staff changes
+    const doRefetch = async () => {
+      if (!isMounted) return;
+      await refetch();
+      lastRefetchTimestamp.current = Date.now();
     };
     
-    fetchData();
+    doRefetch();
     
-    // Refetch when the document becomes visible again (e.g., after switching tabs)
+    // Set up aggressive polling - refetch every 3 seconds
+    const pollInterval = setInterval(() => {
+      if (isMounted && document.visibilityState === 'visible') {
+        doRefetch();
+      }
+    }, 3000);
+    
+    // Also refetch on visibility change
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && vendorId && isMounted) {
-        fetchData();
+      if (document.visibilityState === 'visible' && isMounted) {
+        doRefetch();
       }
     };
-    
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
-    // Periodically refetch appointments to ensure we have the latest data
-    // This helps catch any appointments that might have been created by other users
-    const intervalId = setInterval(() => {
-      if (vendorId && isMounted && document.visibilityState === 'visible') {
-        fetchData();
-      }
-    }, 30000); // Refetch every 30 seconds
-    
-    // Cleanup function to prevent state updates on unmounted component
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      clearInterval(intervalId);
     };
-  }, [vendorId, refetch]); // Simplified dependencies to prevent infinite loops
+  }, [vendorId, selectedDate, selectedStaff, refetch]);
+
+  // Handle appointment just created flag
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true') {
+      console.log('🔄 Detected new appointment, forcing refetch...');
+      sessionStorage.removeItem('appointmentJustCreated');
+      // Multiple refetches to ensure we get the data
+      setTimeout(() => refetch(), 500);
+      setTimeout(() => refetch(), 1500);
+      setTimeout(() => refetch(), 3000);
+    }
+  }, [refetch]);
 
   // Additional check for appointment creation flag with a shorter interval
   useEffect(() => {
@@ -319,15 +437,24 @@ export function Step3_TimeSlot({
     };
   }, [vendorId, refetch]);
 
-  console.log('Step3_TimeSlot - Fetching appointments:', {
-    vendorId,
-    staffId: selectedStaff?.id || 'Any Professional (all staff)',
-    date: format(selectedDate, 'yyyy-MM-dd'),
-    existingAppointments: existingAppointments,
-    isLoadingAppointments,
-    mode: selectedStaff ? 'Specific Staff' : 'Any Professional',
-    lastRefetch: lastRefetchTimestamp.current
-  });
+  console.log('========================================');
+  console.log('📅 TIME SLOT AVAILABILITY CHECK');
+  console.log('========================================');
+  console.log('Vendor ID:', vendorId);
+  console.log('Selected Staff:', selectedStaff ? `${selectedStaff.name} (${selectedStaff.id})` : 'Any Professional');
+  console.log('Selected Date:', format(selectedDate, 'yyyy-MM-dd'));
+  console.log('Loading:', isLoadingAppointments);
+  console.log('Last Refetch:', new Date(lastRefetchTimestamp.current).toLocaleTimeString());
+  console.log('----------------------------------------');
+  console.log('✅ ACTIVE Appointments (Confirmed/Pending/Scheduled):', existingAppointments?.length || 0);
+  if (existingAppointments && existingAppointments.length > 0) {
+    existingAppointments.forEach((apt, i) => {
+      console.log(`  ${i + 1}. ${apt.startTime}-${apt.endTime} | ${apt.staffName || 'Unknown'} | ${apt.status}`);
+    });
+  } else {
+    console.log('  No active appointments - all slots available');
+  }
+  console.log('========================================\n');
 
   // Calculate service duration for overlap checking
   const serviceDuration = useMemo(() => {

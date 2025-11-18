@@ -56,7 +56,7 @@ import { useCrmAuth } from '@/hooks/useCrmAuth';
 // Types
 type Product = {
   _id: string;
-  productImage: string;
+  productImages: string[];
   productName: string;
   price: number;
   salePrice: number;
@@ -68,6 +68,13 @@ type Product = {
   createdAt?: string;
   updatedAt?: string;
   status: 'pending' | 'approved' | 'disapproved';
+  size?: string;
+  sizeMetric?: string;
+  keyIngredients?: string[];
+  forBodyPart?: string;
+  bodyPartType?: string;
+  productForm?: string;
+  brand?: string;
   vendorId?: { name: string };
 };
 
@@ -153,7 +160,8 @@ export default function ProductsPage() {
     const handleDeleteProduct = async () => {
         if (selectedProduct) {
             try {
-                await deleteProduct({ id: selectedProduct._id }).unwrap();
+                // delete data
+            await deleteProduct(selectedProduct._id).unwrap();
                 toast.success('Product deleted successfully!');
                 setIsDeleteModalOpen(false);
                 refetchProducts();
@@ -181,21 +189,18 @@ export default function ProductsPage() {
     
     // Enhanced status badge with better styling
     const getStatusBadge = (status: string) => {
-        const statusConfig: Record<string, { bg: string; text: string; icon: string }> = {
+        const statusConfig: Record<string, { variant: "secondary" | "outline" | "destructive"; dotColor: string }> = {
             pending: { 
-                bg: 'bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-yellow-400/30', 
-                text: 'text-yellow-700 dark:text-yellow-300', 
-                icon: '⏳' 
+                variant: 'outline', 
+                dotColor: 'bg-yellow-500' 
             },
             approved: { 
-                bg: 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-400/30', 
-                text: 'text-green-700 dark:text-green-300', 
-                icon: '✅' 
+                variant: 'secondary', 
+                dotColor: 'bg-green-500' 
             },
             disapproved: { 
-                bg: 'bg-gradient-to-r from-red-500/20 to-rose-500/20 border-red-400/30', 
-                text: 'text-red-700 dark:text-red-300', 
-                icon: '❌' 
+                variant: 'destructive', 
+                dotColor: 'bg-red-500' 
             }
         };
         
@@ -203,9 +208,10 @@ export default function ProductsPage() {
         
         return (
             <Badge 
-                className={`${config.bg} ${config.text} border backdrop-blur-sm px-3 py-1 font-medium text-xs rounded-full shadow-sm`}
+                variant={config.variant}
+                className="rounded-full text-xs"
             >
-                <span className="mr-1">{config.icon}</span>
+                <div className={`w-1.5 h-1.5 rounded-full mr-1 ${config.dotColor}`} />
                 {status.charAt(0).toUpperCase() + status.slice(1)}
             </Badge>
         );
@@ -387,7 +393,7 @@ export default function ProductsPage() {
                               >
                                 <div className="relative aspect-square overflow-hidden rounded-md m-3">
                                   <Image
-                                    src={product.productImage || 'https://placehold.co/300x300.png'}
+                                    src={product.productImages?.[0] || 'https://placehold.co/300x300.png'}
                                     alt={product.productName}
                                     fill
                                     className="group-hover:scale-105 transition-transform duration-300 object-cover"
@@ -399,7 +405,7 @@ export default function ProductsPage() {
                                     {product.stock > 0 ? `In Stock` : "Out of Stock"}
                                   </Badge>
                                   {/* Status Badge */}
-                                  <div className="absolute top-2 left-2">
+                                  <div className="absolute top-2 left-2 text-xs">
                                     {getStatusBadge(product.status)}
                                   </div>
                                 </div>
@@ -472,7 +478,7 @@ export default function ProductsPage() {
                                                 {/* Product Image */}
                                                 <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-border/30 bg-muted/20 shadow-sm flex-shrink-0">
                                                     <Image 
-                                                        src={product.productImage || 'https://placehold.co/80x80.png'} 
+                                                        src={product.productImages?.[0] || 'https://placehold.co/80x80.png'} 
                                                         alt={product.productName} 
                                                         fill
                                                         className="object-cover group-hover:scale-105 transition-transform duration-300" 
@@ -629,34 +635,63 @@ export default function ProductsPage() {
                         </div>
                         
                         <div className="space-y-2">
-                            <Label htmlFor="productImage" className="text-sm font-medium">Product Image</Label>
+                            <Label htmlFor="productImages" className="text-sm font-medium">Product Images</Label>
                             <Input 
-                                id="productImage" 
+                                id="productImages" 
                                 type="file" 
                                 accept="image/*"
+                                multiple
                                 className="rounded-xl border-border/40 focus:border-primary/50"
                                 onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (event) => {
-                                            const base64String = event.target?.result as string;
-                                            setFormData(prev => ({...prev, productImage: base64String}));
-                                        };
-                                        reader.readAsDataURL(file);
+                                    const files = e.target.files;
+                                    if (files && files.length > 0) {
+                                        const fileReaders: Promise<string>[] = [];
+                                        
+                                        Array.from(files).forEach(file => {
+                                            const promise = new Promise<string>((resolve, reject) => {
+                                                const reader = new FileReader();
+                                                reader.onload = (event) => {
+                                                    resolve(event.target?.result as string);
+                                                };
+                                                reader.onerror = reject;
+                                                reader.readAsDataURL(file);
+                                            });
+                                            fileReaders.push(promise);
+                                        });
+                                        
+                                        Promise.all(fileReaders).then(base64Images => {
+                                            setFormData(prev => ({
+                                                ...prev, 
+                                                productImages: [...(prev.productImages || []), ...base64Images]
+                                            }));
+                                        });
                                     }
                                 }}
                             />
-                            {formData.productImage && (
-                                <div className="mt-3 flex justify-center">
-                                    <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-border/30 shadow-sm">
-                                        <Image 
-                                            src={formData.productImage} 
-                                            alt="Product preview" 
-                                            fill
-                                            className="object-cover"
-                                        />
-                                    </div>
+                            {formData.productImages && formData.productImages.length > 0 && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {formData.productImages.map((image, index) => (
+                                        <div key={index} className="relative w-24 h-24 rounded-xl overflow-hidden border border-border/30 shadow-sm group">
+                                            <Image 
+                                                src={image} 
+                                                alt={`Product preview ${index + 1}`} 
+                                                fill
+                                                className="object-cover"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        productImages: prev.productImages?.filter((_, i) => i !== index)
+                                                    }));
+                                                }}
+                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -695,6 +730,91 @@ export default function ProductsPage() {
                                     className="rounded-xl border-border/40 focus:border-primary/50"
                                 />
                             </div>
+                        </div>
+                        
+                        {/* New Fields Section */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="brand" className="text-sm font-medium">Brand</Label>
+                                <Input 
+                                    placeholder="Enter brand name" 
+                                    id="brand" 
+                                    value={formData.brand || ''} 
+                                    onChange={(e) => setFormData(prev => ({...prev, brand: e.target.value}))}
+                                    className="rounded-xl border-border/40 focus:border-primary/50"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="productForm" className="text-sm font-medium">Product Form</Label>
+                                <Input 
+                                    placeholder="e.g., serum, cream, oil, powder" 
+                                    id="productForm" 
+                                    value={formData.productForm || ''} 
+                                    onChange={(e) => setFormData(prev => ({...prev, productForm: e.target.value}))}
+                                    className="rounded-xl border-border/40 focus:border-primary/50"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="size" className="text-sm font-medium">Size</Label>
+                                <Input 
+                                    placeholder="Enter size" 
+                                    id="size" 
+                                    value={formData.size || ''} 
+                                    onChange={(e) => setFormData(prev => ({...prev, size: e.target.value}))}
+                                    className="rounded-xl border-border/40 focus:border-primary/50"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="sizeMetric" className="text-sm font-medium">Size Metric</Label>
+                                <Input 
+                                    placeholder="e.g., grams, ml, litre, pieces" 
+                                    id="sizeMetric" 
+                                    value={formData.sizeMetric || ''} 
+                                    onChange={(e) => setFormData(prev => ({...prev, sizeMetric: e.target.value}))}
+                                    className="rounded-xl border-border/40 focus:border-primary/50"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="forBodyPart" className="text-sm font-medium">For Body Part</Label>
+                                <Input 
+                                    placeholder="e.g., body skin, face, nails, hair" 
+                                    id="forBodyPart" 
+                                    value={formData.forBodyPart || ''} 
+                                    onChange={(e) => setFormData(prev => ({...prev, forBodyPart: e.target.value}))}
+                                    className="rounded-xl border-border/40 focus:border-primary/50"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="bodyPartType" className="text-sm font-medium">Body Part Type</Label>
+                                <Input 
+                                    placeholder="e.g., fair skin, rough skin, oily skin" 
+                                    id="bodyPartType" 
+                                    value={formData.bodyPartType || ''} 
+                                    onChange={(e) => setFormData(prev => ({...prev, bodyPartType: e.target.value}))}
+                                    className="rounded-xl border-border/40 focus:border-primary/50"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="keyIngredients" className="text-sm font-medium">Key Ingredients</Label>
+                            <Input 
+                                placeholder="Enter ingredients separated by commas (e.g., Vitamin C, Hyaluronic Acid, Retinol)" 
+                                id="keyIngredients" 
+                                value={Array.isArray(formData.keyIngredients) ? formData.keyIngredients.join(', ') : formData.keyIngredients || ''} 
+                                onChange={(e) => {
+                                    const ingredients: string[] = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                                    setFormData(prev => ({...prev, keyIngredients: ingredients}));
+                                }}
+                                className="rounded-xl border-border/40 focus:border-primary/50"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">Separate multiple ingredients with commas</p>
                         </div>
                     </div>
                     

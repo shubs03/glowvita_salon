@@ -374,9 +374,6 @@ staffSchema.index({ vendorId: 1, status: 1, role: 1 }); // Most common filter
 staffSchema.index({ vendorId: 1, emailAddress: 1 }, { unique: true }); // Login
 staffSchema.index({ vendorId: 1, mobileNo: 1 }, { unique: true }); // Contact uniqueness
 
-// Add index for vendorId to improve update performance
-staffSchema.index({ vendorId: 1 });
-
 // Availability-specific compound indexes
 staffSchema.index({
   vendorId: 1,

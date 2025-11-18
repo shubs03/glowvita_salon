@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from "@repo/ui/button";
 import { BasicInfoStep } from './components/BasicInfoStep';
 import { ConfirmationStep } from './components/ConfirmationStep';
@@ -64,6 +65,7 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setC
 
 export default function NewConsultationPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isInitialized, setIsInitialized] = useState(false);
   const [consultationData, setConsultationData] = useState<ConsultationData>({
@@ -199,6 +201,9 @@ export default function NewConsultationPage() {
         reason: consultationData.concerns, // API expects 'reason' field
         concerns: consultationData.concerns, // Keep for compatibility
         
+        // User ID (if logged in)
+        userId: user?._id || null,
+        
         // Consultation Type & Details
         consultationType: 'video',
         appointmentDate: new Date().toISOString(), // Video consultations start immediately
@@ -212,6 +217,11 @@ export default function NewConsultationPage() {
         // Payment Information - For now, marking as pending until Razorpay is configured
         paymentStatus: 'pending', // Will be 'completed' when Razorpay is integrated
         paymentMethod: 'online',
+        
+        // Notification Preferences (default for video consultations)
+        whatsappNotifications: true,
+        smsNotifications: false,
+        emailNotifications: false,
         
         // Additional Info
         selectedSpecialty: consultationData.selectedSpecialty,

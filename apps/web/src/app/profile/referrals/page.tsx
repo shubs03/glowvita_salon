@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
@@ -13,14 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@repo/ui/badge';
 import { Pagination } from '@repo/ui/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-
-const referralHistory = [
-  { id: 1, friend: 'John Doe', date: '2024-08-10', status: 'Completed', reward: '₹100' },
-  { id: 2, friend: 'Jane Smith', date: '2024-07-22', status: 'Pending', reward: '₹100' },
-  { id: 3, friend: 'Sam Wilson', date: '2024-07-05', status: 'Completed', reward: '₹100' },
-  { id: 4, friend: 'Alice Johnson', date: '2024-06-18', status: 'Completed', reward: '₹100' },
-  { id: 5, friend: 'Bob Brown', date: '2024-06-12', status: 'Pending', reward: '₹100' },
-];
+import { useGetClientReferralsQuery } from '@repo/store/api';
+import { useAuth } from '@/hooks/useAuth';
 
 const HowItWorksStep = ({ step, title, description }: { step: number, title: string, description: string }) => (
     <div className="flex items-start gap-4">
@@ -35,25 +29,49 @@ const HowItWorksStep = ({ step, title, description }: { step: number, title: str
 );
 
 export default function ReferralsPage() {
+  const { user, isAuthenticated } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const referralCode = 'SOPHIA25';
-  const referralLink = `https://glowvita.com/register?ref=${referralCode}`;
+  // Fetch referral data
+  const { data: referralData, isLoading, refetch } = useGetClientReferralsQuery(undefined, { 
+    skip: !isAuthenticated || !user?._id 
+  });
+
+  const referralCode = referralData?.data?.referralCode || 'LOADING';
+  const isValidCode = referralCode !== 'N/A' && referralCode !== 'LOADING' && referralCode !== 'NOTAVAILABLE';
+  const referralLink = `${typeof window !== 'undefined' ? window.location.origin : 'https://glowvita.com'}/client-register?ref=${referralCode}`;
+  const referralHistory = referralData?.data?.referralHistory || [];
+  const stats = referralData?.data?.stats || { totalEarnings: 0, successfulReferrals: 0, totalReferrals: 0 };
 
   const handleCopy = (textToCopy: string) => {
+    if (!isValidCode) {
+      toast.error('Referral code not available yet. Please refresh the page.');
+      return;
+    }
     navigator.clipboard.writeText(textToCopy);
     toast.success(`${textToCopy === referralLink ? 'Link' : 'Code'} copied to clipboard!`);
   };
 
+  // Refetch if referral code is not available
+  useEffect(() => {
+    if (!isLoading && referralCode === 'NOTAVAILABLE') {
+      // Wait a bit and refetch
+      const timer = setTimeout(() => {
+        refetch();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [referralCode, isLoading, refetch]);
+
   const filteredHistory = useMemo(() => {
-    return referralHistory.filter(referral =>
+    return referralHistory.filter((referral: any) =>
       (referral.friend.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (statusFilter === 'all' || referral.status === statusFilter)
     );
-  }, [searchTerm, statusFilter]);
+  }, [referralHistory, searchTerm, statusFilter]);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -62,18 +80,33 @@ export default function ReferralsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Completed': return 'bg-green-100 text-green-800';
-      case 'Pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Completed': 
+      case 'Bonus Paid': 
+        return 'bg-green-100 text-green-800';
+      case 'Pending': 
+        return 'bg-yellow-100 text-yellow-800';
+      default: 
+        return 'bg-gray-100 text-gray-800';
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading referral data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard icon={Gift} title="Total Earnings" value={`₹${referralHistory.filter(r => r.status === 'Completed').reduce((acc, r) => acc + parseFloat(r.reward.replace('₹', '')), 0)}`} change="from referrals" />
-        <StatCard icon={UserPlus} title="Successful Referrals" value={referralHistory.filter(r => r.status === 'Completed').length} change="friends joined" />
-        <StatCard icon={Users} title="Total Referrals" value={referralHistory.length} change="invites sent" />
+        <StatCard icon={Gift} title="Total Earnings" value={`₹${stats.totalEarnings}`} change="from referrals" />
+        <StatCard icon={UserPlus} title="Successful Referrals" value={stats.successfulReferrals} change="friends joined" />
+        <StatCard icon={Users} title="Total Referrals" value={stats.totalReferrals} change="invites sent" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -110,8 +143,17 @@ export default function ReferralsPage() {
                 <div>
                     <Label className="text-xs font-semibold">Your Referral Code</Label>
                     <div className="flex items-center space-x-2">
-                        <Input value={referralCode} readOnly className="font-mono bg-secondary" />
-                        <Button variant="outline" size="icon" onClick={() => handleCopy(referralCode)}>
+                        <Input 
+                          value={referralCode === 'LOADING' ? 'Generating...' : referralCode === 'NOTAVAILABLE' ? 'Generating code...' : referralCode} 
+                          readOnly 
+                          className="font-mono bg-secondary" 
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={() => handleCopy(referralCode)}
+                          disabled={!isValidCode}
+                        >
                             <Copy className="h-4 w-4" />
                         </Button>
                     </div>
@@ -119,8 +161,17 @@ export default function ReferralsPage() {
                 <div>
                     <Label className="text-xs font-semibold">Your Referral Link</Label>
                      <div className="flex items-center space-x-2">
-                        <Input value={referralLink} readOnly className="text-xs bg-secondary" />
-                        <Button variant="outline" size="icon" onClick={() => handleCopy(referralLink)}>
+                        <Input 
+                          value={!isValidCode ? 'Generating link...' : referralLink} 
+                          readOnly 
+                          className="text-xs bg-secondary" 
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={() => handleCopy(referralLink)}
+                          disabled={!isValidCode}
+                        >
                             <Copy className="h-4 w-4" />
                         </Button>
                     </div>
@@ -177,18 +228,26 @@ export default function ReferralsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currentItems.map((referral) => (
-                  <TableRow key={referral.id}>
-                    <TableCell className="font-medium">{referral.friend}</TableCell>
-                    <TableCell>{referral.date}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(referral.status)}>
-                        {referral.status}
-                      </Badge>
+                {currentItems.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      No referrals yet. Share your code to start earning!
                     </TableCell>
-                    <TableCell className="text-right">{referral.reward}</TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  currentItems.map((referral: any) => (
+                    <TableRow key={referral.id}>
+                      <TableCell className="font-medium">{referral.friend}</TableCell>
+                      <TableCell>{new Date(referral.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(referral.status)}>
+                          {referral.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">{referral.reward}</TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

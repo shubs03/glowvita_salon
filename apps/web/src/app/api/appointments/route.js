@@ -22,7 +22,7 @@ export const GET = async (req) => {
 
         // Base query - either vendorId or userId is required
         const query = { 
-            status: { $nin: ['cancelled'] } // Exclude cancelled appointments
+            status: { $in: ['confirmed', 'pending', 'scheduled'] } // Only include active appointments
         };
 
         // If userId is provided, filter by userId/clientId
@@ -111,12 +111,36 @@ export const GET = async (req) => {
                 status = 'Confirmed';
             }
             
+            // For time slot checking, we need the actual appointment times
+            // CRITICAL: For multi-service appointments, startTime is from FIRST service, endTime is from LAST service
+            let startTime = apt.startTime;
+            let endTime = apt.endTime;
+            
+            if (apt.serviceItems && apt.serviceItems.length > 0) {
+                // Use first service's startTime (appointment begins with first service)
+                startTime = apt.serviceItems[0].startTime || startTime;
+                // Use LAST service's endTime (appointment ends with last service)
+                const lastService = apt.serviceItems[apt.serviceItems.length - 1];
+                endTime = lastService.endTime || endTime;
+                
+                console.log(`Multi-service appointment ${apt._id}:`, {
+                    firstServiceStart: apt.serviceItems[0].startTime,
+                    lastServiceEnd: lastService.endTime,
+                    finalStartTime: startTime,
+                    finalEndTime: endTime,
+                    totalServices: apt.serviceItems.length
+                });
+            }
+            
             return {
                 _id: apt._id,
                 id: apt._id.toString(),
                 service: service,
                 date: apt.date,
-                staff: staff,
+                staff: apt.staff, // ✅ Keep the actual staff ID for comparison
+                staffName: staff, // Also include the name for display
+                startTime: startTime, // ✅ Include startTime at top level
+                endTime: endTime, // ✅ Include endTime at top level
                 status: status,
                 price: price,
                 duration: duration,

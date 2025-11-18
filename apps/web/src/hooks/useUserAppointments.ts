@@ -14,6 +14,9 @@ interface Appointment {
     name: string;
     address: string;
   };
+  vendorId?: string;
+  startTime?: string;
+  endTime?: string;
   serviceItems?: Array<{
     service: string;
     serviceName: string;
@@ -87,6 +90,9 @@ export const useUserAppointments = () => {
           name: appointment.salon?.name || 'Unknown Salon',
           address: appointment.salon?.address || 'Unknown Address'
         },
+        vendorId: appointment.vendorId,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
         serviceItems: appointment.serviceItems || []
       };
     });

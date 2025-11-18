@@ -64,6 +64,7 @@ import {
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorServicesQuery,
   useAddToClientCartMutation,
+  useGetSalonReviewsQuery,
 } from "@repo/store/api";
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart, setCurrentUser } from "@repo/store/slices/cartSlice";
@@ -72,6 +73,7 @@ import { useCartSync } from "@/hooks/useCartSync";
 import { toast } from "sonner";
 import ServicesSection from "./components/ServicesSection";
 import Link from "next/link";
+import { ReviewForm } from '@/components/ReviewForm';
 
 // Skeleton Components
 const Skeleton = ({ className }: { className?: string }) => (
@@ -332,6 +334,175 @@ const defaultSalon = {
   images: ["https://placehold.co/1200x800/e2e8f0/64748b?text=Loading..."],
 };
 
+const ProductCard = ({ product, onBuyNow, onAddToCart, vendorId, vendorName }: { 
+  product: any; 
+  onBuyNow: (product: any) => void; 
+  onAddToCart: (product: any) => void;
+  vendorId: string;
+  vendorName: string;
+}) => {
+  const [isLiked, setIsLiked] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+
+  // Check if product is in wishlist on component mount
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (isAuthenticated && user?._id) {
+        try {
+          const response = await fetch(`/api/client/wishlist/${product.id}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setIsLiked(data.isInWishlist);
+          }
+        } catch (error) {
+          console.error('Error checking wishlist status:', error);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    checkWishlistStatus();
+  }, [product.id, isAuthenticated, user]);
+
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!isAuthenticated) {
+      toast.error("Please login to add items to wishlist");
+      router.push("/client-login");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const url = isLiked ? `/api/client/wishlist/${product.id}/remove` : '/api/client/wishlist';
+      const method = isLiked ? 'DELETE' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ productId: product.id }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsLiked(!isLiked);
+        toast.success(isLiked ? "Removed from Wishlist" : "Added to Wishlist", {
+          description: isLiked ? "Product removed from your wishlist" : "Product added to your wishlist"
+        });
+      } else {
+        const errorData = await response.json();
+        toast.error("Wishlist Update Failed", {
+          description: errorData.message || "Failed to update wishlist"
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update wishlist:", error);
+      toast.error("Wishlist Update Failed", {
+        description: "Failed to update wishlist. Please try again."
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card
+      className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left cursor-pointer relative"
+      onClick={() => router.push(`/product-details/${product.id}`)}
+    >
+      <div className="relative aspect-square overflow-hidden rounded-md m-3">
+        <Image
+          src={product.image}
+          alt={product.name}
+          fill
+          className="group-hover:scale-105 transition-transform duration-300 object-cover"
+          data-ai-hint={product.hint}
+        />
+        <Badge
+          variant={
+            product.stock > 0 ? "secondary" : "default"
+          }
+          className="absolute top-2 right-2 text-xs"
+        >
+          {product.stock > 0 ? `In Stock` : "Out of Stock"}
+        </Badge>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-2 left-2 h-8 w-8 rounded-full bg-white/20 text-blue-500 backdrop-blur-sm hover:bg-white/30 transition-all"
+          onClick={handleWishlistToggle}
+          disabled={isLoading}
+        >
+          <Heart
+            className={`h-4 w-4 ${isLiked ? "fill-current text-blue-500" : ""}`}
+          />
+        </Button>
+      </div>
+      <div className="p-3 flex flex-col flex-grow">
+        <p className="text-xs font-bold text-primary mb-1">
+          {product.category}
+        </p>
+        <h4 className="text-sm font-semibold flex-grow mb-2">
+          {product.name}
+        </h4>
+        <p className="text-xs text-muted-foreground line-clamp-2">
+          {product.description}
+        </p>
+        <div className="flex justify-between items-center mt-auto">
+          <p className="font-bold text-primary">
+            ₹{product.price.toFixed(2)}
+          </p>
+          <div className="flex items-center gap-1">
+            <Star className="h-3 w-3 text-blue-400 fill-current" />
+            <span className="text-xs text-muted-foreground font-medium">
+              {product.rating}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 mt-2">
+          <div className="flex justify-between w-full">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-xs lg:mr-3"
+              onClick={(e) => {
+                e.stopPropagation();
+                onBuyNow(product);
+              }}
+            >
+              Buy Now
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-fit text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddToCart(product);
+              }}
+            >
+              <ShoppingCart className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 // Function to get the salon data dynamically
 export default function SalonDetailsPage() {
   const params = useParams();
@@ -345,6 +516,7 @@ export default function SalonDetailsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   const [mainImage, setMainImage] = useState("");
+  const [showReviewForm, setShowReviewForm] = useState(false);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -402,11 +574,40 @@ export default function SalonDetailsPage() {
     skip: !id,
   });
 
+  // Fetch salon reviews
+  const {
+    data: reviewsData,
+    isLoading: isLoadingReviews,
+    error: reviewsError,
+    refetch: refetchReviews,
+  } = useGetSalonReviewsQuery(id, {
+    skip: !id,
+  });
+
   // Cart mutation for authenticated users
   const [addToCartAPI] = useAddToClientCartMutation();
 
   // Initialize cart sync
   useCartSync();
+
+  // Get salon reviews and calculate metrics
+  const salonReviews = useMemo(() => {
+    return reviewsData?.reviews || [];
+  }, [reviewsData]);
+
+  const reviewMetrics = useMemo(() => {
+    if (salonReviews.length === 0) {
+      return { averageRating: 0, totalReviews: 0 };
+    }
+    
+    const totalRating = salonReviews.reduce((sum: number, review: any) => sum + (review.rating || 0), 0);
+    const averageRating = totalRating / salonReviews.length;
+    
+    return {
+      averageRating: parseFloat(averageRating.toFixed(1)),
+      totalReviews: salonReviews.length
+    };
+  }, [salonReviews]);
 
   const salon = useMemo(() => {
     if (vendorData) {
@@ -414,8 +615,8 @@ export default function SalonDetailsPage() {
         ...defaultSalon,
         id: vendorData._id || defaultSalon.id,
         name: vendorData.businessName || "No Name Available",
-        rating: vendorData.rating || 4.8,
-        reviewCount: vendorData.clientCount || 250,
+        rating: reviewMetrics.averageRating || vendorData.rating || 4.8,
+        reviewCount: reviewMetrics.totalReviews || vendorData.clientCount || 0,
         address: `${vendorData.city || ""}, ${vendorData.state || ""}`,
         email: vendorData.email || "",
         website: vendorData.website || "",
@@ -435,7 +636,7 @@ export default function SalonDetailsPage() {
       return salonData;
     }
     return defaultSalon;
-  }, [vendorData]);
+  }, [vendorData, reviewMetrics]);
 
   const salonProducts = useMemo(() => {
     if (!productsData?.products) return [];
@@ -1080,72 +1281,14 @@ export default function SalonDetailsPage() {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {salonProducts.length > 0 ? (
                     salonProducts.map((product: any) => (
-                      <Card
-                        key={product.id}
-                        className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left"
-                      >
-                        <div className="relative aspect-square overflow-hidden rounded-md m-3">
-                          <Image
-                            src={product.image}
-                            alt={product.name}
-                            fill
-                            className="group-hover:scale-105 transition-transform duration-300 object-cover"
-                            data-ai-hint={product.hint}
-                          />
-                          <Badge
-                            variant={
-                              product.stock > 0 ? "secondary" : "default"
-                            }
-                            className="absolute top-2 right-2 text-xs"
-                          >
-                            {product.stock > 0 ? `In Stock` : "Out of Stock"}
-                          </Badge>
-                        </div>
-                        <div className="p-3 flex flex-col flex-grow">
-                          <p className="text-xs font-bold text-primary mb-1">
-                            {product.category}
-                          </p>
-                          <h4 className="text-sm font-semibold flex-grow mb-2">
-                            {product.name}
-                          </h4>
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {product.description}
-                          </p>
-                          <div className="flex justify-between items-center mt-auto">
-                            <p className="font-bold text-primary">
-                              ₹{product.price.toFixed(2)}
-                            </p>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-3 w-3 text-blue-400 fill-current" />
-                              <span className="text-xs text-muted-foreground font-medium">
-                                {product.rating}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2 mt-2">
-                            <div className="flex justify-between w-full">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-full text-xs lg:mr-3"
-                                onClick={() => handleBuyNow(product)}
-                              >
-                                Buy Now
-                              </Button>
-
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-fit text-xs"
-                                onClick={() => handleAddToCart(product)}
-                              >
-                                <ShoppingCart className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </Card>
+                      <ProductCard 
+                        key={product.id} 
+                        product={product} 
+                        onBuyNow={handleBuyNow} 
+                        onAddToCart={handleAddToCart}
+                        vendorId={id}
+                        vendorName={vendorData?.businessName || "Unknown Vendor"}
+                      />
                     ))
                   ) : (
                     <div className="col-span-full text-center py-8">
@@ -1188,36 +1331,42 @@ export default function SalonDetailsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {vendorData?.reviews?.length > 0 ? (
-                      vendorData.reviews.map((review: any, index: number) => (
-                        <div key={index} className="border-t pt-4">
+                    {isLoadingReviews ? (
+                      <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="border-t pt-4">
+                            <Skeleton className="h-20 w-full" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : salonReviews.length > 0 ? (
+                      salonReviews.map((review: any) => (
+                        <div key={review._id} className="border-t pt-4">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
-                                {review.author?.charAt(0) || "U"}
+                                {review.userName?.charAt(0) || "U"}
                               </div>
                               <div>
                                 <p className="font-semibold text-sm">
-                                  {review.author || "Anonymous"}
+                                  {review.userName || "Anonymous"}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {review.date
-                                    ? new Date(review.date).toLocaleDateString(
-                                        "en-US",
-                                        {
-                                          day: "numeric",
-                                          month: "short",
-                                          year: "numeric",
-                                        }
-                                      )
-                                    : "Date not available"}
+                                  {new Date(review.createdAt).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      day: "numeric",
+                                      month: "short",
+                                      year: "numeric",
+                                    }
+                                  )}
                                 </p>
                               </div>
                             </div>
                             <StarRating rating={review.rating || 0} />
                           </div>
                           <p className="text-sm text-muted-foreground italic">
-                            "{review.text || "No review text available"}"
+                            "{review.comment || "No review text available"}"
                           </p>
                         </div>
                       ))
@@ -1237,11 +1386,35 @@ export default function SalonDetailsPage() {
                     )}
                   </CardContent>
                   <CardFooter>
-                    <Button variant="outline" className="w-full">
-                      {vendorData?.reviews?.length > 0
-                        ? "Read All Reviews"
-                        : "Write a Review"}
-                    </Button>
+                    {showReviewForm ? (
+                      <div className="w-full">
+                        <ReviewForm 
+                          entityId={vendorData?._id || ''}
+                          entityType="salon"
+                          onSubmitSuccess={() => {
+                            setShowReviewForm(false);
+                            refetchReviews();
+                          }}
+                        />
+                        <Button 
+                          variant="outline" 
+                          className="w-full mt-4"
+                          onClick={() => setShowReviewForm(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setShowReviewForm(true)}
+                      >
+                        {salonReviews.length > 0
+                          ? "Write a Review"
+                          : "Write a Review"}
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               </section>

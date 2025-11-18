@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SubscriptionPlanModel from '@repo/lib/models/admin/SubscriptionPlan.model';
@@ -265,6 +264,14 @@ export const PUT = authMiddlewareCrm(async (req) => {
                                 const docUrl = await processBase64Image(body[field][docField], `vendor-${vendorId}-${docField}`, vendor.documents[docField]);
                                 if (docUrl) {
                                     vendor.documents[docField] = docUrl;
+                                    // Reset document status to pending when a new document is uploaded
+                                    const statusField = `${docField}Status`;
+                                    vendor.documents[statusField] = 'pending';
+                                    // Clear rejection reasons when a new document is uploaded
+                                    const rejectionReasonField = `${docField}RejectionReason`;
+                                    vendor.documents[rejectionReasonField] = null;
+                                    const adminRejectionReasonField = `${docField}AdminRejectionReason`;
+                                    vendor.documents[adminRejectionReasonField] = null;
                                 }
                             } else {
                                 // If it's already a URL or null, keep it as is

@@ -1,7 +1,10 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { useGetConsultationsQuery } from '@repo/store/services/api';
+import { selectCrmAuth } from '@repo/store/slices/crmAuthSlice';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
@@ -23,16 +26,17 @@ type Consultation = {
   notes?: string;
 };
 
-const mockConsultations: Consultation[] = [
-  { id: 'CON-001', patientName: 'Alex Johnson', consultationType: 'Video', date: '2024-08-25', time: '10:00', duration: 30, cost: 1500, status: 'Completed' },
-  { id: 'CON-002', patientName: 'Samantha Miller', consultationType: 'In-Person', date: '2024-08-26', time: '11:30', duration: 45, cost: 2000, status: 'Confirmed' },
-  { id: 'CON-003', patientName: 'Michael Chen', consultationType: 'Video', date: '2024-08-27', time: '14:00', duration: 30, cost: 1500, status: 'Confirmed' },
-  { id: 'CON-004', patientName: 'Emily Davis', consultationType: 'In-Person', date: '2024-08-28', time: '09:00', duration: 45, cost: 2000, status: 'Pending' },
-];
-
-
 export default function ConsultationsPage() {
-    const [consultations, setConsultations] = useState<Consultation[]>(mockConsultations);
+    const crmAuth = useSelector(selectCrmAuth);
+    const doctorId = crmAuth.user?.id || crmAuth.user?._id;
+
+    // Fetch consultations from API
+    const { data: consultationsData, isLoading, error, refetch } = useGetConsultationsQuery(
+      doctorId ? { doctorId, limit: 100 } : undefined,
+      { skip: !doctorId, refetchOnMountOrArgChange: true }
+    );
+
+    const [consultations, setConsultations] = useState<Consultation[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [searchTerm, setSearchTerm] = useState('');
@@ -41,6 +45,45 @@ export default function ConsultationsPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+    // Transform API data to local format
+    useEffect(() => {
+      if (consultationsData?.data?.consultations) {
+        const transformed = consultationsData.data.consultations.map((consultation: any) => {
+          // Format date
+          const date = new Date(consultation.appointmentDate);
+          const formattedDate = date.toISOString().split('T')[0];
+
+          // Map consultation type
+          const consultationType = consultation.consultationType === 'video' ? 'Video' : 'In-Person';
+
+          // Map status
+          let status: 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' = 'Pending';
+          if (consultation.status === 'completed') {
+            status = 'Completed';
+          } else if (consultation.status === 'cancelled') {
+            status = 'Cancelled';
+          } else if (consultation.status === 'confirmed') {
+            status = 'Confirmed';
+          } else if (consultation.status === 'scheduled') {
+            status = 'Confirmed';
+          }
+
+          return {
+            id: consultation._id,
+            patientName: consultation.patientName,
+            consultationType,
+            date: formattedDate,
+            time: consultation.appointmentTime,
+            duration: consultation.duration || 30,
+            cost: consultation.consultationFee || 0,
+            status,
+            notes: consultation.reason || consultation.concerns || ''
+          };
+        });
+        setConsultations(transformed);
+      }
+    }, [consultationsData]);
 
     const filteredConsultations = useMemo(() => {
         return consultations.filter(consult => 
@@ -167,7 +210,25 @@ export default function ConsultationsPage() {
           </div>
         </CardHeader>
         <CardContent>
-           <div className="overflow-x-auto no-scrollbar rounded-md border">
+           {isLoading ? (
+             <div className="text-center py-8 text-gray-500">
+               <div className="animate-pulse">
+                 <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                 <p>Loading consultations...</p>
+               </div>
+             </div>
+           ) : error ? (
+             <div className="text-center py-8 text-red-500">
+               <CalendarX className="h-12 w-12 mx-auto mb-4 text-red-300" />
+               <p>Error loading consultations. Please try again.</p>
+             </div>
+           ) : consultations.length === 0 ? (
+             <div className="text-center py-8 text-gray-500">
+               <CalendarCheck className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+               <p>No consultations found.</p>
+             </div>
+           ) : (
+             <div className="overflow-x-auto no-scrollbar rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -206,7 +267,9 @@ export default function ConsultationsPage() {
                   ))}
                 </TableBody>
               </Table>
-           </div>
+             </div>
+           )}
+           {!isLoading && !error && consultations.length > 0 && (
             <Pagination
                 className="mt-4"
                 currentPage={currentPage}
@@ -216,6 +279,7 @@ export default function ConsultationsPage() {
                 onItemsPerPageChange={setItemsPerPage}
                 totalItems={filteredConsultations.length}
             />
+           )}
         </CardContent>
       </Card>
     </div>
