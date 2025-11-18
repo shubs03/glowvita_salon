@@ -1552,6 +1552,25 @@ export const glowvitaApi = createApi({
       invalidatesTags: ['PublicAppointments'],
     }),
 
+    // Payment Collection Endpoint
+    collectPayment: builder.mutation({
+      query: (paymentData) => ({
+        url: "/crm/payments/collect",
+        method: "POST",
+        body: paymentData,
+      }),
+      invalidatesTags: ['Appointments'],
+    }),
+    
+    // Payment Collections Endpoint
+    getPaymentCollections: builder.query({
+      query: (appointmentId) => ({
+        url: `/crm/payments/collections?appointmentId=${appointmentId}`,
+        method: "GET",
+      }),
+      providesTags: ['PaymentCollections'],
+    }),
+
   }),
 });
 
@@ -1769,4 +1788,8 @@ export const {
   // Public Appointment Hooks
   useGetPublicAppointmentsQuery,
   useCreatePublicAppointmentMutation,
+  // Payment Collection Hook
+  useCollectPaymentMutation,
+  // Payment Collections Hook
+  useGetPaymentCollectionsQuery,
 } = glowvitaApi;

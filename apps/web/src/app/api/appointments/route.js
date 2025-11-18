@@ -239,7 +239,8 @@ export const POST = async (req) => {
             status: body.status || 'scheduled',
             notes: body.notes || '',
             serviceItems: body.serviceItems || [],
-            isMultiService: body.isMultiService || (body.serviceItems && body.serviceItems.length > 1)
+            isMultiService: body.isMultiService || (body.serviceItems && body.serviceItems.length > 1),
+            mode: 'online' // Web bookings are always online mode
         };
 
         console.log('Creating appointment with data:', appointmentData);

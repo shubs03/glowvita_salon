@@ -165,6 +165,12 @@ export default function ClientsPage() {
             if (!clientId) return; // count only when appointment has a client ID
 
             const amount = Number(appt?.totalAmount ?? appt?.amount ?? appt?.price ?? 0) || 0;
+            // Use the new amountPaid field if available for more accurate tracking
+            const paidAmount = Number((appt as any)?.amountPaid ?? appt?.payment?.paid ?? 0) || 0;
+            console.log('=== CLIENTS PAGE PAYMENT DEBUG ===');
+            console.log('Appointment ID:', appt?._id);
+            console.log('Total amount:', amount);
+            console.log('Paid amount:', paidAmount);
             countsById.set(clientId, (countsById.get(clientId) || 0) + 1);
             totalsById.set(clientId, (totalsById.get(clientId) || 0) + amount);
         });
@@ -1640,9 +1646,11 @@ export default function ClientsPage() {
                                                         const dateStr = d ? d.toLocaleDateString() : '';
                                                         const timeStr = appt?.startTime || (d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
                                                         const amount = Number(appt?.totalAmount ?? appt?.amount ?? appt?.price ?? 0) || 0;
-                                                        const statusRaw = (appt?.paymentStatus || (appt?.status === 'completed' ? 'paid' : appt?.status || 'pending')) + '';
+                                                        const amountPaid = Number(appt?.amountPaid ?? 0) || 0;
+                                                        const amountRemaining = Number(appt?.amountRemaining ?? (amount - amountPaid)) || 0;
+                                                        const statusRaw = (appt?.paymentStatus || (appt?.status === 'completed' ? 'completed' : appt?.status || 'pending')) + '';
                                                         const status = statusRaw.toLowerCase();
-                                                        const isPaid = status === 'paid' || appt?.status === 'completed';
+                                                        const isPaid = status === 'completed' || appt?.status === 'completed';
                                                         const serviceName = appt?.serviceName || appt?.service?.name || 'Appointment';
 
                                                         return (
@@ -1653,8 +1661,22 @@ export default function ClientsPage() {
                                                                     <p className="font-medium text-sm sm:text-base">{serviceName}</p>
                                                                 </div>
                                                                 <div className="text-left sm:text-right">
-                                                                    <span className={`${isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} px-2 py-1 rounded text-xs`}>{isPaid ? 'paid' : status || 'pending'}</span>
+                                                                    <span className={`${isPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} px-2 py-1 rounded text-xs`}>
+                                                                        {(() => {
+                                                                            // Map the backend payment status to more user-friendly terms
+                                                                            switch (status) {
+                                                                                case 'completed': return 'paid';
+                                                                                case 'pending': return amountPaid > 0 ? `partial (₹${amountPaid.toFixed(2)} paid)` : 'unpaid';
+                                                                                default: return status;
+                                                                            }
+                                                                        })()}
+                                                                    </span>
                                                                     <p className={`font-bold mt-1 text-sm sm:text-base ${isPaid ? 'text-green-600' : 'text-gray-700'}`}>₹{amount.toFixed(2)}</p>
+                                                                    {amountPaid > 0 && amountRemaining > 0 && (
+                                                                        <p className="text-xs text-gray-500 mt-1">
+                                                                            ₹{amountPaid.toFixed(2)} paid, ₹{amountRemaining.toFixed(2)} remaining
+                                                                        </p>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         );

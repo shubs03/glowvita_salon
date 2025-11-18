@@ -153,7 +153,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 // POST - Create a new client
 export const POST = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.toString();
+        const vendorId = (req.user.userId || req.user._id).toString();
         const body = await req.json();
 
         // Validate required fields
@@ -253,7 +253,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 // PUT - Update an existing client
 export const PUT = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.toString();
+        const vendorId = (req.user.userId || req.user._id).toString();
         const body = await req.json();
         const { _id: clientId, ...updateData } = body;
 
@@ -398,7 +398,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // DELETE - Delete a client
 export const DELETE = authMiddlewareCrm(async (req) => {
     try {
-        const vendorId = req.user._id.toString();
+        const vendorId = (req.user.userId || req.user._id).toString();
         const body = await req.json();
         const { id: clientId } = body;
 
