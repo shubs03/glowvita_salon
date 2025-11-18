@@ -9,6 +9,18 @@ await _db();
 // This endpoint doesn't require authentication and returns default shipping config
 export const GET = async (req) => {
   try {
+    // During build phase, return default config
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({
+        success: true,
+        data: {
+          chargeType: 'fixed',
+          amount: 0,
+          isEnabled: false
+        }
+      }, { status: 200 });
+    }
+
     // Check database connection
     const db = await _db();
     

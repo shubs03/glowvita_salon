@@ -141,7 +141,7 @@ export const glowvitaApi = createApi({
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
     "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
-    "Billing", "VendorServices"
+    "Billing", "VendorServices", "DoctorWishlist"
   ],
 
   endpoints: (builder) => ({
@@ -1553,6 +1553,24 @@ export const glowvitaApi = createApi({
       providesTags: ["ClientReferrals"],
     }),
 
+    // Doctor Wishlist Endpoints (Web App)
+    getDoctorWishlist: builder.query({
+      query: () => ({ url: "/client/doctor-wishlist", method: "GET" }),
+      providesTags: ["DoctorWishlist"],
+    }),
+    checkDoctorWishlistStatus: builder.query({
+      query: (doctorId) => ({ url: `/client/doctor-wishlist/${doctorId}`, method: "GET" }),
+      providesTags: (result, error, doctorId) => [{ type: "DoctorWishlist", id: doctorId }],
+    }),
+    addDoctorToWishlist: builder.mutation({
+      query: (doctorId) => ({ url: "/client/doctor-wishlist", method: "POST", body: { doctorId } }),
+      invalidatesTags: ["DoctorWishlist"],
+    }),
+    removeDoctorFromWishlist: builder.mutation({
+      query: (doctorId) => ({ url: `/client/doctor-wishlist/${doctorId}`, method: "DELETE" }),
+      invalidatesTags: ["DoctorWishlist"],
+    }),
+
     // Public Tax Fee Settings Endpoint (Web App - no authentication required)
     getPublicTaxFeeSettings: builder.query({
       query: () => ({ url: "/client/tax-fees", method: "GET" }),
@@ -1787,6 +1805,7 @@ export const glowvitaApi = createApi({
 });
 
 export const {
+ 
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
@@ -1976,8 +1995,10 @@ export const {
   useSaveCustomizedTemplateMutation,
   usePurchaseSmsPackageMutation,
   useGetSmsPurchaseHistoryQuery,
+  
   // New endpoint for fetching all vendor products
   useGetAllVendorProductsQuery,
+  
   // New endpoints for vendor product operations
   useUpdateVendorProductMutation,
   useDeleteVendorProductMutation,
@@ -1997,6 +2018,12 @@ export const {
   // Client Referrals Endpoint (Web App)
   useGetClientReferralsQuery,
 
+  // Doctor Wishlist Endpoints (Web App)
+  useGetDoctorWishlistQuery,
+  useCheckDoctorWishlistStatusQuery,
+  useAddDoctorToWishlistMutation,
+  useRemoveDoctorFromWishlistMutation,
+
   // Public Tax Fee Settings (Web App - no auth required)
   useGetPublicTaxFeeSettingsQuery,
 
@@ -2004,6 +2031,7 @@ export const {
   useGetBlockedTimesQuery,
   useCreateBlockTimeMutation,
   useDeleteBlockTimeMutation,
+  
   // Billing Endpoints
   useCreateBillingMutation,
   useGetBillingRecordsQuery,
@@ -2015,6 +2043,7 @@ export const {
   useCreatePatientMutation,
   useUpdatePatientMutation,
   useDeletePatientMutation,
+  
   // Consultation Hooks (Physical & Video)
   useGetConsultationsQuery,
   useGetBookedSlotsQuery,
@@ -2022,11 +2051,14 @@ export const {
   useCreateConsultationMutation,
   useUpdateConsultationMutation,
   useCancelConsultationMutation,
+  
   // Public Appointment Hooks
   useGetPublicAppointmentsQuery,
   useCreatePublicAppointmentMutation,
+  
   // Payment Collection Hook
   useCollectPaymentMutation,
+  
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,
 } = glowvitaApi;

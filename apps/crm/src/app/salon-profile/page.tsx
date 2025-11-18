@@ -2118,6 +2118,8 @@ export default function SalonProfilePage() {
   const { data: doctorData, isLoading: isDoctorLoading, isError: isDoctorError, refetch: refetchDoctor, error: doctorError } = useGetDoctorProfileQuery(undefined, {
     skip: !user?._id || role !== 'doctor'
   });
+
+  console.log("Doctor Data:", doctorData);
   
   const { data: workingHoursData, isLoading: isLoadingWorkingHours, refetch: refetchWorkingHours } = useGetWorkingHoursQuery(undefined, {
     skip: !user?._id || role !== 'vendor'

@@ -44,6 +44,11 @@ const transformSettings = (settings) => {
 // GET all tax fee settings (public endpoint)
 export async function GET() {
   try {
+    // During build phase, return default settings
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json(transformSettings(null), { status: 200 });
+    }
+
     const settings = await TaxFeeSettings.findOne().sort({ updatedAt: -1 });
     return NextResponse.json(transformSettings(settings), { status: 200 });
   } catch (error) {

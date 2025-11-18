@@ -30,8 +30,10 @@ import {
   BookIcon,
   BookOpenIcon,
 } from "lucide-react";
-import { useGetDoctorsQuery } from "@repo/store/services/api";
+import { useGetDoctorsQuery, useCheckDoctorWishlistStatusQuery, useAddDoctorToWishlistMutation, useRemoveDoctorFromWishlistMutation } from "@repo/store/services/api";
 import { cn } from "@repo/ui/cn";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface Doctor {
   id: string;
@@ -146,6 +148,7 @@ export default function DoctorDetailsPage({
   params: { id: string };
 }) {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
   // Fetch doctors from API
   const {
@@ -154,10 +157,24 @@ export default function DoctorDetailsPage({
     isError,
   } = useGetDoctorsQuery(undefined);
 
+  // Check if doctor is in wishlist using RTK Query
+  const {
+    data: wishlistStatusData,
+    isLoading: isLoadingWishlistStatus,
+  } = useCheckDoctorWishlistStatusQuery(params.id, {
+    skip: !isAuthenticated || !params.id,
+  });
+
+  // Wishlist mutations
+  const [addDoctorToWishlist, { isLoading: isAddingToWishlist }] = useAddDoctorToWishlistMutation();
+  const [removeDoctorFromWishlist, { isLoading: isRemovingFromWishlist }] = useRemoveDoctorFromWishlistMutation();
+
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorState, setErrorState] = useState<string | null>(null);
-  const [isFavorite, setIsFavorite] = useState(false);
+
+  const isFavorite = wishlistStatusData?.isInWishlist || false;
+  const isLoadingFavorite = isLoadingWishlistStatus || isAddingToWishlist || isRemovingFromWishlist;
 
   useEffect(() => {
     if (isLoadingApi) {
@@ -187,6 +204,37 @@ export default function DoctorDetailsPage({
       setLoading(false);
     }
   }, [params.id, doctorsData, isLoadingApi, isError]);
+
+  const handleWishlistToggle = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to add doctors to your wishlist");
+      router.push("/client-login");
+      return;
+    }
+
+    if (!doctor) return;
+
+    try {
+      if (isFavorite) {
+        // Remove from wishlist
+        await removeDoctorFromWishlist(doctor.id).unwrap();
+        toast.success("Removed from Wishlist", {
+          description: "Doctor removed from your wishlist"
+        });
+      } else {
+        // Add to wishlist
+        await addDoctorToWishlist(doctor.id).unwrap();
+        toast.success("Added to Wishlist", {
+          description: "Doctor added to your wishlist"
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to update wishlist:", error);
+      toast.error("Wishlist Update Failed", {
+        description: error?.data?.message || "Failed to update wishlist. Please try again."
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -258,12 +306,13 @@ export default function DoctorDetailsPage({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setIsFavorite(!isFavorite)}
+                onClick={handleWishlistToggle}
+                disabled={isLoadingFavorite}
               >
                 <Heart
                   className={cn(
                     "h-4 w-4",
-                    isFavorite ? "fill-red-500 text-red-500" : ""
+                    isFavorite && "fill-current text-blue-500"
                   )}
                 />
               </Button>
@@ -437,7 +486,13 @@ export default function DoctorDetailsPage({
                   <Button
                     variant="outline"
                     className="w-full py-3 text-sm font-semibold gap-2 border-2"
+                    disabled={doctor.doctorAvailability?.toLowerCase() !== 'online'}
                     onClick={() => {
+                      // Only allow if doctor availability is online
+                      if (doctor.doctorAvailability?.toLowerCase() !== 'online') {
+                        return;
+                      }
+                      
                       // Encode doctor data as base64 JSON (same pattern as physical consultation)
                       console.log('🎥 Video Consultation - Doctor object:', doctor);
                       console.log('🆔 Doctor ID:', doctor.id);
@@ -465,6 +520,9 @@ export default function DoctorDetailsPage({
                   >
                     <Video className="h-4 w-4" />
                     Video Consultation
+                    {doctor.doctorAvailability?.toLowerCase() !== 'online' && (
+                      <span className="text-xs ml-auto">(Offline)</span>
+                    )}
                   </Button>
                 )}
 

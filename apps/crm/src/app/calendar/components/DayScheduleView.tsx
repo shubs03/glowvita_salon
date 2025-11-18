@@ -1796,7 +1796,7 @@ export default function DayScheduleView({
               onCollectPayment={handleCollectPayment}
               onUpdateAppointment={async (updatedAppointment) => {
                 // Update the selectedAppointment state with the new data
-                setSelectedAppointment(updatedAppointment || null);
+                setSelectedAppointment(updatedAppointment as Appointment || null);
                 console.log('Appointment updated:', updatedAppointment);
               }}
             />
