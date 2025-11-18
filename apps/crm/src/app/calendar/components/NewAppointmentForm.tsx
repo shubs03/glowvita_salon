@@ -109,6 +109,7 @@ export interface Appointment {
   tax: number;
   totalAmount: number;
   paymentStatus?: string;
+  mode?: 'online' | 'offline'; // Booking mode
   createdAt?: string;
   updatedAt?: string;
 }
@@ -473,9 +474,9 @@ useEffect(() => {
       return '00:00';
     }
     
-    // For today, use current time + 15 minutes (only for NEW appointments)
+    // For today, use current time + 2 minutes (only for NEW appointments)
     if (targetDateOnly.getTime() === todayDateOnly.getTime() && !isEditing && !isRescheduling) {
-      const minTime = new Date(now.getTime() + 15 * 60 * 1000);
+      const minTime = new Date(now.getTime() + 2 * 60 * 1000);
       const hours = minTime.getHours().toString().padStart(2, '0');
       const minutes = minTime.getMinutes().toString().padStart(2, '0');
       return `${hours}:${minutes}`;
@@ -1507,7 +1508,9 @@ useEffect(() => {
         discount: Number(appointmentData.discount) || 0,
         tax: Number(appointmentData.tax) || 0,
         totalAmount: Number(appointmentData.totalAmount) || 0,
+        finalAmount: Number(appointmentData.totalAmount) || 0,
         paymentStatus: appointmentData.paymentStatus || 'pending',
+        mode: 'offline', // CRM bookings are offline mode
       };
 
       // Include multiple services if available (as serviceItems)

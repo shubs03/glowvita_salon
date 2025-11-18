@@ -126,6 +126,17 @@ const appointmentSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    // Fields to track payment progress
+    amountPaid: {
+        type: Number,
+        default: 0
+    },
+    amountRemaining: {
+        type: Number,
+        default: function() {
+            return this.finalAmount || this.totalAmount || 0;
+        }
+    },
     paymentMethod: {
         type: String,
         enum: ['Pay at Salon', 'Pay Online', 'Pay Later'],
@@ -133,8 +144,20 @@ const appointmentSchema = new mongoose.Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ['pending', 'completed', 'failed', 'refunded'],
+        enum: ['pending', 'partial', 'completed', 'failed', 'refunded'],
         default: 'pending'
+    },
+    // History of payment transactions for this appointment
+    paymentHistory: {
+        type: [{
+            amount: { type: Number, required: true },
+            paymentMethod: { type: String, required: true },
+            paymentDate: { type: Date, default: Date.now },
+            notes: { type: String, default: '' },
+            transactionId: { type: String, default: null },
+            paymentCollectionId: { type: mongoose.Schema.Types.ObjectId, ref: 'PaymentCollection', default: null }
+        }],
+        default: []
     },
     razorpayOrderId: {
         type: String
@@ -162,6 +185,13 @@ const appointmentSchema = new mongoose.Schema({
     isMultiService: {
         type: Boolean,
         default: false
+    },
+    // Booking mode: 'online' for web bookings, 'offline' for CRM bookings
+    mode: {
+        type: String,
+        enum: ['online', 'offline'],
+        required: true,
+        default: 'offline'
     }
 }, {
     timestamps: true

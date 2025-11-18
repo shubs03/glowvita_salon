@@ -1054,16 +1054,167 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
   );
 };
 
-const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Clients</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p>Client management functionality would be implemented here.</p>
-    </CardContent>
-  </Card>
-);
+const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
+  const [clients, setClients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      if (!vendor?._id) return;
+      
+      try {
+        setLoading(true);
+        
+        // Get admin auth state from localStorage (same approach used in the app)
+        const adminAuthState = typeof window !== 'undefined' ? localStorage.getItem('adminAuthState') : null;
+        let token = null;
+        
+        if (adminAuthState) {
+          try {
+            const parsedState = JSON.parse(adminAuthState);
+            token = parsedState.token;
+          } catch (e) {
+            console.error('Error parsing admin auth state:', e);
+          }
+        }
+        
+        if (!token) {
+          setError('Authentication required');
+          setLoading(false);
+          return;
+        }
+        
+        const response = await fetch(`/api/admin/clients?vendorId=${vendor._id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          setClients(data.data || []);
+        } else {
+          setError(data.message || 'Failed to fetch clients');
+        }
+      } catch (err) {
+        setError('Failed to fetch clients');
+        console.error('Error fetching clients:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClients();
+  }, [vendor]);
+
+  if (!vendor) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Clients</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>No vendor selected</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Clients</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Loading clients...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Clients</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-red-500">Error: {error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Clients</CardTitle>
+        <p className="text-sm text-muted-foreground">View clients associated with this vendor</p>
+      </CardHeader>
+      <CardContent>
+        {clients.length === 0 ? (
+          <p className="text-center py-4 text-muted-foreground">No clients found for this vendor</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-4">Name</th>
+                  <th className="text-left py-2 px-4">Email</th>
+                  <th className="text-left py-2 px-4">Phone</th>
+                  <th className="text-left py-2 px-4">Status</th>
+                  <th className="text-left py-2 px-4">Last Visit</th>
+                  <th className="text-left py-2 px-4">Total Spent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clients.map((client) => (
+                  <tr key={client._id} className="border-b hover:bg-muted/50">
+                    <td className="py-2 px-4">
+                      <div className="flex items-center gap-2">
+                        {client.profilePicture ? (
+                          <img 
+                            src={client.profilePicture} 
+                            alt={client.fullName} 
+                            className="w-8 h-8 rounded-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                            <Users className="w-4 h-4 text-gray-500" />
+                          </div>
+                        )}
+                        <span>{client.fullName}</span>
+                      </div>
+                    </td>
+                    <td className="py-2 px-4">{client.email || 'N/A'}</td>
+                    <td className="py-2 px-4">{client.phone || 'N/A'}</td>
+                    <td className="py-2 px-4">
+                      <Badge variant={client.status === 'Active' ? 'default' : 'secondary'}>
+                        {client.status || 'N/A'}
+                      </Badge>
+                    </td>
+                    <td className="py-2 px-4">
+                      {client.lastVisit ? new Date(client.lastVisit).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td className="py-2 px-4">
+                      ₹{client.totalSpent?.toLocaleString() || '0'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 interface VendorEditFormProps {
   isOpen: boolean;

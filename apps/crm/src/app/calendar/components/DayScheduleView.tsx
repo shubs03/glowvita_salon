@@ -23,6 +23,7 @@ type Appointment = {
   status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending';
   isBlocked?: boolean;
   description?: string;
+  mode?: 'online' | 'offline'; // Booking mode
   isMultiService?: boolean;
   serviceItems?: Array<{
     _id?: string;
@@ -125,6 +126,7 @@ interface DayScheduleViewProps {
   blockedTimes?: BlockedTime[];
   isLoading?: boolean;
   error?: any;
+  role?: string;
   onAppointmentClick?: (appointment: Appointment) => void;
   onTimeSlotClick?: (time: string) => void;
   onCreateAppointment?: (appointment: Omit<Appointment, 'id'>) => void;
@@ -185,7 +187,14 @@ const getStatusConfig = (status: Appointment['status']) => {
   }
 };
 
-const groupAppointmentsByStaff = (appointments: Appointment[]) => {
+const groupAppointmentsByStaff = (appointments: Appointment[], role?: string, staffList?: StaffMember[]) => {
+  // For doctors, group all appointments under the doctor's name
+  if (role === 'doctor' && staffList && staffList.length > 0) {
+    const doctor = staffList[0]; // Doctor is the only entry in staffList for doctors
+    return [[doctor.name || 'Doctor', appointments]] as [string, Appointment[]][];
+  }
+  
+  // For vendors/staff, use the original grouping logic
   const staffMap = new Map<string, Appointment[]>();
   
   appointments.forEach(appointment => {
@@ -368,6 +377,7 @@ export default function DayScheduleView({
   workingHours = { startHour: 9, endHour: 18 }, // Default to 9 AM - 6 PM if not provided
   isLoading = false,
   error = null,
+  role,
   onAppointmentClick: onAppointmentClickProp,
   onTimeSlotClick,
   onCreateAppointment,
@@ -728,7 +738,7 @@ export default function DayScheduleView({
     
     // Fallback to grouping by staff name if no staff data is available
     console.warn('No staff data available, falling back to appointment-based grouping');
-    const grouped = groupAppointmentsByStaff(appointments);
+    const grouped = groupAppointmentsByStaff(appointments, role, transformedStaffList);
     return grouped.map(([staffName, staffAppointments]) => {
       const defaultStaff: StaffMember = {
         id: `temp-${staffName.toLowerCase().replace(/\s+/g, '-')}`,
@@ -860,6 +870,12 @@ export default function DayScheduleView({
   };
 
   const handleTimeSlotClick = (time: string, e: React.MouseEvent) => {
+    // For doctors, don't allow creating new appointments
+    if (role === 'doctor') {
+      e.stopPropagation();
+      return;
+    }
+    
     e.stopPropagation();
     onTimeSlotClick?.(time);
   };
@@ -875,7 +891,7 @@ export default function DayScheduleView({
         staff.name,
         appointments.filter(appt => appt.staffName === staff.name)
       ] as [string, Appointment[]])
-    : groupAppointmentsByStaff(appointments);
+    : groupAppointmentsByStaff(appointments, role, transformedStaffList);
 
   const timeSlotsByHour = useMemo(() => {
     if (!timeSlots.length) return null;
@@ -1272,14 +1288,22 @@ export default function DayScheduleView({
             <span>{startTime} - {endTime}</span>
           </div>
           
-          {/* Web Appointment Badge */}
-          {isWebAppointment && (
+          {/* Booking Mode Badge - Only show if mode field exists */}
+          {appointment.mode && (
             <div className="mb-1.5">
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-medium border border-green-200 dark:border-green-800">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
+                appointment.mode === 'online'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+                  : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+              }`}>
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 2a8 8 0 100 16 8 8 0 000-16zM9 9a1 1 0 112 0v4a1 1 0 11-2 0V9zm1-5a1 1 0 100 2 1 1 0 000-2z"/>
+                  {appointment.mode === 'online' ? (
+                    <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"/>
+                  ) : (
+                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                  )}
                 </svg>
-                Web Booking
+                {appointment.mode === 'online' ? 'Web Booking' : 'Offline Booking'}
               </span>
             </div>
           )}
@@ -1305,7 +1329,9 @@ export default function DayScheduleView({
   if (error) {
     return (
       <div className="p-4 text-center text-red-500">
-        <p>Error loading schedule data. Please try again later.</p>
+        <p>{role === 'doctor' 
+          ? 'Error loading doctor schedule data. Please try again later.' 
+          : 'Error loading schedule data. Please try again later.'}</p>
         {error?.message && <p className="text-sm mt-2">{error.message}</p>}
       </div>
     );
@@ -1360,12 +1386,14 @@ export default function DayScheduleView({
               </div>
               <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
                 {staffList && staffList.length === 0 
-                  ? 'No staff members available' 
+                  ? (role === 'doctor' ? 'Doctor profile not configured' : 'No staff members available')
                   : 'No appointments scheduled for this day'}
               </h3>
               {staffList && staffList.length === 0 && (
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Please add staff members to start scheduling appointments.
+                  {role === 'doctor' 
+                    ? 'Please configure your doctor profile and working hours.'
+                    : 'Please add staff members to start scheduling appointments.'}
                 </p>
               )}
             </div>
@@ -1505,6 +1533,36 @@ export default function DayScheduleView({
                 })}
               </div>
               
+              {/* Current Time Indicator - Red Line */}
+              {isCurrentDate && isClient && (() => {
+                const now = new Date();
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                const workDayStartMinutes = globalStartHour * 60;
+                const minutesFromStart = currentMinutes - workDayStartMinutes;
+                const pixelsPerMinute = TIME_SLOT_HEIGHT / 15;
+                const currentTimePosition = minutesFromStart * pixelsPerMinute;
+                
+                // Only show if current time is within working hours
+                if (currentMinutes >= workDayStartMinutes && currentMinutes <= (globalEndHour * 60)) {
+                  return (
+                    <div 
+                      className="absolute left-0 right-0 z-40 pointer-events-none"
+                      style={{ top: `${currentTimePosition}px` }}
+                    >
+                      {/* Red circle on the left */}
+                      <div className="absolute -left-1 w-3 h-3 bg-red-500 rounded-full shadow-lg" style={{ top: '-6px' }} />
+                      {/* Red line */}
+                      <div className="h-0.5 bg-red-500 shadow-md" />
+                      {/* Time label */}
+                      <div className="absolute -top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded shadow-lg">
+                        {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              
               {/* Scrollable staff columns container */}
               <div 
                 className="flex overflow-x-auto min-h-full scrollbar-hide"
@@ -1567,13 +1625,21 @@ export default function DayScheduleView({
                                     ? 'bg-red-50/50 dark:bg-red-900/20 cursor-not-allowed'
                                     : !isWithinWorkingHours 
                                       ? 'bg-gray-100/50 dark:bg-gray-700/30 cursor-not-allowed'
-                                      : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                                      : role === 'doctor' 
+                                        ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-default'
+                                        : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
                               }`}
                               style={{ 
                                 height: `${height}px`,
                                 boxSizing: 'border-box'
                               }}
                               onClick={(e) => {
+                                // For doctors, disable time slot clicking
+                                if (role === 'doctor') {
+                                  e.stopPropagation();
+                                  return;
+                                }
+                                                          
                                 if (isClickable) {
                                   handleTimeSlotClick(timeString, e);
                                 } else if (isBlocked) {
@@ -1581,19 +1647,21 @@ export default function DayScheduleView({
                                 }
                               }}
                               title={
-                                !isAvailable 
-                                  ? `${staff.name} is not available today` 
-                                  : isBlocked
-                                    ? `This time slot is blocked`
-                                    : !isWithinWorkingHours 
-                                      ? `${staff.name} is not working at ${timeSlot.timeString} (Working hours: ${staff.workingHours?.startTime || '09:00'} - ${staff.workingHours?.endTime || '18:00'})` 
-                                      : `Book appointment with ${staff.name} at ${timeSlot.timeString}`
+                                role === 'doctor'
+                                  ? `${staff.name}'s schedule - Doctors cannot create appointments here`
+                                  : !isAvailable 
+                                    ? `${staff.name} is not available today` 
+                                    : isBlocked
+                                      ? `This time slot is blocked`
+                                      : !isWithinWorkingHours 
+                                        ? `${staff.name} is not working at ${timeSlot.timeString} (Working hours: ${staff.workingHours?.startTime || '09:00'} - ${staff.workingHours?.endTime || '18:00'})` 
+                                        : `Book appointment with ${staff.name} at ${timeSlot.timeString}`
                               }
                           >
                               {/* Dashed line for time separation */}
                               <div className="absolute top-1/2 w-full border-t border-dashed border-gray-200 dark:border-gray-600"></div>
                               
-                              {isClickable && (
+                              {isClickable && role !== 'doctor' && (
                                 <div className="absolute top-2 right-2">
                                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                               </div>
@@ -1670,20 +1738,22 @@ export default function DayScheduleView({
         }
       `}</style>
       
-      {/* New Appointment Dialog */}
-      <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
-        <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-              New Appointment for {newAppointmentDate && format(newAppointmentDate, 'EEEE, MMMM d, yyyy')}
-            </DialogTitle>
-          </DialogHeader>
-          <NewAppointmentForm 
-            onSubmit={handleCreateNewAppointment}
-            defaultDate={newAppointmentDate || undefined}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* New Appointment Dialog - only show for non-doctors */}
+      {role !== 'doctor' && (
+        <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
+          <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+                New Appointment for {newAppointmentDate && format(newAppointmentDate, 'EEEE, MMMM d, yyyy')}
+              </DialogTitle>
+            </DialogHeader>
+            <NewAppointmentForm 
+              onSubmit={handleCreateNewAppointment}
+              defaultDate={newAppointmentDate || undefined}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Appointment Detail View */}
       {selectedAppointment && (
@@ -1701,26 +1771,23 @@ export default function DayScheduleView({
           >
             <AppointmentDetailView 
               appointment={{
-                ...selectedAppointment,
+                ...(selectedAppointment as any),
+                // Ensure id field compatibility between types
+                id: selectedAppointment.id || (selectedAppointment as any)._id,
+                _id: selectedAppointment.id || (selectedAppointment as any)._id,
                 date: selectedAppointment.date,
                 serviceName: selectedAppointment.serviceName || selectedAppointment.service,
-                _id: selectedAppointment.id,
                 clientName: selectedAppointment.clientName,
-                staff: '',
                 staffName: selectedAppointment.staffName,
                 service: selectedAppointment.service,
                 startTime: selectedAppointment.startTime,
                 endTime: selectedAppointment.endTime,
-                duration: 0,
-                amount: 0,
-                totalAmount: 0,
                 status: selectedAppointment.status,
                 notes: selectedAppointment.notes || '',
-                client: '', // Add missing client property
-                discount: 0, // Add missing discount property
-                tax: 0, // Add missing tax property
-                paymentStatus: '', // Add missing paymentStatus property
-                vendorId: '', // Add vendorId property
+                // Add the critical payment fields that were missing
+                amountPaid: (selectedAppointment as any).amountPaid,
+                amountRemaining: (selectedAppointment as any).amountRemaining,
+                finalAmount: (selectedAppointment as any).finalAmount,
               }}
               onClose={handleCloseDetailView}
               onStatusChange={(status, reason) => {
@@ -1728,7 +1795,8 @@ export default function DayScheduleView({
               }}
               onCollectPayment={handleCollectPayment}
               onUpdateAppointment={async (updatedAppointment) => {
-                // Handle update if needed
+                // Update the selectedAppointment state with the new data
+                setSelectedAppointment(updatedAppointment || null);
                 console.log('Appointment updated:', updatedAppointment);
               }}
             />
