@@ -9,7 +9,7 @@ import { Badge } from "@repo/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { ChevronLeft, Plus, Clock, User, Calendar as CalendarIcon, Clock3, X, CalendarDays, Eye, Pencil, MoreVertical, CheckCircle2, XCircle, ChevronRight, ChevronDown, Scissors, Loader2 } from 'lucide-react';
+import { ChevronLeft, Plus, Clock, User, Calendar as CalendarIcon, Clock3, X, CalendarDays, Eye, Pencil, MoreVertical, CheckCircle2, XCircle, ChevronRight, ChevronDown, Scissors, Loader2, Power } from 'lucide-react';
 import NewAppointmentForm, { Appointment } from './components/NewAppointmentForm';
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { cn } from '@repo/ui/cn';
@@ -28,6 +28,7 @@ import {
 } from '@repo/store/slices/blockTimeSlice';
 import { glowvitaApi } from '@repo/store/api';
 import { startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 // Define valid statuses from the AppointmentModel
 const validStatuses = ['confirmed','cancelled'];
@@ -116,8 +117,10 @@ export default function CalendarPage() {
   const [isBlockingTime, setIsBlockingTime] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [isClinicAvailable, setIsClinicAvailable] = useState(true);
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { role } = useCrmAuth();
   
   // Fetch blocked times when component mounts
   useEffect(() => {
@@ -196,6 +199,7 @@ export default function CalendarPage() {
       discount: appt.discount || 0,
       tax: appt.tax || 0,
       totalAmount: appt.totalAmount || appt.amount || 0,
+      mode: appt.mode, // Only include if it exists in backend
       // Multi-service appointment fields
       isMultiService: appt.isMultiService || false,
       serviceItems: appt.serviceItems || [],
@@ -257,10 +261,19 @@ export default function CalendarPage() {
   };
 
   const handleNewAppointment = useCallback(() => {
+    // For doctors, toggle clinic availability instead of opening appointment form
+    if (role === 'doctor') {
+      const newAvailability = !isClinicAvailable;
+      setIsClinicAvailable(newAvailability);
+      toast.success(`Clinic is now ${newAvailability ? 'OPEN' : 'CLOSED'}`);
+      return;
+    }
+    
+    // For vendors/staff, open the appointment form
     dispatch(setSelectedAppointment(null));
     setIsEditing(false);
     setIsModalOpen(true);
-  }, [dispatch]);
+  }, [dispatch, role, isClinicAvailable]);
 
   const handleOpenBlockTimeModal = useCallback((date: Date) => {
     setSelectedDateForBlock(date);
@@ -755,14 +768,29 @@ interface AppointmentMenuProps {
             </SelectContent>
           </Select>
           <div className="flex gap-2">
-            <Button
-              onClick={handleNewAppointment}
-              className="bg-blue-600 hover:bg-blue-700"
-              disabled={isCreating}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Booking
-            </Button>
+            {role === 'doctor' ? (
+              <Button
+                onClick={handleNewAppointment}
+                className={cn(
+                  "transition-colors",
+                  isClinicAvailable 
+                    ? "bg-green-600 hover:bg-green-700" 
+                    : "bg-red-600 hover:bg-red-700"
+                )}
+              >
+                <Power className="mr-2 h-4 w-4" />
+                {isClinicAvailable ? 'Clinic ON' : 'Clinic OFF'}
+              </Button>
+            ) : (
+              <Button
+                onClick={handleNewAppointment}
+                className="bg-blue-600 hover:bg-blue-700"
+                disabled={isCreating}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                New Booking
+              </Button>
+            )}
             <Button
               onClick={() => handleOpenBlockTimeModal(new Date())}
               variant="outline"
@@ -956,6 +984,26 @@ interface AppointmentMenuProps {
                             <div className="flex items-center mt-1">
                               <Clock className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
                               <span>{appointment.duration} minutes</span>
+                            </div>
+                          )}
+                          {/* Booking Mode Badge - Only show if mode field exists */}
+                          {(appointment as any).mode && (
+                            <div className="flex items-center mt-2">
+                              <span className={cn(
+                                "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border",
+                                (appointment as any).mode === 'online'
+                                  ? 'bg-green-100 text-green-700 border-green-200'
+                                  : 'bg-blue-100 text-blue-700 border-blue-200'
+                              )}>
+                                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                  {(appointment as any).mode === 'online' ? (
+                                    <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"/>
+                                  ) : (
+                                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                                  )}
+                                </svg>
+                                {(appointment as any).mode === 'online' ? 'Web Booking' : 'Offline Booking'}
+                              </span>
                             </div>
                           )}
                         </div>

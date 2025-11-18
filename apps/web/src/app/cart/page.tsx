@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Image from "next/image";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
@@ -37,6 +37,8 @@ import {
   useGetClientCartQuery,
   useUpdateClientCartItemMutation,
   useRemoveFromClientCartMutation,
+  useGetPublicTaxFeeSettingsQuery,
+  useGetPublicShippingConfigQuery,
 } from "@repo/store/api";
 import { useAppSelector, useAppDispatch } from "@repo/store/hooks";
 import {
@@ -104,12 +106,19 @@ export default function CartPage() {
   const { data: cartData, isLoading } = useGetClientCartQuery(undefined, {
     skip: !isAuthenticated || !user?._id,
   });
+  const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
+  const { data: shippingConfig } = useGetPublicShippingConfigQuery(undefined);
   const [updateCartItem] = useUpdateClientCartItemMutation();
   const [removeFromCartAPI] = useRemoveFromClientCartMutation();
 
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [itemToRemove, setItemToRemove] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  console.log('Shipping Config Full Data: ', shippingConfig);
+  console.log('Shipping Config Amount: ', shippingConfig?.amount);
+  console.log('Shipping Config ChargeType: ', shippingConfig?.chargeType);
+  console.log('Shipping Config IsEnabled: ', shippingConfig?.isEnabled);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -174,8 +183,30 @@ export default function CartPage() {
     (acc: number, item: any) => acc + item.price * item.quantity,
     0
   );
-  const shipping = subtotal > 0 ? 5.0 : 0;
-  const tax = subtotal * 0.08;
+  
+  // Calculate dynamic shipping based on config
+  const shipping = subtotal > 0 && shippingConfig?.isEnabled
+    ? shippingConfig.chargeType === 'percentage'
+      ? (subtotal * shippingConfig.amount) / 100
+      : shippingConfig.amount
+    : 0;
+  
+  // Calculate tax based on dynamic tax settings from API
+  const productGST = taxSettings?.productGST || 18;
+  const productGSTType = taxSettings?.productGSTType || 'percentage';
+  const productPlatformFee = taxSettings?.productPlatformFee || 10;
+  const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
+  const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
+  const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
+  
+  const gst = productGSTEnabled 
+    ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+    : 0;
+  const platformFee = productPlatformFeeEnabled
+    ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+    : 0;
+  const tax = gst + platformFee;
+  
   const discount = subtotal * 0.1; // 10% discount
   const total = subtotal + shipping + tax - discount;
   const itemCount = cartItems.reduce(
@@ -476,10 +507,18 @@ export default function CartPage() {
                     <span className="text-muted-foreground">Est. Shipping</span>
                     <span className="font-medium">₹{shipping.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-sm lg:text-base">
-                    <span className="text-muted-foreground">Est. Tax</span>
-                    <span className="font-medium">₹{tax.toFixed(2)}</span>
-                  </div>
+                  {productGSTEnabled && (
+                    <div className="flex justify-between text-sm lg:text-base">
+                      <span className="text-muted-foreground">GST ({productGSTType === 'percentage' ? `${productGST}%` : '₹' + productGST})</span>
+                      <span className="font-medium">₹{gst.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {productPlatformFeeEnabled && (
+                    <div className="flex justify-between text-sm lg:text-base">
+                      <span className="text-muted-foreground">Platform Fee ({productPlatformFeeType === 'percentage' ? `${productPlatformFee}%` : '₹' + productPlatformFee})</span>
+                      <span className="font-medium">₹{platformFee.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="border-t pt-3 lg:pt-4 flex justify-between font-bold text-lg lg:text-xl">
                     <span>Total</span>
                     <span>₹{total.toFixed(2)}</span>

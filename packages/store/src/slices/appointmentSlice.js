@@ -95,7 +95,7 @@ const appointmentSlice = createSlice({
         appointment.payment = {
           ...appointment.payment,
           ...payment,
-          paymentStatus: payment.amount >= appointment.payment?.total ? 'paid' : 'partial'
+          paymentStatus: payment.amount >= appointment.payment?.total ? 'completed' : 'pending'
         };
       }
     },

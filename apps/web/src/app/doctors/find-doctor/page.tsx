@@ -897,7 +897,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <Button
             asChild
             size="sm"
@@ -909,14 +909,14 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
               <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
             </Link>
           </Button>
-          <Button
+          {/* <Button
             size="sm"
             className="transition-all duration-200 text-xs"
             variant="default"
           >
             <Phone className="h-3 w-3 mr-1" />
             Contact Clinic
-          </Button>
+          </Button> */}
         </div>
       </div>
     </div>

@@ -43,6 +43,40 @@ if (isServer && mongoose && mongoose.model) {
         required: true,
         default: true,
       },
+      productPlatformFee: {
+        type: Number,
+        required: true,
+        min: 0,
+        default: 10,
+      },
+      productPlatformFeeType: {
+        type: String,
+        enum: ['percentage', 'fixed'],
+        required: true,
+        default: 'percentage',
+      },
+      productPlatformFeeEnabled: {
+        type: Boolean,
+        required: true,
+        default: true,
+      },
+      productGST: {
+        type: Number,
+        required: true,
+        min: 0,
+        default: 18,
+      },
+      productGSTType: {
+        type: String,
+        enum: ['percentage', 'fixed'],
+        required: true,
+        default: 'percentage',
+      },
+      productGSTEnabled: {
+        type: Boolean,
+        required: true,
+        default: true,
+      },
       updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Admin',
@@ -69,6 +103,8 @@ if (isServer && mongoose && mongoose.model) {
       subtotal: amount,
       platformFee: 0,
       gst: 0, // This is the serviceTax
+      productPlatformFee: 0,
+      productGST: 0,
       total: amount,
     };
 
@@ -89,7 +125,24 @@ if (isServer && mongoose && mongoose.model) {
           : this.serviceTax;
     }
 
-    breakdown.total = breakdown.subtotal + breakdown.platformFee + breakdown.gst;
+    // Calculate product platform fee if enabled
+    if (this.productPlatformFeeEnabled) {
+      breakdown.productPlatformFee =
+        this.productPlatformFeeType === 'percentage'
+          ? (amount * this.productPlatformFee) / 100
+          : this.productPlatformFee;
+    }
+
+    // Calculate product GST if enabled
+    if (this.productGSTEnabled) {
+      const amountAfterProductPlatformFee = amount + breakdown.productPlatformFee;
+      breakdown.productGST =
+        this.productGSTType === 'percentage'
+          ? (amountAfterProductPlatformFee * this.productGST) / 100
+          : this.productGST;
+    }
+
+    breakdown.total = breakdown.subtotal + breakdown.platformFee + breakdown.gst + breakdown.productPlatformFee + breakdown.productGST;
     return breakdown;
   };
 
@@ -109,7 +162,13 @@ if (isServer && mongoose && mongoose.model) {
         platformFeeEnabled: true,
         serviceTax: 18,
         serviceTaxType: 'percentage',
-        serviceTaxEnabled: true
+        serviceTaxEnabled: true,
+        productPlatformFee: 10,
+        productPlatformFeeType: 'percentage',
+        productPlatformFeeEnabled: true,
+        productGST: 18,
+        productGSTType: 'percentage',
+        productGSTEnabled: true
       };
     },
     // Add a calculateFees method for the browser fallback that properly applies fees when enabled
@@ -121,13 +180,21 @@ if (isServer && mongoose && mongoose.model) {
         platformFeeEnabled: true,
         serviceTax: 18,
         serviceTaxType: 'percentage',
-        serviceTaxEnabled: true
+        serviceTaxEnabled: true,
+        productPlatformFee: 10,
+        productPlatformFeeType: 'percentage',
+        productPlatformFeeEnabled: true,
+        productGST: 18,
+        productGSTType: 'percentage',
+        productGSTEnabled: true
       };
       
       const breakdown = {
         subtotal: amount,
         platformFee: 0,
         gst: 0, // This is the serviceTax
+        productPlatformFee: 0,
+        productGST: 0,
         total: amount,
       };
 
@@ -148,7 +215,24 @@ if (isServer && mongoose && mongoose.model) {
             : taxSettings.serviceTax;
       }
 
-      breakdown.total = breakdown.subtotal + breakdown.platformFee + breakdown.gst;
+      // Calculate product platform fee if enabled
+      if (taxSettings.productPlatformFeeEnabled) {
+        breakdown.productPlatformFee =
+          taxSettings.productPlatformFeeType === 'percentage'
+            ? (amount * taxSettings.productPlatformFee) / 100
+            : taxSettings.productPlatformFee;
+      }
+
+      // Calculate product GST if enabled
+      if (taxSettings.productGSTEnabled) {
+        const amountAfterProductPlatformFee = amount + breakdown.productPlatformFee;
+        breakdown.productGST =
+          taxSettings.productGSTType === 'percentage'
+            ? (amountAfterProductPlatformFee * taxSettings.productGST) / 100
+            : taxSettings.productGST;
+      }
+
+      breakdown.total = breakdown.subtotal + breakdown.platformFee + breakdown.gst + breakdown.productPlatformFee + breakdown.productGST;
       return breakdown;
     }
   };

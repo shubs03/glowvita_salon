@@ -20,6 +20,7 @@ type Appointment = {
   clientEmail?: string;
   duration?: string;
   price?: string;
+  mode?: 'online' | 'offline'; // Booking mode
 };
 
 interface AppointmentCardProps {
@@ -293,6 +294,25 @@ export default function AppointmentCard({
                 <Mail className="w-5 h-5" />
               </Button>
             )}
+          </div>
+        )}
+        {/* Booking Mode Badge - Only show if mode field exists */}
+        {appointment.mode && (
+          <div className="mt-3">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${
+              appointment.mode === 'online'
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+            }`}>
+              <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                {appointment.mode === 'online' ? (
+                  <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"/>
+                ) : (
+                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                )}
+              </svg>
+              {appointment.mode === 'online' ? 'Web Booking' : 'Offline Booking'}
+            </span>
           </div>
         )}
       </div>

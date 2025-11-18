@@ -14,7 +14,12 @@ import { useGetCategoriesQuery, useGetVendorServicesQuery, useGetClientsQuery, u
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { toast } from 'sonner';
 import InvoiceUI from "@/components/InvoiceUI";
-import html2pdf from 'html2pdf.js';
+
+// Dynamically import html2pdf to avoid SSR issues
+let html2pdf: any;
+if (typeof window !== 'undefined') {
+  html2pdf = require('html2pdf.js');
+}
 
 // Service interface
 interface Service {
