@@ -28,7 +28,7 @@ const transformSettings = (settings) => {
     platformFee: settings.platformFee || 15,
     platformFeeType: settings.platformFeeType || 'percentage',
     platformFeeEnabled: settings.platformFeeEnabled !== false,
-    serviceTax: settings.serviceTax || 18, // This is GST
+    serviceTax: settings.serviceTax || 18,
     serviceTaxType: settings.serviceTaxType || 'percentage',
     serviceTaxEnabled: settings.serviceTaxEnabled !== false,
     productPlatformFee: settings.productPlatformFee || 10,
@@ -41,7 +41,7 @@ const transformSettings = (settings) => {
   };
 };
 
-// GET all tax fee settings (public endpoint)
+// GET tax fee settings (public endpoint - no authentication required)
 export async function GET() {
   try {
     const settings = await TaxFeeSettings.findOne().sort({ updatedAt: -1 });

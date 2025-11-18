@@ -1235,6 +1235,14 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["ShippingCharge"],
       transformResponse: (response) => response.data || response,
     }),
+    
+    // Public shipping config endpoint
+    getPublicShippingConfig: builder.query({
+      query: () => ({ url: "/shipping", method: "GET" }),
+      providesTags: ["ShippingCharge"],
+      keepUnusedDataFor: 0, // Don't cache this data
+      transformResponse: (response) => response.data || response,
+    }),
 
     // product categories endpoints
     getProductCategories: builder.query({
@@ -1530,6 +1538,12 @@ export const glowvitaApi = createApi({
     getClientReferrals: builder.query({
       query: () => ({ url: "/client/referrals", method: "GET" }),
       providesTags: ["ClientReferrals"],
+    }),
+
+    // Public Tax Fee Settings Endpoint (Web App - no authentication required)
+    getPublicTaxFeeSettings: builder.query({
+      query: () => ({ url: "/client/tax-fees", method: "GET" }),
+      providesTags: ["TaxFeeSettings"],
     }),
 
     // Web App Login
@@ -1883,6 +1897,7 @@ export const {
   useUpdateCrmOrderMutation,
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
+  useGetPublicShippingConfigQuery,
   useGetProductCategoriesQuery,
   useCreateProductCategoryMutation,
   useGetStaffQuery,
@@ -1948,6 +1963,9 @@ export const {
 
   // Client Referrals Endpoint (Web App)
   useGetClientReferralsQuery,
+
+  // Public Tax Fee Settings (Web App - no auth required)
+  useGetPublicTaxFeeSettingsQuery,
 
   // Block Time Endpoints
   useGetBlockedTimesQuery,
