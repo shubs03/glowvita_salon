@@ -1006,6 +1006,19 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => (response && response.success ? response.data || [] : []),
     }),
 
+    // Admin Users Endpoints
+    getAdminUsers: builder.query({
+      query: ({ vendorId, page = 1, limit = 100 } = {}) => {
+        const params = new URLSearchParams();
+        if (vendorId) params.append('vendorId', vendorId);
+        params.append('page', page.toString());
+        params.append('limit', limit.toString());
+        return { url: `/admin/users?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["User"],
+      transformResponse: (response) => (response && response.success ? response.data || [] : []),
+    }),
+
     // Admin Product Categories 
 
     getAdminProductCategories: builder.query({
@@ -1863,6 +1876,7 @@ export const {
   useGetVendorProductsQuery,
   useUpdateProductStatusMutation,
   useGetAdminClientsQuery,
+  useGetAdminUsersQuery,
 
   // CRM Endpoints
   useVendorLoginMutation,

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch } from 'react-redux';
-import { useUpdateVendorDocumentStatusMutation } from '@repo/store/api';
+import { useUpdateVendorDocumentStatusMutation, useGetAdminUsersQuery } from '@repo/store/api';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@repo/ui/tabs';
@@ -1058,7 +1058,8 @@ const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
+  // Fetch offline clients (existing implementation)
   useEffect(() => {
     const fetchClients = async () => {
       if (!vendor?._id) return;
@@ -1108,6 +1109,12 @@ const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
 
     fetchClients();
   }, [vendor]);
+  
+  // Fetch online users using Redux hook
+  const { data: onlineUsers = [], isLoading: onlineUsersLoading, error: onlineUsersError } = useGetAdminUsersQuery(
+    vendor?._id ? { vendorId: vendor._id } : { vendorId: '' },
+    { skip: !vendor?._id }
+  );
 
   if (!vendor) {
     return (
@@ -1155,62 +1162,103 @@ const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
         <p className="text-sm text-muted-foreground">View clients associated with this vendor</p>
       </CardHeader>
       <CardContent>
-        {clients.length === 0 ? (
-          <p className="text-center py-4 text-muted-foreground">No clients found for this vendor</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-4">Name</th>
-                  <th className="text-left py-2 px-4">Email</th>
-                  <th className="text-left py-2 px-4">Phone</th>
-                  <th className="text-left py-2 px-4">Status</th>
-                  <th className="text-left py-2 px-4">Last Visit</th>
-                  <th className="text-left py-2 px-4">Total Spent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.map((client) => (
-                  <tr key={client._id} className="border-b hover:bg-muted/50">
-                    <td className="py-2 px-4">
-                      <div className="flex items-center gap-2">
-                        {client.profilePicture ? (
-                          <img 
-                            src={client.profilePicture} 
-                            alt={client.fullName} 
-                            className="w-8 h-8 rounded-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
-                            }}
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                            <Users className="w-4 h-4 text-gray-500" />
-                          </div>
-                        )}
-                        <span>{client.fullName}</span>
-                      </div>
-                    </td>
-                    <td className="py-2 px-4">{client.email || 'N/A'}</td>
-                    <td className="py-2 px-4">{client.phone || 'N/A'}</td>
-                    <td className="py-2 px-4">
-                      <Badge variant={client.status === 'Active' ? 'default' : 'secondary'}>
-                        {client.status || 'N/A'}
-                      </Badge>
-                    </td>
-                    <td className="py-2 px-4">
-                      {client.lastVisit ? new Date(client.lastVisit).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td className="py-2 px-4">
-                      ₹{client.totalSpent?.toLocaleString() || '0'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Offline Clients */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Offline Clients</h3>
+            <Badge className="bg-blue-100 text-blue-800">{clients.length} clients</Badge>
           </div>
-        )}
+          
+          {clients.length === 0 ? (
+            <p className="text-center py-4 text-muted-foreground">No offline clients found for this vendor</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-4">Name</th>
+                    <th className="text-left py-2 px-4">Email</th>
+                    <th className="text-left py-2 px-4">Phone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clients.map((client) => (
+                    <tr key={client._id} className="border-b hover:bg-muted/50">
+                      <td className="py-2 px-4">
+                        <div className="flex items-center gap-2">
+                          {client.profilePicture ? (
+                            <img 
+                              src={client.profilePicture} 
+                              alt={client.fullName} 
+                              className="w-8 h-8 rounded-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                              <Users className="w-4 h-4 text-gray-500" />
+                            </div>
+                          )}
+                          <span>{client.fullName}</span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-4">{client.email || 'N/A'}</td>
+                      <td className="py-2 px-4">{client.phone || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+        
+        {/* Horizontal line separator */}
+        <div className="my-8 border-t border-gray-200"></div>
+        
+        {/* Online Users */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Online Users</h3>
+            <Badge className="bg-green-100 text-green-800">{onlineUsers.length} users</Badge>
+          </div>
+          
+          {onlineUsersLoading ? (
+            <p className="text-center py-4 text-muted-foreground">Loading online users...</p>
+          ) : onlineUsersError ? (
+            <p className="text-center py-4 text-red-500">Error loading online users</p>
+          ) : onlineUsers.length === 0 ? (
+            <p className="text-center py-4 text-muted-foreground">No online users found for this vendor</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-4">Name</th>
+                    <th className="text-left py-2 px-4">Email</th>
+                    <th className="text-left py-2 px-4">Phone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {onlineUsers.map((user: any) => (
+                    <tr key={user._id} className="border-b hover:bg-muted/50">
+                      <td className="py-2 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                            <Users className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <span>{user.firstName} {user.lastName}</span>
+                        </div>
+                      </td>
+                      <td className="py-2 px-4">{user.emailAddress || 'N/A'}</td>
+                      <td className="py-2 px-4">{user.mobileNo || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
