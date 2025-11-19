@@ -90,6 +90,8 @@ export default function AppointmentsPage() {
   const [createAppointment] = glowvitaApi.useCreateAppointmentMutation();
   const [updateAppointment] = glowvitaApi.useUpdateAppointmentMutation();
   const [deleteAppointment, { isLoading: isDeleting }] = glowvitaApi.useDeleteAppointmentMutation();
+  // Use backend payments collect endpoint so each payment is recorded with timestamped history
+  const [collectPayment] = glowvitaApi.useCollectPaymentMutation();
   
   const appointments = Array.isArray(appointmentsData) ? appointmentsData : [];
   
@@ -106,6 +108,12 @@ export default function AppointmentsPage() {
     amount: 0,
     paymentMethod: 'cash',
     notes: ''
+  });
+  const [paymentAt, setPaymentAt] = useState<string>(() => {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    // Format to yyyy-MM-ddTHH:mm for datetime-local input
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
   });
 
   const filteredAppointments = useMemo(() => {
@@ -189,54 +197,29 @@ export default function AppointmentsPage() {
       notes: ''
     });
     setIsPaymentModalOpen(true);
+    // Reset payment date to now when opening
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    setPaymentAt(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`);
   };
 
   const handleCollectPayment = async () => {
     if (!selectedAppointment?._id) return;
-    
     const toastId = toast.loading('Processing payment...');
     try {
-      // Calculate new payment status
-      const currentPaid = (selectedAppointment as any).payment?.paid || 0;
-      const currentAmountPaid = (selectedAppointment as any).amountPaid || 0;
-      const newPaidAmount = currentPaid + paymentData.amount;
-      const newAmountPaid = currentAmountPaid + paymentData.amount;
-      const totalAmount = (selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0;
-      const remainingAmount = Math.max(0, totalAmount - newAmountPaid);
-
-      let paymentStatus = 'pending';
-      if (newAmountPaid >= totalAmount) {
-        paymentStatus = 'completed';
-      } else if (newAmountPaid > 0) {
-        paymentStatus = 'partial';
-      }
-
-      // Update appointment with payment information
-      const updatedAppointment = {
-        ...selectedAppointment,
-        payment: {
-          ...(selectedAppointment as any).payment,
-          paid: newPaidAmount,
-          paymentMethod: paymentData.paymentMethod,
-          paymentStatus: paymentStatus,
-          lastPaymentDate: new Date().toISOString(),
-          lastPaymentAmount: paymentData.amount,
-          lastPaymentNotes: paymentData.notes || '',
-        },
-        paymentStatus: paymentStatus,
-        amountPaid: newAmountPaid,
-        amountRemaining: remainingAmount,
-      };
-
-      await updateAppointment({
-        _id: selectedAppointment._id,
-        ...updatedAppointment
+      // Call backend so it records payment history with paymentDate
+      await collectPayment({
+        appointmentId: selectedAppointment._id,
+        amount: paymentData.amount,
+        paymentMethod: paymentData.paymentMethod,
+        notes: paymentData.notes,
+        paymentDate: new Date(paymentAt).toISOString(),
       }).unwrap();
-      
+
       toast.success('Payment collected successfully', {
         description: `₹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`
       });
-      
+
       setIsPaymentModalOpen(false);
       setSelectedAppointment(null);
       refetch();
@@ -448,16 +431,28 @@ export default function AppointmentsPage() {
                               </span>
                             </TableCell>
                             <TableCell>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
-                                appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {formatStatus(appointment.status)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                  appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                  appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
+                                  appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {formatStatus(appointment.status)}
+                                </span>
+                                {(() => {
+                                  const totalAmount = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
+                                  const paidAmount = Number((appointment as any).amountPaid ?? appointment.payment?.paid ?? 0) || 0;
+                                  const isPartial = totalAmount > 0 && paidAmount > 0 && paidAmount < totalAmount;
+                                  return isPartial ? (
+                                    <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wide">
+                                      Partial
+                                    </span>
+                                  ) : null;
+                                })()}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
