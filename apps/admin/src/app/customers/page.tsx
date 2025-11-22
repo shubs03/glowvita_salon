@@ -1,8 +1,8 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
+import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
-import { Eye, FileDown, X, IndianRupee, Percent, Users, FileText, Plus, Search } from 'lucide-react';
+import { Eye, FileDown, X, IndianRupee, Percent, Users, FileText, Plus, Search, Mail, Phone, TrendingUp } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@repo/ui/dialog';
 import { Skeleton } from "@repo/ui/skeleton";
 
@@ -28,6 +28,9 @@ import {
   setSalonItemsPerPage,
   clearSalonFilters
 } from '@repo/store/slices/salonSlice';
+
+// Use a relative import for the API service
+import { useGetAdminUsersQuery } from '../../../../../packages/store/src/services/api';
 
 type Salon = {
   id: number;
@@ -82,10 +85,15 @@ export default function CustomerManagementPage() {
     const isNewCustomerModalOpen = isOpen && modalType === 'newCustomer';
     
     // State for viewing salon customers
-    const [isViewCustomersModalOpen, setIsViewCustomersModalOpen] = useState(false);
-    const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
+    const [isViewCustomersModalOpen, setSelectedSalon] = useState<Salon | null>(null);
     const [salonCustomerSearch, setSalonCustomerSearch] = useState('');
     const [salonCustomerTypeFilter, setSalonCustomerTypeFilter] = useState('all');
+    
+    // State for online clients pagination
+    const [onlineClientsPagination, setOnlineClientsPagination] = useState({
+        currentPage: 1,
+        itemsPerPage: 10
+    });
 
     // Customer Orders State from Redux
     const {
@@ -100,6 +108,9 @@ export default function CustomerManagementPage() {
         filters: salonFilters,
         pagination: salonPagination
     } = useAppSelector((state: any) => state.salon);
+
+    // Fetch all online users data using the new hook
+    const { data: onlineUsers = [], isLoading: isOnlineUsersLoading, error: onlineUsersError } = useGetAdminUsersQuery({});
 
     // Memoized filtering and pagination logic
     const filteredOrders = useMemo(() => {
@@ -144,15 +155,75 @@ export default function CustomerManagementPage() {
         });
     }, [salonCustomerSearch, salonCustomerTypeFilter]);
     
+    // Pagination logic for online clients
+    const currentOnlineUsers = useMemo(() => {
+        const firstItemIndex = (onlineClientsPagination.currentPage - 1) * onlineClientsPagination.itemsPerPage;
+        const lastItemIndex = firstItemIndex + onlineClientsPagination.itemsPerPage;
+        return onlineUsers.slice(firstItemIndex, lastItemIndex);
+    }, [onlineUsers, onlineClientsPagination]);
+    
     const handleViewCustomersClick = (salon: Salon) => {
         setSelectedSalon(salon);
-        setIsViewCustomersModalOpen(true);
     };
 
     const clearSalonCustomerFilters = () => {
         setSalonCustomerSearch('');
         setSalonCustomerTypeFilter('all');
     };
+    
+    const handleOnlineClientsPageChange = (page: number) => {
+        setOnlineClientsPagination(prev => ({
+            ...prev,
+            currentPage: page
+        }));
+    };
+    
+    const handleOnlineClientsItemsPerPageChange = (size: number) => {
+        setOnlineClientsPagination(prev => ({
+            currentPage: 1,
+            itemsPerPage: size
+        }));
+    };
+    
+    const totalOnlineClientsPages = Math.ceil(onlineUsers.length / onlineClientsPagination.itemsPerPage);
+
+    // Calculate dynamic data for the cards
+    const totalClients = onlineUsers.length;
+    const newClientsThisMonth = useMemo(() => {
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        
+        return onlineUsers.filter((user: any) => {
+            if (!user.createdAt) return false;
+            const userCreationDate = new Date(user.createdAt);
+            return userCreationDate >= oneMonthAgo;
+        }).length;
+    }, [onlineUsers]);
+
+    const totalRevenue = useMemo(() => {
+        return onlineUsers.reduce((sum: number, user: any) => {
+            return sum + (user.totalSpent || 0);
+        }, 0);
+    }, [onlineUsers]);
+
+    const totalAppointments = useMemo(() => {
+        return onlineUsers.reduce((sum: number, user: any) => {
+            return sum + (user.totalBookings || 0);
+        }, 0);
+    }, [onlineUsers]);
+
+    const totalVendors = useMemo(() => {
+        const vendorSet = new Set();
+        onlineUsers.forEach((user: any) => {
+            if (user.vendors && Array.isArray(user.vendors)) {
+                user.vendors.forEach((vendor: string) => vendorSet.add(vendor));
+            }
+        });
+        return vendorSet.size;
+    }, [onlineUsers]);
+
+    // State for viewing client vendors
+    const [viewVendorsClient, setViewVendorsClient] = useState<any | null>(null);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -234,272 +305,190 @@ export default function CustomerManagementPage() {
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12,234</div>
-            <p className="text-xs text-muted-foreground">+19% from last month</p>
+            <div className="text-2xl font-bold">{totalClients}</div>
+            <p className="text-xs text-muted-foreground">+{newClientsThisMonth} new this month</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Discount Applied</CardTitle>
-            <Percent className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$1,250.00</div>
-            <p className="text-xs text-muted-foreground">Across 500 orders</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Taxes Applied</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <IndianRupee className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$2,315.50</div>
-            <p className="text-xs text-muted-foreground">GST and other taxes</p>
+            <div className="text-2xl font-bold">₹{totalRevenue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">+12.5% from last month</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Platform Fees</CardTitle>
+            <CardTitle className="text-sm font-medium">Appointments</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalAppointments}</div>
+            <p className="text-xs text-muted-foreground">+8.2% from last month</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Vendors</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$850.75</div>
-            <p className="text-xs text-muted-foreground">From all transactions</p>
+            <div className="text-2xl font-bold">{totalVendors}</div>
+            <p className="text-xs text-muted-foreground">Active vendors</p>
           </CardContent>
         </Card>
       </div>
       
-        <Tabs defaultValue="all-customers">
-            <TabsList className="grid w-full grid-cols-2 max-w-md">
-                <TabsTrigger value="all-customers">All Customers</TabsTrigger>
-                <TabsTrigger value="salon-list">Salon List</TabsTrigger>
-            </TabsList>
-            <TabsContent value="all-customers">
-                <Card>
-                    <CardHeader>
-                        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                            <div>
-                                <CardTitle>All Customer Orders</CardTitle>
-                                <CardDescription>A list of all customer transactions.</CardDescription>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button onClick={() => dispatch(openModal({ modalType: 'newCustomer' }))}>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    New Customer
-                                </Button>
-                                <Button>
-                                    <FileDown className="mr-2 h-4 w-4" />
-                                    Export List
-                                </Button>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="mb-6 p-4 rounded-lg bg-secondary">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold">Filters</h3>
-                                <Button variant="ghost" size="sm" onClick={() => dispatch(clearCustomerFilters())}>
-                                <X className="mr-2 h-4 w-4" />
-                                Clear Filters
-                                </Button>
-                            </div>
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                                <Select value={customerFilters.orderType} onValueChange={value => dispatch(setCustomerFilter({ filterName: 'orderType', value }))}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filter by Order Type" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Online">Online</SelectItem>
-                                        <SelectItem value="Offline">Offline</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Select value={customerFilters.paymentMode} onValueChange={value => dispatch(setCustomerFilter({ filterName: 'paymentMode', value }))}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filter by Payment Mode" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Credit Card">Credit Card</SelectItem>
-                                        <SelectItem value="PayPal">PayPal</SelectItem>
-                                        <SelectItem value="Cash">Cash</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Select value={customerFilters.orderStatus} onValueChange={value => dispatch(setCustomerFilter({ filterName: 'orderStatus', value }))}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Filter by Order Status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Completed">Completed</SelectItem>
-                                        <SelectItem value="Confirmed">Confirmed</SelectItem>
-                                        <SelectItem value="Pending">Pending</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Input 
-                                    type="date" 
-                                    placeholder="Appointment Date" 
-                                    value={customerFilters.appointmentDate} 
-                                    onChange={e => dispatch(setCustomerFilter({ filterName: 'appointmentDate', value: e.target.value }))}
-                                />
-                            </div>
-                        </div>
-
+        <Card>
+            <CardHeader>
+                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div>
+                        <CardTitle>Online Clients</CardTitle>
+                        <CardDescription>List of all online clients who have booked appointments.</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button>
+                            <FileDown className="mr-2 h-4 w-4" />
+                            Export List
+                        </Button>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                {isOnlineUsersLoading ? (
+                    <div className="flex justify-center items-center h-32">
+                        <Skeleton className="h-8 w-full" />
+                    </div>
+                ) : (
+                    <>
                         <div className="overflow-x-auto no-scrollbar">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Sr. No</TableHead>
-                                        <TableHead>Order ID</TableHead>
-                                        <TableHead>Customer ID</TableHead>
-                                        <TableHead>Vendor</TableHead>
-                                        <TableHead>Customer</TableHead>
-                                        <TableHead>Order Type</TableHead>
-                                        <TableHead>Appt. Date</TableHead>
-                                        <TableHead>Fees</TableHead>
-                                        <TableHead>Sub Total</TableHead>
-                                        <TableHead>Discount</TableHead>
-                                        <TableHead>Taxes</TableHead>
-                                        <TableHead>Coupon</TableHead>
-                                        <TableHead>Payment</TableHead>
-                                        <TableHead>Platform Fee</TableHead>
-                                        <TableHead>Service Tax</TableHead>
+                                        <TableHead>Client</TableHead>
+                                        <TableHead>Contact</TableHead>
                                         <TableHead>Status</TableHead>
+                                        <TableHead>Bookings</TableHead>
+                                        <TableHead className="text-right">Total Spent</TableHead>
+                                        <TableHead className="text-right">Vendors</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {currentOrders.map((order: Order) => (
-                                        <TableRow key={order.id}>
-                                            <TableCell>{order.id}</TableCell>
-                                            <TableCell>{order.orderId}</TableCell>
-                                            <TableCell>{order.customerId}</TableCell>
-                                            <TableCell>{order.vendorName}</TableCell>
-                                            <TableCell>{order.customerName}</TableCell>
-                                            <TableCell>{order.orderType}</TableCell>
-                                            <TableCell>{order.appointmentDate}</TableCell>
-                                            <TableCell>${order.fees.toFixed(2)}</TableCell>
-                                            <TableCell>${order.subTotal.toFixed(2)}</TableCell>
-                                            <TableCell>${order.discount.toFixed(2)}</TableCell>
-                                            <TableCell>${order.taxes.toFixed(2)}</TableCell>
-                                            <TableCell>{order.couponApplied}</TableCell>
-                                            <TableCell>{order.paymentMode}</TableCell>
-                                            <TableCell>${order.platformFees.toFixed(2)}</TableCell>
-                                            <TableCell>${order.serviceTax.toFixed(2)}</TableCell>
+                                    {currentOnlineUsers.map((user: any, index: number) => (
+                                        <TableRow key={user._id}>
+                                            <TableCell>{(onlineClientsPagination.currentPage - 1) * onlineClientsPagination.itemsPerPage + index + 1}</TableCell>
                                             <TableCell>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                    order.orderStatus === "Completed" ? "bg-green-100 text-green-800" :
-                                                    order.orderStatus === "Confirmed" ? "bg-blue-100 text-blue-800" :
-                                                    "bg-yellow-100 text-yellow-800"
-                                                }`}>
-                                                    {order.orderStatus}
-                                                </span>
+                                                <div className="font-medium">{user.firstName} {user.lastName}</div>
+                                                <div className="text-sm text-muted-foreground">
+                                                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col">
+                                                    <div className="flex items-center gap-1">
+                                                        <Mail className="h-3 w-3" />
+                                                        <span className="text-sm">{user.emailAddress || 'N/A'}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <Phone className="h-3 w-3" />
+                                                        <span className="text-sm">{user.mobileNo || 'N/A'}</span>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="secondary">{user.status || 'New'}</Badge>
+                                            </TableCell>
+                                            <TableCell>{user.totalBookings || 0}</TableCell>
+                                            <TableCell className="text-right">₹{user.totalSpent?.toFixed(2) || '0.00'}</TableCell>
+                                            <TableCell className="text-right">
+                                                {user.vendors && user.vendors.length > 0 ? (
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm"
+                                                        onClick={() => setViewVendorsClient(user)}
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                ) : (
+                                                    <span>No bookings</span>
+                                                )}
                                             </TableCell>
                                         </TableRow>
                                     ))}
+                                    {onlineUsersError && (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center text-destructive">
+                                                Error loading online clients: {JSON.stringify(onlineUsersError)}
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    {!onlineUsersError && onlineUsers.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center text-muted-foreground">
+                                                No online clients found.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </div>
                         <Pagination
                             className="mt-4"
-                            currentPage={customerPagination.currentPage}
-                            totalPages={Math.ceil(filteredOrders.length / customerPagination.itemsPerPage)}
-                            onPageChange={(page) => dispatch(setCurrentCustomerPage(page))}
-                            itemsPerPage={customerPagination.itemsPerPage}
-                            onItemsPerPageChange={(size) => dispatch(setCustomerItemsPerPage(size))}
-                            totalItems={filteredOrders.length}
+                            currentPage={onlineClientsPagination.currentPage}
+                            totalPages={totalOnlineClientsPages}
+                            onPageChange={handleOnlineClientsPageChange}
+                            itemsPerPage={onlineClientsPagination.itemsPerPage}
+                            onItemsPerPageChange={handleOnlineClientsItemsPerPageChange}
+                            totalItems={onlineUsers.length}
                         />
-                    </CardContent>
-                </Card>
-            </TabsContent>
-            <TabsContent value="salon-list">
-                 <Card>
-                    <CardHeader>
-                        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                            <div>
-                                <CardTitle>Salon List</CardTitle>
-                                <CardDescription>List of all affiliated salons and their details.</CardDescription>
-                            </div>
-                            <Button>
-                               <FileDown className="mr-2 h-4 w-4" />
-                                Export List
-                            </Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="mb-6 p-4 rounded-lg bg-secondary">
-                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold">Filters</h3>
-                                <Button variant="ghost" size="sm" onClick={() => dispatch(clearSalonFilters())}>
-                                    <X className="mr-2 h-4 w-4" />
-                                    Clear Filters
-                                </Button>
-                            </div>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <Input 
-                                    type="text" 
-                                    placeholder="Filter by Salon Name..."
-                                    value={salonFilters.salonName}
-                                    onChange={e => dispatch(setSalonFilter({ filterName: 'salonName', value: e.target.value }))}
-                                />
-                                <Input 
-                                    type="text" 
-                                    placeholder="Filter by Vendor Owner..."
-                                    value={salonFilters.vendorOwner}
-                                    onChange={e => dispatch(setSalonFilter({ filterName: 'vendorOwner', value: e.target.value }))}
-                                />
-                            </div>
-                        </div>
+                    </>
+                )}
+            </CardContent>
+        </Card>
 
-                        <div className="overflow-x-auto no-scrollbar">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Sr. No</TableHead>
-                                        <TableHead>Salon Name</TableHead>
-                                        <TableHead>Vendor Contact</TableHead>
-                                        <TableHead>Vendor Owner</TableHead>
-                                        <TableHead>Admin Reservation</TableHead>
-                                        <TableHead>Admin Pay</TableHead>
-                                        <TableHead>Settlement Amount</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {currentSalons.map((salon: Salon) => (
-                                        <TableRow key={salon.id}>
-                                            <TableCell>{salon.id}</TableCell>
-                                            <TableCell>{salon.salonName}</TableCell>
-                                            <TableCell>{salon.vendorContact}</TableCell>
-                                            <TableCell>{salon.vendorOwner}</TableCell>
-                                            <TableCell>${salon.adminReservation.toFixed(2)}</TableCell>
-                                            <TableCell>${salon.adminPay.toFixed(2)}</TableCell>
-                                            <TableCell>${salon.settlementAmount.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">
-                                                 <Button variant="ghost" size="icon" onClick={() => handleViewCustomersClick(salon)}>
-                                                    <Eye className="h-4 w-4" />
-                                                    <span className="sr-only">View Customers</span>
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+        {/* Vendor List Dialog */}
+        <Dialog open={!!viewVendorsClient} onOpenChange={() => setViewVendorsClient(null)}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Vendors for {viewVendorsClient?.firstName} {viewVendorsClient?.lastName}</DialogTitle>
+                    <DialogDescription>
+                        List of all vendors this client has booked appointments with.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    {viewVendorsClient?.vendors && viewVendorsClient.vendors.length > 0 ? (
+                        <div className="space-y-3">
+                            {viewVendorsClient.vendors.map((vendor: string, index: number) => (
+                                <div key={index} className="flex items-center p-3 border rounded-lg">
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                        <FileText className="h-5 w-5 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium">{vendor}</p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                         <Pagination
-                            className="mt-4"
-                            currentPage={salonPagination.currentPage}
-                            totalPages={Math.ceil(filteredSalons.length / salonPagination.itemsPerPage)}
-                            onPageChange={(page) => dispatch(setCurrentSalonPage(page))}
-                            itemsPerPage={salonPagination.itemsPerPage}
-                            onItemsPerPageChange={(size) => dispatch(setSalonItemsPerPage(size))}
-                            totalItems={filteredSalons.length}
-                        />
-                    </CardContent>
-                </Card>
-            </TabsContent>
-        </Tabs>
+                    ) : (
+                        <p className="text-center text-muted-foreground py-4">
+                            No vendors found for this client.
+                        </p>
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button variant="secondary" onClick={() => setViewVendorsClient(null)}>
+                        Close
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         <Dialog open={isNewCustomerModalOpen} onOpenChange={(open) => !open && dispatch(closeModal())}>
             <DialogContent className="sm:max-w-[425px]">
@@ -536,10 +525,10 @@ export default function CustomerManagementPage() {
             </DialogContent>
         </Dialog>
         
-        <Dialog open={isViewCustomersModalOpen} onOpenChange={setIsViewCustomersModalOpen}>
+        <Dialog open={!!isViewCustomersModalOpen} onOpenChange={() => setSelectedSalon(null)}>
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
-                    <DialogTitle>Customers at {selectedSalon?.salonName}</DialogTitle>
+                    <DialogTitle>Customers at {isViewCustomersModalOpen?.salonName}</DialogTitle>
                     <DialogDescription>
                         A list of all customers who have visited this salon.
                     </DialogDescription>
@@ -601,7 +590,7 @@ export default function CustomerManagementPage() {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="secondary" onClick={() => setIsViewCustomersModalOpen(false)}>
+                    <Button variant="secondary" onClick={() => setSelectedSalon(null)}>
                         Close
                     </Button>
                 </DialogFooter>

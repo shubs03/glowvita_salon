@@ -141,7 +141,7 @@ export const glowvitaApi = createApi({
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
     "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
-    "Billing", "VendorServices", "DoctorWishlist"
+    "Billing", "VendorServices", "DoctorWishlist", "Product"
   ],
 
   endpoints: (builder) => ({
@@ -1040,19 +1040,38 @@ export const glowvitaApi = createApi({
 
 
     // Product Approval
-    getVendorProducts: builder.query({
-      query: () => ({ url: "/admin/product-approval", method: "GET" }),
+    // Removed old combined product approval endpoints - using separate vendor/supplier endpoints now
+    
+    // Vendor Product Approval (separate from general product approval)
+    getVendorProductApprovals: builder.query({
+      query: () => ({ url: "/admin/product-approval/vendor", method: "GET" }),
       providesTags: ["Product"],
     }),
-    updateProductStatus: builder.mutation({
+    // Supplier Product Approval (separate from general product approval)
+    getSupplierProductApprovals: builder.query({
+      query: () => ({ url: "/admin/product-approval/supplier", method: "GET" }),
+      providesTags: ["Product"],
+    }),
+    
+    // Update Vendor Product Status
+    updateVendorProductStatus: builder.mutation({
       query: ({ productId, status }) => ({
-        url: "/admin/product-approval",
+        url: "/admin/product-approval/vendor",
         method: "PATCH",
         body: { productId, status },
       }),
       invalidatesTags: ["Product", "CrmProducts"],
     }),
-
+    
+    // Update Supplier Product Status
+    updateSupplierProductStatus: builder.mutation({
+      query: ({ productId, status }) => ({
+        url: "/admin/product-approval/supplier",
+        method: "PATCH",
+        body: { productId, status },
+      }),
+      invalidatesTags: ["Product", "CrmProducts"],
+    }),
     //======================================================== CRM Endpoints ====================================================//
     // Vendor Endpoints
     vendorLogin: builder.mutation({
@@ -1925,10 +1944,16 @@ export const {
   useCreateFaqMutation,
   useUpdateFaqMutation,
   useDeleteFaqMutation,
-  useGetVendorProductsQuery,
-  useUpdateProductStatusMutation,
+  // useGetVendorProductsQuery,  // Removed old combined product approval hook
+  // useUpdateProductStatusMutation,  // Removed old combined product approval hook
   useGetAdminClientsQuery,
   useGetAdminUsersQuery,
+
+  // Vendor Product Approval Hooks
+  useGetVendorProductApprovalsQuery,
+  useGetSupplierProductApprovalsQuery,
+  useUpdateVendorProductStatusMutation,
+  useUpdateSupplierProductStatusMutation,
 
   // CRM Endpoints
   useVendorLoginMutation,

@@ -11,11 +11,22 @@ import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Tras
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
 import { Skeleton } from "@repo/ui/skeleton";
-import { useGetSuppliersQuery, useUpdateSupplierMutation, useDeleteSupplierMutation } from '@repo/store/api';
-import { useGetDoctorsQuery, useUpdateDoctorMutation, useDeleteDoctorMutation } from '../../../../../packages/store/src/services/api';
-import { useGetVendorsQuery, useUpdateVendorStatusMutation } from '@repo/store/api';
-import { useGetPendingServicesQuery, useUpdateServiceStatusMutation } from '@repo/store/api';
-import { useGetVendorProductsQuery, useUpdateProductStatusMutation } from '@repo/store/api';
+import { 
+  useGetSuppliersQuery, 
+  useUpdateSupplierMutation, 
+  useDeleteSupplierMutation,
+  useGetDoctorsQuery,
+  useUpdateDoctorMutation,
+  useDeleteDoctorMutation,
+  useGetVendorsQuery,
+  useUpdateVendorStatusMutation,
+  useGetPendingServicesQuery,
+  useUpdateServiceStatusMutation,
+  useGetVendorProductApprovalsQuery,
+  useUpdateVendorProductStatusMutation,
+  useGetSupplierProductApprovalsQuery,
+  useUpdateSupplierProductStatusMutation
+} from '@repo/store/api';
 import { toast } from 'sonner';
 import DocumentStatusManager from '../../components/DocumentStatusManager';
 
@@ -130,7 +141,7 @@ type Supplier = {
 };
 
 type ActionType = 'approve' | 'reject' | 'delete';
-type ItemType = 'vendor' | 'service' | 'product' | 'doctor' | 'supplier';
+type ItemType = 'vendor' | 'service' | 'vendor-product' | 'supplier-product' | 'doctor' | 'supplier';
 
 export default function VendorApprovalPage() {
   // RTK Query hooks
@@ -140,13 +151,14 @@ export default function VendorApprovalPage() {
   const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
   const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetPendingServicesQuery(undefined);
   const [updateServiceStatus] = useUpdateServiceStatusMutation();
-  const { data: productDatas, isLoading: productsLoading, error: productsError, refetch: refetchProducts } = useGetVendorProductsQuery(undefined);
-  const [updateProductStatus] = useUpdateProductStatusMutation();
-
-  // Safely extract products array
-  const productsData = Array.isArray(productDatas?.products) ? productDatas.products : [];
-
-  console.log("Products Data:", productsData);
+  
+  // Vendor product approvals
+  const { data: vendorProductData, isLoading: vendorProductsLoading, error: vendorProductsError, refetch: refetchVendorProducts } = useGetVendorProductApprovalsQuery(undefined);
+  const [updateVendorProductStatus] = useUpdateVendorProductStatusMutation();
+  
+  // Supplier product approvals
+  const { data: supplierProductData, isLoading: supplierProductsLoading, error: supplierProductsError, refetch: refetchSupplierProducts } = useGetSupplierProductApprovalsQuery(undefined);
+  const [updateSupplierProductStatus] = useUpdateSupplierProductStatusMutation();
 
   const [updateSupplier] = useUpdateSupplierMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
@@ -193,20 +205,17 @@ export default function VendorApprovalPage() {
     
     return false;
   });
-  const pendingProducts = productsData.filter((p: Product) => p.status === 'pending');
 
   // Pagination logic
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
   const currentVendors = pendingVendors.slice(firstItemIndex, lastItemIndex);
   const currentServices = pendingServices.slice(firstItemIndex, lastItemIndex);
-  const currentProducts = pendingProducts.slice(firstItemIndex, lastItemIndex);
   const currentDoctors = pendingDoctors.slice(firstItemIndex, lastItemIndex);
   const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
 
   const totalVendorPages = Math.ceil(pendingVendors.length / itemsPerPage);
   const totalServicePages = Math.ceil(pendingServices.length / itemsPerPage);
-  const totalProductPages = Math.ceil(pendingProducts.length / itemsPerPage);
   const totalDoctorPages = Math.ceil(pendingDoctors.length / itemsPerPage);
   const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
 
@@ -269,15 +278,25 @@ export default function VendorApprovalPage() {
         await updateServiceStatus({ serviceId: service._id, status: newStatus }).unwrap();
         toast.success(`Service "${service.serviceName}" has been ${newStatus}.`);
         refetchPendingServices();
-      } else if (itemType === 'product') {
+      } else if (itemType === 'vendor-product') {
         const product = selectedItem as Product;
         if (actionType === 'delete') {
           toast.error('Error', { description: 'Delete functionality for products is not yet implemented.' });
         } else {
           const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
-          await updateProductStatus({ productId: product._id, status: newStatus }).unwrap();
+          await updateVendorProductStatus({ productId: product._id, status: newStatus }).unwrap();
           toast.success(`Product "${product.productName}" has been ${newStatus}.`);
-          refetchProducts();
+          refetchVendorProducts();
+        }
+      } else if (itemType === 'supplier-product') {
+        const product = selectedItem as Product;
+        if (actionType === 'delete') {
+          toast.error('Error', { description: 'Delete functionality for products is not yet implemented.' });
+        } else {
+          const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
+          await updateSupplierProductStatus({ productId: product._id, status: newStatus }).unwrap();
+          toast.success(`Product "${product.productName}" has been ${newStatus}.`);
+          refetchSupplierProducts();
         }
       }
     } catch (error) {
@@ -293,7 +312,7 @@ export default function VendorApprovalPage() {
   const getModalContent = () => {
     if (!actionType || !selectedItem || !itemType) return { title: '', description: '', buttonText: '' };
 
-    const itemName = (selectedItem as any).businessName || (selectedItem as any).serviceName || (selectedItem as any).productName || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
+    const itemName = (selectedItem as any).businessName || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).name || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
 
     switch (actionType) {
       case 'approve':
@@ -321,8 +340,21 @@ export default function VendorApprovalPage() {
 
   const { title, description, buttonText } = getModalContent();
 
+  // Safely extract products arrays
+  const vendorProducts = Array.isArray(vendorProductData?.products) ? vendorProductData.products : [];
+  const supplierProducts = Array.isArray(supplierProductData?.products) ? supplierProductData.products : [];
+
+  console.log("Vendor Products Data:", vendorProducts);
+  console.log("Supplier Products Data:", supplierProducts);
+
+  const pendingVendorProducts = vendorProducts.filter((p: Product) => p.status === 'pending');
+  const pendingSupplierProducts = supplierProducts.filter((p: Product) => p.status === 'pending');
+
+  const totalVendorProductPages = Math.ceil(pendingVendorProducts.length / itemsPerPage);
+  const totalSupplierProductPages = Math.ceil(pendingSupplierProducts.length / itemsPerPage);
+
   // Check if any of the main data is still loading
-  const isMainDataLoading = vendorsLoading || suppliersLoading || doctorsLoading || servicesLoading || productsLoading;
+  const isMainDataLoading = vendorsLoading || suppliersLoading || doctorsLoading || servicesLoading || vendorProductsLoading || supplierProductsLoading;
 
   if (isMainDataLoading) {
     return (
@@ -431,12 +463,13 @@ export default function VendorApprovalPage() {
       </div>
 
       <Tabs defaultValue="vendor-approvals">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-3xl">
-          <TabsTrigger value="vendor-approvals">Vendor Approvals</TabsTrigger>
-          <TabsTrigger value="service-approvals">Service Approvals</TabsTrigger>
-          <TabsTrigger value="product-approvals">Product Approvals</TabsTrigger>
-          <TabsTrigger value="doctor-approvals">Doctor Approvals</TabsTrigger>
-          <TabsTrigger value="supplier-approvals">Supplier Approvals</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+          <TabsTrigger value="vendor-approvals" className="text-xs md:text-sm">Vendors</TabsTrigger>
+          <TabsTrigger value="service-approvals" className="text-xs md:text-sm">Services</TabsTrigger>
+          <TabsTrigger value="vendor-product-approvals" className="text-xs md:text-sm">Vendor Products</TabsTrigger>
+          <TabsTrigger value="supplier-product-approvals" className="text-xs md:text-sm">Supplier Products</TabsTrigger>
+          <TabsTrigger value="doctor-approvals" className="text-xs md:text-sm">Doctors</TabsTrigger>
+          <TabsTrigger value="supplier-approvals" className="text-xs md:text-sm">Suppliers</TabsTrigger>
         </TabsList>
         <TabsContent value="vendor-approvals">
           <Card>
@@ -445,18 +478,17 @@ export default function VendorApprovalPage() {
               <CardDescription>Vendors waiting for verification to join the platform.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto no-scrollbar">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Vendor ID</TableHead>
-                      <TableHead>Business Name</TableHead>
-                      <TableHead>Owner Name</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>City</TableHead>
-                      <TableHead>Pincode</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-xs">Vendor ID</TableHead>
+                      <TableHead className="text-xs">Business Name</TableHead>
+                      <TableHead className="text-xs">Owner</TableHead>
+                      <TableHead className="text-xs">Phone</TableHead>
+                      <TableHead className="text-xs">City</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -481,16 +513,15 @@ export default function VendorApprovalPage() {
                     ) : (
                       currentVendors.map((vendor: Vendor) => (
                         <TableRow key={vendor._id}>
-                          <TableCell className="font-mono text-xs">{vendor._id}</TableCell>
-                          <TableCell className="font-medium">{vendor.businessName || 'N/A'}</TableCell>
-                          <TableCell>{`${vendor.firstName} ${vendor.lastName}` || 'N/A'}</TableCell>
-                          <TableCell>{vendor.phone || 'N/A'}</TableCell>
-                          <TableCell>{vendor.city || 'N/A'}</TableCell>
-                          <TableCell>{vendor.pincode || 'N/A'}</TableCell>
+                          <TableCell className="font-mono text-xs max-w-[80px] truncate">{vendor._id.substring(0, 8)}...</TableCell>
+                          <TableCell className="font-medium text-xs max-w-[120px] truncate">{vendor.businessName || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[100px] truncate">{`${vendor.firstName} ${vendor.lastName}` || 'N/A'}</TableCell>
+                          <TableCell className="text-xs">{vendor.phone || 'N/A'}</TableCell>
+                          <TableCell className="text-xs">{vendor.city || 'N/A'}</TableCell>
                           <TableCell>
                             <Badge
                               variant={vendor.status === 'Pending' || vendor.status === 'Disabled' ? 'default' : 'secondary'}
-                              className={vendor.status === 'Pending' || vendor.status === 'Disabled' ? 'bg-yellow-100 text-yellow-800' : ''}
+                              className={vendor.status === 'Pending' || vendor.status === 'Disabled' ? 'bg-yellow-100 text-yellow-800 text-xs' : 'text-xs'}
                             >
                               {vendor.status || 'N/A'}
                             </Badge>
@@ -498,7 +529,7 @@ export default function VendorApprovalPage() {
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleViewClick(vendor, 'vendor')}>
                               <Eye className="h-4 w-4" />
-                              <span className="sr-only">View Details</span>
+                              <span className="sr-only">View</span>
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'vendor', 'approve')}>
                               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -507,15 +538,6 @@ export default function VendorApprovalPage() {
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'vendor', 'reject')}>
                               <XCircle className="h-4 w-4 text-red-600" />
                               <span className="sr-only">Reject</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleActionClick(vendor, 'vendor', 'delete')}
-                              disabled
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                              <span className="sr-only">Delete</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -543,15 +565,15 @@ export default function VendorApprovalPage() {
               <CardDescription>Services submitted by vendors waiting for approval.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto no-scrollbar">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Service Name</TableHead>
-                      <TableHead>Vendor</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-xs">Service Name</TableHead>
+                      <TableHead className="text-xs">Vendor</TableHead>
+                      <TableHead className="text-xs">Price</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -572,18 +594,18 @@ export default function VendorApprovalPage() {
                     ) : (
                       currentServices.map((service: Service) => (
                         <TableRow key={service._id}>
-                          <TableCell className="font-medium">{service.serviceName || 'N/A'}</TableCell>
-                          <TableCell>{service.vendorName || 'N/A'}</TableCell>
-                          <TableCell>{service.price ? `₹${service.price.toFixed(2)}` : 'N/A'}</TableCell>
+                          <TableCell className="font-medium text-xs max-w-[120px] truncate">{service.serviceName || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[100px] truncate">{service.vendorName || 'N/A'}</TableCell>
+                          <TableCell className="text-xs">{service.price ? `₹${service.price.toFixed(2)}` : 'N/A'}</TableCell>
                           <TableCell>
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
                               {service.status || 'pending'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleViewClick(service, 'service')}>
                               <Eye className="h-4 w-4" />
-                              <span className="sr-only">View Details</span>
+                              <span className="sr-only">View</span>
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(service, 'service', 'approve')}>
                               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -612,26 +634,26 @@ export default function VendorApprovalPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="product-approvals">
+        <TabsContent value="vendor-product-approvals">
           <Card>
             <CardHeader>
-              <CardTitle>Pending Product Approvals</CardTitle>
+              <CardTitle>Vendor Product Approvals</CardTitle>
               <CardDescription>Products submitted by vendors waiting for approval.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto no-scrollbar">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-xs">Product</TableHead>
+                      <TableHead className="text-xs">Price</TableHead>
+                      <TableHead className="text-xs">Category</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {productsLoading ? (
+                    {vendorProductsLoading ? (
                       [...Array(3)].map((_, i) => (
                         <TableRow key={i}>
                           {[...Array(5)].map((_, j) => (
@@ -641,70 +663,60 @@ export default function VendorApprovalPage() {
                           ))}
                         </TableRow>
                       ))
-                    ) : productsError ? (
+                    ) : vendorProductsError ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">Error loading products.</TableCell>
+                        <TableCell colSpan={5} className="text-center">Error loading vendor products.</TableCell>
                       </TableRow>
-                    ) : !Array.isArray(currentProducts) || currentProducts.length === 0 ? (
+                    ) : !Array.isArray(pendingVendorProducts) || pendingVendorProducts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">No pending product approvals.</TableCell>
+                        <TableCell colSpan={5} className="text-center">No pending vendor product approvals.</TableCell>
                       </TableRow>
                     ) : (
-                      currentProducts.map((product) => (
+                      pendingVendorProducts.map((product) => (
                         <TableRow key={product._id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
+                          <TableCell className="max-w-[150px]">
+                            <div className="flex items-center gap-2">
                               <Image
                                 src={product.productImage || 'https://placehold.co/400x400.png'}
                                 alt={product.productName || 'Product'}
-                                width={40}
-                                height={40}
-                                className="rounded-md cursor-pointer"
+                                width={30}
+                                height={30}
+                                className="rounded-md cursor-pointer object-cover"
                                 onClick={() => handleImageClick(product.productImage || 'https://placehold.co/400x400.png')}
                               />
-                              <span className="font-medium">{product.productName || 'N/A'}</span>
+                              <span className="font-medium text-xs truncate">{product.productName || 'N/A'}</span>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs">
                             <div>
                               <span className={product.salePrice < product.price ? "line-through text-muted-foreground" : ""}>
-                                {product.price ? `$${product.price.toFixed(2)}` : 'N/A'}
+                                {product.price ? `₹${product.price.toFixed(2)}` : 'N/A'}
                               </span>
                               {product.salePrice < product.price && (
                                 <div className="text-green-600 font-semibold">
-                                  {product.salePrice ? `$${product.salePrice.toFixed(2)}` : 'N/A'}
+                                  {product.salePrice ? `₹${product.salePrice.toFixed(2)}` : 'N/A'}
                                 </div>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground">Sale price is the discounted price.</p>
                           </TableCell>
-                          <TableCell>{product.category?.name || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[80px] truncate">{product.category?.name || 'N/A'}</TableCell>
                           <TableCell>
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
                               {product.status || 'pending'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(product, 'product')}>
+                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(product, 'vendor-product')}>
                               <Eye className="h-4 w-4" />
-                              <span className="sr-only">View Details</span>
+                              <span className="sr-only">View</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'product', 'approve')}>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'vendor-product', 'approve')}>
                               <CheckCircle className="h-4 w-4 text-green-600" />
                               <span className="sr-only">Approve</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'product', 'reject')}>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'vendor-product', 'reject')}>
                               <XCircle className="h-4 w-4 text-red-600" />
                               <span className="sr-only">Reject</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleActionClick(product, 'product', 'delete')}
-                              disabled
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                              <span className="sr-only">Delete</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -716,11 +728,114 @@ export default function VendorApprovalPage() {
               <Pagination
                 className="mt-4"
                 currentPage={currentPage}
-                totalPages={totalProductPages}
+                totalPages={totalVendorProductPages}
                 onPageChange={setCurrentPage}
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
-                totalItems={pendingProducts.length}
+                totalItems={pendingVendorProducts.length}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="supplier-product-approvals">
+          <Card>
+            <CardHeader>
+              <CardTitle>Supplier Product Approvals</CardTitle>
+              <CardDescription>Products submitted by suppliers waiting for approval.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Product</TableHead>
+                      <TableHead className="text-xs">Price</TableHead>
+                      <TableHead className="text-xs">Category</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {supplierProductsLoading ? (
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(5)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : supplierProductsError ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">Error loading supplier products.</TableCell>
+                      </TableRow>
+                    ) : !Array.isArray(pendingSupplierProducts) || pendingSupplierProducts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">No pending supplier product approvals.</TableCell>
+                      </TableRow>
+                    ) : (
+                      pendingSupplierProducts.map((product) => (
+                        <TableRow key={product._id}>
+                          <TableCell className="max-w-[150px]">
+                            <div className="flex items-center gap-2">
+                              <Image
+                                src={product.productImage || 'https://placehold.co/400x400.png'}
+                                alt={product.productName || 'Product'}
+                                width={30}
+                                height={30}
+                                className="rounded-md cursor-pointer object-cover"
+                                onClick={() => handleImageClick(product.productImage || 'https://placehold.co/400x400.png')}
+                              />
+                              <span className="font-medium text-xs truncate">{product.productName || 'N/A'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            <div>
+                              <span className={product.salePrice < product.price ? "line-through text-muted-foreground" : ""}>
+                                {product.price ? `₹${product.price.toFixed(2)}` : 'N/A'}
+                              </span>
+                              {product.salePrice < product.price && (
+                                <div className="text-green-600 font-semibold">
+                                  {product.salePrice ? `₹${product.salePrice.toFixed(2)}` : 'N/A'}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs max-w-[80px] truncate">{product.category?.name || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
+                              {product.status || 'pending'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(product, 'supplier-product')}>
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'supplier-product', 'approve')}>
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="sr-only">Approve</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(product, 'supplier-product', 'reject')}>
+                              <XCircle className="h-4 w-4 text-red-600" />
+                              <span className="sr-only">Reject</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <Pagination
+                className="mt-4"
+                currentPage={currentPage}
+                totalPages={totalSupplierProductPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={setItemsPerPage}
+                totalItems={pendingSupplierProducts.length}
               />
             </CardContent>
           </Card>
@@ -728,18 +843,18 @@ export default function VendorApprovalPage() {
         <TabsContent value="doctor-approvals">
           <Card>
             <CardHeader>
-              <CardTitle>Pending Doctor Approvals</CardTitle>
+              <CardTitle>Doctor Approvals</CardTitle>
               <CardDescription>Doctors waiting for verification.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto no-scrollbar">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Doctor's Name</TableHead>
-                      <TableHead>Clinic Name</TableHead>
-                      <TableHead>Specialization</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-xs">Doctor</TableHead>
+                      <TableHead className="text-xs">Clinic</TableHead>
+                      <TableHead className="text-xs">Specialization</TableHead>
+                      <TableHead className="text-right text-xs">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -767,25 +882,25 @@ export default function VendorApprovalPage() {
                     ) : (
                       currentDoctors.map((doctor: Doctor) => (
                         <TableRow key={doctor._id}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
+                          <TableCell className="max-w-[150px]">
+                            <div className="flex items-center gap-2">
                               <Image
                                 src={doctor.profileImage || "https://placehold.co/400x400.png"}
                                 alt={doctor.name || 'Doctor'}
-                                width={40}
-                                height={40}
-                                className="rounded-full cursor-pointer"
+                                width={30}
+                                height={30}
+                                className="rounded-full cursor-pointer object-cover"
                                 onClick={() => handleImageClick(doctor.profileImage || "https://placehold.co/400x400.png")}
                               />
-                              <span className="font-medium">{doctor.name || 'N/A'}</span>
+                              <span className="font-medium text-xs truncate">{doctor.name || 'N/A'}</span>
                             </div>
                           </TableCell>
-                          <TableCell>{doctor.clinicName || 'N/A'}</TableCell>
-                          <TableCell>{doctor.specialization || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[100px] truncate">{doctor.clinicName || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[100px] truncate">{doctor.specialization || 'N/A'}</TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleViewClick(doctor, 'doctor')}>
                               <Eye className="h-4 w-4" />
-                              <span className="sr-only">View Details</span>
+                              <span className="sr-only">View</span>
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'doctor', 'approve')}>
                               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -794,10 +909,6 @@ export default function VendorApprovalPage() {
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'doctor', 'reject')}>
                               <XCircle className="h-4 w-4 text-red-600" />
                               <span className="sr-only">Reject</span>
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'doctor', 'delete')}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                              <span className="sr-only">Delete</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -821,20 +932,19 @@ export default function VendorApprovalPage() {
         <TabsContent value="supplier-approvals">
           <Card>
             <CardHeader>
-              <CardTitle>Pending Supplier Approvals</CardTitle>
+              <CardTitle>Supplier Approvals</CardTitle>
               <CardDescription>Suppliers waiting for verification.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto no-scrollbar">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Supplier Name</TableHead>
-                      <TableHead>Business Reg. No.</TableHead>
-                      <TableHead>Supplier Type</TableHead>
-                      <TableHead>License/Cert.</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="text-xs">Supplier</TableHead>
+                      <TableHead className="text-xs">Reg. No</TableHead>
+                      <TableHead className="text-xs">Type</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -850,28 +960,23 @@ export default function VendorApprovalPage() {
                       ))
                     ) : currentSuppliers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">No pending supplier approvals.</TableCell>
+                        <TableCell colSpan={5} className="text-center">No pending supplier approvals.</TableCell>
                       </TableRow>
                     ) : (
                       currentSuppliers.map((supplier: Supplier) => (
                         <TableRow key={supplier._id}>
-                          <TableCell className="font-medium">{(supplier.firstName + " " + supplier.lastName) || 'N/A'}</TableCell>
-                          <TableCell>{supplier.businessRegistrationNo || 'N/A'}</TableCell>
-                          <TableCell>{supplier.supplierType || 'N/A'}</TableCell>
+                          <TableCell className="font-medium text-xs max-w-[120px] truncate">{(supplier.firstName + " " + supplier.lastName) || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[100px] truncate">{supplier.businessRegistrationNo || 'N/A'}</TableCell>
+                          <TableCell className="text-xs">{supplier.supplierType || 'N/A'}</TableCell>
                           <TableCell>
-                            <a href={supplier.licenseFile || '#'} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                              View License
-                            </a>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={supplier.status === 'Pending' ? 'default' : 'secondary'} className={supplier.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' : ''}>
+                            <Badge variant={supplier.status === 'Pending' ? 'default' : 'secondary'} className={supplier.status === 'Pending' ? 'bg-yellow-100 text-yellow-800 text-xs' : 'text-xs'}>
                               {supplier.status || 'N/A'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleViewClick(supplier, 'supplier')}>
                               <Eye className="h-4 w-4" />
-                              <span className="sr-only">View Details</span>
+                              <span className="sr-only">View</span>
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'supplier', 'approve')}>
                               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -880,10 +985,6 @@ export default function VendorApprovalPage() {
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'supplier', 'reject')}>
                               <XCircle className="h-4 w-4 text-red-600" />
                               <span className="sr-only">Reject</span>
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'supplier', 'delete')}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                              <span className="sr-only">Delete</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -1056,7 +1157,7 @@ export default function VendorApprovalPage() {
                 </div>
               </>
             )}
-            {itemType === 'product' && selectedItem && (
+            {(itemType === 'vendor-product' || itemType === 'supplier-product') && selectedItem && (
               <>
                 <div className="flex items-center gap-4">
                   <Image
@@ -1081,11 +1182,11 @@ export default function VendorApprovalPage() {
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Price</span>
-                  <span className="col-span-2">{(selectedItem as Product).price ? `$${(selectedItem as Product).price.toFixed(2)}` : 'N/A'}</span>
+                  <span className="col-span-2">{(selectedItem as Product).price ? `₹${(selectedItem as Product).price.toFixed(2)}` : 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Sale Price</span>
-                  <span className="col-span-2">{(selectedItem as Product).salePrice ? `$${(selectedItem as Product).salePrice.toFixed(2)}` : 'N/A'}</span>
+                  <span className="col-span-2">{(selectedItem as Product).salePrice ? `₹${(selectedItem as Product).salePrice.toFixed(2)}` : 'N/A'}</span>
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Stock</span>
