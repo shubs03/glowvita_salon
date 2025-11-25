@@ -400,6 +400,16 @@ export default function DailySchedulePage() {
     // setIsNewAppointmentOpen(true);
   }, []);
 
+  // Allow AppointmentDetailView's Client History to open another appointment
+  const handleOpenAppointmentFromHistory = useCallback((appointmentId: string) => {
+    if (!appointmentId) return;
+    // Find in the loaded appointments list
+    const found = (appointments || []).find((a: any) => (a?._id || a?.id) === appointmentId);
+    if (found) {
+      setSelectedAppointment(found as any);
+    }
+  }, [appointments]);
+
   // Handle date change from the DayScheduleView
   const handleDateChange = useCallback((newDate: Date) => {
     if (!newDate || !(newDate instanceof Date)) return;
@@ -1023,6 +1033,7 @@ export default function DailySchedulePage() {
           onCollectPayment={handleCollectPayment}
           onUpdateAppointment={handleUpdateAppointment}
           onRescheduleAppointment={handleRescheduleAppointment}
+          onOpenAppointment={handleOpenAppointmentFromHistory}
         />
       )}
 

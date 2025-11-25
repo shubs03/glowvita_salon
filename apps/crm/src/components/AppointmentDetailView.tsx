@@ -95,13 +95,14 @@ interface AppointmentDetailViewProps {
   onUpdateAppointment?: (appointment: Appointment) => Promise<void>;
   onRescheduleAppointment?: (appointment: Appointment) => Promise<void>;
   onCloseReschedule?: () => void;
+  onOpenAppointment?: (appointmentId: string) => void;
 }
 
 interface ClientAppointment {
   id: string;
   date: Date;
   service: string;
-  status: 'pending' | 'completed' | 'cancelled' | 'missed';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed';
   staffName: string;
   amount: number;
   startTime?: string;
@@ -118,11 +119,12 @@ export function AppointmentDetailView({
   onUpdateAppointment,
   onRescheduleAppointment,
   onCloseReschedule,
+  onOpenAppointment,
 }: AppointmentDetailViewProps) {
   const [activeTab, setActiveTab] = useState('details');
   const [clientHistory, setClientHistory] = useState<ClientAppointment[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [activeHistoryFilter, setActiveHistoryFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled' | 'missed'>('all');
+  const [activeHistoryFilter, setActiveHistoryFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed'>('all');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCollectingPayment, setIsCollectingPayment] = useState(false);
@@ -158,6 +160,17 @@ export function AppointmentDetailView({
       : undefined;
     return { ...appointment, ...(fromList || {}) } as any;
   }, [allAppointments, appointment]);
+
+  // Normalize all appointments into an array regardless of API shape
+  const appointmentsList: any[] = useMemo(() => {
+    const r: any = allAppointments;
+    if (Array.isArray(r)) return r;
+    if (Array.isArray(r?.data)) return r.data;
+    if (Array.isArray(r?.appointments)) return r.appointments;
+    if (Array.isArray(r?.data?.appointments)) return r.data.appointments;
+    if (Array.isArray(r?.data?.data)) return r.data.data;
+    return [];
+  }, [allAppointments]);
 
   // Prepare default values for edit/reschedule form
   const defaultFormValues = useMemo(() => {
@@ -372,46 +385,62 @@ export function AppointmentDetailView({
     }));
   }, [appointment._id, remainingAmount]);
 
-  // Fetch client history when the component mounts or filter changes
+  // Build client history: prefer clientId match; also allow name/phone fallback. Include all dates and statuses.
   useEffect(() => {
-    const fetchClientHistory = async () => {
-      setIsLoadingHistory(true);
-      try {
-        // Use the appointment data directly instead of mock data
-        const allHistory: ClientAppointment[] = [
-          {
-            id: appointment._id || appointment.id || '',
-            date: appointment.date instanceof Date ? appointment.date : new Date(appointment.date as string),
-            service: appointment.serviceName,
-            status: 'pending' as 'pending' | 'completed' | 'cancelled' | 'missed',
+    setIsLoadingHistory(true);
+    try {
+      const currentClientId = String((appointment as any)?.client?._id ?? (appointment as any)?.client ?? (appointment as any)?.clientId ?? (appointment as any)?.client_id ?? '').trim();
+      const currentClientName = String((appointment as any)?.clientName ?? (appointment as any)?.client?.name ?? '').trim().toLowerCase();
+      const currentClientPhone = String((appointment as any)?.client?.phone ?? (appointment as any)?.clientPhone ?? (appointment as any)?.phone ?? '').replace(/\D+/g, '');
 
-            staffName: appointment.staffName,
-            amount: appointment.amount,
-            startTime: appointment.startTime,
-            endTime: appointment.endTime,
-            notes: appointment.notes || '',
-            payment: appointment.payment
-          }
-        ];
+      const mapStatus = (s: any): ClientAppointment['status'] => {
+        const status = String(s || '').toLowerCase();
+        if (status === 'confirmed') return 'confirmed';
+        if (status === 'completed') return 'completed';
+        if (status === 'cancelled') return 'cancelled';
+        if (status === 'no_show' || status === 'no-show' || status === 'missed') return 'missed';
+        return 'pending';
+      };
 
-        // Filter based on active filter
-        const filteredHistory = activeHistoryFilter === 'all' 
-          ? allHistory 
-          : allHistory.filter(appt => appt.status === activeHistoryFilter);
+      const history = (appointmentsList || [])
+        .filter((a: any) => {
+          const rawClientId = a?.client?._id ?? a?.client ?? a?.clientId ?? a?.client_id;
+          const clientId = rawClientId != null ? String(rawClientId).trim() : '';
+          const name = String(a?.clientName ?? a?.client?.name ?? '').trim().toLowerCase();
+          const phone = String(a?.client?.phone ?? a?.clientPhone ?? a?.phone ?? '').replace(/\D+/g, '');
 
-        setClientHistory(filteredHistory);
-      } catch (error: any) {
-        console.error('Error processing client history:', error);
-        // In a real app, you might want to fetch from an API here
-        // For now, we'll set an empty array if there's an error
-        setClientHistory([]);
-      } finally {
-        setIsLoadingHistory(false);
+          const idMatches = !!currentClientId && !!clientId && clientId === currentClientId;
+          const nameMatches = !!currentClientName && !!name && name === currentClientName;
+          const phoneMatches = !!currentClientPhone && !!phone && phone === currentClientPhone;
+          return idMatches || nameMatches || phoneMatches;
+        })
+        .map((a: any) => ({
+          id: String(a?._id ?? a?.id ?? ''),
+          date: new Date(a?.date),
+          service: String(a?.serviceName ?? a?.service?.name ?? a?.service ?? 'Service'),
+          status: mapStatus(a?.status),
+          staffName: String(a?.staffName ?? a?.staff?.name ?? ''),
+          amount: Number(a?.totalAmount ?? a?.finalAmount ?? a?.amount ?? 0) || 0,
+          startTime: a?.startTime,
+          endTime: a?.endTime,
+          notes: a?.notes ?? '',
+          payment: a?.payment,
+        }))
+        .sort((a: ClientAppointment, b: ClientAppointment) => b.date.getTime() - a.date.getTime());
+
+      const filtered = activeHistoryFilter === 'all' ? history : history.filter(h => h.status === activeHistoryFilter);
+      if (process && process.env && typeof window !== 'undefined') {
+        console.log('[ClientHistory] Matches total:', history.length, 'Filter:', activeHistoryFilter, 'Shown:', filtered.length);
+        console.log('[ClientHistory] Current client id/name/phone:', { currentClientId, currentClientName, currentClientPhone });
       }
-    };
-
-    fetchClientHistory();
-  }, [appointment, activeHistoryFilter]);
+      setClientHistory(filtered);
+    } catch (e) {
+      console.error('Error building client history', e);
+      setClientHistory([]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [appointmentsList, appointment, activeHistoryFilter]);
 
   // Function to update appointment status
   const updateAppointmentStatus = (appointmentId: string, newStatus: 'pending' | 'completed' | 'cancelled' | 'missed') => {
@@ -1635,7 +1664,7 @@ export function AppointmentDetailView({
               {/* History Filter Tabs */}
               <div className="border-b px-6">
                 <div className="flex space-x-1 overflow-x-auto py-2">
-                  {['all', 'pending', 'completed', 'cancelled', 'missed'].map((filter) => (
+                  {['all', 'pending', 'confirmed', 'completed', 'cancelled', 'missed'].map((filter) => (
                     <button
                       key={filter}
                       onClick={() => setActiveHistoryFilter(filter as any)}
@@ -1680,7 +1709,15 @@ export function AppointmentDetailView({
                         key={appt.id} 
                         className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => {
-                          window.history.replaceState({}, '', `/appointments/${appt.id}`);
+                          if (onOpenAppointment) {
+                            onOpenAppointment(appt.id);
+                            setActiveTab('details');
+                          } else {
+                            // Fallback: update URL without navigation if handler not provided
+                            if (typeof window !== 'undefined') {
+                              window.history.replaceState({}, '', `/appointments/${appt.id}`);
+                            }
+                          }
                         }}
                       >
                         <div className="flex justify-between items-start">
