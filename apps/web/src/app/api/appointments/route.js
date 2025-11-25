@@ -74,7 +74,7 @@ export const GET = async (req) => {
     
         // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount vendorId')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount finalAmount platformFee serviceTax discountAmount vendorId')
             .populate('vendorId', 'businessName address')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
@@ -84,7 +84,8 @@ export const GET = async (req) => {
             let service = apt.serviceName || apt.service || 'Unknown Service';
             let staff = apt.staffName || 'Any Professional';
             let duration = apt.duration || 60;
-            let price = apt.amount || apt.totalAmount || 0;
+            // Updated to use finalAmount if available, otherwise totalAmount, otherwise amount
+            let price = apt.finalAmount || apt.totalAmount || apt.amount || 0;
             
             // If there are service items, use the first one for main service info
             if (apt.serviceItems && apt.serviceItems.length > 0) {
@@ -92,6 +93,13 @@ export const GET = async (req) => {
                 service = firstService.serviceName || service;
                 staff = firstService.staffName || staff;
                 duration = firstService.duration || duration;
+                // For multi-service appointments, we might want to show the total of all services
+                // Sum up all service item amounts for a more accurate total
+                const serviceItemsTotal = apt.serviceItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+                // But only use this if it's greater than the base price (to handle cases where serviceItems might be incomplete)
+                if (serviceItemsTotal > price) {
+                    price = serviceItemsTotal;
+                }
             }
             
             // Get salon information from vendor data
@@ -144,6 +152,12 @@ export const GET = async (req) => {
                 status: status,
                 price: price,
                 duration: duration,
+                amount: apt.amount || 0,
+                totalAmount: apt.totalAmount || 0,
+                platformFee: apt.platformFee || 0,
+                serviceTax: apt.serviceTax || 0,
+                discountAmount: apt.discountAmount || 0,
+                finalAmount: apt.finalAmount || 0,
                 salon: {
                     name: salonName,
                     address: salonAddress

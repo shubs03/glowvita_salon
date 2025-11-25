@@ -44,6 +44,12 @@ interface Appointment {
     duration: number;
     amount: number;
   }>;
+  amount?: number;
+  totalAmount?: number;
+  platformFee?: number;
+  serviceTax?: number;
+  discountAmount?: number;
+  finalAmount?: number;
 }
 
 interface AppointmentCardProps {
@@ -83,7 +89,19 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
         >
             <div className="flex justify-between items-start">
                 <div>
-                    <p className="font-semibold">{appointment.service}</p>
+                    {/* Show all services for multi-service appointments */}
+                    {appointment.serviceItems && appointment.serviceItems.length > 1 ? (
+                        <p className="font-semibold">
+                            {appointment.serviceItems.map((item, index) => (
+                                <span key={index}>
+                                    {item.serviceName}
+                                    {index < appointment.serviceItems!.length - 1 ? ", " : ""}
+                                </span>
+                            ))}
+                        </p>
+                    ) : (
+                        <p className="font-semibold">{appointment.service}</p>
+                    )}
                     <p className="text-sm text-muted-foreground">{displayDate}</p>
                 </div>
                 <div className={`flex items-center text-xs font-medium gap-1 ${statusConfig[appointment.status]?.color}`}>
@@ -92,8 +110,21 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
                 </div>
             </div>
             <div className="text-sm text-muted-foreground mt-2">
-                with {appointment.staff} at {appointment.salon.name}
+                {appointment.serviceItems && appointment.serviceItems.length > 1 ? (
+                    <>
+                        with {appointment.serviceItems.map(item => item.staffName).join(", ")} at {appointment.salon.name}
+                    </>
+                ) : (
+                    <>with {appointment.staff} at {appointment.salon.name}</>
+                )}
             </div>
+            {/* Show indicator for multi-service appointments */}
+            {appointment.serviceItems && appointment.serviceItems.length > 1 && (
+                <div className="mt-2 flex items-center text-xs text-primary">
+                    <Scissors className="h-3 w-3 mr-1" />
+                    <span>{appointment.serviceItems.length} Services</span>
+                </div>
+            )}
         </button>
     );
 };
@@ -106,6 +137,7 @@ interface AppointmentDetailsProps {
 const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsProps) => {
     const router = useRouter();
     console.log("AppointmentDetails received appointment:", appointment);
+    console.log("Pricing details - amount:", appointment?.amount, "platformFee:", appointment?.platformFee, "serviceTax:", appointment?.serviceTax, "discountAmount:", appointment?.discountAmount, "finalAmount:", appointment?.finalAmount);
     if (!appointment) return (
         <Card className="sticky top-24">
             <CardContent className="h-96 flex items-center justify-center text-muted-foreground">
@@ -194,17 +226,38 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
 
     return (
         <Card className="sticky top-24">
-            <CardHeader>
+            <CardHeader className="pb-3">
                 <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl">{appointment.service}</CardTitle>
+                    {/* Show all services for multi-service appointments */}
+                    {appointment.serviceItems && appointment.serviceItems.length > 1 ? (
+                        <div>
+                            <CardTitle className="text-xl">Multiple Services</CardTitle>
+                            <p className="text-sm text-muted-foreground">
+                                {appointment.serviceItems.map((item, index) => (
+                                    <span key={index}>
+                                        {item.serviceName}
+                                        {index < appointment.serviceItems!.length - 1 ? ", " : ""}
+                                    </span>
+                                ))}
+                            </p>
+                        </div>
+                    ) : (
+                        <CardTitle className="text-xl">{appointment.service}</CardTitle>
+                    )}
                     <Badge className={cn("text-xs", statusConfig[appointment.status]?.color)}>
                         {appointment.status}
                     </Badge>
                 </div>
                 <CardDescription>{appointment.salon.name}</CardDescription>
+                {/* Show all staff for multi-service appointments */}
+                {appointment.serviceItems && appointment.serviceItems.length > 1 && (
+                    <p className="text-sm text-muted-foreground">
+                        with {appointment.serviceItems.map(item => item.staffName).join(", ")}
+                    </p>
+                )}
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="space-y-4">
+                <div className="flex justify-between items-start gap-4">
                     <div className="flex items-center gap-3">
                         <Calendar className="h-5 w-5 text-muted-foreground" />
                         <div>
@@ -214,7 +267,7 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
                             </p>
                         </div>
                     </div>
-                     <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                         <Clock className="h-5 w-5 text-muted-foreground" />
                         <div>
                             <p className="text-sm font-medium">Duration</p>
@@ -247,18 +300,72 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
 
                 <div className="space-y-3">
                     <h4 className="font-semibold">Service & Booking Summary</h4>
-                    <div className="text-sm space-y-2">
-                         <div className="flex justify-between">
-                            <span className="text-muted-foreground">Service</span>
-                            <span>{appointment.service}</span>
+                    
+                    {/* Show service details for all appointments */}
+                    <div className="space-y-3">
+                        <h5 className="font-semibold text-sm">Services</h5>
+                        {appointment.serviceItems && appointment.serviceItems.length > 0 ? (
+                            <div className="space-y-2">
+                                {appointment.serviceItems.map((item, index) => (
+                                    <div key={index} className="border rounded-lg p-3 bg-muted/30">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="font-medium">{item.serviceName}</p>
+                                                <p className="text-xs text-muted-foreground mt-1">with {item.staffName}</p>
+                                            </div>
+                                            <span className="font-medium">₹{item.amount.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                                            <span>{item.startTime} - {item.endTime}</span>
+                                            <span>{item.duration} min</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="border rounded-lg p-3 bg-muted/30">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="font-medium">{appointment.service}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">with {appointment.staff}</p>
+                                    </div>
+                                    <span className="font-medium">₹{appointment.price.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                                    <span>{appointment.startTime} - {appointment.endTime}</span>
+                                    <span>{appointment.duration} min</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    {/* Display detailed pricing breakdown */}
+                    <div className="space-y-2 pt-4 border-t">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Subtotal</span>
+                            <span>₹{appointment.amount?.toFixed(2) || '0.00'}</span>
                         </div>
-                         <div className="flex justify-between">
-                            <span className="text-muted-foreground">Professional</span>
-                            <span>{appointment.staff}</span>
+                        
+                        {appointment.discountAmount != null && appointment.discountAmount > 0 && (
+                            <div className="flex justify-between text-sm text-green-600">
+                                <span className="text-muted-foreground">Discount</span>
+                                <span>-₹{appointment.discountAmount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        
+                        <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Platform Fee</span>
+                            <span>₹{appointment.platformFee?.toFixed(2) || '0.00'}</span>
                         </div>
-                         <div className="flex justify-between font-bold">
-                            <span>Total</span>
-                            <span>₹{appointment.price.toFixed(2)}</span>
+                        
+                        <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">GST</span>
+                            <span>₹{appointment.serviceTax?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        
+                        <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                            <span>Total Amount</span>
+                            <span>₹{appointment.finalAmount?.toFixed(2) || appointment.price.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
@@ -355,12 +462,14 @@ export default function AppointmentsPage() {
                     
                     <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
                         {/* Left Column: Appointments List */}
-                        <div className="lg:col-span-1 space-y-4">
-                            <Card>
-                                <CardHeader>
+                        <div className="lg:col-span-1 flex flex-col h-full">
+                            <Card className="flex-1 flex flex-col">
+                                <CardHeader className="pb-3">
                                     <CardTitle>My Appointments</CardTitle>
                                     <CardDescription>Select an appointment to view details.</CardDescription>
-                                    <div className="pt-4 space-y-4">
+                                </CardHeader>
+                                <CardContent className="flex-1 flex flex-col space-y-4">
+                                    <div className="space-y-4">
                                         <div className="relative">
                                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                             <Input
@@ -383,24 +492,24 @@ export default function AppointmentsPage() {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                </CardHeader>
-                                <CardContent className="space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar">
-                                    {filteredAppointments.length > 0 ? (
-                                        filteredAppointments.map(appt => (
-                                            <AppointmentCard 
-                                                key={appt.id} 
-                                                appointment={appt} 
-                                                onSelect={() => setSelectedAppointment(appt)}
-                                                isSelected={selectedAppointment?.id === appt.id}
-                                            />
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-8">
-                                            <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                                            <p className="text-muted-foreground">No appointments found.</p>
-                                            <p className="text-sm text-muted-foreground mt-2">Book your first appointment to see it here.</p>
-                                        </div>
-                                    )}
+                                    <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
+                                        {filteredAppointments.length > 0 ? (
+                                            filteredAppointments.map(appt => (
+                                                <AppointmentCard 
+                                                    key={appt.id} 
+                                                    appointment={appt} 
+                                                    onSelect={() => setSelectedAppointment(appt)}
+                                                    isSelected={selectedAppointment?.id === appt.id}
+                                                />
+                                            ))
+                                        ) : (
+                                            <div className="text-center py-8">
+                                                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                                                <p className="text-muted-foreground">No appointments found.</p>
+                                                <p className="text-sm text-muted-foreground mt-2">Book your first appointment to see it here.</p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
