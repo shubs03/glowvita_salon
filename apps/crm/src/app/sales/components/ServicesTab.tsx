@@ -18,7 +18,7 @@ import InvoiceUI from "@/components/InvoiceUI";
 // Dynamically import html2pdf to avoid SSR issues
 let html2pdf: any;
 if (typeof window !== 'undefined') {
-  html2pdf = require('html2pdf.js');
+  html2pdf = require('html2pdf.js').default;
 }
 
 // Service interface

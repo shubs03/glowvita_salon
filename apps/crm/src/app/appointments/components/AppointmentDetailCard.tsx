@@ -111,17 +111,17 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
           <CardContent>
             <div className="flex justify-between text-sm">
               <span>Amount:</span>
-              <span>${appointment.amount?.toFixed(2)}</span>
+              <span>₹{appointment.amount?.toFixed(2)}</span>
             </div>
             {appointment.discount > 0 && (
               <div className="flex justify-between text-sm text-red-600">
                 <span>Discount:</span>
-                <span>-${appointment.discount?.toFixed(2)}</span>
+                <span>-₹{appointment.discount?.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between font-medium mt-1 pt-2 border-t">
               <span>Total:</span>
-              <span>${appointment.totalAmount?.toFixed(2)}</span>
+              <span>₹{appointment.totalAmount?.toFixed(2)}</span>
             </div>
           </CardContent>
         </Card>

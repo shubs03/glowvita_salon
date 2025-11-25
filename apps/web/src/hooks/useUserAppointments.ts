@@ -27,6 +27,12 @@ interface Appointment {
     duration: number;
     amount: number;
   }>;
+  amount?: number;
+  totalAmount?: number;
+  platformFee?: number;
+  serviceTax?: number;
+  discountAmount?: number;
+  finalAmount?: number;
 }
 
 export const useUserAppointments = () => {
@@ -54,17 +60,23 @@ export const useUserAppointments = () => {
   // Memoize the transformed appointments to prevent unnecessary re-renders
   const transformedAppointments: Appointment[] = useMemo(() => {
     return appointments.map((appointment: any) => {
+      // Debug log to see what data we're receiving
+      console.log('Raw appointment data:', appointment);
+      
       // For multi-service appointments, use the first service as the main service
       let service = appointment.serviceName || appointment.service || 'Unknown Service';
       let staff = appointment.staffName || appointment.staff || 'Any Professional';
       let duration = appointment.duration || 60;
       
       // If there are service items, use the first one for main service info
+      // But for duration, calculate total duration of all services
       if (appointment.serviceItems && appointment.serviceItems.length > 0) {
         const firstService = appointment.serviceItems[0];
         service = firstService.serviceName || service;
         staff = firstService.staffName || staff;
-        duration = firstService.duration || duration;
+        
+        // Calculate total duration from all service items
+        duration = appointment.serviceItems.reduce((total: number, item: { duration?: number }): number => total + (item.duration || 0), 0);
       }
       
       // Status transformation - ensure proper capitalization
@@ -84,8 +96,14 @@ export const useUserAppointments = () => {
         date: appointment.date,
         staff: staff,
         status: status,
-        price: appointment.price || appointment.price || 0,
+        price: appointment.finalAmount || appointment.price || 0,
         duration: duration,
+        amount: appointment.amount || 0,
+        totalAmount: appointment.totalAmount || 0,
+        platformFee: appointment.platformFee || 0,
+        serviceTax: appointment.serviceTax || 0,
+        discountAmount: appointment.discountAmount || 0,
+        finalAmount: appointment.finalAmount || 0,
         salon: {
           name: appointment.salon?.name || 'Unknown Salon',
           address: appointment.salon?.address || 'Unknown Address'

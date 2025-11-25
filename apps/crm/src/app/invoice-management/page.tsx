@@ -17,7 +17,7 @@ import { Pagination } from "@repo/ui/pagination";
 // Dynamically import html2pdf to avoid SSR issues
 let html2pdf: any;
 if (typeof window !== 'undefined') {
-  html2pdf = require('html2pdf.js');
+  html2pdf = require('html2pdf.js').default;
 }
 
 // Billing interface
