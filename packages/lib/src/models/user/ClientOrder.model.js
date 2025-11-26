@@ -32,6 +32,22 @@ const ClientOrderSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  shippingAmount: {
+    type: Number,
+    default: 0,
+  },
+  taxAmount: {
+    type: Number,
+    default: 0,
+  },
+  gstAmount: {
+    type: Number,
+    default: 0,
+  },
+  platformFeeAmount: {
+    type: Number,
+    default: 0,
+  },
   shippingAddress: {
     type: String,
     required: true,
@@ -57,6 +73,10 @@ const ClientOrderSchema = new mongoose.Schema({
   },
   trackingNumber: {
     type: String,
+  },
+  cancellationReason: {
+    type: String,
+    default: null,
   },
   createdAt: {
     type: Date,

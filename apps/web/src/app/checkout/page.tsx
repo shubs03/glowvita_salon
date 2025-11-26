@@ -88,25 +88,84 @@ export default function CheckoutPage() {
     }
     if (!product) return;
 
-    const totalAmount = (product.price * product.quantity) + shipping + (product.price * product.quantity * 0.08);
+    // Use the correct calculation for totalAmount that matches the checkout page display
+    const subtotal = product.price * product.quantity;
+    const shipping = subtotal > 0 && shippingConfig?.isEnabled
+      ? shippingConfig.chargeType === 'percentage'
+        ? (subtotal * shippingConfig.amount) / 100
+        : shippingConfig.amount
+      : 0;
+    
+    // Calculate tax based on dynamic tax settings from API
+    const productGST = taxSettings?.productGST || 18;
+    const productGSTType = taxSettings?.productGSTType || 'percentage';
+    const productPlatformFee = taxSettings?.productPlatformFee || 10;
+    const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
+    const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
+    const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
+    
+    const gst = productGSTEnabled 
+      ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+      : 0;
+    const platformFee = productPlatformFeeEnabled
+      ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+      : 0;
+    const tax = gst + platformFee;
+    
+    const totalAmount = subtotal + shipping + tax;
 
     try {
       // For cash on delivery, directly create order
       if (paymentMethod === 'cash-on-delivery') {
-        const orderData = {
-          items: [{
-            productId: product.id,
-            name: product.name,
-            quantity: product.quantity,
-            price: product.price,
-            image: product.image,
-          }],
-          vendorId: product.vendorId,
-          totalAmount,
-          shippingAddress,
-          contactNumber,
-          paymentMethod,
-        };
+        // Check if this is a cart checkout (product ID starts with 'cart-')
+        let orderData;
+        if (product.id.startsWith('cart-')) {
+          // This is a cart checkout, we need to get the actual cart items
+          const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+          if (cartItems.length === 0) {
+            toast.error('Cart is empty. Cannot place order.');
+            return;
+          }
+          
+          orderData = {
+            items: cartItems.map((item: any) => ({
+              productId: item.productId || item._id,
+              name: item.productName,
+              quantity: item.quantity,
+              price: item.price,
+              image: item.productImage || "/images/placeholder.jpg",
+            })),
+            vendorId: product.vendorId,
+            totalAmount,
+            shippingAmount: shipping,
+            taxAmount: tax,
+            gstAmount: gst,
+            platformFeeAmount: platformFee,
+            shippingAddress,
+            contactNumber,
+            paymentMethod,
+          };
+        } else {
+          // This is a single product checkout
+          orderData = {
+            items: [{
+              productId: product.id,
+              name: product.name,
+              quantity: product.quantity,
+              price: product.price,
+              image: product.image,
+            }],
+            vendorId: product.vendorId,
+            totalAmount,
+            shippingAmount: shipping,
+            taxAmount: tax,
+            gstAmount: gst,
+            platformFeeAmount: platformFee,
+            shippingAddress,
+            contactNumber,
+            paymentMethod,
+          };
+        }
         
         await createOrder(orderData).unwrap();
         toast.success('Order placed successfully!', {
@@ -114,6 +173,7 @@ export default function CheckoutPage() {
         });
 
         localStorage.removeItem('buyNowProduct');
+        localStorage.removeItem('cartItems');
         setTimeout(() => {
           router.push('/profile/orders');
         }, 2000);
@@ -184,24 +244,61 @@ export default function CheckoutPage() {
               }).unwrap();
 
               if (verifyResponse.success) {
-                // Create order after successful payment
-                const orderData = {
-                  items: [{
-                    productId: product.id,
-                    name: product.name,
-                    quantity: product.quantity,
-                    price: product.price,
-                    image: product.image,
-                  }],
-                  vendorId: product.vendorId,
-                  totalAmount,
-                  shippingAddress,
-                  contactNumber,
-                  paymentMethod,
-                  razorpayOrderId: response.razorpay_order_id,
-                  razorpayPaymentId: response.razorpay_payment_id,
-                  razorpaySignature: response.razorpay_signature,
-                };
+                // Check if this is a cart checkout (product ID starts with 'cart-')
+                let orderData;
+                if (product.id.startsWith('cart-')) {
+                  // This is a cart checkout, we need to get the actual cart items
+                  const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+                  if (cartItems.length === 0) {
+                    toast.error('Cart is empty. Cannot place order.');
+                    return;
+                  }
+                  
+                  orderData = {
+                    items: cartItems.map((item: any) => ({
+                      productId: item.productId || item._id,
+                      name: item.productName,
+                      quantity: item.quantity,
+                      price: item.price,
+                      image: item.productImage || "/images/placeholder.jpg",
+                    })),
+                    vendorId: product.vendorId,
+                    totalAmount,
+                    shippingAmount: shipping,
+                    taxAmount: tax,
+                    gstAmount: gst,
+                    platformFeeAmount: platformFee,
+                    shippingAddress,
+                    contactNumber,
+                    paymentMethod,
+                    razorpayOrderId: response.razorpay_order_id,
+                    razorpayPaymentId: response.razorpay_payment_id,
+                    razorpaySignature: response.razorpay_signature,
+                  };
+                } else {
+                  // This is a single product checkout
+                  orderData = {
+                    items: [{
+                      productId: product.id,
+                      name: product.name,
+                      quantity: product.quantity,
+                      price: product.price,
+                      image: product.image,
+                    }],
+                    vendorId: product.vendorId,
+                    totalAmount,
+                    shippingAmount: shipping,
+                    taxAmount: tax,
+                    gstAmount: gst,
+                    platformFeeAmount: platformFee,
+                    shippingAddress,
+                    contactNumber,
+                    paymentMethod,
+                    razorpayOrderId: response.razorpay_order_id,
+                    razorpayPaymentId: response.razorpay_payment_id,
+                    razorpaySignature: response.razorpay_signature,
+                  };
+                }
                 
                 await createOrder(orderData).unwrap();
                 toast.success('Payment successful! Order placed successfully!', {
@@ -209,6 +306,7 @@ export default function CheckoutPage() {
                 });
 
                 localStorage.removeItem('buyNowProduct');
+                localStorage.removeItem('cartItems');
                 setTimeout(() => {
                   router.push('/profile/orders');
                 }, 2000);
@@ -243,9 +341,9 @@ export default function CheckoutPage() {
       // Fallback for any other payment method
       toast.error('Selected payment method is not supported yet.');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to place order:', error);
-      toast.error('Failed to place order. Please try again.');
+      toast.error(error?.data?.message || 'Failed to place order. Please try again.');
     }
   };
 
