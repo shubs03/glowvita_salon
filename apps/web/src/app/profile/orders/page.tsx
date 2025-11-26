@@ -396,7 +396,6 @@ export default function OrdersPage() {
                         {selectedOrder.shippingAddress}
                       </p>
                     </div>
-                    {console.log('Checking cancellation reason:', selectedOrder.status, selectedOrder.cancellationReason)}
                     {selectedOrder.status === 'Cancelled' && selectedOrder.cancellationReason && (
                       <div className="flex items-start gap-3">
                         <X className="h-4 w-4 mt-0.5 text-muted-foreground" />
