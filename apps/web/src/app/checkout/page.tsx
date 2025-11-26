@@ -300,9 +300,9 @@ export default function CheckoutPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Order Summary</CardTitle>
-                <CardDescription>Review the item you are about to purchase.</CardDescription>
+                <CardDescription>Review your order details and costs.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
                 <div className="flex items-center gap-6">
                   <Image 
                     src={product.image} 

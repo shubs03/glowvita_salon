@@ -3,6 +3,8 @@ import _db from "@repo/lib/db";
 import UserModel from "@repo/lib/models/user";
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model";
 import ClientModel from "@repo/lib/models/Vendor/Client.model";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
+import mongoose from "mongoose";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 // Initialize database connection
@@ -56,7 +58,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         total = await UserModel.countDocuments(query);
       }
     } else {
-      // If no vendorId specified, return all users
+      // If no vendorId specified, return all users with additional booking data
       users = await UserModel.find({})
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -65,6 +67,55 @@ export const GET = authMiddlewareAdmin(async (req) => {
         .lean();
       
       total = await UserModel.countDocuments({});
+      
+      // Add booking data for each user
+      if (users.length > 0) {
+        const userIds = users.map(user => user._id.toString());
+        
+        // Get appointment data for these users
+        const appointmentData = await AppointmentModel.aggregate([
+          { $match: { client: { $in: userIds.map(id => new mongoose.Types.ObjectId(id)) } } },
+          {
+            $group: {
+              _id: "$client",
+              totalBookings: { $sum: 1 },
+              totalSpent: { $sum: "$totalAmount" },
+              vendorIds: { $addToSet: "$vendorId" }
+            }
+          }
+        ]);
+        
+        // Get vendor names
+        const vendorIds = [...new Set(appointmentData.flatMap(data => data.vendorIds))];
+        const vendors = await VendorModel.find({ _id: { $in: vendorIds } })
+          .select('businessName')
+          .lean();
+        
+        const vendorMap = {};
+        vendors.forEach(vendor => {
+          vendorMap[vendor._id.toString()] = vendor.businessName;
+        });
+        
+        // Create a map for appointment data
+        const appointmentMap = {};
+        appointmentData.forEach(data => {
+          // Convert ObjectId to string for mapping
+          const clientId = data._id.toString();
+          appointmentMap[clientId] = {
+            totalBookings: data.totalBookings,
+            totalSpent: data.totalSpent,
+            vendors: data.vendorIds.map(id => vendorMap[id.toString()] || 'Unknown Vendor')
+          };
+        });
+        
+        // Add appointment data to users
+        users = users.map(user => ({
+          ...user,
+          totalBookings: appointmentMap[user._id.toString()]?.totalBookings || 0,
+          totalSpent: appointmentMap[user._id.toString()]?.totalSpent || 0,
+          vendors: appointmentMap[user._id.toString()]?.vendors || []
+        }));
+      }
     }
     
     return NextResponse.json({
