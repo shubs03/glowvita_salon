@@ -4,53 +4,41 @@ import UserModel from '@repo/lib/models/user';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import _db from '@repo/lib/db';
-
-// Validate models have expected methods
-if (ClientModel && typeof ClientModel.find !== 'function') {
-    console.error('ClientModel.find is not a function');
-}
-if (UserModel && typeof UserModel.find !== 'function') {
-    console.error('UserModel.find is not a function');
-}
-if (AppointmentModel && typeof AppointmentModel.find !== 'function') {
-    console.error('AppointmentModel.find is not a function');
-}
-if (VendorModel && typeof VendorModel.find !== 'function') {
-    console.error('VendorModel.find is not a function');
-}
-
-// Validate models are properly imported
-if (!ClientModel) {
-    console.error('ClientModel is not properly imported');
-    return NextResponse.json({ 
-        success: false,
-        message: "ClientModel is not properly imported" 
-    }, { status: 500 });
-}
-if (!UserModel) {
-    console.error('UserModel is not properly imported');
-    return NextResponse.json({ 
-        success: false,
-        message: "UserModel is not properly imported" 
-    }, { status: 500 });
-}
-if (!AppointmentModel) {
-    console.error('AppointmentModel is not properly imported');
-    return NextResponse.json({ 
-        success: false,
-        message: "AppointmentModel is not properly imported" 
-    }, { status: 500 });
-}
-if (!VendorModel) {
-    console.error('VendorModel is not properly imported');
-    return NextResponse.json({ 
-        success: false,
-        message: "VendorModel is not properly imported" 
-    }, { status: 500 });
-}
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin";
 
-try {
+// GET - Fetch customers for admin dashboard
+export const GET = authMiddlewareAdmin(async (req) => {
+    // Validate models are properly imported
+    if (!ClientModel) {
+        console.error('ClientModel is not properly imported');
+        return NextResponse.json({ 
+            success: false,
+            message: "ClientModel is not properly imported" 
+        }, { status: 500 });
+    }
+    if (!UserModel) {
+        console.error('UserModel is not properly imported');
+        return NextResponse.json({ 
+            success: false,
+            message: "UserModel is not properly imported" 
+        }, { status: 500 });
+    }
+    if (!AppointmentModel) {
+        console.error('AppointmentModel is not properly imported');
+        return NextResponse.json({ 
+            success: false,
+            message: "AppointmentModel is not properly imported" 
+        }, { status: 500 });
+    }
+    if (!VendorModel) {
+        console.error('VendorModel is not properly imported');
+        return NextResponse.json({ 
+            success: false,
+            message: "VendorModel is not properly imported" 
+        }, { status: 500 });
+    }
+    
+    try {
         await _db();
         console.log('Database connected successfully');
         
@@ -74,20 +62,18 @@ try {
             error: dbError.message
         }, { status: 500 });
     }
-
-// GET - Fetch customers for admin dashboard
-export const GET = authMiddlewareAdmin(async (req) => {
+    
     try {
         console.log('=== ADMIN CUSTOMERS API REQUEST ===');
         console.log('Request URL:', req.url);
         
         const url = new URL(req.url);
-        const page = parseInt(url.searchParams.get('page')) || 1;
-        const limit = parseInt(url.searchParams.get('limit')) || 10;
+        let page = parseInt(url.searchParams.get('page')) || 1;
+        let limit = parseInt(url.searchParams.get('limit')) || 10;
         const search = url.searchParams.get('search') || '';
         const status = url.searchParams.get('status') || '';
-        const source = url.searchParams.get('source') || 'all'; // 'online', 'offline', or 'all'
-        const vendorId = url.searchParams.get('vendorId') || '';
+        let source = url.searchParams.get('source') || 'all'; // 'online', 'offline', or 'all'
+        let vendorId = url.searchParams.get('vendorId') || '';
         
         console.log('Parsed parameters:', { page, limit, search, status, source, vendorId });
         
@@ -460,3 +446,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }, { status: 500 });
     }
 }, ['superadmin', 'admin']);
+
+// Validate models have expected methods
+if (ClientModel && typeof ClientModel.find !== 'function') {
+    console.error('ClientModel.find is not a function');
+}
+if (UserModel && typeof UserModel.find !== 'function') {
+    console.error('UserModel.find is not a function');
+}
+if (AppointmentModel && typeof AppointmentModel.find !== 'function') {
+    console.error('AppointmentModel.find is not a function');
+}
+if (VendorModel && typeof VendorModel.find !== 'function') {
+    console.error('VendorModel.find is not a function');
+}

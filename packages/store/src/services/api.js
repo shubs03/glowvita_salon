@@ -141,7 +141,7 @@ export const glowvitaApi = createApi({
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
     "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
-    "Billing", "VendorServices", "DoctorWishlist", "Product"
+    "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder","DoctorReviews",
   ],
 
   endpoints: (builder) => ({
@@ -341,6 +341,19 @@ export const glowvitaApi = createApi({
       query: (salonId) => ({ url: `/salons/reviews/${salonId}`, method: "GET" }),
       providesTags: (result, error, salonId) => [{ type: "SalonReviews", id: salonId }],
       transformResponse: (response) => response,
+    }),
+
+    // Doctor Reviews - Get all reviews for a doctor (Web)
+    getDoctorReviews: builder.query({
+      query: (doctorId) => ({ url: `/doctors/reviews/${doctorId}`, method: "GET" }),
+      providesTags: (result, error, doctorId) => [{ type: "DoctorReviews", id: doctorId }],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Doctors endpoint (Web App - no authentication required)
+    getPublicDoctors: builder.query({
+      query: () => ({ url: "/client/doctors", method: "GET" }),
+      providesTags: ["doctors"],
     }),
 
     // Public Services for vendor details page
@@ -1269,6 +1282,12 @@ export const glowvitaApi = createApi({
       invalidatesTags: ['CrmOrder'],
     }),
 
+    // Online Customer Orders
+    getCrmClientOrders: builder.query({
+      query: () => ({ url: '/crm/client-orders' }),
+      providesTags: ['CrmClientOrder'],
+    }),
+
     // shipping charge endpoints
     getShippingConfig: builder.query({
       query: () => ({ url: "/crm/shipping", method: "GET" }),
@@ -1986,6 +2005,7 @@ export const {
   useGetCrmOrdersQuery,
   useCreateCrmOrderMutation,
   useUpdateCrmOrderMutation,
+  useGetCrmClientOrdersQuery,
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
   useGetPublicShippingConfigQuery,
@@ -2062,6 +2082,9 @@ export const {
   useCheckDoctorWishlistStatusQuery,
   useAddDoctorToWishlistMutation,
   useRemoveDoctorFromWishlistMutation,
+
+  // Public Doctors Endpoint (Web App - no auth required)
+  useGetPublicDoctorsQuery,
 
   // Public Tax Fee Settings (Web App - no auth required)
   useGetPublicTaxFeeSettingsQuery,

@@ -20,7 +20,7 @@ const reviewSchema = new mongoose.Schema({
   entityType: {
     type: String,
     required: true,
-    enum: ['product', 'service', 'salon'],
+    enum: ['product', 'service', 'salon', 'doctor'],
     index: true
   },
   rating: {

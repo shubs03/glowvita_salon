@@ -142,9 +142,13 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
+  const [error, setError] = useState("");
 
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
   const [createService, { isLoading: isCreatingService }] = useCreateServiceMutation();
+  
+  const { data: categories = [] } = useGetCategoriesQuery(undefined);
+  const { data: allServices = [] } = useGetServicesQuery(undefined);
 
   const isLoading = isCreatingCategory || isCreatingService;
 
@@ -160,24 +164,55 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
   };
 
   const handleCreate = async () => {
-    if (name.trim()) {
-      try {
-        let newItem;
-        if (itemType === "Category") {
-          newItem = await createCategory({ name, description, image }).unwrap();
-        } else if (itemType === "Service" && categoryId) {
-          newItem = await createService({ name, description, category: categoryId, image }).unwrap();
-        } else {
-          throw new Error("Invalid item type or missing categoryId");
+    // Reset error
+    setError("");
+    
+    if (!name.trim()) {
+      setError("Name is required");
+      return;
+    }
+    
+    try {
+      let newItem;
+      if (itemType === "Category") {
+        // Check for duplicate category name
+        const isDuplicate = categories.some(
+          (cat: Category) => cat.name.toLowerCase() === name.trim().toLowerCase()
+        );
+        
+        if (isDuplicate) {
+          setError("A category with this name already exists");
+          return;
         }
-        setName("");
-        setDescription("");
-        setImage("");
-        onItemCreated(newItem);
-        onClose();
-      } catch (error) {
-        console.error(`Failed to create ${itemType}`, error);
+        
+        newItem = await createCategory({ name, description, image }).unwrap();
+      } else if (itemType === "Service" && categoryId) {
+        // Check for duplicate service name in the same category
+        const isDuplicate = allServices.some(
+          (service: Service) => 
+            service.name.toLowerCase() === name.trim().toLowerCase() && 
+            service.category?._id === categoryId
+        );
+        
+        if (isDuplicate) {
+          setError("A service with this name already exists in this category");
+          return;
+        }
+        
+        newItem = await createService({ name, description, category: categoryId, image }).unwrap();
+      } else {
+        throw new Error("Invalid item type or missing categoryId");
       }
+      setName("");
+      setDescription("");
+      setImage("");
+      onItemCreated(newItem);
+      onClose();
+    } catch (error: any) {
+      console.error(`Failed to create ${itemType}`, error);
+      // Extract error message from the response
+      const errorMessage = error?.data?.error || error?.data?.message || error?.message || `Failed to create ${itemType}`;
+      setError(errorMessage);
     }
   };
 
@@ -200,6 +235,9 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
               onChange={(e) => setName(e.target.value)}
               disabled={isLoading}
             />
+            {error && (
+              <p className="text-sm text-red-500">{error}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor={`new-${itemType}-description`}>Description</Label>

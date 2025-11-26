@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
+import DoctorModel from '@repo/lib/models/Vendor/Docters.model';
+import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import { authMiddlewareCrm } from "../../../../middlewareCrm";
 
 await _db();
@@ -9,10 +11,11 @@ await _db();
 // GET - Fetch all reviews for vendor's products and services
 export const GET = authMiddlewareCrm(async (request) => {
   try {
-    const vendorId = request.user.userId;
+    const userId = request.user.userId;
+    const userRole = request.user.role;
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter') || 'all'; // all, approved, pending
-    const entityType = searchParams.get('entityType') || 'all'; // all, product, service, salon
+    const entityType = searchParams.get('entityType') || 'all'; // all, product, service, salon, doctor
 
     // Build query
     let query = {};
@@ -29,50 +32,85 @@ export const GET = authMiddlewareCrm(async (request) => {
       query.entityType = entityType;
     }
 
-    // Get all reviews based on entity type
     let reviews = [];
 
-    if (entityType === 'all' || entityType === 'product') {
-      // Get vendor's product IDs
-      const vendorProducts = await ProductModel.find({ vendorId }).select('_id');
-      const productIds = vendorProducts.map(p => p._id);
+    // For doctors, only show reviews for their own profile
+    if (userRole === 'doctor') {
+      query.entityId = userId;
+      query.entityType = 'doctor';
+      reviews = await ReviewModel.find(query).sort({ createdAt: -1 });
+      
+      // Populate doctor details
+      for (let review of reviews) {
+        const doctor = await DoctorModel.findById(review.entityId).select('name specialties experience rating');
+        review._doc.entityDetails = doctor;
+      }
+    } 
+    // For vendors, show reviews for their products, services, and salon
+    else if (userRole === 'vendor' || userRole === 'staff') {
+      const vendorId = userId;
+      
+      if (entityType === 'all' || entityType === 'product') {
+        // Get vendor's product IDs
+        const vendorProducts = await ProductModel.find({ vendorId }).select('_id');
+        const productIds = vendorProducts.map(p => p._id);
 
-      if (productIds.length > 0) {
-        const productReviews = await ReviewModel.find({
+        if (productIds.length > 0) {
+          const productReviews = await ReviewModel.find({
+            ...query,
+            entityType: 'product',
+            entityId: { $in: productIds }
+          })
+          .sort({ createdAt: -1 });
+
+          // Populate product details
+          for (let review of productReviews) {
+            const product = await ProductModel.findById(review.entityId).select('productName productImages price category');
+            review._doc.entityDetails = product;
+          }
+
+          reviews = [...reviews, ...productReviews];
+        }
+      }
+
+      if (entityType === 'all' || entityType === 'salon') {
+        // Get salon reviews for this vendor
+        const salonReviews = await ReviewModel.find({
           ...query,
-          entityType: 'product',
-          entityId: { $in: productIds }
+          entityType: 'salon',
+          entityId: vendorId // The salon ID is the vendor ID
         })
         .sort({ createdAt: -1 });
 
-        // Populate product details
-        for (let review of productReviews) {
-          const product = await ProductModel.findById(review.entityId).select('productName productImages price category');
-          review._doc.entityDetails = product;
+        // Add salon details (use vendor info)
+        for (let review of salonReviews) {
+          const vendor = await VendorModel.findById(vendorId).select('businessName');
+          review._doc.entityDetails = {
+            _id: vendorId,
+            salonName: vendor?.businessName || 'Your Salon',
+          };
         }
 
-        reviews = [...reviews, ...productReviews];
-      }
-    }
-
-    if (entityType === 'all' || entityType === 'salon') {
-      // Get salon reviews for this vendor
-      const salonReviews = await ReviewModel.find({
-        ...query,
-        entityType: 'salon',
-        entityId: vendorId // The salon ID is the vendor ID
-      })
-      .sort({ createdAt: -1 });
-
-      // Add salon details (use vendor info)
-      for (let review of salonReviews) {
-        review._doc.entityDetails = {
-          _id: vendorId,
-          salonName: 'Your Salon', // You can fetch actual salon name from Vendor model if needed
-        };
+        reviews = [...reviews, ...salonReviews];
       }
 
-      reviews = [...reviews, ...salonReviews];
+      if (entityType === 'all' || entityType === 'doctor') {
+        // Get doctor reviews for this vendor
+        const doctorReviews = await ReviewModel.find({
+          ...query,
+          entityType: 'doctor',
+          entityId: vendorId // The doctor ID is the vendor ID
+        })
+        .sort({ createdAt: -1 });
+
+        // Add doctor details
+        for (let review of doctorReviews) {
+          const doctor = await DoctorModel.findById(review.entityId).select('name specialties experience rating');
+          review._doc.entityDetails = doctor;
+        }
+
+        reviews = [...reviews, ...doctorReviews];
+      }
     }
 
     // TODO: Add service reviews when those models are ready

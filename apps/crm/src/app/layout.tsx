@@ -43,6 +43,7 @@ export default function RootLayout({
     '/earnings',
     '/doctor-reports',
     '/doctor-referrals',
+    '/doctor-reviews',
     '/doctor-staff',
     '/timetable',
     '/consultations',
