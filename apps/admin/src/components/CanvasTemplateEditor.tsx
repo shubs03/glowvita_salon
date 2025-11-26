@@ -15,8 +15,6 @@ import {
   Move,
 } from "lucide-react";
 import { toast } from "sonner";
-// Import fabric without types
-import fabric from "fabric";
 
 interface CanvasTemplateEditorProps {
   initialImage?: string;
@@ -36,6 +34,7 @@ export default function CanvasTemplateEditor({
 }: CanvasTemplateEditorProps) {
   const [fabricCanvas, setFabricCanvas] = useState<any>(null);
   const [selectedObject, setSelectedObject] = useState<any>(null);
+  const [fabricLibrary, setFabricLibrary] = useState<any>(null);
 
   // This state will track if the component has mounted on the client
   const [isClient, setIsClient] = useState(false);
@@ -43,6 +42,16 @@ export default function CanvasTemplateEditor({
   useEffect(() => {
     // This effect runs only once on the client-side after the component mounts
     setIsClient(true);
+    
+    // Dynamically import fabric only on the client side
+    if (typeof window !== 'undefined') {
+      import("fabric").then((fabricModule) => {
+        setFabricLibrary(fabricModule.default || fabricModule);
+      }).catch((error) => {
+        console.error('Failed to load fabric library:', error);
+        toast.error('Failed to load design editor. Please try again.');
+      });
+    }
   }, []);
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
@@ -56,14 +65,14 @@ export default function CanvasTemplateEditor({
   const [textAlign, setTextAlign] = useState("center");
 
   const initCanvas = useCallback(() => {
-    if (!canvasContainerRef.current || !isClient) return;
+    if (!canvasContainerRef.current || !isClient || !fabricLibrary) return;
 
     const canvasEl = document.createElement("canvas");
     canvasContainerRef.current.innerHTML = "";
     canvasContainerRef.current.appendChild(canvasEl);
 
     // Fixed initialization - using fabric.Canvas properly
-    const canvas = new (fabric as any).Canvas(canvasEl, {
+    const canvas = new fabricLibrary.Canvas(canvasEl, {
       width: width,
       height: height,
       backgroundColor: "#ffffff",
@@ -71,7 +80,7 @@ export default function CanvasTemplateEditor({
 
     // Load initial background image if provided
     if (initialImage) {
-      (fabric as any).Image.fromURL(initialImage, (img: any) => {
+      fabricLibrary.Image.fromURL(initialImage, (img: any) => {
         img.set({
           scaleX: (canvas.width || 1) / width,
           scaleY: (canvas.height || 1) / height,
@@ -82,7 +91,7 @@ export default function CanvasTemplateEditor({
     }
 
     // Add default text elements
-    const titleText = new (fabric as any).Textbox("Your Title Here", {
+    const titleText = new fabricLibrary.Textbox("Your Title Here", {
       left: width / 2,
       top: 100,
       fontSize: 48,
@@ -97,7 +106,7 @@ export default function CanvasTemplateEditor({
       editable: true,
     });
 
-    const subtitleText = new (fabric as any).Textbox("Add your message here", {
+    const subtitleText = new fabricLibrary.Textbox("Add your message here", {
       left: width / 2,
       top: 200,
       fontSize: 24,
@@ -176,7 +185,7 @@ export default function CanvasTemplateEditor({
   const addText = () => {
     if (!fabricCanvas) return;
 
-    const newText = new (fabric as any).Textbox("New Text", {
+    const newText = new fabricLibrary.Textbox("New Text", {
       left: 100,
       top: 100,
       fontSize: 30,
@@ -199,7 +208,7 @@ export default function CanvasTemplateEditor({
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        (fabric as any).Image.fromURL(dataUrl, (img: any) => {
+        fabricLibrary.Image.fromURL(dataUrl, (img: any) => {
           const maxWidth = 150;
           const maxHeight = 150;
 

@@ -8,7 +8,6 @@ import { Textarea } from '@repo/ui/textarea';
 import { Label } from '@repo/ui/label';
 import { Download, Save, X, Image as ImageIcon, Type, Move, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import * as fabric from 'fabric';
 import { useSaveCustomizedTemplateMutation } from '@repo/store/services/api';
 
 interface SocialMediaTemplate {
@@ -33,7 +32,7 @@ interface TemplateEditorModalProps {
   onClose: () => void;
 }
 
-const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Object | null, canvas: fabric.Canvas | null }) => {
+const EditorControls = ({ selectedObject, canvas, fabricLibrary }: { selectedObject: any | null, canvas: any | null, fabricLibrary: any | null }) => {
   const [text, setText] = useState('');
   const [fontSize, setFontSize] = useState(20);
   const [fill, setFill] = useState('#000000');
@@ -42,8 +41,8 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
   const [textAlign, setTextAlign] = useState('center');
 
   useEffect(() => {
-    if (selectedObject && selectedObject.type === 'textbox') {
-      const textbox = selectedObject as fabric.Textbox;
+    if (selectedObject && fabricLibrary && selectedObject.type === 'textbox') {
+      const textbox = selectedObject as any;
       setText(textbox.text || '');
       setFontSize(textbox.fontSize || 20);
       setFill(textbox.fill as string || '#000000');
@@ -56,8 +55,8 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setText(newText);
-    if (selectedObject && selectedObject.type === 'textbox' && canvas) {
-      (selectedObject as fabric.Textbox).set('text', newText);
+    if (selectedObject && fabricLibrary && selectedObject.type === 'textbox' && canvas) {
+      (selectedObject as any).set('text', newText);
       canvas.requestRenderAll();
     }
   };
@@ -175,20 +174,33 @@ const EditorControls = ({ selectedObject, canvas }: { selectedObject: fabric.Obj
 };
 
 export default function TemplateEditorModal({ template, isOpen, onClose }: TemplateEditorModalProps) {
-  const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
-  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
+  const [fabricCanvas, setFabricCanvas] = useState<any | null>(null);
+  const [selectedObject, setSelectedObject] = useState<any | null>(null);
+  const [fabricLibrary, setFabricLibrary] = useState<any | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
   const [saveCustomizedTemplate] = useSaveCustomizedTemplateMutation();
 
+  // Load fabric library dynamically on client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('fabric').then((fabricModule) => {
+        setFabricLibrary(fabricModule.default || fabricModule);
+      }).catch((error) => {
+        console.error('Failed to load fabric library:', error);
+        toast.error('Failed to load design editor. Please try again.');
+      });
+    }
+  }, []);
+
   const initCanvas = useCallback((container: HTMLDivElement) => {
-    if (!container || !template || !template.jsonData) return;
+    if (!container || !template || !template.jsonData || !fabricLibrary) return;
     
     container.innerHTML = ''; // Clear previous canvas
     const canvasEl = document.createElement('canvas');
     container.appendChild(canvasEl);
 
-    const canvas = new fabric.Canvas(canvasEl);
+    const canvas = new fabricLibrary.Canvas(canvasEl);
     
     // Set a default size first
     canvas.setWidth(container.clientWidth);
@@ -201,7 +213,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
         let canvasWidth = containerWidth;
         let canvasHeight = containerWidth * (9/16);
 
-        if (bgImage instanceof fabric.Image && bgImage.width) {
+        if (bgImage instanceof fabricLibrary.Image && bgImage.width) {
             const imgAspectRatio = bgImage.width / (bgImage.height || 1);
             canvasHeight = containerWidth / imgAspectRatio;
         }
@@ -229,8 +241,8 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
 
 
   const addText = () => {
-    if (!fabricCanvas) return;
-    const text = new fabric.Textbox('Click to edit text', {
+    if (!fabricCanvas || !fabricLibrary) return;
+    const text = new fabricLibrary.Textbox('Click to edit text', {
       left: (fabricCanvas.width || 0) / 2 - 100,
       top: (fabricCanvas.height || 0) / 2,
       fontSize: 30,
@@ -248,11 +260,11 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
   
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && fabricCanvas) {
+    if (file && fabricCanvas && fabricLibrary) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl).then((img: fabric.Image) => {
+        fabricLibrary.Image.fromURL(dataUrl).then((img: any) => {
           const maxWidth = 150;
           const maxHeight = 150;
           
@@ -372,7 +384,7 @@ export default function TemplateEditorModal({ template, isOpen, onClose }: Templ
             <div className="border-t"></div>
             <div>
               <h3 className="text-lg font-semibold mb-4">Edit Element</h3>
-              <EditorControls selectedObject={selectedObject} canvas={fabricCanvas} />
+              <EditorControls selectedObject={selectedObject} canvas={fabricCanvas} fabricLibrary={fabricLibrary} />
             </div>
           </div>
           
