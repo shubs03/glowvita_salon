@@ -12,7 +12,7 @@ import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Search, FileDown, Truck, Package, ShoppingCart, User, CheckCircle, Clock, Eye, Edit, XCircle, MapPin, Calendar, Mail, Phone, Building } from 'lucide-react';
 import Image from 'next/image';
-import { useGetCrmOrdersQuery, useUpdateCrmOrderMutation } from '@repo/store/api';
+import { useGetCrmOrdersQuery, useUpdateCrmOrderMutation, useGetCrmClientOrdersQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { OrderStatusTimeline } from '@/components/OrderStatusTimeline';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
@@ -30,7 +30,7 @@ type OrderItem = {
 
 type Order = {
   _id: string;
-  orderId: string;
+  orderId?: string; // Make orderId optional since ClientOrder doesn't have it
   items: OrderItem[];
   customerName?: string; 
   customerEmail?: string;
@@ -42,6 +42,8 @@ type Order = {
   createdAt: string;
   trackingNumber?: string;
   courier?: string;
+  // For ClientOrder specific fields
+  userId?: string; // To identify online orders
 };
 
 export default function OrdersPage() {
@@ -50,6 +52,7 @@ export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState(defaultTab);
   
   const { data: ordersData = [], isLoading, isError, refetch } = useGetCrmOrdersQuery(user?._id, { skip: !user });
+  const { data: clientOrdersData = [], isLoading: isClientOrdersLoading, isError: isClientOrdersError } = useGetCrmClientOrdersQuery(undefined, { skip: role !== 'vendor' });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -69,29 +72,66 @@ export default function OrdersPage() {
     }
   }, [user, refetch]);
 
-  const { customerOrders, myPurchases, receivedOrders } = useMemo(() => {
-    if (!ordersData) return { customerOrders: [], myPurchases: [], receivedOrders: [] };
+  const { customerOrders, myPurchases, receivedOrders, onlineCustomerOrders } = useMemo(() => {
+    if (!ordersData) return { customerOrders: [], myPurchases: [], receivedOrders: [], onlineCustomerOrders: [] };
     
     const customerOrders = ordersData.filter((o: Order) => o.vendorId === user?._id && o.customerName);
     const myPurchases = ordersData.filter((o: Order) => o.vendorId === user?._id && o.supplierId);
     const receivedOrders = ordersData.filter((o: Order) => o.supplierId === user?._id);
-
-    return { customerOrders, myPurchases, receivedOrders };
-  }, [ordersData, user]);
+    
+    // Transform ClientOrder data to match our Order type
+    const transformedOnlineOrders = (clientOrdersData || []).map((clientOrder: any) => {
+      // Transform items from ClientOrder format to OrderItem format
+      const transformedItems = (clientOrder.items || []).map((item: any) => ({
+        productId: item.productId || '',
+        productName: item.name || 'Unknown Product',
+        productImage: item.image || 'https://placehold.co/80x80.png',
+        quantity: item.quantity || 0,
+        price: item.price || 0
+      }));
+      
+      // Create an Order object from ClientOrder data
+      return {
+        _id: clientOrder._id || '',
+        orderId: undefined, // ClientOrder doesn't have this field
+        items: transformedItems,
+        customerName: 'Online Customer', // ClientOrder has userId but not customer name
+        customerEmail: undefined,
+        vendorId: clientOrder.vendorId || '',
+        supplierId: undefined,
+        totalAmount: clientOrder.totalAmount || 0,
+        status: clientOrder.status || 'Pending',
+        shippingAddress: clientOrder.shippingAddress || '',
+        createdAt: clientOrder.createdAt || new Date().toISOString(),
+        trackingNumber: clientOrder.trackingNumber,
+        courier: undefined,
+        userId: clientOrder.userId // To identify as online order
+      };
+    });
+    
+    return { 
+      customerOrders, 
+      myPurchases, 
+      receivedOrders, 
+      onlineCustomerOrders: transformedOnlineOrders 
+    };
+  }, [ordersData, clientOrdersData, user]);
 
   const filteredOrders = useMemo(() => {
     let dataToFilter: Order[] = [];
-    if (activeTab === 'customer-orders') dataToFilter = customerOrders;
+    if (activeTab === 'customer-orders') dataToFilter = [...customerOrders, ...onlineCustomerOrders];
     if (activeTab === 'my-purchases') dataToFilter = myPurchases;
     if (activeTab === 'received-orders') dataToFilter = receivedOrders;
 
     return dataToFilter.filter((order: Order) =>
-      (order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-       order.items.some((item: OrderItem) => item.productName.toLowerCase().includes(searchTerm.toLowerCase()))) &&
-      (statusFilter === 'all' || order.status === statusFilter)
+      ((order.orderId && order.orderId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.items && order.items.some((item: OrderItem) => 
+        item.productName && item.productName.toLowerCase().includes(searchTerm.toLowerCase())
+      ))) &&
+      (statusFilter === 'all' || (order.status && order.status === statusFilter))
     );
-  }, [searchTerm, statusFilter, activeTab, customerOrders, myPurchases, receivedOrders]);
+  }, [searchTerm, statusFilter, activeTab, customerOrders, myPurchases, receivedOrders, onlineCustomerOrders]);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -168,9 +208,17 @@ export default function OrdersPage() {
     return currentIndex < statuses.length - 1 ? statuses[currentIndex + 1] : null;
   };
   
+  const isLoadingAll = isLoading || isClientOrdersLoading;
+  const isErrorAny = isError || isClientOrdersError;
+
+  const isOnlineOrder = (order: Order) => {
+    // Online orders from ClientOrder model will have a userId field
+    return !!order.userId;
+  };
+
   const renderOrderTable = (orders: Order[]) => (
     <>
-      {isLoading ? (
+      {isLoadingAll ? (
         // Loading state with skeleton loaders
         <div className="space-y-4">
           {/* Desktop Skeleton View */}
@@ -270,7 +318,7 @@ export default function OrdersPage() {
             ))}
           </div>
         </div>
-      ) : isError ? (
+      ) : isErrorAny ? (
         // Show "No orders found" when there's an error
         <div className="text-center py-16">
           <div className="mx-auto w-32 h-32 mb-6 bg-gradient-to-br from-muted to-muted/50 rounded-full flex items-center justify-center">
@@ -313,10 +361,23 @@ export default function OrdersPage() {
                     >
                       <TableCell>
                         <div className="space-y-1">
-                          <p className="font-mono text-sm font-bold text-primary">#{order.orderId}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-mono text-sm font-bold text-primary">
+                              #{order.orderId || `ONLINE-${order._id.substring(0, 8).toUpperCase()}`}
+                            </p>
+                            {isOnlineOrder(order) ? (
+                              <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs px-2 py-0.5 rounded-full">
+                                Online
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-green-100 text-green-800 border-green-300 text-xs px-2 py-0.5 rounded-full">
+                                Offline
+                              </Badge>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
-                            {new Date(order.createdAt).toLocaleDateString()}
+                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
                           </div>
                         </div>
                       </TableCell>
@@ -324,21 +385,21 @@ export default function OrdersPage() {
                         <div className="flex items-center gap-3">
                           <div className="relative">
                             <Image 
-                              src={order.items[0].productImage || 'https://placehold.co/50x50.png'} 
-                              alt={order.items[0].productName} 
+                              src={(order.items && order.items[0]?.productImage) || 'https://placehold.co/50x50.png'} 
+                              alt={(order.items && order.items[0]?.productName) || 'Product'} 
                               width={50} 
                               height={50} 
                               className="rounded-lg object-cover border border-border/30" 
                             />
-                            {order.items.length > 1 && (
+                            {order.items && order.items.length > 1 && (
                               <div className="absolute -top-2 -right-2 w-5 h-5 bg-primary text-white text-xs font-bold rounded-full flex items-center justify-center">
                                 +{order.items.length - 1}
                               </div>
                             )}
                           </div>
                           <div className="space-y-1">
-                            <p className="font-medium text-sm">{order.items[0].productName}</p>
-                            {order.items.length > 1 && (
+                            <p className="font-medium text-sm">{(order.items && order.items[0]?.productName) || 'Product Name'}</p>
+                            {order.items && order.items.length > 1 && (
                               <p className="text-xs text-muted-foreground">
                                 and {order.items.length - 1} more item{order.items.length > 2 ? 's' : ''}
                               </p>
@@ -355,16 +416,16 @@ export default function OrdersPage() {
                       <TableCell>
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {new Date(order.createdAt).toLocaleDateString()}
+                          {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <p className="font-bold text-lg text-primary">₹{order.totalAmount.toFixed(2)}</p>
+                        <p className="font-bold text-lg text-primary">₹{(order.totalAmount || 0).toFixed(2)}</p>
                       </TableCell>
                       <TableCell>
                         <Badge className={`${getStatusColor(order.status)} border-2 font-medium px-3 py-1.5 rounded-full flex items-center gap-2 w-fit`}>
                           {getStatusIcon(order.status)}
-                          {order.status}
+                          {order.status || 'Unknown'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -378,7 +439,7 @@ export default function OrdersPage() {
                             <Eye className="mr-2 h-4 w-4" />
                             View
                           </Button>
-                          {role === 'supplier' && getNextStatus(order.status) && (
+                          {role === 'supplier' && order.status && getNextStatus(order.status) && (
                             <Button 
                               size="sm" 
                               onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status)!)} 
@@ -415,15 +476,28 @@ export default function OrdersPage() {
                   <div className="p-4 bg-gradient-to-r from-muted/30 to-muted/20 border-b border-border/30">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-mono text-sm font-bold text-primary">#{order.orderId}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-sm font-bold text-primary">
+                            #{order.orderId || `ONLINE-${order._id.substring(0, 8).toUpperCase()}`}
+                          </p>
+                          {isOnlineOrder(order) ? (
+                            <Badge className="bg-blue-100 text-blue-800 border-blue-300 text-xs px-2 py-0.5 rounded-full">
+                              Online
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-green-100 text-green-800 border-green-300 text-xs px-2 py-0.5 rounded-full">
+                              Offline
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(order.createdAt).toLocaleDateString()}
+                          {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
                         </div>
                       </div>
                       <Badge className={`${getStatusColor(order.status)} border-2 font-medium px-3 py-1 rounded-full flex items-center gap-1`}>
                         {getStatusIcon(order.status)}
-                        <span className="text-xs">{order.status}</span>
+                        <span className="text-xs">{order.status || 'Unknown'}</span>
                       </Badge>
                     </div>
                   </div>
@@ -434,21 +508,21 @@ export default function OrdersPage() {
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <Image 
-                          src={order.items[0].productImage || 'https://placehold.co/60x60.png'} 
-                          alt={order.items[0].productName} 
+                          src={(order.items && order.items[0]?.productImage) || 'https://placehold.co/60x60.png'} 
+                          alt={(order.items && order.items[0]?.productName) || 'Product'} 
                           width={60} 
                           height={60} 
                           className="rounded-lg object-cover border border-border/30" 
                         />
-                        {order.items.length > 1 && (
+                        {order.items && order.items.length > 1 && (
                           <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-white text-xs font-bold rounded-full flex items-center justify-center">
                             +{order.items.length - 1}
                           </div>
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="font-medium">{order.items[0].productName}</p>
-                        {order.items.length > 1 && (
+                        <p className="font-medium">{(order.items && order.items[0]?.productName) || 'Product Name'}</p>
+                        {order.items && order.items.length > 1 && (
                           <p className="text-sm text-muted-foreground">
                             and {order.items.length - 1} more item{order.items.length > 2 ? 's' : ''}
                           </p>
@@ -463,7 +537,7 @@ export default function OrdersPage() {
                     {/* Price and Actions */}
                     <div className="flex justify-between items-center pt-2 border-t border-border/20">
                       <div>
-                        <p className="text-xl font-bold text-primary">₹{order.totalAmount.toFixed(2)}</p>
+                        <p className="text-xl font-bold text-primary">₹{(order.totalAmount || 0).toFixed(2)}</p>
                         <p className="text-xs text-muted-foreground">Total Amount</p>
                       </div>
                       <div className="flex gap-2">
@@ -476,7 +550,7 @@ export default function OrdersPage() {
                           <Eye className="mr-1 h-4 w-4" />
                           View
                         </Button>
-                        {role === 'supplier' && getNextStatus(order.status) && (
+                        {role === 'supplier' && order.status && getNextStatus(order.status) && (
                           <Button 
                             size="sm" 
                             onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status)!)} 
@@ -484,11 +558,13 @@ export default function OrdersPage() {
                             className="rounded-lg bg-gradient-to-r from-primary to-primary/80"
                           >
                             {isUpdatingStatus ? (
-                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-background border-t-transparent mr-1"></div>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-background border-t-transparent mr-1"></div>
                             ) : (
-                              <Edit className="mr-1 h-3 w-3" />
+                              <Edit className="mr-1 h-4 w-4" />
                             )}
-                            Update
+                            <span className="hidden xs:inline">
+                              {isUpdatingStatus ? 'Updating...' : `Mark as ${getNextStatus(order.status)}`}
+                            </span>
                           </Button>
                         )}
                       </div>
@@ -635,7 +711,9 @@ export default function OrdersPage() {
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Order Details</DialogTitle>
-            <DialogDescription>Order ID: #{selectedOrder?.orderId}</DialogDescription>
+            <DialogDescription>
+              Order ID: #{selectedOrder?.orderId || `ONLINE-${selectedOrder?._id?.substring(0, 8).toUpperCase()}`}
+            </DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[calc(90vh-8rem)] p-6">
             {selectedOrder && (
@@ -655,10 +733,10 @@ export default function OrdersPage() {
                     <div className="bg-gradient-to-r from-background to-muted/20 rounded-2xl p-6 border border-border/30">
                       <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                         <ShoppingCart className="h-5 w-5 text-primary" />
-                        Items Ordered ({selectedOrder.items.length})
+                        Items Ordered ({selectedOrder?.items?.length || 0})
                       </h3>
                       <div className="space-y-4">
-                        {selectedOrder.items.map((item, index) => (
+                        {selectedOrder?.items?.map((item: OrderItem, index: number) => (
                           <div 
                             key={item.productId} 
                             className="flex items-center gap-4 p-4 bg-background rounded-xl border border-border/20 hover:shadow-md transition-shadow"
@@ -679,12 +757,12 @@ export default function OrdersPage() {
                                   Qty: {item.quantity}
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <span>₹{item.price.toFixed(2)} each</span>
+                                  <span>₹{(item.price || 0).toFixed(2)} each</span>
                                 </div>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-xl font-bold text-primary">₹{(item.quantity * item.price).toFixed(2)}</p>
+                              <p className="text-xl font-bold text-primary">₹{((item.quantity || 0) * (item.price || 0)).toFixed(2)}</p>
                               <p className="text-sm text-muted-foreground">Total</p>
                             </div>
                           </div>
@@ -694,7 +772,7 @@ export default function OrdersPage() {
                         <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20">
                           <div className="flex justify-between items-center">
                             <span className="text-lg font-semibold">Total Amount</span>
-                            <span className="text-2xl font-bold text-primary">₹{selectedOrder.totalAmount.toFixed(2)}</span>
+                            <span className="text-2xl font-bold text-primary">₹{(selectedOrder?.totalAmount || 0).toFixed(2)}</span>
                           </div>
                         </div>
                       </div>
@@ -712,9 +790,9 @@ export default function OrdersPage() {
                       <div className="space-y-3">
                         <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
                           <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{selectedOrder.customerName || `Vendor ID: ${selectedOrder.vendorId}`}</span>
+                          <span className="font-medium">{selectedOrder?.customerName || `Vendor ID: ${selectedOrder?.vendorId || ''}`}</span>
                         </div>
-                        {selectedOrder.customerEmail && (
+                        {selectedOrder?.customerEmail && (
                           <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
                             <Mail className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">{selectedOrder.customerEmail}</span>
@@ -730,12 +808,12 @@ export default function OrdersPage() {
                         Shipping Address
                       </h3>
                       <div className="p-4 bg-muted/20 rounded-xl">
-                        <p className="text-sm leading-relaxed">{selectedOrder.shippingAddress}</p>
+                        <p className="text-sm leading-relaxed">{selectedOrder?.shippingAddress || 'No shipping address provided'}</p>
                       </div>
                     </div>
 
                     {/* Tracking Information */}
-                    {selectedOrder.trackingNumber && (
+                    {selectedOrder?.trackingNumber && (
                       <div className="bg-gradient-to-r from-background to-muted/20 rounded-2xl p-6 border border-border/30">
                         <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                           <Truck className="h-5 w-5 text-primary" />
@@ -746,7 +824,7 @@ export default function OrdersPage() {
                             <Building className="h-4 w-4 text-muted-foreground" />
                             <div>
                               <p className="text-sm font-medium">Courier</p>
-                              <p className="text-sm text-muted-foreground">{selectedOrder.courier}</p>
+                              <p className="text-sm text-muted-foreground">{selectedOrder.courier || 'Not specified'}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
@@ -772,13 +850,16 @@ export default function OrdersPage() {
                           <div>
                             <p className="text-sm font-medium">Order Placed</p>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(selectedOrder.createdAt).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
+                              {selectedOrder?.createdAt ? 
+                                new Date(selectedOrder.createdAt).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }) : 
+                                'Date not available'
+                              }
                             </p>
                           </div>
                         </div>
@@ -799,7 +880,9 @@ export default function OrdersPage() {
                   <Truck className="h-5 w-5 text-primary" />
                   Ship Order
                 </DialogTitle>
-                <DialogDescription>Enter tracking information for order #{orderToShip?.orderId}</DialogDescription>
+                <DialogDescription>
+                  Enter tracking information for order #{orderToShip?.orderId || `ONLINE-${orderToShip?._id?.substring(0, 8).toUpperCase()}`}
+                </DialogDescription>
             </DialogHeader>
             <div className="space-y-6 py-6">
                 <div className="space-y-3">
@@ -831,15 +914,17 @@ export default function OrdersPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Order ID:</span>
-                        <span className="font-mono">#{orderToShip.orderId}</span>
+                        <span className="font-mono">
+                          #{orderToShip.orderId || `ONLINE-${orderToShip._id.substring(0, 8).toUpperCase()}`}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Total Amount:</span>
-                        <span className="font-bold text-primary">₹{orderToShip.totalAmount.toFixed(2)}</span>
+                        <span className="font-bold text-primary">₹{(orderToShip.totalAmount || 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Items:</span>
-                        <span>{orderToShip.items.length} product{orderToShip.items.length > 1 ? 's' : ''}</span>
+                        <span>{(orderToShip.items?.length || 0)} product{(orderToShip.items?.length || 0) > 1 ? 's' : ''}</span>
                       </div>
                     </div>
                   </div>
