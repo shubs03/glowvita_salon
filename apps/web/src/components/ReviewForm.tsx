@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface ReviewFormProps {
   entityId: string;
-  entityType: "salon" | "product";
+  entityType: "salon" | "product" | "doctor";
   onSubmitSuccess?: () => void;
 }
 
@@ -25,7 +25,8 @@ export function ReviewForm({ entityId, entityType, onSubmitSuccess }: ReviewForm
     e.preventDefault();
     
     if (!isAuthenticated) {
-      router.push("/login");
+      toast.error("Please login to submit a review");
+      router.push("/client-login");
       return;
     }
 
@@ -42,11 +43,32 @@ export function ReviewForm({ entityId, entityType, onSubmitSuccess }: ReviewForm
     setIsSubmitting(true);
     
     try {
+      // Get token from localStorage
+      const authData = localStorage.getItem('auth');
+      let token = null;
+      
+      if (authData) {
+        try {
+          const parsedAuth = JSON.parse(authData);
+          token = parsedAuth.token;
+        } catch (e) {
+          console.error('Error parsing auth data:', e);
+        }
+      }
+
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      };
+
+      // Add Authorization header if token exists
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const response = await fetch("/api/reviews", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
+        credentials: "include",
         body: JSON.stringify({
           entityId,
           entityType,
@@ -58,10 +80,17 @@ export function ReviewForm({ entityId, entityType, onSubmitSuccess }: ReviewForm
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to submit review");
+        if (response.status === 401) {
+          toast.error("Please login to submit a review");
+          router.push("/client-login");
+          return;
+        }
+        throw new Error(data.message || data.error || "Failed to submit review");
       }
 
-      toast.success("Review submitted successfully!");
+      toast.success("Review submitted successfully!", {
+        description: "Your review will be visible after approval"
+      });
 
       // Reset form
       setRating(0);
@@ -72,6 +101,7 @@ export function ReviewForm({ entityId, entityType, onSubmitSuccess }: ReviewForm
         onSubmitSuccess();
       }
     } catch (error: any) {
+      console.error("Review submission error:", error);
       toast.error(error.message || "Failed to submit review");
     } finally {
       setIsSubmitting(false);
@@ -79,8 +109,14 @@ export function ReviewForm({ entityId, entityType, onSubmitSuccess }: ReviewForm
   };
 
   if (!isAuthenticated) {
-    router.push("/login");
-    return null;
+    return (
+      <div className="text-center py-6">
+        <p className="text-muted-foreground mb-4">Please login to write a review</p>
+        <Button onClick={() => router.push("/client-login")}>
+          Login to Continue
+        </Button>
+      </div>
+    );
   }
 
   return (

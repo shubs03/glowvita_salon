@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import _db from "../../../../../../../../packages/lib/src/db.js";
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
+import DoctorModel from '@repo/lib/models/Vendor/Docters.model';
 import { authMiddlewareCrm } from "../../../../../middlewareCrm";
 
 await _db();
@@ -42,6 +43,14 @@ export const PATCH = authMiddlewareCrm(async (request, { params }) => {
       }
     } else if (review.entityType === 'salon') {
       // For salon reviews, the entityId should match the vendorId
+      if (review.entityId.toString() !== vendorId) {
+        return NextResponse.json({
+          success: false,
+          message: "Unauthorized to modify this review"
+        }, { status: 403 });
+      }
+    } else if (review.entityType === 'doctor') {
+      // For doctor reviews, the entityId should match the vendorId
       if (review.entityId.toString() !== vendorId) {
         return NextResponse.json({
           success: false,
@@ -99,6 +108,14 @@ export const DELETE = authMiddlewareCrm(async (request, { params }) => {
       }
     } else if (review.entityType === 'salon') {
       // For salon reviews, the entityId should match the vendorId
+      if (review.entityId.toString() !== vendorId) {
+        return NextResponse.json({
+          success: false,
+          message: "Unauthorized to delete this review"
+        }, { status: 403 });
+      }
+    } else if (review.entityType === 'doctor') {
+      // For doctor reviews, the entityId should match the vendorId
       if (review.entityId.toString() !== vendorId) {
         return NextResponse.json({
           success: false,

@@ -1,26 +1,53 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyJwt } from '@repo/lib/auth';
-import dbConnect from '@repo/lib/db';
+import _db from '@repo/lib/db';
 import User from '@repo/lib/models/user';
 import Review from '@repo/lib/models/Review/Review.model';
 import Product from '@repo/lib/models/Vendor/Product.model';
 import VendorServices from '@repo/lib/models/Vendor/VendorServices.model';
-import Vendor from '@repo/lib/models/Vendor/Vendor.model';
+import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
+import DoctorModel from '@repo/lib/models/Vendor/Docters.model';
 
 // Connect to database
-await dbConnect();
+await _db();
+
+// Handle CORS preflight
+export async function OPTIONS(request) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
 
 // POST - Submit a review
 export async function POST(req) {
   try {
-    // Get token from cookies
-    const token = cookies().get('token')?.value;
+    // Get token from Authorization header or cookies
+    let token = null;
+    
+    // First, check Authorization header
+    const authHeader = req.headers.get('authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    }
+    
+    // If not in header, check cookies
+    if (!token) {
+      const cookieStore = await cookies();
+      token = cookieStore.get('token')?.value;
+    }
     
     // Check if user is authenticated
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Authentication required' },
+        { success: false, message: 'Authentication required. Please login to submit a review.' },
         { status: 401 }
       );
     }
@@ -29,9 +56,16 @@ export async function POST(req) {
     let payload;
     try {
       payload = await verifyJwt(token);
+      if (!payload) {
+        return NextResponse.json(
+          { success: false, message: 'Invalid or expired token. Please login again.' },
+          { status: 401 }
+        );
+      }
     } catch (error) {
+      console.error('JWT verification error:', error);
       return NextResponse.json(
-        { success: false, message: 'Invalid token' },
+        { success: false, message: 'Invalid or expired token. Please login again.' },
         { status: 401 }
       );
     }
@@ -40,7 +74,7 @@ export async function POST(req) {
     const user = await User.findById(payload.userId);
     if (!user) {
       return NextResponse.json(
-        { success: false, message: 'User not found' },
+        { success: false, message: 'User not found. Please login again.' },
         { status: 404 }
       );
     }
@@ -87,7 +121,7 @@ export async function POST(req) {
     
     if (existingReview) {
       return NextResponse.json(
-        { success: false, message: 'You have already reviewed this item' },
+        { success: false, message: 'You have already submitted a review for this item' },
         { status: 400 }
       );
     }
@@ -116,9 +150,14 @@ export async function POST(req) {
           }
         }
       } else if (entityType === 'salon') {
-        const vendor = await Vendor.findById(entityId);
+        const vendor = await VendorModel.findById(entityId);
         if (vendor) {
           entityName = vendor.businessName || vendor.name || entityName;
+        }
+      } else if (entityType === 'doctor') {
+        const doctor = await DoctorModel.findById(entityId);
+        if (doctor) {
+          entityName = doctor.name || entityName;
         }
       }
     } catch (error) {
@@ -146,7 +185,7 @@ export async function POST(req) {
     return NextResponse.json(
       { 
         success: true, 
-        message: 'Review submitted successfully',
+        message: 'Review submitted successfully. It will be visible after approval.',
         review: reviewWithEntity
       },
       { status: 201 }
@@ -154,7 +193,7 @@ export async function POST(req) {
   } catch (error) {
     console.error('Error submitting review:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: error.message || 'Internal server error' },
       { status: 500 }
     );
   }
