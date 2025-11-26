@@ -26,6 +26,7 @@ import {
   ThumbsUp,
   Package,
   MessageSquare,
+  User,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -40,12 +41,15 @@ import Image from 'next/image';
 type Review = {
   _id: string;
   entityId: string;
-  entityType: 'product' | 'service' | 'salon';
+  entityType: 'product' | 'service' | 'salon' | 'doctor';
   entityDetails?: {
     _id: string;
     productName?: string;
     serviceName?: string;
     salonName?: string;
+    name?: string;
+    specialties?: string[];
+    experience?: string;
     productImages?: string[];
     price?: number;
     category?: string;
@@ -63,7 +67,7 @@ type Review = {
 export default function ReviewsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'approved' | 'pending'>('all');
-  const [filterType, setFilterType] = useState<'all' | 'product' | 'service' | 'salon'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'product' | 'service' | 'salon' | 'doctor'>('all');
   const [selectedReview, setSelectedReview] = useState<Review | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -83,7 +87,7 @@ export default function ReviewsPage() {
   const filteredReviews = useMemo(() => {
     return reviews.filter((r: Review) => {
       const searchLower = searchTerm.toLowerCase();
-      const entityName = r.entityDetails?.productName || r.entityDetails?.serviceName || r.entityDetails?.salonName || '';
+      const entityName = r.entityDetails?.productName || r.entityDetails?.serviceName || r.entityDetails?.salonName || r.entityDetails?.name || '';
       return (
         r.comment.toLowerCase().includes(searchLower) ||
         r.userName.toLowerCase().includes(searchLower) ||
@@ -130,6 +134,8 @@ export default function ReviewsPage() {
       return review.entityDetails?.productName || 'Product';
     } else if (review.entityType === 'service') {
       return review.entityDetails?.serviceName || 'Service';
+    } else if (review.entityType === 'doctor') {
+      return review.entityDetails?.name || 'Doctor';
     } else {
       return review.entityDetails?.salonName || 'Salon';
     }
@@ -150,7 +156,7 @@ export default function ReviewsPage() {
         <div>
           <h1 className="text-3xl font-bold">Reviews Management</h1>
           <p className="text-muted-foreground mt-1">
-            Manage and moderate customer reviews for your products, services, and salon
+            Manage and moderate customer reviews for your products, services, salon, and doctors
           </p>
         </div>
       </div>
@@ -197,7 +203,7 @@ export default function ReviewsPage() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search reviews, products, or customers..."
+                placeholder="Search reviews, products, doctors, or customers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -256,6 +262,13 @@ export default function ReviewsPage() {
                 >
                   Salon
                 </Button>
+                <Button
+                  variant={filterType === 'doctor' ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => setFilterType('doctor')}
+                >
+                  Doctors
+                </Button>
               </div>
             </div>
           </div>
@@ -284,7 +297,7 @@ export default function ReviewsPage() {
               <p className="text-muted-foreground">
                 {searchTerm
                   ? 'Try adjusting your search terms'
-                  : 'Reviews from customers will appear here'}
+                  : 'Reviews from customers for your products, services, salon, and doctors will appear here'}
               </p>
             </div>
           ) : (
@@ -292,7 +305,7 @@ export default function ReviewsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product/Service</TableHead>
+                    <TableHead>Entity</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Rating</TableHead>
                     <TableHead>Review</TableHead>
@@ -314,6 +327,10 @@ export default function ReviewsPage() {
                               height={40}
                               className="rounded object-cover"
                             />
+                          ) : review.entityType === 'doctor' ? (
+                            <div className="w-10 h-10 bg-muted rounded-full flex items-center justify-center">
+                              <User className="h-5 w-5 text-muted-foreground" />
+                            </div>
                           ) : (
                             <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
                               <Package className="h-5 w-5 text-muted-foreground" />
@@ -439,7 +456,7 @@ export default function ReviewsPage() {
           {selectedReview && (
             <div className="space-y-4">
               <div className="flex items-start gap-4">
-                {getEntityImage(selectedReview) && (
+                {getEntityImage(selectedReview) ? (
                   <Image
                     src={getEntityImage(selectedReview)!}
                     alt={getEntityName(selectedReview)}
@@ -447,12 +464,25 @@ export default function ReviewsPage() {
                     height={80}
                     className="rounded object-cover"
                   />
+                ) : selectedReview.entityType === 'doctor' ? (
+                  <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center">
+                    <User className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="w-20 h-20 bg-muted rounded flex items-center justify-center">
+                    <Package className="h-10 w-10 text-muted-foreground" />
+                  </div>
                 )}
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{getEntityName(selectedReview)}</h3>
                   <p className="text-sm text-muted-foreground capitalize">{selectedReview.entityType}</p>
                   {selectedReview.entityDetails?.price && (
                     <p className="text-sm">₹{selectedReview.entityDetails.price}</p>
+                  )}
+                  {selectedReview.entityType === 'doctor' && selectedReview.entityDetails?.specialties && (
+                    <p className="text-sm text-muted-foreground">
+                      {selectedReview.entityDetails.specialties.join(', ')}
+                    </p>
                   )}
                 </div>
               </div>
