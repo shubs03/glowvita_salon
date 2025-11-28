@@ -27,7 +27,7 @@ import {
   DialogTitle,
 } from "@repo/ui/dialog";
 import {
-  Trash,
+  X,
   ShoppingCart,
   TrendingUp,
   Package,
@@ -71,12 +71,18 @@ interface Order {
   createdAt: string;
   items: OrderItem[];
   totalAmount: number;
+  shippingAmount?: number;
+  taxAmount?: number;
+  gstAmount?: number;
+  platformFeeAmount?: number;
   status: string;
   shippingAddress: string;
   paymentMethod?: string;
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
+  vendorId?: string; // Add vendorId to the interface
+  cancellationReason?: string;
 }
 
 export default function OrdersPage() {
@@ -120,21 +126,43 @@ export default function OrdersPage() {
   };
 
   const handleViewClick = (order: Order) => {
+    console.log('Viewing order:', order);
     setSelectedOrder(order);
     setIsViewModalOpen(true);
   };
 
-  const handleConfirmCancel = () => {
-    // Here you would call an API to cancel the order
-    console.log(
-      "Cancelling order:",
-      orderToCancel?.id,
-      "Reason:",
-      cancellationReason
-    );
-    setIsCancelModalOpen(false);
-    setOrderToCancel(null);
-    setCancellationReason("");
+  const handleConfirmCancel = async () => {
+    if (!orderToCancel || !cancellationReason.trim()) return;
+
+    try {
+      console.log('Sending cancellation request for order:', orderToCancel._id, 'with reason:', cancellationReason);
+      const response = await fetch('/api/client/orders', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: orderToCancel._id,
+          cancellationReason: cancellationReason,
+        }),
+      });
+
+      const result = await response.json();
+      console.log('Cancellation response:', result);
+      
+      if (result.success) {
+        // Close the modal
+        setIsCancelModalOpen(false);
+        setOrderToCancel(null);
+        setCancellationReason("");
+        // Trigger a refetch of the orders
+        window.location.reload();
+      } else {
+        console.error('Failed to cancel order:', result.message);
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+    }
   };
 
   const isOrderCancellable = (status: string) => {
@@ -246,6 +274,8 @@ export default function OrdersPage() {
                           variant={
                             order.status === "Delivered"
                               ? "default"
+                              : order.status === "Cancelled"
+                              ? "destructive"
                               : "secondary"
                           }
                         >
@@ -267,7 +297,7 @@ export default function OrdersPage() {
                             className="text-red-500 hover:text-red-700 hover:bg-red-50"
                             onClick={() => handleCancelClick(order)}
                           >
-                            <Trash className="h-4 w-4" />
+                            <X className="h-4 w-4" />
                           </Button>
                         )}
                       </TableCell>
@@ -300,8 +330,8 @@ export default function OrdersPage() {
           <DialogHeader>
             <DialogTitle>Cancel Order</DialogTitle>
             <DialogDescription>
-              Are you sure you want to cancel order {orderToCancel?.id}? Please
-              provide a reason.
+              Are you sure you want to cancel order #{orderToCancel?._id.slice(-6)}? Please
+              provide a reason for cancellation.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -343,10 +373,16 @@ export default function OrdersPage() {
               {selectedOrder
                 ? new Date(selectedOrder.createdAt).toLocaleDateString()
                 : ""}
+              {selectedOrder?.status && (
+                <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  {selectedOrder.status}
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
           {selectedOrder && (
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h3 className="font-semibold mb-3 text-lg flex items-center gap-2">
@@ -360,6 +396,15 @@ export default function OrdersPage() {
                         {selectedOrder.shippingAddress}
                       </p>
                     </div>
+                    {selectedOrder.status === 'Cancelled' && selectedOrder.cancellationReason && (
+                      <div className="flex items-start gap-3">
+                        <X className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">Cancellation Reason</p>
+                          <p className="text-muted-foreground">{selectedOrder.cancellationReason}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -368,13 +413,23 @@ export default function OrdersPage() {
                     Payment Summary
                   </h3>
                   <div className="space-y-2 text-sm p-4 bg-secondary rounded-lg">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal:</span>
-                      <span>₹{selectedOrder.totalAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Shipping:</span>
-                      <span>Free</span>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span>₹{selectedOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Shipping</span>
+                        <span>₹{(typeof selectedOrder.shippingAmount === 'number' ? selectedOrder.shippingAmount : 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">GST (18%)</span>
+                        <span>₹{(typeof selectedOrder.gstAmount === 'number' ? selectedOrder.gstAmount : 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Platform Fee (10%)</span>
+                        <span>₹{(typeof selectedOrder.platformFeeAmount === 'number' ? selectedOrder.platformFeeAmount : 0).toFixed(2)}</span>
+                      </div>
                     </div>
                     <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
                       <span>Total:</span>

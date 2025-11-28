@@ -141,7 +141,7 @@ export const glowvitaApi = createApi({
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
     "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
-    "Billing", "VendorServices", "DoctorWishlist", "DoctorReviews", "Product"
+    "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder","DoctorReviews",
   ],
 
   endpoints: (builder) => ({
@@ -1282,6 +1282,12 @@ export const glowvitaApi = createApi({
       invalidatesTags: ['CrmOrder'],
     }),
 
+    // Online Customer Orders
+    getCrmClientOrders: builder.query({
+      query: () => ({ url: '/crm/client-orders' }),
+      providesTags: ['CrmClientOrder'],
+    }),
+
     // shipping charge endpoints
     getShippingConfig: builder.query({
       query: () => ({ url: "/crm/shipping", method: "GET" }),
@@ -1999,6 +2005,7 @@ export const {
   useGetCrmOrdersQuery,
   useCreateCrmOrderMutation,
   useUpdateCrmOrderMutation,
+  useGetCrmClientOrdersQuery,
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
   useGetPublicShippingConfigQuery,

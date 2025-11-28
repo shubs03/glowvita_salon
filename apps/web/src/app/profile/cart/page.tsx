@@ -159,6 +159,9 @@ export default function CartPage() {
 
   const handleCheckout = () => {
     if (cartItems.length > 0) {
+      // Store the actual cart items for checkout
+      localStorage.setItem('cartItems', JSON.stringify(cartItems));
+      
       // Create a virtual product that represents the entire cart
       // This ensures the subtotal calculation matches between cart and checkout pages
       const checkoutProduct = {
@@ -170,6 +173,12 @@ export default function CartPage() {
         vendorId: (cartItems[0] as any).vendorId || (cartItems[0] as any).supplierId || (cartItems[0] as any).vendor_id || null,
         vendorName: (cartItems[0] as any).supplierName || (cartItems[0] as any).vendorName || "Multiple Vendors",
       };
+      
+      // Ensure vendorId is valid
+      if (!checkoutProduct.vendorId) {
+        toast.error("Vendor information is missing. Cannot proceed to checkout.");
+        return;
+      }
       
       // Log for debugging
       console.log('Checkout product data:', checkoutProduct);
