@@ -34,7 +34,6 @@ export default function RootLayout({
     '/return-policy',
     '/terms-and-conditions',
     '/product-details/[id]',
-    '/salon-details/[id]',
   ];
 
   const isMarketingPage = marketingPages.some(page => {
