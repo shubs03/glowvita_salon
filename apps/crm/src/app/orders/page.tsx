@@ -42,6 +42,7 @@ type Order = {
   createdAt: string;
   trackingNumber?: string;
   courier?: string;
+  cancellationReason?: string; // Add cancellation reason field
   // For ClientOrder specific fields
   userId?: string; // To identify online orders
 };
@@ -105,6 +106,7 @@ export default function OrdersPage() {
         createdAt: clientOrder.createdAt || new Date().toISOString(),
         trackingNumber: clientOrder.trackingNumber,
         courier: undefined,
+        cancellationReason: clientOrder.cancellationReason, // Add cancellation reason
         userId: clientOrder.userId // To identify as online order
       };
     });
@@ -811,6 +813,19 @@ export default function OrdersPage() {
                         <p className="text-sm leading-relaxed">{selectedOrder?.shippingAddress || 'No shipping address provided'}</p>
                       </div>
                     </div>
+
+                    {/* Cancellation Reason */}
+                    {selectedOrder?.status === 'Cancelled' && selectedOrder?.cancellationReason && (
+                      <div className="bg-gradient-to-r from-background to-muted/20 rounded-2xl p-6 border border-border/30">
+                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                          <XCircle className="h-5 w-5 text-primary" />
+                          Cancellation Reason
+                        </h3>
+                        <div className="p-4 bg-muted/20 rounded-xl">
+                          <p className="text-sm leading-relaxed">{selectedOrder.cancellationReason}</p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Tracking Information */}
                     {selectedOrder?.trackingNumber && (

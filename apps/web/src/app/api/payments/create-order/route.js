@@ -23,6 +23,7 @@ export async function POST(req) {
 
     console.log('Razorpay instance created successfully');
     console.log('Using Key ID:', process.env.RAZORPAY_KEY_ID);
+    console.log('Using Key Secret:', process.env.RAZORPAY_KEY_SECRET);
 
     const { amount, currency = 'INR', receipt } = await req.json();
     console.log('Request data:', { amount, currency, receipt });
