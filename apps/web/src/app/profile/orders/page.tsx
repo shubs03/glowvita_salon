@@ -389,14 +389,13 @@ export default function OrdersPage() {
                     <User className="h-5 w-5 text-primary" />
                     Customer & Shipping
                   </h3>
-                  <div className="p-4 bg-secondary rounded-lg space-y-3 text-sm">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                  <div className="space-y-3">
+                    <div>
+                      <p className="font-medium">Shipping Address</p>
                       <p className="text-muted-foreground">
                         {selectedOrder.shippingAddress}
                       </p>
                     </div>
-                    {console.log('Checking cancellation reason:', selectedOrder.status, selectedOrder.cancellationReason)}
                     {selectedOrder.status === 'Cancelled' && selectedOrder.cancellationReason && (
                       <div className="flex items-start gap-3">
                         <X className="h-4 w-4 mt-0.5 text-muted-foreground" />

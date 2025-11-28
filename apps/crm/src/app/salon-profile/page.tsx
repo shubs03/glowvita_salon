@@ -2149,25 +2149,28 @@ export default function SalonProfilePage() {
   useEffect(() => {
     if (supplierData) {
       console.log("Supplier data received:", supplierData);
+      // Access the actual supplier data from the response
+      const supplierInfo = supplierData.data || supplierData;
       setLocalSupplier({
-        _id: supplierData._id,
-        firstName: supplierData.firstName || '',
-        lastName: supplierData.lastName || '',
-        shopName: supplierData.shopName || '',
-        description: supplierData.description || '', // Add description field
-        email: supplierData.email || '',
-        mobile: supplierData.mobile || '',
-        country: supplierData.country || '',
-        state: supplierData.state || '',
-        city: supplierData.city || '',
-        pincode: supplierData.pincode || '',
-        address: supplierData.address || '',
-        supplierType: supplierData.supplierType || '',
-        businessRegistrationNo: supplierData.businessRegistrationNo || '',
-        profileImage: supplierData.profileImage || '',
+        _id: supplierInfo._id,
+        firstName: supplierInfo.firstName || '',
+        lastName: supplierInfo.lastName || '',
+        shopName: supplierInfo.shopName || '',
+        description: supplierInfo.description || '', // Add description field
+        email: supplierInfo.email || '',
+        mobile: supplierInfo.mobile || '',
+        country: supplierInfo.country || '',
+        state: supplierInfo.state || '',
+        city: supplierInfo.city || '',
+        pincode: supplierInfo.pincode || '',
+        address: supplierInfo.address || '',
+        supplierType: supplierInfo.supplierType || '',
+        businessRegistrationNo: supplierInfo.businessRegistrationNo || '',
+        profileImage: supplierInfo.profileImage || '',
         type: 'supplier',
-        referralCode: supplierData.referralCode || '',
-        licenseFiles: supplierData.licenseFiles || [],
+        subscription: supplierInfo.subscription || undefined,
+        referralCode: supplierInfo.referralCode || '',
+        licenseFiles: supplierInfo.licenseFiles || [],
       });
     }
   }, [supplierData]);
