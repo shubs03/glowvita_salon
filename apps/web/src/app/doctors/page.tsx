@@ -19,6 +19,7 @@ import {
   Star,
   Building,
   User,
+  Search,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -235,11 +236,11 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
               <div className="flex items-center gap-1.5">
                 <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-green-400 to-green-600 rounded-full transition-all duration-300"
+                    className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-300"
                     style={{ width: `${doctor.patientSatisfaction}%` }}
                   />
                 </div>
-                <span className="text-[10px] font-semibold text-green-600">
+                <span className="text-[10px] font-semibold text-blue-600">
                   {doctor.patientSatisfaction}%
                 </span>
               </div>
@@ -302,9 +303,22 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
 
 export default function DoctorsPage() {
   const { data: doctorsData, isLoading, isError } = useGetPublicDoctorsQuery(undefined);
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
   console.log("Doctors data on doctors page : ", doctorsData)
 
   const doctors: Doctor[] = doctorsData ? doctorsData.map(transformDoctor) : [];
+
+  const handleMyAppointmentsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      toast.error("Please login to view your appointments");
+      router.push("/client-login");
+    } else {
+      router.push("/profile/appointments");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
@@ -353,7 +367,9 @@ export default function DoctorsPage() {
       </section>
 
       {/* Specialities Section */}
-      <SpecialitiesSectionWithData />
+      <div id="categories">
+        <SpecialitiesSectionWithData />
+      </div>
 
       {/* Blog Section */}
       <BlogSectionWithData />
@@ -374,28 +390,9 @@ export default function DoctorsPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Book Appointment */}
-            <Link href="/doctors/appointments" className="group block">
-              <div className="relative p-6 rounded-md transition-all duration-300 hover:bg-primary/5 hover:-translate-y-1 bg-gradient-to-br from-primary/5 to-primary/2">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 bg-primary/15 rounded-md flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-primary group-hover:text-white group-hover:scale-110">
-                    <Calendar className="h-6 w-6 text-primary group-hover:text-white" />
-                  </div>
-                  <h3 className="text-base font-bold text-foreground mb-2 group-hover:text-primary transition-colors">
-                    Book Appointment
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Schedule with your preferred doctor
-                  </p>
-
-                  {/* Subtle underline animation */}
-                  <div className="h-0.5 w-0 bg-primary mt-3 transition-all duration-300 rounded-full group-hover:w-8" />
-                </div>
-              </div>
-            </Link>
 
             {/* Browse Specialties */}
-            <Link href="/doctors/specialties" className="group block">
+            <Link href="#categories" className="group block">
               <div className="relative p-6 rounded-md transition-all duration-300 hover:bg-primary/5 hover:-translate-y-1 bg-gradient-to-br from-primary/5 to-primary/2">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-12 h-12 bg-primary/15 rounded-md flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-primary group-hover:text-white group-hover:scale-110">
@@ -434,45 +431,46 @@ export default function DoctorsPage() {
               </div>
             </Link>
 
-            {/* Check Schedule */}
-            <Link href="/doctors/schedule" className="group block">
+            {/* Find Doctor */}
+            <Link href="/doctors/find-doctor" className="group block">
               <div className="relative p-6 rounded-md transition-all duration-300 hover:bg-blue-500/5 hover:-translate-y-1 bg-gradient-to-br from-blue-500/5 to-blue-500/2">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-12 h-12 bg-blue-500/15 rounded-md flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-blue-500 group-hover:text-white group-hover:scale-110">
-                    <Clock className="h-6 w-6 text-blue-500 group-hover:text-white" />
+                    <Search className="h-6 w-6 text-blue-500 group-hover:text-white" />
                   </div>
                   <h3 className="text-base font-bold text-foreground mb-2 group-hover:text-blue-600 transition-colors">
-                    Check Schedule
+                    Find Doctor
                   </h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    View doctor availability
+                    Search by symptoms or conditions
+                  </p>
+
+                  {/* Subtle underline animation */}
+                  <div className="h-0.5 w-0 bg-blue-500o mt-3 transition-all duration-300 rounded-full group-hover:w-8" />
+                </div>
+              </div>
+            </Link>
+
+            {/* My Appointments */}
+            <button onClick={handleMyAppointmentsClick} className="group block w-full text-left">
+              <div className="relative p-6 rounded-md transition-all duration-300 hover:bg-blue-500/5 hover:-translate-y-1 bg-gradient-to-br from-blue-500/5 to-blue-500/2">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 bg-blue-500/15 rounded-md flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-blue-500 group-hover:text-white group-hover:scale-110">
+                    <Calendar className="h-6 w-6 text-blue-500 group-hover:text-white" />
+                  </div>
+                  <h3 className="text-base font-bold text-foreground mb-2 group-hover:text-blue-600 transition-colors">
+                    My Appointments
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    View your upcoming appointments
                   </p>
 
                   {/* Subtle underline animation */}
                   <div className="h-0.5 w-0 bg-blue-500 mt-3 transition-all duration-300 rounded-full group-hover:w-8" />
                 </div>
               </div>
-            </Link>
-
-            {/* Physical Consultation */}
-            <Link href="/doctors/physical-consultation" className="group block">
-              <div className="relative p-6 rounded-md transition-all duration-300 hover:bg-green-500/5 hover:-translate-y-1 bg-gradient-to-br from-green-500/5 to-green-500/2">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 bg-green-500/15 rounded-md flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-green-500 group-hover:text-white group-hover:scale-110">
-                    <MapPin className="h-6 w-6 text-green-500 group-hover:text-white" />
-                  </div>
-                  <h3 className="text-base font-bold text-foreground mb-2 group-hover:text-green-600 transition-colors">
-                    Physical Consultation
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Book in-person appointment
-                  </p>
-
-                  {/* Subtle underline animation */}
-                  <div className="h-0.5 w-0 bg-green-500 mt-3 transition-all duration-300 rounded-full group-hover:w-8" />
-                </div>
-              </div>
-            </Link>
+            </button>
+            
           </div>
         </div>
       </section>
