@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -7,7 +6,7 @@ import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown, Droplets, Leaf, FlaskConical, Loader2, PackageCheck, AlertCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -33,6 +32,8 @@ export default function ProductDetailsPage() {
   const [isBuyingNow, setIsBuyingNow] = useState(false);
   const [questionText, setQuestionText] = useState('');
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isWishlistLoading, setIsWishlistLoading] = useState(true);
   
   // Review states
   const [reviewRating, setReviewRating] = useState(0);
@@ -63,6 +64,75 @@ export default function ProductDetailsPage() {
   const product = productResponse?.product;
   const availableStock = product?.stock || 0;
   const isOutOfStock = availableStock === 0;
+
+  // Check if product is in wishlist
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (isAuthenticated && user?._id && id) {
+        try {
+          const response = await fetch(`/api/client/wishlist/${id}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            setIsWishlisted(data.isInWishlist);
+          }
+        } catch (error) {
+          console.error('Error checking wishlist status:', error);
+        }
+      }
+      setIsWishlistLoading(false);
+    };
+
+    checkWishlistStatus();
+  }, [id, isAuthenticated, user]);
+
+  // Handle wishlist toggle
+  const handleWishlistToggle = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to add items to wishlist");
+      router.push("/client-login");
+      return;
+    }
+
+    try {
+      setIsWishlistLoading(true);
+      const url = isWishlisted ? `/api/client/wishlist/${id}/remove` : '/api/client/wishlist';
+      const method = isWishlisted ? 'DELETE' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ productId: id }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsWishlisted(!isWishlisted);
+        toast.success(isWishlisted ? "Removed from Wishlist" : "Added to Wishlist", {
+          description: isWishlisted ? "Product removed from your wishlist" : "Product added to your wishlist"
+        });
+      } else {
+        const errorData = await response.json();
+        toast.error("Wishlist Update Failed", {
+          description: errorData.message || "Failed to update wishlist"
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update wishlist:", error);
+      toast.error("Wishlist Update Failed", {
+        description: "Failed to update wishlist. Please try again."
+      });
+    } finally {
+      setIsWishlistLoading(false);
+    }
+  };
 
   // Update main image when product loads
   React.useEffect(() => {
@@ -325,7 +395,7 @@ export default function ProductDetailsPage() {
       }).unwrap();
 
       toast.success("Review submitted successfully!", {
-        description: "Thank you for your feedback!",
+        description: "Your review will be visible in your profile after approval by the product owner.",
       });
       
       // Reset form
@@ -537,7 +607,15 @@ export default function ProductDetailsPage() {
                   'Add to Cart'
                 )}
               </Button>
-              <Button variant="outline" size="icon" className="h-12 w-12"><Heart className="h-6 w-6" /></Button>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-12 w-12"
+                onClick={handleWishlistToggle}
+                disabled={isWishlistLoading}
+              >
+                <Heart className={`h-5 w-5 ${isWishlisted ? "fill-current text-blue-500" : ""}`} />
+              </Button>
             </div>
 
             <div className="space-y-3 pt-4 border-t">

@@ -11,7 +11,7 @@ import Vendor from '@repo/lib/models/Vendor/Vendor.model';
 // Connect to database
 await dbConnect();
 
-// GET - Fetch user reviews
+// GET - Fetch user reviews (only approved ones)
 export async function GET(req) {
   try {
     // Get token from cookies
@@ -45,8 +45,11 @@ export async function GET(req) {
       );
     }
     
-    // Fetch user's reviews
-    const reviews = await Review.find({ userId: user._id })
+    // Fetch user's approved reviews only
+    const reviews = await Review.find({ 
+      userId: user._id,
+      isApproved: true  // Only fetch approved reviews
+    })
       .sort({ createdAt: -1 })
       .lean();
     

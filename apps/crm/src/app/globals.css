@@ -14,6 +14,31 @@
       @apply border-white/10;
   }
 
+  /* Ensure native inputs respect dark theme */
+  .dark input[type="text"],
+  .dark input[type="email"],
+  .dark input[type="tel"],
+  .dark input[type="number"],
+  .dark input[type="date"],
+  .dark input[type="time"],
+  .dark textarea,
+  .dark select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--border));
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Force native date/time pickers into dark appearance where supported */
+  .dark input[type="date"],
+  .dark input[type="time"] {
+    color-scheme: dark;
+  }
+
   .dark .bg-secondary {
     @apply bg-slate-900;
   }
