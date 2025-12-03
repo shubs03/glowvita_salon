@@ -150,7 +150,9 @@ export default function ReviewsPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">No reviews found.</p>
+              <p className="text-center text-muted-foreground py-8">
+                No approved reviews found. Reviews you submit will appear here after approval by the product owners.
+              </p>
             )}
             {filteredReviews.length > itemsPerPage && (
               <Pagination

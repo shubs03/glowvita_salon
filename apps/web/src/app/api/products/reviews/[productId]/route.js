@@ -1,6 +1,8 @@
 import _db from "@repo/lib/db";
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
+import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import { verifyJwt } from "@repo/lib/auth";
 import { cookies } from 'next/headers';
 
@@ -31,7 +33,7 @@ export const GET = async (request, { params }) => {
       }, { status: 400 });
     }
 
-    // Get all reviews for the product
+    // Get all approved reviews for the product
     const reviews = await ReviewModel.find({
       entityId: productId,
       entityType: 'product',
@@ -47,7 +49,6 @@ export const GET = async (request, { params }) => {
         'Access-Control-Allow-Origin': '*',
       }
     });
-
   } catch (error) {
     console.error("Error fetching product reviews:", error);
     return Response.json({
@@ -103,28 +104,11 @@ export const POST = async (request) => {
       }, { status: 400 });
     }
 
-    if (comment.trim().length < 10) {
-      return Response.json({
-        success: false,
-        message: "Review must be at least 10 characters long"
-      }, { status: 400 });
-    }
-
-    // Check if product exists
-    const product = await ProductModel.findById(productId);
-    
-    if (!product) {
-      return Response.json({
-        success: false,
-        message: "Product not found"
-      }, { status: 404 });
-    }
-
     // Check if user has already reviewed this product
     const existingReview = await ReviewModel.findOne({
       userId: payload.userId,
       entityId: productId,
-      entityType: 'product',
+      entityType: 'product'
     });
 
     if (existingReview) {
@@ -134,7 +118,16 @@ export const POST = async (request) => {
       }, { status: 400 });
     }
 
-    // Create new review
+    // Get the product to identify the owner
+    const product = await ProductModel.findById(productId);
+    if (!product) {
+      return Response.json({
+        success: false,
+        message: "Product not found"
+      }, { status: 404 });
+    }
+
+    // Create new review (initially not approved)
     const newReview = await ReviewModel.create({
       userId: payload.userId,
       userName: payload.name || payload.firstName || 'Anonymous',
@@ -142,11 +135,12 @@ export const POST = async (request) => {
       entityType: 'product',
       rating: rating,
       comment: comment.trim(),
+      // isApproved defaults to false
     });
 
     return Response.json({
       success: true,
-      message: "Review submitted successfully. Thank you for your feedback!",
+      message: "Review submitted successfully. It will be visible after approval by the product owner.",
       review: newReview,
     }, {
       status: 201,

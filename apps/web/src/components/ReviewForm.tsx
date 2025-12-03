@@ -89,7 +89,7 @@ export function ReviewForm({ entityId, entityType, onSubmitSuccess }: ReviewForm
       }
 
       toast.success("Review submitted successfully!", {
-        description: "Your review will be visible after approval"
+        description: "Your review will be visible after approval by the product owner."
       });
 
       // Reset form

@@ -78,7 +78,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
         <link href='https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css' rel='stylesheet' />
       </head>
-      <body>
+      <body className="bg-background text-foreground">
         <StoreProvider>
           <Toaster richColors />
           <ThemeProvider

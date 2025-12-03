@@ -1,6 +1,7 @@
 import _db from "@repo/lib/db";
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import VendorModel from "@repo/lib/models/Vendor.model";
+import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 
 await _db();
 
@@ -30,13 +31,8 @@ export const GET = async (request, { params }) => {
     }
 
     // Get product by ID
-    const product = await ProductModel.findById(id)
-      .populate({
-        path: 'vendorId',
-        select: 'businessName firstName lastName status city state',
-        match: { status: 'Approved' }
-      });
-
+    const product = await ProductModel.findById(id);
+    
     if (!product) {
       return Response.json({
         success: false,
@@ -44,8 +40,26 @@ export const GET = async (request, { params }) => {
       }, { status: 404 });
     }
 
-    // Check if product is approved and vendor exists
-    if (product.status !== 'approved' || !product.vendorId) {
+    // Check if product is approved
+    if (product.status !== 'approved') {
+      return Response.json({
+        success: false,
+        message: "Product not available"
+      }, { status: 404 });
+    }
+
+    // Populate vendor/supplier based on origin
+    let vendorData = null;
+    if (product.origin === 'Supplier') {
+      // For supplier products, populate with Supplier model
+      vendorData = await SupplierModel.findById(product.vendorId).select('shopName firstName lastName status city state');
+    } else {
+      // For vendor products, populate with Vendor model
+      vendorData = await VendorModel.findById(product.vendorId).select('businessName firstName lastName status city state');
+    }
+
+    // Check if vendor/supplier exists and is approved
+    if (!vendorData || vendorData.status !== 'Approved') {
       return Response.json({
         success: false,
         message: "Product not available"
@@ -62,9 +76,9 @@ export const GET = async (request, { params }) => {
       images: product.productImages && product.productImages.length > 0 
         ? product.productImages 
         : ['https://placehold.co/800x800/e2e8f0/64748b?text=Product'],
-      vendorId: product.vendorId?._id,
-      vendorName: product.vendorId?.businessName || 'Unknown Vendor',
-      vendorLocation: `${product.vendorId?.city || ''}, ${product.vendorId?.state || ''}`.trim(),
+      vendorId: vendorData._id,
+      vendorName: product.origin === 'Supplier' ? vendorData.shopName : vendorData.businessName || 'Unknown Vendor',
+      vendorLocation: `${vendorData.city || ''}, ${vendorData.state || ''}`.trim(),
       category: product.category || 'Beauty Products',
       stock: product.stock,
       isActive: product.isActive,
