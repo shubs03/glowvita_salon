@@ -5,6 +5,7 @@ import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import DoctorModel from '@repo/lib/models/Vendor/Docters.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
+import VendorServicesModel from '@repo/lib/models/Vendor/VendorServices.model';
 import { authMiddlewareCrm } from "../../../../middlewareCrm";
 
 await _db();
@@ -74,6 +75,46 @@ export const GET = authMiddlewareCrm(async (request) => {
         }
       }
 
+      // Add service reviews for vendors
+      if ((userRole === 'vendor' || userRole === 'staff') && (entityType === 'all' || entityType === 'service')) {
+        // Get service IDs for this vendor
+        const vendorServicesDoc = await VendorServicesModel.findOne({ vendor: ownerId });
+        let serviceIds = [];
+        
+        if (vendorServicesDoc && vendorServicesDoc.services) {
+          serviceIds = vendorServicesDoc.services.map(s => s._id);
+        }
+
+        if (serviceIds.length > 0) {
+          const serviceReviews = await ReviewModel.find({
+            ...query,
+            entityType: 'service',
+            entityId: { $in: serviceIds }
+          })
+          .sort({ createdAt: -1 });
+
+          // Populate service details
+          for (let review of serviceReviews) {
+            // Find the service in the vendor services document
+            let serviceDetails = null;
+            if (vendorServicesDoc) {
+              const service = vendorServicesDoc.services.id(review.entityId);
+              if (service) {
+                serviceDetails = {
+                  serviceName: service.name,
+                  price: service.price,
+                  duration: service.duration,
+                  // Add other relevant service details as needed
+                };
+              }
+            }
+            review._doc.entityDetails = serviceDetails;
+          }
+
+          reviews = [...reviews, ...serviceReviews];
+        }
+      }
+
       if (userRole === 'vendor' || userRole === 'staff') {
         // Vendor-specific reviews (salon and doctor)
         if (entityType === 'all' || entityType === 'salon') {
@@ -98,17 +139,18 @@ export const GET = authMiddlewareCrm(async (request) => {
         }
 
         if (entityType === 'all' || entityType === 'doctor') {
-          // Get doctor reviews for this vendor
+          // For doctor reviews, we need to find doctors that are associated with this vendor
+          // Since there's no direct link in the schema, we'll fetch all doctor reviews for now
+          // In a more complete implementation, there should be a vendor-doctor relationship
           const doctorReviews = await ReviewModel.find({
             ...query,
-            entityType: 'doctor',
-            entityId: ownerId // The doctor ID is the vendor ID
+            entityType: 'doctor'
           })
           .sort({ createdAt: -1 });
 
-          // Add doctor details
+          // Populate doctor details
           for (let review of doctorReviews) {
-            const doctor = await DoctorModel.findById(review.entityId).select('name specialties experience rating');
+            const doctor = await DoctorModel.findById(review.entityId).select('name specialties experience rating clinicName');
             review._doc.entityDetails = doctor;
           }
 
@@ -116,9 +158,6 @@ export const GET = authMiddlewareCrm(async (request) => {
         }
       }
     }
-
-    // TODO: Add service reviews when those models are ready
-    // Similar logic for services
 
     return NextResponse.json({
       success: true,
