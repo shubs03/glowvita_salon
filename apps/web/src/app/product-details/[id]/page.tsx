@@ -325,7 +325,7 @@ export default function ProductDetailsPage() {
       }).unwrap();
 
       toast.success("Review submitted successfully!", {
-        description: "Thank you for your feedback!",
+        description: "Your review will be visible in your profile after approval by the product owner.",
       });
       
       // Reset form
