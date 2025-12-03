@@ -188,7 +188,7 @@ export default function AppointmentsPage() {
   const handleOpenPaymentModal = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     const totalAmount = (appointment as any).finalAmount || appointment.totalAmount || 0;
-    const paidAmount = appointment.payment?.paid || 0;
+    const paidAmount = (appointment as any).amountPaid || appointment.payment?.paid || 0;
     const remainingAmount = Math.max(0, totalAmount - paidAmount);
     
     setPaymentData({
@@ -344,6 +344,7 @@ export default function AppointmentsPage() {
                         <TableHead>Date & Time</TableHead>
                         <TableHead>Duration</TableHead>
                         <TableHead>Amount</TableHead>
+                        <TableHead>Partial Payment</TableHead>
                         <TableHead>Payment Method</TableHead>
                         <TableHead>Payment Status</TableHead>
                         <TableHead>Status</TableHead>
@@ -353,7 +354,7 @@ export default function AppointmentsPage() {
                     <TableBody>
                       {isLoading ? (
                         <TableRow>
-                          <TableCell colSpan={10} className="text-center py-8">
+                          <TableCell colSpan={11} className="text-center py-8">
                             <div className="flex items-center justify-center gap-2">
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                               Loading appointments...
@@ -362,7 +363,7 @@ export default function AppointmentsPage() {
                         </TableRow>
                       ) : currentItems.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                             {searchTerm || statusFilter !== 'all' ? 'No appointments found matching your criteria' : 'No appointments scheduled'}
                           </TableCell>
                         </TableRow>
@@ -399,6 +400,16 @@ export default function AppointmentsPage() {
                             </TableCell>
                             <TableCell>{appointment.duration} min</TableCell>
                             <TableCell>₹{totalAmount.toFixed(2)}</TableCell>
+                            <TableCell>
+                              {paidAmount > 0 && remainingAmount > 0 ? (
+                                <div className="flex flex-col text-xs">
+                                  <span className="text-green-700 font-medium">Paid: ₹{paidAmount.toFixed(2)}</span>
+                                  <span className="text-orange-700 font-medium">Remain: ₹{remainingAmount.toFixed(2)}</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <span className="text-sm">
                                 {(appointment as any).paymentMethod || appointment.payment?.paymentMethod || 'N/A'}
@@ -639,11 +650,11 @@ export default function AppointmentsPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Already Paid:</span>
-                  <span className="font-semibold text-green-600">₹{(selectedAppointment.payment?.paid || 0).toFixed(2)}</span>
+                  <span className="font-semibold text-green-600">₹{(((selectedAppointment as any).amountPaid || selectedAppointment.payment?.paid || 0)).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm pt-2 border-t">
                   <span className="font-medium">Remaining:</span>
-                  <span className="font-bold text-orange-600">₹{(Math.max(0, ((selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0) - (selectedAppointment.payment?.paid || 0))).toFixed(2)}</span>
+                  <span className="font-bold text-orange-600">₹{(Math.max(0, ((selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0) - (((selectedAppointment as any).amountPaid || selectedAppointment.payment?.paid || 0)))).toFixed(2)}</span>
                 </div>
               </div>
 

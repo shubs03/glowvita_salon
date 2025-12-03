@@ -43,6 +43,16 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
     ).join(' ');
   };
 
+  // Compute payment-related values consistently with list and modal
+  const totalAmount = (appointment as any).finalAmount ?? appointment.totalAmount ?? appointment.amount ?? 0;
+  const paidAmount = (appointment as any).amountPaid ?? (appointment as any).payment?.paid ?? 0;
+  const remainingAmount = Math.max(0, Number(totalAmount) - Number(paidAmount));
+  const discountAmount = (appointment as any).discountAmount ?? appointment.discount ?? 0;
+  const serviceTax = (appointment as any).serviceTax ?? 0;
+  const platformFee = (appointment as any).platformFee ?? 0;
+  const paymentMethod = (appointment as any).paymentMethod ?? (appointment as any).payment?.paymentMethod ?? null;
+  const paymentStatus = (appointment as any).paymentStatus ?? (appointment as any).payment?.paymentStatus ?? null;
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-start">
@@ -111,18 +121,44 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
           <CardContent>
             <div className="flex justify-between text-sm">
               <span>Amount:</span>
-              <span>₹{appointment.amount?.toFixed(2)}</span>
+              <span>₹{Number(appointment.amount ?? totalAmount).toFixed(2)}</span>
             </div>
-            {appointment.discount > 0 && (
+            {Number(discountAmount) > 0 && (
               <div className="flex justify-between text-sm text-red-600">
                 <span>Discount:</span>
-                <span>-₹{appointment.discount?.toFixed(2)}</span>
+                <span>-₹{Number(discountAmount).toFixed(2)}</span>
+              </div>
+            )}
+            {Number(serviceTax) > 0 && (
+              <div className="flex justify-between text-sm text-gray-700">
+                <span>Service Tax:</span>
+                <span>₹{Number(serviceTax).toFixed(2)}</span>
+              </div>
+            )}
+            {Number(platformFee) > 0 && (
+              <div className="flex justify-between text-sm text-gray-700">
+                <span>Platform Fee:</span>
+                <span>₹{Number(platformFee).toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between font-medium mt-1 pt-2 border-t">
               <span>Total:</span>
-              <span>₹{appointment.totalAmount?.toFixed(2)}</span>
+              <span>₹{Number(totalAmount).toFixed(2)}</span>
             </div>
+            <div className="flex justify-between text-sm mt-2">
+              <span>Already Paid:</span>
+              <span className="text-green-700 font-medium">₹{Number(paidAmount).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm mt-1">
+              <span>Remaining:</span>
+              <span className="text-orange-700 font-semibold">₹{Number(remainingAmount).toFixed(2)}</span>
+            </div>
+            {(paymentMethod || paymentStatus) && (
+              <div className="flex items-center justify-between text-xs text-gray-600 mt-3">
+                <span>Method: {paymentMethod ?? '—'}</span>
+                <span>Status: {paymentStatus ? String(paymentStatus).toUpperCase() : '—'}</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 
