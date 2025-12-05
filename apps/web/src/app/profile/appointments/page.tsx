@@ -59,7 +59,6 @@ interface AppointmentCardProps {
 }
 
 const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardProps) => {
-    console.log("AppointmentCard received appointment:", appointment);
     const statusConfig = {
         Completed: { icon: CheckCircle, color: 'text-green-500' },
         Confirmed: { icon: Calendar, color: 'text-blue-500' },

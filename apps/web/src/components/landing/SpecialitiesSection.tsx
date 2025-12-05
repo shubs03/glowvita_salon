@@ -49,13 +49,14 @@ function SpecialtyItem({ specialty }: { specialty: Specialty }) {
   
   return (
     <Link 
-      href={`/specialties/${specialty.slug}`}
+      href={`/doctors/find-doctor?specialty=${encodeURIComponent(specialty.name)}`}
       className="group relative block"
     >
       <div className={cn(
         "flex flex-col items-center text-center p-6 rounded-2xl transition-all duration-300",
         "hover:bg-primary/5 hover:scale-105 cursor-pointer",
-        "transform-gpu will-change-transform"
+        "transform-gpu will-change-transform",
+        "border border-transparent hover:border-primary/20"
       )}>
         {/* Icon */}
         <div className={cn(
@@ -85,7 +86,7 @@ function SpecialtyItem({ specialty }: { specialty: Specialty }) {
 
 export function SpecialitiesSection({ specialties }: SpecialitiesProps) {
   return (
-    <section className="py-20 bg-gradient-to-b from-background to-muted/20">
+    <section id="categories" className="py-20 bg-gradient-to-b from-background to-muted/20">
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -113,7 +114,7 @@ export function SpecialitiesSection({ specialties }: SpecialitiesProps) {
             Can't find your specialty? Browse our complete directory
           </p>
           <Link 
-            href="/specialties" 
+            href="/doctors/find-doctor" 
             className={cn(
               "inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground",
               "rounded-md font-medium transition-all duration-300 hover:bg-primary/90 hover:shadow-md"

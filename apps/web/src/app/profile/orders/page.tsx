@@ -63,6 +63,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   image: string;
+  origin?: string;
 }
 
 interface Order {
@@ -81,7 +82,7 @@ interface Order {
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
-  vendorId?: string; // Add vendorId to the interface
+  vendorId?: string;
   cancellationReason?: string;
 }
 
@@ -95,6 +96,8 @@ export default function OrdersPage() {
     skip: !user,
   });
 
+  console.log("Orders Data on orders page : ", ordersData)
+
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
@@ -102,23 +105,49 @@ export default function OrdersPage() {
   const [cancellationReason, setCancellationReason] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
-  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [originFilter, setOriginFilter] = useState("all"); // Origin filter
+  const [dateFromFilter, setDateFromFilter] = useState(""); // Date from filter
+  const [dateToFilter, setDateToFilter] = useState(""); // Date to filter
+  const [itemsCountFilter, setItemsCountFilter] = useState(""); // Items count filter
 
   const orderHistory: Order[] = ordersData?.data || [];
 
   const filteredOrders = useMemo(() => {
     return orderHistory.filter((order) => {
-      const orderId = order?.id?.toString().toLowerCase() || "";
-      const term = searchTerm?.toLowerCase() || "";
       const status = order?.status || "";
+      // Determine the origin of items in the order
+            const getOrderOrigin = (items: OrderItem[]) => {
+              const origins = items.map(item => item.origin || 'Vendor');
+              // Use filter to get unique values instead of Set
+              const uniqueOrigins = origins.filter((value, index, self) => self.indexOf(value) === index);
+              
+              if (uniqueOrigins.length === 1) {
+                return uniqueOrigins[0] === 'Supplier' ? 'Supplier' : 'Salon';
+              } else {
+                return 'Mixed';
+              }
+            };
+            
+            const origin = getOrderOrigin(order.items);
+      const date = new Date(order?.createdAt);
+      const itemsCount = order?.items?.length || 0;
+
+      const isStatusMatch = statusFilter === "all" || status === statusFilter;
+      const isOriginMatch = originFilter === "all" || origin === originFilter;
+      const isDateFromMatch = !dateFromFilter || date >= new Date(dateFromFilter);
+      const isDateToMatch = !dateToFilter || date <= new Date(dateToFilter);
+      const isItemsCountMatch = !itemsCountFilter || itemsCount === parseInt(itemsCountFilter);
 
       return (
-        orderId.includes(term) &&
-        (statusFilter === "all" || status === statusFilter)
+        isStatusMatch &&
+        isOriginMatch &&
+        isDateFromMatch &&
+        isDateToMatch &&
+        isItemsCountMatch
       );
     });
-  }, [orderHistory, searchTerm, statusFilter]);
+  }, [orderHistory, statusFilter, originFilter, dateFromFilter, dateToFilter, itemsCountFilter]);
 
   const handleCancelClick = (order: Order) => {
     setOrderToCancel(order);
@@ -203,29 +232,51 @@ export default function OrdersPage() {
               <CardTitle>My Orders</CardTitle>
               <CardDescription>Your product order history.</CardDescription>
             </div>
-            <div className="flex gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search by Order ID..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+            <div className="flex flex-wrap gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[150px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="Delivered">Delivered</SelectItem>
                   <SelectItem value="Processing">Processing</SelectItem>
                   <SelectItem value="Cancelled">Cancelled</SelectItem>
                   <SelectItem value="Pending">Pending</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={originFilter} onValueChange={setOriginFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Origin" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Origins</SelectItem>
+                  <SelectItem value="Salon">Salon</SelectItem>
+                  <SelectItem value="Supplier">Supplier</SelectItem>
+                  <SelectItem value="Mixed">Mixed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                type="date"
+                placeholder="From date"
+                className="w-[150px]"
+                value={dateFromFilter}
+                onChange={(e) => setDateFromFilter(e.target.value)}
+              />
+              <Input
+                type="date"
+                placeholder="To date"
+                className="w-[150px]"
+                value={dateToFilter}
+                onChange={(e) => setDateToFilter(e.target.value)}
+              />
+              <Input
+                type="number"
+                placeholder="Items count"
+                className="w-[120px]"
+                value={itemsCountFilter}
+                onChange={(e) => setItemsCountFilter(e.target.value)}
+              />
             </div>
           </div>
         </CardHeader>
@@ -237,6 +288,8 @@ export default function OrdersPage() {
                   <TableHead>Order ID</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Items</TableHead>
+                  <TableHead>Origin</TableHead>
+                  <TableHead>Address</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Action</TableHead>
@@ -245,67 +298,109 @@ export default function OrdersPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       Loading orders...
                     </TableCell>
                   </TableRow>
                 ) : isError ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={8}
                       className="text-center py-8 text-destructive"
                     >
                       Failed to load orders.
                     </TableCell>
                   </TableRow>
                 ) : currentItems.length > 0 ? (
-                  currentItems.map((order) => (
-                    <TableRow key={order._id}>
-                      <TableCell className="font-mono">
-                        {order._id.slice(-6)}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>{order.items.length}</TableCell>
-                      <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            order.status === "Delivered"
-                              ? "default"
-                              : order.status === "Cancelled"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                        >
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewClick(order)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {isOrderCancellable(order.status) && (
+                  currentItems.map((order) => {
+                    // Determine the origin of items in the order
+                    const getOrderOrigin = (items: OrderItem[]) => {
+                      const origins = items.map(item => item.origin || 'Vendor');
+                      // Use filter to get unique values instead of Set
+                      const uniqueOrigins = origins.filter((value, index, self) => self.indexOf(value) === index);
+                      
+                      if (uniqueOrigins.length === 1) {
+                        return uniqueOrigins[0] === 'Supplier' ? 'Supplier' : 'Salon';
+                      } else {
+                        return 'Mixed';
+                      }
+                    };
+
+                    const orderOrigin = getOrderOrigin(order.items);
+                    
+                    // Get product names for the order
+                    const productNames = order.items.map(item => item.name).join(', ');
+
+                    return (
+                      <TableRow key={order._id}>
+                        <TableCell className="font-mono">
+                          {order._id.slice(-6)}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span>{order.items.length} items</span>
+                            <span className="text-xs text-muted-foreground line-clamp-2 max-w-[200px]" title={productNames}>
+                              {productNames}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              orderOrigin === 'Supplier' ? 'default' : 
+                              orderOrigin === 'Salon' ? 'secondary' : 'outline'
+                            }
+                          >
+                            {orderOrigin}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="line-clamp-2 text-sm" title={order.shippingAddress}>
+                            {order.shippingAddress}
+                          </div>
+                        </TableCell>
+                        <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              order.status === "Delivered"
+                                ? "default"
+                                : order.status === "Cancelled"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleCancelClick(order)}
+                            onClick={() => handleViewClick(order)}
                           >
-                            <X className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                          {isOrderCancellable(order.status) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleCancelClick(order)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={8} className="text-center py-8">
                       No orders found.
                     </TableCell>
                   </TableRow>
@@ -470,9 +565,20 @@ export default function OrdersPage() {
                       />
                       <div className="flex-grow">
                         <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Qty: {item.quantity}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-sm text-muted-foreground">
+                            Qty: {item.quantity}
+                          </span>
+                          <Badge 
+                            variant={
+                              item.origin === 'Supplier' ? 'default' : 
+                              item.origin === 'Vendor' ? 'secondary' : 'outline'
+                            }
+                            className="text-xs"
+                          >
+                            {item.origin === 'Supplier' ? 'Supplier' : 'Salon'}
+                          </Badge>
+                        </div>
                       </div>
                       <p className="font-semibold">
                         ₹{(item.price * item.quantity).toFixed(2)}

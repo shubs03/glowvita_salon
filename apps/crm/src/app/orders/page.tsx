@@ -49,11 +49,32 @@ type Order = {
 
 export default function OrdersPage() {
   const { user, role } = useCrmAuth();
-  const defaultTab = role === 'supplier' ? 'received-orders' : (role === 'vendor' ? 'customer-orders' : 'my-purchases');
+  const defaultTab = role === 'supplier' ? 'customer-orders' : (role === 'vendor' ? 'customer-orders' : 'my-purchases');
   const [activeTab, setActiveTab] = useState(defaultTab);
   
-  const { data: ordersData = [], isLoading, isError, refetch } = useGetCrmOrdersQuery(user?._id, { skip: !user });
-  const { data: clientOrdersData = [], isLoading: isClientOrdersLoading, isError: isClientOrdersError } = useGetCrmClientOrdersQuery(undefined, { skip: role !== 'vendor' });
+  // For suppliers, we need to fetch different types of orders based on the active tab
+  const orderQueryParams = useMemo(() => {
+    if (role === 'supplier') {
+      return { type: activeTab === 'customer-orders' ? 'customer-orders' : 'received-orders' };
+    }
+    return {};
+  }, [role, activeTab]);
+  
+  const { data: ordersData = [], isLoading, isError, refetch } = useGetCrmOrdersQuery(
+    user?._id, 
+    { 
+      skip: !user,
+      refetchOnMountOrArgChange: true
+    }
+  );
+  
+  const { data: clientOrdersData = [], isLoading: isClientOrdersLoading, isError: isClientOrdersError } = useGetCrmClientOrdersQuery(
+    undefined, 
+    { 
+      skip: role !== 'vendor' && role !== 'supplier',
+      refetchOnMountOrArgChange: true
+    }
+  );
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -384,29 +405,26 @@ export default function OrdersPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="relative">
-                            <Image 
-                              src={(order.items && order.items[0]?.productImage) || 'https://placehold.co/50x50.png'} 
-                              alt={(order.items && order.items[0]?.productName) || 'Product'} 
-                              width={50} 
-                              height={50} 
-                              className="rounded-lg object-cover border border-border/30" 
-                            />
-                            {order.items && order.items.length > 1 && (
-                              <div className="absolute -top-2 -right-2 w-5 h-5 bg-primary text-white text-xs font-bold rounded-full flex items-center justify-center">
-                                +{order.items.length - 1}
+                        <div className="space-y-2">
+                          {order.items && order.items.map((item: OrderItem, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <div className="relative">
+                                <Image 
+                                  src={item.productImage || 'https://placehold.co/50x50.png'} 
+                                  alt={item.productName} 
+                                  width={50} 
+                                  height={50} 
+                                  className="rounded-lg object-cover border border-border/30" 
+                                />
                               </div>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <p className="font-medium text-sm">{(order.items && order.items[0]?.productName) || 'Product Name'}</p>
-                            {order.items && order.items.length > 1 && (
-                              <p className="text-xs text-muted-foreground">
-                                and {order.items.length - 1} more item{order.items.length > 2 ? 's' : ''}
-                              </p>
-                            )}
-                          </div>
+                              <div className="space-y-0.5">
+                                <p className="font-medium text-xs">{item.productName}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Qty: {item.quantity} × ₹{item.price.toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -425,35 +443,38 @@ export default function OrdersPage() {
                         <p className="font-bold text-lg text-primary">₹{(order.totalAmount || 0).toFixed(2)}</p>
                       </TableCell>
                       <TableCell>
-                        <Badge className={`${getStatusColor(order.status)} border-2 font-medium px-3 py-1.5 rounded-full flex items-center gap-2 w-fit`}>
+                        <Badge className={`${getStatusColor(order.status)} border-2 font-medium px-2 py-1 rounded-full flex items-center gap-1 w-fit text-xs`}>
                           {getStatusIcon(order.status)}
-                          {order.status || 'Unknown'}
+                          <span className="hidden sm:inline">{order.status || 'Unknown'}</span>
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
+                        <div className="flex gap-1 justify-end">
                           <Button 
                             variant="outline" 
                             size="sm" 
                             onClick={() => handleViewDetails(order)}
-                            className="rounded-lg hover:bg-primary/10 hover:border-primary/30"
+                            className="rounded-lg hover:bg-primary/10 hover:border-primary/30 h-8 w-8 p-0"
                           >
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
+                            <Eye className="h-4 w-4" />
                           </Button>
                           {role === 'supplier' && order.status && getNextStatus(order.status) && (
                             <Button 
                               size="sm" 
                               onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status)!)} 
                               disabled={isUpdatingStatus}
-                              className="rounded-lg bg-gradient-to-r from-primary to-primary/80"
+                              className="rounded-lg bg-gradient-to-r from-primary to-primary/80 h-8 px-2 text-xs"
                             >
                               {isUpdatingStatus ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-background border-t-transparent mr-2"></div>
+                                <div className="animate-spin rounded-full h-3 w-3 border-2 border-background border-t-transparent"></div>
                               ) : (
-                                <Edit className="mr-2 h-4 w-4" />
+                                <>
+                                  <Edit className="mr-1 h-3 w-3" />
+                                  <span className="hidden sm:inline">
+                                    {`Mark as ${getNextStatus(order.status)}`}
+                                  </span>
+                                </>
                               )}
-                              {isUpdatingStatus ? 'Updating...' : `Mark as ${getNextStatus(order.status)}`}
                             </Button>
                           )}
                         </div>
@@ -507,33 +528,30 @@ export default function OrdersPage() {
                   {/* Card Content */}
                   <div className="p-4 space-y-4">
                     {/* Products */}
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <Image 
-                          src={(order.items && order.items[0]?.productImage) || 'https://placehold.co/60x60.png'} 
-                          alt={(order.items && order.items[0]?.productName) || 'Product'} 
-                          width={60} 
-                          height={60} 
-                          className="rounded-lg object-cover border border-border/30" 
-                        />
-                        {order.items && order.items.length > 1 && (
-                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary text-white text-xs font-bold rounded-full flex items-center justify-center">
-                            +{order.items.length - 1}
+                    <div className="space-y-3">
+                      {order.items && order.items.map((item: OrderItem, idx: number) => (
+                        <div key={idx} className="flex items-center gap-3">
+                          <div className="relative">
+                            <Image 
+                              src={item.productImage || 'https://placehold.co/60x60.png'} 
+                              alt={item.productName} 
+                              width={60} 
+                              height={60} 
+                              className="rounded-lg object-cover border border-border/30" 
+                            />
                           </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium">{(order.items && order.items[0]?.productName) || 'Product Name'}</p>
-                        {order.items && order.items.length > 1 && (
-                          <p className="text-sm text-muted-foreground">
-                            and {order.items.length - 1} more item{order.items.length > 2 ? 's' : ''}
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <User className="h-3 w-3" />
-                          {order.customerName || order.vendorId || 'N/A'}
-                        </p>
-                      </div>
+                          <div className="flex-1">
+                            <p className="font-medium">{item.productName}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Qty: {item.quantity} × ₹{item.price.toFixed(2)} = ₹{(item.quantity * item.price).toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                        <User className="h-3 w-3" />
+                        {order.customerName || order.vendorId || 'N/A'}
+                      </p>
                     </div>
 
                     {/* Price and Actions */}
@@ -542,31 +560,32 @@ export default function OrdersPage() {
                         <p className="text-xl font-bold text-primary">₹{(order.totalAmount || 0).toFixed(2)}</p>
                         <p className="text-xs text-muted-foreground">Total Amount</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
                         <Button 
                           variant="outline" 
                           size="sm" 
                           onClick={() => handleViewDetails(order)}
-                          className="rounded-lg"
+                          className="rounded-lg h-8 w-8 p-0"
                         >
-                          <Eye className="mr-1 h-4 w-4" />
-                          View
+                          <Eye className="h-4 w-4" />
                         </Button>
                         {role === 'supplier' && order.status && getNextStatus(order.status) && (
                           <Button 
                             size="sm" 
                             onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status)!)} 
                             disabled={isUpdatingStatus}
-                            className="rounded-lg bg-gradient-to-r from-primary to-primary/80"
+                            className="rounded-lg bg-gradient-to-r from-primary to-primary/80 h-8 px-2 text-xs"
                           >
                             {isUpdatingStatus ? (
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-background border-t-transparent mr-1"></div>
+                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-background border-t-transparent"></div>
                             ) : (
-                              <Edit className="mr-1 h-4 w-4" />
+                              <>
+                                <Edit className="mr-1 h-3 w-3" />
+                                <span className="hidden sm:inline">
+                                  {`Mark as ${getNextStatus(order.status)}`}
+                                </span>
+                              </>
                             )}
-                            <span className="hidden xs:inline">
-                              {isUpdatingStatus ? 'Updating...' : `Mark as ${getNextStatus(order.status)}`}
-                            </span>
                           </Button>
                         )}
                       </div>
@@ -610,7 +629,7 @@ export default function OrdersPage() {
           {/* Enhanced Tab List */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <TabsList className="grid w-full max-w-md grid-cols-1 sm:grid-cols-3 h-auto p-1 bg-muted/50 backdrop-blur-sm">
-              {role === 'vendor' && (
+              {(role === 'vendor' || role === 'supplier') && (
                 <TabsTrigger 
                   value="customer-orders" 
                   className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg py-2.5 font-medium transition-all"
@@ -710,71 +729,70 @@ export default function OrdersPage() {
         </Tabs>
       
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Order Details</DialogTitle>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden p-0">
+          <DialogHeader className="p-6 pb-4 bg-gradient-to-r from-muted/30 to-muted/10">
+            <DialogTitle className="text-xl font-bold">Order Details</DialogTitle>
             <DialogDescription>
               Order ID: #{selectedOrder?.orderId || `ONLINE-${selectedOrder?._id?.substring(0, 8).toUpperCase()}`}
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)] p-6">
+          <div className="overflow-y-auto max-h-[calc(80vh-6rem)] p-6 pt-4">
             {selectedOrder && (
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {/* Enhanced Status Timeline */}
-                <div className="bg-gradient-to-r from-muted/30 to-muted/10 rounded-2xl p-6">
-                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                    <Package className="h-5 w-5 text-primary" />
+                <div className="bg-gradient-to-r from-muted/20 to-muted/10 rounded-xl p-4">
+                  <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                    <Package className="h-4 w-4 text-primary" />
                     Order Progress
                   </h3>
                   <OrderStatusTimeline currentStatus={selectedOrder.status} />
                 </div>
 
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Order Items */}
-                  <div className="xl:col-span-2">
-                    <div className="bg-gradient-to-r from-background to-muted/20 rounded-2xl p-6 border border-border/30">
-                      <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                        <ShoppingCart className="h-5 w-5 text-primary" />
+                  <div className="lg:col-span-2">
+                    <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                      <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                        <ShoppingCart className="h-4 w-4 text-primary" />
                         Items Ordered ({selectedOrder?.items?.length || 0})
                       </h3>
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {selectedOrder?.items?.map((item: OrderItem, index: number) => (
                           <div 
                             key={item.productId} 
-                            className="flex items-center gap-4 p-4 bg-background rounded-xl border border-border/20 hover:shadow-md transition-shadow"
-                            style={{ animationDelay: `${index * 0.1}s` }}
+                            className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border/10"
                           >
                             <Image 
-                              src={item.productImage || 'https://placehold.co/80x80.png'} 
+                              src={item.productImage || 'https://placehold.co/60x60.png'} 
                               alt={item.productName} 
-                              width={80} 
-                              height={80} 
-                              className="rounded-lg object-cover border border-border/20" 
+                              width={60} 
+                              height={60} 
+                              className="rounded-md object-cover border border-border/10" 
                             />
                             <div className="flex-1">
-                              <h4 className="font-semibold text-lg">{item.productName}</h4>
-                              <div className="flex items-center gap-4 mt-2">
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <Package className="h-4 w-4" />
+                              <h4 className="font-medium text-md">{item.productName}</h4>
+                              <div className="flex items-center gap-3 mt-1">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Package className="h-3 w-3" />
                                   Qty: {item.quantity}
                                 </div>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                   <span>₹{(item.price || 0).toFixed(2)} each</span>
                                 </div>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-xl font-bold text-primary">₹{((item.quantity || 0) * (item.price || 0)).toFixed(2)}</p>
-                              <p className="text-sm text-muted-foreground">Total</p>
+                              <p className="text-md font-bold text-primary">₹{((item.quantity || 0) * (item.price || 0)).toFixed(2)}</p>
+                              <p className="text-xs text-muted-foreground">Total</p>
                             </div>
                           </div>
                         ))}
                         
                         {/* Order Total */}
-                        <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20">
+                        <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-3 border border-primary/10">
                           <div className="flex justify-between items-center">
-                            <span className="text-lg font-semibold">Total Amount</span>
-                            <span className="text-2xl font-bold text-primary">₹{(selectedOrder?.totalAmount || 0).toFixed(2)}</span>
+                            <span className="text-md font-semibold">Total Amount</span>
+                            <span className="text-xl font-bold text-primary">₹{(selectedOrder?.totalAmount || 0).toFixed(2)}</span>
                           </div>
                         </div>
                       </div>
@@ -782,20 +800,20 @@ export default function OrdersPage() {
                   </div>
 
                   {/* Order Information */}
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {/* Customer Information */}
-                    <div className="bg-gradient-to-r from-background to-muted/20 rounded-2xl p-6 border border-border/30">
-                      <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                        <User className="h-5 w-5 text-primary" />
+                    <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                      <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                        <User className="h-4 w-4 text-primary" />
                         Customer Details
                       </h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 p-2 bg-muted/10 rounded-lg">
                           <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{selectedOrder?.customerName || `Vendor ID: ${selectedOrder?.vendorId || ''}`}</span>
+                          <span className="font-medium text-sm">{selectedOrder?.customerName || `Vendor ID: ${selectedOrder?.vendorId || ''}`}</span>
                         </div>
                         {selectedOrder?.customerEmail && (
-                          <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
+                          <div className="flex items-center gap-2 p-2 bg-muted/10 rounded-lg">
                             <Mail className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">{selectedOrder.customerEmail}</span>
                           </div>
@@ -804,24 +822,24 @@ export default function OrdersPage() {
                     </div>
 
                     {/* Shipping Information */}
-                    <div className="bg-gradient-to-r from-background to-muted/20 rounded-2xl p-6 border border-border/30">
-                      <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                        <MapPin className="h-5 w-5 text-primary" />
+                    <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                      <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-primary" />
                         Shipping Address
                       </h3>
-                      <div className="p-4 bg-muted/20 rounded-xl">
+                      <div className="p-3 bg-muted/10 rounded-lg">
                         <p className="text-sm leading-relaxed">{selectedOrder?.shippingAddress || 'No shipping address provided'}</p>
                       </div>
                     </div>
 
                     {/* Cancellation Reason */}
                     {selectedOrder?.status === 'Cancelled' && selectedOrder?.cancellationReason && (
-                      <div className="bg-gradient-to-r from-background to-muted/20 rounded-2xl p-6 border border-border/30">
-                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                          <XCircle className="h-5 w-5 text-primary" />
+                      <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                        <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                          <XCircle className="h-4 w-4 text-primary" />
                           Cancellation Reason
                         </h3>
-                        <div className="p-4 bg-muted/20 rounded-xl">
+                        <div className="p-3 bg-muted/10 rounded-lg">
                           <p className="text-sm leading-relaxed">{selectedOrder.cancellationReason}</p>
                         </div>
                       </div>
@@ -829,24 +847,24 @@ export default function OrdersPage() {
 
                     {/* Tracking Information */}
                     {selectedOrder?.trackingNumber && (
-                      <div className="bg-gradient-to-r from-background to-muted/20 rounded-2xl p-6 border border-border/30">
-                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                          <Truck className="h-5 w-5 text-primary" />
+                      <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                        <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-primary" />
                           Tracking Details
                         </h3>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 p-2 bg-muted/10 rounded-lg">
                             <Building className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-sm font-medium">Courier</p>
-                              <p className="text-sm text-muted-foreground">{selectedOrder.courier || 'Not specified'}</p>
+                              <p className="text-xs font-medium">Courier</p>
+                              <p className="text-xs text-muted-foreground">{selectedOrder.courier || 'Not specified'}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
+                          <div className="flex items-center gap-2 p-2 bg-muted/10 rounded-lg">
                             <Package className="h-4 w-4 text-muted-foreground" />
                             <div>
-                              <p className="text-sm font-medium">Tracking Number</p>
-                              <p className="text-sm font-mono text-primary">{selectedOrder.trackingNumber}</p>
+                              <p className="text-xs font-medium">Tracking Number</p>
+                              <p className="text-xs font-mono text-primary">{selectedOrder.trackingNumber}</p>
                             </div>
                           </div>
                         </div>
@@ -854,21 +872,21 @@ export default function OrdersPage() {
                     )}
 
                     {/* Order Timeline */}
-                    <div className="bg-gradient-to-r from-background to-muted/20 rounded-2xl p-6 border border-border/30">
-                      <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-primary" />
+                    <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                      <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary" />
                         Order Timeline
                       </h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 p-2 bg-muted/10 rounded-lg">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <div>
-                            <p className="text-sm font-medium">Order Placed</p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-xs font-medium">Order Placed</p>
+                            <p className="text-xs text-muted-foreground">
                               {selectedOrder?.createdAt ? 
                                 new Date(selectedOrder.createdAt).toLocaleDateString('en-US', {
                                   year: 'numeric',
-                                  month: 'long',
+                                  month: 'short',
                                   day: 'numeric',
                                   hour: '2-digit',
                                   minute: '2-digit'

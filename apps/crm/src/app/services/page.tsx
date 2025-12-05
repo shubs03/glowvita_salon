@@ -121,6 +121,8 @@ interface Service {
   onlineBooking?: boolean;
   image?: string;
   status?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface AddItemModalProps {
@@ -282,6 +284,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
     isLoading: servicesLoading,
     refetch: refetchServices,
   } = useGetServicesQuery(undefined);
+
   const { data: staffList = [], isLoading: staffLoading } = useGetStaffQuery(VENDOR_ID, { skip: !VENDOR_ID });
 
   const [createVendorServices, { isLoading: isCreating }] = useCreateVendorServicesMutation();
@@ -803,13 +806,13 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   if (type === "view") {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-hide">
           <DialogHeader>
             <DialogTitle>{service?.name || 'Service Details'}</DialogTitle>
             <DialogDescription>{service?.description || 'No description available'}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4 text-sm">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <span className="font-semibold">Category:</span>{" "}
                 {service?.categoryName || "N/A"}
@@ -819,11 +822,39 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                 {service?.price?.toFixed(2) || 0}
               </div>
               <div>
+                <span className="font-semibold">Discounted Price:</span> ₹
+                {service?.discountedPrice ? service.discountedPrice.toFixed(2) : "N/A"}
+              </div>
+              <div>
                 <span className="font-semibold">Duration:</span>{" "}
                 {service?.duration || 0} mins
               </div>
               <div>
+                <span className="font-semibold">Booking Interval:</span>{" "}
+                {service?.bookingInterval || 0} mins
+              </div>
+              <div>
                 <span className="font-semibold">Gender:</span> {service?.gender || 'N/A'}
+              </div>
+              <div>
+                <span className="font-semibold">Commission:</span>{" "}
+                {service?.commission ? 'Enabled' : 'Disabled'}
+              </div>
+              <div>
+                <span className="font-semibold">Online Booking:</span>{" "}
+                {service?.onlineBooking ? 'Enabled' : 'Disabled'}
+              </div>
+              <div>
+                <span className="font-semibold">Home Service:</span>{" "}
+                {service?.homeService?.available ? `Available (₹${service.homeService.charges || 0})` : 'Not Available'}
+              </div>
+              <div>
+                <span className="font-semibold">Wedding Service:</span>{" "}
+                {service?.weddingService?.available ? `Available (₹${service.weddingService.charges || 0})` : 'Not Available'}
+              </div>
+              <div>
+                <span className="font-semibold">Tax:</span>{" "}
+                {service?.tax?.enabled ? `${service.tax.type === 'percentage' ? `${service.tax.value}%` : `₹${service.tax.value}`}` : 'Not Enabled'}
               </div>
               <div>
                 <span className="font-semibold">Status:</span>
@@ -841,11 +872,19 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                   {service?.status || 'N/A'}
                 </Badge>
               </div>
+              <div>
+                <span className="font-semibold">Created At:</span>{" "}
+                {service?.createdAt ? new Date(service.createdAt).toLocaleDateString() : 'N/A'}
+              </div>
+              <div>
+                <span className="font-semibold">Updated At:</span>{" "}
+                {service?.updatedAt ? new Date(service.updatedAt).toLocaleDateString() : 'N/A'}
+              </div>
             </div>
             {service?.image && (
               <div className="mt-4">
                 <span className="font-semibold">Image:</span>
-                <Image src={service.image} alt={service.name} width={100} height={100} className="mt-2" />
+                <Image src={service.image} alt={service.name} width={200} height={200} className="mt-2" />
               </div>
             )}
           </div>
@@ -932,7 +971,10 @@ export default function ServicesPage() {
     refetch,
   } = useGetVendorServicesQuery({ vendorId: user?._id }, { skip: !user?._id });
 
+  
   const services = data.services || [];
+
+  console.log("Services Data on Services page : ", services)
 
   const [deleteVendorServices] = useDeleteVendorServicesMutation();
   const [updateVendorServices] = useUpdateVendorServicesMutation();

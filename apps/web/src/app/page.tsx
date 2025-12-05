@@ -517,7 +517,7 @@ export default function HomePage() {
         {/* <SecuritySection /> */}
         {/* <Integrations /> */}
         {/* <Blog /> */}
-        <FAQ />
+        {/* <FAQ /> */}
         <AppCTA />
       </main>
     </div>

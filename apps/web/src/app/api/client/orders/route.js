@@ -23,13 +23,31 @@ export async function GET(req) {
 
     const orders = await ClientOrder.find({ userId: payload.userId }).sort({ createdAt: -1 });
     
-    // Log the first order to see what fields are returned
-    if (orders.length > 0) {
-      console.log('First order fields:', Object.keys(orders[0].toObject()));
-      console.log('First order cancellationReason:', orders[0].cancellationReason);
-    }
+    // Enhance orders with product origin information
+    const enhancedOrders = await Promise.all(orders.map(async (order) => {
+      const enhancedItems = await Promise.all(order.items.map(async (item) => {
+        try {
+          const product = await ProductModel.findById(item.productId).select('origin').lean();
+          return {
+            ...item,
+            origin: product?.origin || 'Vendor' // Default to 'Vendor' if not found
+          };
+        } catch (error) {
+          console.error(`Error fetching product ${item.productId}:`, error);
+          return {
+            ...item,
+            origin: 'Vendor' // Default to 'Vendor' if error occurs
+          };
+        }
+      }));
 
-    return NextResponse.json({ success: true, data: orders });
+      return {
+        ...order.toObject(),
+        items: enhancedItems
+      };
+    }));
+
+    return NextResponse.json({ success: true, data: enhancedOrders });
 
   } catch (error) {
     console.error('Error fetching user orders:', error);
