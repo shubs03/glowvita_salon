@@ -70,6 +70,11 @@ const reportsData: ReportCategory[] = [
                 description: "Track supplier performance and product sales.",
                 details: "Manage inventory and supplier relationships."
             },
+            {
+                title: "Supplier Product Reviews Report",
+                description: "Comprehensive report on all reviews for supplier products.",
+                details: "View product ratings, review counts, and best-selling supplier products."
+            },
         ]
     },
     {

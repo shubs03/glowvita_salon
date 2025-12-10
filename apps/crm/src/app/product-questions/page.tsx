@@ -35,9 +35,13 @@ import {
   useGetCrmProductQuestionsQuery,
   useAnswerProductQuestionMutation,
   useDeleteProductQuestionMutation,
+  useGetSupplierProductQuestionsQuery,
+  useAnswerSupplierProductQuestionMutation,
+  useDeleteSupplierProductQuestionMutation,
 } from '@repo/store/api';
 import { format } from 'date-fns';
 import Image from 'next/image';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 // Types
 type ProductQuestion = {
@@ -61,6 +65,9 @@ type ProductQuestion = {
 };
 
 export default function ProductQuestionsPage() {
+  const { role } = useCrmAuth();
+  const isSupplier = role === 'supplier';
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'answered' | 'unanswered'>('all');
   const [selectedQuestion, setSelectedQuestion] = useState<ProductQuestion | null>(null);
@@ -70,10 +77,20 @@ export default function ProductQuestionsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<ProductQuestion | null>(null);
 
-  // Fetch questions
-  const { data: questionsResponse, isLoading, refetch } = useGetCrmProductQuestionsQuery(filterStatus);
-  const [answerQuestion, { isLoading: isAnswering }] = useAnswerProductQuestionMutation();
-  const [deleteQuestion, { isLoading: isDeleting }] = useDeleteProductQuestionMutation();
+  // Fetch questions based on user role
+  const vendorQuestionsQuery = useGetCrmProductQuestionsQuery(filterStatus);
+  const supplierQuestionsQuery = useGetSupplierProductQuestionsQuery(filterStatus);
+  
+  const { data: questionsResponse, isLoading, refetch } = isSupplier ? supplierQuestionsQuery : vendorQuestionsQuery;
+  
+  // Mutations based on user role
+  const [answerVendorQuestion, { isLoading: isAnsweringVendor }] = useAnswerProductQuestionMutation();
+  const [deleteVendorQuestion, { isLoading: isDeletingVendor }] = useDeleteProductQuestionMutation();
+  const [answerSupplierQuestion, { isLoading: isAnsweringSupplier }] = useAnswerSupplierProductQuestionMutation();
+  const [deleteSupplierQuestion, { isLoading: isDeletingSupplier }] = useDeleteSupplierProductQuestionMutation();
+  
+  const isAnswering = isSupplier ? isAnsweringSupplier : isAnsweringVendor;
+  const isDeleting = isSupplier ? isDeletingSupplier : isDeletingVendor;
 
   const questions = questionsResponse?.questions || [];
 
@@ -110,11 +127,19 @@ export default function ProductQuestionsPage() {
     }
 
     try {
-      await answerQuestion({
-        questionId: selectedQuestion._id,
-        answer: answerText.trim(),
-        isPublished: publishAnswer,
-      }).unwrap();
+      if (isSupplier) {
+        await answerSupplierQuestion({
+          questionId: selectedQuestion._id,
+          answer: answerText.trim(),
+          isPublished: publishAnswer,
+        }).unwrap();
+      } else {
+        await answerVendorQuestion({
+          questionId: selectedQuestion._id,
+          answer: answerText.trim(),
+          isPublished: publishAnswer,
+        }).unwrap();
+      }
 
       toast.success('Answer submitted successfully');
       setIsAnswerDialogOpen(false);
@@ -131,7 +156,12 @@ export default function ProductQuestionsPage() {
     if (!questionToDelete) return;
 
     try {
-      await deleteQuestion(questionToDelete._id).unwrap();
+      if (isSupplier) {
+        await deleteSupplierQuestion(questionToDelete._id).unwrap();
+      } else {
+        await deleteVendorQuestion(questionToDelete._id).unwrap();
+      }
+      
       toast.success('Question deleted successfully');
       setIsDeleteDialogOpen(false);
       setQuestionToDelete(null);

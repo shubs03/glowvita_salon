@@ -1191,6 +1191,32 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["CrmProductQuestions"],
     }),
 
+    // Supplier Product Questions - Get all questions for supplier's products
+    getSupplierProductQuestions: builder.query({
+      query: (filter = 'all') => ({ url: `/crm/supplier/product-questions?filter=${filter}`, method: "GET" }),
+      providesTags: ["SupplierProductQuestions"],
+      transformResponse: (response) => response,
+    }),
+
+    // Supplier Product Questions - Answer a question
+    answerSupplierProductQuestion: builder.mutation({
+      query: ({ questionId, answer, isPublished }) => ({ 
+        url: `/crm/supplier/product-questions`, 
+        method: "PATCH", 
+        body: { questionId, answer, isPublished } 
+      }),
+      invalidatesTags: ["SupplierProductQuestions"],
+    }),
+
+    // Supplier Product Questions - Delete a question
+    deleteSupplierProductQuestion: builder.mutation({
+      query: (questionId) => ({ 
+        url: `/crm/supplier/product-questions?questionId=${questionId}`, 
+        method: "DELETE"
+      }),
+      invalidatesTags: ["SupplierProductQuestions"],
+    }),
+
     // CRM Reviews - Get all reviews for vendor's products/services/salons
     getCrmReviews: builder.query({
       query: ({ filter = 'all', entityType = 'all' }) => ({ 
@@ -1852,6 +1878,16 @@ export const glowvitaApi = createApi({
       providesTags: ['PaymentCollections'],
     }),
 
+    // Admin Reports - Supplier Product Reviews
+    getSupplierProductReviewsReport: builder.query({
+      query: () => ({ 
+        url: "/admin/reports/supplier-product-reviews", 
+        method: "GET" 
+      }),
+      providesTags: ["AdminReports"],
+      transformResponse: (response) => response,
+    }),
+
   }),
 });
 
@@ -2062,6 +2098,11 @@ export const {
   useUpdateVendorProductMutation,
   useDeleteVendorProductMutation,
   useCreateVendorProductMutation,
+
+  useGetSupplierProductQuestionsQuery,
+  useAnswerSupplierProductQuestionMutation,
+  useDeleteSupplierProductQuestionMutation,
+
   // Cart Endpoints (CRM)
   useGetCartQuery,
   useAddToCartMutation,
@@ -2123,4 +2164,5 @@ export const {
   
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,
+  useGetSupplierProductReviewsReportQuery,
 } = glowvitaApi;
