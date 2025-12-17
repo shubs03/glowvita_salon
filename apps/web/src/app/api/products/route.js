@@ -1,6 +1,7 @@
 import _db from "@repo/lib/db";
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import VendorModel from "@repo/lib/models/Vendor.model";
+import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 
 await _db();
 
@@ -23,7 +24,6 @@ export const GET = async (request) => {
     // Extract vendorId from query parameters if provided
     const url = new URL(request.url);
     const vendorId = url.searchParams.get('vendorId');
-    const dbTest = await ProductModel.findOne().limit(1);
     
     // Build query with optional vendor filter
     const query = { 
@@ -39,17 +39,46 @@ export const GET = async (request) => {
     
     // Get products that are approved via admin panel
     const approvedProducts = await ProductModel.find(query)
-    .populate({
-      path: 'vendorId',
-      select: 'businessName firstName lastName status',
-      match: { status: 'Approved' } // Only include products from approved vendors
-    })
-    .select('productName description price salePrice productImage vendorId stock createdAt')
-    .sort({ createdAt: -1 })
-    .limit(50);
+      .select('productName description price salePrice productImages vendorId stock createdAt origin')
+      .sort({ createdAt: -1 })
+      .limit(50);
 
-    // Filter out products where vendor population failed (vendor not approved)
-    const validProducts = approvedProducts.filter(product => product.vendorId !== null);
+    // Separate products by origin (Vendor vs Supplier)
+    const vendorProducts = approvedProducts.filter(p => p.origin === 'Vendor');
+    const supplierProducts = approvedProducts.filter(p => p.origin === 'Supplier');
+
+    // Get vendor IDs and supplier IDs
+    const vendorIds = [...new Set(vendorProducts.map(p => p.vendorId))];
+    const supplierIds = [...new Set(supplierProducts.map(p => p.vendorId))];
+
+    // Fetch vendors and suppliers in parallel
+    const [vendors, suppliers] = await Promise.all([
+      vendorIds.length > 0 
+        ? VendorModel.find({ 
+            _id: { $in: vendorIds }, 
+            status: 'Approved' 
+          }).select('_id businessName firstName lastName status city state')
+        : Promise.resolve([]),
+      supplierIds.length > 0 
+        ? SupplierModel.find({ 
+            _id: { $in: supplierIds }, 
+            status: 'Approved' 
+          }).select('_id shopName firstName lastName status city state')
+        : Promise.resolve([])
+    ]);
+
+    // Create maps for quick lookup
+    const vendorMap = new Map(vendors.map(v => [v._id.toString(), v]));
+    const supplierMap = new Map(suppliers.map(s => [s._id.toString(), s]));
+
+    // Filter and transform products
+    const validProducts = approvedProducts.filter(product => {
+      if (product.origin === 'Vendor') {
+        return vendorMap.has(product.vendorId.toString());
+      } else {
+        return supplierMap.has(product.vendorId.toString());
+      }
+    });
 
     if (validProducts.length === 0) {
       return Response.json({
@@ -61,22 +90,36 @@ export const GET = async (request) => {
     }
 
     // Transform the data for the frontend
-    const transformedProducts = validProducts.map(product => ({
-      id: product._id,
-      name: product.productName,
-      description: product.description || '',
-      price: product.price,
-      salePrice: product.salePrice > 0 ? product.salePrice : null,
-      image: product.productImage || 'https://placehold.co/320x224/e2e8f0/64748b?text=Product',
-      vendorId: product.vendorId?._id || product.vendorId,
-      vendorName: product.vendorId?.businessName || 'Unknown Vendor',
-      category: 'Beauty Products',
-      stock: product.stock,
-      isNew: new Date(product.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      rating: (4.2 + Math.random() * 0.8).toFixed(1),
-      reviewCount: Math.floor(50 + Math.random() * 500),
-      hint: product.description || product.productName
-    }));
+    const transformedProducts = validProducts.map(product => {
+      let vendorData = null;
+      if (product.origin === 'Vendor') {
+        vendorData = vendorMap.get(product.vendorId.toString());
+      } else {
+        vendorData = supplierMap.get(product.vendorId.toString());
+      }
+
+      return {
+        id: product._id,
+        name: product.productName,
+        description: product.description || '',
+        price: product.price,
+        salePrice: product.salePrice > 0 ? product.salePrice : null,
+        image: product.productImages && product.productImages.length > 0 
+          ? product.productImages[0] 
+          : 'https://placehold.co/320x224/e2e8f0/64748b?text=Product',
+        vendorId: vendorData?._id || product.vendorId,
+        vendorName: product.origin === 'Vendor' 
+          ? (vendorData?.businessName || 'Unknown Vendor') 
+          : (vendorData?.shopName || 'Unknown Supplier'),
+        category: 'Beauty Products',
+        stock: product.stock,
+        isNew: new Date(product.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        rating: (4.2 + Math.random() * 0.8).toFixed(1),
+        reviewCount: Math.floor(50 + Math.random() * 500),
+        hint: product.description || product.productName
+      };
+    });
+
     return new Response(JSON.stringify({
       success: true,
       products: transformedProducts,

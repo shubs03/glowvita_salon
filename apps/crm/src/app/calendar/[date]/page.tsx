@@ -15,6 +15,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { toast } from 'sonner';
 import React from 'react';
 import { format, parseISO, isSameDay, addMinutes, parse, isWithinInterval, addDays, startOfDay, endOfDay } from 'date-fns';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 // Types
 type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
@@ -40,6 +41,20 @@ type Appointment = {
   discount?: number;
   tax?: number;
   totalAmount?: number;
+  // Additional payment fields
+  platformFee?: number;
+  serviceTax?: number;
+  taxRate?: number;
+  discountAmount?: number;
+  finalAmount?: number;
+  paymentMethod?: string;
+  payment?: {
+    paid?: number;
+    paymentMode?: string;
+    paymentStatus?: string;
+    paymentMethod?: string;
+    [key: string]: any;
+  };
 };
 
 // Components
@@ -149,6 +164,7 @@ export default function DailySchedulePage() {
   const router = useRouter();
   const params = useParams();
   const dispatch = useAppDispatch();
+  const { role } = useCrmAuth();
   
   // State
   const [showBlockTimeModal, setShowBlockTimeModal] = useState(false);
@@ -174,6 +190,7 @@ export default function DailySchedulePage() {
   const allAppointments = useSelector(selectAllAppointments);
   
   // Fetch appointments for the selected date range using RTK Query
+  // For doctors, we might need to filter appointments by doctor ID
   const { data: appointmentsData, isLoading: isLoadingAppointments, refetch: refetchAppointments } = glowvitaApi.useGetAppointmentsQuery(
     {
       startDate: selectedDate ? formatDateForAPI(selectedDate) : '',
@@ -208,10 +225,18 @@ export default function DailySchedulePage() {
         discount: appt.discount || 0,
         tax: appt.tax || 0,
         totalAmount: appt.totalAmount || appt.amount || 0,
+        mode: appt.mode, // Only include if it exists in backend
         // Multi-service appointment fields
         isMultiService: appt.isMultiService || false,
         serviceItems: appt.serviceItems || [],
         payment: appt.payment,
+        // Additional payment fields from appointment root
+        platformFee: appt.platformFee || 0,
+        serviceTax: appt.serviceTax || 0,
+        taxRate: appt.taxRate || 0,
+        discountAmount: appt.discountAmount || 0,
+        finalAmount: appt.finalAmount || appt.totalAmount || appt.amount || 0,
+        paymentMethod: appt.paymentMethod || 'Pay at Salon',
       }));
   }, [appointmentsData]);
   
@@ -224,14 +249,21 @@ export default function DailySchedulePage() {
       // Filter by date
       if (!isSameDay(new Date(appointment.date), selectedDate)) return false;
       
-      // Filter by staff if a specific staff is selected
+      // For doctors, we might want to show all appointments regardless of staff filter
+      // or handle staff filtering differently
+      if (role === 'doctor') {
+        // Doctors see all their appointments
+        return true;
+      }
+      
+      // Filter by staff if a specific staff is selected (vendor behavior)
       if (selectedStaff !== 'All Staff' && appointment.staffName !== selectedStaff) {
         return false;
       }
       
       return true;
     });
-  }, [appointments, selectedDate, selectedStaff]);
+  }, [appointments, selectedDate, selectedStaff, role]);
 
   // Handle appointment form submission
   const handleAppointmentSubmit = async (appointmentData: any) => {
@@ -368,6 +400,16 @@ export default function DailySchedulePage() {
     // setIsNewAppointmentOpen(true);
   }, []);
 
+  // Allow AppointmentDetailView's Client History to open another appointment
+  const handleOpenAppointmentFromHistory = useCallback((appointmentId: string) => {
+    if (!appointmentId) return;
+    // Find in the loaded appointments list
+    const found = (appointments || []).find((a: any) => (a?._id || a?.id) === appointmentId);
+    if (found) {
+      setSelectedAppointment(found as any);
+    }
+  }, [appointments]);
+
   // Handle date change from the DayScheduleView
   const handleDateChange = useCallback((newDate: Date) => {
     if (!newDate || !(newDate instanceof Date)) return;
@@ -403,22 +445,72 @@ export default function DailySchedulePage() {
     setIsNewAppointmentOpen(true);
   };
 
-  // Fetch working hours
-  const { data: workingHoursData, isLoading: isLoadingWorkingHours, error: workingHoursError } = glowvitaApi.useGetWorkingHoursQuery(
-    selectedDate ? formatDateForAPI(selectedDate) : '',
-    { skip: !selectedDate }
-  );
+  // Fetch working hours - use doctor endpoint for doctors, vendor endpoint for others
+  const { data: workingHoursData, isLoading: isLoadingWorkingHours, error: workingHoursError } = role === 'doctor' 
+    ? glowvitaApi.useGetCrmDoctorWorkingHoursQuery(undefined, { skip: !selectedDate })
+    : glowvitaApi.useGetWorkingHoursQuery(
+        selectedDate ? formatDateForAPI(selectedDate) : '',
+        { skip: !selectedDate }
+      );
 
-  // Fetch staff data
+  // Fetch staff data - for doctors, we might want to show only the doctor themselves
   const { data: staffData = [], isLoading: isLoadingStaff, error: staffError } = glowvitaApi.useGetStaffQuery(undefined, {
-    refetchOnMountOrArgChange: true
+    refetchOnMountOrArgChange: true,
+    skip: role === 'doctor' // Doctors don't need staff data in the same way vendors do
   });
+  
+  // For doctors, we might want to create a pseudo-staff entry for themselves
+  const doctorStaffData = useMemo(() => {
+    if (role !== 'doctor' || !workingHoursData) return [];
+    
+    // Create a staff-like object for the doctor
+    return [{
+      _id: 'doctor-self',
+      id: 'doctor-self',
+      fullName: 'Doctor',
+      name: 'Doctor',
+      position: 'Doctor',
+      status: 'active',
+      isAvailable: true,
+      isCurrentlyAvailable: true,
+      // Use doctor working hours for the staff entry
+      workingHours: {
+        startTime: '09:00',
+        endTime: '18:00',
+        startHour: 9,
+        endHour: 18
+      },
+      mondayAvailable: true,
+      tuesdayAvailable: true,
+      wednesdayAvailable: true,
+      thursdayAvailable: true,
+      fridayAvailable: true,
+      saturdayAvailable: false,
+      sundayAvailable: false,
+      mondaySlots: [],
+      tuesdaySlots: [],
+      wednesdaySlots: [],
+      thursdaySlots: [],
+      fridaySlots: [],
+      saturdaySlots: [],
+      sundaySlots: [],
+      hasWeekdayAvailability: true,
+      hasWeekendAvailability: false,
+      blockedTimes: [],
+      startTime: '09:00',
+      endTime: '18:00',
+      timezone: 'Asia/Kolkata'
+    }];
+  }, [role, workingHoursData]);
 
   // Transform staff data for the schedule view
   const staffList = useMemo(() => {
-    if (!staffData || !Array.isArray(staffData)) return [];
+    // For doctors, use the doctorStaffData instead of regular staff data
+    const sourceData = role === 'doctor' ? doctorStaffData : staffData;
     
-    return staffData.map((staff: any) => ({
+    if (!sourceData || !Array.isArray(sourceData)) return [];
+    
+    return sourceData.map((staff: any) => ({
       id: staff._id || staff.id,
       name: staff.fullName || staff.name,
       position: staff.position || '',
@@ -458,7 +550,7 @@ export default function DailySchedulePage() {
       endTime: staff.endTime || '18:00',
       timezone: staff.timezone || 'Asia/Kolkata'
     }));
-  }, [staffData]);
+  }, [staffData, doctorStaffData, role]);
 
   // Debug: Log the response structure
   useEffect(() => {
@@ -484,12 +576,20 @@ export default function DailySchedulePage() {
       isWorking: true
     };
 
-    if (!workingHoursData?.workingHours) {
+    if (!workingHoursData) {
       console.log('No working hours data available, using defaults');
       return defaultHours;
     }
     
-    const workingHoursArray = workingHoursData.workingHours;
+    // Handle doctor working hours structure (different from vendor)
+    let workingHoursArray = [];
+    if (role === 'doctor') {
+      // Doctor working hours are in workingHoursArray property
+      workingHoursArray = workingHoursData.workingHoursArray || [];
+    } else {
+      // Vendor working hours are in workingHours property
+      workingHoursArray = workingHoursData.workingHours || [];
+    }
     
     if (!Array.isArray(workingHoursArray)) {
       console.log('Working hours is not an array, using defaults');
@@ -505,8 +605,17 @@ export default function DailySchedulePage() {
     
     console.log('Working hours for', targetDay, ':', found || 'Not found, using defaults');
     
+    // For doctors, isOpen property indicates if the day is working
+    if (role === 'doctor') {
+      return {
+        startTime: found?.open || '09:00',
+        endTime: found?.close || '18:00',
+        isWorking: found?.isOpen !== false // Default to true if isOpen is not explicitly false
+      };
+    }
+    
     return found || defaultHours;
-  }, [workingHoursData, dayName]);
+  }, [workingHoursData, dayName, role]);
   
   // Get blocked times for the selected date with proper timezone handling
   const blockedTimes = useSelector((state: any) => {
@@ -557,20 +666,69 @@ export default function DailySchedulePage() {
 
   // Handle collect payment
   const handleCollectPayment = async (paymentData: { amount: number; paymentMethod: string; notes?: string }) => {
+    const toastId = toast.loading('Processing payment...');
     try {
-      // Here you would typically make an API call to process the payment
-      // For now, we'll just show a success message
+      if (!selectedAppointment?._id) {
+        throw new Error('No appointment selected');
+      }
+
+      // Calculate the new paid amount
+      const currentPaid = (selectedAppointment as any).payment?.paid || 0;
+      const currentAmountPaid = (selectedAppointment as any).amountPaid || 0;
+      const newPaidAmount = currentPaid + paymentData.amount;
+      const newAmountPaid = currentAmountPaid + paymentData.amount;
+      const totalAmount = (selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0;
+      const remainingAmount = Math.max(0, totalAmount - newAmountPaid);
+
+      // Determine payment status
+      let paymentStatus = 'pending';
+      if (newAmountPaid >= totalAmount) {
+        paymentStatus = 'completed';
+      } else if (newAmountPaid > 0) {
+        paymentStatus = 'partial';
+      }
+
+      // Update appointment with payment information
+      const updatedAppointment = {
+        ...selectedAppointment,
+        payment: {
+          ...(selectedAppointment as any).payment,
+          paid: newPaidAmount,
+          paymentMethod: paymentData.paymentMethod,
+          paymentStatus: paymentStatus,
+          lastPaymentDate: new Date().toISOString(),
+          lastPaymentAmount: paymentData.amount,
+          lastPaymentNotes: paymentData.notes || '',
+        },
+        paymentStatus: paymentStatus,
+        amountPaid: newAmountPaid,
+        amountRemaining: remainingAmount,
+      };
+
+      // Call the update appointment API
+      await updateAppointment({
+        id: selectedAppointment._id,
+        ...updatedAppointment,
+        date: formatDateForAPI(new Date(selectedAppointment.date)),
+      }).unwrap();
+      
       toast.success('Payment collected successfully', {
-        description: `Payment of $${paymentData.amount} processed`
+        description: `₹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`
       });
       
-      // Optionally refresh the appointments list
-      // await dispatch(refreshAppointments());
+      // Refresh appointments to show updated payment status
+      await refetchAppointments();
+      
+      // Close the appointment detail view
+      setSelectedAppointment(null);
+      
     } catch (error: any) {
       console.error('Error processing payment:', error);
       toast.error('Failed to process payment', {
-        description: error.message
+        description: error?.data?.message || error.message || 'Please try again.'
       });
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
@@ -600,6 +758,8 @@ export default function DailySchedulePage() {
 
       console.log('Sending update request with data:', updateData);
       
+      // For partial updates, we should ensure we're not missing required fields
+      // If this is just a status update, make sure we include all required fields
       const result = await updateAppointment(updateData).unwrap();
       
       console.log('Update successful, refreshing appointments...');
@@ -644,6 +804,7 @@ export default function DailySchedulePage() {
 
       console.log('Sending reschedule request with data:', rescheduleData);
       
+      // For rescheduling, ensure all required fields are preserved
       const result = await updateAppointment(rescheduleData).unwrap();
       
       console.log('Reschedule successful, refreshing appointments...');
@@ -685,19 +846,21 @@ export default function DailySchedulePage() {
         
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
           <div className="flex items-center gap-4">
-            <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-              <SelectTrigger className="w-[200px] rounded-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 shadow-sm text-base font-bold">
-                <SelectValue placeholder="Select staff" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl border-gray-200 dark:border-gray-700 shadow-lg">
-                <SelectItem value="All Staff" className="rounded-lg py-2 font-medium">All Staff</SelectItem>
-                {staffList.map(staff => (
-                  <SelectItem key={staff.id} value={staff.name} className="rounded-lg py-2 font-medium">
-                    {staff.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {role !== 'doctor' && (
+              <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+                <SelectTrigger className="w-[200px] rounded-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 shadow-sm text-base font-bold">
+                  <SelectValue placeholder="Select staff" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-gray-200 dark:border-gray-700 shadow-lg">
+                  <SelectItem value="All Staff" className="rounded-lg py-2 font-medium">All Staff</SelectItem>
+                  {staffList.map(staff => (
+                    <SelectItem key={staff.id} value={staff.name} className="rounded-lg py-2 font-medium">
+                      {staff.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             
             <Button 
               onClick={handleNewAppointment} 
@@ -717,8 +880,9 @@ export default function DailySchedulePage() {
           staffList={staffList}
           workingHours={dayWorkingHours}
           blockedTimes={blockedTimes}
-          isLoading={isLoading || isLoadingAppointments || isLoadingWorkingHours || isLoadingStaff}
+          isLoading={isLoading || isLoadingAppointments || isLoadingWorkingHours || (role !== 'doctor' && isLoadingStaff)}
           error={staffError || workingHoursError}
+          role={role}
           onAppointmentClick={handleAppointmentClick}
           onTimeSlotClick={handleTimeSlotClick}
           timeSlots={useMemo(() => {
@@ -869,6 +1033,7 @@ export default function DailySchedulePage() {
           onCollectPayment={handleCollectPayment}
           onUpdateAppointment={handleUpdateAppointment}
           onRescheduleAppointment={handleRescheduleAppointment}
+          onOpenAppointment={handleOpenAppointmentFromHistory}
         />
       )}
 

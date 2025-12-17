@@ -74,20 +74,92 @@ export const PATCH = authMiddlewareCrm(async (req) => {
     const role = req.user.role;
     const { orderId, status, trackingNumber, courier } = await req.json();
 
+    console.log("=== ORDER UPDATE DEBUG INFO ===");
+    console.log("User ID:", userId);
+    console.log("User Role:", role);
+    console.log("Order ID received:", orderId);
+    console.log("Status to update:", status);
+    console.log("==============================");
+
     if (!orderId || !status) {
       return NextResponse.json({ message: "Order ID and status are required" }, { status: 400 });
     }
 
-    const order = await OrderModel.findById(orderId);
+    // Try to find order by _id first (MongoDB ID)
+    let order = await OrderModel.findById(orderId);
+    console.log("Found order by _id:", order ? "Yes" : "No");
+    
+    // If not found, try to find by the human-readable orderId field
     if (!order) {
+      order = await OrderModel.findOne({ orderId: orderId });
+      console.log("Found order by orderId field:", order ? "Yes" : "No");
+    }
+    
+    // Log the order details if found
+    if (order) {
+      console.log("Order details:", {
+        _id: order._id,
+        orderId: order.orderId,
+        supplierId: order.supplierId,
+        vendorId: order.vendorId,
+        customerId: order.customerId,
+        status: order.status
+      });
+    }
+    
+    if (!order) {
+      // Log all orders in the database for debugging
+      const allOrders = await OrderModel.find({}, '_id orderId supplierId vendorId customerId status');
+      console.log("All orders in database:", allOrders.map(o => ({
+        _id: o._id,
+        orderId: o.orderId,
+        supplierId: o.supplierId,
+        vendorId: o.vendorId,
+        customerId: o.customerId,
+        status: o.status
+      })));
+      
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
     }
 
     // Security check: Only the seller (supplier or vendor) can update the order status
-    const isSeller = (role === 'supplier' && order.supplierId.equals(userId)) || 
-                     (role === 'vendor' && order.vendorId.equals(userId) && order.customerId);
+    console.log("Checking authorization...");
+    console.log("Role:", role);
+    console.log("Order supplierId:", order.supplierId);
+    console.log("Order vendorId:", order.vendorId);
+    console.log("Order customerId:", order.customerId);
+    console.log("User ID:", userId);
+    
+    let isAuthorized = false;
+    
+    if (role === 'supplier') {
+      // Suppliers can update orders where they are the supplier
+      console.log("Checking supplier authorization...");
+      console.log("order.supplierId:", order.supplierId);
+      console.log("userId:", userId);
+      console.log("order.supplierId && order.supplierId.equals(userId):", order.supplierId && order.supplierId.equals ? order.supplierId.equals(userId) : false);
+      
+      isAuthorized = order.supplierId && order.supplierId.equals && order.supplierId.equals(userId);
+    } else if (role === 'vendor') {
+      // Vendors can update:
+      // 1. Orders they placed (where they are the vendorId)
+      // 2. Orders they received (where they are the customerId) - for customer orders
+      console.log("Checking vendor authorization...");
+      console.log("Order vendorId:", order.vendorId);
+      console.log("Order customerId:", order.customerId);
+      
+      const isB2BOrderTheyPlaced = order.vendorId && order.vendorId.equals && order.vendorId.equals(userId);
+      const isB2COrderForCustomer = order.customerId && order.customerId.equals && order.customerId.equals(userId);
+      
+      console.log("isB2BOrderTheyPlaced:", isB2BOrderTheyPlaced);
+      console.log("isB2COrderForCustomer:", isB2COrderForCustomer);
+      
+      isAuthorized = isB2BOrderTheyPlaced || isB2COrderForCustomer;
+    }
+    
+    console.log("Final authorization result:", isAuthorized);
 
-    if (!isSeller) {
+    if (!isAuthorized) {
       return NextResponse.json({ message: "You are not authorized to update this order" }, { status: 403 });
     }
 
@@ -101,6 +173,13 @@ export const PATCH = authMiddlewareCrm(async (req) => {
     });
 
     await order.save();
+    
+    console.log("Order updated successfully:", {
+      _id: order._id,
+      orderId: order.orderId,
+      newStatus: order.status
+    });
+    
     return NextResponse.json(order, { status: 200 });
 
   } catch (error) {

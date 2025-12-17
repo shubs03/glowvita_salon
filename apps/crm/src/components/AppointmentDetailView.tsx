@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
 import NewAppointmentForm, { type Appointment as FormAppointment } from "../app/calendar/components/NewAppointmentForm";
 import { toast } from 'sonner';
+import { useCollectPaymentMutation, useGetAppointmentsQuery } from '@repo/store/services/api';
 
 interface PaymentDetails {
   amount: number;
@@ -28,6 +29,15 @@ interface PaymentDetails {
   total: number;
   paymentMethod?: string;
   paymentStatus: 'pending' | 'partial' | 'paid' | 'refunded';
+  platformFee?: number;
+  serviceTax?: number;
+  offer?: {
+    code: string;
+    description: string;
+    discountAmount: number;
+  };
+  bookingSource?: 'web' | 'phone' | 'walk-in';
+  paymentMode?: 'online' | 'salon';
 }
 
 // Service item interface for multi-service appointments
@@ -85,13 +95,14 @@ interface AppointmentDetailViewProps {
   onUpdateAppointment?: (appointment: Appointment) => Promise<void>;
   onRescheduleAppointment?: (appointment: Appointment) => Promise<void>;
   onCloseReschedule?: () => void;
+  onOpenAppointment?: (appointmentId: string) => void;
 }
 
 interface ClientAppointment {
   id: string;
   date: Date;
   service: string;
-  status: 'pending' | 'completed' | 'cancelled' | 'missed';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed';
   staffName: string;
   amount: number;
   startTime?: string;
@@ -108,32 +119,63 @@ export function AppointmentDetailView({
   onUpdateAppointment,
   onRescheduleAppointment,
   onCloseReschedule,
+  onOpenAppointment,
 }: AppointmentDetailViewProps) {
   const [activeTab, setActiveTab] = useState('details');
   const [clientHistory, setClientHistory] = useState<ClientAppointment[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [activeHistoryFilter, setActiveHistoryFilter] = useState<'all' | 'pending' | 'completed' | 'cancelled' | 'missed'>('all');
+  const [activeHistoryFilter, setActiveHistoryFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed'>('all');
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isCollectingPayment, setIsCollectingPayment] = useState(false);
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [showStatusConfirm, setShowStatusConfirm] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [paymentData, setPaymentData] = useState({
-    amount: (appointment.payment?.total || 0) - (appointment.payment?.paid || 0),
+    amount: 0,
     paymentMethod: 'cash',
     notes: ''
   });
-  const [isSaving, setIsSaving] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [cancellationReason, setCancellationReason] = useState('');
+  const [collectPayment, { isLoading: isCollectingPaymentLoading }] = useCollectPaymentMutation();
+  
+  // Add the missing isStatusChanging state
+  const [isStatusChanging, setIsStatusChanging] = useState(false);
+
+  // Local override for payment values after a successful collection, so UI updates immediately
+  const [overridePayment, setOverridePayment] = useState<{ amountPaid: number; amountRemaining: number; paymentStatus: string } | null>(null);
+  // Local override for payment history so it shows immediately after payment
+  const [overridePaymentHistory, setOverridePaymentHistory] = useState<any[] | null>(null);
+
+  // Pull latest appointments list from store and merge the one for this id
+  const { data: allAppointments } = useGetAppointmentsQuery(undefined, { refetchOnMountOrArgChange: true });
+  const liveAppointment = useMemo(() => {
+    const currentId = (appointment as any)._id || (appointment as any).id;
+    const fromList = Array.isArray(allAppointments)
+      ? allAppointments.find((a: any) => (a?._id || a?.id) === currentId)
+      : undefined;
+    return { ...appointment, ...(fromList || {}) } as any;
+  }, [allAppointments, appointment]);
+
+  // Normalize all appointments into an array regardless of API shape
+  const appointmentsList: any[] = useMemo(() => {
+    const r: any = allAppointments;
+    if (Array.isArray(r)) return r;
+    if (Array.isArray(r?.data)) return r.data;
+    if (Array.isArray(r?.appointments)) return r.appointments;
+    if (Array.isArray(r?.data?.appointments)) return r.data.appointments;
+    if (Array.isArray(r?.data?.data)) return r.data.data;
+    return [];
+  }, [allAppointments]);
 
   // Prepare default values for edit/reschedule form
   const defaultFormValues = useMemo(() => {
     // Map 'pending' status to 'scheduled' since NewAppointmentForm doesn't support 'pending'
-    const status = appointment.status === 'pending' ? 'scheduled' : appointment.status;
+    const status = liveAppointment.status === 'pending' ? 'scheduled' : liveAppointment.status;
     
     return {
       ...appointment,
@@ -279,56 +321,126 @@ export function AppointmentDetailView({
     }
   };
 
-  // Default payment details if not provided
-  const payment = {
-    amount: 0,
-    paid: 0,
-    tax: 0,
-    total: 0,
-    paymentStatus: 'pending' as const,
-    ...appointment.payment
+  // Initialize payment data with values from the latest appointment snapshot
+  const payment: PaymentDetails = {
+    amount: (liveAppointment as any).amount || appointment.amount || 0,
+    paid: (liveAppointment as any).amountPaid || (appointment as any).amountPaid || 0,
+    tax: (liveAppointment as any).tax || (appointment as any).tax || 0,
+    total: (liveAppointment as any).totalAmount || (appointment as any).totalAmount || appointment.amount || 0,
+    paymentStatus: (liveAppointment as any).paymentStatus || (appointment as any).paymentStatus || 'pending',
+    ...(liveAppointment as any).payment || appointment.payment
   };
 
-  // Fetch client history when the component mounts or filter changes
+  // Calculate total amount - prioritize finalAmount, then totalAmount, then amount (from liveAppointment)
+  const totalAmount = (liveAppointment as any).finalAmount || (liveAppointment as any).totalAmount || payment.total || (liveAppointment as any).amount || 0;
+  
+  // Use override first, then amountPaid from appointment, then fallback to payment.paid
+  const paidAmount = overridePayment?.amountPaid !== undefined
+    ? Number(overridePayment.amountPaid)
+    : (liveAppointment as any).amountPaid !== undefined
+      ? parseFloat((liveAppointment as any).amountPaid)
+      : (payment.paid ? parseFloat(payment.paid as any) : 0);
+    
+  // Calculate remaining amount - prefer override, then appointment, else compute
+  const remainingAmount = overridePayment?.amountRemaining !== undefined
+    ? Number(overridePayment.amountRemaining)
+    : (liveAppointment as any).amountRemaining !== undefined
+      ? parseFloat((liveAppointment as any).amountRemaining)
+      : Math.max(0, totalAmount - paidAmount);
+  
+  // Resolve payment history to display
+  const displayPaymentHistory = useMemo(() => {
+    const hist = overridePaymentHistory ?? (liveAppointment as any)?.paymentHistory ?? [];
+    // Sort desc by date if available
+    return Array.isArray(hist)
+      ? [...hist].sort((a: any, b: any) => new Date(b.paymentDate || b.date || 0).getTime() - new Date(a.paymentDate || a.date || 0).getTime())
+      : [];
+  }, [overridePaymentHistory, liveAppointment]);
+
+  // Debug: Log appointment data to console
+  console.log('=== APPOINTMENT PAYMENT DATA ===');
+  console.log('Appointment ID:', (liveAppointment as any)._id);
+  console.log('finalAmount:', (liveAppointment as any).finalAmount);
+  console.log('totalAmount:', (liveAppointment as any).totalAmount);
+  console.log('amountPaid (from liveAppointment):', (liveAppointment as any).amountPaid);
+  console.log('amountRemaining (from liveAppointment):', (liveAppointment as any).amountRemaining);
+  console.log('paymentStatus:', (liveAppointment as any).paymentStatus);
+  console.log('payment.paid:', payment.paid);
+  console.log('calculated remainingAmount:', remainingAmount);
+  console.log('=== END APPOINTMENT PAYMENT DATA ===');
+  
+  // Update paymentData when remainingAmount changes
   useEffect(() => {
-    const fetchClientHistory = async () => {
-      setIsLoadingHistory(true);
-      try {
-        // Use the appointment data directly instead of mock data
-        const allHistory: ClientAppointment[] = [
-          {
-            id: appointment._id || appointment.id || '',
-            date: appointment.date instanceof Date ? appointment.date : new Date(appointment.date as string),
-            service: appointment.serviceName,
-            status: 'pending' as 'pending' | 'completed' | 'cancelled' | 'missed',
+    setPaymentData(prev => ({
+      ...prev,
+      amount: remainingAmount
+    }));
+  }, [remainingAmount]);
+  
+  // Ensure paymentData is updated when appointment data changes
+  useEffect(() => {
+    setPaymentData(prev => ({
+      ...prev,
+      amount: remainingAmount
+    }));
+  }, [appointment._id, remainingAmount]);
 
-            staffName: appointment.staffName,
-            amount: appointment.amount,
-            startTime: appointment.startTime,
-            endTime: appointment.endTime,
-            notes: appointment.notes || '',
-            payment: appointment.payment
-          }
-        ];
+  // Build client history: prefer clientId match; also allow name/phone fallback. Include all dates and statuses.
+  useEffect(() => {
+    setIsLoadingHistory(true);
+    try {
+      const currentClientId = String((appointment as any)?.client?._id ?? (appointment as any)?.client ?? (appointment as any)?.clientId ?? (appointment as any)?.client_id ?? '').trim();
+      const currentClientName = String((appointment as any)?.clientName ?? (appointment as any)?.client?.name ?? '').trim().toLowerCase();
+      const currentClientPhone = String((appointment as any)?.client?.phone ?? (appointment as any)?.clientPhone ?? (appointment as any)?.phone ?? '').replace(/\D+/g, '');
 
-        // Filter based on active filter
-        const filteredHistory = activeHistoryFilter === 'all' 
-          ? allHistory 
-          : allHistory.filter(appt => appt.status === activeHistoryFilter);
+      const mapStatus = (s: any): ClientAppointment['status'] => {
+        const status = String(s || '').toLowerCase();
+        if (status === 'confirmed') return 'confirmed';
+        if (status === 'completed') return 'completed';
+        if (status === 'cancelled') return 'cancelled';
+        if (status === 'no_show' || status === 'no-show' || status === 'missed') return 'missed';
+        return 'pending';
+      };
 
-        setClientHistory(filteredHistory);
-      } catch (error: any) {
-        console.error('Error processing client history:', error);
-        // In a real app, you might want to fetch from an API here
-        // For now, we'll set an empty array if there's an error
-        setClientHistory([]);
-      } finally {
-        setIsLoadingHistory(false);
+      const history = (appointmentsList || [])
+        .filter((a: any) => {
+          const rawClientId = a?.client?._id ?? a?.client ?? a?.clientId ?? a?.client_id;
+          const clientId = rawClientId != null ? String(rawClientId).trim() : '';
+          const name = String(a?.clientName ?? a?.client?.name ?? '').trim().toLowerCase();
+          const phone = String(a?.client?.phone ?? a?.clientPhone ?? a?.phone ?? '').replace(/\D+/g, '');
+
+          const idMatches = !!currentClientId && !!clientId && clientId === currentClientId;
+          const nameMatches = !!currentClientName && !!name && name === currentClientName;
+          const phoneMatches = !!currentClientPhone && !!phone && phone === currentClientPhone;
+          return idMatches || nameMatches || phoneMatches;
+        })
+        .map((a: any) => ({
+          id: String(a?._id ?? a?.id ?? ''),
+          date: new Date(a?.date),
+          service: String(a?.serviceName ?? a?.service?.name ?? a?.service ?? 'Service'),
+          status: mapStatus(a?.status),
+          staffName: String(a?.staffName ?? a?.staff?.name ?? ''),
+          amount: Number(a?.totalAmount ?? a?.finalAmount ?? a?.amount ?? 0) || 0,
+          startTime: a?.startTime,
+          endTime: a?.endTime,
+          notes: a?.notes ?? '',
+          payment: a?.payment,
+        }))
+        .sort((a: ClientAppointment, b: ClientAppointment) => b.date.getTime() - a.date.getTime());
+
+      const filtered = activeHistoryFilter === 'all' ? history : history.filter(h => h.status === activeHistoryFilter);
+      if (process && process.env && typeof window !== 'undefined') {
+        console.log('[ClientHistory] Matches total:', history.length, 'Filter:', activeHistoryFilter, 'Shown:', filtered.length);
+        console.log('[ClientHistory] Current client id/name/phone:', { currentClientId, currentClientName, currentClientPhone });
       }
-    };
-
-    fetchClientHistory();
-  }, [appointment, activeHistoryFilter]);
+      setClientHistory(filtered);
+    } catch (e) {
+      console.error('Error building client history', e);
+      setClientHistory([]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [appointmentsList, appointment, activeHistoryFilter]);
 
   // Function to update appointment status
   const updateAppointmentStatus = (appointmentId: string, newStatus: 'pending' | 'completed' | 'cancelled' | 'missed') => {
@@ -392,29 +504,13 @@ export function AppointmentDetailView({
   );
 
   // Ensure total is calculated if not provided
-  if (!payment.total) {
-    payment.total = payment.amount + payment.tax - (payment.discount?.amount || 0);
+  if (!payment.total && totalAmount > 0) {
+    payment.total = totalAmount;
   }
-  
-  const remainingAmount = Math.max(0, payment.total - payment.paid);
   
   const statusColors = {
     confirmed: 'bg-green-100 text-green-800',
-    pending: 'bg-yellow-100 text-yellow-800',
-    completed: 'bg-blue-100 text-blue-800',
-    cancelled: 'bg-red-100 text-red-800',
-  };
-
-  const handlePaymentSubmit = () => {
-    if (onCollectPayment) {
-      onCollectPayment({
-        amount: paymentData.amount,
-        paymentMethod: paymentData.paymentMethod,
-        notes: paymentData.notes
-      });
-      setIsCollectingPayment(false);
     }
-  };
 
   // Format date for display
   const formatAppointmentDate = (date: Date) => {
@@ -467,8 +563,6 @@ export function AppointmentDetailView({
         ];
     }
   };
-
-  const [isStatusChanging, setIsStatusChanging] = useState(false);
 
   const handleStatusChange = useCallback(async (newStatus: string) => {
     const toastId = toast.loading('Updating status...');
@@ -533,6 +627,132 @@ export function AppointmentDetailView({
   const handleCancelEdit = () => {
     setIsEditing(false);
     setIsRescheduling(false);
+  };
+
+  // Collect payment and update appointment/payment state
+  const handlePaymentSubmit = async () => {
+    const toastId = toast.loading('Processing payment...');
+    try {
+      // Validate payment amount
+      if (paymentData.amount <= 0) {
+        toast.error('Payment amount must be greater than zero');
+        return;
+      }
+
+      // Validate appointment ID
+      if (!appointment?._id) {
+        toast.error('Appointment ID is missing');
+        return;
+      }
+
+      // Prepare payload
+      const paymentPayload = {
+        appointmentId: appointment._id,
+        amount: paymentData.amount,
+        paymentMethod: paymentData.paymentMethod,
+        notes: paymentData.notes,
+      };
+
+      console.log('Submitting payment with payload:', paymentPayload);
+
+      // Call API
+      const result: any = await collectPayment(paymentPayload).unwrap();
+      console.log('Payment API response:', result);
+
+      if (!result || !result.success) {
+        throw new Error(result?.message || 'Failed to process payment');
+      }
+
+      // Extract response data
+      const updatedAppointmentData = result.appointment || {};
+      const paymentDetails = result.paymentDetails || {};
+
+      // Derive amounts/status from most reliable source
+      const newAmountPaid =
+        paymentDetails.amountPaid ?? updatedAppointmentData.amountPaid ?? (appointment as any).amountPaid ?? 0;
+      const newRemainingAmount =
+        paymentDetails.amountRemaining ?? updatedAppointmentData.amountRemaining ?? (appointment as any).amountRemaining ?? 0;
+      const newPaymentStatus =
+        paymentDetails.paymentStatus ?? updatedAppointmentData.paymentStatus ?? (appointment as any).paymentStatus ?? 'pending';
+
+      console.log('Updating payment data:', {
+        newAmountPaid,
+        newRemainingAmount,
+        newPaymentStatus,
+      });
+
+      // Update parent with latest appointment state
+      if (onUpdateAppointment) {
+        const updatedAppointment: any = {
+          ...appointment,
+          ...updatedAppointmentData,
+          payment: {
+            ...(appointment.payment || {}),
+            ...(updatedAppointmentData.payment || {}),
+          },
+          amountPaid: newAmountPaid,
+          amountRemaining: newRemainingAmount,
+          paymentStatus: newPaymentStatus,
+          status: updatedAppointmentData.status || appointment.status,
+        };
+
+        // Keep payment object in sync
+        updatedAppointment.payment = {
+          ...updatedAppointment.payment,
+          paid: newAmountPaid,
+          paymentStatus: newPaymentStatus,
+          amount: (updatedAppointment as any).finalAmount || updatedAppointment.totalAmount || updatedAppointment.amount || 0,
+        };
+
+        console.log('Calling onUpdateAppointment with:', updatedAppointment);
+        await onUpdateAppointment(updatedAppointment);
+      }
+
+      // Success toast
+      let successMessage = `Payment of ₹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`;
+      if (updatedAppointmentData?.status && appointment.status !== updatedAppointmentData.status) {
+        successMessage += ` and appointment marked as ${updatedAppointmentData.status}`;
+      }
+      toast.success('Payment Successful', { description: successMessage });
+
+      // Update local payment input to remaining amount
+      setPaymentData((prev) => ({
+        ...prev,
+        amount: newRemainingAmount,
+        paymentMethod: paymentPayload.paymentMethod,
+        notes: paymentPayload.notes,
+      }));
+
+      // Locally override UI payment values immediately
+      setOverridePayment({
+        amountPaid: newAmountPaid,
+        amountRemaining: newRemainingAmount,
+        paymentStatus: newPaymentStatus,
+      });
+
+      // Update local payment history for immediate UI
+      const newHistoryEntry = {
+        amount: paymentData.amount,
+        paymentMethod: paymentPayload.paymentMethod,
+        paymentDate: new Date().toISOString(),
+        notes: paymentPayload.notes || '',
+        transactionId: (result?.paymentCollection?.paymentHistory || []).slice(-1)[0]?.transactionId || null,
+      };
+      const backendHistory = updatedAppointmentData?.paymentHistory || result?.paymentCollection?.paymentHistory || [];
+      setOverridePaymentHistory(Array.isArray(backendHistory) && backendHistory.length > 0 
+        ? backendHistory
+        : [newHistoryEntry, ...((overridePaymentHistory as any[]) || ((liveAppointment as any)?.paymentHistory || []))]);
+
+      // Close payment form
+      setIsCollectingPayment(false);
+    } catch (error: any) {
+      console.error('Error collecting payment:', error);
+      toast.error('Payment Failed', {
+        description: error?.message || 'There was an error processing your payment. Please try again.',
+      });
+    } finally {
+      toast.dismiss(toastId);
+    }
   };
 
   const renderActionButtons = () => (
@@ -603,7 +823,7 @@ export function AppointmentDetailView({
           onClose();
         }
       }}>
-        <DialogContent className="sm:max-w-[800px] max-h-[90vh] h-auto overflow-y-auto p-0">
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] h-auto overflow-y-scroll p-0 scrollbar-hidden">
             <DialogHeader className="px-6 pt-6 pb-4 border-b">
               <div className="flex justify-between items-start">
                 <div>
@@ -645,14 +865,25 @@ export function AppointmentDetailView({
             <TabsContent value="details" className="p-6 pt-4 space-y-4">
               <div className="flex flex-col sm:flex-row justify-between gap-3">
               <div className="w-full flex flex-col sm:flex-row gap-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full sm:w-auto"
-                  onClick={() => setIsCollectingPayment(!isCollectingPayment)}
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  {isCollectingPayment ? 'Hide Payment' : 'Collect Payment'}
-                </Button>
+                {(remainingAmount > 0 && (overridePayment?.paymentStatus ?? (liveAppointment as any).paymentStatus) !== 'completed') && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full sm:w-auto"
+                    onClick={() => {
+                      // When opening the payment form, set the amount to the remaining balance
+                      if (!isCollectingPayment) {
+                        setPaymentData(prev => ({
+                          ...prev,
+                          amount: remainingAmount
+                        }));
+                      }
+                      setIsCollectingPayment(!isCollectingPayment);
+                    }}
+                  >
+                    <DollarSign className="w-4 h-4 mr-2" />
+                    {isCollectingPayment ? 'Hide Payment' : 'Collect Payment'}
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   className="w-full sm:w-auto"
@@ -661,9 +892,9 @@ export function AppointmentDetailView({
                   <CalendarPlus className="w-4 h-4 mr-2" />
                   Reschedule
                 </Button>
-                <div className="w-full sm:w-[200px]">
+                <div className="w-full sm:w-[200px] hidden">
                   <Select 
-                    value={appointment.status || ""}
+                    value={appointment.status || "scheduled"}
                     onValueChange={handleStatusChange}
                     disabled={isStatusChanging}
                   >
@@ -672,6 +903,7 @@ export function AppointmentDetailView({
                     </SelectTrigger>
                     <SelectContent>
                       {[
+                        { value: 'scheduled', label: 'Mark as Scheduled' },
                         { value: 'confirmed', label: 'Mark as Confirmed' },
                         { value: 'completed', label: 'Mark as Completed' },
                         { value: 'cancelled', label: 'Mark as Cancelled' },
@@ -688,134 +920,485 @@ export function AppointmentDetailView({
 
             {/* Payment Collection Form */}
             {isCollectingPayment && (
-              <div className="bg-muted/30 p-4 rounded-lg border border-dashed border-muted-foreground/30">
-                <h3 className="font-medium mb-3 flex items-center">
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Collect Payment
-                </h3>
+              <div className="bg-background p-5 rounded-lg border-2 border-muted">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-lg flex items-center text-foreground">
+                    <DollarSign className="w-5 h-5 mr-2 text-foreground" />
+                    Payment Collection
+                  </h3>
+                  {appointment.payment?.bookingSource && (
+                    <Badge variant="outline" className="text-xs font-medium">
+                      {appointment.payment.bookingSource === 'web' ? '🌐 Online Booking' : 
+                       appointment.payment.bookingSource === 'phone' ? '📞 Phone Booking' : 
+                       '🚶 Walk-in'}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Booking Source & Payment Mode Info */}
+                {appointment.payment?.bookingSource === 'web' && (
+                  <div className="mb-4 p-3 bg-muted rounded-lg border border-muted">
+                    <div className="flex items-start gap-2">
+                      <div className="p-1.5 bg-foreground rounded-md mt-0.5">
+                        <svg className="w-4 h-4 text-background" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          Online Booking {appointment.payment?.paymentMode === 'online' ? '- Paid Online' : '- Pay at Salon'}
+                        </p>
+                        <p className="text-xs text-foreground/80 mt-0.5">
+                          {appointment.payment?.paymentMode === 'online' 
+                            ? 'Customer has already paid online. Verify payment status before service.' 
+                            : 'Customer selected "Pay at Salon" option. Collect payment now.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
-                <div className="space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Total Amount</label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          value={appointment.totalAmount?.toFixed(2) || '0.00'}
-                          className="pl-9 bg-muted/50"
-                          readOnly
-                          disabled
-                        />
+                <div className="space-y-4">
+                  {/* Payment Breakdown */}
+                  <div className="bg-background p-4 rounded-lg border shadow-sm">
+                    <h4 className="text-sm font-semibold mb-3 text-foreground">Payment Breakdown</h4>
+                    
+                    <div className="space-y-2 text-sm">
+                      {/* Service Amount */}
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Service Amount</span>
+                        <span className="font-medium">₹{appointment.amount?.toFixed(2) || '0.00'}</span>
+                      </div>
+
+                      {/* Discount Amount (from appointment root) */}
+                      {(appointment as any).discountAmount > 0 && (
+                        <div className="flex justify-between items-center text-foreground">
+                          <span>Discount Applied</span>
+                          <span className="font-medium">-₹{((appointment as any).discountAmount)?.toFixed(2) || '0.00'}</span>
+                        </div>
+                      )}
+
+                      {/* Offer/Discount Applied (from payment object) */}
+                      {appointment.payment?.offer && (
+                        <div className="flex justify-between items-center text-foreground">
+                          <div className="flex items-center gap-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                            <span>Offer ({appointment.payment.offer.code})</span>
+                          </div>
+                          <span className="font-medium">-₹{appointment.payment.offer.discountAmount?.toFixed(2) || '0.00'}</span>
+                        </div>
+                      )}
+
+                      {/* Regular Discount */}
+                      {appointment.discount > 0 && (
+                        <div className="flex justify-between items-center text-foreground">
+                          <span>Discount</span>
+                          <span className="font-medium">-₹{appointment.discount.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {/* Service Tax (from appointment root) */}
+                      {(appointment as any).serviceTax && (appointment as any).serviceTax > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Service Tax (GST)</span>
+                          <span className="font-medium">₹{((appointment as any).serviceTax)?.toFixed(2) || '0.00'}</span>
+                        </div>
+                      )}
+
+                      {/* Service Tax (from payment object - fallback) */}
+                      {!((appointment as any).serviceTax) && appointment.payment?.serviceTax && appointment.payment.serviceTax > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Service Tax (GST)</span>
+                          <span className="font-medium">₹{appointment.payment.serviceTax.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {/* Platform Fee (from appointment root) */}
+                      {(appointment as any).platformFee && (appointment as any).platformFee > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Platform Fee</span>
+                          <span className="font-medium">₹{((appointment as any).platformFee)?.toFixed(2) || '0.00'}</span>
+                        </div>
+                      )}
+
+                      {/* Platform Fee (from payment object - fallback) */}
+                      {!((appointment as any).platformFee) && appointment.payment?.platformFee && appointment.payment.platformFee > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Platform Fee</span>
+                          <span className="font-medium">₹{appointment.payment.platformFee.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      <div className="border-t pt-2 mt-2">
+                        <div className="flex justify-between items-center font-semibold text-base">
+                          <span>Total Amount</span>
+                          <span className="text-foreground">₹{((appointment as any).finalAmount || appointment.totalAmount)?.toFixed(2) || '0.00'}</span>
+                        </div>
+                      </div>
+
+                      {/* Payment Method (from appointment root) */}
+                      {(appointment as any).paymentMethod && (
+                        <div className="flex justify-between items-center py-2 px-3 bg-muted rounded-lg">
+                          <span className="text-sm font-medium text-foreground">Payment Method:</span>
+                          <span className="text-sm font-semibold text-foreground">{(appointment as any).paymentMethod}</span>
+                        </div>
+                      )}
+
+                      {/* Payment Status (from appointment root) */}
+                      {(appointment as any).paymentStatus && (
+                        <div className="flex justify-between items-center py-2 px-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
+                          <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Payment Status:</span>
+                          <span className={`text-sm font-semibold capitalize ${
+                            (appointment as any).paymentStatus === 'completed' ? 'text-green-700 dark:text-green-300' :
+                            (appointment as any).paymentStatus === 'pending' ? 'text-yellow-700 dark:text-yellow-300' :
+                            'text-red-700 dark:text-red-300'
+                          }`}>
+                            {(appointment as any).paymentStatus}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Amount Paid (from appointment root) */}
+                      <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                        <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid:</span>
+                        <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                          ₹{paidAmount.toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* Amount Remaining (from appointment root) */}
+                      <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+                        <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining:</span>
+                        <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                          ₹{remainingAmount.toFixed(2)}
+                        </span>
+                      </div>
+
+                      {/* Amount Already Paid */}
+                      {(appointment.payment?.paid ?? 0) > 0 && (
+                        <div className="flex justify-between items-center text-foreground">
+                          <div className="flex items-center gap-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <span>Amount Paid {appointment.payment?.paymentMode === 'online' ? '(Online)' : ''}</span>
+                          </div>
+                          <span className="font-medium">₹{(appointment.payment?.paid ?? 0).toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {/* Remaining Amount */}
+                      <div className="border-t pt-2 mt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold text-base">Amount to Collect</span>
+                          <span className="text-xl font-bold text-foreground">
+                            ₹{remainingAmount.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Amount Paid</label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          value={(appointment.payment?.paid || 0).toFixed(2)}
-                          className="pl-9 bg-muted/50"
-                          readOnly
-                          disabled
-                        />
+                  {/* Payment Collection Details */}
+                  <div className="bg-background p-4 rounded-lg border shadow-sm mt-4">
+                    <h4 className="text-sm font-semibold mb-3 text-foreground">Payment Collection Details</h4>
+                    
+                    {/* Debug Information - Remove this in production */}
+                    
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between items-center py-2 px-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Total Amount</span>
+                        <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                          ₹{((appointment as any).finalAmount || appointment.totalAmount || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                        <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid</span>
+                        <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                          ₹{paidAmount.toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+                        <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining</span>
+                        <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                          ₹{remainingAmount.toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      {/* Payment Status */}
+                      <div className={`flex justify-between items-center py-2 px-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg`}>
+                        <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Payment Status</span>
+                        <span className={`text-sm font-semibold ${
+                          (overridePayment?.paymentStatus ?? (appointment as any).paymentStatus) === 'completed' ? 'text-green-700 dark:text-green-300' :
+                          (overridePayment?.paymentStatus ?? (appointment as any).paymentStatus) === 'pending' ? 'text-yellow-700 dark:text-yellow-300' :
+                          'text-red-700 dark:text-red-300'
+                        }`}>
+                          {/* Map backend payment status to user-friendly terms */}
+                          {(() => {
+                            const status = overridePayment?.paymentStatus ?? (appointment as any).paymentStatus;
+                            const amountPaid = Number(paidAmount || 0) || 0;
+                            const totalAmount = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
+                            
+                            switch (status) {
+                              case 'completed': return 'PAID';
+                              case 'pending': 
+                                if (amountPaid > 0 && totalAmount > 0) {
+                                  return `PARTIAL (₹${amountPaid.toFixed(2)})`;
+                                }
+                                return 'UNPAID';
+                              default: return status.toUpperCase();
+                            }
+                          })()}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Amount to Collect</label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          type="number" 
-                          value={paymentData.amount}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value) || 0;
-                            setPaymentData(prev => ({
-                              ...prev,
-                              amount: Math.min(value, remainingAmount)
-                            }));
-                          }}
-                          className="pl-9"
-                          min="0"
-                          max={remainingAmount}
-                          step="0.01"
+                  {/* Collect Payment Amount */}
+                  {remainingAmount > 0 && (
+                    <>
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Collecting Amount (Manual Entry)</label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground font-medium">₹</span>
+                          <Input 
+                            type="number" 
+                            value={paymentData.amount}
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value) || 0;
+                              // Allow any positive value for manual entry
+                              setPaymentData(prev => ({
+                                ...prev,
+                                amount: value >= 0 ? value : 0
+                              }));
+                            }}
+                            className="pl-7 text-lg font-semibold"
+                            min="0"
+                            step="0.01"
+                            placeholder="Enter amount to collect"
+                          />
+                        </div>
+                        <div className="flex justify-between items-center mt-1.5">
+                          <p className="text-xs text-foreground/80">
+                            Remaining Balance: ₹{remainingAmount.toFixed(2)}
+                          </p>
+                          {paymentData.amount !== remainingAmount && remainingAmount > 0 && (
+                            <button
+                              onClick={() => setPaymentData(prev => ({ ...prev, amount: remainingAmount }))}
+                              className="text-xs text-foreground font-medium hover:opacity-80"
+                            >
+                              Set to Remaining
+                            </button>
+                          )}
+                        </div>
+                        {paymentData.amount > remainingAmount && (
+                          <p className="text-xs text-foreground/80 mt-1 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Amount exceeds remaining balance by ₹{(paymentData.amount - remainingAmount).toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Payment Methods */}
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Payment Method</label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <button
+                            onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'cash' }))}
+                            className={`p-3 rounded-lg border-2 transition-all ${
+                              paymentData.paymentMethod === 'cash'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
+                            }`}
+                          >
+                            <Wallet className={`w-6 h-6 mx-auto mb-1 ${
+                              paymentData.paymentMethod === 'cash' ? 'text-foreground' : 'text-foreground/60'
+                            }`} />
+                            <p className="text-xs font-medium">Cash</p>
+                          </button>
+
+                          <button
+                            onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'card' }))}
+                            className={`p-3 rounded-lg border-2 transition-all ${
+                              paymentData.paymentMethod === 'card'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
+                            }`}
+                          >
+                            <CreditCard className={`w-6 h-6 mx-auto mb-1 ${
+                              paymentData.paymentMethod === 'card' ? 'text-foreground' : 'text-foreground/60'
+                            }`} />
+                            <p className="text-xs font-medium">Card</p>
+                          </button>
+
+                          <button
+                            onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'upi' }))}
+                            className={`p-3 rounded-lg border-2 transition-all ${
+                              paymentData.paymentMethod === 'upi'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
+                            }`}
+                          >
+                            <Smartphone className={`w-6 h-6 mx-auto mb-1 ${
+                              paymentData.paymentMethod === 'upi' ? 'text-foreground' : 'text-foreground/60'
+                            }`} />
+                            <p className="text-xs font-medium">UPI</p>
+                          </button>
+
+                          <button
+                            onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'netbanking' }))}
+                            className={`p-3 rounded-lg border-2 transition-all ${
+                              paymentData.paymentMethod === 'netbanking'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
+                            }`}
+                          >
+                            <svg className={`w-6 h-6 mx-auto mb-1 ${
+                              paymentData.paymentMethod === 'netbanking' ? 'text-foreground' : 'text-foreground/60'
+                            }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            <p className="text-xs font-medium">Net Banking</p>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* UPI QR Code Section */}
+                      {paymentData.paymentMethod === 'upi' && (
+                        <div className="bg-muted p-4 rounded-lg border-2 border-dashed border-muted">
+                          <div className="flex flex-col items-center">
+                            <div className="bg-background p-3 rounded-lg shadow-md mb-3">
+                              {/* Placeholder for QR Code - You can integrate a QR code generator library */}
+                              <div className="w-48 h-48 bg-muted rounded flex items-center justify-center">
+                                <div className="text-center">
+                                  <Smartphone className="w-12 h-12 mx-auto mb-2 text-foreground" />
+                                  <p className="text-xs text-foreground/80">QR Code</p>
+                                  <p className="text-xs text-foreground/80">Scan to Pay</p>
+                                </div>
+                              </div>
+                            </div>
+                            <p className="text-sm font-medium text-center">Scan QR code to pay ₹{paymentData.amount.toFixed(2)}</p>
+                            <p className="text-xs text-foreground/80 mt-1">Or enter UPI ID manually</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Payment Notes */}
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Transaction Notes (Optional)</label>
+                        <Textarea
+                          placeholder="Add payment reference, transaction ID, or any notes..."
+                          value={paymentData.notes}
+                          onChange={(e) => setPaymentData(prev => ({
+                            ...prev,
+                            notes: e.target.value
+                          }))}
+                          rows={2}
+                          className="resize-none"
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Remaining balance: ${remainingAmount.toFixed(2)}
-                      </p>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 pt-2">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setIsCollectingPayment(false)}
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={handlePaymentSubmit}
+                          disabled={paymentData.amount <= 0 || isCollectingPaymentLoading}
+                          className="flex-1 bg-foreground hover:bg-foreground/90 text-background"
+                        >
+                          {isCollectingPaymentLoading ? (
+                            <>
+                              <svg className="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              Confirm Payment ₹{paymentData.amount.toFixed(2)}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Already Paid Message */}
+                  {remainingAmount <= 0 && (
+                    <div className="bg-muted p-4 rounded-lg border-2 border-muted">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-foreground rounded-full">
+                          <svg className="w-6 h-6 text-background" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground">Payment Complete</p>
+                          <p className="text-sm text-foreground/80">Full payment of ₹{appointment.totalAmount?.toFixed(2)} has been received.</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Payment Method</label>
-                    <Select 
-                      value={paymentData.paymentMethod}
-                      onValueChange={(value) => setPaymentData(prev => ({
-                        ...prev,
-                        paymentMethod: value
-                      }))}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select method" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="cash">
-                          <div className="flex items-center">
-                            <Wallet className="w-4 h-4 mr-2" />
-                            Cash
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="card">
-                          <div className="flex items-center">
-                            <CreditCard className="w-4 h-4 mr-2" />
-                            Credit/Debit Card
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="upi">
-                          <div className="flex items-center">
-                            <Smartphone className="w-4 h-4 mr-2" />
-                            UPI
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium mb-1 block">Notes (Optional)</label>
-                    <Input 
-                      placeholder="Payment reference or notes"
-                      value={paymentData.notes}
-                      onChange={(e) => setPaymentData(prev => ({
-                        ...prev,
-                        notes: e.target.value
-                      }))}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setIsCollectingPayment(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handlePaymentSubmit}
-                      disabled={paymentData.amount <= 0}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      Process Payment
-                    </Button>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
             
+            {/* Payment History */}
+            <div className="bg-background p-4 rounded-lg border shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <History className="w-4 h-4" /> Payment History
+                </h4>
+                {displayPaymentHistory.length > 0 && (
+                  <span className="text-xs text-muted-foreground">{displayPaymentHistory.length} entr{displayPaymentHistory.length === 1 ? 'y' : 'ies'}</span>
+                )}
+              </div>
+
+              {displayPaymentHistory.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No payments recorded yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {displayPaymentHistory.map((p: any, idx: number) => {
+                    const when = p.paymentDate || p.date;
+                    const dateStr = when ? format(new Date(when), 'MMM d, yyyy h:mm a') : '';
+                    return (
+                      <div key={idx} className="flex items-start justify-between p-3 rounded-lg border bg-card/50">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-foreground">₹{Number(p.amount || 0).toFixed(2)}</span>
+                            <span className="text-xs text-muted-foreground">• {String(p.paymentMethod || 'cash').toUpperCase()}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">{dateStr}</div>
+                          {(p.notes || p.transactionId) && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {p.notes && <span className="mr-2">{p.notes}</span>}
+                              {p.transactionId && <span className="font-mono">Txn: {p.transactionId}</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* Client & Service Info */}
             <div className="bg-gradient-to-br from-background/50 to-muted/20 p-3 sm:p-4 rounded-lg border">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -823,7 +1406,7 @@ export function AppointmentDetailView({
                   <div className="bg-background p-3 rounded-lg border shadow-sm">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-primary/10 rounded-lg">
-                        <User className="h-5 w-5 text-primary" />
+                        <User className="h-5 w-5 text-foreground" />
                       </div>
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Client</p>
@@ -836,8 +1419,8 @@ export function AppointmentDetailView({
                   {!(appointment.isMultiService || (appointment.serviceItems && appointment.serviceItems.length > 1)) ? (
                     <div className="bg-background p-3 rounded-lg border shadow-sm">
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                          <Scissors className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Scissors className="h-5 w-5 text-foreground" />
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service</p>
@@ -850,8 +1433,8 @@ export function AppointmentDetailView({
                   ) : (
                     <div className="bg-background p-3 rounded-lg border shadow-sm">
                       <div className="flex items-center space-x-3 mb-3">
-                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                          <ClipboardList className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <ClipboardList className="h-5 w-5 text-foreground" />
                         </div>
                         <div>
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Services</p>
@@ -884,8 +1467,8 @@ export function AppointmentDetailView({
                   
                   <div className="bg-background p-3 rounded-lg border shadow-sm">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                        <UserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <UserCheck className="h-5 w-5 text-foreground" />
                       </div>
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Staff</p>
@@ -898,8 +1481,8 @@ export function AppointmentDetailView({
                 <div className="space-y-5">
                   <div className="bg-background p-3 rounded-lg border shadow-sm">
                     <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                        <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <Calendar className="h-5 w-5 text-foreground" />
                       </div>
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Date & Time</p>
@@ -908,7 +1491,7 @@ export function AppointmentDetailView({
                             {format(new Date(appointment.date), 'EEEE, MMMM d, yyyy')}
                           </p>
                           <div className="flex items-center text-foreground/80">
-                            <Clock className="h-4 w-4 mr-1.5 text-muted-foreground" />
+                            <Clock className="h-4 w-4 mr-1.5 text-foreground" />
                             <span>{appointment.startTime} - {appointment.endTime}</span>
                             <span className="ml-2 text-xs text-muted-foreground">({appointment.duration} min)</span>
                           </div>
@@ -963,8 +1546,8 @@ export function AppointmentDetailView({
                   {appointment.notes && (
                     <div className="bg-background p-3 rounded-lg border shadow-sm">
                       <div className="flex items-start space-x-3">
-                        <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg mt-0.5">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-600 dark:text-cyan-400">
+                        <div className="p-2 bg-primary/10 rounded-lg mt-0.5">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground">
                             <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
                             <rect width="8" height="2" x="8" y="12" rx="1"></rect>
@@ -991,24 +1574,40 @@ export function AppointmentDetailView({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Service Amount:</span>
-                  <span>${appointment.amount?.toFixed(2) || '0.00'}</span>
+                  <span>₹{Number(((liveAppointment as any)?.amount ?? appointment.amount) || 0).toFixed(2)}</span>
                 </div>
                 
                 {appointment.discount && appointment.discount > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>Discount:</span>
-                    <span>-${appointment.discount.toFixed(2)}</span>
+                    <span>-₹{appointment.discount.toFixed(2)}</span>
                   </div>
                 )}
                 
                 <div className="flex justify-between font-medium pt-2 border-t mt-2">
                   <span>Total Amount:</span>
-                  <span>${appointment.totalAmount?.toFixed(2) || '0.00'}</span>
+                  <span>₹{Number(totalAmount || (liveAppointment as any)?.totalAmount || appointment.totalAmount || 0).toFixed(2)}</span>
                 </div>
                 
-                <div className="flex justify-between text-sm mt-4">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount Paid:</span>
+                  <span>₹{paidAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount Remaining:</span>
+                  <span>₹{remainingAmount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm mt-2">
                   <span className="text-muted-foreground">Payment Status:</span>
-                  <span className="capitalize">{appointment.payment?.paymentStatus || 'unpaid'}</span>
+                  <span className="capitalize">
+                    {(() => {
+                      const status = (overridePayment?.paymentStatus ?? (liveAppointment as any)?.paymentStatus ?? 'pending') as string;
+                      if (status === 'completed') return 'paid';
+                      if (status === 'pending') return paidAmount > 0 ? `partial (₹${paidAmount.toFixed(2)})` : 'unpaid';
+                      if (status === 'partial') return `partial (₹${paidAmount.toFixed(2)})`;
+                      return status;
+                    })()}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1065,7 +1664,7 @@ export function AppointmentDetailView({
               {/* History Filter Tabs */}
               <div className="border-b px-6">
                 <div className="flex space-x-1 overflow-x-auto py-2">
-                  {['all', 'pending', 'completed', 'cancelled', 'missed'].map((filter) => (
+                  {['all', 'pending', 'confirmed', 'completed', 'cancelled', 'missed'].map((filter) => (
                     <button
                       key={filter}
                       onClick={() => setActiveHistoryFilter(filter as any)}
@@ -1110,7 +1709,15 @@ export function AppointmentDetailView({
                         key={appt.id} 
                         className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => {
-                          window.history.replaceState({}, '', `/appointments/${appt.id}`);
+                          if (onOpenAppointment) {
+                            onOpenAppointment(appt.id);
+                            setActiveTab('details');
+                          } else {
+                            // Fallback: update URL without navigation if handler not provided
+                            if (typeof window !== 'undefined') {
+                              window.history.replaceState({}, '', `/appointments/${appt.id}`);
+                            }
+                          }
                         }}
                       >
                         <div className="flex justify-between items-start">

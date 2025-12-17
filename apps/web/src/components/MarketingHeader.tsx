@@ -50,6 +50,7 @@ interface MarketingHeaderProps {
 const profileNavItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
   { id: 'appointments', label: 'My Appointments', icon: Calendar, href: '/profile/appointments' },
+  { id: 'consultations', label: 'My Consultations', icon: Calendar, href: '/profile/consultations' },
   { id: 'orders', label: 'My Orders', icon: ShoppingCart, href: '/profile/orders' },
   { id: 'cart', label: 'My Cart', icon: ShoppingCart, href: '/profile/cart' },
   { id: 'reviews', label: 'My Reviews', icon: Star, href: '/profile/reviews' },
@@ -165,19 +166,7 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
                 ) : (
                   <>
                     <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                      <Link href="/apps">Features</Link>
-                    </Button>
-                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                      <Link href="/pricing">Pricing</Link>
-                    </Button>
-                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                      <Link href="/about">About Us</Link>
-                    </Button>
-                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                      <Link href="/contact">Contact</Link>
-                    </Button>
-                    <Button variant="ghost" className="hover:bg-primary/10 text-sm px-3" asChild>
-                      <Link href="/support">Support</Link>
+                      <Link href="/all-products">Products</Link>
                     </Button>
                   </>
                 )}
@@ -276,19 +265,10 @@ export function MarketingHeader({ isMobileMenuOpen, toggleMobileMenu, isHomePage
                     ) : (
                       <>
                         <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                          <Link href="/apps">Features</Link>
+                          <Link href="/all-products">All-Products</Link>
                         </Button>
                         <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                          <Link href="/pricing">Pricing</Link>
-                        </Button>
-                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                          <Link href="/about">About Us</Link>
-                        </Button>
-                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                          <Link href="/contact">Contact</Link>
-                        </Button>
-                        <Button variant="ghost" className="w-full justify-start h-12 text-left" asChild>
-                          <Link href="/support">Support</Link>
+                          <Link href="/apps">Get App</Link>
                         </Button>
                       </>
                     )}

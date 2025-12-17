@@ -1,7 +1,8 @@
- "use client";
+"use client";
 
 import { Clock, User, MoreVertical, ArrowRight, CheckCircle2, Clock4, XCircle, Calendar, Phone, Mail } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 
 type Appointment = {
   id: string;
@@ -20,6 +21,7 @@ type Appointment = {
   clientEmail?: string;
   duration?: string;
   price?: string;
+  mode?: 'online' | 'offline'; // Booking mode
 };
 
 interface AppointmentCardProps {
@@ -36,16 +38,18 @@ const getServiceGradient = (service: string | null | undefined) => {
   if (serviceName.includes('hair')) {
     return {
       gradient: 'from-purple-500 to-pink-500',
-      bg: 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20',
-      border: 'border-l-purple-500',
-      accent: 'text-purple-600 dark:text-purple-400'
+      bg: 'bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30',
+      border: 'border-l-purple-500 dark:border-l-purple-400',
+      accent: 'text-purple-600 dark:text-purple-400',
+      hover: 'hover:from-purple-50/80 hover:to-pink-50/80 dark:hover:from-purple-900/40 dark:hover:to-pink-900/40'
     };
   } else if (serviceName.includes('facial') || serviceName.includes('skin')) {
     return {
       gradient: 'from-blue-500 to-cyan-500',
-      bg: 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',
-      border: 'border-l-blue-500',
-      accent: 'text-blue-600 dark:text-blue-400'
+      bg: 'bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30',
+      border: 'border-l-blue-500 dark:border-l-blue-400',
+      accent: 'text-blue-600 dark:text-blue-400',
+      hover: 'hover:from-blue-50/80 hover:to-cyan-50/80 dark:hover:from-blue-900/40 dark:hover:to-cyan-900/40'
     };
   } else if (serviceName.includes('nail') || serviceName.includes('manicure') || serviceName.includes('pedicure')) {
     return {
@@ -63,10 +67,11 @@ const getServiceGradient = (service: string | null | undefined) => {
     };
   } else {
     return {
-      gradient: 'from-gray-500 to-slate-500',
-      bg: 'bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20',
-      border: 'border-l-gray-500',
-      accent: 'text-gray-600 dark:text-gray-400'
+      gradient: 'from-gray-500 to-gray-600',
+      bg: 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800/30 dark:to-gray-800/40',
+      border: 'border-l-gray-400 dark:border-l-gray-500',
+      accent: 'text-gray-600 dark:text-gray-300',
+      hover: 'hover:from-gray-50/80 hover:to-gray-100/80 dark:hover:from-gray-800/40 dark:hover:to-gray-800/50'
     };
   }
 };
@@ -183,7 +188,7 @@ const DropdownMenuContent = ({
   };
 
   return (
-    <div className={`absolute top-full mt-2 ${alignmentClasses[align]} z-50 min-w-48 rounded-xl border border-gray-200 bg-white/95 backdrop-blur-sm py-2 shadow-2xl ring-1 ring-black/5 focus:outline-none dark:border-gray-700 dark:bg-gray-800/95 animate-in slide-in-from-top-1 ${className}`}>
+    <div className={`absolute top-full mt-2 ${alignmentClasses[align]} z-50 min-w-48 rounded-xl border border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm py-2 shadow-2xl ring-1 ring-black/5 focus:outline-none dark:ring-gray-600 ${className}`}>
       {children}
     </div>
   );
@@ -200,7 +205,7 @@ const DropdownMenuItem = ({
 }) => {
   return (
     <button
-      className={`block w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 focus:bg-gradient-to-r focus:from-gray-50 focus:to-gray-100 focus:outline-none transition-all duration-150 first:rounded-t-lg last:rounded-b-lg dark:text-gray-300 dark:hover:from-gray-700 dark:hover:to-gray-600 dark:focus:from-gray-700 dark:focus:to-gray-600 ${className}`}
+      className={`block w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 ${className}`}
       onClick={onClick}
     >
       {children}
@@ -215,9 +220,19 @@ export default function AppointmentCard({
   onCancel, 
   onComplete 
 }: AppointmentCardProps) {
+  const { theme } = useTheme();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const statusConfig = getStatusConfig(appointment.status);
-  const serviceTheme = getServiceGradient(appointment.service);
+  const { gradient, bg, border, accent, hover } = getServiceGradient(appointment.service);
   
   const handleAction = (e: React.MouseEvent, action?: () => void) => {
     e.stopPropagation();
@@ -227,7 +242,7 @@ export default function AppointmentCard({
 
   return (
     <div 
-      className={`relative group p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 ${serviceTheme.border} ${serviceTheme.bg} border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900/90 backdrop-blur-sm cursor-pointer transform hover:-translate-y-1.5 hover:scale-[1.02]`}
+      className={`relative p-4 rounded-lg shadow-sm transition-all duration-200 cursor-pointer border-l-4 ${border} ${bg} ${hover} hover:shadow-md dark:shadow-gray-900/20`}
       onClick={onViewDetails}
     >
       {/* Top Bar - Status and Time */}
@@ -237,6 +252,16 @@ export default function AppointmentCard({
           <span className={`text-sm font-extrabold ${statusConfig.color} px-4 py-2 rounded-full shadow-md`}>
             {statusConfig.label}
           </span>
+          {(() => {
+            const totalAmount = (appointment as any).finalAmount || (appointment as any).totalAmount || 0;
+            const paidAmount = (appointment as any).amountPaid || (appointment as any).payment?.paid || 0;
+            const isPartial = totalAmount > 0 && paidAmount > 0 && paidAmount < totalAmount;
+            return isPartial ? (
+              <span className="text-xs font-semibold px-2 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                Partial
+              </span>
+            ) : null;
+          })()}
         </div>
         <div className="flex items-center text-sm text-gray-700 dark:text-gray-300 font-bold bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
           <Clock className="w-5 h-5 mr-2 text-gray-600 dark:text-gray-400" />
@@ -245,54 +270,59 @@ export default function AppointmentCard({
       </div>
 
       {/* Client and Service Info */}
-      <div className="mb-5 pb-5 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-xl font-extrabold text-gray-900 dark:text-white mb-3 truncate">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-medium text-gray-900 dark:text-white">
           {appointment.clientName}
         </h3>
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className={`text-base font-extrabold px-4 py-2 rounded-full ${serviceTheme.accent} bg-opacity-20 shadow-md`}>
-            {appointment.serviceName || appointment.service}
-          </div>
-          {appointment.duration && (
-            <span className="text-base text-gray-700 dark:text-gray-300 font-bold flex items-center bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
-              <Clock className="w-5 h-5 mr-2" />
-              {appointment.duration}
+        <div className="flex items-center space-x-2">
+          {appointment.mode === 'online' && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border border-blue-200 dark:border-blue-800/50">
+              Online
             </span>
           )}
-          {appointment.price && (
-            <span className="text-lg font-extrabold text-gray-900 dark:text-white bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 rounded-lg shadow-md">
-              {appointment.price}
-            </span>
-          )}
+          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusConfig.color}`}>
+            {statusConfig.icon}
+            {statusConfig.label}
+          </span>
         </div>
-        {(appointment.clientPhone || appointment.clientEmail) && (
-          <div className="flex gap-3 mt-4">
-            {appointment.clientPhone && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="h-10 w-10 p-0 text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 border-gray-300 dark:border-gray-600 shadow-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `tel:${appointment.clientPhone}`;
-                }}
-              >
-                <Phone className="w-5 h-5" />
-              </Button>
-            )}
-            {appointment.clientEmail && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="h-10 w-10 p-0 text-gray-600 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 border-gray-300 dark:border-gray-600 shadow-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `mailto:${appointment.clientEmail}`;
-                }}
-              >
-                <Mail className="w-5 h-5" />
-              </Button>
-            )}
+      </div>
+
+      {/* Service and Duration */}
+      <div className="flex items-center justify-between mb-5">
+        <div className={`text-base font-extrabold px-4 py-2 rounded-full ${accent} bg-opacity-20 shadow-md`}>
+          {appointment.serviceName || appointment.service}
+        </div>
+        {appointment.duration && (
+          <span className="text-base text-gray-700 dark:text-gray-300 font-bold flex items-center bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg">
+            <Clock className="w-5 h-5 mr-2" />
+            {appointment.duration}
+          </span>
+        )}
+      </div>
+
+      {/* Price and Booking Mode */}
+      <div className="flex items-center justify-between mb-5">
+        {appointment.price && (
+          <span className="text-lg font-extrabold text-gray-900 dark:text-white bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 rounded-lg shadow-md">
+            {appointment.price}
+          </span>
+        )}
+        {appointment.mode && (
+          <div className="mt-3">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${
+              appointment.mode === 'online'
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+            }`}>
+              <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                {appointment.mode === 'online' ? (
+                  <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"/>
+                ) : (
+                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                )}
+              </svg>
+              {appointment.mode === 'online' ? 'Web Booking' : 'Offline Booking'}
+            </span>
           </div>
         )}
       </div>

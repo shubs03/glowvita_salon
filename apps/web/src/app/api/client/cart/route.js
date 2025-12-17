@@ -3,6 +3,7 @@ import _db from '@repo/lib/db';
 import { verifyJwt } from '@repo/lib/auth';
 import { cookies } from 'next/headers';
 import UserCartModel from '@repo/lib/models/user/UserCart.model';
+import ProductModel from '@repo/lib/models/Vendor/Product.model';
 
 await _db();
 
@@ -56,6 +57,44 @@ export async function POST(req) {
 
     if (!item.productId || !item.quantity || !item.price) {
       return NextResponse.json({ success: false, message: 'Product ID, quantity, and price are required' }, { status: 400 });
+    }
+
+    // Check product stock availability
+    const product = await ProductModel.findById(item.productId);
+    
+    if (!product) {
+      return NextResponse.json({ success: false, message: 'Product not found' }, { status: 404 });
+    }
+
+    if (product.stock === 0) {
+      return NextResponse.json({ success: false, message: 'Product is out of stock' }, { status: 400 });
+    }
+
+    // Check if user already has this product in cart
+    const existingCart = await UserCartModel.findOne({ 
+      userId, 
+      'items.productId': item.productId 
+    });
+
+    let totalRequestedQuantity = item.quantity;
+
+    // If product already exists in cart, add to existing quantity
+    if (existingCart) {
+      const existingItem = existingCart.items.find(
+        cartItem => cartItem.productId.toString() === item.productId.toString()
+      );
+      if (existingItem) {
+        totalRequestedQuantity += existingItem.quantity;
+      }
+    }
+
+    // Validate total quantity against stock
+    if (totalRequestedQuantity > product.stock) {
+      return NextResponse.json({ 
+        success: false, 
+        message: `Cannot add ${item.quantity} items. Only ${product.stock} units available in stock${existingCart ? ' (you already have some in your cart)' : ''}.`,
+        availableStock: product.stock
+      }, { status: 400 });
     }
 
     // Use a single, efficient findOneAndUpdate operation similar to vendor cart
@@ -113,6 +152,21 @@ export async function PUT(req) {
       );
       return NextResponse.json({ success: true, data: updatedCart || { userId, items: [] } });
     } else {
+      // Validate stock before updating quantity
+      const product = await ProductModel.findById(productId);
+      
+      if (!product) {
+        return NextResponse.json({ success: false, message: 'Product not found' }, { status: 404 });
+      }
+
+      if (quantity > product.stock) {
+        return NextResponse.json({ 
+          success: false, 
+          message: `Cannot update quantity. Only ${product.stock} units available in stock.`,
+          availableStock: product.stock
+        }, { status: 400 });
+      }
+
       // Otherwise, update the quantity
       const updatedCart = await UserCartModel.findOneAndUpdate(
         { userId, 'items.productId': productId },

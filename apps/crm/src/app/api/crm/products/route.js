@@ -8,6 +8,39 @@ import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
 
+// Utility function to process multiple base64 images and upload them
+const processMultipleImages = async (images, vendorId, prefix = 'product') => {
+    if (!images || !Array.isArray(images) || images.length === 0) {
+        return [];
+    }
+    
+    const uploadedUrls = [];
+    
+    for (let i = 0; i < images.length; i++) {
+        const imageData = images[i];
+        
+        // Skip if empty or already a URL
+        if (!imageData) continue;
+        if (imageData.startsWith('http')) {
+            uploadedUrls.push(imageData);
+            continue;
+        }
+        
+        try {
+            const fileName = `${prefix}-${vendorId}-${Date.now()}-${i}`;
+            const imageUrl = await uploadBase64(imageData, fileName);
+            if (imageUrl) {
+                uploadedUrls.push(imageUrl);
+            }
+        } catch (error) {
+            console.error(`Failed to upload image ${i}:`, error);
+            // Continue with other images even if one fails
+        }
+    }
+    
+    return uploadedUrls;
+};
+
 // Utility function to process base64 image and upload it
 // Also deletes the old image if a new one is uploaded
 const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
@@ -105,7 +138,25 @@ export const GET = authMiddlewareCrm(getProducts, ["vendor", "supplier"]);
 const createProduct = async (req) => {
     try {
         const body = await req.json();
-        const { productName, description, category, categoryDescription, price, salePrice, stock, productImage, isActive, status } = body;
+        const { 
+            productName, 
+            description, 
+            category, 
+            categoryDescription, 
+            price, 
+            salePrice, 
+            stock, 
+            productImages, // Now expecting an array
+            isActive, 
+            status,
+            size,
+            sizeMetric,
+            keyIngredients,
+            forBodyPart,
+            bodyPartType,
+            productForm,
+            brand
+        } = body;
         const userRole = req.user?.role;
 
         if (!productName || !category || price === undefined || stock === undefined) {
@@ -140,12 +191,21 @@ const createProduct = async (req) => {
             );
         }
         
-        // Handle product image upload
-        let productImageUrl = '';
-        if (productImage) {
-            const imageUrl = await processBase64Image(productImage, `product-${vendorId}-${Date.now()}`);
-            if (imageUrl) {
-                productImageUrl = imageUrl;
+        // Handle product images upload - now supports multiple images
+        let productImageUrls = [];
+        if (productImages) {
+            // Ensure it's an array
+            const imagesArray = Array.isArray(productImages) ? productImages : [productImages];
+            productImageUrls = await processMultipleImages(imagesArray, vendorId, 'product');
+        }
+
+        // Process keyIngredients - convert comma-separated string to array
+        let processedKeyIngredients = [];
+        if (keyIngredients) {
+            if (typeof keyIngredients === 'string') {
+                processedKeyIngredients = keyIngredients.split(',').map(i => i.trim()).filter(i => i.length > 0);
+            } else if (Array.isArray(keyIngredients)) {
+                processedKeyIngredients = keyIngredients;
             }
         }
 
@@ -159,9 +219,16 @@ const createProduct = async (req) => {
             price: Number(price),
             salePrice: Number(salePrice) || 0,
             stock: Number(stock),
-            productImage: productImageUrl,
+            productImages: productImageUrls,
             isActive: Boolean(isActive),
             status: status === 'disapproved' ? 'rejected' : (status || 'pending'),
+            size: size?.trim() || '',
+            sizeMetric: sizeMetric?.trim() || '',
+            keyIngredients: processedKeyIngredients,
+            forBodyPart: forBodyPart?.trim() || '',
+            bodyPartType: bodyPartType?.trim() || '',
+            productForm: productForm?.trim() || '',
+            brand: brand?.trim() || '',
             createdBy: vendorId,
             updatedBy: vendorId,
         });
@@ -194,7 +261,20 @@ export const POST = authMiddlewareCrm(createProduct, ["vendor", "supplier"]);
 // PUT (update) a product
 export const PUT = authMiddlewareCrm(async (req) => {
   try {
-    const { id, productImage, category, status, ...updateData } = await req.json();
+    const { 
+        id, 
+        productImages, // Now expecting an array
+        category, 
+        status, 
+        size,
+        sizeMetric,
+        keyIngredients,
+        forBodyPart,
+        bodyPartType,
+        productForm,
+        brand,
+        ...updateData 
+    } = await req.json();
 
     if (!id) {
       return NextResponse.json({ 
@@ -243,21 +323,71 @@ export const PUT = authMiddlewareCrm(async (req) => {
         updatedAt: new Date()
     };
 
-    // Handle product image upload
-    if (productImage !== undefined) {
-        if (productImage) {
-            const imageUrl = await processBase64Image(productImage, `product-${vendorId}-${Date.now()}`, existingProduct.productImage);
-            if (imageUrl) {
-                finalUpdateData.productImage = imageUrl;
+    // Handle product images upload - now supports multiple images
+    if (productImages !== undefined) {
+        if (productImages && productImages.length > 0) {
+            // Ensure it's an array
+            const imagesArray = Array.isArray(productImages) ? productImages : [productImages];
+            
+            // Separate existing URLs from new base64 images
+            const existingUrls = imagesArray.filter(img => img && img.startsWith('http'));
+            const newBase64Images = imagesArray.filter(img => img && !img.startsWith('http'));
+            
+            // Upload new images
+            const newUploadedUrls = await processMultipleImages(newBase64Images, vendorId, 'product');
+            
+            // Combine existing and new URLs
+            finalUpdateData.productImages = [...existingUrls, ...newUploadedUrls];
+            
+            // Delete removed images (images that were in old array but not in new array)
+            const oldImages = existingProduct.productImages || [];
+            const removedImages = oldImages.filter(oldImg => !finalUpdateData.productImages.includes(oldImg));
+            
+            for (const removedImg of removedImages) {
+                if (removedImg && removedImg.startsWith('http')) {
+                    try {
+                        await deleteFile(removedImg);
+                    } catch (err) {
+                        console.warn('Failed to delete removed image:', err);
+                    }
+                }
             }
         } else {
-            // If productImage is null/empty, remove it and delete the old image
-            finalUpdateData.productImage = '';
-            if (existingProduct.productImage) {
-                await deleteFile(existingProduct.productImage);
+            // If productImages is empty array, remove all images
+            finalUpdateData.productImages = [];
+            
+            // Delete all old images
+            const oldImages = existingProduct.productImages || [];
+            for (const oldImg of oldImages) {
+                if (oldImg && oldImg.startsWith('http')) {
+                    try {
+                        await deleteFile(oldImg);
+                    } catch (err) {
+                        console.warn('Failed to delete old image:', err);
+                    }
+                }
             }
         }
     }
+
+    // Process keyIngredients - convert comma-separated string to array
+    if (keyIngredients !== undefined) {
+        if (typeof keyIngredients === 'string') {
+            finalUpdateData.keyIngredients = keyIngredients.split(',').map(i => i.trim()).filter(i => i.length > 0);
+        } else if (Array.isArray(keyIngredients)) {
+            finalUpdateData.keyIngredients = keyIngredients;
+        } else {
+            finalUpdateData.keyIngredients = [];
+        }
+    }
+
+    // Add the new fields to finalUpdateData if they are provided
+    if (size !== undefined) finalUpdateData.size = size?.trim() || '';
+    if (sizeMetric !== undefined) finalUpdateData.sizeMetric = sizeMetric?.trim() || '';
+    if (forBodyPart !== undefined) finalUpdateData.forBodyPart = forBodyPart?.trim() || '';
+    if (bodyPartType !== undefined) finalUpdateData.bodyPartType = bodyPartType?.trim() || '';
+    if (productForm !== undefined) finalUpdateData.productForm = productForm?.trim() || '';
+    if (brand !== undefined) finalUpdateData.brand = brand?.trim() || '';
 
     if(categoryId) finalUpdateData.category = categoryId;
     if(status) finalUpdateData.status = status === 'disapproved' ? 'rejected' : status;
@@ -286,19 +416,27 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     await _db();
     const body = await req.json();
     console.log("Request body:", body);
+    console.log("Request body type:", typeof body);
+    console.log("Body keys:", Object.keys(body));
+    
     // Extract ID from the body object { id: '...' }
-    const id = body.id || body._id;
-    console.log("Extracted ID:", id);
+    let id = body.id || body._id;
+    console.log("Raw ID extracted:", id, "Type:", typeof id);
+    
+    // Convert to string if it's not already
+    if (id && typeof id === 'object' && id.toString) {
+      console.log("ID is an object, converting with toString()");
+      id = id.toString();
+    } else if (id) {
+      console.log("Converting ID to string with String()");
+      id = String(id);
+    }
+    
+    console.log("Extracted ID after conversion:", id, "Type:", typeof id, "Length:", id?.length);
 
     if (!id) {
       console.log("ID is missing from request body");
       return NextResponse.json({ success: false, message: "ID is required for deletion" }, { status: 400 });
-    }
-
-    // Validate that ID is a string
-    if (typeof id !== 'string') {
-      console.log("ID is not a string:", id);
-      return NextResponse.json({ success: false, message: "ID must be a string" }, { status: 400 });
     }
 
     console.log("Product ID to delete:", id);
@@ -318,11 +456,27 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     
     console.log("Attempting to delete product with ID:", id, "for vendor:", vendorId);
     
-    // Validate ObjectId format
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      console.log("Invalid product ID format:", id);
-      return NextResponse.json({ success: false, message: "Invalid product ID format" }, { status: 400 });
+    // Validate ObjectId format - trim whitespace first
+    const trimmedId = id?.trim();
+    console.log("Trimmed ID:", trimmedId, "Original length:", id?.length, "Trimmed length:", trimmedId?.length);
+    
+    if (!trimmedId || !mongoose.Types.ObjectId.isValid(trimmedId)) {
+      console.log("Invalid product ID format:", trimmedId, "Type:", typeof trimmedId, "Length:", trimmedId?.length);
+      console.log("Is valid ObjectId:", mongoose.Types.ObjectId.isValid(trimmedId));
+      return NextResponse.json({ 
+        success: false, 
+        message: "Invalid product ID format. Please try again.",
+        debug: {
+          receivedId: id,
+          trimmedId: trimmedId,
+          type: typeof id,
+          isValid: mongoose.Types.ObjectId.isValid(trimmedId)
+        }
+      }, { status: 400 });
     }
+    
+    // Use the trimmed ID for the rest of the operation
+    id = trimmedId;
     
     if (!mongoose.Types.ObjectId.isValid(vendorId)) {
       console.log("Invalid vendor ID format:", vendorId);
@@ -344,9 +498,17 @@ export const DELETE = authMiddlewareCrm(async (req) => {
       return NextResponse.json({ success: false, message: "Product not found or you don't have permission to delete it" }, { status: 404 });
     }
     
-    // Delete product image from VPS if it exists
-    if (deletedProduct.productImage) {
-        await deleteFile(deletedProduct.productImage);
+    // Delete all product images from VPS if they exist
+    if (deletedProduct.productImages && Array.isArray(deletedProduct.productImages)) {
+      for (const imageUrl of deletedProduct.productImages) {
+        if (imageUrl && imageUrl.startsWith('http')) {
+          try {
+            await deleteFile(imageUrl);
+          } catch (err) {
+            console.warn('Failed to delete product image:', imageUrl, err);
+          }
+        }
+      }
     }
     
     return NextResponse.json({ success: true, message: "Product deleted successfully" });

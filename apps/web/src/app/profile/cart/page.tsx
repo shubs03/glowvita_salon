@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { X, Plus, Minus, ShoppingCart, ArrowLeft, Trash2, Shield, Tag, Search, DollarSign, Package } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useGetClientCartQuery, useUpdateClientCartItemMutation, useRemoveFromClientCartMutation } from '@repo/store/api';
+import { useGetClientCartQuery, useUpdateClientCartItemMutation, useRemoveFromClientCartMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery } from '@repo/store/api';
 import { useAppSelector, useAppDispatch } from "@repo/store/hooks";
 import {
   updateQuantity,
@@ -43,6 +43,8 @@ export default function CartPage() {
   useCartSync();
 
   const { data: cartData, isLoading } = useGetClientCartQuery(undefined, { skip: !isAuthenticated || !user?._id });
+    const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
+    const { data: shippingConfig } = useGetPublicShippingConfigQuery(undefined);
   const [updateCartItem] = useUpdateClientCartItemMutation();
   const [removeFromCartAPI] = useRemoveFromClientCartMutation();
   
@@ -65,9 +67,11 @@ export default function CartPage() {
       if (isAuthenticated && user?._id) {
         // User is authenticated, use API
         if (quantity > 0) {
-          await updateCartItem({ productId, quantity }).unwrap();
+          const result = await updateCartItem({ productId, quantity }).unwrap();
+          toast.success('Cart updated successfully');
         } else {
           await removeFromCartAPI({ productId }).unwrap();
+          toast.success('Item removed from cart');
         }
       } else {
         // User is not authenticated, use local Redux store
@@ -77,8 +81,15 @@ export default function CartPage() {
           dispatch(removeFromLocalCart(productId));
         }
       }
-    } catch (error) {
-      toast.error('Failed to update quantity.');
+    } catch (error: any) {
+      // Handle stock validation errors from the API
+      const errorMessage = error?.data?.message || 'Failed to update quantity.';
+      toast.error(errorMessage);
+      
+      // If there's an available stock value, show it
+      if (error?.data?.availableStock !== undefined) {
+        toast.warning(`Only ${error.data.availableStock} units available in stock.`);
+      }
     }
   };
 
@@ -115,10 +126,32 @@ export default function CartPage() {
     (acc: number, item: any) => acc + item.price * item.quantity,
     0
   );
-  const shipping = subtotal > 0 ? 50.00 : 0; 
-  const tax = subtotal * 0.08;
-  const discount = subtotal * 0.1; // 10% discount
-  const total = subtotal + shipping + tax - discount;
+  
+  // Calculate dynamic shipping based on config (same as checkout page)
+  const shipping = subtotal > 0 && shippingConfig?.isEnabled
+    ? shippingConfig.chargeType === 'percentage'
+      ? (subtotal * shippingConfig.amount) / 100
+      : shippingConfig.amount
+    : 0;
+  
+  // Calculate tax based on dynamic tax settings from API (same as checkout page)
+  const productGST = taxSettings?.productGST || 18;
+  const productGSTType = taxSettings?.productGSTType || 'percentage';
+  const productPlatformFee = taxSettings?.productPlatformFee || 10;
+  const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
+  const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
+  const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
+  
+  const gst = productGSTEnabled 
+    ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+    : 0;
+  const platformFee = productPlatformFeeEnabled
+    ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+    : 0;
+  const tax = gst + platformFee;
+  
+  // No discount in checkout page, so removing discount calculation to match
+  const total = subtotal + shipping + tax;
   const itemCount = cartItems.reduce(
     (acc: number, item: any) => acc + item.quantity,
     0
@@ -126,25 +159,26 @@ export default function CartPage() {
 
   const handleCheckout = () => {
     if (cartItems.length > 0) {
-      // Try to get vendorId from the first cart item
-      let vendorId = (cartItems[0] as any).vendorId;
+      // Store the actual cart items for checkout
+      localStorage.setItem('cartItems', JSON.stringify(cartItems));
       
-      // If vendorId is not directly available, check other possible fields
-      if (!vendorId) {
-        vendorId = (cartItems[0] as any).supplierId || 
-                  (cartItems[0] as any).vendor_id ||
-                  null;
-      }
-      
+      // Create a virtual product that represents the entire cart
+      // This ensures the subtotal calculation matches between cart and checkout pages
       const checkoutProduct = {
-        id: cartItems.map((item: any) => item.productId || item._id).join(','),
-        name: cartItems.length > 1 ? `${cartItems.length} items` : cartItems[0].productName,
-        price: total,
-        image: cartItems[0].productImage,
-        quantity: 1,
-        vendorId: vendorId,
-        vendorName: (cartItems[0] as any).supplierName || (cartItems[0] as any).vendorName,
+        id: 'cart-' + Date.now(), // Unique ID for the cart checkout
+        name: `Cart Items (${cartItems.length} items)`,
+        price: subtotal, // Use the cart's subtotal as the price
+        image: cartItems[0].productImage || "/images/cart-icon.png", // Use first item's image or default
+        quantity: 1, // Quantity is 1 since price already includes all items
+        vendorId: (cartItems[0] as any).vendorId || (cartItems[0] as any).supplierId || (cartItems[0] as any).vendor_id || null,
+        vendorName: (cartItems[0] as any).supplierName || (cartItems[0] as any).vendorName || "Multiple Vendors",
       };
+      
+      // Ensure vendorId is valid
+      if (!checkoutProduct.vendorId) {
+        toast.error("Vendor information is missing. Cannot proceed to checkout.");
+        return;
+      }
       
       // Log for debugging
       console.log('Checkout product data:', checkoutProduct);
@@ -159,8 +193,8 @@ export default function CartPage() {
       {/* Stats Section */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard icon={ShoppingCart} title="Items in Cart" value={cartItems.length} change={`Total quantity: ${itemCount}`} />
-        <StatCard icon={DollarSign} title="Cart Value" value={`₹${subtotal.toFixed(0)}`} change="Before discounts" />
-        <StatCard icon={Tag} title="You Save" value={`₹${discount.toFixed(0)}`} change="Total savings" />
+        <StatCard icon={DollarSign} title="Cart Value" value={`₹${subtotal.toFixed(0)}`} change="Before taxes and shipping" />
+        <StatCard icon={Tag} title="Estimated Tax" value={`₹${tax.toFixed(0)}`} change="Including GST and platform fees" />
       </div>
 
       {/* Main Cart Table */}
@@ -318,14 +352,6 @@ export default function CartPage() {
                       <Package className="h-5 w-5 text-primary" />
                       Order Summary
                     </CardTitle>
-                    {discount > 0 && (
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 py-2 px-4 rounded-lg">
-                        <p className="text-sm text-green-700 font-medium flex items-center gap-2">
-                          <span>🎉</span>
-                          You saved ₹{discount.toFixed(2)}!
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -337,11 +363,6 @@ export default function CartPage() {
                           <div className="text-2xl font-bold text-primary">₹{subtotal.toFixed(2)}</div>
                           <div className="text-sm text-muted-foreground">Subtotal</div>
                           <div className="text-xs text-muted-foreground mt-1">({itemCount} items)</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600">-₹{discount.toFixed(2)}</div>
-                          <div className="text-sm text-muted-foreground">Discount</div>
-                          <div className="text-xs text-green-600 mt-1">You save!</div>
                         </div>
                         <div className="text-center">
                           <div className="text-2xl font-bold text-green-600">

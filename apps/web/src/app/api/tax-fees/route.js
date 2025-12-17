@@ -11,10 +11,16 @@ const transformSettings = (settings) => {
     return {
       platformFee: 15,
       serviceTax: 18,
+      productPlatformFee: 10,
+      productGST: 18,
       platformFeeType: "percentage",
       serviceTaxType: "percentage",
+      productPlatformFeeType: "percentage",
+      productGSTType: "percentage",
       platformFeeEnabled: true,
       serviceTaxEnabled: true,
+      productPlatformFeeEnabled: true,
+      productGSTEnabled: true,
     };
   }
 
@@ -25,6 +31,12 @@ const transformSettings = (settings) => {
     serviceTax: settings.serviceTax || 18, // This is GST
     serviceTaxType: settings.serviceTaxType || 'percentage',
     serviceTaxEnabled: settings.serviceTaxEnabled !== false,
+    productPlatformFee: settings.productPlatformFee || 10,
+    productPlatformFeeType: settings.productPlatformFeeType || 'percentage',
+    productPlatformFeeEnabled: settings.productPlatformFeeEnabled !== false,
+    productGST: settings.productGST || 18,
+    productGSTType: settings.productGSTType || 'percentage',
+    productGSTEnabled: settings.productGSTEnabled !== false,
     _id: settings._id
   };
 };
@@ -32,6 +44,11 @@ const transformSettings = (settings) => {
 // GET all tax fee settings (public endpoint)
 export async function GET() {
   try {
+    // During build phase, return default settings
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json(transformSettings(null), { status: 200 });
+    }
+
     const settings = await TaxFeeSettings.findOne().sort({ updatedAt: -1 });
     return NextResponse.json(transformSettings(settings), { status: 200 });
   } catch (error) {

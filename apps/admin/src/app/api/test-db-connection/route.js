@@ -7,7 +7,19 @@ export async function GET() {
     console.log('Testing database connection...');
     
     // Test connection
-    await _db();
+    const connection = await _db();
+    
+    // If connection is null (during build), return appropriate response
+    if (!connection) {
+      return NextResponse.json({
+        success: true,
+        message: "Database connection skipped (build phase)",
+        connection: {
+          readyState: 0,
+          message: "Connection skipped during build phase"
+        }
+      });
+    }
     
     // Test if we can list collections
     const collections = await mongoose.connection.db.listCollections().toArray();
@@ -42,7 +54,7 @@ export async function GET() {
       success: false,
       error: error.message,
       connection: {
-        readyState: mongoose.connection?.readyState,
+        readyState: mongoose.connection?.readyState || 0,
         host: mongoose.connection?.host,
         dbName: mongoose.connection?.name,
         error: error.toString()

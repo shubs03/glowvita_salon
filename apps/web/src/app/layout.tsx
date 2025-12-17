@@ -25,16 +25,27 @@ export default function RootLayout({
   const marketingPages = [
     '/',
     '/apps',
+    '/all-products',
     '/pricing',
     '/support',
     '/about',
     '/contact',
     '/privacy-policy',
     '/return-policy',
-    '/terms-and-conditions'
+    '/terms-and-conditions',
+    '/product-details/[id]',
   ];
 
-  const isMarketingPage = marketingPages.includes(pathname);
+  const isMarketingPage = marketingPages.some(page => {
+    // For dynamic routes, check if the pathname starts with the base path
+    if (page.includes('[id]')) {
+      const basePath = page.replace('/[id]', '');
+      return pathname.startsWith(basePath);
+    }
+    // For static routes, check exact match
+    return page === pathname;
+  });
+  
   const isAuthPage = pathname.startsWith('/client-login') || 
                      pathname.startsWith('/client-register') || 
                      pathname.startsWith('/forgot-password') ||

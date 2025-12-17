@@ -8,7 +8,7 @@ await _db();
 
 export const PUT = authMiddlewareCrm(async (req, { params }) => {
     try {
-        const vendorId = req.user._id;
+        const vendorId = req.user.userId || req.user._id;
         const appointmentId = params?.id;
         
         if (!appointmentId) {
@@ -65,6 +65,11 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
         // Prepare the update object
         const updateObject = { ...updateData };
         
+        // Remove fields that MongoDB manages automatically to prevent conflicts
+        delete updateObject.updatedAt;
+        delete updateObject.createdAt;
+        delete updateObject.__v; // version key managed by Mongoose
+        
         // If client is a string (name) and not a valid ObjectId, remove it to prevent cast error
         if (updateObject.client && !Types.ObjectId.isValid(updateObject.client)) {
             // If clientName is not provided, use the client string as clientName
@@ -82,13 +87,15 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
         }
 
         // Update the appointment
+        // Use runValidators: false to prevent validation errors on partial updates
+        // since we're only updating specific fields and not the entire document
         const updatedAppointment = await AppointmentModel.findByIdAndUpdate(
             appointmentId,
             { 
                 $set: updateObject,
                 $currentDate: { updatedAt: true }
             },
-            { new: true, runValidators: true }
+            { new: true, runValidators: false }
         )
         .populate('client', 'fullName email phone')
         .populate('service', 'name duration price')
@@ -120,7 +127,7 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
 export const DELETE = authMiddlewareCrm(async (req, { params }) => {
     try {
         console.log('=== DELETE REQUEST START ===');
-        const vendorId = req.user._id;
+        const vendorId = req.user.userId || req.user._id;
         const { id: appointmentId } = params;
         
         console.log('DELETE Request - ID:', appointmentId);

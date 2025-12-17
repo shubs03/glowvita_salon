@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
@@ -141,7 +142,11 @@ const transformDoctor = (apiDoctor: any): Doctor => {
 
 export default function FindDoctorPage() {
   const { data: doctorsData, isLoading, isError } = useGetDoctorsQuery(undefined);
-  const [searchTerm, setSearchTerm] = useState('');
+  const searchParams = useSearchParams();
+  const urlSpecialty = searchParams.get('specialty');
+  const urlSearch = searchParams.get('search'); // Get search parameter from URL
+  
+  const [searchTerm, setSearchTerm] = useState(urlSearch || '');
   const [selectedSpecialty, setSelectedSpecialty] = useState('All Specialties');
   const [selectedCity, setSelectedCity] = useState('All Cities');
   const [minRating, setMinRating] = useState(0);
@@ -150,7 +155,7 @@ export default function FindDoctorPage() {
   
   // State for hero search results
   const [showHeroResults, setShowHeroResults] = useState(false);
-  const [heroSearchTerm, setHeroSearchTerm] = useState('');
+  const [heroSearchTerm, setHeroSearchTerm] = useState(urlSearch || '');
   const [heroSelectedCity, setHeroSelectedCity] = useState('All Cities');
 
   console.log('Fetched Doctors Data:', doctorsData);
@@ -198,6 +203,13 @@ export default function FindDoctorPage() {
     return ['All Specialties', ...Array.from(specialtiesSet).sort()];
   }, [doctors]);
 
+  // Set the selected specialty from URL parameter only on initial load
+  useEffect(() => {
+    if (urlSpecialty && allSpecialties.includes(urlSpecialty)) {
+      setSelectedSpecialty(urlSpecialty);
+    }
+  }, []); // Empty dependency array means this runs only once on mount
+
   // Extract all unique cities from doctors data
   const allCities = React.useMemo(() => {
     const citiesSet = new Set<string>();
@@ -211,10 +223,12 @@ export default function FindDoctorPage() {
 
   const filteredDoctors = doctors
     .filter(doctor => {
-      const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (doctor.specialty && doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                           (doctor.clinicName && doctor.clinicName.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+      const matchesSearch = searchTerm.trim() === '' || 
+        doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (doctor.specialty && doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (doctor.clinicName && doctor.clinicName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (doctor.specialties && doctor.specialties.some(s => s.toLowerCase().includes(searchTerm.toLowerCase())));
+
       const matchesSpecialty = selectedSpecialty === 'All Specialties' || 
                                doctor.specialty === selectedSpecialty ||
                                (doctor.specialties && doctor.specialties.includes(selectedSpecialty));
@@ -574,13 +588,16 @@ export default function FindDoctorPage() {
                         key={specialty}
                         onClick={() => setSelectedSpecialty(specialty)}
                         className={cn(
-                          "w-full text-left px-3 py-2 rounded-md text-sm transition-all duration-200",
+                          "w-full text-left px-3 py-2 rounded-md text-sm transition-all duration-200 flex items-center justify-between",
                           selectedSpecialty === specialty
                             ? "bg-primary text-primary-foreground font-medium shadow-sm"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         )}
                       >
-                        {specialty}
+                        <span>{specialty}</span>
+                        {selectedSpecialty === specialty && (
+                          <span className="h-2 w-2 rounded-full bg-primary-foreground"></span>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -697,6 +714,12 @@ export default function FindDoctorPage() {
                     {filteredDoctors.length} Doctors Found
                   </h2>
                   <div className="flex flex-wrap gap-2 mt-2">
+                    {searchTerm && (
+                      <Badge variant="secondary" className="text-xs bg-blue-500/10 text-blue-600">
+                        <Search className="h-3 w-3 mr-1" />
+                        {searchTerm}
+                      </Badge>
+                    )}
                     {selectedSpecialty !== 'All Specialties' && (
                       <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
                         {selectedSpecialty}
@@ -897,7 +920,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <Button
             asChild
             size="sm"
@@ -909,14 +932,14 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
               <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
             </Link>
           </Button>
-          <Button
+          {/* <Button
             size="sm"
             className="transition-all duration-200 text-xs"
             variant="default"
           >
             <Phone className="h-3 w-3 mr-1" />
             Contact Clinic
-          </Button>
+          </Button> */}
         </div>
       </div>
     </div>

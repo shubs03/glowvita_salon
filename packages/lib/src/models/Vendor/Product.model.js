@@ -41,9 +41,37 @@ const productSchema = new mongoose.Schema({
     min: [0, 'Stock cannot be negative'],
     default: 0,
   },
-  productImage: {
-    type: String, // URL to the uploaded image
-    default: '',
+  productImages: {
+    type: [String], // Array of URLs to uploaded images
+    default: [],
+  },
+  size: {
+    type: String,
+    trim: true,
+  },
+  sizeMetric: {
+    type: String,
+    trim: true,
+  },
+  keyIngredients: {
+    type: [String],
+    default: [],
+  },
+  forBodyPart: {
+    type: String,
+    trim: true,
+  },
+  bodyPartType: {
+    type: String,
+    trim: true,
+  },
+  productForm: {
+    type: String,
+    trim: true,
+  },
+  brand: {
+    type: String,
+    trim: true,
   },
   isActive: {
     type: Boolean,

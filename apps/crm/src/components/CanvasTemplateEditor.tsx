@@ -9,8 +9,6 @@ import { Label } from "@repo/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Type, Image as ImageIcon, Download, Save, Trash2, Move } from 'lucide-react';
 import { toast } from 'sonner';
-import fabric from 'fabric';
-import type { TEvent, FabricImage, ImageProps, SerializedImageProps, ObjectEvents, TPointerEvent } from 'fabric';
 
 interface CanvasTemplateEditorProps {
   initialImage?: string;
@@ -28,13 +26,23 @@ export default function CanvasTemplateEditor({
   width = 900, 
   height = 800 
 }: CanvasTemplateEditorProps) {
-  const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
-  const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
+  const [fabricCanvas, setFabricCanvas] = useState<any | null>(null);
+  const [selectedObject, setSelectedObject] = useState<any | null>(null);
+  const [fabricLibrary, setFabricLibrary] = useState<any | null>(null);
   
   // This state will track if the component has mounted on the client
   const [isClient, setIsClient] = useState(false);
   
+  // Load fabric library dynamically on client side
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('fabric').then((fabricModule) => {
+        setFabricLibrary(fabricModule.default || fabricModule);
+      }).catch((error) => {
+        console.error('Failed to load fabric library:', error);
+        toast.error('Failed to load design editor. Please try again.');
+      });
+    }
     // This effect runs only once on the client-side after the component mounts
     setIsClient(true);
   }, []);
@@ -50,14 +58,14 @@ export default function CanvasTemplateEditor({
   const [textAlign, setTextAlign] = useState('center');
 
   const initCanvas = useCallback(() => {
-    if (!canvasContainerRef.current) return;
+    if (!canvasContainerRef.current || !fabricLibrary) return;
     
     const canvasEl = document.createElement('canvas');
     canvasContainerRef.current.innerHTML = '';
     canvasContainerRef.current.appendChild(canvasEl);
 
     // Use fabric.Canvas instead of new Canvas
-    const canvas = new fabric.Canvas(canvasEl, {
+    const canvas = new fabricLibrary.Canvas(canvasEl, {
       width: width,
       height: height,
       backgroundColor: '#ffffff'
@@ -65,7 +73,7 @@ export default function CanvasTemplateEditor({
 
     // Load initial background image if provided
     if (initialImage) {
-      fabric.Image.fromURL(initialImage).then((img: FabricImage) => {
+      fabricLibrary.Image.fromURL(initialImage).then((img: any) => {
         // Set scale properties on the image
         img.set({
           scaleX: (canvas.width || 1) / (img.width || 1),
@@ -74,13 +82,13 @@ export default function CanvasTemplateEditor({
         
         canvas.backgroundImage = img;
         canvas.renderAll();
-      }).catch((error) => {
+      }).catch((error: any) => {
         console.error('Error loading background image:', error);
       });
     }
 
     // Add default text elements
-    const titleText = new fabric.Textbox('Your Title Here', {
+    const titleText = new fabricLibrary.Textbox('Your Title Here', {
       left: width / 2,
       top: 100,
       fontSize: 48,
@@ -95,7 +103,7 @@ export default function CanvasTemplateEditor({
       editable: true
     });
 
-    const subtitleText = new fabric.Textbox('Add your message here', {
+    const subtitleText = new fabricLibrary.Textbox('Add your message here', {
       left: width / 2,
       top: 200,
       fontSize: 24,
@@ -131,6 +139,7 @@ export default function CanvasTemplateEditor({
     canvas.on('selection:created', (e: any) => {
       const selected = e.selected[0];
       setSelectedObject(selected || null);
+      // Simple check for textbox type without using instanceof
       if (selected && selected.type === 'textbox') {
         updateTextControls(selected);
       }
@@ -139,6 +148,7 @@ export default function CanvasTemplateEditor({
     canvas.on('selection:updated', (e: any) => {
       const selected = e.selected[0];
       setSelectedObject(selected || null);
+      // Simple check for textbox type without using instanceof
       if (selected && selected.type === 'textbox') {
         updateTextControls(selected);
       }
@@ -152,8 +162,9 @@ export default function CanvasTemplateEditor({
     return canvas;
   }, [initialImage, width, height]);
 
-  const updateTextControls = (textbox: fabric.Object) => {
-    if (textbox instanceof fabric.Textbox) {
+  const updateTextControls = (textbox: any) => {
+    // Simple check for textbox type without using instanceof
+    if (textbox && textbox.type === 'textbox') {
       setText(textbox.text || '');
       setFontSize(textbox.fontSize || 24);
       setFill(textbox.fill as string || '#000000');
@@ -164,7 +175,7 @@ export default function CanvasTemplateEditor({
   };
 
   useEffect(() => {
-    if (isClient) {
+    if (isClient && fabricLibrary) {
       const canvas = initCanvas();
       
       return () => {
@@ -173,12 +184,12 @@ export default function CanvasTemplateEditor({
         }
       };
     }
-  }, [isClient, initCanvas]);
+  }, [isClient, initCanvas, fabricLibrary]);
 
   const addText = () => {
-    if (!fabricCanvas) return;
+    if (!fabricCanvas || !fabricLibrary) return;
     
-    const newText = new fabric.Textbox('New Text', {
+    const newText = new fabricLibrary.Textbox('New Text', {
       left: 100,
       top: 100,
       fontSize: 30,
@@ -197,11 +208,11 @@ export default function CanvasTemplateEditor({
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && fabricCanvas) {
+    if (file && fabricCanvas && fabricLibrary) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
-        fabric.Image.fromURL(dataUrl).then((img: FabricImage) => {
+        fabricLibrary.Image.fromURL(dataUrl).then((img: any) => {
           const maxWidth = 150;
           const maxHeight = 150;
           
@@ -219,7 +230,7 @@ export default function CanvasTemplateEditor({
           fabricCanvas.add(img);
           fabricCanvas.setActiveObject(img);
           fabricCanvas.renderAll();
-        }).catch((error) => {
+        }).catch((error: any) => {
           console.error('Error loading image:', error);
           toast.error('Failed to load image');
         });
@@ -231,8 +242,8 @@ export default function CanvasTemplateEditor({
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newText = e.target.value;
     setText(newText);
-    if (selectedObject && selectedObject.type === 'textbox' && fabricCanvas) {
-      (selectedObject as fabric.Textbox).set('text', newText);
+    if (selectedObject && selectedObject.type === 'textbox' && fabricCanvas && fabricLibrary) {
+      (selectedObject as any).set('text', newText);
       fabricCanvas.requestRenderAll();
     }
   };

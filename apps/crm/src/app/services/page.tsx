@@ -121,6 +121,8 @@ interface Service {
   onlineBooking?: boolean;
   image?: string;
   status?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface AddItemModalProps {
@@ -142,9 +144,13 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
+  const [error, setError] = useState("");
 
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
   const [createService, { isLoading: isCreatingService }] = useCreateServiceMutation();
+  
+  const { data: categories = [] } = useGetCategoriesQuery(undefined);
+  const { data: allServices = [] } = useGetServicesQuery(undefined);
 
   const isLoading = isCreatingCategory || isCreatingService;
 
@@ -160,24 +166,55 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
   };
 
   const handleCreate = async () => {
-    if (name.trim()) {
-      try {
-        let newItem;
-        if (itemType === "Category") {
-          newItem = await createCategory({ name, description, image }).unwrap();
-        } else if (itemType === "Service" && categoryId) {
-          newItem = await createService({ name, description, category: categoryId, image }).unwrap();
-        } else {
-          throw new Error("Invalid item type or missing categoryId");
+    // Reset error
+    setError("");
+    
+    if (!name.trim()) {
+      setError("Name is required");
+      return;
+    }
+    
+    try {
+      let newItem;
+      if (itemType === "Category") {
+        // Check for duplicate category name
+        const isDuplicate = categories.some(
+          (cat: Category) => cat.name.toLowerCase() === name.trim().toLowerCase()
+        );
+        
+        if (isDuplicate) {
+          setError("A category with this name already exists");
+          return;
         }
-        setName("");
-        setDescription("");
-        setImage("");
-        onItemCreated(newItem);
-        onClose();
-      } catch (error) {
-        console.error(`Failed to create ${itemType}`, error);
+        
+        newItem = await createCategory({ name, description, image }).unwrap();
+      } else if (itemType === "Service" && categoryId) {
+        // Check for duplicate service name in the same category
+        const isDuplicate = allServices.some(
+          (service: Service) => 
+            service.name.toLowerCase() === name.trim().toLowerCase() && 
+            service.category?._id === categoryId
+        );
+        
+        if (isDuplicate) {
+          setError("A service with this name already exists in this category");
+          return;
+        }
+        
+        newItem = await createService({ name, description, category: categoryId, image }).unwrap();
+      } else {
+        throw new Error("Invalid item type or missing categoryId");
       }
+      setName("");
+      setDescription("");
+      setImage("");
+      onItemCreated(newItem);
+      onClose();
+    } catch (error: any) {
+      console.error(`Failed to create ${itemType}`, error);
+      // Extract error message from the response
+      const errorMessage = error?.data?.error || error?.data?.message || error?.message || `Failed to create ${itemType}`;
+      setError(errorMessage);
     }
   };
 
@@ -200,6 +237,9 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
               onChange={(e) => setName(e.target.value)}
               disabled={isLoading}
             />
+            {error && (
+              <p className="text-sm text-red-500">{error}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor={`new-${itemType}-description`}>Description</Label>
@@ -244,6 +284,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
     isLoading: servicesLoading,
     refetch: refetchServices,
   } = useGetServicesQuery(undefined);
+
   const { data: staffList = [], isLoading: staffLoading } = useGetStaffQuery(VENDOR_ID, { skip: !VENDOR_ID });
 
   const [createVendorServices, { isLoading: isCreating }] = useCreateVendorServicesMutation();
@@ -765,13 +806,13 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   if (type === "view") {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-hide">
           <DialogHeader>
             <DialogTitle>{service?.name || 'Service Details'}</DialogTitle>
             <DialogDescription>{service?.description || 'No description available'}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4 text-sm">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <span className="font-semibold">Category:</span>{" "}
                 {service?.categoryName || "N/A"}
@@ -781,11 +822,39 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                 {service?.price?.toFixed(2) || 0}
               </div>
               <div>
+                <span className="font-semibold">Discounted Price:</span> ₹
+                {service?.discountedPrice ? service.discountedPrice.toFixed(2) : "N/A"}
+              </div>
+              <div>
                 <span className="font-semibold">Duration:</span>{" "}
                 {service?.duration || 0} mins
               </div>
               <div>
+                <span className="font-semibold">Booking Interval:</span>{" "}
+                {service?.bookingInterval || 0} mins
+              </div>
+              <div>
                 <span className="font-semibold">Gender:</span> {service?.gender || 'N/A'}
+              </div>
+              <div>
+                <span className="font-semibold">Commission:</span>{" "}
+                {service?.commission ? 'Enabled' : 'Disabled'}
+              </div>
+              <div>
+                <span className="font-semibold">Online Booking:</span>{" "}
+                {service?.onlineBooking ? 'Enabled' : 'Disabled'}
+              </div>
+              <div>
+                <span className="font-semibold">Home Service:</span>{" "}
+                {service?.homeService?.available ? `Available (₹${service.homeService.charges || 0})` : 'Not Available'}
+              </div>
+              <div>
+                <span className="font-semibold">Wedding Service:</span>{" "}
+                {service?.weddingService?.available ? `Available (₹${service.weddingService.charges || 0})` : 'Not Available'}
+              </div>
+              <div>
+                <span className="font-semibold">Tax:</span>{" "}
+                {service?.tax?.enabled ? `${service.tax.type === 'percentage' ? `${service.tax.value}%` : `₹${service.tax.value}`}` : 'Not Enabled'}
               </div>
               <div>
                 <span className="font-semibold">Status:</span>
@@ -803,11 +872,19 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                   {service?.status || 'N/A'}
                 </Badge>
               </div>
+              <div>
+                <span className="font-semibold">Created At:</span>{" "}
+                {service?.createdAt ? new Date(service.createdAt).toLocaleDateString() : 'N/A'}
+              </div>
+              <div>
+                <span className="font-semibold">Updated At:</span>{" "}
+                {service?.updatedAt ? new Date(service.updatedAt).toLocaleDateString() : 'N/A'}
+              </div>
             </div>
             {service?.image && (
               <div className="mt-4">
                 <span className="font-semibold">Image:</span>
-                <Image src={service.image} alt={service.name} width={100} height={100} className="mt-2" />
+                <Image src={service.image} alt={service.name} width={200} height={200} className="mt-2" />
               </div>
             )}
           </div>
@@ -894,7 +971,10 @@ export default function ServicesPage() {
     refetch,
   } = useGetVendorServicesQuery({ vendorId: user?._id }, { skip: !user?._id });
 
+  
   const services = data.services || [];
+
+  console.log("Services Data on Services page : ", services)
 
   const [deleteVendorServices] = useDeleteVendorServicesMutation();
   const [updateVendorServices] = useUpdateVendorServicesMutation();

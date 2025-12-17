@@ -22,7 +22,7 @@ const rolesData = [
   {
     id: 'role_2',
     roleName: "admin",
-    permissions: "View Customers, View Vendors",
+    permissions: "View Customers, View Vendors", 
     isActive: true,
   },
   {

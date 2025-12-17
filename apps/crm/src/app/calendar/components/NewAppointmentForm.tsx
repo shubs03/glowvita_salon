@@ -109,6 +109,7 @@ export interface Appointment {
   tax: number;
   totalAmount: number;
   paymentStatus?: string;
+  mode?: 'online' | 'offline'; // Booking mode
   createdAt?: string;
   updatedAt?: string;
 }
@@ -473,9 +474,9 @@ useEffect(() => {
       return '00:00';
     }
     
-    // For today, use current time + 15 minutes (only for NEW appointments)
+    // For today, use current time + 2 minutes (only for NEW appointments)
     if (targetDateOnly.getTime() === todayDateOnly.getTime() && !isEditing && !isRescheduling) {
-      const minTime = new Date(now.getTime() + 15 * 60 * 1000);
+      const minTime = new Date(now.getTime() + 2 * 60 * 1000);
       const hours = minTime.getHours().toString().padStart(2, '0');
       const minutes = minTime.getMinutes().toString().padStart(2, '0');
       return `${hours}:${minutes}`;
@@ -1507,7 +1508,9 @@ useEffect(() => {
         discount: Number(appointmentData.discount) || 0,
         tax: Number(appointmentData.tax) || 0,
         totalAmount: Number(appointmentData.totalAmount) || 0,
+        finalAmount: Number(appointmentData.totalAmount) || 0,
         paymentStatus: appointmentData.paymentStatus || 'pending',
+        mode: 'offline', // CRM bookings are offline mode
       };
 
       // Include multiple services if available (as serviceItems)
@@ -1633,7 +1636,7 @@ useEffect(() => {
       limit: 100
     },
     { 
-      skip: !user?._id || !debouncedClientSearchTerm || !isClientSearchEnabled, // Skip if not new appointment
+      skip: !user?._id || !isClientSearchEnabled, // Fetch initial list even without search
       refetchOnMountOrArgChange: true
     }
   );
@@ -1749,10 +1752,10 @@ useEffect(() => {
   return (
     <div className="space-y-6 p-4">
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold text-gray-900">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           {formTitle}
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           {formDescription}
         </p>
       </div>
@@ -1762,11 +1765,11 @@ useEffect(() => {
         {isClientSearchEnabled ? (
           /* Client Search - Only for new appointments */
           <div className="space-y-2 relative" ref={clientSearchRef}>
-            <Label htmlFor="clientSearch" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="clientSearch" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Client <span className="text-red-500">*</span>
             </Label>
-            <div className="relative">
-              <div className="relative">
+            <div className="relative flex items-center gap-2">
+              <div className="relative flex-1">
                 <Input
                   id="clientSearch"
                   type="text"
@@ -1779,67 +1782,69 @@ useEffect(() => {
                     setIsClientDropdownOpen(true);
                   }}
                   placeholder="Search for a client..."
-                  className="pl-10 w-full"
+                  className="pl-10 w-full bg-background text-foreground border border-border placeholder:text-muted-foreground"
                   autoComplete="off"
                 />
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 {(isLoadingClients || isFetchingClients) && (
-                  <Loader2 className="absolute right-10 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
+                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
                 )}
                 {appointmentData.clientName && (
                   <button
                     type="button"
                     onClick={clearClient}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                    title="Clear"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 )}
+                {/* Client Dropdown */}
+                {isClientDropdownOpen && (
+                  <div className="absolute z-10 mt-1 w-full bg-background shadow-lg rounded-md py-1 max-h-60 overflow-auto border border-border">
+                    {isLoadingClients || isFetchingClients ? (
+                      <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">Loading clients...</div>
+                    ) : Array.isArray(clientsResponse) && clientsResponse.length > 0 ? (
+                      clientsResponse.map((client: any) => (
+                        <button
+                          key={client._id}
+                          type="button"
+                          onClick={() => handleClientSelect(client)}
+                          className="w-full text-left px-4 py-2 hover:bg-muted border-b border-border last:border-0"
+                        >
+                          <div className="font-medium text-foreground">{client.fullName || client.name}</div>
+                          {client.email && (
+                            <div className="text-sm text-muted-foreground truncate">{client.email}</div>
+                          )}
+                          {client.phone && (
+                            <div className="text-sm text-muted-foreground">{client.phone}</div>
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                        {debouncedClientSearchTerm ? 'No matching clients found.' : 'No clients found.'}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              
-              {/* Client Dropdown */}
-              {isClientDropdownOpen && (
-                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md py-1 max-h-60 overflow-auto border border-gray-200">
-                  {isLoadingClients || isFetchingClients ? (
-                    <div className="px-4 py-2 text-sm text-gray-500">Loading clients...</div>
-                  ) : Array.isArray(clientsResponse) && clientsResponse.length > 0 ? (
-                    clientsResponse.map((client: any) => (
-                      <button
-                        key={client._id}
-                        type="button"
-                        onClick={() => handleClientSelect(client)}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 border-b border-gray-100 last:border-0"
-                      >
-                        <div className="font-medium text-gray-900">{client.fullName || client.name}</div>
-                        {client.email && (
-                          <div className="text-sm text-gray-500 truncate">{client.email}</div>
-                        )}
-                        {client.phone && (
-                          <div className="text-sm text-gray-500">{client.phone}</div>
-                        )}
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-4 py-2 text-sm text-gray-500">
-                      {debouncedClientSearchTerm ? 'No matching clients found.' : 'Start typing to search...'}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setIsAddClientModalOpen(true)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 text-blue-600 font-medium flex items-center border-t"
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add New Client
-                  </button>
-                </div>
-              )}
+              <Button
+                type="button"
+                onClick={() => setIsAddClientModalOpen(true)}
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                title="Add client"
+              >
+                <PlusCircle className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         ) : (
           /* Client Name Display - For edit and reschedule modes */
           <div className="space-y-2">
-            <Label htmlFor="clientName" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="clientName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Client <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -1848,7 +1853,7 @@ useEffect(() => {
               value={appointmentData.clientName}
               onChange={(e) => handleFieldChange('clientName', e.target.value)}
               placeholder="Client name"
-              className="w-full"
+              className="w-full bg-background text-foreground border border-border appearance-none dark:[color-scheme:dark]"
               required
             />
           </div>
@@ -1857,7 +1862,7 @@ useEffect(() => {
         {/* Date and Time Row */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="date" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Date <span className="text-red-500">*</span>
             </Label>
             <div className="relative">
@@ -1921,16 +1926,16 @@ useEffect(() => {
                   }
                 }}
                 min={!isEditing && !isRescheduling ? formatDateForForm(new Date()) : undefined}
-                className="pl-10 w-full"
+                className="pl-10 w-full bg-background text-foreground border border-border appearance-none dark:[color-scheme:dark]"
                 required
               />
-              <CalendarIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+              <CalendarIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
             </div>
           </div>
       
 
           <div className="space-y-2">
-            <Label htmlFor="startTime" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="startTime" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Start Time <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -1946,13 +1951,13 @@ useEffect(() => {
                 return getMinTimeForDate(selectedDate);
               })()}
               onChange={(e) => handleStartTimeChange(e.target.value)}
-              className="w-full"
+              className="w-full bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-neutral-700"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="endTime" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="endTime" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               End Time <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -1961,7 +1966,7 @@ useEffect(() => {
               value={appointmentData.endTime}
               min={appointmentData.startTime} // Ensure end time is after start time
               onChange={(e) => handleEndTimeChange(e.target.value)}
-              className="w-full"
+              className="w-full bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-neutral-700"
               required
             />
           </div>
@@ -1970,13 +1975,13 @@ useEffect(() => {
         {/* Service and Staff Row */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="service" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="service" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Service <span className="text-red-500">*</span>
             </Label>
             {isLoadingServices ? (
-              <div className="flex items-center justify-center p-2 bg-gray-100 rounded-md">
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                <span>Loading services...</span>
+              <div className="flex items-center justify-center p-2 bg-gray-100 dark:bg-neutral-800 rounded-md">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin text-gray-700 dark:text-gray-300" />
+                <span className="text-gray-700 dark:text-gray-300">Loading services...</span>
               </div>
             ) : (
               <div className="space-y-2">
@@ -1986,7 +1991,7 @@ useEffect(() => {
                     onValueChange={handleServiceChange}
                     disabled={isLoadingServices || services.length === 0}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full bg-background text-foreground border border-border">
                       <SelectValue placeholder={
                         isLoadingServices ? 'Loading services...' : 
                         services.length === 0 ? 'No services available' : 'Select a service'
@@ -2001,7 +2006,7 @@ useEffect(() => {
                         )}
                       </SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background text-foreground border border-border">
                       {services.map((service) => (
                         <SelectItem key={service.id || service._id} value={service.id || service._id}>
                           <div className="flex justify-between w-full">
@@ -2026,13 +2031,13 @@ useEffect(() => {
                   </Button>
                 </div>
                 {/* Helper: Steps guidance */}
-                <div className="text-xs text-gray-500 mt-1">Step 1: Select service • Step 2: Select staff • Step 3: Click + to add</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Step 1: Select service • Step 2: Select staff • Step 3: Click + to add</div>
                 {/* Helper: Selected service details */}
                 {(() => {
                   const s = services.find((sv) => (sv.id === appointmentData.service || sv._id === appointmentData.service));
                   if (!s) return null;
                   return (
-                    <div className="text-[11px] text-gray-600 mt-1">Selected: {s.name} • {s.duration} min • ${s.price?.toFixed(2) || '0.00'}</div>
+                    <div className="text-[11px] text-gray-600 dark:text-gray-400 mt-1">Selected: {s.name} • {s.duration} min • ${s.price?.toFixed(2) || '0.00'}</div>
                   );
                 })()}
 
@@ -2040,22 +2045,22 @@ useEffect(() => {
                 {/* Display added services */}
                 {appointmentData.services && appointmentData.services.length > 0 && (
                   <div className="space-y-2 mt-2">
-                    <p className="text-xs font-medium text-gray-600">Service sequence (queued back-to-back):</p>
+                    <p className="text-xs font-medium text-gray-600 dark:text-gray-400">Service sequence (queued back-to-back):</p>
                     {appointmentData.services.map((serviceItem, index) => (
                       <div
                         key={index}
-                        className="flex items-center justify-between p-2.5 bg-blue-50 border border-blue-200 rounded-lg"
+                        className="flex items-center justify-between p-2.5 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-900 rounded-lg"
                       >
                         <div className="flex items-start gap-2 flex-1">
                           <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-200 text-[10px] font-semibold text-blue-800">
                             {index + 1}
                           </span>
                           <div className="flex-1">
-                            <p className="text-xs font-semibold text-gray-900">{serviceItem.serviceName}</p>
-                            <p className="text-[11px] text-gray-600">
+                            <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{serviceItem.serviceName}</p>
+                            <p className="text-[11px] text-gray-600 dark:text-gray-400">
                               {serviceItem.staffName} • ${serviceItem.amount.toFixed(2)} • {serviceItem.duration} min
                             </p>
-                            <p className="text-[11px] text-gray-500">
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
                               {serviceItem.startTime} → {serviceItem.endTime}
                             </p>
                           </div>
@@ -2073,7 +2078,7 @@ useEffect(() => {
 
                     {/* Visual timeline bar */}
                     <div className="mt-1">
-                      <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div className="flex w-full">
                           {appointmentData.services.map((s, i) => (
                             <div
@@ -2085,25 +2090,25 @@ useEffect(() => {
                           ))}
                         </div>
                       </div>
-                      <div className="flex justify-between text-[10px] text-gray-500 mt-1">
+                      <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mt-1">
                         <span>{appointmentData.startTime}</span>
                         <span>{appointmentData.endTime}</span>
                       </div>
                     </div>
 
                     {/* Total Summary */}
-                    <div className="p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-300 rounded-lg">
+                    <div className="p-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border border-blue-300 dark:border-blue-900 rounded-lg">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs font-semibold text-gray-900">
+                          <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
                             Total: {appointmentData.services.length} Service{appointmentData.services.length > 1 ? 's' : ''}
                           </p>
-                          <p className="text-[11px] text-gray-600">
+                          <p className="text-[11px] text-gray-600 dark:text-gray-400">
                             {appointmentData.startTime} - {appointmentData.endTime} ({appointmentData.duration} min)
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-indigo-600">
+                          <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
                             ${appointmentData.amount.toFixed(2)}
                           </p>
                         </div>
@@ -2122,7 +2127,7 @@ useEffect(() => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="staff" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="staff" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Staff <span className="text-red-500">*</span>
             </Label>
             {staffData.length > 0 ? (
@@ -2131,23 +2136,23 @@ useEffect(() => {
                 onValueChange={handleStaffChange}
                 disabled={isLoadingStaff || staffData.length === 0}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-background text-foreground border border-border">
                   <SelectValue placeholder={
                     isLoadingStaff ? 'Loading staff...' : 
                     staffData.length === 0 ? 'No staff available' : 'Select a staff member'
-                  }>
+                  } className="placeholder:text-muted-foreground">
                     {appointmentData.staffName && (
                       <span>{appointmentData.staffName}</span>
                     )}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background text-foreground border border-border">
                   {staffData.map((staff: StaffMember) => (
-                    <SelectItem key={staff._id} value={staff._id}>
+                    <SelectItem key={staff._id} value={staff._id} className="text-foreground data-[highlighted]:bg-muted data-[state=checked]:bg-muted focus:bg-muted">
                       <div className="flex flex-col">
                         <span>{staff.name}</span>
                         {staff.email && (
-                          <span className="text-xs text-gray-500">{staff.email}</span>
+                          <span className="text-xs text-muted-foreground">{staff.email}</span>
                         )}
                       </div>
                     </SelectItem>
@@ -2159,7 +2164,7 @@ useEffect(() => {
                 {isLoadingStaff ? 'Loading staff...' : 'No staff members found'}
               </div>
             )}
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Select staff member for each service when adding
             </p>
           </div>
@@ -2168,7 +2173,7 @@ useEffect(() => {
         {/* Financial Information Row */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           <div className="space-y-2">
-            <Label htmlFor="amount" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="amount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Amount ($)
             </Label>
             <Input
@@ -2179,12 +2184,12 @@ useEffect(() => {
               value={appointmentData.amount || ''}
               onChange={(e) => handleFieldChange('amount', e.target.value)}
               placeholder="0.00"
-              className="w-full"
+              className="w-full bg-background text-foreground border border-border"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="discount" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="discount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Discount ($) <span className="text-gray-400 text-xs">(Optional)</span>
             </Label>
             <Input
@@ -2195,12 +2200,12 @@ useEffect(() => {
               value={appointmentData.discount || ''}
               onChange={(e) => handleFieldChange('discount', e.target.value)}
               placeholder="0.00"
-              className="w-full"
+              className="w-full bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-neutral-700"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="tax" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="tax" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Tax ($)
             </Label>
             <Input
@@ -2211,12 +2216,12 @@ useEffect(() => {
               value={appointmentData.tax || ''}
               onChange={(e) => handleFieldChange('tax', e.target.value)}
               placeholder="0.00"
-              className="w-full"
+              className="w-full bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-neutral-700"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="totalAmount" className="text-sm font-medium text-gray-700">
+            <Label htmlFor="totalAmount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Total Amount ($)
             </Label>
             <Input
@@ -2224,14 +2229,14 @@ useEffect(() => {
               type="text"
               value={appointmentData.totalAmount ? appointmentData.totalAmount.toFixed(2) : '0.00'}
               readOnly
-              className="w-full bg-gray-50"
+              className="w-full bg-muted text-foreground border border-border"
             />
           </div>
         </div>
 
         {/* Duration */}
         <div className="space-y-2">
-          <Label htmlFor="duration" className="text-sm font-medium text-gray-700">
+          <Label htmlFor="duration" className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Duration (minutes)
           </Label>
           <Input
@@ -2248,13 +2253,13 @@ useEffect(() => {
               }));
             }}
             placeholder="60"
-            className="w-full"
+            className="w-full bg-background text-foreground border border-border"
           />
         </div>
 
         {/* Notes */}
         <div className="space-y-2">
-          <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
+          <Label htmlFor="notes" className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Notes <span className="text-gray-400 text-xs">(Optional)</span>
           </Label>
           <Textarea
@@ -2263,7 +2268,7 @@ useEffect(() => {
             onChange={(e) => handleFieldChange('notes', e.target.value)}
             placeholder="Add any additional notes..."
             rows={3}
-            className="w-full"
+            className="w-full bg-background text-foreground border border-border placeholder:text-muted-foreground"
           />
         </div>
 
@@ -2312,7 +2317,7 @@ useEffect(() => {
       {/* Add New Client Modal - Only for new appointments */}
       {isClientSearchEnabled && (
         <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background text-foreground">
             <DialogHeader>
               <DialogTitle>Add New Client</DialogTitle>
               <DialogDescription>
@@ -2337,7 +2342,7 @@ useEffect(() => {
                               htmlFor="profilePicture" 
                               className="cursor-pointer block"
                           >
-                              <div className="w-24 h-24 rounded-full border-4 border-dashed border-gray-300 hover:border-blue-400 transition-colors duration-200 flex items-center justify-center overflow-hidden bg-gray-50 hover:bg-blue-50">
+                              <div className="w-24 h-24 rounded-full border-4 border-dashed border-gray-300 dark:border-neutral-700 hover:border-blue-400 transition-colors duration-200 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-neutral-800 hover:bg-blue-50 dark:hover:bg-neutral-700">
                                   {newClientData.profilePicture ? (
                                       <img 
                                           src={newClientData.profilePicture} 
@@ -2358,28 +2363,28 @@ useEffect(() => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name <span className="text-red-500">*</span></Label>
-                  <Input id="fullName" name="fullName" value={newClientData.fullName} onChange={handleNewClientInputChange} required />
+                  <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name <span className="text-red-500">*</span></Label>
+                  <Input id="fullName" name="fullName" value={newClientData.fullName} onChange={handleNewClientInputChange} required className="bg-background text-foreground border border-border" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone <span className="text-red-500">*</span></Label>
-                  <Input id="phone" name="phone" value={newClientData.phone} onChange={handleNewClientInputChange} required />
+                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone <span className="text-red-500">*</span></Label>
+                  <Input id="phone" name="phone" value={newClientData.phone} onChange={handleNewClientInputChange} required className="bg-background text-foreground border border-border" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" value={newClientData.email} onChange={handleNewClientInputChange} />
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
+                  <Input id="email" name="email" type="email" value={newClientData.email} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="birthdayDate">Birthday</Label>
-                  <Input id="birthdayDate" name="birthdayDate" type="date" value={newClientData.birthdayDate} onChange={handleNewClientInputChange} />
+                  <Label htmlFor="birthdayDate" className="text-sm font-medium text-gray-700 dark:text-gray-300">Birthday</Label>
+                  <Input id="birthdayDate" name="birthdayDate" type="date" value={newClientData.birthdayDate} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gender">Gender</Label>
+                  <Label htmlFor="gender" className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender</Label>
                   <Select name="gender" value={newClientData.gender} onValueChange={(value) => handleNewClientSelectChange('gender', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-background text-foreground border border-border">
                           <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background text-foreground border border-border">
                           <SelectItem value="Male">Male</SelectItem>
                           <SelectItem value="Female">Female</SelectItem>
                           <SelectItem value="Other">Other</SelectItem>
@@ -2387,21 +2392,21 @@ useEffect(() => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Input id="country" name="country" value={newClientData.country} onChange={handleNewClientInputChange} />
+                  <Label htmlFor="country" className="text-sm font-medium text-gray-700 dark:text-gray-300">Country</Label>
+                  <Input id="country" name="country" value={newClientData.country} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="occupation">Occupation</Label>
-                  <Input id="occupation" name="occupation" value={newClientData.occupation} onChange={handleNewClientInputChange} />
+                  <Label htmlFor="occupation" className="text-sm font-medium text-gray-700 dark:text-gray-300">Occupation</Label>
+                  <Input id="occupation" name="occupation" value={newClientData.occupation} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
                 </div>
               </div>
               <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea id="address" name="address" value={newClientData.address} onChange={handleNewClientInputChange} />
+                  <Label htmlFor="address" className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</Label>
+                  <Textarea id="address" name="address" value={newClientData.address} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border placeholder:text-muted-foreground" />
               </div>
               <div className="space-y-2">
-                  <Label htmlFor="preferences">Preferences</Label>
-                  <Textarea id="preferences" name="preferences" value={newClientData.preferences} onChange={handleNewClientInputChange} />
+                  <Label htmlFor="preferences" className="text-sm font-medium text-gray-700 dark:text-gray-300">Preferences</Label>
+                  <Textarea id="preferences" name="preferences" value={newClientData.preferences} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border placeholder:text-muted-foreground" />
               </div>
             </div>
 

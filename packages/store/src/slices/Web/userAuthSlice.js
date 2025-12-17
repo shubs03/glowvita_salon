@@ -106,11 +106,32 @@ const userAuthSlice = createSlice({
         // Explicitly set to false when nothing is found in storage
         state.isAuthenticated = false;
       }
+    },
+    updateUser: (state, action) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+        
+        // Update localStorage
+        if (typeof window !== 'undefined') {
+          try {
+            const stateToPersist = { 
+              isAuthenticated: state.isAuthenticated, 
+              user: state.user, 
+              token: state.token, 
+              role: state.role, 
+              permissions: state.permissions 
+            };
+            localStorage.setItem('userAuthState', JSON.stringify(stateToPersist));
+          } catch (e) {
+            console.error("Could not update user auth state in localStorage", e);
+          }
+        }
+      }
     }
   },
 });
 
-export const { setUserAuth, clearUserAuth, rehydrateAuth } = userAuthSlice.actions;
+export const { setUserAuth, clearUserAuth, rehydrateAuth, updateUser } = userAuthSlice.actions;
 
 export const selectUserAuth = (state) => ({
   isAuthenticated: state.userAuth.isAuthenticated,

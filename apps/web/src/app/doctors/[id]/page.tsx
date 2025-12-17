@@ -30,8 +30,11 @@ import {
   BookIcon,
   BookOpenIcon,
 } from "lucide-react";
-import { useGetDoctorsQuery } from "@repo/store/services/api";
+import { useGetDoctorsQuery, useCheckDoctorWishlistStatusQuery, useAddDoctorToWishlistMutation, useRemoveDoctorFromWishlistMutation } from "@repo/store/services/api";
 import { cn } from "@repo/ui/cn";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { ReviewForm } from '@/components/ReviewForm';
 
 interface Doctor {
   id: string;
@@ -146,6 +149,7 @@ export default function DoctorDetailsPage({
   params: { id: string };
 }) {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
   // Fetch doctors from API
   const {
@@ -154,10 +158,72 @@ export default function DoctorDetailsPage({
     isError,
   } = useGetDoctorsQuery(undefined);
 
+  // Check if doctor is in wishlist using RTK Query
+  const {
+    data: wishlistStatusData,
+    isLoading: isLoadingWishlistStatus,
+  } = useCheckDoctorWishlistStatusQuery(params.id, {
+    skip: !isAuthenticated || !params.id,
+  });
+
+  // Fetch doctor reviews
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(true);
+
+  const fetchReviews = async () => {
+    if (!params.id) return;
+    
+    try {
+      setIsLoadingReviews(true);
+      
+      // Get token from localStorage
+      const authData = localStorage.getItem('auth');
+      let token = null;
+      
+      if (authData) {
+        try {
+          const parsedAuth = JSON.parse(authData);
+          token = parsedAuth.token;
+        } catch (e) {
+          console.error('Error parsing auth data:', e);
+        }
+      }
+
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/doctors/reviews/${params.id}`, {
+        credentials: 'include',
+        headers,
+      });
+      const data = await response.json();
+      if (data.success) {
+        setReviews(data.reviews);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setIsLoadingReviews(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, [params.id]);
+
+  // Wishlist mutations
+  const [addDoctorToWishlist, { isLoading: isAddingToWishlist }] = useAddDoctorToWishlistMutation();
+  const [removeDoctorFromWishlist, { isLoading: isRemovingFromWishlist }] = useRemoveDoctorFromWishlistMutation();
+
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorState, setErrorState] = useState<string | null>(null);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  const isFavorite = wishlistStatusData?.isInWishlist || false;
+  const isLoadingFavorite = isLoadingWishlistStatus || isAddingToWishlist || isRemovingFromWishlist;
 
   useEffect(() => {
     if (isLoadingApi) {
@@ -187,6 +253,37 @@ export default function DoctorDetailsPage({
       setLoading(false);
     }
   }, [params.id, doctorsData, isLoadingApi, isError]);
+
+  const handleWishlistToggle = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to add doctors to your wishlist");
+      router.push("/client-login");
+      return;
+    }
+
+    if (!doctor) return;
+
+    try {
+      if (isFavorite) {
+        // Remove from wishlist
+        await removeDoctorFromWishlist(doctor.id).unwrap();
+        toast.success("Removed from Wishlist", {
+          description: "Doctor removed from your wishlist"
+        });
+      } else {
+        // Add to wishlist
+        await addDoctorToWishlist(doctor.id).unwrap();
+        toast.success("Added to Wishlist", {
+          description: "Doctor added to your wishlist"
+        });
+      }
+    } catch (error: any) {
+      console.error("Failed to update wishlist:", error);
+      toast.error("Wishlist Update Failed", {
+        description: error?.data?.message || "Failed to update wishlist. Please try again."
+      });
+    }
+  };
 
   if (loading) {
     return (
@@ -242,7 +339,7 @@ export default function DoctorDetailsPage({
   return (
     <div className="min-h-screen bg-background">
       {/* Page Header */}
-      <div className="max-w-6xl mx-auto p-4 md:p-6">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-6">
             <Button
@@ -258,12 +355,13 @@ export default function DoctorDetailsPage({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setIsFavorite(!isFavorite)}
+                onClick={handleWishlistToggle}
+                disabled={isLoadingFavorite}
               >
                 <Heart
                   className={cn(
                     "h-4 w-4",
-                    isFavorite ? "fill-red-500 text-red-500" : ""
+                    isFavorite && "fill-current text-blue-500"
                   )}
                 />
               </Button>
@@ -390,9 +488,9 @@ export default function DoctorDetailsPage({
             </div>
           </CardContent>
         </Card>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 max-w-7xl mx-auto">
           {/* Left Column - Contact Info and Actions */}
-          <div className="lg:col-span-1 space-y-5 sm:space-y-6">
+          <div className="lg:col-span-1 space-y-5 sm:space-y-6 lg:sticky lg:top-24 lg:self-start">
             {/* Action Buttons */}
             <Card>
               <CardHeader>
@@ -437,7 +535,13 @@ export default function DoctorDetailsPage({
                   <Button
                     variant="outline"
                     className="w-full py-3 text-sm font-semibold gap-2 border-2"
+                    disabled={doctor.doctorAvailability?.toLowerCase() !== 'online'}
                     onClick={() => {
+                      // Only allow if doctor availability is online
+                      if (doctor.doctorAvailability?.toLowerCase() !== 'online') {
+                        return;
+                      }
+                      
                       // Encode doctor data as base64 JSON (same pattern as physical consultation)
                       console.log('🎥 Video Consultation - Doctor object:', doctor);
                       console.log('🆔 Doctor ID:', doctor.id);
@@ -465,6 +569,9 @@ export default function DoctorDetailsPage({
                   >
                     <Video className="h-4 w-4" />
                     Video Consultation
+                    {doctor.doctorAvailability?.toLowerCase() !== 'online' && (
+                      <span className="text-xs ml-auto">(Offline)</span>
+                    )}
                   </Button>
                 )}
 
@@ -764,8 +871,129 @@ export default function DoctorDetailsPage({
                 </div>
               </CardContent>
             </Card>
+
+            <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                <Star className="h-6 w-6 text-primary" />
+                Reviews
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingReviews ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="border-t pt-4 animate-pulse">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-muted"></div>
+                          <div className="space-y-1">
+                            <div className="h-3 w-20 bg-muted rounded"></div>
+                            <div className="h-2 w-16 bg-muted rounded"></div>
+                          </div>
+                        </div>
+                        <div className="h-4 w-20 bg-muted rounded"></div>
+                      </div>
+                      <div className="h-4 w-full bg-muted rounded"></div>
+                      <div className="h-4 w-3/4 bg-muted rounded mt-1"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : reviews.length > 0 ? (
+                <div className="space-y-6">
+                  {reviews.map((review: any) => (
+                    <div key={review._id} className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
+                            {review.userName?.charAt(0) || "U"}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">
+                              {review.userName || "Anonymous"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(review.createdAt).toLocaleDateString(
+                                "en-US",
+                                {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                }
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-4 w-4 ${star <= review.rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground italic">
+                        "{review.comment || "No review text available"}"
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">
+                    No reviews yet
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Be the first to leave a review!
+                  </p>
+                </div>
+              )}
+              
+              <div className="mt-6 pt-6 border-t">
+                {showReviewForm ? (
+                  <div>
+                    <ReviewForm 
+                      entityId={doctor.id}
+                      entityType="doctor"
+                      onSubmitSuccess={() => {
+                        setShowReviewForm(false);
+                        // Refresh reviews after successful submission
+                        fetchReviews();
+                      }}
+                    />
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-4"
+                      onClick={() => setShowReviewForm(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        toast.error("Please login to write a review");
+                        router.push("/client-login");
+                        return;
+                      }
+                      setShowReviewForm(true);
+                    }}
+                  >
+                    Write a Review
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           </div>
         </div>
+        
       </div>
     </div>
   );

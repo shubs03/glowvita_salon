@@ -43,6 +43,18 @@ type Appointment = {
   tax?: number;
   totalAmount: number;
   paymentStatus?: string;
+  paymentMethod?: string;
+  platformFee?: number;
+  serviceTax?: number;
+  discountAmount?: number;
+  finalAmount?: number;
+  payment?: {
+    paid?: number;
+    paymentMode?: string;
+    paymentStatus?: string;
+    paymentMethod?: string;
+    [key: string]: any;
+  };
   createdAt?: string;
   updatedAt?: string;
 };
@@ -78,6 +90,8 @@ export default function AppointmentsPage() {
   const [createAppointment] = glowvitaApi.useCreateAppointmentMutation();
   const [updateAppointment] = glowvitaApi.useUpdateAppointmentMutation();
   const [deleteAppointment, { isLoading: isDeleting }] = glowvitaApi.useDeleteAppointmentMutation();
+  // Use backend payments collect endpoint so each payment is recorded with timestamped history
+  const [collectPayment] = glowvitaApi.useCollectPaymentMutation();
   
   const appointments = Array.isArray(appointmentsData) ? appointmentsData : [];
   
@@ -88,7 +102,19 @@ export default function AppointmentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
+  const [paymentData, setPaymentData] = useState({
+    amount: 0,
+    paymentMethod: 'cash',
+    notes: ''
+  });
+  const [paymentAt, setPaymentAt] = useState<string>(() => {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    // Format to yyyy-MM-ddTHH:mm for datetime-local input
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  });
 
   const filteredAppointments = useMemo(() => {
     return appointments.filter(appt => 
@@ -155,6 +181,55 @@ export default function AppointmentsPage() {
     } catch (error) {
       console.error('Error deleting appointment:', error);
       toast.error('Failed to delete appointment');
+    }
+  };
+
+  // Handle payment collection
+  const handleOpenPaymentModal = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    const totalAmount = (appointment as any).finalAmount || appointment.totalAmount || 0;
+    const paidAmount = (appointment as any).amountPaid || appointment.payment?.paid || 0;
+    const remainingAmount = Math.max(0, totalAmount - paidAmount);
+    
+    setPaymentData({
+      amount: remainingAmount,
+      paymentMethod: 'cash',
+      notes: ''
+    });
+    setIsPaymentModalOpen(true);
+    // Reset payment date to now when opening
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    setPaymentAt(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`);
+  };
+
+  const handleCollectPayment = async () => {
+    if (!selectedAppointment?._id) return;
+    const toastId = toast.loading('Processing payment...');
+    try {
+      // Call backend so it records payment history with paymentDate
+      await collectPayment({
+        appointmentId: selectedAppointment._id,
+        amount: paymentData.amount,
+        paymentMethod: paymentData.paymentMethod,
+        notes: paymentData.notes,
+        paymentDate: new Date(paymentAt).toISOString(),
+      }).unwrap();
+
+      toast.success('Payment collected successfully', {
+        description: `₹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`
+      });
+
+      setIsPaymentModalOpen(false);
+      setSelectedAppointment(null);
+      refetch();
+    } catch (error: any) {
+      console.error('Error processing payment:', error);
+      toast.error('Failed to process payment', {
+        description: error?.data?.message || error.message || 'Please try again.'
+      });
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
@@ -269,6 +344,9 @@ export default function AppointmentsPage() {
                         <TableHead>Date & Time</TableHead>
                         <TableHead>Duration</TableHead>
                         <TableHead>Amount</TableHead>
+                        <TableHead>Partial Payment</TableHead>
+                        <TableHead>Payment Method</TableHead>
+                        <TableHead>Payment Status</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -276,7 +354,7 @@ export default function AppointmentsPage() {
                     <TableBody>
                       {isLoading ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8">
+                          <TableCell colSpan={11} className="text-center py-8">
                             <div className="flex items-center justify-center gap-2">
                               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                               Loading appointments...
@@ -285,12 +363,27 @@ export default function AppointmentsPage() {
                         </TableRow>
                       ) : currentItems.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                             {searchTerm || statusFilter !== 'all' ? 'No appointments found matching your criteria' : 'No appointments scheduled'}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        currentItems.map((appointment) => (
+                        currentItems.map((appointment) => {
+                          const totalAmount = (appointment as any).finalAmount || appointment.totalAmount || 0;
+                          // Use the new amountPaid field from the appointment, fallback to payment.paid for backward compatibility
+                          const paidAmount = (appointment as any).amountPaid || appointment.payment?.paid || 0;
+                          const remainingAmount = Math.max(0, totalAmount - paidAmount);
+                          
+                          console.log('=== APPOINTMENTS PAGE PAYMENT DEBUG ===');
+                          console.log('Appointment ID:', appointment._id);
+                          console.log('totalAmount:', totalAmount);
+                          console.log('paidAmount (from appointment.amountPaid):', (appointment as any).amountPaid);
+                          console.log('paidAmount (from appointment.payment?.paid):', appointment.payment?.paid);
+                          console.log('paidAmount (final):', paidAmount);
+                          console.log('remainingAmount:', remainingAmount);
+                          console.log('Full appointment data:', appointment);
+                          
+                          return (
                           <TableRow key={appointment._id}>
                             <TableCell className="font-medium">{appointment.clientName}</TableCell>
                             <TableCell>{appointment.serviceName}</TableCell>
@@ -306,21 +399,87 @@ export default function AppointmentsPage() {
                               </div>
                             </TableCell>
                             <TableCell>{appointment.duration} min</TableCell>
-                            <TableCell>${appointment.totalAmount?.toFixed(2)}</TableCell>
+                            <TableCell>₹{totalAmount.toFixed(2)}</TableCell>
+                            <TableCell>
+                              {paidAmount > 0 && remainingAmount > 0 ? (
+                                <div className="flex flex-col text-xs">
+                                  <span className="text-green-700 font-medium">Paid: ₹{paidAmount.toFixed(2)}</span>
+                                  <span className="text-orange-700 font-medium">Remain: ₹{remainingAmount.toFixed(2)}</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">
+                                {(appointment as any).paymentMethod || appointment.payment?.paymentMethod || 'N/A'}
+                              </span>
+                            </TableCell>
                             <TableCell>
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
-                                appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
-                                'bg-yellow-100 text-yellow-800'
+                                ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'completed' 
+                                  ? 'bg-green-100 text-green-800' :
+                                ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'pending' 
+                                  ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
                               }`}>
-                                {formatStatus(appointment.status)}
+                                {(() => {
+                                  // Map the backend payment status to more user-friendly terms
+                                  const status = (appointment as any).paymentStatus || appointment.payment?.paymentStatus || 'pending';
+                                  const amountPaid = Number((appointment as any).amountPaid ?? 0) || 0;
+                                  const totalAmount = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
+                                  
+                                  switch (status) {
+                                    case 'completed': return 'PAID';
+                                    case 'pending': 
+                                      if (amountPaid > 0 && totalAmount > 0) {
+                                        return `PARTIAL (₹${amountPaid.toFixed(2)})`;
+                                      }
+                                      return 'UNPAID';
+                                    default: return status.toUpperCase();
+                                  }
+                                })()}
                               </span>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                  appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                  appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
+                                  appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {formatStatus(appointment.status)}
+                                </span>
+                                {(() => {
+                                  const totalAmount = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
+                                  const paidAmount = Number((appointment as any).amountPaid ?? appointment.payment?.paid ?? 0) || 0;
+                                  const isPartial = totalAmount > 0 && paidAmount > 0 && paidAmount < totalAmount;
+                                  return isPartial ? (
+                                    <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wide">
+                                      Partial
+                                    </span>
+                                  ) : null;
+                                })()}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-1">
+                                {remainingAmount > 0 && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={() => handleOpenPaymentModal(appointment)}
+                                    className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    title="Collect Payment"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                  </Button>
+                                )}
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
@@ -351,7 +510,8 @@ export default function AppointmentsPage() {
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))
+                        );
+                        })
                       )}
                     </TableBody>
                   </Table>
@@ -465,6 +625,105 @@ export default function AppointmentsPage() {
                   Delete
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Collection Modal */}
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Collect Payment</DialogTitle>
+            <DialogDescription>
+              Collect payment for <strong>{selectedAppointment?.clientName}</strong>'s appointment
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedAppointment && (
+            <div className="space-y-4 py-4">
+              {/* Payment Summary */}
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Total Amount:</span>
+                  <span className="font-semibold">₹{((selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Already Paid:</span>
+                  <span className="font-semibold text-green-600">₹{(((selectedAppointment as any).amountPaid || selectedAppointment.payment?.paid || 0)).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm pt-2 border-t">
+                  <span className="font-medium">Remaining:</span>
+                  <span className="font-bold text-orange-600">₹{(Math.max(0, ((selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0) - (((selectedAppointment as any).amountPaid || selectedAppointment.payment?.paid || 0)))).toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Amount Input */}
+              <div className="space-y-2">
+                <Label htmlFor="amount">Collecting Amount</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">₹</span>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={paymentData.amount}
+                    onChange={(e) => setPaymentData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                    className="pl-7"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="space-y-2">
+                <Label htmlFor="paymentMethod">Payment Method</Label>
+                <Select 
+                  value={paymentData.paymentMethod}
+                  onValueChange={(value) => setPaymentData(prev => ({ ...prev, paymentMethod: value }))}
+                >
+                  <SelectTrigger id="paymentMethod">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">💰 Cash</SelectItem>
+                    <SelectItem value="card">💳 Card</SelectItem>
+                    <SelectItem value="upi">📱 UPI</SelectItem>
+                    <SelectItem value="netbanking">🏦 Net Banking</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  value={paymentData.notes}
+                  onChange={(e) => setPaymentData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Payment reference or notes..."
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPaymentModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCollectPayment}
+              disabled={paymentData.amount <= 0}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Confirm Payment ₹{paymentData.amount.toFixed(2)}
             </Button>
           </DialogFooter>
         </DialogContent>

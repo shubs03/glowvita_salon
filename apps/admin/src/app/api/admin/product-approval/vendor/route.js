@@ -1,34 +1,40 @@
 import mongoose from 'mongoose';
-import ProductModel from '@repo/lib/models/Vendor/Product.model'; // Adjust path to your ProductModel
-import {authMiddlewareAdmin} from '../../../../middlewareAdmin'; // Adjust path to your middleware
+import ProductModel from '@repo/lib/models/Vendor/Product.model';
+import {authMiddlewareAdmin} from '../../../../../middlewareAdmin';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import ProductCategoryModel from '@repo/lib/models/admin/ProductCategory';
-// Get Products (with optional filtering by status)
+
+// Get Vendor Products (with optional filtering by status)
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     const url = new URL(req.url);
     const status = url.searchParams.get('status'); // Optional query parameter for status
 
-    const query = status ? { status } : {};
+    // Build query for vendor products only
+    const query = { origin: 'Vendor' };
+    if (status) {
+      query.status = status;
+    }
+
     const products = await ProductModel.find(query)
       .populate('vendorId', 'name email') // Populate vendor details
       .populate('category', 'name') // Populate category details
       .select('-__v'); // Exclude version key
 
     return Response.json({
-      message: 'Products retrieved successfully',
+      message: 'Vendor products retrieved successfully',
       products,
     });
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error('Error fetching vendor products:', error);
     return Response.json(
-      { message: 'Server error while fetching products' },
+      { message: 'Server error while fetching vendor products' },
       { status: 500 }
     );
   }
 }, ['superadmin']);
 
-// Approve or Reject Product
+// Approve or Reject Vendor Product
 export const PATCH = authMiddlewareAdmin(async (req) => {
   try {
     const { productId, status } = await req.json();
@@ -55,8 +61,9 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       updatedAt: new Date(), // Update timestamp
     };
 
-    const updatedProduct = await ProductModel.findByIdAndUpdate(
-      productId,
+    // Find and update the product, ensuring it's a vendor product
+    const updatedProduct = await ProductModel.findOneAndUpdate(
+      { _id: productId, origin: 'Vendor' },
       { $set: updateData },
       { new: true, runValidators: true }
     )
@@ -66,19 +73,19 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
 
     if (!updatedProduct) {
       return Response.json(
-        { message: 'Product not found' },
+        { message: 'Vendor product not found' },
         { status: 404 }
       );
     }
 
     return Response.json({
-      message: `Product ${status} successfully`,
+      message: `Vendor product ${status} successfully`,
       product: updatedProduct,
     });
   } catch (error) {
-    console.error('Error updating product status:', error);
+    console.error('Error updating vendor product status:', error);
     return Response.json(
-      { message: 'Server error while updating product status' },
+      { message: 'Server error while updating vendor product status' },
       { status: 500 }
     );
   }

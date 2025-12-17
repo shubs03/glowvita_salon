@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation } from '@repo/store/api';
+import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
 
 interface Product {
@@ -32,9 +32,16 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('credit-card');
   
   const { user } = useAuth();
+  const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
+  const { data: shippingConfig } = useGetPublicShippingConfigQuery(undefined);
   const [createOrder, { isLoading }] = useCreateClientOrderMutation();
   const [createPaymentOrder] = useCreatePaymentOrderMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
+
+  console.log('Shipping Config Full Data: ', shippingConfig);
+  console.log('Shipping Config Amount: ', shippingConfig?.amount);
+  console.log('Shipping Config ChargeType: ', shippingConfig?.chargeType);
+  console.log('Shipping Config IsEnabled: ', shippingConfig?.isEnabled);
 
   // Load Razorpay script
   useEffect(() => {
@@ -81,25 +88,84 @@ export default function CheckoutPage() {
     }
     if (!product) return;
 
-    const totalAmount = (product.price * product.quantity) + 5.00 + (product.price * product.quantity * 0.08);
+    // Use the correct calculation for totalAmount that matches the checkout page display
+    const subtotal = product.price * product.quantity;
+    const shipping = subtotal > 0 && shippingConfig?.isEnabled
+      ? shippingConfig.chargeType === 'percentage'
+        ? (subtotal * shippingConfig.amount) / 100
+        : shippingConfig.amount
+      : 0;
+    
+    // Calculate tax based on dynamic tax settings from API
+    const productGST = taxSettings?.productGST || 18;
+    const productGSTType = taxSettings?.productGSTType || 'percentage';
+    const productPlatformFee = taxSettings?.productPlatformFee || 10;
+    const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
+    const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
+    const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
+    
+    const gst = productGSTEnabled 
+      ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+      : 0;
+    const platformFee = productPlatformFeeEnabled
+      ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+      : 0;
+    const tax = gst + platformFee;
+    
+    const totalAmount = subtotal + shipping + tax;
 
     try {
       // For cash on delivery, directly create order
       if (paymentMethod === 'cash-on-delivery') {
-        const orderData = {
-          items: [{
-            productId: product.id,
-            name: product.name,
-            quantity: product.quantity,
-            price: product.price,
-            image: product.image,
-          }],
-          vendorId: product.vendorId,
-          totalAmount,
-          shippingAddress,
-          contactNumber,
-          paymentMethod,
-        };
+        // Check if this is a cart checkout (product ID starts with 'cart-')
+        let orderData;
+        if (product.id.startsWith('cart-')) {
+          // This is a cart checkout, we need to get the actual cart items
+          const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+          if (cartItems.length === 0) {
+            toast.error('Cart is empty. Cannot place order.');
+            return;
+          }
+          
+          orderData = {
+            items: cartItems.map((item: any) => ({
+              productId: item.productId || item._id,
+              name: item.productName,
+              quantity: item.quantity,
+              price: item.price,
+              image: item.productImage || "/images/placeholder.jpg",
+            })),
+            vendorId: product.vendorId,
+            totalAmount,
+            shippingAmount: shipping,
+            taxAmount: tax,
+            gstAmount: gst,
+            platformFeeAmount: platformFee,
+            shippingAddress,
+            contactNumber,
+            paymentMethod,
+          };
+        } else {
+          // This is a single product checkout
+          orderData = {
+            items: [{
+              productId: product.id,
+              name: product.name,
+              quantity: product.quantity,
+              price: product.price,
+              image: product.image,
+            }],
+            vendorId: product.vendorId,
+            totalAmount,
+            shippingAmount: shipping,
+            taxAmount: tax,
+            gstAmount: gst,
+            platformFeeAmount: platformFee,
+            shippingAddress,
+            contactNumber,
+            paymentMethod,
+          };
+        }
         
         await createOrder(orderData).unwrap();
         toast.success('Order placed successfully!', {
@@ -107,14 +173,15 @@ export default function CheckoutPage() {
         });
 
         localStorage.removeItem('buyNowProduct');
+        localStorage.removeItem('cartItems');
         setTimeout(() => {
           router.push('/profile/orders');
         }, 2000);
         return;
       }
       
-      // For UPI and Credit/Debit Card payments, use Razorpay
-      if (paymentMethod === 'upi' || paymentMethod === 'credit-card') {
+      // For UPI, Credit/Debit Card, and Net Banking payments, use Razorpay
+      if (paymentMethod === 'upi' || paymentMethod === 'credit-card' || paymentMethod === 'netbanking') {
         // Create Razorpay payment order
         const paymentOrderResponse = await createPaymentOrder({
           amount: totalAmount,
@@ -148,6 +215,13 @@ export default function CheckoutPage() {
             netbanking: false,
             wallet: false,
           };
+        } else if (paymentMethod === 'netbanking') {
+          paymentMethods = {
+            card: false,
+            upi: false,
+            netbanking: true,
+            wallet: false,
+          };
         }
 
         // Initialize Razorpay payment
@@ -170,24 +244,61 @@ export default function CheckoutPage() {
               }).unwrap();
 
               if (verifyResponse.success) {
-                // Create order after successful payment
-                const orderData = {
-                  items: [{
-                    productId: product.id,
-                    name: product.name,
-                    quantity: product.quantity,
-                    price: product.price,
-                    image: product.image,
-                  }],
-                  vendorId: product.vendorId,
-                  totalAmount,
-                  shippingAddress,
-                  contactNumber,
-                  paymentMethod,
-                  razorpayOrderId: response.razorpay_order_id,
-                  razorpayPaymentId: response.razorpay_payment_id,
-                  razorpaySignature: response.razorpay_signature,
-                };
+                // Check if this is a cart checkout (product ID starts with 'cart-')
+                let orderData;
+                if (product.id.startsWith('cart-')) {
+                  // This is a cart checkout, we need to get the actual cart items
+                  const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+                  if (cartItems.length === 0) {
+                    toast.error('Cart is empty. Cannot place order.');
+                    return;
+                  }
+                  
+                  orderData = {
+                    items: cartItems.map((item: any) => ({
+                      productId: item.productId || item._id,
+                      name: item.productName,
+                      quantity: item.quantity,
+                      price: item.price,
+                      image: item.productImage || "/images/placeholder.jpg",
+                    })),
+                    vendorId: product.vendorId,
+                    totalAmount,
+                    shippingAmount: shipping,
+                    taxAmount: tax,
+                    gstAmount: gst,
+                    platformFeeAmount: platformFee,
+                    shippingAddress,
+                    contactNumber,
+                    paymentMethod,
+                    razorpayOrderId: response.razorpay_order_id,
+                    razorpayPaymentId: response.razorpay_payment_id,
+                    razorpaySignature: response.razorpay_signature,
+                  };
+                } else {
+                  // This is a single product checkout
+                  orderData = {
+                    items: [{
+                      productId: product.id,
+                      name: product.name,
+                      quantity: product.quantity,
+                      price: product.price,
+                      image: product.image,
+                    }],
+                    vendorId: product.vendorId,
+                    totalAmount,
+                    shippingAmount: shipping,
+                    taxAmount: tax,
+                    gstAmount: gst,
+                    platformFeeAmount: platformFee,
+                    shippingAddress,
+                    contactNumber,
+                    paymentMethod,
+                    razorpayOrderId: response.razorpay_order_id,
+                    razorpayPaymentId: response.razorpay_payment_id,
+                    razorpaySignature: response.razorpay_signature,
+                  };
+                }
                 
                 await createOrder(orderData).unwrap();
                 toast.success('Payment successful! Order placed successfully!', {
@@ -195,6 +306,7 @@ export default function CheckoutPage() {
                 });
 
                 localStorage.removeItem('buyNowProduct');
+                localStorage.removeItem('cartItems');
                 setTimeout(() => {
                   router.push('/profile/orders');
                 }, 2000);
@@ -229,9 +341,9 @@ export default function CheckoutPage() {
       // Fallback for any other payment method
       toast.error('Selected payment method is not supported yet.');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to place order:', error);
-      toast.error('Failed to place order. Please try again.');
+      toast.error(error?.data?.message || 'Failed to place order. Please try again.');
     }
   };
 
@@ -247,8 +359,30 @@ export default function CheckoutPage() {
   }
 
   const subtotal = product.price * product.quantity;
-  const shipping = 5.00;
-  const tax = subtotal * 0.08;
+  
+  // Calculate dynamic shipping based on config
+  const shipping = subtotal > 0 && shippingConfig?.isEnabled
+    ? shippingConfig.chargeType === 'percentage'
+      ? (subtotal * shippingConfig.amount) / 100
+      : shippingConfig.amount
+    : 0;
+  
+  // Calculate tax based on dynamic tax settings from API
+  const productGST = taxSettings?.productGST || 18;
+  const productGSTType = taxSettings?.productGSTType || 'percentage';
+  const productPlatformFee = taxSettings?.productPlatformFee || 10;
+  const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
+  const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
+  const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
+  
+  const gst = productGSTEnabled 
+    ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+    : 0;
+  const platformFee = productPlatformFeeEnabled
+    ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+    : 0;
+  const tax = gst + platformFee;
+  
   const total = subtotal + shipping + tax;
 
   return (
@@ -264,9 +398,9 @@ export default function CheckoutPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Order Summary</CardTitle>
-                <CardDescription>Review the item you are about to purchase.</CardDescription>
+                <CardDescription>Review your order details and costs.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
                 <div className="flex items-center gap-6">
                   <Image 
                     src={product.image} 
@@ -330,10 +464,18 @@ export default function CheckoutPage() {
                     <span>Shipping</span>
                     <span>₹{shipping.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Tax (8%)</span>
-                    <span>₹{tax.toFixed(2)}</span>
-                  </div>
+                  {productGSTEnabled && (
+                    <div className="flex justify-between">
+                      <span>GST ({productGSTType === 'percentage' ? `${productGST}%` : '₹' + productGST})</span>
+                      <span>₹{gst.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {productPlatformFeeEnabled && (
+                    <div className="flex justify-between">
+                      <span>Platform Fee ({productPlatformFeeType === 'percentage' ? `${productPlatformFee}%` : '₹' + productPlatformFee})</span>
+                      <span>₹{platformFee.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="border-t pt-2 mt-2 flex justify-between font-bold text-lg">
                     <span>Total</span>
                     <span>₹{total.toFixed(2)}</span>
@@ -354,6 +496,11 @@ export default function CheckoutPage() {
                       <span>UPI</span>
                     </Label>
                     <Label className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
+                      <RadioGroupItem value="netbanking" id="netbanking" />
+                      <Landmark className="h-5 w-5" />
+                      <span>Net Banking</span>
+                    </Label>
+                    <Label className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
                       <RadioGroupItem value="cash-on-delivery" id="cash-on-delivery" />
                       <Wallet className="h-5 w-5" />
                       <span>Cash on Delivery</span>
@@ -372,6 +519,7 @@ export default function CheckoutPage() {
                    paymentMethod === 'cash-on-delivery' ? 'Place Order' :
                    paymentMethod === 'credit-card' ? 'Pay with Card' :
                    paymentMethod === 'upi' ? 'Pay with UPI' :
+                   paymentMethod === 'netbanking' ? 'Pay with Net Banking' :
                    'Place Order'
                   }
                 </Button>

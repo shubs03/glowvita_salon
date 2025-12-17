@@ -22,26 +22,29 @@ const validateShippingData = (data) => {
 // GET: Retrieve shipping configuration
 export const GET = authMiddlewareCrm(async (req, ctx) => {
   try {
-    console.log('Received GET /api/crm/shipping request');
-    console.log('Headers:', Object.fromEntries(req.headers.entries()));
+    // Get vendorId from authenticated user
+    const vendorId = req.user._id || req.user.userId;
+    if (!vendorId) {
+      return NextResponse.json(
+        { success: false, message: 'Vendor ID not found in authentication' },
+        { status: 401 }
+      );
+    }
     
     // Check database connection
     const db = await _db();
-    console.log('Database connection status:', db ? 'Connected' : 'Not connected');
     
-    // Try to find existing config
-    let config = await ShippingConfigModel.findOne();
-    console.log('Found config:', config);
+    // Try to find existing config for this vendor
+    let config = await ShippingConfigModel.findOne({ vendorId });
     
-    // If no config exists, create a default one
+    // If no config exists, create a default one for this vendor
     if (!config) {
-      console.log('No config found, creating default...');
       config = await ShippingConfigModel.create({ 
+        vendorId,
         chargeType: 'fixed', 
         amount: 0, 
         isEnabled: false 
       });
-      console.log('Created default config:', config);
     }
     
     return NextResponse.json({
@@ -75,9 +78,16 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
 // PUT: Update shipping configuration
 export const PUT = authMiddlewareCrm(async (req, ctx) => {
   try {
-    console.log('Received PUT /api/crm/shipping request');
     const body = await req.json();
-    console.log('Request body:', body);
+    
+    // Get vendorId from authenticated user
+    const vendorId = req.user._id || req.user.userId;
+    if (!vendorId) {
+      return NextResponse.json(
+        { success: false, message: 'Vendor ID not found in authentication' },
+        { status: 401 }
+      );
+    }
     
     const validationError = validateShippingData(body);
     if (validationError) {
@@ -87,18 +97,20 @@ export const PUT = authMiddlewareCrm(async (req, ctx) => {
       }, { status: 400 });
     }
 
-    let config = await ShippingConfigModel.findOne();
+    let config = await ShippingConfigModel.findOne({ vendorId });
     
     if (!config) {
-      config = await ShippingConfigModel.create(body);
+      config = await ShippingConfigModel.create({
+        vendorId,
+        ...body
+      });
     } else {
       config.chargeType = body.chargeType;
       config.amount = body.amount;
       config.isEnabled = body.isEnabled;
       await config.save();
     }
-    
-    console.log('Updated config:', config);
+
     return NextResponse.json({
       success: true,
       data: config,
