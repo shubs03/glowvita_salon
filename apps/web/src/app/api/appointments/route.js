@@ -191,7 +191,7 @@ export const POST = async (req) => {
 
         console.log('POST request - creating public appointment:', body);
 
-        // Required fields validation
+        // Required fields validation (client is handled separately)
         const requiredFields = [
           'vendorId',
           'clientName',
@@ -230,7 +230,8 @@ export const POST = async (req) => {
             );
         }
 
-        // Validate client information
+        // Validate client information - either client or userId is required but not both
+        // Remove client from required fields since it's optional if userId is provided
         if (!body.client && !body.userId) {
             console.log('No client field found in body:', body);
             return NextResponse.json(
@@ -242,7 +243,7 @@ export const POST = async (req) => {
         // Set default values and ensure proper data types
         const appointmentData = {
             vendorId: body.vendorId,
-            client: body.client || body.userId,
+            client: body.client || body.userId || null, // Either client or userId or null
             clientName: body.clientName,
             service: body.service,
             serviceName: body.serviceName,

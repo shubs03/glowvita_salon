@@ -71,13 +71,30 @@ const vendorSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "ShippingConfig",
   },
-  subCategories: [
-    {
-      type: String,
-      enum: ["shop", "shop-at-home", "onsite"],
+  vendorType: {
+    type: String,
+    enum: ["shop-only", "home-only", "onsite-only", "hybrid", "vendor-home-travel"],
+    default: "shop-only",
+  },
+  // Travel and location information
+  travelRadius: {
+    type: Number, // in kilometers
+    default: 0,
+  },
+  travelSpeed: {
+    type: Number, // in km/h
+    default: 30,
+  },
+  baseLocation: {
+    lat: {
+      type: Number,
       required: true,
     },
-  ],
+    lng: {
+      type: Number,
+      required: true,
+    },
+  },
   status: {
     type: String,
     enum: ["Approved", "Pending", "Rejected"],
@@ -340,6 +357,7 @@ vendorSchema.pre('validate', function(next) {
 });
 
 vendorSchema.index({ status: 1 });
+vendorSchema.index({ location: "2dsphere" }); // Geospatial index for location-based queries
 
 const VendorModel =
   mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);

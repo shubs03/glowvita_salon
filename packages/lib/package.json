@@ -40,6 +40,7 @@
     "./models/Vendor/Shipping.model": "./src/models/Vendor/Shipping.model.js",
     "./models/Vendor/Staff.model": "./src/models/Vendor/Staff.model.js",
     "./models/Vendor/VendorWorkingHours.model": "./src/models/Vendor/VendorWorkingHours.model.js",
+    "./models/Vendor/WeddingPackage.model": "./src/models/Vendor/WeddingPackage.model.js",
     "./models/Appointment/Appointment.model": "./src/models/Appointment/Appointment.model.js",
     "./stateCity": "./src/state-city.json",
     "./models/Marketing/SmsTemplate.model": "./src/models/Marketing/SmsTemplate.model.js",
@@ -61,7 +62,9 @@
     "bcryptjs": "^2.4.3",
     "jose": "^5.4.0",
     "mongoose": "^8.4.1",
-    "nodemailer": "^6.10.1"
+    "node-cache": "^5.1.2",
+    "nodemailer": "^6.10.1",
+    "redis": "^5.10.0"
   },
   "devDependencies": {
     "@repo/eslint-config-custom": "*",

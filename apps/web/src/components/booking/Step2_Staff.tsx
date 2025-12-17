@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import Image from 'next/image';
 import { cn } from '@repo/ui/cn';
-import { User, Users, CheckCircle, ChevronRight, Loader2, AlertCircle, Star } from 'lucide-react';
+import { User, Users, CheckCircle, ChevronRight, Loader2, AlertCircle, Star, Info } from 'lucide-react';
 import { StaffMember, Service } from '@/hooks/useBookingData';
 
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
@@ -39,6 +39,8 @@ interface Step2StaffProps {
     error?: any;
     selectedService?: Service | null;
     onStaffSelect?: (staff: StaffMember | null) => void;
+    isWeddingPackage?: boolean;
+    weddingPackage?: any;
 }
 
 export function Step2_Staff({ 
@@ -50,7 +52,9 @@ export function Step2_Staff({
     isLoading,
     error,
     selectedService,
-    onStaffSelect
+    onStaffSelect,
+    isWeddingPackage = false,
+    weddingPackage
 }: Step2StaffProps): JSX.Element {
 
     // Log what we receive as props
@@ -104,10 +108,13 @@ export function Step2_Staff({
             console.log('Step2_Staff - Calling onStaffSelect callback with:', staff);
             onStaffSelect(staff);
         }
-        // Automatically navigate to Step 3 after a short delay to ensure state update
-        setTimeout(() => {
-            setCurrentStep(3);
-        }, 100);
+        
+        // For wedding packages or home services, automatically navigate to Step 3
+        if (isWeddingPackage || (selectedService && (selectedService.homeService?.available || selectedService.serviceHomeService?.available))) {
+            setTimeout(() => {
+                setCurrentStep(3);
+            }, 100);
+        }
     };
 
     // Loading state
@@ -171,6 +178,24 @@ export function Step2_Staff({
                 <h2 className="text-3xl font-bold font-headline">Select a Professional</h2>
             </div>
             <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
+            
+            {/* Wedding Package Information */}
+            {isWeddingPackage && weddingPackage && (
+              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5 p-1 bg-purple-100 rounded-full">
+                    <Info className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-purple-800">Wedding Package Selected</h4>
+                    <p className="text-sm text-purple-700 mt-1">
+                      You've selected the <span className="font-medium">{weddingPackage.name}</span> package.
+                      For wedding packages, you can select a specific professional or let us assign the best team.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {/* Any Professional Card */}

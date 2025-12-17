@@ -21,7 +21,7 @@ import {
 
 import { Award, Users, LineChart, Clock, ArrowRight, ShoppingCart, Star, Heart } from "lucide-react";
 import { Button } from "@repo/ui/button";
-import { useGetAdminProductCategoriesQuery, useGetVendorsQuery, useGetPublicProductsQuery } from "@repo/store/api";
+import { useGetAdminProductCategoriesQuery, useGetVendorsQuery, useGetPublicProductsQuery } from "@repo/store/services/api";
 import { useState, useEffect } from "react";
 import { NewProductCard } from "@/components/landing/NewProductCard";
 import { Badge } from "@repo/ui/badge";
