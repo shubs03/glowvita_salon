@@ -52,7 +52,7 @@ interface Document {
 
 // Update type definitions
 export type SalonCategory = 'unisex' | 'men' | 'women';
-type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
+type SubCategory = 'at-salon' | 'at-home' | 'custom-location';
 
 export interface Vendor {
   _id?: string;
@@ -312,9 +312,9 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
   ];
 
   const subCategories: { id: SubCategory; label: string }[] = [
-    { id: 'shop', label: 'Shop' },
-    { id: 'shop-at-home', label: 'Shop at Home' },
-    { id: 'onsite', label: 'Onsite' },
+    { id: 'at-salon', label: 'At Salon' },
+    { id: 'at-home', label: 'At Home' },
+    { id: 'custom-location', label: 'Custom Location' },
   ];
 
   return (

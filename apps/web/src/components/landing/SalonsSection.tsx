@@ -148,7 +148,7 @@ export function SalonsSection() {
     return vendorsArray.map((vendor: VendorData, index: number) => {
       // Map vendor category to appropriate icon
       const getIconForCategory = (category: string, subCategories: string[]) => {
-        if (subCategories?.includes('shop-at-home')) return Calendar;
+        if (subCategories?.includes('at-home')) return Calendar;
         if (category === 'unisex') return Users;
         if (category === 'women') return Heart;
         if (category === 'men') return Star;
@@ -160,7 +160,7 @@ export function SalonsSection() {
         const categoryText = category === 'unisex' ? 'Full-Service Salon' : 
                            category === 'women' ? 'Women\'s Beauty Salon' : 
                            category === 'men' ? 'Men\'s Grooming' : 'Beauty Services';
-        const serviceType = subCategories?.includes('shop-at-home') ? ' & Home Service' : '';
+        const serviceType = subCategories?.includes('at-home') ? ' & Home Service' : '';
         return categoryText + serviceType;
       };
 

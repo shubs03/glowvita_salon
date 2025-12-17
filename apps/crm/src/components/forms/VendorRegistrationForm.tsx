@@ -20,7 +20,7 @@ import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../../packages/config/confi
 const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
 
 type SalonCategory = 'unisex' | 'men' | 'women';
-type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
+type SubCategory = 'at-salon' | 'at-home' | 'custom-location';
 
 interface FormData {
   firstName: string;
@@ -507,7 +507,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                   </div>
                   <div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
-                      {(['shop', 'shop-at-home', 'onsite'] as SubCategory[]).map(sc => (
+                      {(['at-salon', 'at-home', 'custom-location'] as SubCategory[]).map(sc => (
                         <div key={sc} className="flex items-center space-x-2 p-2 sm:p-3 border rounded-md hover:bg-gray-50">
                           <Checkbox 
                             id={sc} 

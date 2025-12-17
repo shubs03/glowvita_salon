@@ -2,7 +2,7 @@ import _db from "@repo/lib/db";
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
-import { authMiddlewareAdmin } from '../../../../middlewareAdmin';
+import { authMiddlewareAdmin } from '../../../../../../src/middlewareAdmin';
 
 await _db();
 

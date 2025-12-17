@@ -74,7 +74,7 @@ const vendorSchema = new mongoose.Schema({
   subCategories: [
     {
       type: String,
-      enum: ["shop", "shop-at-home", "onsite"],
+      enum: ["at-salon", "at-home", "custom-location"],
       required: true,
     },
   ],

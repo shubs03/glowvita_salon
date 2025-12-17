@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
-import { Download, Eye, DollarSign, Users, UserPlus, ShoppingCart, Search, FileSpreadsheet, FileText, Printer, Tag, CheckCircle, Percent, IndianRupee, XCircle, Clock, TrendingUp } from 'lucide-react';
+import { Download, Eye, DollarSign, Users, UserPlus, ShoppingCart, Search, FileSpreadsheet, FileText, Printer, Tag, CheckCircle, Percent, IndianRupee, XCircle, Clock, TrendingUp, Package, AlertTriangle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Input } from '@repo/ui/input';
 import { Skeleton } from "@repo/ui/skeleton";
@@ -19,9 +19,14 @@ import {
   useGetCrmReferralsQuery,
   useGetCrmCampaignsQuery,
   useGetCrmClientOrdersQuery,
-  useGetOffersQuery
-} from '@repo/store/services/api';
-import { toast } from 'sonner';
+  useGetOffersQuery,
+  useGetSupplierTotalOrdersReportQuery,
+  useGetSupplierPendingOrdersReportQuery,
+  useGetSupplierConfirmedOrdersReportQuery,
+  useGetSupplierCompletedOrdersReportQuery,
+  useGetSupplierPlatformCollectionsReportQuery,
+  useGetSupplierProductSalesReportQuery
+} from '@repo/store/services/api';import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -239,13 +244,42 @@ const roleSpecificReports: Record<string, ReportCategory[]> = {
   ],
   supplier: [
     {
+      category: "Sales",
+      reports: [
+        {
+          title: "Product Sales Report",
+          description: "Detailed report of sales for each product.",
+          details: "View product name, price, remaining stock, and sales performance.",
+          type: "supplier-product-sales"
+        }
+      ]
+    },
+    {
       category: "Order Management",
       reports: [
         {
-          title: "Customer Orders Report",
+          title: "Total Orders Report",
           description: "Detailed report of all orders received from vendors.",
           details: "Track order status, revenue, and fulfillment metrics.",
-          type: "supplier-orders"
+          type: "supplier-total-orders"
+        },
+        {
+          title: "Pending Orders Report",
+          description: "Detailed report of all pending orders from vendors.",
+          details: "Track pending orders and take necessary actions.",
+          type: "supplier-pending-orders"
+        },
+        {
+          title: "Confirmed Orders Report",
+          description: "Detailed report of all confirmed orders from vendors.",
+          details: "Track confirmed orders that are being processed.",
+          type: "supplier-confirmed-orders"
+        },
+        {
+          title: "Completed Orders Report",
+          description: "Detailed report of all completed orders from vendors.",
+          details: "Track delivered orders and customer satisfaction.",
+          type: "supplier-completed-orders"
         },
         {
           title: "Product Sales Report",
@@ -258,6 +292,12 @@ const roleSpecificReports: Record<string, ReportCategory[]> = {
           description: "Real-time overview of stock levels and reorder alerts.",
           details: "Monitor inventory turnover and optimize stock levels.",
           type: "inventory"
+        },
+        {
+          title: "Platform Collections Report",
+          description: "Detailed report of platform collections on your product orders.",
+          details: "View product name, order date, status, price, GST tax, and platform fees collected.",
+          type: "platform-collections"
         }
       ]
     },
@@ -272,8 +312,7 @@ const roleSpecificReports: Record<string, ReportCategory[]> = {
           type: "supplier-revenue"
         }
       ]
-    },
-    {
+    },    {
       category: "Marketing & Engagement",
       reports: [
         {
@@ -433,8 +472,12 @@ const generateInventoryReportData = (products: any[]) => {
 };
 
 // Add supplier orders report data generator
-const generateSupplierOrdersReportData = (orders: SupplierOrder[]) => {
-  const headers = ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Status", "Date"];
+const generateSupplierOrdersReportData = (orders: SupplierOrder[], taxFeeSettings?: any) => {
+  // Add platform fee column to headers if tax settings are available
+  const headers = taxFeeSettings && taxFeeSettings.productPlatformFeeEnabled 
+    ? ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Platform Fee", "Status", "Date"]
+    : ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Status", "Date"];
+    
   const rows = orders.slice(0, 10).map(order => {
     // Calculate total quantity
     const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -442,15 +485,38 @@ const generateSupplierOrdersReportData = (orders: SupplierOrder[]) => {
     // Get product names
     const productNames = order.items.map(item => item.productName).join(", ");
     
-    return [
-      order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
-      order.vendorId ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
-      productNames,
-      totalQuantity.toString(),
-      `₹${order.totalAmount.toFixed(2)}`,
-      order.status,
-      new Date(order.createdAt).toLocaleDateString()
-    ];
+    // Calculate platform fee if tax settings are available
+    let platformFee = 0;
+    if (taxFeeSettings && taxFeeSettings.productPlatformFeeEnabled) {
+      const orderAmount = order.totalAmount || 0;
+      platformFee = taxFeeSettings.productPlatformFeeType === 'percentage'
+        ? (orderAmount * taxFeeSettings.productPlatformFee) / 100
+        : taxFeeSettings.productPlatformFee;
+    }
+    
+    // Return row data with or without platform fee based on availability
+    if (taxFeeSettings && taxFeeSettings.productPlatformFeeEnabled) {
+      return [
+        order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+        order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+        productNames,
+        totalQuantity.toString(),
+        `₹${order.totalAmount.toFixed(2)}`,
+        `₹${platformFee.toFixed(2)}`,
+        order.status,
+        new Date(order.createdAt).toLocaleDateString()
+      ];
+    } else {
+      return [
+        order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+        order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+        productNames,
+        totalQuantity.toString(),
+        `₹${order.totalAmount.toFixed(2)}`,
+        order.status,
+        new Date(order.createdAt).toLocaleDateString()
+      ];
+    }
   });
   
   return { headers, rows };
@@ -592,6 +658,31 @@ const generateReferralsReportData = (referrals: any[]) => {
   }};
 };
 
+// Add supplier product sales report data generator
+const generateSupplierProductSalesReportData = (data: any) => {
+  if (!data || !data.data || !data.data.products) {
+    return { headers: [], rows: [], summary: {} };
+  }
+
+  const { products, summary } = data.data;
+
+  // Prepare headers
+  const headers = ["Product Name", "Price", "Stock", "Category", "Units Sold", "Revenue", "Orders"];
+  
+  // Prepare rows
+  const rows = products.map((product: any) => [
+    product.productName || "N/A",
+    `₹${product.price?.toFixed(2) || "0.00"}`,
+    product.stock?.toString() || "0",
+    product.category || "N/A",
+    product.totalQuantitySold?.toString() || "0",
+    `₹${product.totalRevenue?.toFixed(2) || "0.00"}`,
+    product.orderCount?.toString() || "0"
+  ]);
+  
+  return { headers, rows, summary };
+};
+
 // Real report data generator
 const getReportDataByType = (reportType: string, data: any, selectedMonth: string | null = null) => {
   switch (reportType) {
@@ -606,7 +697,23 @@ const getReportDataByType = (reportType: string, data: any, selectedMonth: strin
     case "supplier-orders":
       // Use received orders for suppliers
       const receivedOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId);
-      return generateSupplierOrdersReportData(receivedOrders);
+      return generateSupplierOrdersReportData(receivedOrders, data.taxFeeSettings);
+    case "supplier-total-orders":
+      // Use received orders for suppliers
+      const totalOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId);
+      return generateSupplierOrdersReportData(totalOrders, data.taxFeeSettings);
+    case "supplier-pending-orders":
+      // Use received orders for suppliers
+      const pendingOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId && order.status === 'Pending');
+      return generateSupplierOrdersReportData(pendingOrders, data.taxFeeSettings);
+    case "supplier-confirmed-orders":
+      // Use received orders for suppliers
+      const confirmedOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId && (order.status === 'Processing' || order.status === 'Packed' || order.status === 'Shipped'));
+      return generateSupplierOrdersReportData(confirmedOrders, data.taxFeeSettings);
+    case "supplier-completed-orders":
+      // Use received orders for suppliers
+      const completedOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId && order.status === 'Delivered');
+      return generateSupplierOrdersReportData(completedOrders, data.taxFeeSettings);
     case "supplier-revenue":
       // Use received orders for suppliers
       const supplierOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId);
@@ -615,6 +722,12 @@ const getReportDataByType = (reportType: string, data: any, selectedMonth: strin
       return generateOffersReportData(data.offers || []);
     case "referrals":
       return generateReferralsReportData(data.referrals || []);
+    case "platform-collections":
+      // Use received orders for suppliers
+      const platformCollectionOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId);
+      return generateSupplierOrdersReportData(platformCollectionOrders, data.taxFeeSettings);
+    case "supplier-product-sales":
+      return generateSupplierProductSalesReportData(data);
     default:
       // Return sample data for other report types
       return sampleReportData[reportType] || sampleReportData["sales"];
@@ -623,28 +736,161 @@ const getReportDataByType = (reportType: string, data: any, selectedMonth: strin
 
 // ReportPreviewTable component
 const ReportPreviewTable = ({ reportType, reportData }: { reportType: string; reportData: ReportData }) => {
-  return (
-    <div className="overflow-x-auto no-scrollbar rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {reportData.headers.map((header, index) => (
-              <TableHead key={index}>{header}</TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {reportData.rows.map((row, rowIndex) => (
-            <TableRow key={rowIndex}>
-              {row.map((cell, cellIndex) => (
-                <TableCell key={cellIndex} className={cellIndex === 0 ? "font-mono" : ""}>
-                  {cell}
-                </TableCell>
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Filter rows based on search term
+  const filteredRows = useMemo(() => {
+    if (!reportData?.rows) return [];
+    if (!searchTerm) return reportData.rows;
+    
+    return reportData.rows.filter(row => 
+      row.some(cell => 
+        cell && cell.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [reportData.rows, searchTerm]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRows = filteredRows.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Check if there's no data to display
+  if (!reportData?.headers || !reportData?.rows || reportData.rows.length === 0) {
+    return (
+      <div className="overflow-x-auto no-scrollbar rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {(reportData.headers || []).map((header, index) => (
+                <TableHead key={index}>{header}</TableHead>
               ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={(reportData.headers || []).length} className="text-center py-8 text-muted-foreground">
+                No data available
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Search Input and Pagination Controls */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search in table..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        
+        {/* Pagination Controls */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            Rows per page:
+          </span>
+          <Select 
+            value={itemsPerPage.toString()} 
+            onValueChange={(value) => {
+              setItemsPerPage(parseInt(value));
+              setCurrentPage(1); // Reset to first page when changing items per page
+            }}
+          >
+            <SelectTrigger className="w-[80px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      {/* Table */}
+      <div className="overflow-x-auto no-scrollbar rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {(reportData.headers || []).map((header, index) => (
+                <TableHead key={index}>{header}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedRows.length > 0 ? (
+              paginatedRows.map((row, rowIndex) => (
+                <TableRow key={startIndex + rowIndex}>
+                  {row.map((cell, cellIndex) => (
+                    <TableCell key={cellIndex} className={cellIndex === 0 ? "font-mono" : ""}>
+                      {cell}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={(reportData.headers || []).length} className="text-center py-8 text-muted-foreground">
+                  No matching records found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      
+      {/* Pagination and Results Info */}
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="text-sm text-muted-foreground">
+          Showing {Math.min(startIndex + 1, filteredRows.length)} to {Math.min(startIndex + paginatedRows.length, filteredRows.length)} of {filteredRows.length} entries
+          {searchTerm && reportData?.rows && ` (filtered from ${reportData.rows.length} total entries)`}
+        </div>
+        
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -816,6 +1062,813 @@ const ReferralsReportPreview = ({ reportData }: { reportData: any }) => {
   );
 };
 
+// Supplier Total Orders Report Preview component
+const SupplierTotalOrdersReportPreview = ({ reportData }: { reportData: any }) => {
+  // Extract supplier total orders data
+  const supplierTotalOrdersData = reportData;
+  
+  // Use provided total platform fees from API
+  const totalPlatformFees = supplierTotalOrdersData?.data?.summary?.totalPlatformFees ?? 0;
+  const totalRevenue = supplierTotalOrdersData?.data?.summary?.totalRevenue ?? 0;
+  const totalOrders = supplierTotalOrdersData?.data?.summary?.totalOrders ?? 0;
+  const platformFeeSettings = supplierTotalOrdersData?.data?.summary?.platformFeeSettings;
+  
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalOrders}</div>
+            <p className="text-xs text-muted-foreground">All orders received</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalRevenue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Gross revenue</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Platform Fees</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalPlatformFees.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              {platformFeeSettings 
+                ? `${platformFeeSettings.rate}${platformFeeSettings.type === 'percentage' ? '%' : ''} per order` 
+                : 'Not configured'}
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Net Revenue</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{(totalRevenue - totalPlatformFees).toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">After platform fees</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Status Distribution */}
+      {supplierTotalOrdersData?.data?.summary?.statusCounts && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Order Status Distribution</CardTitle>
+            <CardDescription>Breakdown of orders by status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {Object.entries(supplierTotalOrdersData.data.summary.statusCounts).map(([status, count]) => (
+                <div key={status} className="text-center p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold">{Number(count)}</div>
+                  <div className="text-sm text-muted-foreground">{status}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Detailed Report Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Order Details</CardTitle>
+          <CardDescription>Complete list of all orders with platform fees</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {supplierTotalOrdersData?.data?.orders ? (
+            <ReportPreviewTable 
+              reportType="supplier-total-orders" 
+              reportData={{
+                headers: platformFeeSettings?.enabled 
+                  ? ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Platform Fee", "Status", "Date"]
+                  : ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Status", "Date"],
+                rows: supplierTotalOrdersData.data.orders.map((order: any) => {
+                  // Calculate total quantity
+                  const totalQuantity = order.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                  
+                  // Get product names
+                  const productNames = order.items.map((item: any) => item.productName).join(", ");
+                  
+                  // Calculate platform fee if settings are available
+                  let platformFee = 0;
+                  if (platformFeeSettings?.enabled) {
+                    const orderAmount = order.totalAmount || 0;
+                    platformFee = platformFeeSettings.type === 'percentage'
+                      ? (orderAmount * platformFeeSettings.rate) / 100
+                      : platformFeeSettings.rate;
+                  }
+                  
+                  // Return row data
+                  if (platformFeeSettings?.enabled) {
+                    return [
+                      order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+                      order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+                      productNames,
+                      totalQuantity.toString(),
+                      `₹${order.totalAmount.toFixed(2)}`,
+                      `₹${platformFee.toFixed(2)}`,
+                      order.status,
+                      new Date(order.createdAt).toLocaleDateString()
+                    ];
+                  } else {
+                    return [
+                      order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+                      order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+                      productNames,
+                      totalQuantity.toString(),
+                      `₹${order.totalAmount.toFixed(2)}`,
+                      order.status,
+                      new Date(order.createdAt).toLocaleDateString()
+                    ];
+                  }
+                })
+              }} 
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No order data available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Supplier Platform Collections Report Preview component
+const SupplierPlatformCollectionsReportPreview = ({ reportData }: { reportData: any }) => {
+  // Extract supplier platform collections data
+  const supplierPlatformCollectionsData = reportData;
+  
+  // Use provided totals from API
+  const totalGSTCollected = supplierPlatformCollectionsData?.data?.summary?.totalGSTCollected ?? 0;
+  const totalPlatformFeesCollected = supplierPlatformCollectionsData?.data?.summary?.totalPlatformFeesCollected ?? 0;
+  const totalOrders = supplierPlatformCollectionsData?.data?.summary?.totalOrders ?? 0;
+  const totalRevenue = supplierPlatformCollectionsData?.data?.summary?.totalRevenue ?? 0;
+  
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalOrders}</div>
+            <p className="text-xs text-muted-foreground">All orders received</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalRevenue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Gross revenue</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">GST Collected</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalGSTCollected.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Total GST collected</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Platform Fees</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalPlatformFeesCollected.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Total platform fees collected</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Status Distribution */}
+      {supplierPlatformCollectionsData?.data?.summary?.statusCounts && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Order Status Distribution</CardTitle>
+            <CardDescription>Breakdown of orders by status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {Object.entries(supplierPlatformCollectionsData.data.summary.statusCounts).map(([status, count]) => (
+                <div key={status} className="text-center p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold">{Number(count)}</div>
+                  <div className="text-sm text-muted-foreground">{status}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Detailed Report Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Platform Collections Details</CardTitle>
+          <CardDescription>Complete list of all orders with GST and platform fees</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {supplierPlatformCollectionsData?.data?.orders ? (
+            <ReportPreviewTable 
+              reportType="platform-collections" 
+              reportData={{
+                headers: ["Order ID", "Customer Name", "City", "Product Name", "Quantity", "Status", "Product Price", "GST Tax", "Platform Fee"],
+                rows: supplierPlatformCollectionsData.data.orders.map((order: any) => [
+                  order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+                  order.customerName || 'N/A',
+                  order.city || 'N/A',
+                  order.items.map((item: any) => item.productName).join(", "),
+                  order.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0),
+                  order.orderStatus,
+                  `₹${order.subtotal.toFixed(2)}`,
+                  `₹${order.gstTotal.toFixed(2)}`,
+                  `₹${order.platformFeeTotal.toFixed(2)}`
+                ])
+              }} 
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No order data available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Supplier Pending Orders Report Preview component
+const SupplierPendingOrdersReportPreview = ({ reportData }: { reportData: any }) => {
+  // Extract supplier pending orders data
+  const supplierPendingOrdersData = reportData;
+  
+  // Use provided totals from API
+  const totalPendingOrders = supplierPendingOrdersData?.data?.summary?.totalPendingOrders ?? 0;
+  const totalPendingRevenue = supplierPendingOrdersData?.data?.summary?.totalPendingRevenue ?? 0;
+  const totalPlatformFees = supplierPendingOrdersData?.data?.summary?.totalPlatformFees ?? 0;
+  const platformFeeSettings = supplierPendingOrdersData?.data?.summary?.platformFeeSettings;
+  
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalPendingOrders}</div>
+            <p className="text-xs text-muted-foreground">Orders awaiting processing</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Revenue</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalPendingRevenue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Potential revenue</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Platform Fees</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalPlatformFees.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              {platformFeeSettings 
+                ? `${platformFeeSettings.rate}${platformFeeSettings.type === 'percentage' ? '%' : ''} per order` 
+                : 'Not configured'}
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Net Potential</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{(totalPendingRevenue - totalPlatformFees).toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">After platform fees</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Detailed Report Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Pending Order Details</CardTitle>
+          <CardDescription>Complete list of all pending orders with platform fees</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {supplierPendingOrdersData?.data?.orders ? (
+            <ReportPreviewTable 
+              reportType="supplier-pending-orders" 
+              reportData={{
+                headers: platformFeeSettings?.enabled 
+                  ? ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Platform Fee", "Date"]
+                  : ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Date"],
+                rows: supplierPendingOrdersData.data.orders.map((order: any) => {
+                  // Calculate total quantity
+                  const totalQuantity = order.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                  
+                  // Get product names
+                  const productNames = order.items.map((item: any) => item.productName).join(", ");
+                  
+                  // Calculate platform fee if settings are available
+                  let platformFee = 0;
+                  if (platformFeeSettings?.enabled) {
+                    const orderAmount = order.totalAmount || 0;
+                    platformFee = platformFeeSettings.type === 'percentage'
+                      ? (orderAmount * platformFeeSettings.rate) / 100
+                      : platformFeeSettings.rate;
+                  }
+                  
+                  // Return row data
+                  if (platformFeeSettings?.enabled) {
+                    return [
+                      order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+                      order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+                      productNames,
+                      totalQuantity.toString(),
+                      `₹${order.totalAmount.toFixed(2)}`,
+                      `₹${platformFee.toFixed(2)}`,
+                      new Date(order.createdAt).toLocaleDateString()
+                    ];
+                  } else {
+                    return [
+                      order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+                      order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+                      productNames,
+                      totalQuantity.toString(),
+                      `₹${order.totalAmount.toFixed(2)}`,
+                      new Date(order.createdAt).toLocaleDateString()
+                    ];
+                  }
+                })
+              }} 
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No pending orders available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Supplier Confirmed Orders Report Preview component
+const SupplierConfirmedOrdersReportPreview = ({ reportData }: { reportData: any }) => {
+  // Extract supplier confirmed orders data
+  const supplierConfirmedOrdersData = reportData;
+  
+  // Use provided totals from API
+  const totalConfirmedOrders = supplierConfirmedOrdersData?.data?.summary?.totalConfirmedOrders ?? 0;
+  const totalConfirmedRevenue = supplierConfirmedOrdersData?.data?.summary?.totalConfirmedRevenue ?? 0;
+  const totalPlatformFees = supplierConfirmedOrdersData?.data?.summary?.totalPlatformFees ?? 0;
+  const platformFeeSettings = supplierConfirmedOrdersData?.data?.summary?.platformFeeSettings;
+  const statusBreakdown = supplierConfirmedOrdersData?.data?.summary?.statusBreakdown;
+  
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Confirmed Orders</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalConfirmedOrders}</div>
+            <p className="text-xs text-muted-foreground">Orders in process</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Confirmed Revenue</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalConfirmedRevenue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Revenue in process</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Platform Fees</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalPlatformFees.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              {platformFeeSettings 
+                ? `${platformFeeSettings.rate}${platformFeeSettings.type === 'percentage' ? '%' : ''} per order` 
+                : 'Not configured'}
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Net Revenue</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{(totalConfirmedRevenue - totalPlatformFees).toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">After platform fees</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Status Breakdown */}
+      {statusBreakdown && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Status Breakdown</CardTitle>
+            <CardDescription>Distribution of confirmed orders by status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {Object.entries(statusBreakdown).map(([status, count]) => (
+                <div key={status} className="text-center p-3 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold">{Number(count)}</div>
+                  <div className="text-sm text-muted-foreground">{status}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {/* Detailed Report Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Confirmed Order Details</CardTitle>
+          <CardDescription>Complete list of all confirmed orders with platform fees</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {supplierConfirmedOrdersData?.data?.orders ? (
+            <ReportPreviewTable 
+              reportType="supplier-confirmed-orders" 
+              reportData={{
+                headers: platformFeeSettings?.enabled 
+                  ? ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Platform Fee", "Status", "Date"]
+                  : ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Status", "Date"],
+                rows: supplierConfirmedOrdersData.data.orders.map((order: any) => {
+                  // Calculate total quantity
+                  const totalQuantity = order.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                  
+                  // Get product names
+                  const productNames = order.items.map((item: any) => item.productName).join(", ");
+                  
+                  // Calculate platform fee if settings are available
+                  let platformFee = 0;
+                  if (platformFeeSettings?.enabled) {
+                    const orderAmount = order.totalAmount || 0;
+                    platformFee = platformFeeSettings.type === 'percentage'
+                      ? (orderAmount * platformFeeSettings.rate) / 100
+                      : platformFeeSettings.rate;
+                  }
+                  
+                  // Return row data
+                  if (platformFeeSettings?.enabled) {
+                    return [
+                      order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+                      order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+                      productNames,
+                      totalQuantity.toString(),
+                      `₹${order.totalAmount.toFixed(2)}`,
+                      `₹${platformFee.toFixed(2)}`,
+                      order.status,
+                      new Date(order.createdAt).toLocaleDateString()
+                    ];
+                  } else {
+                    return [
+                      order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+                      order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+                      productNames,
+                      totalQuantity.toString(),
+                      `₹${order.totalAmount.toFixed(2)}`,
+                      order.status,
+                      new Date(order.createdAt).toLocaleDateString()
+                    ];
+                  }
+                })
+              }} 
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No confirmed orders available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Supplier Completed Orders Report Preview component
+const SupplierCompletedOrdersReportPreview = ({ reportData }: { reportData: any }) => {
+  // Extract supplier completed orders data
+  const supplierCompletedOrdersData = reportData;
+  
+  // Use provided totals from API
+  const totalCompletedOrders = supplierCompletedOrdersData?.data?.summary?.totalCompletedOrders ?? 0;
+  const totalCompletedRevenue = supplierCompletedOrdersData?.data?.summary?.totalCompletedRevenue ?? 0;
+  const totalPlatformFees = supplierCompletedOrdersData?.data?.summary?.totalPlatformFees ?? 0;
+  const platformFeeSettings = supplierCompletedOrdersData?.data?.summary?.platformFeeSettings;
+  
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed Orders</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalCompletedOrders}</div>
+            <p className="text-xs text-muted-foreground">Successfully delivered orders</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Completed Revenue</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalCompletedRevenue.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Revenue from completed orders</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Platform Fees</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalPlatformFees.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              {platformFeeSettings 
+                ? `${platformFeeSettings.rate}${platformFeeSettings.type === 'percentage' ? '%' : ''} per order` 
+                : 'Not configured'}
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Net Revenue</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{(totalCompletedRevenue - totalPlatformFees).toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">After platform fees</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Detailed Report Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Completed Order Details</CardTitle>
+          <CardDescription>Complete list of all completed orders with platform fees</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {supplierCompletedOrdersData?.data?.orders ? (
+            <ReportPreviewTable 
+              reportType="supplier-completed-orders" 
+              reportData={{
+                headers: platformFeeSettings?.enabled 
+                  ? ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Platform Fee", "Date"]
+                  : ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Date"],
+                rows: supplierCompletedOrdersData.data.orders.map((order: any) => {
+                  // Calculate total quantity
+                  const totalQuantity = order.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+                  
+                  // Get product names
+                  const productNames = order.items.map((item: any) => item.productName).join(", ");
+                  
+                  // Calculate platform fee if settings are available
+                  let platformFee = 0;
+                  if (platformFeeSettings?.enabled) {
+                    const orderAmount = order.totalAmount || 0;
+                    platformFee = platformFeeSettings.type === 'percentage'
+                      ? (orderAmount * platformFeeSettings.rate) / 100
+                      : platformFeeSettings.rate;
+                  }
+                  
+                  // Return row data
+                  if (platformFeeSettings?.enabled) {
+                    return [
+                      order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+                      order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+                      productNames,
+                      totalQuantity.toString(),
+                      `₹${order.totalAmount.toFixed(2)}`,
+                      `₹${platformFee.toFixed(2)}`,
+                      new Date(order.createdAt).toLocaleDateString()
+                    ];
+                  } else {
+                    return [
+                      order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+                      order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+                      productNames,
+                      totalQuantity.toString(),
+                      `₹${order.totalAmount.toFixed(2)}`,
+                      new Date(order.createdAt).toLocaleDateString()
+                    ];
+                  }
+                })
+              }} 
+            />
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No completed orders available
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Supplier Product Sales Report Preview component
+const SupplierProductSalesReportPreview = ({ reportData }: { reportData: any }) => {
+  const summary = reportData?.data?.summary || reportData?.summary || {};
+  
+  // Transform the data for the table
+  const transformedReportData = useMemo(() => {
+    return generateSupplierProductSalesReportData(reportData);
+  }, [reportData]);
+  
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary?.totalProducts || 0}</div>
+            <p className="text-xs text-muted-foreground">In your catalog</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Stock Value</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{(summary?.totalStockValue || 0).toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">Total inventory worth</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{(summary?.totalRevenue || 0).toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">From all sales</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Units Sold</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary?.totalUnitsSold || 0}</div>
+            <p className="text-xs text-muted-foreground">Total items sold</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary?.lowStockProducts || 0}</div>
+            <p className="text-xs text-muted-foreground">Products below 10</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* B2C vs B2B Breakdown */}
+      {(summary?.b2cSales || summary?.b2bSales) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Customer Sales (B2C)</CardTitle>
+              <CardDescription>Direct sales to web customers</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Revenue:</span>
+                <span className="text-lg font-semibold">₹{(summary?.b2cSales?.revenue || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Orders:</span>
+                <span className="text-base font-medium">{summary?.b2cSales?.orders || 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">% of Total:</span>
+                <span className="text-base font-medium">{summary?.b2cSales?.percentage || 0}%</span>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Vendor Sales (B2B)</CardTitle>
+              <CardDescription>Wholesale to vendors</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Revenue:</span>
+                <span className="text-lg font-semibold">₹{(summary?.b2bSales?.revenue || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Orders:</span>
+                <span className="text-base font-medium">{summary?.b2bSales?.orders || 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">% of Total:</span>
+                <span className="text-base font-medium">{summary?.b2bSales?.percentage || 0}%</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
+      {/* Detailed Report Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Product Sales Details</CardTitle>
+          <CardDescription>Complete breakdown of each product's sales performance</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ReportPreviewTable reportType="supplier-product-sales" reportData={transformedReportData} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 // Helper function to generate month options including future months
 const generateMonthOptions = () => {
   const options = [];
@@ -878,6 +1931,32 @@ export default function ReportsPage() {
     skip: userRole !== 'vendor' && userRole !== 'admin' && userRole !== 'supplier'
   });
 
+  // Supplier report queries
+  const { data: supplierTotalOrdersData, isLoading: isSupplierTotalOrdersLoading } = useGetSupplierTotalOrdersReportQuery(undefined, { 
+    skip: userRole !== 'supplier'
+  });
+
+  const { data: supplierPendingOrdersData, isLoading: isSupplierPendingOrdersLoading } = useGetSupplierPendingOrdersReportQuery(undefined, { 
+    skip: userRole !== 'supplier'
+  });
+
+  const { data: supplierConfirmedOrdersData, isLoading: isSupplierConfirmedOrdersLoading } = useGetSupplierConfirmedOrdersReportQuery(undefined, { 
+    skip: userRole !== 'supplier'
+  });
+
+  const { data: supplierCompletedOrdersData, isLoading: isSupplierCompletedOrdersLoading } = useGetSupplierCompletedOrdersReportQuery(undefined, { 
+    skip: userRole !== 'supplier'
+  });
+
+  const { data: supplierPlatformCollectionsData, isLoading: isSupplierPlatformCollectionsLoading } = useGetSupplierPlatformCollectionsReportQuery(undefined, { 
+    skip: userRole !== 'supplier'
+  });
+
+  const { data: supplierProductSalesData, isLoading: isSupplierProductSalesLoading } = useGetSupplierProductSalesReportQuery(undefined, { 
+    skip: userRole !== 'supplier'
+  });
+
+  // No longer using separate tax fee settings query
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -924,12 +2003,16 @@ export default function ReportsPage() {
         referrals: referralsData,
         campaigns: campaignsData,
         clientOrders: clientOrdersData,
-        offers: offersData
-      };
-      
+        offers: offersData,
+        supplierTotalOrders: supplierTotalOrdersData,
+        supplierPendingOrders: supplierPendingOrdersData,
+        supplierConfirmedOrders: supplierConfirmedOrdersData,
+        supplierCompletedOrders: supplierCompletedOrdersData,
+        supplierPlatformCollections: supplierPlatformCollectionsData
+      };      
       const reportData = getReportDataByType(reportType, allData, reportType === "supplier-revenue" ? selectedMonth : null);
-      const headers = reportData.headers.join(',');
-      const rows = reportData.rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+      const headers = (reportData.headers || []).join(',');
+      const rows = reportData.rows ? reportData.rows.map((row: any[]) => row.map((cell: any) => `"${cell}"`).join(',')).join('\n') : '';
       const csvContent = `${headers}\n${rows}`;
       
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -964,12 +2047,17 @@ export default function ReportsPage() {
         referrals: referralsData,
         campaigns: campaignsData,
         clientOrders: clientOrdersData,
-        offers: offersData
+        offers: offersData,
+        supplierTotalOrders: supplierTotalOrdersData,
+        supplierPendingOrders: supplierPendingOrdersData,
+        supplierConfirmedOrders: supplierConfirmedOrdersData,
+        supplierCompletedOrders: supplierCompletedOrdersData,
+        supplierPlatformCollections: supplierPlatformCollectionsData,
       };
       
       const reportData = getReportDataByType(reportType, allData, reportType === "supplier-revenue" ? selectedMonth : null);
-      const headers = reportData.headers.join('\t');
-      const rows = reportData.rows.map(row => row.join('\t')).join('\n');
+      const headers = (reportData.headers || []).join('\t');
+      const rows = reportData.rows ? reportData.rows.map((row: any[]) => row.join('\t')).join('\n') : '';
       const excelContent = `${headers}\n${rows}`;
       
       const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
@@ -1004,7 +2092,12 @@ export default function ReportsPage() {
         referrals: referralsData,
         campaigns: campaignsData,
         clientOrders: clientOrdersData,
-        offers: offersData
+        offers: offersData,
+        supplierTotalOrders: supplierTotalOrdersData,
+        supplierPendingOrders: supplierPendingOrdersData,
+        supplierConfirmedOrders: supplierConfirmedOrdersData,
+        supplierCompletedOrders: supplierCompletedOrdersData,
+        supplierPlatformCollections: supplierPlatformCollectionsData,
       };
       
       const reportData = getReportDataByType(reportType, allData, reportType === "supplier-revenue" ? selectedMonth : null);
@@ -1021,11 +2114,11 @@ export default function ReportsPage() {
           <table style="width: 100%; border-collapse: collapse;">
             <thead>
               <tr>
-                ${reportData.headers.map(header => `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">${header}</th>`).join('')}
+                ${(reportData.headers || []).map(header => `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">${header}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
-              ${reportData.rows.map((row: any[], rowIndex: number) => `
+              ${(reportData.rows || []).map((row: any[], rowIndex: number) => `
                 <tr key="${rowIndex}">
                   ${row.map((cell: any) => `<td style="border: 1px solid #ddd; padding: 8px;">${cell}</td>`).join('')}
                 </tr>
@@ -1082,6 +2175,36 @@ export default function ReportsPage() {
   const previewReportData = useMemo(() => {
     if (!selectedReport) return sampleReportData["sales"];
     
+    // For supplier total orders, return the raw data directly
+    if (selectedReport.type === "supplier-total-orders") {
+      return supplierTotalOrdersData;
+    }
+    
+    // For supplier platform collections, return the raw data directly
+    if (selectedReport.type === "platform-collections") {
+      return supplierPlatformCollectionsData;
+    }
+    
+    // For supplier pending orders, return the raw data directly
+    if (selectedReport.type === "supplier-pending-orders") {
+      return supplierPendingOrdersData;
+    }
+    
+    // For supplier confirmed orders, return the raw data directly
+    if (selectedReport.type === "supplier-confirmed-orders") {
+      return supplierConfirmedOrdersData;
+    }
+    
+    // For supplier completed orders, return the raw data directly
+    if (selectedReport.type === "supplier-completed-orders") {
+      return supplierCompletedOrdersData;
+    }
+    
+    // For supplier product sales, return the raw data directly
+    if (selectedReport.type === "supplier-product-sales") {
+      return supplierProductSalesData;
+    }
+    
     const allData = {
       appointments: appointmentsData,
       clients: clientsData,
@@ -1091,7 +2214,12 @@ export default function ReportsPage() {
       referrals: referralsData,
       campaigns: campaignsData,
       clientOrders: clientOrdersData,
-      offers: offersData
+      offers: offersData,
+      supplierTotalOrders: supplierTotalOrdersData,
+      supplierPendingOrders: supplierPendingOrdersData,
+      supplierConfirmedOrders: supplierConfirmedOrdersData,
+      supplierCompletedOrders: supplierCompletedOrdersData,
+      supplierPlatformCollections: supplierPlatformCollectionsData,
     };
     
     // For supplier revenue report, pass the selected month
@@ -1101,8 +2229,7 @@ export default function ReportsPage() {
     }
     
     return getReportDataByType(selectedReport.type, allData);
-  }, [selectedReport, appointmentsData, clientsData, productsData, expensesData, ordersData, referralsData, campaignsData, clientOrdersData, offersData, selectedMonth]);
-
+  }, [selectedReport, appointmentsData, clientsData, productsData, expensesData, ordersData, referralsData, campaignsData, clientOrdersData, offersData, supplierTotalOrdersData, supplierPendingOrdersData, supplierConfirmedOrdersData, supplierCompletedOrdersData, supplierPlatformCollectionsData, selectedMonth]);
   if (isLoading || isAuthLoading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -1278,6 +2405,18 @@ export default function ReportsPage() {
                 <OffersReportPreview reportData={previewReportData} />
               ) : selectedReport.type === "referrals" ? (
                 <ReferralsReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "supplier-total-orders" ? (
+                <SupplierTotalOrdersReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "supplier-pending-orders" ? (
+                <SupplierPendingOrdersReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "supplier-confirmed-orders" ? (
+                <SupplierConfirmedOrdersReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "supplier-completed-orders" ? (
+                <SupplierCompletedOrdersReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "platform-collections" ? (
+                <SupplierPlatformCollectionsReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "supplier-product-sales" ? (
+                <SupplierProductSalesReportPreview reportData={previewReportData} />
               ) : (
                 <ReportPreviewTable reportType={selectedReport.type} reportData={previewReportData} />
               )

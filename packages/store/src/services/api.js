@@ -142,6 +142,7 @@ export const glowvitaApi = createApi({
     "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder","DoctorReviews",
+    "SupplierReports",
   ],
 
   endpoints: (builder) => ({
@@ -1313,6 +1314,14 @@ export const glowvitaApi = createApi({
       query: () => ({ url: '/crm/client-orders' }),
       providesTags: ['CrmClientOrder'],
     }),
+    updateCrmClientOrder: builder.mutation({
+      query: ({ orderId, ...updateData }) => ({
+        url: '/crm/client-orders',
+        method: 'PATCH',
+        body: { orderId, ...updateData },
+      }),
+      invalidatesTags: ['CrmClientOrder'],
+    }),
 
     // shipping charge endpoints
     getShippingConfig: builder.query({
@@ -1888,6 +1897,66 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => response,
     }),
 
+    // Supplier Reports - CRM Panel
+    // Total Orders Report
+    getSupplierTotalOrdersReport: builder.query({      query: () => ({ 
+        url: "/crm/reports/supplier/total-orders", 
+        method: "GET" 
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Pending Orders Report
+    getSupplierPendingOrdersReport: builder.query({
+      query: () => ({ 
+        url: "/crm/reports/supplier/pending-orders", 
+        method: "GET" 
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Completed Orders Report
+    getSupplierCompletedOrdersReport: builder.query({
+      query: () => ({ 
+        url: "/crm/reports/supplier/completed-orders", 
+        method: "GET" 
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Confirmed Orders Report
+    getSupplierConfirmedOrdersReport: builder.query({
+      query: () => ({ 
+        url: "/crm/reports/supplier/confirmed-orders", 
+        method: "GET" 
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Platform Collections Report
+    getSupplierPlatformCollectionsReport: builder.query({
+      query: () => ({ 
+        url: "/crm/reports/supplier/platform-collections", 
+        method: "GET" 
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Product Sales Report
+    getSupplierProductSalesReport: builder.query({
+      query: () => ({ 
+        url: "/crm/reports/supplier/product-sales", 
+        method: "GET" 
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
   }),
 });
 
@@ -2042,6 +2111,7 @@ export const {
   useCreateCrmOrderMutation,
   useUpdateCrmOrderMutation,
   useGetCrmClientOrdersQuery,
+  useUpdateCrmClientOrderMutation,
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
   useGetPublicShippingConfigQuery,
@@ -2165,4 +2235,12 @@ export const {
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,
   useGetSupplierProductReviewsReportQuery,
+  
+  // Supplier Report Hooks
+  useGetSupplierTotalOrdersReportQuery,
+  useGetSupplierPendingOrdersReportQuery,
+  useGetSupplierCompletedOrdersReportQuery,
+  useGetSupplierConfirmedOrdersReportQuery,
+  useGetSupplierPlatformCollectionsReportQuery,
+  useGetSupplierProductSalesReportQuery,
 } = glowvitaApi;

@@ -59,7 +59,7 @@ import { SmsPackagesTab } from '@/components/SmsPackagesTab';
 
 // TYPES
 type SalonCategory = "unisex" | "men" | "women";
-type SubCategory = "shop" | "shop-at-home" | "onsite";
+type SubCategory = "at-salon" | "at-home" | "custom-location";
 type UserType = 'vendor' | 'supplier' | 'doctor';
 
 interface VendorProfile {
@@ -254,7 +254,7 @@ const ProfileTab = ({ vendor, setVendor }: any) => {
         <div className="space-y-2">
           <Label>Sub Categories</Label>
           <div className="grid grid-cols-3 gap-4">
-            {['shop', 'shop-at-home', 'onsite'].map((subCat: string) => (
+            {['at-salon', 'at-home', 'custom-location'].map((subCat: string) => (
               <div key={subCat} className="flex items-center space-x-2">
                 <Checkbox
                   id={subCat}
@@ -271,7 +271,7 @@ const ProfileTab = ({ vendor, setVendor }: any) => {
                   htmlFor={subCat}
                   className="text-sm font-medium leading-none"
                 >
-                  {subCat.replace('-', ' ')}
+                  {subCat.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                 </Label>
               </div>
             ))}
