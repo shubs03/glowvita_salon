@@ -28,6 +28,15 @@ const serviceSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
+    // Service timing information
+    prepTime: {
+      type: Number, // in minutes
+      default: 0,
+    },
+    setupCleanupTime: {
+      type: Number, // in minutes
+      default: 0,
+    },
     description: {
       type: String,
       required: true,
@@ -173,7 +182,7 @@ vendorServicesSchema.index(
   { "services.name": "text", "services.description": "text" },
   { weights: { "services.name": 10, "services.description": 5 } } // Prioritize name in text search
 );
-vendorServicesSchema.index({ createdAt: -1 }); // For sorting by creation date
+vendorServicesSchema.index({ createdAt: -1 }); // For sorting by creation date 
 vendorServicesSchema.index({ updatedAt: -1 }); // For sorting by update date
 
 // Pre-save hook to update `updatedAt` timestamp

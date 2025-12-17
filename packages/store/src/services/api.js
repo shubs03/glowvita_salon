@@ -277,7 +277,29 @@ export const glowvitaApi = createApi({
 
     // Public Vendors for landing page
     getPublicVendors: builder.query({
-      query: () => ({ url: "/vendors", method: "GET" }),
+      query: (params = {}) => {
+        const { lat, lng, radius, limit } = params;
+        const queryParams = new URLSearchParams();
+        
+        if (lat !== undefined && lng !== undefined) {
+          queryParams.append('lat', lat.toString());
+          queryParams.append('lng', lng.toString());
+        }
+        
+        if (radius !== undefined) {
+          queryParams.append('radius', radius.toString());
+        }
+        
+        if (limit !== undefined) {
+          queryParams.append('limit', limit.toString());
+        }
+        
+        const queryString = queryParams.toString();
+        return { 
+          url: `/vendors${queryString ? `?${queryString}` : ''}`, 
+          method: "GET" 
+        };
+      },
       providesTags: ["PublicVendors"],
       transformResponse: (response) => response,
     }),
@@ -1867,6 +1889,90 @@ export const glowvitaApi = createApi({
         } catch {}
       },
     }),
+    
+
+    
+    // Confirm Booking Mutation (uses main booking endpoint)
+    confirmBooking: builder.mutation({
+      query: (confirmationData) => ({
+        url: "/booking/confirm",
+        method: "POST",
+        body: confirmationData
+      }),
+      invalidatesTags: ['PublicAppointments'],
+    }),
+
+    // Acquire slot lock for preventing concurrent bookings
+    acquireSlotLock: builder.mutation({
+      query: (lockData) => ({
+        url: "/booking/lock",
+        method: "POST",
+        body: lockData
+      }),
+      invalidatesTags: ['AvailableSlots'],
+      async onQueryStarted(lockData, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          // Optimistic update: remove locked slot from cache
+          dispatch(
+            api.util.updateQueryData('getAvailableSlots', 
+              { vendorId: lockData.vendorId, date: lockData.date },
+              (draft) => {
+                return draft.filter(slot => slot.startTime !== lockData.startTime);
+              }
+            )
+          );
+        } catch {}
+      },
+    }),
+
+    // Release slot lock
+    releaseSlotLock: builder.mutation({
+      query: ({ lockToken }) => ({
+        url: "/booking/release-lock",
+        method: "POST",
+        body: { lockToken }
+      }),
+      invalidatesTags: ['AvailableSlots'],
+    }),
+
+    // Get available slots with caching
+    getAvailableSlots: builder.query({
+      query: ({ vendorId, staffId, serviceIds, date, isHomeService, location }) => {
+        const params = new URLSearchParams({
+          vendorId,
+          staffId: staffId || 'any',
+          ...(serviceIds && { serviceIds: Array.isArray(serviceIds) ? serviceIds.join(',') : serviceIds }),
+          date: date,
+          isHomeService: isHomeService?.toString() || 'false',
+          ...(location?.lat && { lat: location.lat.toString() }),
+          ...(location?.lng && { lng: location.lng.toString() })
+        });
+        return {
+          url: `/booking/slots?${params.toString()}`,
+          method: "GET"
+        };
+      },
+      providesTags: ['AvailableSlots'],
+      keepUnusedDataFor: 180, // 3 minutes cache
+    }),
+
+    
+    // Lock Wedding Package Mutation
+    lockWeddingPackage: builder.mutation({
+      query: (lockData) => ({ 
+        url: "/scheduling/wedding-package", 
+        method: "PUT", 
+        body: lockData 
+      }),
+    }),
+    
+    // Public Wedding Packages Endpoint
+    getPublicVendorWeddingPackages: builder.query({
+      query: (vendorId) => ({ url: `/wedding-packages/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorWeddingPackages"],
+      transformResponse: (response) => response,
+    }),
 
     // Payment Collection Endpoint
     collectPayment: builder.mutation({
@@ -2228,6 +2334,15 @@ export const {
   // Public Appointment Hooks
   useGetPublicAppointmentsQuery,
   useCreatePublicAppointmentMutation,
+  // Slot Lock Mutation
+  useAcquireSlotLockMutation,
+  // Confirm Booking Mutation
+  useConfirmBookingMutation,
+  // Lock Wedding Package Mutation
+  useLockWeddingPackageMutation,
+  // Public Wedding Packages Hook
+  useGetPublicVendorWeddingPackagesQuery,
+
   
   // Payment Collection Hook
   useCollectPaymentMutation,

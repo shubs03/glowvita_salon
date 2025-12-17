@@ -63,9 +63,9 @@ import {
   useGetPublicVendorOffersQuery,
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorServicesQuery,
-  useAddToClientCartMutation,
   useGetSalonReviewsQuery,
-} from "@repo/store/api";
+  useAddToClientCartMutation,
+} from "@repo/store/services/api";
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart, setCurrentUser } from "@repo/store/slices/cartSlice";
 import { useAuth } from "@/hooks/useAuth";
@@ -148,7 +148,7 @@ const StaffDisplay = ({
             <Image
               src={
                 member.image ||
-                `https://placehold.co/128x128/e2e8f0/64748b?text=${(member.name || "Staff").charAt(0)}`
+                `https://placehold.co/128x128/png?text=${(member.name || "Staff").charAt(0)}`
               }
               alt={member.name || "Staff Member"}
               fill
@@ -331,7 +331,7 @@ const defaultSalon = {
   phone: "",
   description: "",
   mission: "",
-  images: ["https://placehold.co/1200x800/e2e8f0/64748b?text=Loading..."],
+  images: ["https://placehold.co/1200x800/png?text=Loading..."],
 };
 
 const ProductCard = ({ product, onBuyNow, onAddToCart, vendorId, vendorName }: { 
@@ -651,7 +651,7 @@ export default function SalonDetailsPage() {
       image:
         p.image ||
         p.productImage ||
-        "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
+        "https://placehold.co/320x224/png?text=Product",
       vendorId: id, // Always use the salon ID from URL params as vendorId
       vendorName: vendorData?.businessName || "Unknown Vendor",
       category: p.category || "Beauty Products",

@@ -8,7 +8,7 @@ import {
   CardHeader,
 } from "@repo/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { useGetPublicVendorServicesQuery } from "@repo/store/api";
+import { useGetPublicVendorServicesQuery } from "@repo/store/services/api";
 import { Loader2 } from "lucide-react";
 
 interface ServicesSectionProps {
@@ -30,7 +30,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow }
         duration: service.duration || 60,
         category: service.category?.name || service.category || "Other",
         description: service.description || "",
-        image: service.image || "https://placehold.co/200x200/e2e8f0/64748b?text=" + (service.name || "Service").replace(/\s/g, '+')
+        image: service.image || "https://placehold.co/200x200/png?text=" + (service.name || "Service").replace(/\s/g, '+')
       }));
     }
     return [];

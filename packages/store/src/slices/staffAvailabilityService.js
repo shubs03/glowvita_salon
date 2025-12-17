@@ -268,3 +268,5 @@ export class StaffAvailabilityService {
       .map(staff => this.getStaffAvailability(staff, date));
   }
 }
+
+export default StaffAvailabilityService;
