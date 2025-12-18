@@ -632,6 +632,11 @@ useEffect(() => {
       if (appointmentId && (appt._id === appointmentId || appt.id === appointmentId)) {
         return false;
       }
+      // Ensure we only compare against the SAME staff member
+      const apptStaffId = (appt?.staff?._id ?? appt?.staff ?? appt?.staffId ?? '').toString();
+      if (apptStaffId && staffId && apptStaffId !== staffId.toString()) {
+        return false;
+      }
       
       const apptDate = appt.date ? new Date(appt.date) : new Date(appointmentData.date);
       const apptStart = new Date(apptDate.toISOString().split('T')[0] + 'T' + appt.startTime).getTime();
@@ -1170,6 +1175,12 @@ useEffect(() => {
       
       // Check for overlapping appointments
       const hasOverlap = existingAppointments?.some((appt: any) => {
+        // Only consider appointments for the SAME staff member
+        const apptStaffId = (appt?.staff?._id ?? appt?.staff ?? appt?.staffId ?? '').toString();
+        if (apptStaffId && staffId && apptStaffId !== staffId.toString()) {
+          return false;
+        }
+
         const apptStart = new Date(`${appt.date}T${appt.startTime}`).getTime();
         const apptEnd = new Date(`${appt.date}T${appt.endTime}`).getTime();
         const newStart = currentTime.getTime();
@@ -1229,6 +1240,11 @@ useEffect(() => {
           const hasOverlap = existingAppointments?.some((appt: any) => {
             // Skip the current appointment when editing
             if (appointmentData._id && (appt._id === appointmentData._id)) {
+              return false;
+            }
+            // Only consider appointments for the SAME staff member
+            const apptStaffId = (appt?.staff?._id ?? appt?.staff ?? appt?.staffId ?? '').toString();
+            if (apptStaffId && prev.staff && apptStaffId !== prev.staff.toString()) {
               return false;
             }
             

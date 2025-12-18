@@ -26,7 +26,7 @@ import { useState } from "react";
 import { Cart } from "./cart/Cart";
 import { useGetCartQuery } from "@repo/store/api";
 
-export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
+export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSidebar: () => void, subscription: any, isSubExpired: boolean }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user, role, isCrmAuthenticated } = useCrmAuth();
@@ -34,7 +34,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  
+
   const { data: cartData } = useGetCartQuery(user?._id, {
     skip: !isCrmAuthenticated || !user?._id,
   });
@@ -57,7 +57,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
 
   const navItems = getNavItemsForRole();
   const currentPage = navItems.find(item => pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/'))?.title || 'Dashboard';
-  
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -66,12 +66,12 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
       Cookies.remove('crm_access_token', { path: '/', domain: window.location.hostname });
       Cookies.remove('access_token', { path: '/' });
       Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
-      
+
       // Clear all auth-related data from localStorage
       localStorage.removeItem('crmAuthState');
       localStorage.removeItem('userAuthState');
       localStorage.removeItem('adminAuthState');
-      
+
       // Clear any other possible tokens
       Object.keys(localStorage).forEach(key => {
         if (key.includes('token') || key.includes('auth')) {
@@ -85,7 +85,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
 
       // This action will now trigger the root reducer to reset the entire state
       dispatch(clearCrmAuth());
-      
+
       // Redirect to login page after state is cleared
       router.push('/login');
       // Force a page refresh to ensure all state is cleared
@@ -132,7 +132,15 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
           <h1 className="text-xl font-bold text-foreground">
             {currentPage}
           </h1>
-          
+          {/* --- DEBUG INFO --- */}
+          {/* <div className="fixed top-20 right-4 bg-yellow-200 text-black p-2 rounded-lg shadow-lg z-50 text-xs">
+            <p className="font-bold">Subscription Debug:</p>
+            <p>isSubExpired: <span className="font-bold">{isSubExpired ? 'TRUE' : 'FALSE'}</span></p>
+            <p>Status: {subscription?.status ?? 'N/A'}</p>
+            <p>End Date: {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'N/A'}</p>
+          </div> */}
+          {/* --- END DEBUG INFO --- */}
+
           {/* Quick Stats Pills */}
           <div className="hidden xl:flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-semibold hover:scale-105 transition-all duration-300 cursor-pointer">
@@ -162,9 +170,9 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
           <Search className="h-5 w-5" />
           <span className="sr-only">Search</span>
         </Button>
-        
+
         <ThemeToggle />
-        
+
         {/* Cart for Vendors */}
         {role === 'vendor' && (
           <Button
@@ -211,7 +219,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
               <DropdownMenuItem className="p-4 border-b border-border/10 hover:bg-muted/50 transition-colors">
                 <div className="flex items-start gap-3 w-full">
                   <div className="bg-green-100 text-green-600 p-2 rounded-lg">
-                    <CheckCircle className="h-4 w-4"/>
+                    <CheckCircle className="h-4 w-4" />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-foreground">New Appointment Confirmed</p>
@@ -245,32 +253,32 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-xl border border-border/30 shadow-lg rounded-lg">
             <DropdownMenuLabel className="p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12 border-2 border-primary/20 shadow-sm">
-                    <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name || "User"} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                      {(user?.businessName || user?.name || "U").charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-bold text-foreground truncate">{user?.businessName || user?.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-xs text-green-600 font-semibold">ONLINE</span>
-                    </div>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12 border-2 border-primary/20 shadow-sm">
+                  <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name || "User"} />
+                  <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                    {(user?.businessName || user?.name || "U").charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-foreground truncate">{user?.businessName || user?.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-green-600 font-semibold">ONLINE</span>
                   </div>
                 </div>
+              </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup className="p-2">
               <DropdownMenuItem asChild className="rounded-md">
-                  <Link href="/salon-profile" className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                      <span className="font-semibold">Profile Settings</span>
-                  </Link>
+                <Link href="/salon-profile" className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <User className="h-4 w-4 text-primary" />
+                  </div>
+                  <span className="font-semibold">Profile Settings</span>
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="hover:bg-gradient-to-r hover:from-muted/30 hover:to-muted/50 p-3 transition-all duration-300 group">
                 <div className="flex items-center gap-3">

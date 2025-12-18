@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import ClientOrder from '@repo/lib/models/user/ClientOrder.model';
-import { authMiddlewareCrm } from '@/middlewareCrm';
+import { withSubscriptionCheck } from '@/middlewareCrm';
 
 await _db();
 
-// GET Online Customer Orders for the logged-in vendor or supplier
-export const GET = authMiddlewareCrm(async (req) => {
+// GET Online Customer Orders for the logged-in vendor
+export const GET = withSubscriptionCheck(async (req) => {
   try {
     const userId = req.user.userId;
     const role = req.user.role;
@@ -55,7 +55,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
 
     // Find the client order
     const order = await ClientOrder.findById(orderId);
-    
+
     if (!order) {
       console.log("Order not found with ID:", orderId);
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
@@ -88,7 +88,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
     });
 
     await order.save();
-    
+
     console.log("Order saved successfully:", order._id);
     return NextResponse.json(order, { status: 200 });
 

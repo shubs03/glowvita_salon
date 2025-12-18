@@ -11,31 +11,31 @@ await _db();
 export const GET = authMiddlewareCrm(async (req) => {
   try {
     const supplierId = req.user.userId || req.user._id;
-    
+
     console.log("Fetching supplier profile for ID:", supplierId);
     console.log("User from token:", req.user);
 
     if (!supplierId) {
-        return NextResponse.json({ message: "Supplier ID is required" }, { status: 400 });
+      return NextResponse.json({ message: "Supplier ID is required" }, { status: 400 });
     }
 
     const supplier = await SupplierModel.findById(supplierId).select('firstName lastName shopName description email mobile country state city pincode address supplierType businessRegistrationNo profileImage status referralCode licenseFiles subscription smsBalance');
-    
+
     console.log("Supplier data from DB:", supplier);
 
     if (!supplier) {
-        return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
+      return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
     }
 
     // Get the active SMS package information
     let activePackageSmsCount = 0;
-    const activePackages = await SmsTransaction.find({ 
+    const activePackages = await SmsTransaction.find({
       userId: supplierId,
       userType: 'supplier',
       status: 'active',
       expiryDate: { $gte: new Date() }
     }).sort({ purchaseDate: -1 });
-    
+
     if (activePackages.length > 0) {
       // Use the most recent active package
       activePackageSmsCount = activePackages[0].smsCount;
@@ -46,13 +46,13 @@ export const GET = authMiddlewareCrm(async (req) => {
     supplierResponse.currentSmsBalance = activePackageSmsCount;  // SMS count from active package
 
     // Return in the same format as vendor profile API
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       data: supplierResponse
     }, { status: 200 });
   } catch (error) {
     console.error("Error fetching supplier profile:", error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
       message: "Failed to fetch supplier profile",
       error: error.message
@@ -73,9 +73,9 @@ export const PUT = authMiddlewareCrm(async (req) => {
     const supplier = await SupplierModel.findById(supplierId);
     if (!supplier) {
       console.log('Supplier not found with ID:', supplierId);
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: "Supplier not found" 
+        message: "Supplier not found"
       }, { status: 404 });
     }
 
@@ -92,24 +92,24 @@ export const PUT = authMiddlewareCrm(async (req) => {
         // Upload new image to VPS
         const fileName = `supplier-${supplierId}-profile`;
         const imageUrl = await uploadBase64(body.profileImage, fileName);
-        
+
         if (!imageUrl) {
           return NextResponse.json(
             { success: false, message: "Failed to upload profile image" },
             { status: 500 }
           );
         }
-        
+
         // Delete old image from VPS if it exists
         if (supplier.profileImage) {
           await deleteFile(supplier.profileImage);
         }
-        
+
         body.profileImage = imageUrl;
       } else {
         // If image is null/empty, remove it
         body.profileImage = null;
-        
+
         // Delete old image from VPS if it exists
         if (supplier.profileImage) {
           await deleteFile(supplier.profileImage);
@@ -127,7 +127,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
             // Upload new file to VPS
             const fileName = `supplier-${supplierId}-license-${i}`;
             const fileUrl = await uploadBase64(file, fileName);
-            
+
             if (fileUrl) {
               uploadedFiles.push(fileUrl);
             }
@@ -159,10 +159,10 @@ export const PUT = authMiddlewareCrm(async (req) => {
     // Handle subscription updates carefully
     if (body.subscription !== undefined) {
       // Only update subscription if it contains meaningful data
-      if (body.subscription && 
-          (body.subscription.plan || body.subscription.endDate || 
-           body.subscription.startDate || (body.subscription.history && body.subscription.history.length > 0))) {
-        
+      if (body.subscription &&
+        (body.subscription.plan || body.subscription.endDate ||
+          body.subscription.startDate || (body.subscription.history && body.subscription.history.length > 0))) {
+
         // Validate that required fields are present if any subscription data is provided
         if (body.subscription.plan && body.subscription.endDate) {
           supplier.subscription = body.subscription;
@@ -179,7 +179,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
     console.log('Saving supplier with data:', supplier.toObject());
 
     const updatedSupplier = await supplier.save();
-    
+
     // Return updated supplier without sensitive fields
     const supplierResponse = updatedSupplier.toObject();
     delete supplierResponse.password;
@@ -187,45 +187,45 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
     console.log('Supplier updated successfully:', supplierResponse);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: "Supplier profile updated successfully",
       data: supplierResponse
     }, { status: 200 });
   } catch (error) {
     console.error('Error updating supplier profile:', error);
-    
+
     if (error.code === 11000) {
       const field = Object.keys(error.keyPattern)[0];
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: `Supplier with this ${field} already exists` 
+        message: `Supplier with this ${field} already exists`
       }, { status: 409 });
     }
-    
+
     // Handle validation errors
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map(err => err.message);
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: "Validation error", 
+        message: "Validation error",
         errors: errors
       }, { status: 400 });
     }
-    
+
     // Handle custom validation errors
     if (error.name === 'Error') {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: "Validation error", 
+        message: "Validation error",
         errors: [error.message]
       }, { status: 400 });
     }
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
-      message: "Failed to update supplier profile", 
-      error: error.message 
+      message: "Failed to update supplier profile",
+      error: error.message
     }, { status: 500 });
   }
 }, ['supplier']);

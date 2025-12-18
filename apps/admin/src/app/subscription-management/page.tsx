@@ -2,7 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation } from '@repo/store/api';
+import { useSelector } from 'react-redux';
+import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation, useGetVendorsQuery, useGetSuppliersQuery, useGetDoctorsQuery, useRenewPlanMutation } from '@repo/store/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
@@ -11,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Skeleton } from '@repo/ui/skeleton';
-import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck } from 'lucide-react';
+import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck, RefreshCw } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Switch } from '@repo/ui/switch';
@@ -39,50 +40,96 @@ type Subscription = {
   startDate: string;
   endDate: string;
   status: string;
+  history?: Array<{
+    plan: { _id: string; name: string };
+    status: string;
+    startDate: string;
+    endDate: string;
+  }>;
+  userType?: 'vendor' | 'supplier' | 'doctor';
+};
+
+type VendorSubPlan = { _id: string; name?: string } | string | undefined;
+type VendorItem = {
+  _id: string;
+  businessName?: string;
+  subscription?: {
+    plan?: VendorSubPlan;
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  };
 };
 
 export default function SubscriptionManagementPage() {
+  const token = useSelector((state: any) => state.adminAuth?.token);
   const { data: plans = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery(undefined);
+  const { data: vendors = [], isLoading: vendorsLoading, refetch: refetchVendors } = useGetVendorsQuery(undefined);
+  const { data: suppliers = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(undefined);
+  const { data: doctors = [], isLoading: doctorsLoading, refetch: refetchDoctors } = useGetDoctorsQuery(undefined);
   const [createNewPlan] = useCreateSubscriptionPlanMutation();
   const [updateExistingPlan] = useUpdateSubscriptionPlanMutation();
   const [deletePlan] = useDeleteSubscriptionPlanMutation();
 
-  const subscriptionsData = [
-    {
-      id: 'sub_1',
-      subscriberId: 'CUST-101',
-      subscriberName: 'Alice Johnson',
-      planName: 'Pro Yearly',
-      startDate: '2024-01-15',
-      endDate: '2025-01-15',
-      status: 'Active',
-    },
-    {
-      id: 'sub_2',
-      subscriberId: 'CUST-102',
-      subscriberName: 'Bob Williams',
-      planName: 'Basic Monthly',
-      startDate: '2024-08-01',
-      endDate: '2024-09-01',
-      status: 'Active',
-    },
-    {
-      id: 'sub_3',
-      subscriberId: 'CUST-103',
-      subscriberName: 'Charlie Brown',
-      planName: 'Basic Monthly',
-      startDate: '2024-07-20',
-      endDate: '2024-08-20',
-      status: 'Inactive',
-    },
+  // Derived subscribers from vendors, suppliers, and doctors (live data)
+  const subscribers: Subscription[] = [
+    ...(Array.isArray(vendors) ? vendors : []).map((v: any) => {
+      const plan = v.subscription?.plan;
+      const planName = typeof plan === 'object' && plan !== null ? (plan as any).name : undefined;
+      return {
+        id: v._id,
+        subscriberId: v._id,
+        subscriberName: v.businessName || 'Vendor',
+        planName: planName || (typeof plan === 'string' ? plan : '-'),
+        startDate: v.subscription?.startDate || '',
+        endDate: v.subscription?.endDate || '',
+        status: v.subscription?.status || 'Pending',
+        history: (v.subscription as any)?.history || [],
+        userType: 'vendor' as const
+      };
+    }),
+    ...(Array.isArray(suppliers) ? suppliers : []).map((s: any) => {
+      const plan = s.subscription?.plan;
+      const planName = typeof plan === 'object' && plan !== null ? (plan as any).name : undefined;
+      return {
+        id: s._id,
+        subscriberId: s._id,
+        subscriberName: s.shopName || (s.firstName + ' ' + s.lastName) || 'Supplier',
+        planName: planName || (typeof plan === 'string' ? plan : '-'),
+        startDate: s.subscription?.startDate || '',
+        endDate: s.subscription?.endDate || '',
+        status: s.subscription?.status || 'Pending',
+        history: (s.subscription as any)?.history || [],
+        userType: 'supplier' as const
+      };
+    }),
+    ...(Array.isArray(doctors) ? doctors : []).map((d: any) => {
+      const plan = d.subscription?.plan;
+      const planName = typeof plan === 'object' && plan !== null ? (plan as any).name : undefined;
+      return {
+        id: d._id,
+        subscriberId: d._id,
+        subscriberName: d.clinicName ? `${d.name} (${d.clinicName})` : d.name || 'Doctor',
+        planName: planName || (typeof plan === 'string' ? plan : '-'),
+        startDate: d.subscription?.startDate || '',
+        endDate: d.subscription?.endDate || '',
+        status: d.subscription?.status || 'Pending',
+        history: (d.subscription as any)?.history || [],
+        userType: 'doctor' as const
+      };
+    })
   ];
 
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'add' | 'edit' | 'view'>('add');
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
+  const [selectedRenewalPlan, setSelectedRenewalPlan] = useState<Plan | null>(null);
+  const [isRenewingManual, setIsRenewingManual] = useState(false);
+  const [renewPlan, { isLoading: isRenewing }] = useRenewPlanMutation(); // Keep for type safety or remove usage if verified
 
   const [planForm, setPlanForm] = useState({
     name: '',
@@ -113,8 +160,8 @@ export default function SubscriptionManagementPage() {
 
   const handleInputChange = (field: string, value: string | boolean) => {
     if (field === 'duration') {
-        const numValue = Number(value);
-        if (numValue > 99) return;
+      const numValue = Number(value);
+      if (numValue > 99) return;
     }
     setPlanForm((prev) => ({
       ...prev,
@@ -235,30 +282,71 @@ export default function SubscriptionManagementPage() {
     }
   };
 
-  const [activeSubscriptions, setActiveSubscriptions] = useState(
-    subscriptionsData.reduce((acc, sub) => {
-      acc[sub.id] = sub.status === 'Active';
-      return acc;
-    }, {} as Record<string, boolean>)
-  );
-
-  const handleToggleStatus = (subId: string) => {
-    setActiveSubscriptions((prev) => ({
-      ...prev,
-      [subId]: !prev[subId],
-    }));
+  const handleOpenRenewModal = (sub: Subscription) => {
+    setSelectedSubscription(sub);
+    setSelectedRenewalPlan(null);
+    setIsRenewModalOpen(true);
   };
+
+  const handleRenewSubscription = async () => {
+    if (!selectedSubscription || !selectedRenewalPlan) {
+      toast.error('Please select a plan to renew');
+      return;
+    }
+
+    try {
+      setIsRenewingManual(true);
+      // Use relative path to avoid port issues in dev
+      const response = await fetch('/api/admin/subscription-renewal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}` // Ensure auth if needed
+        },
+        body: JSON.stringify({
+          // vendorId param name is kept for backward compat if needed, but we prefer generic naming
+          // However, the backend reads `vendorId || userId`
+          userId: selectedSubscription.subscriberId,
+          userType: selectedSubscription.userType,
+          planId: selectedRenewalPlan._id,
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success('Subscription renewed successfully!');
+        setIsRenewModalOpen(false);
+        setSelectedSubscription(null);
+        setSelectedRenewalPlan(null);
+        refetchVendors();
+        refetchSuppliers();
+        refetchDoctors();
+      } else {
+        throw new Error(data.message || 'Failed to renew subscription');
+      }
+    } catch (error: any) {
+      console.error('Error renewing subscription:', error);
+      toast.error(error.message || 'Failed to renew subscription');
+    } finally {
+      setIsRenewingManual(false);
+    }
+  };
+
+
+  // Active count derived from live data
+  const activeSubscribersCount = subscribers.filter((s) => s.status === 'Active').length;
 
   // Pagination logic with safeguards
   const totalPlanPages = Math.ceil(plans.length / (planItemsPerPage || 1)) || 1;
-  const totalSubPages = Math.ceil(subscriptionsData.length / (subItemsPerPage || 1)) || 1;
+  const totalSubPages = Math.ceil(subscribers.length / (subItemsPerPage || 1)) || 1;
 
   const paginatedPlans = plans.slice(
     (currentPlanPage - 1) * planItemsPerPage,
     currentPlanPage * planItemsPerPage
   );
 
-  const paginatedSubscriptions = subscriptionsData.slice(
+  const paginatedSubscriptions = subscribers.slice(
     (currentSubPage - 1) * subItemsPerPage,
     currentSubPage * subItemsPerPage
   );
@@ -276,7 +364,7 @@ export default function SubscriptionManagementPage() {
     setCurrentSubPage(1); // Reset to first page
   };
 
-  if (isLoading) {
+  if (isLoading || vendorsLoading || suppliersLoading || doctorsLoading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8">
         <Skeleton className="h-8 w-56 mb-6" />
@@ -377,7 +465,7 @@ export default function SubscriptionManagementPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{subscriptionsData.length}</div>
+            <div className="text-2xl font-bold">{subscribers.length}</div>
             <p className="text-xs text-muted-foreground">Across all plans</p>
           </CardContent>
         </Card>
@@ -387,9 +475,7 @@ export default function SubscriptionManagementPage() {
             <BadgeCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {Object.values(activeSubscriptions).filter(Boolean).length}
-            </div>
+            <div className="text-2xl font-bold text-green-600">{activeSubscribersCount}</div>
             <p className="text-xs text-muted-foreground">Currently active plans</p>
           </CardContent>
         </Card>
@@ -422,6 +508,7 @@ export default function SubscriptionManagementPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Subscriber Name</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Plan Name</TableHead>
                       <TableHead>Start Date</TableHead>
                       <TableHead>End Date</TableHead>
@@ -432,7 +519,7 @@ export default function SubscriptionManagementPage() {
                   <TableBody>
                     {paginatedSubscriptions.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">
+                        <TableCell colSpan={7} className="text-center">
                           No subscriptions available.
                         </TableCell>
                       </TableRow>
@@ -440,24 +527,31 @@ export default function SubscriptionManagementPage() {
                       paginatedSubscriptions.map((sub) => (
                         <TableRow key={sub.id}>
                           <TableCell className="font-medium">{sub.subscriberName}</TableCell>
-                          <TableCell>{sub.planName}</TableCell>
-                          <TableCell>{sub.startDate}</TableCell>
-                          <TableCell>{sub.endDate}</TableCell>
                           <TableCell>
-                            <Switch
-                              checked={activeSubscriptions[sub.id]}
-                              onCheckedChange={() => handleToggleStatus(sub.id)}
-                              aria-label={`Toggle subscription for ${sub.subscriberName}`}
-                            />
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium 
+                              ${sub.userType === 'vendor' ? 'bg-blue-100 text-blue-800' :
+                                sub.userType === 'supplier' ? 'bg-purple-100 text-purple-800' :
+                                  'bg-teal-100 text-teal-800'}`}>
+                              {sub.userType ? sub.userType.charAt(0).toUpperCase() + sub.userType.slice(1) : '-'}
+                            </span>
                           </TableCell>
+                          <TableCell>{sub.planName}</TableCell>
+                          <TableCell>{sub.startDate ? new Date(sub.startDate).toLocaleDateString() : '-'}</TableCell>
+                          <TableCell>{sub.endDate ? new Date(sub.endDate).toLocaleDateString() : '-'}</TableCell>
+                          <TableCell>{sub.status}</TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => handleOpenSubModal('view', sub)}>
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">View</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenSubModal('edit', sub)}>
-                              <Edit2 className="h-4 w-4" />
-                              <span className="sr-only">Edit</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleOpenRenewModal(sub)}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                              <span className="sr-only">Renew</span>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -472,7 +566,7 @@ export default function SubscriptionManagementPage() {
                 onPageChange={(page) => setCurrentSubPage(page)}
                 onItemsPerPageChange={handleSubItemsPerPageChange}
                 itemsPerPage={subItemsPerPage}
-                totalItems={subscriptionsData.length} // Added for "Showing X to Y of Z"
+                totalItems={subscribers.length} // Added for "Showing X to Y of Z"
               />
             </CardContent>
           </Card>
@@ -500,14 +594,14 @@ export default function SubscriptionManagementPage() {
                       <TableHead>Duration</TableHead>
                       <TableHead>Price</TableHead>
                       <TableHead>Discounted Price</TableHead>
-                      <TableHead>Available</TableHead>
+                      <TableHead>Visible to Users</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedPlans.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center">
+                        <TableCell colSpan={7} className="text-center">
                           No plans available.
                         </TableCell>
                       </TableRow>
@@ -520,7 +614,37 @@ export default function SubscriptionManagementPage() {
                           </TableCell>
                           <TableCell>₹{plan.price}</TableCell>
                           <TableCell>{plan.discountedPrice ? `₹${plan.discountedPrice}` : '-'}</TableCell>
-                          <TableCell>{plan.isAvailableForPurchase ? 'Yes' : 'No'}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                checked={plan.isAvailableForPurchase !== false}
+                                onCheckedChange={async (checked) => {
+                                  try {
+                                    await updateExistingPlan({
+                                      _id: plan._id,
+                                      name: plan.name,
+                                      duration: plan.duration,
+                                      durationType: plan.durationType,
+                                      price: plan.price,
+                                      status: plan.status,
+                                      features: plan.features,
+                                      userTypes: plan.userType,
+                                      planType: (plan as any).planType, // Cast to handle potential type mismatch
+                                      isAvailableForPurchase: checked
+                                    }).unwrap();
+                                    toast.success(`Plan is now ${checked ? 'visible' : 'hidden'} to users`);
+                                    refetch(); // Ensure UI refreshes
+                                  } catch (err) {
+                                    console.error('Failed to toggle visibility', err);
+                                    toast.error('Failed to update plan visibility');
+                                  }
+                                }}
+                              />
+                              <span className="text-xs text-muted-foreground">
+                                {plan.isAvailableForPurchase !== false ? 'Visible' : 'Hidden'}
+                              </span>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="ghost"
@@ -677,33 +801,188 @@ export default function SubscriptionManagementPage() {
       </Dialog>
 
       <Dialog open={isSubModalOpen} onOpenChange={setIsSubModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{modalType === 'edit' ? 'Edit Subscription' : 'Subscription Details'}</DialogTitle>
+            <DialogTitle>Subscription Details</DialogTitle>
+            <DialogDescription>
+              View complete subscription information and history for {selectedSubscription?.subscriberName}
+            </DialogDescription>
           </DialogHeader>
           {selectedSubscription && (
-            <div className="grid gap-4 py-4">
-              <div className="space-y-2">
-                <Label>Subscriber Name</Label>
-                <Input value={selectedSubscription.subscriberName} readOnly={modalType === 'view'} />
-              </div>
-              <div className="space-y-2">
-                <Label>Plan</Label>
-                <Input value={selectedSubscription.planName} readOnly={modalType === 'view'} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Start Date</Label>
-                  <Input type="date" value={selectedSubscription.startDate} readOnly={modalType === 'view'} />
+            <div className="space-y-6 py-4">
+              {/* Current Plan Section */}
+              <div className="rounded-lg border bg-card p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Current Plan</h3>
+                  <div className={`
+                    px-3 py-1 rounded-full text-xs font-semibold
+                    ${selectedSubscription.status === 'Active'
+                      ? 'bg-green-100 text-green-700 border border-green-200'
+                      : selectedSubscription.status === 'Expired'
+                        ? 'bg-red-100 text-red-700 border border-red-200'
+                        : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                    }
+                  `}>
+                    {selectedSubscription.status || 'Unknown'}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>End Date</Label>
-                  <Input type="date" value={selectedSubscription.endDate} readOnly={modalType === 'view'} />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Subscriber Name</Label>
+                    <p className="font-medium">{selectedSubscription.subscriberName}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Plan Name</Label>
+                    <p className="font-medium">{selectedSubscription.planName || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Start Date</Label>
+                    <p className="font-medium">
+                      {selectedSubscription.startDate
+                        ? new Date(selectedSubscription.startDate).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        })
+                        : 'N/A'
+                      }
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">End Date</Label>
+                    <p className="font-medium">
+                      {selectedSubscription.endDate
+                        ? new Date(selectedSubscription.endDate).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric'
+                        })
+                        : 'N/A'
+                      }
+                    </p>
+                  </div>
                 </div>
+
+                {/* Days Remaining/Expired */}
+                {selectedSubscription.endDate && (
+                  <div className="pt-2 border-t">
+                    {(() => {
+                      const now = new Date();
+                      const end = new Date(selectedSubscription.endDate);
+                      const diffTime = end.getTime() - now.getTime();
+                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                      if (diffDays > 0) {
+                        return (
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-semibold text-green-600">{diffDays} days</span> remaining
+                          </p>
+                        );
+                      } else if (diffDays === 0) {
+                        return (
+                          <p className="text-sm text-orange-600 font-semibold">
+                            Expires today
+                          </p>
+                        );
+                      } else {
+                        return (
+                          <p className="text-sm text-muted-foreground">
+                            Expired <span className="font-semibold text-red-600">{Math.abs(diffDays)} days ago</span>
+                          </p>
+                        );
+                      }
+                    })()}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center space-x-2">
-                <Label>Status</Label>
-                <p>{activeSubscriptions[selectedSubscription.id] ? 'Active' : 'Inactive'}</p>
+
+              {/* Subscription History Section */}
+              <div className="space-y-3">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Subscription History
+                </h3>
+
+                {selectedSubscription.history && selectedSubscription.history.length > 0 ? (
+                  <div className="space-y-3">
+                    {/* Timeline */}
+                    <div className="relative space-y-4 pl-6 border-l-2 border-muted">
+                      {selectedSubscription.history.map((historyItem, index) => (
+                        <div key={index} className="relative">
+                          {/* Timeline dot */}
+                          <div className="absolute -left-[1.6rem] top-1 w-4 h-4 rounded-full bg-primary border-4 border-background"></div>
+
+                          {/* History card */}
+                          <div className="bg-muted/30 rounded-lg p-3 border">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <p className="font-semibold text-sm">
+                                  {typeof historyItem.plan === 'object' && historyItem.plan !== null
+                                    ? historyItem.plan.name
+                                    : 'Unknown Plan'}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                  <span>
+                                    {historyItem.startDate
+                                      ? new Date(historyItem.startDate).toLocaleDateString('en-IN', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric',
+                                      })
+                                      : 'N/A'}
+                                  </span>
+                                  <span>→</span>
+                                  <span>
+                                    {historyItem.endDate
+                                      ? new Date(historyItem.endDate).toLocaleDateString('en-IN', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric',
+                                      })
+                                      : 'N/A'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div
+                                className={`
+                                  px-2 py-0.5 rounded-full text-xs font-semibold
+                                  ${historyItem.status === 'Active'
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-gray-100 text-gray-700'
+                                  }
+                                `}
+                              >
+                                {historyItem.status}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-4 border">
+                    <p className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      No subscription history available yet
+                    </p>
+                    <p className="mt-2 text-xs">
+                      Current plan: <span className="font-semibold">{selectedSubscription.planName || 'N/A'}</span>
+                      {selectedSubscription.startDate && (
+                        <span>
+                          {' '}
+                          (since{' '}
+                          {new Date(selectedSubscription.startDate).toLocaleDateString('en-IN', {
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                          )
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -711,7 +990,6 @@ export default function SubscriptionManagementPage() {
             <Button type="button" variant="secondary" onClick={() => setIsSubModalOpen(false)}>
               Close
             </Button>
-            {modalType === 'edit' && <Button type="submit">Save Changes</Button>}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -730,6 +1008,89 @@ export default function SubscriptionManagementPage() {
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Renew Subscription Dialog */}
+      <Dialog open={isRenewModalOpen} onOpenChange={setIsRenewModalOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Renew Subscription</DialogTitle>
+            <DialogDescription>
+              Select a plan to renew subscription for {selectedSubscription?.subscriberName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6">
+            {plans.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No plans available
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-3 gap-4">
+                {plans.map((plan: Plan) => (
+                  <div
+                    key={plan._id}
+                    onClick={() => setSelectedRenewalPlan(plan)}
+                    className={`
+                      cursor-pointer rounded-lg border-2 p-4 transition-all hover:shadow-lg
+                      ${selectedRenewalPlan?._id === plan._id
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-border hover:border-primary/50'
+                      }
+                    `}
+                  >
+                    <div className="text-center">
+                      <h3 className="text-lg font-bold mb-2">{plan.name}</h3>
+                      <div className="flex items-baseline justify-center gap-2 mb-1">
+                        <span className="text-3xl font-bold">₹{plan.discountedPrice || plan.price}</span>
+                        {plan.discountedPrice && (
+                          <span className="text-sm text-muted-foreground line-through">₹{plan.price}</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        per {plan.duration} {plan.durationType}
+                      </p>
+                    </div>
+                    <ul className="space-y-2 mt-4">
+                      {plan.features?.slice(0, 4).map((feature, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm">
+                          <span className="text-green-500 mt-0.5">✓</span>
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                      {plan.features?.length > 4 && (
+                        <li className="text-xs text-muted-foreground">
+                          +{plan.features.length - 4} more features
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setIsRenewModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRenewSubscription}
+              disabled={!selectedRenewalPlan || isRenewingManual}
+              className="min-w-[120px]"
+            >
+              {isRenewingManual ? (
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  Renewing...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Renew Now
+                </span>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

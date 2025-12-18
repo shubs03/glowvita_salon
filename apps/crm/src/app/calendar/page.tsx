@@ -580,6 +580,7 @@ interface AppointmentMenuProps {
 
     const handleStatusChange = async (status: string) => {
       if (status === 'cancelled') {
+        setSelectedAppointmentId(appointment.id || appointment._id);
         dispatch(setSelectedAppointment(appointment));
         setShowCancelDialog(true);
         setShowStatusMenu(false);
