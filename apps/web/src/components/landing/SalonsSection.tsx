@@ -11,12 +11,15 @@ import {
   MapPin,
   Zap,
   LucideProps,
+  Filter,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { cn } from "@repo/ui/cn";
-import { useGetPublicVendorsQuery } from "@repo/store/services/api";
+import { useGetPublicVendorsQuery, useGetPublicCategoriesQuery, useGetPublicServicesQuery } from "@repo/store/services/api";
 import { useRouter } from "next/navigation";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
+import { Button } from "@repo/ui/button";
 
 // Types for vendor data
 interface VendorData {
@@ -137,6 +140,10 @@ export function SalonsSection() {
   const router = useRouter();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt' | null>(null);
+  
+  // Filter states
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<string | null>(null);
 
   // Get user's current location
   useEffect(() => {
@@ -169,6 +176,14 @@ export function SalonsSection() {
       radius: 50, // 50km radius
       limit: 6 
     } : { limit: 6 }
+  );
+  
+  // Fetch categories for filter
+  const { data: CategoriesData, isLoading: categoriesLoading } = useGetPublicCategoriesQuery(undefined);
+  
+  // Fetch services for filter based on selected category
+  const { data: ServicesData, isLoading: servicesLoading } = useGetPublicServicesQuery(
+    selectedCategory ? { categoryId: selectedCategory } : {}
   );
 
   // Transform vendor data to match the card structure, with fallbacks
@@ -284,7 +299,7 @@ export function SalonsSection() {
             fill
             className="object-cover"
             placeholder="blur"
-            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+Wj2he"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+Wj2he"
           />
           <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <Star className="h-3 w-3 fill-yellow-300 text-yellow-300" />
@@ -347,6 +362,92 @@ export function SalonsSection() {
       <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,white,transparent_70%)] opacity-20"></div>
 
       <div className="container mx-auto px-4 relative z-10">
+        {/* Filter Section */}
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row gap-4 items-end">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Browse Services
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Service Category</label>
+                  <Select 
+                    value={selectedCategory || ""} 
+                    onValueChange={(value) => {
+                      setSelectedCategory(value === "all" ? null : value);
+                      setSelectedService(null); // Reset service when category changes
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {!categoriesLoading && CategoriesData?.categories?.map((category: any) => (
+                        <SelectItem key={category._id} value={category._id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Service</label>
+                  <Select 
+                    value={selectedService || ""} 
+                    onValueChange={(value) => setSelectedService(value === "all" ? null : value)}
+                    disabled={!selectedCategory || servicesLoading}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={selectedCategory ? "Select a service" : "Select a category first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Services</SelectItem>
+                      {!servicesLoading && ServicesData?.services?.map((service: any) => (
+                        <SelectItem key={service._id} value={service._id}>
+                          {service.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            
+            {(selectedCategory || selectedService) && (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSelectedCategory(null);
+                  setSelectedService(null);
+                }}
+                className="whitespace-nowrap"
+              >
+                Clear Filters
+              </Button>
+            )}
+          </div>
+          
+          {/* Show selected service info */}
+          {(selectedCategory || selectedService) && (
+            <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+              <p className="text-sm">
+                {selectedService 
+                  ? `Selected service: ${ServicesData?.services?.find((s: any) => s._id === selectedService)?.name}`
+                  : selectedCategory 
+                    ? `Selected category: ${CategoriesData?.categories?.find((c: any) => c._id === selectedCategory)?.name}`
+                    : "No selection"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                In a future update, this will filter salons that offer these services.
+              </p>
+            </div>
+          )}
+        </div>
+        
         {/* Key Features Section */}
         <div
           className={`transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}

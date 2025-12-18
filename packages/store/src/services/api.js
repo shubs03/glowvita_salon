@@ -155,7 +155,7 @@ export const glowvitaApi = createApi({
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart", "ClientCart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
-    "PublicVendorProducts", "WorkingHours", "ClientOrder", "Patient", "Appointment",
+    "PublicVendorProducts", "PublicServices", "PublicCategories", "WorkingHours", "ClientOrder", "Patient", "Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SupplierReports",
@@ -336,6 +336,41 @@ export const glowvitaApi = createApi({
     getPublicProducts: builder.query({
       query: () => ({ url: "/products", method: "GET" }),
       providesTags: ["PublicProducts"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Services Endpoint
+    getPublicServices: builder.query({
+      query: (params = {}) => {
+        const { categoryId, limit, page } = params;
+        const queryParams = new URLSearchParams();
+
+        if (categoryId) {
+          queryParams.append('categoryId', categoryId);
+        }
+
+        if (limit) {
+          queryParams.append('limit', limit.toString());
+        }
+
+        if (page) {
+          queryParams.append('page', page.toString());
+        }
+
+        const queryString = queryParams.toString();
+        return {
+          url: `/services${queryString ? `?${queryString}` : ''}`,
+          method: "GET"
+        };
+      },
+      providesTags: ["PublicServices"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Categories Endpoint
+    getPublicCategories: builder.query({
+      query: () => ({ url: "/categories", method: "GET" }),
+      providesTags: ["PublicCategories"],
       transformResponse: (response) => response,
     }),
 
@@ -2116,6 +2151,8 @@ export const {
   useGetMeQuery,
   useGetPublicVendorsQuery,
   useGetPublicProductsQuery,
+  useGetPublicServicesQuery,
+  useGetPublicCategoriesQuery,
   useGetPublicVendorProductsQuery,
   useGetPublicProductByIdQuery,
   useGetProductQuestionsQuery,
