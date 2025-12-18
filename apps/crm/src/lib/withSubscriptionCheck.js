@@ -1,6 +1,5 @@
-
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
+import connectDB from '@repo/lib/db';
 import Vendor from '@repo/lib/models/Vendor/Vendor.model';
 import Doctor from '@repo/lib/models/Vendor/Docters.model';
 import Supplier from '@repo/lib/models/Vendor/Supplier.model';

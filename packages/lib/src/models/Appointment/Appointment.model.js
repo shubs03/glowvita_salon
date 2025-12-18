@@ -154,7 +154,7 @@ const appointmentSchema = new mongoose.Schema({
     },
     amountRemaining: {
         type: Number,
-        default: function() {
+        default: function () {
             return this.finalAmount || this.totalAmount || 0;
         }
     },
@@ -346,6 +346,7 @@ const appointmentSchema = new mongoose.Schema({
     bufferAfter: {
         type: Number, // in minutes
         default: 0
+    },
     // Booking mode: 'online' for web bookings, 'offline' for CRM bookings
     mode: {
         type: String,
@@ -359,12 +360,12 @@ const appointmentSchema = new mongoose.Schema({
 
 // Optimized indexes for preventing double booking and improving query performance
 // Compound index for slot conflict detection (most critical queries)
-appointmentSchema.index({ 
-    vendorId: 1, 
-    staff: 1, 
-    date: 1, 
-    startTime: 1, 
-    endTime: 1 
+appointmentSchema.index({
+    vendorId: 1,
+    staff: 1,
+    date: 1,
+    startTime: 1,
+    endTime: 1
 }, { name: 'slot_conflict_detection' });
 
 // Index for status-based queries
@@ -386,15 +387,15 @@ appointmentSchema.index({ isWeddingService: 1, vendorId: 1 });
 appointmentSchema.index({ 'weddingPackageDetails.packageId': 1 });
 
 // Index for optimistic locking
-appointmentSchema.index({ lockToken: 1, lockExpiration: 1 }, { 
+appointmentSchema.index({ lockToken: 1, lockExpiration: 1 }, {
     name: 'optimistic_locking',
     sparse: true // Only index documents with lockToken
 });
 
 // Index for travel blocking windows (home service appointments)
-appointmentSchema.index({ 
-    'blockedTravelWindows.startTime': 1, 
-    'blockedTravelWindows.endTime': 1 
+appointmentSchema.index({
+    'blockedTravelWindows.startTime': 1,
+    'blockedTravelWindows.endTime': 1
 }, { sparse: true });
 
 // Ensure the model is only defined once

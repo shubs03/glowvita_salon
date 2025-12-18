@@ -7,11 +7,11 @@ const JWT_SECRET_SUPPLIER = process.env.JWT_SECRET_SUPPLIER;
 
 async function verifyJwt(token) {
   if (!token) return null;
-  
+
   try {
     const decoded = jose.decodeJwt(token);
     const role = decoded.role;
-    
+
     let secret;
     switch (role) {
       case 'vendor':
@@ -27,12 +27,12 @@ async function verifyJwt(token) {
       default:
         return null;
     }
-    
+
     if (!secret) {
       console.log("CRM JWT Verification Error in Middleware: No secret for role", role);
       return null;
     }
-    
+
     const secretKey = new TextEncoder().encode(secret);
     const { payload } = await jose.jwtVerify(token, secretKey);
     return payload;
@@ -46,7 +46,7 @@ async function verifyJwt(token) {
 export function authMiddlewareCrm(handler, allowedRoles = []) {
   return async (request, context) => {
     const token = request.cookies.get('crm_access_token')?.value;
-    
+
     if (!token) {
       return NextResponse.json(
         { success: false, message: 'Authentication required' },
@@ -55,7 +55,7 @@ export function authMiddlewareCrm(handler, allowedRoles = []) {
     }
 
     const payload = await verifyJwt(token);
-    
+
     if (!payload) {
       // Don't immediately clear the cookie as it may be a transient error
       // Just return an auth error response
@@ -75,8 +75,10 @@ export function authMiddlewareCrm(handler, allowedRoles = []) {
 
     // Attach user info to request
     request.user = payload;
-    
+
     // Call the original handler
     return await handler(request, context);
   };
 }
+
+export { withSubscriptionCheck } from './lib/withSubscriptionCheck';
