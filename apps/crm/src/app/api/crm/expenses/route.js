@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import ExpenseModel from '@repo/lib/models/Vendor/Expense.model';
 import _db from '@repo/lib/db';
-import { authMiddlewareCrm } from '@/middlewareCrm';
+import { withSubscriptionCheck } from '@/middlewareCrm';
 
 await _db();
 
 // GET all expenses for a vendor or doctor
-export const GET = authMiddlewareCrm(async (req) => {
+export const GET = withSubscriptionCheck(async (req) => {
     try {
         const ownerId = req.user.userId;
         
@@ -27,7 +27,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 }, ['vendor', 'doctor', 'supplier']);
 
 // POST a new expense
-export const POST = authMiddlewareCrm(async (req) => {
+export const POST = withSubscriptionCheck(async (req) => {
     try {
         const ownerId = req.user.userId.toString();
         const userType = req.user.role === 'doctor' ? 'Doctor' : req.user.role === 'supplier' ? 'Supplier' : 'Vendor';
@@ -71,7 +71,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 }, ['vendor', 'doctor', 'supplier']);
 
 // PUT (Update) an existing expense
-export const PUT = authMiddlewareCrm(async (req) => {
+export const PUT = withSubscriptionCheck(async (req) => {
     try {
         const ownerId = req.user.userId.toString();
         const body = await req.json();
@@ -122,7 +122,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 }, ['vendor', 'doctor', 'supplier']);
 
 // DELETE an expense (soft delete)
-export const DELETE = authMiddlewareCrm(async (req) => {
+export const DELETE = withSubscriptionCheck(async (req) => {
     try {
         const ownerId = req.user.userId.toString();
         const body = await req.json();

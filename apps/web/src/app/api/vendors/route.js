@@ -35,6 +35,7 @@ export const GET = async () => {
         profileImage: 1,
         description: 1,
         createdAt: 1,
+        subscription: 1, // Include subscription data for expiry check
       }
     )
       .lean()

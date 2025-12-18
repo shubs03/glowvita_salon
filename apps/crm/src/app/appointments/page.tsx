@@ -28,8 +28,20 @@ type Appointment = {
   id?: string;
   client: string;
   clientName: string;
+  clientPhone?: string;
   service: string;
   serviceName: string;
+  serviceItems?: Array<{
+    service: string;
+    serviceName: string;
+    staff: string;
+    staffName: string;
+    startTime: string;
+    endTime: string;
+    duration: number;
+    amount: number;
+    _id: string;
+  }>;
   staff: string;
   staffName: string;
   date: Date | string;
@@ -339,7 +351,7 @@ export default function AppointmentsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Client</TableHead>
-                        <TableHead>Service</TableHead>
+                        <TableHead>Services</TableHead>
                         <TableHead>Staff</TableHead>
                         <TableHead>Date & Time</TableHead>
                         <TableHead>Duration</TableHead>
@@ -385,9 +397,44 @@ export default function AppointmentsPage() {
                           
                           return (
                           <TableRow key={appointment._id}>
-                            <TableCell className="font-medium">{appointment.clientName}</TableCell>
-                            <TableCell>{appointment.serviceName}</TableCell>
-                            <TableCell>{appointment.staffName}</TableCell>
+                            <TableCell className="font-medium">
+                              {appointment.clientName}
+                              <div className="text-xs text-muted-foreground">
+                                {appointment.clientPhone || 'No phone'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {appointment.serviceItems?.length > 0 ? (
+                                <div className="space-y-1">
+                                  {appointment.serviceItems.map((item: any, idx: number) => (
+                                    <div key={idx} className="text-sm">
+                                      {item.serviceName}
+                                      {appointment.serviceItems.length > 1 && ` (${item.duration} min)`}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-sm">
+                                  {appointment.serviceName}
+                                  {appointment.duration && ` (${appointment.duration} min)`}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {appointment.serviceItems?.length > 0 ? (
+                                <div className="space-y-1">
+                                  {appointment.serviceItems.map((item: any, idx: number) => (
+                                    <div key={idx} className="text-sm">
+                                      {item.staffName}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-sm">
+                                  {appointment.staffName}
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <CalendarCheck className="h-4 w-4 text-gray-500" />

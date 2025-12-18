@@ -306,40 +306,96 @@ const vendorSchema = new mongoose.Schema({
 });
 
 // Add validation to ensure rejection reasons are provided when status is rejected
-vendorSchema.pre('validate', function(next) {
+vendorSchema.pre('validate', function (next) {
   const docs = this.documents;
-  
+
   if (docs) {
     // Check Aadhar Card
     if (docs.aadharCardStatus === 'rejected' && !docs.aadharCardRejectionReason) {
       return next(new Error('Rejection reason is required for rejected Aadhar Card'));
     }
-    
+
     // Check Udyog Aadhar
     if (docs.udyogAadharStatus === 'rejected' && !docs.udyogAadharRejectionReason) {
       return next(new Error('Rejection reason is required for rejected Udyog Aadhar'));
     }
-    
+
     // Check Udhayam Certificate
     if (docs.udhayamCertStatus === 'rejected' && !docs.udhayamCertRejectionReason) {
       return next(new Error('Rejection reason is required for rejected Udhayam Certificate'));
     }
-    
+
     // Check Shop License
     if (docs.shopLicenseStatus === 'rejected' && !docs.shopLicenseRejectionReason) {
       return next(new Error('Rejection reason is required for rejected Shop License'));
     }
-    
+
     // Check PAN Card
     if (docs.panCardStatus === 'rejected' && !docs.panCardRejectionReason) {
       return next(new Error('Rejection reason is required for rejected PAN Card'));
     }
   }
-  
+
   next();
 });
 
+// Pre-save middleware to auto-update subscription status based on endDate
+vendorSchema.pre('save', function (next) {
+  // Migrate old 'Active' status to 'Approved' for backward compatibility
+  if (this.status === 'Active') {
+    this.status = 'Approved';
+  }
+
+  if (this.subscription && this.subscription.endDate) {
+    const now = new Date();
+    const endDate = new Date(this.subscription.endDate);
+
+    // Auto-update status to Expired if endDate has passed
+    if (endDate <= now && this.subscription.status !== 'Expired') {
+      this.subscription.status = 'Expired';
+    }
+  }
+
+  this.updatedAt = new Date();
+  next();
+});
+
+// Instance method to get normalized subscription data
+vendorSchema.methods.getSubscriptionData = function () {
+  if (!this.subscription) {
+    return {
+      status: 'Expired',
+      isExpired: true,
+      endDate: null,
+      plan: null
+    };
+  }
+
+  const now = new Date();
+  const endDate = this.subscription.endDate ? new Date(this.subscription.endDate) : null;
+  const isExpired = !endDate || endDate <= now || this.subscription.status?.toLowerCase() === 'expired';
+
+  return {
+    status: isExpired ? 'Expired' : this.subscription.status,
+    isExpired,
+    endDate: this.subscription.endDate,
+    startDate: this.subscription.startDate,
+    plan: this.subscription.plan
+  };
+};
+
+// Static method for optimized subscription queries
+vendorSchema.statics.findByIdWithSubscription = function (id) {
+  return this.findById(id)
+    .select('subscription status email businessName')
+    .populate('subscription.plan', 'name duration price')
+    .lean();
+};
+
+// Indexes for performance
 vendorSchema.index({ status: 1 });
+vendorSchema.index({ 'subscription.status': 1, 'subscription.endDate': 1 });
+vendorSchema.index({ email: 1 });
 
 const VendorModel =
   mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);

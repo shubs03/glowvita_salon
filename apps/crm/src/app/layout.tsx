@@ -1,19 +1,142 @@
 
 "use client";
 
-import type { ReactNode } from 'react';
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import StoreProvider from '@repo/store/provider';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
+import { useGetProfileQuery } from '@repo/store/services/api';
 import './globals.css';
 import { MarketingLayout } from '@/components/MarketingLayout';
 import { CrmLayout } from '@/components/CrmLayout';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from 'sonner';
+import { Loader2 } from 'lucide-react';
+
+// Define types for the user and subscription data
+interface Subscription {
+  status?: string;
+  endDate?: string;
+  [key: string]: any;
+}
+
+interface User {
+  subscription?: Subscription;
+  [key: string]: any;
+}
+
+interface ProfileData {
+  user?: User;
+  [key: string]: any;
+}
+
+function SubscriptionCheck({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { isCrmAuthenticated, isAuthLoading } = useCrmAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [showExpired, setShowExpired] = useState(false);
+  const [initialCheckComplete, setInitialCheckComplete] = useState(false);
+  
+  const { 
+    data: profileData, 
+    isSuccess, 
+    refetch 
+  } = useGetProfileQuery(undefined, {
+    skip: !isCrmAuthenticated,
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+    pollingInterval: 30000,
+  }) as { 
+    data: ProfileData | undefined; 
+    isSuccess: boolean; 
+    refetch: () => Promise<any>;
+  };
+
+  // Handle initial load and authentication state
+  useEffect(() => {
+    if (!isAuthLoading) {
+      if (!isCrmAuthenticated) {
+        // If not authenticated, no need to check subscription
+        setIsLoading(false);
+        setInitialCheckComplete(true);
+        return;
+      }
+      
+      // If authenticated, fetch profile
+      const checkSubscription = async () => {
+        try {
+          await refetch();
+        } finally {
+          setInitialCheckComplete(true);
+          setIsLoading(false);
+        }
+      };
+      
+      checkSubscription();
+    }
+  }, [isAuthLoading, isCrmAuthenticated, refetch]);
+
+  // Check subscription status when profile data is loaded
+  useEffect(() => {
+    if (isSuccess && profileData?.user && isCrmAuthenticated) {
+      try {
+        const subscription = profileData.user.subscription;
+        const endDate = subscription?.endDate ? new Date(subscription.endDate) : null;
+        const isExpired = !subscription || 
+                         (subscription.status?.toLowerCase() === 'expired') || 
+                         (endDate && endDate.getTime() <= Date.now());
+        
+        setShowExpired(isExpired);
+        
+        // If expired, redirect to subscription expired page
+        if (isExpired && typeof window !== 'undefined' && !window.location.pathname.startsWith('/subscription-expired')) {
+          router.push('/subscription-expired');
+        }
+      } catch (err) {
+        console.error('Error checking subscription status:', err);
+        // Continue with the app if there's an error checking subscription
+        setShowExpired(false);
+      }
+    }
+  }, [isSuccess, profileData, isCrmAuthenticated, router]);
+
+  // Light polling safety net in case the server updates mid-session
+  useEffect(() => {
+    if (!isCrmAuthenticated) return;
+    const id = setInterval(() => {
+      refetch();
+    }, 30000);
+    return () => clearInterval(id);
+  }, [isCrmAuthenticated, refetch]);
+
+  // Show loading state only for the initial check
+  if (isLoading && !initialCheckComplete) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+        <p className="text-muted-foreground">Loading your account...</p>
+      </div>
+    );
+  }
+
+  // If we're on the subscription expired page, don't redirect
+  if (typeof window !== 'undefined' && window.location.pathname === '/subscription-expired') {
+    return <>{children}</>;
+  }
+
+  // If subscription is expired and we're not already on the expired page, redirect
+  if (showExpired) {
+    return null; // The useEffect will handle the redirect
+  }
+
+  return <>{children}</>;
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isPanelPage = [
@@ -48,28 +171,31 @@ export default function RootLayout({
     '/timetable',
     '/consultations',
     '/patients',
-    '/calendar',
-    '/appointments/[id]',
-    '/appointments'
+    '/crm'
   ].some(path => pathname.startsWith(path));
   
-  const showMarketingLayout = ['/', '/apps', '/pricing', '/support'].includes(pathname);
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/auth/register') || pathname.startsWith('/forgot-password') || pathname.startsWith('/reset-password');
+  const isAuthPage = pathname.startsWith('/login') || 
+                   pathname.startsWith('/auth/register') || 
+                   pathname.startsWith('/forgot-password') || 
+                   pathname.startsWith('/reset-password');
   const isNotFoundPage = pathname === '/not-found';
 
-  let layoutContent: ReactNode;
+  let layoutContent: React.ReactNode;
 
   if (isAuthPage || isNotFoundPage) {
     // Auth and Not Found pages have no layout
     layoutContent = children;
   } else if (isPanelPage) {
-    // CRM panel pages get the CrmLayout
-    layoutContent = <CrmLayout>{children}</CrmLayout>;
+    // CRM panel pages get the CrmLayout with SubscriptionCheck
+    layoutContent = (
+      <SubscriptionCheck>
+        <CrmLayout>{children}</CrmLayout>
+      </SubscriptionCheck>
+    );
   } else {
     // All other pages get the MarketingLayout
     layoutContent = <MarketingLayout>{children}</MarketingLayout>;
   }
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -80,7 +206,6 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-foreground">
         <StoreProvider>
-          <Toaster richColors />
           <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -88,6 +213,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {layoutContent}
+            <Toaster position="top-center" />
           </ThemeProvider>
         </StoreProvider>
       </body>

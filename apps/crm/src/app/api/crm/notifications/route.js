@@ -3,12 +3,12 @@
 
 import _db from "../../../../../../../packages/lib/src/db.js";
 import VendorNotificationsModel from '@repo/lib/models/Vendor/VendorNotification.model';
-import { authMiddlewareCrm } from "../../../../middlewareCrm";
+import { withSubscriptionCheck } from "../../../../middlewareCrm";
 
 await _db();
 
 // Create or update a VendorNotifications document, adding notifications to the array
-export const POST = authMiddlewareCrm(async (req) => {
+export const POST = withSubscriptionCheck(async (req) => {
   const vendor = req.user;
   const body = await req.json();
   const { title, channels, content, targetType, targets } = body;
@@ -68,7 +68,7 @@ const targetDisplayMap = {
 };
 
 // GET: Retrieve VendorNotifications by vendor ID or paginated notifications
-export const GET = authMiddlewareCrm(async (req) => {
+export const GET = withSubscriptionCheck(async (req) => {
   const vendorId = req.user.userId.toString();
 
   if (!vendorId) {
@@ -124,7 +124,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 }, ["vendor", "doctor", "supplier"]);
 
 // DELETE: Remove specific notifications from the VendorNotifications document
-export const DELETE = authMiddlewareCrm(async (req) => {
+export const DELETE = withSubscriptionCheck(async (req) => {
   const vendor = req.user.userId.toString();
 
   const body = await req.json();

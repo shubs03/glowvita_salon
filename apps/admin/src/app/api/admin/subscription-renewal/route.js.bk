@@ -1,0 +1,132 @@
+import { NextResponse } from "next/server";
+import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js"; // Adjust based on file depth
+import _db from "@repo/lib/db";
+import Vendor from "@repo/lib/models/Vendor.model";
+import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
+
+// Ensure DB connection
+await _db();
+
+export const POST = authMiddlewareAdmin(async (req) => {
+    console.log("🚀 HIT RENEWAL ENDPOINT"); // Debug log
+    try {
+        const body = await req.json();
+        console.log("📝 Renewal Payload:", body);
+
+        const { vendorId, planId } = body;
+
+        if (!vendorId || !planId) {
+            return NextResponse.json(
+                { message: "Vendor ID and Plan ID are required" },
+                { status: 400 }
+            );
+        }
+
+        // 1. Fetch the Plan
+        const plan = await SubscriptionPlan.findById(planId);
+        if (!plan) {
+            return NextResponse.json(
+                { message: "Subscription Plan not found" },
+                { status: 404 }
+            );
+        }
+
+        // 2. Fetch the Vendor
+        const vendor = await Vendor.findById(vendorId);
+        if (!vendor) {
+            return NextResponse.json(
+                { message: "Vendor not found" },
+                { status: 404 }
+            );
+        }
+
+        // 3. Calculate Dates
+        const now = new Date();
+        const startDate = new Date(now);
+        const endDate = new Date(now);
+
+        // Add duration (in days) to start date to get end date
+        // Assuming plan.duration is in days (or 'Monthly'/'Yearly' string?)
+        // Let's check plan schema or assume days for now, or handle common strings
+        let durationDays = 30;
+        if (typeof plan.duration === 'number') {
+            durationDays = plan.duration;
+        } else if (typeof plan.duration === 'string') {
+            const lower = plan.duration.toLowerCase();
+            if (lower.includes('year')) durationDays = 365;
+            else if (lower.includes('month')) durationDays = 30;
+            else if (lower.includes('week')) durationDays = 7;
+            else {
+                // try parsing number
+                const parsed = parseInt(plan.duration);
+                if (!isNaN(parsed)) durationDays = parsed;
+            }
+        }
+
+        endDate.setDate(endDate.getDate() + durationDays);
+
+        // 4. Archive Current Subscription if exists
+        // 4. Archive Current Subscription if exists
+        if (vendor.subscription && vendor.subscription.plan) {
+            // Check if already active and valid (Prevent accidental overwrite)
+            if (vendor.subscription.status === 'Active' && new Date(vendor.subscription.endDate) > new Date()) {
+                return NextResponse.json(
+                    { message: "Subscription is already active" },
+                    { status: 400 }
+                );
+            }
+
+            // Ensure history array exists
+            if (!Array.isArray(vendor.subscription.history)) {
+                vendor.subscription.history = [];
+            }
+
+            // Create history entry
+            const historyEntry = {
+                plan: vendor.subscription.plan,
+                status: vendor.subscription.status || 'Expired',
+                startDate: vendor.subscription.startDate,
+                endDate: vendor.subscription.endDate,
+                archivedAt: new Date()
+            };
+
+            vendor.subscription.history.push(historyEntry);
+        } else {
+            // Initialize if missing
+            if (!vendor.subscription) vendor.subscription = {};
+            if (!vendor.subscription.history) vendor.subscription.history = [];
+        }
+
+        // 5. Update Subscription Fields Individually
+        vendor.subscription.plan = plan._id;
+        vendor.subscription.status = 'Active';
+        vendor.subscription.startDate = startDate;
+        vendor.subscription.endDate = endDate;
+        // History is already updated
+
+        // Save vendor
+        await vendor.save();
+
+        // Populate the plan for the frontend
+        await vendor.populate('subscription.plan');
+
+        return NextResponse.json(
+            {
+                success: true,
+                message: "Subscription renewed successfully",
+                vendor: {
+                    _id: vendor._id,
+                    subscription: vendor.subscription
+                }
+            },
+            { status: 200 }
+        );
+
+    } catch (error) {
+        console.error("Error renewing subscription:", error);
+        return NextResponse.json(
+            { message: "Internal server error", error: error.message },
+            { status: 500 }
+        );
+    }
+}, ["superadmin", "admin"]);

@@ -1,6 +1,5 @@
-
 import { NextResponse } from "next/server";
-import { authMiddlewareCrm } from "../../../../middlewareCrm.js";
+import { authMiddlewareCrm } from "../../../../../middlewareCrm.js";
 import _db from "@repo/lib/db";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
@@ -21,14 +20,14 @@ const getUserModel = (userType) => {
   }
 };
 
-// Change subscription plan
+// Renew subscription plan
 export const POST = authMiddlewareCrm(async (req) => {
   try {
     await _db();
-    const { planId, userType } = await req.json();
+    const { planId, userType, amount } = await req.json();
     const userId = req.user.userId || req.user._id;
 
-    console.log('Change Plan Request:', { planId, userType, userId });
+    console.log('Renew request:', { planId, userType, userId });
 
     if (!planId) {
       return NextResponse.json({
@@ -37,7 +36,6 @@ export const POST = authMiddlewareCrm(async (req) => {
       }, { status: 400 });
     }
 
-    // Get the new plan details
     const newPlan = await SubscriptionPlanModel.findById(planId);
     if (!newPlan || !newPlan.isAvailableForPurchase || newPlan.status !== 'Active') {
       return NextResponse.json({
@@ -46,7 +44,6 @@ export const POST = authMiddlewareCrm(async (req) => {
       }, { status: 400 });
     }
 
-    // Get user's current subscription
     const UserModel = getUserModel(userType);
     const user = await UserModel.findById(userId);
     if (!user) {
@@ -56,9 +53,9 @@ export const POST = authMiddlewareCrm(async (req) => {
       }, { status: 404 });
     }
 
-    // Calculate new subscription dates
+    // Compute new subscription period (renew from now)
     const startDate = new Date();
-    const endDate = new Date();
+    const endDate = new Date(startDate);
 
     switch (newPlan.durationType) {
       case 'days':
@@ -73,24 +70,25 @@ export const POST = authMiddlewareCrm(async (req) => {
       case 'years':
         endDate.setFullYear(endDate.getFullYear() + newPlan.duration);
         break;
+      default:
+        break;
     }
 
-    // Add current plan to history if exists
+    // Push current subscription to history if exists
     if (user.subscription && user.subscription.plan) {
       const currentPlan = {
         plan: user.subscription.plan,
         startDate: user.subscription.startDate,
         endDate: user.subscription.endDate,
-        status: user.subscription.status
+        status: user.subscription.status === 'Active' && user.subscription.endDate < new Date() ? 'Expired' : user.subscription.status
       };
 
-      if (!user.subscription.history) {
+      if (!Array.isArray(user.subscription.history)) {
         user.subscription.history = [];
       }
       user.subscription.history.push(currentPlan);
     }
 
-    // Update subscription
     user.subscription = {
       plan: newPlan._id,
       status: 'Active',
@@ -103,15 +101,15 @@ export const POST = authMiddlewareCrm(async (req) => {
 
     return NextResponse.json({
       success: true,
-      message: "Subscription plan changed successfully",
+      message: "Subscription renewed successfully",
       data: user.subscription
     }, { status: 200 });
 
   } catch (error) {
-    console.error('Error changing subscription plan:', error);
+    console.error('Error renewing subscription plan:', error);
     return NextResponse.json({
       success: false,
-      message: "Failed to change subscription plan",
+      message: "Failed to renew subscription plan",
       error: error.message
     }, { status: 500 });
   }

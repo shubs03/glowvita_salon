@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@repo/ui/button";
@@ -709,7 +709,7 @@ export function AppointmentDetailView({
       }
 
       // Success toast
-      let successMessage = `Payment of ₹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`;
+      let successMessage = `Payment of â‚¹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`;
       if (updatedAppointmentData?.status && appointment.status !== updatedAppointmentData.status) {
         successMessage += ` and appointment marked as ${updatedAppointmentData.status}`;
       }
@@ -829,7 +829,7 @@ export function AppointmentDetailView({
                 <div>
                   <DialogTitle className="text-xl font-semibold text-foreground">Appointment Details</DialogTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {appointment.clientName} • {format(new Date(appointment.date), 'MMM d, yyyy')} • {appointment.startTime}
+                    {appointment.clientName} â€¢ {format(new Date(appointment.date), 'MMM d, yyyy')} â€¢ {appointment.startTime}
                   </p>
                 </div>
               </div>
@@ -892,7 +892,30 @@ export function AppointmentDetailView({
                   <CalendarPlus className="w-4 h-4 mr-2" />
                   Reschedule
                 </Button>
-                <div className="w-full sm:w-[200px] hidden">
+                {/* <div className="w-full sm:w-[200px]">
+                  <Select 
+                    value={appointment.status || "scheduled"}
+                    onValueChange={handleStatusChange}
+                    disabled={isStatusChanging}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        { value: 'scheduled', label: 'Mark as Scheduled' },
+                        { value: 'confirmed', label: 'Mark as Confirmed' },
+                        { value: 'completed', label: 'Mark as Completed' },
+                        { value: 'cancelled', label: 'Mark as Cancelled' },
+                      ].map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div> */}
+                <div className="w-full sm:w-[200px]">
                   <Select 
                     value={appointment.status || "scheduled"}
                     onValueChange={handleStatusChange}
@@ -928,9 +951,9 @@ export function AppointmentDetailView({
                   </h3>
                   {appointment.payment?.bookingSource && (
                     <Badge variant="outline" className="text-xs font-medium">
-                      {appointment.payment.bookingSource === 'web' ? '🌐 Online Booking' : 
-                       appointment.payment.bookingSource === 'phone' ? '📞 Phone Booking' : 
-                       '🚶 Walk-in'}
+                      {appointment.payment.bookingSource === 'web' ? 'ðŸŒ Online Booking' : 
+                       appointment.payment.bookingSource === 'phone' ? 'ðŸ“ž Phone Booking' : 
+                       'ðŸš¶ Walk-in'}
                     </Badge>
                   )}
                 </div>
@@ -967,14 +990,14 @@ export function AppointmentDetailView({
                       {/* Service Amount */}
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Service Amount</span>
-                        <span className="font-medium">₹{appointment.amount?.toFixed(2) || '0.00'}</span>
+                        <span className="font-medium">â‚¹{appointment.amount?.toFixed(2) || '0.00'}</span>
                       </div>
 
                       {/* Discount Amount (from appointment root) */}
                       {(appointment as any).discountAmount > 0 && (
                         <div className="flex justify-between items-center text-foreground">
                           <span>Discount Applied</span>
-                          <span className="font-medium">-₹{((appointment as any).discountAmount)?.toFixed(2) || '0.00'}</span>
+                          <span className="font-medium">-â‚¹{((appointment as any).discountAmount)?.toFixed(2) || '0.00'}</span>
                         </div>
                       )}
 
@@ -987,7 +1010,7 @@ export function AppointmentDetailView({
                             </svg>
                             <span>Offer ({appointment.payment.offer.code})</span>
                           </div>
-                          <span className="font-medium">-₹{appointment.payment.offer.discountAmount?.toFixed(2) || '0.00'}</span>
+                          <span className="font-medium">-â‚¹{appointment.payment.offer.discountAmount?.toFixed(2) || '0.00'}</span>
                         </div>
                       )}
 
@@ -995,7 +1018,7 @@ export function AppointmentDetailView({
                       {appointment.discount > 0 && (
                         <div className="flex justify-between items-center text-foreground">
                           <span>Discount</span>
-                          <span className="font-medium">-₹{appointment.discount.toFixed(2)}</span>
+                          <span className="font-medium">-â‚¹{appointment.discount.toFixed(2)}</span>
                         </div>
                       )}
 
@@ -1003,7 +1026,7 @@ export function AppointmentDetailView({
                       {(appointment as any).serviceTax && (appointment as any).serviceTax > 0 && (
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Service Tax (GST)</span>
-                          <span className="font-medium">₹{((appointment as any).serviceTax)?.toFixed(2) || '0.00'}</span>
+                          <span className="font-medium">â‚¹{((appointment as any).serviceTax)?.toFixed(2) || '0.00'}</span>
                         </div>
                       )}
 
@@ -1011,7 +1034,7 @@ export function AppointmentDetailView({
                       {!((appointment as any).serviceTax) && appointment.payment?.serviceTax && appointment.payment.serviceTax > 0 && (
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Service Tax (GST)</span>
-                          <span className="font-medium">₹{appointment.payment.serviceTax.toFixed(2)}</span>
+                          <span className="font-medium">â‚¹{appointment.payment.serviceTax.toFixed(2)}</span>
                         </div>
                       )}
 
@@ -1019,7 +1042,7 @@ export function AppointmentDetailView({
                       {(appointment as any).platformFee && (appointment as any).platformFee > 0 && (
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Platform Fee</span>
-                          <span className="font-medium">₹{((appointment as any).platformFee)?.toFixed(2) || '0.00'}</span>
+                          <span className="font-medium">â‚¹{((appointment as any).platformFee)?.toFixed(2) || '0.00'}</span>
                         </div>
                       )}
 
@@ -1027,14 +1050,14 @@ export function AppointmentDetailView({
                       {!((appointment as any).platformFee) && appointment.payment?.platformFee && appointment.payment.platformFee > 0 && (
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Platform Fee</span>
-                          <span className="font-medium">₹{appointment.payment.platformFee.toFixed(2)}</span>
+                          <span className="font-medium">â‚¹{appointment.payment.platformFee.toFixed(2)}</span>
                         </div>
                       )}
 
                       <div className="border-t pt-2 mt-2">
                         <div className="flex justify-between items-center font-semibold text-base">
                           <span>Total Amount</span>
-                          <span className="text-foreground">₹{((appointment as any).finalAmount || appointment.totalAmount)?.toFixed(2) || '0.00'}</span>
+                          <span className="text-foreground">â‚¹{((appointment as any).finalAmount || appointment.totalAmount)?.toFixed(2) || '0.00'}</span>
                         </div>
                       </div>
 
@@ -1064,7 +1087,7 @@ export function AppointmentDetailView({
                       <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
                         <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid:</span>
                         <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                          ₹{paidAmount.toFixed(2)}
+                          â‚¹{paidAmount.toFixed(2)}
                         </span>
                       </div>
 
@@ -1072,7 +1095,7 @@ export function AppointmentDetailView({
                       <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
                         <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining:</span>
                         <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-                          ₹{remainingAmount.toFixed(2)}
+                          â‚¹{remainingAmount.toFixed(2)}
                         </span>
                       </div>
 
@@ -1085,7 +1108,7 @@ export function AppointmentDetailView({
                             </svg>
                             <span>Amount Paid {appointment.payment?.paymentMode === 'online' ? '(Online)' : ''}</span>
                           </div>
-                          <span className="font-medium">₹{(appointment.payment?.paid ?? 0).toFixed(2)}</span>
+                          <span className="font-medium">â‚¹{(appointment.payment?.paid ?? 0).toFixed(2)}</span>
                         </div>
                       )}
 
@@ -1094,7 +1117,7 @@ export function AppointmentDetailView({
                         <div className="flex justify-between items-center">
                           <span className="font-semibold text-base">Amount to Collect</span>
                           <span className="text-xl font-bold text-foreground">
-                            ₹{remainingAmount.toFixed(2)}
+                            â‚¹{remainingAmount.toFixed(2)}
                           </span>
                         </div>
                       </div>
@@ -1111,21 +1134,21 @@ export function AppointmentDetailView({
                       <div className="flex justify-between items-center py-2 px-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
                         <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Total Amount</span>
                         <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                          ₹{((appointment as any).finalAmount || appointment.totalAmount || 0).toFixed(2)}
+                          â‚¹{((appointment as any).finalAmount || appointment.totalAmount || 0).toFixed(2)}
                         </span>
                       </div>
                       
                       <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
                         <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid</span>
                         <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                          ₹{paidAmount.toFixed(2)}
+                          â‚¹{paidAmount.toFixed(2)}
                         </span>
                       </div>
                       
                       <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
                         <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining</span>
                         <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-                          ₹{remainingAmount.toFixed(2)}
+                          â‚¹{remainingAmount.toFixed(2)}
                         </span>
                       </div>
                       
@@ -1147,7 +1170,7 @@ export function AppointmentDetailView({
                               case 'completed': return 'PAID';
                               case 'pending': 
                                 if (amountPaid > 0 && totalAmount > 0) {
-                                  return `PARTIAL (₹${amountPaid.toFixed(2)})`;
+                                  return `PARTIAL (â‚¹${amountPaid.toFixed(2)})`;
                                 }
                                 return 'UNPAID';
                               default: return status.toUpperCase();
@@ -1164,7 +1187,7 @@ export function AppointmentDetailView({
                       <div>
                         <label className="text-sm font-medium mb-2 block">Collecting Amount (Manual Entry)</label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground font-medium">₹</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground font-medium">â‚¹</span>
                           <Input 
                             type="number" 
                             value={paymentData.amount}
@@ -1184,7 +1207,7 @@ export function AppointmentDetailView({
                         </div>
                         <div className="flex justify-between items-center mt-1.5">
                           <p className="text-xs text-foreground/80">
-                            Remaining Balance: ₹{remainingAmount.toFixed(2)}
+                            Remaining Balance: â‚¹{remainingAmount.toFixed(2)}
                           </p>
                           {paymentData.amount !== remainingAmount && remainingAmount > 0 && (
                             <button
@@ -1200,7 +1223,7 @@ export function AppointmentDetailView({
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
-                            Amount exceeds remaining balance by ₹{(paymentData.amount - remainingAmount).toFixed(2)}
+                            Amount exceeds remaining balance by â‚¹{(paymentData.amount - remainingAmount).toFixed(2)}
                           </p>
                         )}
                       </div>
@@ -1283,7 +1306,7 @@ export function AppointmentDetailView({
                                 </div>
                               </div>
                             </div>
-                            <p className="text-sm font-medium text-center">Scan QR code to pay ₹{paymentData.amount.toFixed(2)}</p>
+                            <p className="text-sm font-medium text-center">Scan QR code to pay â‚¹{paymentData.amount.toFixed(2)}</p>
                             <p className="text-xs text-foreground/80 mt-1">Or enter UPI ID manually</p>
                           </div>
                         </div>
@@ -1331,7 +1354,7 @@ export function AppointmentDetailView({
                               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
-                              Confirm Payment ₹{paymentData.amount.toFixed(2)}
+                              Confirm Payment â‚¹{paymentData.amount.toFixed(2)}
                             </>
                           )}
                         </Button>
@@ -1350,7 +1373,7 @@ export function AppointmentDetailView({
                         </div>
                         <div>
                           <p className="font-semibold text-foreground">Payment Complete</p>
-                          <p className="text-sm text-foreground/80">Full payment of ₹{appointment.totalAmount?.toFixed(2)} has been received.</p>
+                          <p className="text-sm text-foreground/80">Full payment of â‚¹{appointment.totalAmount?.toFixed(2)} has been received.</p>
                         </div>
                       </div>
                     </div>
@@ -1381,8 +1404,8 @@ export function AppointmentDetailView({
                       <div key={idx} className="flex items-start justify-between p-3 rounded-lg border bg-card/50">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-foreground">₹{Number(p.amount || 0).toFixed(2)}</span>
-                            <span className="text-xs text-muted-foreground">• {String(p.paymentMethod || 'cash').toUpperCase()}</span>
+                            <span className="text-sm font-semibold text-foreground">â‚¹{Number(p.amount || 0).toFixed(2)}</span>
+                            <span className="text-xs text-muted-foreground">â€¢ {String(p.paymentMethod || 'cash').toUpperCase()}</span>
                           </div>
                           <div className="text-xs text-muted-foreground mt-0.5">{dateStr}</div>
                           {(p.notes || p.transactionId) && (
@@ -1399,6 +1422,28 @@ export function AppointmentDetailView({
               )}
             </div>
 
+                        <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Cancel Appointment</DialogTitle>
+                  <DialogDescription>Provide a reason to cancel this appointment.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3">
+                  <Label htmlFor="cancelReason">Reason</Label>
+                  <Textarea
+                    id="cancelReason"
+                    value={cancellationReason}
+                    onChange={(e) => setCancellationReason(e.target.value)}
+                    placeholder="Enter cancellation reason"
+                    rows={3}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowCancelDialog(false)} disabled={isStatusChanging}>Close</Button>
+                  <Button variant="destructive" onClick={handleConfirmCancel} disabled={isStatusChanging || !cancellationReason.trim()}>Confirm Cancel</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             {/* Client & Service Info */}
             <div className="bg-gradient-to-br from-background/50 to-muted/20 p-3 sm:p-4 rounded-lg border">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1452,11 +1497,11 @@ export function AppointmentDetailView({
                               <div className="flex-1">
                                 <div className="font-medium text-sm">{item.serviceName}</div>
                                 <div className="text-xs text-muted-foreground">
-                                  {item.staffName} • {item.startTime} - {item.endTime} ({item.duration} min)
+                                  {item.staffName} â€¢ {item.startTime} - {item.endTime} ({item.duration} min)
                                 </div>
                               </div>
                               <div className="text-right ml-2">
-                                <div className="font-semibold text-sm">₹{item.amount?.toFixed(2) || '0.00'}</div>
+                                <div className="font-semibold text-sm">â‚¹{item.amount?.toFixed(2) || '0.00'}</div>
                               </div>
                             </div>
                           ))}
@@ -1574,28 +1619,28 @@ export function AppointmentDetailView({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Service Amount:</span>
-                  <span>₹{Number(((liveAppointment as any)?.amount ?? appointment.amount) || 0).toFixed(2)}</span>
+                  <span>â‚¹{Number(((liveAppointment as any)?.amount ?? appointment.amount) || 0).toFixed(2)}</span>
                 </div>
                 
                 {appointment.discount && appointment.discount > 0 && (
                   <div className="flex justify-between text-green-600 dark:text-green-400">
                     <span>Discount:</span>
-                    <span>-₹{appointment.discount.toFixed(2)}</span>
+                    <span>-â‚¹{appointment.discount.toFixed(2)}</span>
                   </div>
                 )}
                 
                 <div className="flex justify-between font-medium pt-2 border-t mt-2">
                   <span>Total Amount:</span>
-                  <span>₹{Number(totalAmount || (liveAppointment as any)?.totalAmount || appointment.totalAmount || 0).toFixed(2)}</span>
+                  <span>â‚¹{Number(totalAmount || (liveAppointment as any)?.totalAmount || appointment.totalAmount || 0).toFixed(2)}</span>
                 </div>
                 
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount Paid:</span>
-                  <span>₹{paidAmount.toFixed(2)}</span>
+                  <span>â‚¹{paidAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount Remaining:</span>
-                  <span>₹{remainingAmount.toFixed(2)}</span>
+                  <span>â‚¹{remainingAmount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm mt-2">
                   <span className="text-muted-foreground">Payment Status:</span>
@@ -1603,8 +1648,8 @@ export function AppointmentDetailView({
                     {(() => {
                       const status = (overridePayment?.paymentStatus ?? (liveAppointment as any)?.paymentStatus ?? 'pending') as string;
                       if (status === 'completed') return 'paid';
-                      if (status === 'pending') return paidAmount > 0 ? `partial (₹${paidAmount.toFixed(2)})` : 'unpaid';
-                      if (status === 'partial') return `partial (₹${paidAmount.toFixed(2)})`;
+                      if (status === 'pending') return paidAmount > 0 ? `partial (â‚¹${paidAmount.toFixed(2)})` : 'unpaid';
+                      if (status === 'partial') return `partial (â‚¹${paidAmount.toFixed(2)})`;
                       return status;
                     })()}
                   </span>
@@ -1726,7 +1771,7 @@ export function AppointmentDetailView({
                               {appt.service}
                             </h4>
                             <p className="text-sm text-muted-foreground">
-                              {format(appt.date, 'MMM d, yyyy')} • {appt.startTime}
+                              {format(appt.date, 'MMM d, yyyy')} â€¢ {appt.startTime}
                             </p>
                           </div>
                           <Badge variant={appt.status === 'completed' ? 'default' : 'secondary'}>

@@ -1,7 +1,7 @@
 
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
-import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { clearCrmAuth, handleSubscriptionExpired } from "@repo/store/slices/crmAuthSlice";
 import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from "@repo/config/config";
 
 // Function to get base URLs with intelligent fallbacks for production
@@ -87,7 +87,15 @@ const baseQuery = async (args, api, extraOptions) => {
   }
 
   const baseUrl = API_BASE_URLS[targetService];
-  const fullUrl = `${baseUrl}${requestUrl}`;
+
+  // Cache-busting for all GET requests on the client-side to avoid hydration errors
+  let fullUrl = `${baseUrl}${requestUrl}`;
+  const method = (typeof args === 'object' && args.method) ? args.method.toUpperCase() : 'GET';
+
+  if (method === 'GET' && typeof window !== 'undefined') {
+    const separator = fullUrl.includes('?') ? '&' : '?';
+    fullUrl += `${separator}_t=${new Date().getTime()}`;
+  }
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
@@ -107,6 +115,14 @@ const baseQuery = async (args, api, extraOptions) => {
       api,
       extraOptions
     );
+
+    // Handle 401 Unauthorized
+    // Handle 403 Forbidden (Subscription Expired)
+    if (result.error?.status === 403) {
+      api.dispatch(handleSubscriptionExpired());
+      // Force a refetch of the profile to ensure the UI updates with the latest user data
+      api.dispatch(glowvitaApi.endpoints.getProfile.initiate(undefined, { forceRefetch: true }));
+    }
 
     // Handle 401 Unauthorized
     if (result.error?.status === 401) {
@@ -139,12 +155,24 @@ export const glowvitaApi = createApi({
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart", "ClientCart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
-    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
+    "PublicVendorProducts", "WorkingHours", "ClientOrder", "Patient", "Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
-    "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder","DoctorReviews",
+    "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
   ],
 
   endpoints: (builder) => ({
+    getProfile: builder.query({
+      query: () => `/crm/auth/profile`,
+      providesTags: ['User'],
+    }),
+
+    refreshToken: builder.mutation({
+      query: () => ({
+        url: `/crm/auth/refresh`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['User'],
+    }),
 
     // SMS Templates Endpoints
     getSmsTemplates: builder.query({
@@ -311,10 +339,10 @@ export const glowvitaApi = createApi({
 
     // Product Questions - Submit a new question (Web)
     submitProductQuestion: builder.mutation({
-      query: ({ productId, question }) => ({ 
-        url: `/products/questions/${productId}`, 
-        method: "POST", 
-        body: { productId, question } 
+      query: ({ productId, question }) => ({
+        url: `/products/questions/${productId}`,
+        method: "POST",
+        body: { productId, question }
       }),
       invalidatesTags: (result, error, { productId }) => [{ type: "ProductQuestions", id: productId }],
     }),
@@ -328,10 +356,10 @@ export const glowvitaApi = createApi({
 
     // Product Reviews - Submit a new review (Web)
     submitProductReview: builder.mutation({
-      query: ({ productId, rating, comment }) => ({ 
-        url: `/products/reviews/${productId}`, 
-        method: "POST", 
-        body: { productId, rating, comment } 
+      query: ({ productId, rating, comment }) => ({
+        url: `/products/reviews/${productId}`,
+        method: "POST",
+        body: { productId, rating, comment }
       }),
       invalidatesTags: (result, error, { productId }) => [{ type: "ProductReviews", id: productId }],
     }),
@@ -691,7 +719,7 @@ export const glowvitaApi = createApi({
         "Vendor",
       ],
     }),
-    
+
     // Add new endpoint for updating vendor document status
     updateVendorDocumentStatus: builder.mutation({
       query: ({ vendorId, documentType, status, rejectionReason }) => ({
@@ -765,13 +793,18 @@ export const glowvitaApi = createApi({
       providesTags: ["SubscriptionPlan"],
     }),
 
+    getCrmSubscriptionPlans: builder.query({
+      query: () => ({ url: "/crm/subscription/plans", method: "GET" }),
+      providesTags: ["SubscriptionPlan"],
+    }),
+
     createSubscriptionPlan: builder.mutation({
       query: (plan) => ({
         url: "/admin/subscription-plans",
         method: "POST",
         body: plan,
       }),
-      invalidatesTags: ["SubscriptionPlan"],
+      invalidatesTags: ["SubscriptionPlan", "Vendor"],
     }),
 
     updateSubscriptionPlan: builder.mutation({
@@ -791,7 +824,16 @@ export const glowvitaApi = createApi({
         url: `/admin/subscription-plans?id=${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["SubscriptionPlan"],
+      invalidatesTags: ["SubscriptionPlan", "Vendor"],
+    }),
+
+    renewPlan: builder.mutation({
+      query: (data) => ({
+        url: "/admin/subscription-renewal",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Vendor"],
     }),
 
     // Supplier Endpoints
@@ -1028,7 +1070,6 @@ export const glowvitaApi = createApi({
         params.append('limit', limit.toString());
         return { url: `/admin/users?${params.toString()}`, method: "GET" };
       },
-      providesTags: ["User"],
       transformResponse: (response) => (response && response.success ? response.data || [] : []),
     }),
 
@@ -1054,7 +1095,7 @@ export const glowvitaApi = createApi({
 
     // Product Approval
     // Removed old combined product approval endpoints - using separate vendor/supplier endpoints now
-    
+
     // Vendor Product Approval (separate from general product approval)
     getVendorProductApprovals: builder.query({
       query: () => ({ url: "/admin/product-approval/vendor", method: "GET" }),
@@ -1065,7 +1106,7 @@ export const glowvitaApi = createApi({
       query: () => ({ url: "/admin/product-approval/supplier", method: "GET" }),
       providesTags: ["Product"],
     }),
-    
+
     // Update Vendor Product Status
     updateVendorProductStatus: builder.mutation({
       query: ({ productId, status }) => ({
@@ -1075,7 +1116,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Product", "CrmProducts"],
     }),
-    
+
     // Update Supplier Product Status
     updateSupplierProductStatus: builder.mutation({
       query: ({ productId, status }) => ({
@@ -1140,8 +1181,8 @@ export const glowvitaApi = createApi({
 
     // Products endpoints
     getCrmProducts: builder.query({
-      query: ({ vendorId } = {}) => ({ 
-        url: "/crm/products", 
+      query: ({ vendorId } = {}) => ({
+        url: "/crm/products",
         method: "GET",
         params: vendorId ? { vendorId } : {}
       }),
@@ -1157,9 +1198,9 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["CrmProducts"],
     }),
     deleteCrmProduct: builder.mutation({
-      query: (data) => ({ 
-        url: "/crm/products", 
-        method: "DELETE", 
+      query: (data) => ({
+        url: "/crm/products",
+        method: "DELETE",
         body: typeof data === 'object' && data.id ? data : { id: data }
       }),
       invalidatesTags: ["CrmProducts"],
@@ -1174,18 +1215,18 @@ export const glowvitaApi = createApi({
 
     // CRM Product Questions - Answer a question
     answerProductQuestion: builder.mutation({
-      query: ({ questionId, answer, isPublished }) => ({ 
-        url: `/crm/product-questions/${questionId}`, 
-        method: "PATCH", 
-        body: { answer, isPublished } 
+      query: ({ questionId, answer, isPublished }) => ({
+        url: `/crm/product-questions/${questionId}`,
+        method: "PATCH",
+        body: { answer, isPublished }
       }),
       invalidatesTags: ["CrmProductQuestions"],
     }),
 
     // CRM Product Questions - Delete a question
     deleteProductQuestion: builder.mutation({
-      query: (questionId) => ({ 
-        url: `/crm/product-questions/${questionId}`, 
+      query: (questionId) => ({
+        url: `/crm/product-questions/${questionId}`,
         method: "DELETE"
       }),
       invalidatesTags: ["CrmProductQuestions"],
@@ -1193,9 +1234,9 @@ export const glowvitaApi = createApi({
 
     // CRM Reviews - Get all reviews for vendor's products/services/salons
     getCrmReviews: builder.query({
-      query: ({ filter = 'all', entityType = 'all' }) => ({ 
-        url: `/crm/reviews?filter=${filter}&entityType=${entityType}`, 
-        method: "GET" 
+      query: ({ filter = 'all', entityType = 'all' }) => ({
+        url: `/crm/reviews?filter=${filter}&entityType=${entityType}`,
+        method: "GET"
       }),
       providesTags: ["CrmReviews"],
       transformResponse: (response) => response,
@@ -1203,10 +1244,10 @@ export const glowvitaApi = createApi({
 
     // CRM Reviews - Approve/Reject a review
     approveReview: builder.mutation({
-      query: ({ reviewId, isApproved }) => ({ 
-        url: `/crm/reviews/${reviewId}`, 
-        method: "PATCH", 
-        body: { isApproved } 
+      query: ({ reviewId, isApproved }) => ({
+        url: `/crm/reviews/${reviewId}`,
+        method: "PATCH",
+        body: { isApproved }
       }),
       invalidatesTags: ["CrmReviews"],
     }),
@@ -1247,7 +1288,7 @@ export const glowvitaApi = createApi({
       query: (id) => `/crm/supplier-profile/${id}`,
       providesTags: (result, error, id) => [{ type: 'SupplierProfile', id }],
     }),
-    
+
     // Add new endpoint for getting current supplier's profile
     getCurrentSupplierProfile: builder.query({
       query: () => ({ url: "/crm/supplier-profile", method: "GET" }),
@@ -1263,7 +1304,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
-    
+
     // Orders
     getCrmOrders: builder.query({
       query: () => ({ url: '/crm/orders' }),
@@ -1299,7 +1340,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["ShippingCharge"],
       transformResponse: (response) => response.data || response,
     }),
-    
+
     // Public shipping config endpoint
     getPublicShippingConfig: builder.query({
       query: () => ({ url: "/shipping", method: "GET" }),
@@ -1317,7 +1358,7 @@ export const glowvitaApi = createApi({
       query: (category) => ({ url: "/crm/product-categories", method: "POST", body: category }),
       invalidatesTags: ["ProductCategory"],
     }),
-    
+
     // Block Time Endpoints
     getBlockedTimes: builder.query({
       query: (staffId) => ({ url: `/crm/block-time/${staffId}`, method: 'GET' }),
@@ -1513,12 +1554,12 @@ export const glowvitaApi = createApi({
 
     //subscription renewal
     changePlan: builder.mutation({
-      query: (data) => ({ url: `/crm/subscription/change-plan`, method: "POST", body: data }),
-      invalidatesTags: ["SubscriptionPlan"],
+      query: (data) => ({ url: `/crm/subscription`, method: "POST", body: data }),
+      invalidatesTags: ["SubscriptionPlan", "Vendor", "User"],
     }),
     renewPlan: builder.mutation({
       query: (data) => ({ url: `/crm/subscription/renew`, method: "POST", body: data }),
-      invalidatesTags: ["SubscriptionPlan"],
+      invalidatesTags: ["SubscriptionPlan", "Vendor", "User"],
     }),
 
     // CRM SMS Packages Endpoints
@@ -1554,8 +1595,8 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Vendor"],
     }),
     getSmsPurchaseHistory: builder.query({
-      query: (params) => ({ 
-        url: "/crm/sms-purchase", 
+      query: (params) => ({
+        url: "/crm/sms-purchase",
         method: "GET",
         params
       }),
@@ -1791,7 +1832,7 @@ export const glowvitaApi = createApi({
     verifyPayment: builder.mutation({
       query: (verificationData) => ({ url: "/payments/verify", method: "POST", body: verificationData }),
     }),
-    
+
     // Public Appointment Endpoints
     getPublicAppointments: builder.query({
       query: ({ vendorId, staffId, date, startDate, endDate, userId }) => {
@@ -1804,10 +1845,10 @@ export const glowvitaApi = createApi({
         if (userId) params.append('userId', userId);
         // Add cache buster
         params.append('_t', Date.now().toString());
-        
-        return { 
-          url: `/appointments?${params.toString()}`, 
-          method: "GET" 
+
+        return {
+          url: `/appointments?${params.toString()}`,
+          method: "GET"
         };
       },
       providesTags: (result, error, arg) => [
@@ -1829,7 +1870,7 @@ export const glowvitaApi = createApi({
           await queryFulfilled;
           // Invalidate all appointment queries
           dispatch(glowvitaApi.util.invalidateTags(['PublicAppointments']));
-        } catch {}
+        } catch { }
       },
     }),
 
@@ -1842,7 +1883,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ['Appointments'],
     }),
-    
+
     // Payment Collections Endpoint
     getPaymentCollections: builder.query({
       query: (appointmentId) => ({
@@ -1856,7 +1897,9 @@ export const glowvitaApi = createApi({
 });
 
 export const {
- 
+  useGetProfileQuery,
+  useRefreshTokenMutation,
+
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
@@ -1923,6 +1966,7 @@ export const {
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
   useGetSubscriptionPlansQuery,
+  useGetCrmSubscriptionPlansQuery,
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
@@ -2054,10 +2098,10 @@ export const {
   useSaveCustomizedTemplateMutation,
   usePurchaseSmsPackageMutation,
   useGetSmsPurchaseHistoryQuery,
-  
+
   // New endpoint for fetching all vendor products
   useGetAllVendorProductsQuery,
-  
+
   // New endpoints for vendor product operations
   useUpdateVendorProductMutation,
   useDeleteVendorProductMutation,
@@ -2093,7 +2137,7 @@ export const {
   useGetBlockedTimesQuery,
   useCreateBlockTimeMutation,
   useDeleteBlockTimeMutation,
-  
+
   // Billing Endpoints
   useCreateBillingMutation,
   useGetBillingRecordsQuery,
@@ -2105,7 +2149,7 @@ export const {
   useCreatePatientMutation,
   useUpdatePatientMutation,
   useDeletePatientMutation,
-  
+
   // Consultation Hooks (Physical & Video)
   useGetConsultationsQuery,
   useGetBookedSlotsQuery,
@@ -2113,14 +2157,14 @@ export const {
   useCreateConsultationMutation,
   useUpdateConsultationMutation,
   useCancelConsultationMutation,
-  
+
   // Public Appointment Hooks
   useGetPublicAppointmentsQuery,
   useCreatePublicAppointmentMutation,
-  
+
   // Payment Collection Hook
   useCollectPaymentMutation,
-  
+
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,
 } = glowvitaApi;

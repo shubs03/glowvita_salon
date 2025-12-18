@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import ClientOrder from '@repo/lib/models/user/ClientOrder.model';
-import { authMiddlewareCrm } from '@/middlewareCrm';
+import { withSubscriptionCheck } from '@/middlewareCrm';
 
 await _db();
 
 // GET Online Customer Orders for the logged-in vendor
-export const GET = authMiddlewareCrm(async (req) => {
+export const GET = withSubscriptionCheck(async (req) => {
   try {
     const userId = req.user.userId;
     const role = req.user.role;

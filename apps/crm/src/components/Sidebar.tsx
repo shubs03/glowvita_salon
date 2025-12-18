@@ -21,7 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
 
-export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean }) {
+export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, className }: { isOpen: boolean, toggleSidebar: () => void, isMobile: boolean, isSubExpired: boolean, className?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -217,17 +217,23 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
           
           {visibleNavItems.map((item, index) => {
             const isActive = (pathname.startsWith(item.href) && item.href !== '/') || (pathname === '/' && item.href === '/');
+            const isDisabled = isSubExpired && item.href !== '/salon-profile';
             
             return (
               <Link
                 key={item.href}
-                href={item.href}
-                onClick={isMobile ? toggleSidebar : undefined}
+                href={isDisabled ? '#' : item.href}
+                onClick={(e) => {
+                  if (isDisabled) e.preventDefault();
+                  if (isMobile && !isDisabled) toggleSidebar();
+                }}
                 className={cn(
-                  "group flex items-center text-sm rounded-xl transition-all duration-300 hover:bg-primary/10 hover:text-primary min-w-0 relative overflow-hidden",
-                  "before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/10 before:to-primary/5 before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100",
-                  isActive && "bg-gradient-to-r from-primary/15 to-primary/5 text-primary font-semibold border-r-2 border-primary shadow-lg shadow-primary/10",
-                  isOpen ? "gap-3 px-3 py-3 mx-0" : "justify-center px-2 py-3 mx-0"
+                  "group flex items-center text-sm rounded-xl transition-all duration-300 min-w-0 relative overflow-hidden",
+                  isOpen ? "gap-3 px-3 py-3 mx-0" : "justify-center px-2 py-3 mx-0",
+                  isDisabled
+                    ? 'cursor-not-allowed opacity-50'
+                    : 'hover:bg-primary/10 hover:text-primary before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/10 before:to-primary/5 before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100',
+                  isActive && !isDisabled && "bg-gradient-to-r from-primary/15 to-primary/5 text-primary font-semibold border-r-2 border-primary shadow-lg shadow-primary/10"
                 )}
                 title={!isOpen ? item.title : undefined}
               >
@@ -342,7 +348,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   }
 
   return (
-    <div className="hidden lg:block h-full flex-shrink-0 fixed top-0 left-0 z-40">
+    <div className={cn("hidden lg:block h-full flex-shrink-0 fixed top-0 left-0 z-40", className)}>
       <SidebarContent />
     </div>
   );
