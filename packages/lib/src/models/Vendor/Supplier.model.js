@@ -55,7 +55,7 @@ const supplierSchema = new mongoose.Schema({
     plan: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SubscriptionPlan",
-      required: false // Made this not required by default
+      required: true
     },
     status: {
       type: String,
@@ -68,7 +68,7 @@ const supplierSchema = new mongoose.Schema({
     },
     endDate: {
       type: Date,
-      required: false // Made this not required by default
+      required: true
     },
     history: {
       type: [{
@@ -104,48 +104,47 @@ const supplierSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-// Pre-validate middleware to handle subscription validation properly
-supplierSchema.pre("validate", function(next) {
-  // If subscription object exists but is empty or incomplete, remove it to avoid validation issues
-  if (this.subscription) {
-    const hasValidSubscription = this.subscription.plan && this.subscription.endDate;
-    
-    // If subscription exists but doesn't have required fields, remove it
-    if (!hasValidSubscription) {
-      this.subscription = undefined;
+
+
+// Pre-save middleware to auto-update subscription status and ensure consistency
+supplierSchema.pre("save", async function (next) {
+  // Auto-update subscription status based on endDate
+  if (this.subscription && this.subscription.endDate) {
+    const now = new Date();
+    const endDate = new Date(this.subscription.endDate);
+
+    // Auto-update status to Expired if endDate has passed
+    if (endDate <= now && this.subscription.status !== 'Expired') {
+      this.subscription.status = 'Expired';
     }
   }
-  next();
-});
 
-// Pre-save middleware to ensure suppliers always have a valid subscription
-supplierSchema.pre("save", async function(next) {
   // Only assign default subscription if none exists or if it's invalid
   if (!this.subscription || !this.subscription.plan || !this.subscription.endDate) {
     try {
       // Import SubscriptionPlan model dynamically to avoid circular dependencies
       const SubscriptionPlan = (await import("@repo/lib/models/admin/SubscriptionPlan.model")).default;
-      
+
       // Check if a trial plan already exists
       let trialPlan = await SubscriptionPlan.findOne({ name: 'Trial Plan' });
-      
+
       // If no trial plan exists, create one
       if (!trialPlan) {
         trialPlan = await SubscriptionPlan.create({
           name: 'Trial Plan',
           description: 'Default trial plan for new suppliers',
           price: 0,
-      duration: 30, // 30 days
+          duration: 30, // 30 days
           features: ['Basic features'],
           userType: 'supplier',
           status: 'active'
         });
       }
-      
+
       // Set default subscription
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + trialPlan.duration);
-      
+
       this.subscription = {
         plan: trialPlan._id,
         status: 'Active',
@@ -158,10 +157,47 @@ supplierSchema.pre("save", async function(next) {
       // Don't block supplier creation if subscription assignment fails
     }
   }
-  
+
   this.updatedAt = new Date();
   next();
 });
+
+// Instance method to get normalized subscription data
+supplierSchema.methods.getSubscriptionData = function () {
+  if (!this.subscription) {
+    return {
+      status: 'Expired',
+      isExpired: true,
+      endDate: null,
+      plan: null
+    };
+  }
+
+  const now = new Date();
+  const endDate = this.subscription.endDate ? new Date(this.subscription.endDate) : null;
+  const isExpired = !endDate || endDate <= now || this.subscription.status?.toLowerCase() === 'expired';
+
+  return {
+    status: isExpired ? 'Expired' : this.subscription.status,
+    isExpired,
+    endDate: this.subscription.endDate,
+    startDate: this.subscription.startDate,
+    plan: this.subscription.plan
+  };
+};
+
+// Static method for optimized subscription queries
+supplierSchema.statics.findByIdWithSubscription = function (id) {
+  return this.findById(id)
+    .select('subscription status email shopName firstName lastName')
+    .populate('subscription.plan', 'name duration price')
+    .lean();
+};
+
+// Indexes for performance
+supplierSchema.index({ 'subscription.status': 1, 'subscription.endDate': 1 });
+supplierSchema.index({ email: 1 });
+supplierSchema.index({ status: 1 });
 
 const SupplierModel = mongoose.models.Supplier || mongoose.model("Supplier", supplierSchema);
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import DoctorWorkingHours from '@repo/lib/models/Vendor/DoctorWorkingHours.model';
 import _db from '@repo/lib/db';
-import { authMiddlewareCrm } from '@/middlewareCrm';
+import { withSubscriptionCheck } from '@/middlewareCrm';
 
 await _db();
 
@@ -39,7 +39,7 @@ const convertTo24HourFormat = (time12) => {
 };
 
 // GET working hours for the doctor
-export const GET = authMiddlewareCrm(async (req) => {
+export const GET = withSubscriptionCheck(async (req) => {
     try {
         const doctorId = req.user.userId;
         console.log("req.user:", req.user);
@@ -104,7 +104,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 }, ['doctor']);
 
 // Update working hours
-export const PUT = authMiddlewareCrm(async (req) => {
+export const PUT = withSubscriptionCheck(async (req) => {
     try {
         const doctorId = req.user.userId;
         const updateData = await req.json();
@@ -166,7 +166,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 }, ['doctor']);
 
 // Add special hours
-export const POST = authMiddlewareCrm(async (req) => {
+export const POST = withSubscriptionCheck(async (req) => {
     try {
         
         const doctorId = req.user.userId;
@@ -224,7 +224,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 }, ['doctor']);
 
 // PATCH - Update specific settings like slotGap
-export const PATCH = authMiddlewareCrm(async (req) => {
+export const PATCH = withSubscriptionCheck(async (req) => {
     try {
         const doctorId = req.user.userId;
         const updateData = await req.json();
@@ -293,7 +293,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
 }, ['doctor']);
 
 // DELETE special hours
-export const DELETE = authMiddlewareCrm(async (req) => {
+export const DELETE = withSubscriptionCheck(async (req) => {
     try {
         const doctorId = req.user.userId;
         const { searchParams } = new URL(req.url);

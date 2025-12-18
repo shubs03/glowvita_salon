@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import BillingModel from '@repo/lib/models/Vendor/Billing.model';
 import _db from '@repo/lib/db';
-import { authMiddlewareCrm } from '@/middlewareCrm';
+import { withSubscriptionCheck } from '@/middlewareCrm';
 
 await _db();
 
 // POST - Create a new billing record
-export const POST = authMiddlewareCrm(async (req) => {
+export const POST = withSubscriptionCheck(async (req) => {
     try {
         const userId = req.user.userId.toString();
         const userRole = req.user.role;
@@ -55,7 +55,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 }, ['vendor', 'supplier']);
 
 // GET - Retrieve billing records
-export const GET = authMiddlewareCrm(async (req) => {
+export const GET = withSubscriptionCheck(async (req) => {
     try {
         const userId = req.user.userId.toString();
         const userRole = req.user.role;
@@ -113,7 +113,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 }, ['vendor', 'supplier']);
 
 // PUT - Update a billing record
-export const PUT = authMiddlewareCrm(async (req) => {
+export const PUT = withSubscriptionCheck(async (req) => {
     try {
         const userId = req.user.userId.toString();
         const userRole = req.user.role;
@@ -163,7 +163,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 }, ['vendor', 'supplier']);
 
 // DELETE - Delete a billing record
-export const DELETE = authMiddlewareCrm(async (req) => {
+export const DELETE = withSubscriptionCheck(async (req) => {
     try {
         const userId = req.user.userId.toString();
         const userRole = req.user.role;

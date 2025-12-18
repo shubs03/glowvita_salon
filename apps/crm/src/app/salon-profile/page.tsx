@@ -19,6 +19,7 @@ import { Button } from "@repo/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
+import { cn } from "@repo/ui/cn";
 import { Textarea } from "@repo/ui/textarea";
 import {
   Select,
@@ -119,6 +120,18 @@ interface OpeningHour {
   isOpen: boolean;
 }
 
+// Helper to format dates as "DD Month YYYY"
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'Unknown';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Unknown';
+  return new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  }).format(date);
+};
+
 // Update SupplierProfile interface to include licenseFiles
 interface SupplierProfile {
   _id: string;
@@ -178,15 +191,15 @@ interface DoctorProfile {
   createdAt?: string;
   updatedAt?: string;
   // New working hours fields
-  physicalConsultation?: Record<string, Array<{startTime: string, endTime: string}>>;
+  physicalConsultation?: Record<string, Array<{ startTime: string, endTime: string }>>;
   videoConsultationEnabled?: boolean;
-  videoConsultation?: Record<string, Array<{startTime: string, endTime: string}>>;
+  videoConsultation?: Record<string, Array<{ startTime: string, endTime: string }>>;
 }
 
 // SUB-COMPONENTS FOR TABS
 const ProfileTab = ({ vendor, setVendor }: any) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
-  
+
   const handleSave = async () => {
     try {
       const result: any = await updateVendorProfile({
@@ -197,7 +210,7 @@ const ProfileTab = ({ vendor, setVendor }: any) => {
         subCategories: vendor.subCategories,
         website: vendor.website,
       }).unwrap();
-      
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -289,11 +302,35 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription?:
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  const isExpired = subscription?.endDate ? new Date(subscription.endDate) < new Date() : true;
-  const daysLeft = !isExpired && subscription?.endDate ? Math.ceil((new Date(subscription.endDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)) : 0;
-  
+  // Calculate subscription status and days remaining
+  const now = new Date();
+  const endDate = subscription?.endDate ? new Date(subscription.endDate) : null;
+  const startDate = subscription?.startDate ? new Date(subscription.startDate) : null;
+
+  // Calculate days remaining and total days
+  let daysLeft = 0;
+  let totalDays = 0;
+  let isExpired = true;
+
+  if (endDate && startDate) {
+    // Calculate time difference in days
+    const timeDiff = endDate.getTime() - now.getTime();
+    daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+    // Calculate total subscription duration in days
+    totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
+
+    // Determine if subscription is expired based on end date and status
+    isExpired = subscription?.status === 'expired' || daysLeft <= 0;
+  }
+
+  // Calculate progress percentage for the progress bar
+  const progressPercentage = totalDays > 0
+    ? Math.min(100, Math.max(0, ((totalDays - daysLeft) / totalDays) * 100))
+    : 0;
+
   const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'active':
         return 'bg-green-100 text-green-800';
       case 'expired':
@@ -317,42 +354,50 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription?:
             <div className="mb-6">
               <h3 className="text-2xl font-bold">{subscription?.plan?.name || 'No Active Plan'}</h3>
               <p className="text-muted-foreground">
-                {isExpired ? 'Expired' : `Expires on ${subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'Unknown'}`}
+                {!isExpired ? `Expires on ${formatDate(subscription?.endDate)}` : 'Expired'}
               </p>
             </div>
-            <div className="grid sm:grid-cols-3 gap-6">
+            <div className="grid sm:grid-cols-4 gap-6">
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
                 <div className="mt-1 flex items-center gap-2">
-                    <span className={`w-3 h-3 rounded-full ${isExpired ? 'bg-red-500' : 'bg-green-500'}`}></span>
-                    <p className="font-semibold">{isExpired ? 'Expired' : 'Active'}</p>
+                  <span className={`w-3 h-3 rounded-full ${isExpired ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                  <p className="font-semibold">{isExpired ? 'Expired' : 'Active'}</p>
                 </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Days Remaining</p>
+                <p className="mt-1 font-semibold">
+                  {!isExpired ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''}` : 'Expired'}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Start Date</p>
                 <p className="mt-1 font-semibold">
-                  {subscription?.startDate ? new Date(subscription.startDate).toLocaleDateString() : 'Unknown'}
+                  {formatDate(subscription?.startDate)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">End Date</p>
                 <p className="mt-1 font-semibold">
-                  {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'Unknown'}
+                  {formatDate(subscription?.endDate)}
                 </p>
               </div>
             </div>
-             {daysLeft > 0 && (
-                <div className="mt-6">
-                  <p className="text-sm text-muted-foreground">Days Remaining</p>
-                  <div className="w-full bg-secondary rounded-full h-2.5 mt-1">
-                    <div 
-                        className={`h-2.5 rounded-full ${daysLeft <= 7 ? 'bg-red-500' : 'bg-green-500'}`} 
-                        style={{ width: `${(daysLeft/30) * 100}%`}}
-                    ></div>
-                  </div>
-                  <p className="text-xs text-right mt-1">{daysLeft} days left</p>
-                </div>
-            )}
+            <div className="mt-6">
+              <p className="text-sm text-muted-foreground">Subscription Progress</p>
+              <div className="w-full bg-secondary rounded-full h-2.5 mt-1">
+                <div
+                  className={`h-2.5 rounded-full ${daysLeft <= 7 ? 'bg-red-500' : 'bg-green-500'}`}
+                  style={{ width: `${progressPercentage}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-right mt-1">
+                {!isExpired
+                  ? `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`
+                  : 'Subscription ' + (daysLeft === 0 ? 'expires today' : 'expired')}
+              </p>
+            </div>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button onClick={() => setShowPlansModal(true)}>
                 <RefreshCw className="mr-2 h-4 w-4" />
@@ -375,42 +420,123 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription?:
           userType={userType}
         />
       )}
-      
+
       <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Subscription History</DialogTitle>
-            <DialogDescription>
-              Your complete subscription history
-            </DialogDescription>
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader className="border-b pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-2xl font-bold">Subscription History</DialogTitle>
+                <DialogDescription>
+                  Your complete subscription payment history
+                </DialogDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowHistoryModal(false)}
+                className="h-8 w-8"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
           </DialogHeader>
-          <div className="py-4">
+
+          <div className="py-2">
             {subscription?.history && subscription.history.length > 0 ? (
-              <div className="space-y-4">
-                {subscription.history.map((entry, index) => (
-                  <div key={index} className="flex flex-col p-4 border rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium">{entry.plan.name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(entry.startDate).toLocaleDateString()} - {new Date(entry.endDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Badge className={getStatusColor(entry.status)}>
-                        {entry.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr className="text-left text-sm font-medium">
+                      <th className="p-3 border-b">Date</th>
+                      <th className="p-3 border-b">Plan</th>
+                      <th className="p-3 border-b">Payment Mode</th>
+                      <th className="p-3 border-b text-right">Duration</th>
+                      <th className="p-3 border-b text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subscription.history.map((entry, index) => {
+                      const startDate = new Date(entry.startDate);
+                      const endDate = new Date(entry.endDate);
+                      const historyDate = entry.historyDate ? new Date(entry.historyDate) : startDate;
+                      const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                      const isCurrent = entry.status.toLowerCase() === 'active' && endDate > new Date();
+
+                      return (
+                        <tr
+                          key={index}
+                          className={cn(
+                            "hover:bg-muted/50 transition-colors",
+                            isCurrent && "bg-primary/5"
+                          )}
+                        >
+                          <td className="p-3 border-b">
+                            <div className="font-medium">
+                              {historyDate.toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {historyDate.toLocaleTimeString('en-US', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                          </td>
+                          <td className="p-3 border-b">
+                            <div className="font-medium">{entry.plan?.name || 'N/A'}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {entry?.plan?.name?.includes('Trial') ? 'Free Trial' : 'Paid Plan'}
+                            </div>
+                          </td>
+                          <td className="p-3 border-b">
+                            {entry.paymentMode || 'Online'}
+                          </td>
+                          <td className="p-3 border-b text-right">
+                            {days} days
+                          </td>
+                          <td className="p-3 border-b text-right">
+                            <span className={cn(
+                              "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium",
+                              entry.status.toLowerCase() === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            )}>
+                              {entry.status}
+                              {isCurrent && (
+                                <span className="ml-1">• Current</span>
+                              )}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">
-                No subscription history available
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-1">No subscription history</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  You don't have any subscription history yet. Your subscription details will appear here.
+                </p>
+              </div>
             )}
           </div>
-          <DialogFooter>
-            <Button onClick={() => setShowHistoryModal(false)}>Close</Button>
+
+          <DialogFooter className="border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setShowHistoryModal(false)}
+              className="w-full sm:w-auto"
+            >
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -421,13 +547,13 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription?:
 const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any }) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  
+
   const handleSave = async () => {
     try {
       const result: any = await updateVendorProfile({
         gallery: gallery
       }).unwrap();
-      
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -446,11 +572,11 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    
+
     // In a real app, you would upload the files to a server and get URLs
     // For now, we'll convert to base64 strings for demonstration
     const newImages: string[] = [];
-    
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       // Convert file to base64
@@ -462,7 +588,7 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
       });
       newImages.push(base64);
     }
-    
+
     setVendor((prev: any) => ({
       ...prev,
       gallery: [...(prev.gallery || []), ...newImages]
@@ -526,8 +652,8 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
                 )}
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <div className="flex gap-2">
-                    <Button 
-                      variant="secondary" 
+                    <Button
+                      variant="secondary"
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -536,8 +662,8 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="destructive" 
+                    <Button
+                      variant="destructive"
                       size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -554,14 +680,14 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
         ) : (
           <p className="text-center text-muted-foreground py-4">No images uploaded yet</p>
         )}
-        
+
         {/* Image Preview Modal */}
         {previewImage && (
           <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closePreview}>
             <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
-              <Button 
-                variant="secondary" 
-                size="icon" 
+              <Button
+                variant="secondary"
+                size="icon"
                 className="absolute -top-12 right-0"
                 onClick={closePreview}
               >
@@ -592,13 +718,13 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
 const BankDetailsTab = ({ bankDetails, setVendor }: { bankDetails: BankDetails; setVendor: any }) => {
   console.log("BankDetailsTab received bankDetails:", bankDetails);
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
-  
+
   const handleSave = async () => {
     try {
       const result: any = await updateVendorProfile({
         bankDetails: bankDetails
       }).unwrap();
-      
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -629,37 +755,37 @@ const BankDetailsTab = ({ bankDetails, setVendor }: { bankDetails: BankDetails; 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="accountHolder">Account Holder Name</Label>
-            <Input 
+            <Input
               id="accountHolder"
               placeholder="Enter account holder name"
-              value={bankDetails?.accountHolder || ''} 
+              value={bankDetails?.accountHolder || ''}
               onChange={(e) => handleInputChange('accountHolder', e.target.value)}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="accountNumber">Account Number</Label>
-            <Input 
+            <Input
               id="accountNumber"
               placeholder="Enter account number"
-              value={bankDetails?.accountNumber || ''} 
+              value={bankDetails?.accountNumber || ''}
               onChange={(e) => handleInputChange('accountNumber', e.target.value)}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="bankName">Bank Name</Label>
-            <Input 
+            <Input
               id="bankName"
               placeholder="Enter bank name"
-              value={bankDetails?.bankName || ''} 
+              value={bankDetails?.bankName || ''}
               onChange={(e) => handleInputChange('bankName', e.target.value)}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="ifscCode">IFSC Code</Label>
-            <Input 
+            <Input
               id="ifscCode"
               placeholder="Enter IFSC code"
-              value={bankDetails?.ifscCode || ''} 
+              value={bankDetails?.ifscCode || ''}
               onChange={(e) => handleInputChange('ifscCode', e.target.value)}
             />
           </div>
@@ -675,13 +801,13 @@ const BankDetailsTab = ({ bankDetails, setVendor }: { bankDetails: BankDetails; 
 const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any }) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
   const [previewDocument, setPreviewDocument] = useState<{ src: string; type: string } | null>(null);
-  
+
   const handleSave = async () => {
     try {
       const result: any = await updateVendorProfile({
         documents: documents
       }).unwrap();
-      
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -694,7 +820,7 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
 
   const handleDocumentUpload = async (docType: string, file: File | null) => {
     if (!file) return;
-    
+
     // Convert file to base64
     const base64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
@@ -702,7 +828,7 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = error => reject(error);
     });
-    
+
     setVendor((prev: any) => ({
       ...prev,
       documents: {
@@ -798,15 +924,15 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
                   {documents?.[key] ? (
                     <>
                       {getStatusBadge(documents[`${key}Status`] || 'pending')}
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         onClick={() => openDocumentPreview(documents[key], key)}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveDocument(key)}
                       >
@@ -822,7 +948,7 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
                   )}
                 </div>
               </div>
-              
+
               {/* Display admin rejection reason if document is rejected */}
               {documents?.[`${key}Status`] === 'rejected' && documents[`${key}AdminRejectionReason`] && (
                 <div className="mt-3 p-3 bg-red-50 rounded-md border border-red-200">
@@ -833,14 +959,14 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
             </div>
           ))}
         </div>
-        
+
         {/* Document Preview Modal */}
         {previewDocument && (
           <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closeDocumentPreview}>
             <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
-              <Button 
-                variant="secondary" 
-                size="icon" 
+              <Button
+                variant="secondary"
+                size="icon"
                 className="absolute -top-12 right-0"
                 onClick={closeDocumentPreview}
               >
@@ -900,7 +1026,7 @@ const OpeningHoursWithPropsTab = ({
       const workingHoursObject: Record<string, any> = {};
       const dayMapping: Record<string, string> = {
         'Monday': 'monday',
-        'Tuesday': 'tuesday', 
+        'Tuesday': 'tuesday',
         'Wednesday': 'wednesday',
         'Thursday': 'thursday',
         'Friday': 'friday',
@@ -955,13 +1081,13 @@ const OpeningHoursWithPropsTab = ({
   const applyTimeForAll = async () => {
     // Find the first open day
     const firstOpenDay = hours.find(hour => hour.isOpen);
-    
+
     // If no day is open, show a message and return
     if (!firstOpenDay) {
       toast.info('No open days found. Please open at least one day.');
       return;
     }
-    
+
     // Apply the hours from the first open day to all other open days
     const newHours = hours.map(hour => {
       // Only update days that are open
@@ -975,17 +1101,17 @@ const OpeningHoursWithPropsTab = ({
       // Return closed days unchanged
       return hour;
     });
-    
+
     setHours(newHours);
     toast.success(`Applied ${firstOpenDay.open} to ${firstOpenDay.close} to all open days`);
-    
+
     // Automatically save the changes
     try {
       // Transform hours array to the expected object format
       const workingHoursObject: Record<string, any> = {};
       const dayMapping: Record<string, string> = {
         'Monday': 'monday',
-        'Tuesday': 'tuesday', 
+        'Tuesday': 'tuesday',
         'Wednesday': 'wednesday',
         'Thursday': 'thursday',
         'Friday': 'friday',
@@ -1030,7 +1156,7 @@ const OpeningHoursWithPropsTab = ({
     }
   };
 
-  const {data : workingHoursData} = useGetWorkingHoursQuery(undefined);
+  const { data: workingHoursData } = useGetWorkingHoursQuery(undefined);
   console.log("workingHoursData", workingHoursData);
 
   return (
@@ -1049,14 +1175,13 @@ const OpeningHoursWithPropsTab = ({
             <div className="col-span-2">Status</div>
             <div className="col-span-1 text-center">Open</div>
           </div>
-          
+
           {hours &&
             hours.map((hour, index) => (
-              <div 
-                key={hour.day} 
-                className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors hover:bg-muted/30 ${
-                  index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
-                }`}
+              <div
+                key={hour.day}
+                className={`grid grid-cols-12 gap-4 px-4 py-3 items-center transition-colors hover:bg-muted/30 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                  }`}
               >
                 <div className="col-span-3 font-medium flex items-center gap-2">
                   {hour.day}
@@ -1108,26 +1233,24 @@ const OpeningHoursWithPropsTab = ({
                   )}
                 </div>
                 <div className="col-span-1 flex justify-center">
-                  <div 
+                  <div
                     onClick={() => updateHours(index, { isOpen: !hour.isOpen })}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors ${
-                      hour.isOpen ? 'bg-blue-400' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span 
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        hour.isOpen ? 'translate-x-6' : 'translate-x-1'
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors ${hour.isOpen ? 'bg-blue-400' : 'bg-gray-300'
                       }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hour.isOpen ? 'translate-x-6' : 'translate-x-1'
+                        }`}
                     />
                   </div>
                 </div>
               </div>
             ))}
         </div>
-        
+
         <div className="flex justify-end pt-4">
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             className="px-6"
             disabled={isSaving}
           >
@@ -1203,7 +1326,7 @@ const DoctorProfileTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoc
 
 const DoctorBasicInfoTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
   const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
-  
+
   const handleSave = async () => {
     try {
       const updateData: any = {
@@ -1220,7 +1343,7 @@ const DoctorBasicInfoTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setD
       };
 
       const result: any = await updateDoctorProfile(updateData).unwrap();
-      
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -1363,7 +1486,7 @@ const DoctorBasicInfoTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setD
 
 const DoctorProfessionalDetailsTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
   const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
-  
+
   const handleSave = async () => {
     try {
       const updateData: any = {
@@ -1378,7 +1501,7 @@ const DoctorProfessionalDetailsTab = ({ doctor, setDoctor }: { doctor: DoctorPro
       };
 
       const result: any = await updateDoctorProfile(updateData).unwrap();
-      
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -1487,7 +1610,7 @@ const DoctorProfessionalDetailsTab = ({ doctor, setDoctor }: { doctor: DoctorPro
 
 const DoctorClinicDetailsTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
   const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
-  
+
   const handleSave = async () => {
     try {
       const updateData: any = {
@@ -1503,7 +1626,7 @@ const DoctorClinicDetailsTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; 
       };
 
       const result: any = await updateDoctorProfile(updateData).unwrap();
-      
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -1594,7 +1717,7 @@ const DoctorClinicDetailsTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; 
 // Add Supplier Profile Tab Component
 const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfile; setSupplier: any }) => {
   const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
-  
+
   const handleSave = async () => {
     try {
       const updateData: any = {
@@ -1618,9 +1741,9 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
       console.log('Sending supplier update data:', updateData);
 
       const result: any = await updateSupplierProfile(updateData).unwrap();
-      
+
       console.log('Supplier update result:', result);
-      
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -1692,7 +1815,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               disabled
             />
           </div>
-          
+
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
@@ -1704,7 +1827,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               placeholder="Describe your business..."
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="email">Email *</Label>
             <Input
@@ -1731,7 +1854,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="country">Country *</Label>
             <Input
@@ -1756,7 +1879,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="city">City *</Label>
             <Input
@@ -1781,7 +1904,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               required
             />
           </div>
-          
+
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="address">Address *</Label>
             <Textarea
@@ -1794,7 +1917,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               required
             />
           </div>
-          
+
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="businessRegistrationNo">Business Registration No</Label>
             <Input
@@ -1806,7 +1929,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
               }
             />
           </div>
-          
+
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="referralCode">Referral Code</Label>
             <Input
@@ -1829,7 +1952,7 @@ const SupplierProfileTab = ({ supplier, setSupplier }: { supplier: SupplierProfi
 
 const DoctorAssistantInfoTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; setDoctor: any }) => {
   const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
-  
+
   const handleSave = async () => {
     try {
       const updateData: any = {
@@ -1839,7 +1962,7 @@ const DoctorAssistantInfoTab = ({ doctor, setDoctor }: { doctor: DoctorProfile; 
       };
 
       const result: any = await updateDoctorProfile(updateData).unwrap();
-      
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -1900,7 +2023,7 @@ const SupplierDocumentsTab = ({ supplier, setSupplier }: { supplier: SupplierPro
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
-    
+
     try {
       // Convert files to base64 strings
       const base64Files: string[] = [];
@@ -1917,7 +2040,7 @@ const SupplierDocumentsTab = ({ supplier, setSupplier }: { supplier: SupplierPro
 
       // Update supplier profile with new license files
       const updatedLicenseFiles = [...(supplier.licenseFiles || []), ...base64Files];
-      
+
       const result: any = await updateSupplierProfile({
         _id: supplier._id,
         licenseFiles: updatedLicenseFiles
@@ -1946,7 +2069,7 @@ const SupplierDocumentsTab = ({ supplier, setSupplier }: { supplier: SupplierPro
     try {
       const updatedLicenseFiles = [...(supplier.licenseFiles || [])];
       updatedLicenseFiles.splice(index, 1);
-      
+
       const result: any = await updateSupplierProfile({
         _id: supplier._id,
         licenseFiles: updatedLicenseFiles
@@ -2011,7 +2134,7 @@ const SupplierDocumentsTab = ({ supplier, setSupplier }: { supplier: SupplierPro
             </div>
           )}
         </div>
-        
+
         {supplier.licenseFiles && supplier.licenseFiles.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {supplier.licenseFiles.map((file, index) => (
@@ -2066,14 +2189,14 @@ const SupplierDocumentsTab = ({ supplier, setSupplier }: { supplier: SupplierPro
           </div>
         )}
       </CardContent>
-      
+
       {/* Image Preview Modal */}
       {previewImage && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closeImagePreview}>
           <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
-            <Button 
-              variant="secondary" 
-              size="icon" 
+            <Button
+              variant="secondary"
+              size="icon"
               className="absolute -top-12 right-0"
               onClick={closeImagePreview}
             >
@@ -2100,32 +2223,32 @@ const SupplierDocumentsTab = ({ supplier, setSupplier }: { supplier: SupplierPro
 // MAIN PAGE COMPONENT
 export default function SalonProfilePage() {
   const { user, role } = useCrmAuth();
-  
+
   // Vendor profile data
   const { data: vendorData, isLoading: isVendorLoading, isError: isVendorError, refetch: refetchVendor, error: vendorError } = useGetVendorProfileQuery(undefined, {
     skip: !user?._id || role !== 'vendor'
   });
-  
+
   // Supplier profile data (current supplier's profile)
   const { data: supplierData, isLoading: isSupplierLoading, isError: isSupplierError, refetch: refetchSupplier, error: supplierError } = useGetCurrentSupplierProfileQuery(undefined, {
     skip: !user?._id || role !== 'supplier'
   });
-  
+
   // Doctor profile data (current doctor's profile)
   const { data: doctorData, isLoading: isDoctorLoading, isError: isDoctorError, refetch: refetchDoctor, error: doctorError } = useGetDoctorProfileQuery(undefined, {
     skip: !user?._id || role !== 'doctor'
   });
 
   console.log("Doctor Data:", doctorData);
-  
+
   const { data: workingHoursData, isLoading: isLoadingWorkingHours, refetch: refetchWorkingHours } = useGetWorkingHoursQuery(undefined, {
     skip: !user?._id || role !== 'vendor'
   });
-  
+
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
   const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
   const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
-  
+
   const [localVendor, setLocalVendor] = useState<VendorProfile | null>(null);
   const [localSupplier, setLocalSupplier] = useState<SupplierProfile | null>(null);
   const [localDoctor, setLocalDoctor] = useState<DoctorProfile | null>(null);
@@ -2239,14 +2362,14 @@ export default function SalonProfilePage() {
     }
   }, [workingHoursData]);
 
-  
-    
-      const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+
+
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
-    
+
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -2341,7 +2464,7 @@ export default function SalonProfilePage() {
         }
         setRetryCount(prev => prev + 1);
       }, 1000);
-      
+
       return () => clearTimeout(retryTimer);
     }
   }, [isVendorError, isSupplierError, isDoctorError, retryCount, refetchVendor, refetchWorkingHours, refetchSupplier, refetchDoctor, role]);
@@ -2360,12 +2483,12 @@ export default function SalonProfilePage() {
   }
 
   // Update the error state to handle doctor profile
-  if ((role === 'vendor' && isVendorError && retryCount >= 3) || 
-      (role === 'supplier' && isSupplierError && retryCount >= 3) || 
-      (role === 'doctor' && isDoctorError && retryCount >= 3) ||
-      (role === 'vendor' && !isVendorLoading && !localVendor && !isVendorError) ||
-      (role === 'supplier' && !isSupplierLoading && !localSupplier && !isSupplierError) ||
-      (role === 'doctor' && !isDoctorLoading && !localDoctor && !isDoctorError)) {
+  if ((role === 'vendor' && isVendorError && retryCount >= 3) ||
+    (role === 'supplier' && isSupplierError && retryCount >= 3) ||
+    (role === 'doctor' && isDoctorError && retryCount >= 3) ||
+    (role === 'vendor' && !isVendorLoading && !localVendor && !isVendorError) ||
+    (role === 'supplier' && !isSupplierLoading && !localSupplier && !isSupplierError) ||
+    (role === 'doctor' && !isDoctorLoading && !localDoctor && !isDoctorError)) {
     // Extract error message safely
     let errorMessage = 'No profile data available';
     const error = role === 'vendor' ? vendorError : role === 'supplier' ? supplierError : doctorError;
@@ -2382,7 +2505,7 @@ export default function SalonProfilePage() {
         <div className="text-center">
           <p className="text-red-600">Error loading profile</p>
           <p className="text-sm text-muted-foreground mt-2">{errorMessage}</p>
-          <Button 
+          <Button
             onClick={() => {
               if (role === 'vendor') {
                 refetchVendor();
@@ -2393,7 +2516,7 @@ export default function SalonProfilePage() {
                 refetchDoctor();
               }
               setRetryCount(0);
-            }} 
+            }}
             className="mt-4"
           >
             Retry
@@ -2462,8 +2585,8 @@ export default function SalonProfilePage() {
                   ) : (
                     <>
                       {profileData?.profileImage && (
-                        <Button 
-                          variant="secondary" 
+                        <Button
+                          variant="secondary"
                           size="icon"
                           className="rounded-full"
                           onClick={(e) => {
@@ -2474,8 +2597,8 @@ export default function SalonProfilePage() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       )}
-                      <Button 
-                        variant="secondary" 
+                      <Button
+                        variant="secondary"
                         size="icon"
                         className="rounded-full"
                         asChild
@@ -2500,15 +2623,15 @@ export default function SalonProfilePage() {
             </div>
             <div className="flex-grow">
               <CardTitle className="text-2xl md:text-3xl font-bold">
-                {role === 'vendor' ? (localVendor?.businessName || 'Your Salon') : 
-                 role === 'supplier' ? (localSupplier?.shopName || `${localSupplier?.firstName} ${localSupplier?.lastName}`) : 
-                 (localDoctor?.name || 'Doctor Profile')}
+                {role === 'vendor' ? (localVendor?.businessName || 'Your Salon') :
+                  role === 'supplier' ? (localSupplier?.shopName || `${localSupplier?.firstName} ${localSupplier?.lastName}`) :
+                    (localDoctor?.name || 'Doctor Profile')}
               </CardTitle>
               <CardDescription className="text-base flex items-center gap-2 mt-1">
-                <MapPin className="h-4 w-4" /> 
-                {role === 'vendor' ? (localVendor?.address || 'Address not set') : 
-                 role === 'supplier' ? (localSupplier?.address || `${localSupplier?.city || ''}, ${localSupplier?.state || ''}, ${localSupplier?.country || ''}`) :
-                 (localDoctor?.clinicAddress || `${localDoctor?.city || ''}, ${localDoctor?.state || ''}`)}
+                <MapPin className="h-4 w-4" />
+                {role === 'vendor' ? (localVendor?.address || 'Address not set') :
+                  role === 'supplier' ? (localSupplier?.address || `${localSupplier?.city || ''}, ${localSupplier?.state || ''}, ${localSupplier?.country || ''}`) :
+                    (localDoctor?.clinicAddress || `${localDoctor?.city || ''}, ${localDoctor?.state || ''}`)}
               </CardDescription>
               <div className="text-sm text-muted-foreground mt-2">
                 {role === 'vendor' ? 'Vendor' : role === 'supplier' ? 'Supplier' : 'Doctor'} ID:{" "}
@@ -2543,9 +2666,9 @@ export default function SalonProfilePage() {
       {previewImage && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closePreview}>
           <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
-            <Button 
-              variant="secondary" 
-              size="icon" 
+            <Button
+              variant="secondary"
+              size="icon"
               className="absolute -top-12 right-0"
               onClick={closePreview}
             >
@@ -2566,7 +2689,7 @@ export default function SalonProfilePage() {
         </div>
       )}
 
-      
+
 
       {role === 'vendor' ? (
         <Tabs defaultValue="profile" className="w-full">
@@ -2577,7 +2700,7 @@ export default function SalonProfilePage() {
             <TabsTrigger value="bank-details">Bank Details</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="opening-hours">Opening Hours</TabsTrigger>
-          <TabsTrigger value="sms-packages">SMS Packages</TabsTrigger>
+            <TabsTrigger value="sms-packages">SMS Packages</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
           </TabsList>
           <TabsContent value="profile" className="mt-4">
@@ -2587,40 +2710,40 @@ export default function SalonProfilePage() {
             />
           </TabsContent>
           <TabsContent value="subscription" className="mt-4">
-            <SubscriptionTab 
-              subscription={localVendor?.subscription} 
+            <SubscriptionTab
+              subscription={localVendor?.subscription}
               userType={localVendor?.type || 'vendor'}
             />
           </TabsContent>
           <TabsContent value="gallery" className="mt-4">
-            <GalleryTab 
-              gallery={localVendor?.gallery || []} 
-              setVendor={setLocalVendor} 
+            <GalleryTab
+              gallery={localVendor?.gallery || []}
+              setVendor={setLocalVendor}
             />
           </TabsContent>
           <TabsContent value="bank-details" className="mt-4">
-            <BankDetailsTab 
-              bankDetails={localVendor?.bankDetails || {}} 
-              setVendor={setLocalVendor} 
+            <BankDetailsTab
+              bankDetails={localVendor?.bankDetails || {}}
+              setVendor={setLocalVendor}
             />
           </TabsContent>
           <TabsContent value="documents" className="mt-4">
-            <DocumentsTab 
-              documents={localVendor?.documents || {}} 
-              setVendor={setLocalVendor} 
+            <DocumentsTab
+              documents={localVendor?.documents || {}}
+              setVendor={setLocalVendor}
             />
           </TabsContent>
           <TabsContent value="opening-hours" className="mt-4">
-            <OpeningHoursWithPropsTab 
-              hours={openingHours} 
+            <OpeningHoursWithPropsTab
+              hours={openingHours}
               setHours={setOpeningHours}
               setVendor={setLocalVendor}
               refetchWorkingHours={refetchWorkingHours}
             />
           </TabsContent>
-        <TabsContent value="sms-packages" className="mt-4">
-          <SmsPackagesTab />
-        </TabsContent>
+          <TabsContent value="sms-packages" className="mt-4">
+            <SmsPackagesTab />
+          </TabsContent>
           <TabsContent value="categories" className="mt-4">
             <CategoriesTab />
           </TabsContent>
@@ -2640,13 +2763,13 @@ export default function SalonProfilePage() {
             />
           </TabsContent>
           <TabsContent value="subscription" className="mt-4">
-            <SubscriptionTab 
-              subscription={localSupplier.subscription} 
-              userType={localSupplier.type || 'supplier'}
+            <SubscriptionTab
+              subscription={localSupplier.subscription}
+              userType="supplier"
             />
           </TabsContent>
           <TabsContent value="documents" className="mt-4">
-            <SupplierDocumentsTab 
+            <SupplierDocumentsTab
               supplier={localSupplier}
               setSupplier={setLocalSupplier}
             />
@@ -2671,25 +2794,25 @@ export default function SalonProfilePage() {
             />
           </TabsContent>
           <TabsContent value="subscription" className="mt-4">
-            <SubscriptionTab 
-              subscription={localDoctor.subscription} 
+            <SubscriptionTab
+              subscription={localDoctor.subscription}
               userType={localDoctor.type || 'doctor'}
             />
           </TabsContent>
           <TabsContent value="professional" className="mt-4">
-            <DoctorProfessionalDetailsTab 
+            <DoctorProfessionalDetailsTab
               doctor={localDoctor}
               setDoctor={setLocalDoctor}
             />
           </TabsContent>
           <TabsContent value="clinic" className="mt-4">
-            <DoctorClinicDetailsTab 
+            <DoctorClinicDetailsTab
               doctor={localDoctor}
               setDoctor={setLocalDoctor}
             />
           </TabsContent>
           <TabsContent value="assistant" className="mt-4">
-            <DoctorAssistantInfoTab 
+            <DoctorAssistantInfoTab
               doctor={localDoctor}
               setDoctor={setLocalDoctor}
             />
