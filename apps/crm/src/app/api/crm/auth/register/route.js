@@ -16,11 +16,11 @@ const generateReferralCode = async (businessName) => {
   let isUnique = false;
   // Use a more robust prefix generation
   const namePrefix = (businessName || "VENDOR").replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 4);
-  
+
   while (!isUnique) {
     const randomNumbers = Math.floor(1000 + Math.random() * 9000); // Generates 4-digit number
     referralCode = `${namePrefix}${randomNumbers}`;
-    
+
     // Check if code already exists
     const existingVendor = await VendorModel.findOne({ referralCode });
     if (!existingVendor) {
@@ -228,14 +228,14 @@ export async function POST(req) {
 
     // 3️⃣ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     // 4️⃣ Generate unique referral code
     const referralCode = await generateReferralCode(businessName);
 
     // 5️⃣ Assign a default trial plan
     const trialPlan = await SubscriptionPlan.findOne({ name: 'Trial Plan' });
     if (!trialPlan) {
-        return NextResponse.json({ message: "Default trial plan for vendors not found." }, { status: 500 });
+      return NextResponse.json({ message: "Default trial plan for vendors not found." }, { status: 500 });
     }
     const subscriptionEndDate = new Date();
     subscriptionEndDate.setDate(subscriptionEndDate.getDate() + trialPlan.duration);
@@ -245,12 +245,12 @@ export async function POST(req) {
     const locationData = location || { lat: 0, lng: 0 };
     
     const newVendor = await VendorModel.create({
-      firstName, 
-      lastName, 
+      firstName,
+      lastName,
       businessName: businessName || `${firstName}'s Salon`,
-      email, 
-      phone, 
-      password: hashedPassword, 
+      email,
+      phone,
+      password: hashedPassword,
       referralCode,
       // Include other fields if they are passed, with defaults
       state: state || 'N/A',
@@ -263,7 +263,7 @@ export async function POST(req) {
       // Add baseLocation with default values to satisfy the required fields
       baseLocation: locationData,
       description: description || null,
-      profileImage: profileImage || null, 
+      profileImage: profileImage || null,
       website: website || null,
       subscription: {
         plan: trialPlan._id,
@@ -326,7 +326,7 @@ export async function POST(req) {
     if (referredByCode) {
       const referringVendor = await VendorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
       if (referringVendor) {
-        
+
         // Fetch V2V referral settings to get dynamic bonus
         const v2vSettings = await V2VSettingsModel.findOne({});
         const bonusValue = v2vSettings?.referrerBonus?.bonusValue || 0; // Default to 0 if not set
