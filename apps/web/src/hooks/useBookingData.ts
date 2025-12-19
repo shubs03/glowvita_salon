@@ -114,6 +114,8 @@ export interface WeddingPackage {
   totalPrice: number;
   discountedPrice?: number | null;
   duration: number;
+  staffCount?: number;
+  assignedStaff?: Array<string | { _id: string; name: string }>;
   image?: string;
   status: string;
   isActive: boolean;
@@ -302,7 +304,9 @@ export const useWeddingPackages = (salonId: string) => {
         duration: pkg.duration || 0,
         image: pkg.image || '',
         status: pkg.status || 'approved',
-        isActive: pkg.isActive !== undefined ? pkg.isActive : true
+        isActive: pkg.isActive !== undefined ? pkg.isActive : true,
+        staffCount: pkg.staffCount || 1,
+        assignedStaff: pkg.assignedStaff || []
       };
     });
   };

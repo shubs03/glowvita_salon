@@ -7,7 +7,7 @@ import ServiceModel from "@repo/lib/models/admin/Service";
 import StaffModel from "@repo/lib/models/staffModel";
 import WeddingPackageModel from "@repo/lib/models/Vendor/WeddingPackage.model";
 import { validateService, validateStaff, validateAppointment, validateWeddingPackage } from "@repo/lib/modules/validation/ValidationEngine";
-import { AppError, handleError, formatErrorResponse } from "@repo/lib/modules/error/ErrorHandler";
+import { AppError, formatErrorResponse } from "@repo/lib/modules/error/ErrorHandler";
 import { getCache, setCache } from "@repo/lib/modules/caching/CacheManager";
 
 // Export utility functions for frontend integration
@@ -62,7 +62,9 @@ export const GET = async (request, { params }) => {
         return formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404));
     }
   } catch (error) {
-    return handleError(error);
+    console.error('GET Error:', error);
+    const errorResponse = formatErrorResponse(error);
+    return Response.json(errorResponse, { status: errorResponse.statusCode || 500 });
   }
 };
 
@@ -91,7 +93,9 @@ export const POST = async (request, { params }) => {
         return formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404));
     }
   } catch (error) {
-    return handleError(error);
+    console.error('POST Error:', error);
+    const errorResponse = formatErrorResponse(error);
+    return Response.json(errorResponse, { status: errorResponse.statusCode || 500 });
   }
 };
 
@@ -112,7 +116,9 @@ export const PUT = async (request, { params }) => {
         return formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404));
     }
   } catch (error) {
-    return handleError(error);
+    console.error('PUT Error:', error);
+    const errorResponse = formatErrorResponse(error);
+    return Response.json(errorResponse, { status: errorResponse.statusCode || 500 });
   }
 };
 
@@ -133,7 +139,9 @@ export const DELETE = async (request, { params }) => {
         return formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404));
     }
   } catch (error) {
-    return handleError(error);
+    console.error('DELETE Error:', error);
+    const errorResponse = formatErrorResponse(error);
+    return Response.json(errorResponse, { status: errorResponse.statusCode || 500 });
   }
 };
 
@@ -480,26 +488,34 @@ async function handleStaffDiscovery(searchParams) {
  * Handle slot discovery with comprehensive validation
  */
 async function handleSlotDiscovery(searchParams) {
-  const vendorId = searchParams.get('vendorId');
-  const staffId = searchParams.get('staffId');
-  const serviceIds = searchParams.get('serviceIds')?.split(',') || [];
-  const date = searchParams.get('date');
-  const lat = searchParams.get('lat');
-  const lng = searchParams.get('lng');
-  const isHomeService = searchParams.get('isHomeService') === 'true';
-  const isWeddingService = searchParams.get('isWeddingService') === 'true';
-  const packageId = searchParams.get('packageId');
-  const bufferBefore = parseInt(searchParams.get('bufferBefore')) || 0;
-  const bufferAfter = parseInt(searchParams.get('bufferAfter')) || 0;
-  
-  // Validate required parameters
-  if (!vendorId) {
-    return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
-  }
-  
-  if (!date) {
-    return formatErrorResponse(new AppError('Date is required', 'MISSING_DATE', 'CLIENT_ERROR', 400));
-  }
+  try {
+    console.log('=== handleSlotDiscovery called ===');
+    console.log('Query params:', Object.fromEntries(searchParams.entries()));
+    
+    const vendorId = searchParams.get('vendorId');
+    const staffId = searchParams.get('staffId');
+    const serviceIds = searchParams.get('serviceIds')?.split(',') || [];
+    const date = searchParams.get('date');
+    const lat = searchParams.get('lat');
+    const lng = searchParams.get('lng');
+    const isHomeService = searchParams.get('isHomeService') === 'true';
+    const isWeddingService = searchParams.get('isWeddingService') === 'true';
+    const packageId = searchParams.get('packageId');
+    const bufferBefore = parseInt(searchParams.get('bufferBefore')) || 0;
+    const bufferAfter = parseInt(searchParams.get('bufferAfter')) || 0;
+    
+    console.log('Parsed values:', { vendorId, staffId, serviceIds, isWeddingService, packageId });
+    
+    // Validate required parameters
+    if (!vendorId) {
+      console.error('Missing vendorId');
+      return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+    }
+    
+    if (!date) {
+      console.error('Missing date');
+      return formatErrorResponse(new AppError('Date is required', 'MISSING_DATE', 'CLIENT_ERROR', 400));
+    }
   
   // Parse date
   const parsedDate = new Date(date);
@@ -507,14 +523,22 @@ async function handleSlotDiscovery(searchParams) {
     return formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
   }
   
-  // Get services
+  // Get services - for wedding packages, we'll pass minimal info since package has duration
   let services = [];
-  if (serviceIds.length > 0) {
-    services = await ServiceModel.find({
-      _id: { $in: serviceIds },
-      vendorId: vendorId
-    });
+  if (serviceIds.length > 0 && !isWeddingService) {
+    // Only fetch detailed services for non-wedding bookings
+    try {
+      services = await ServiceModel.find({
+        _id: { $in: serviceIds }
+      }).lean();
+      console.log(`Found ${services.length} regular services`);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      return formatErrorResponse(new AppError('Failed to fetch services', 'SERVICE_FETCH_ERROR', 'SERVER_ERROR', 500));
+    }
   }
+  
+  // For wedding packages, services array can be empty - we use package duration directly
   
   // Prepare customer location if provided
   let customerLocation = null;
@@ -537,47 +561,80 @@ async function handleSlotDiscovery(searchParams) {
     });
   }
   
-  if (isWeddingService && packageId) {
-    // Generate wedding package slots
-    slots = await generateWeddingPackageSlots({
-      packageId,
-      vendorId,
-      services,
-      date: parsedDate,
-      customerLocation,
-      bufferBefore,
-      bufferAfter
-    });
-  } else if (staffId === 'any' || !staffId) {
-    // Generate "Any Staff" slots
-    slots = await generateAnyStaffSlots({
-      vendorId,
-      serviceIds: serviceIds.length > 0 ? serviceIds[0] : null,
-      date: parsedDate,
-      services,
-      customerLocation,
-      isHomeService,
-      bufferBefore,
-      bufferAfter
-    });
-  } else {
-    // Generate slots for specific staff
-    slots = await generateFreshaLikeSlots({
-      vendorId,
-      staffId,
-      date: parsedDate,
-      services,
-      customerLocation,
-      isHomeService,
-      bufferBefore,
-      bufferAfter
-    });
+  try {
+    if (isWeddingService && packageId) {
+      // Generate wedding package slots
+      console.log('Generating wedding package slots with:', {
+        packageId,
+        vendorId,
+        servicesCount: services.length,
+        date: parsedDate,
+        hasCustomerLocation: !!customerLocation
+      });
+      
+      slots = await generateWeddingPackageSlots({
+        packageId,
+        vendorId,
+        services,
+        date: parsedDate,
+        customerLocation,
+        bufferBefore,
+        bufferAfter
+      });
+      
+      console.log(`Generated ${slots.length} wedding package slots`);
+    } else if (staffId === 'any' || !staffId) {
+      // Generate "Any Staff" slots
+      slots = await generateAnyStaffSlots({
+        vendorId,
+        serviceIds: serviceIds.length > 0 ? serviceIds[0] : null,
+        date: parsedDate,
+        services,
+        customerLocation,
+        isHomeService,
+        bufferBefore,
+        bufferAfter
+      });
+    } else {
+      // Generate slots for specific staff
+      slots = await generateFreshaLikeSlots({
+        vendorId,
+        staffId,
+        date: parsedDate,
+        services,
+        customerLocation,
+        isHomeService,
+        bufferBefore,
+        bufferAfter
+      });
+    }
+  } catch (error) {
+    console.error('Error generating slots:', error);
+    console.error('Error stack:', error.stack);
+    return formatErrorResponse(new AppError(
+      `Failed to generate slots: ${error.message}`, 
+      'SLOT_GENERATION_ERROR', 
+      'SERVER_ERROR', 
+      500
+    ));
   }
   
   // Cache the results
   await setCache(cacheKey, slots, 180); // Cache for 3 minutes
   
   return Response.json({ slots });
+  
+  } catch (topLevelError) {
+    console.error('=== CRITICAL ERROR in handleSlotDiscovery ===');
+    console.error('Error:', topLevelError);
+    console.error('Stack:', topLevelError.stack);
+    return formatErrorResponse(new AppError(
+      `Server error: ${topLevelError.message}`, 
+      'INTERNAL_ERROR', 
+      'SERVER_ERROR', 
+      500
+    ));
+  }
 }
 
 /**
@@ -764,125 +821,138 @@ async function handleQuoteRequest(body) {
  * Handle slot lock acquisition
  */
 async function handleSlotLock(body) {
-  const {
-    vendorId,
-    staffId,
-    serviceId,
-    serviceName,
-    date,
-    startTime,
-    endTime,
-    clientId,
-    clientName,
-    staffName,
-    isHomeService,
-    isWeddingService,
-    location,
-    homeServiceLocation, 
-    packageId,
-    duration,
-    amount,
-    totalAmount,
-    finalAmount
-  } = body;
-  
-  // SUPPORT BOTH FIELD NAMES: If location is missing but homeServiceLocation exists, use it
-  const actualLocation = location || homeServiceLocation;
+  try {
+    const {
+      vendorId,
+      staffId,
+      serviceId,
+      serviceName,
+      date,
+      startTime,
+      endTime,
+      clientId,
+      clientName,
+      staffName,
+      isHomeService,
+      isWeddingService,
+      location,
+      homeServiceLocation, 
+      packageId,
+      duration,
+      amount,
+      totalAmount,
+      finalAmount
+    } = body;
+    
+    // SUPPORT BOTH FIELD NAMES: If location is missing but homeServiceLocation exists, use it
+    const actualLocation = location || homeServiceLocation;
 
-  console.log('Received slot lock request:', body);
-  console.log('Using location data:', actualLocation);
-  
-  // FIX: Force isHomeService to true if we have a location
-  // This handles cases where the frontend might send location but false flag, or legacy calls
-  const effectiveIsHomeService = isHomeService || !!actualLocation;
-  console.log('Effective isHomeService:', effectiveIsHomeService, '(Original:', isHomeService, ', Has Location:', !!actualLocation, ')');
+    console.log('Received slot lock request:', body);
+    console.log('Using location data:', actualLocation);
+    
+    // FIX: Force isHomeService to true if we have a location
+    // This handles cases where the frontend might send location but false flag, or legacy calls
+    const effectiveIsHomeService = isHomeService || !!actualLocation;
+    console.log('Effective isHomeService:', effectiveIsHomeService, '(Original:', isHomeService, ', Has Location:', !!actualLocation, ')');
 
-  // Validate required parameters
-  if (!vendorId || !serviceId || !date || !startTime || !endTime || !clientId) {
-    return formatErrorResponse(new AppError('Vendor ID, service ID, date, start time, end time, and client ID are required', 'MISSING_REQUIRED_FIELDS', 'CLIENT_ERROR', 400));
-  }
-  
-  // Parse date
-  const appointmentDate = new Date(date);
-  if (isNaN(appointmentDate.getTime())) {
-    return formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
-  }
-  
-  // Prepare lock data
-  const lockData = {
-    vendorId,
-    staffId,
-    serviceId,
-    serviceName: serviceName || 'Service',
-    date: appointmentDate,
-    startTime,
-    endTime,
-    clientId,
-    clientName: clientName || 'Client',
-    staffName: staffName || 'Any Professional',
-    isHomeService: effectiveIsHomeService,
-    isWeddingService,
-    location: actualLocation, // Use the resolved location
-    packageId,
-    duration,
-    amount: amount || 0,
-    totalAmount: totalAmount || amount || 0,
-    finalAmount: finalAmount || totalAmount || amount || 0
-  };
-  
-  // Calculate travel time for home services
-  let travelTimeInfo = null;
-  if (effectiveIsHomeService && actualLocation) {
-    try {
-      const customerLocation = {
-        lat: actualLocation.lat,
-        lng: actualLocation.lng
-      };
-      travelTimeInfo = await calculateVendorTravelTime(vendorId, customerLocation);
-    } catch (error) {
-      console.warn('Could not calculate travel time, using fallback:', error.message);
-      // Use a conservative estimate
-      travelTimeInfo = {
-        timeInMinutes: 30, // Conservative 30-minute estimate
-        distanceInKm: 10,
-        distanceInMeters: 10000,
-        source: 'fallback'
-      };
+    // Validate required parameters
+    if (!vendorId || !serviceId || !date || !startTime || !endTime) {
+      const errorResponse = formatErrorResponse(new AppError('Vendor ID, service ID, date, start time, and end time are required', 'MISSING_REQUIRED_FIELDS', 'CLIENT_ERROR', 400));
+      return Response.json(errorResponse, { status: 400 });
     }
+
+    // Set default clientId if not provided
+    const effectiveClientId = clientId || 'temp-client-id';
+    const effectiveClientName = clientName || 'Customer';
+    
+    // Parse date
+    const appointmentDate = new Date(date);
+    if (isNaN(appointmentDate.getTime())) {
+      const errorResponse = formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
+      return Response.json(errorResponse, { status: 400 });
+    }
+    
+    // Prepare lock data - only include location if it exists
+    const lockData = {
+      vendorId,
+      staffId,
+      serviceId,
+      serviceName: serviceName || 'Service',
+      date: appointmentDate,
+      startTime,
+      endTime,
+      clientId: effectiveClientId,
+      clientName: effectiveClientName,
+      staffName: staffName || 'Any Professional',
+      isHomeService: effectiveIsHomeService,
+      isWeddingService,
+      duration,
+      amount: amount || 0,
+      totalAmount: totalAmount || amount || 0,
+      finalAmount: finalAmount || totalAmount || amount || 0,
+      ...(actualLocation && actualLocation.lat && actualLocation.lng ? { location: actualLocation } : {}),
+      ...(packageId ? { packageId } : {})
+    };
+    
+    // Calculate travel time for home services
+    let travelTimeInfo = null;
+    if (effectiveIsHomeService && actualLocation) {
+      try {
+        const customerLocation = {
+          lat: actualLocation.lat,
+          lng: actualLocation.lng
+        };
+        travelTimeInfo = await calculateVendorTravelTime(vendorId, customerLocation);
+      } catch (error) {
+        console.warn('Could not calculate travel time, using fallback:', error.message);
+        // Use a conservative estimate
+        travelTimeInfo = {
+          timeInMinutes: 30, // Conservative 30-minute estimate
+          distanceInKm: 10,
+          distanceInMeters: 10000,
+          source: 'fallback'
+        };
+      }
+    }
+    
+    // Add travel time info to lock data
+    const enhancedLockData = {
+      ...lockData,
+      travelTimeInfo
+    };
+    
+    console.log('Enhanced lock data:', enhancedLockData);
+    
+    // Acquire lock
+    const lockToken = await acquireLock(enhancedLockData);
+    
+    if (!lockToken) {
+      const errorResponse = formatErrorResponse(new AppError('Failed to acquire slot lock - slot may be taken', 'LOCK_ACQUISITION_FAILED', 'CONFLICT', 409));
+      return Response.json(errorResponse, { status: 409 });
+    }
+    
+    console.log('Lock acquired with token:', lockToken);
+    
+    // Create temporary appointment with travel time information
+    const tempAppointment = await createTemporaryAppointment(enhancedLockData, lockToken);
+    
+    // Use the actual MongoDB ObjectId of the temporary appointment
+    const tempAppointmentId = tempAppointment._id.toString();
+    
+    console.log('Temporary appointment created with ID:', tempAppointmentId);
+    
+    return Response.json({
+      success: true,
+      message: "Slot lock acquired successfully",
+      lockId: lockToken,
+      appointmentId: tempAppointmentId,
+      expiresAt: tempAppointment.lockExpiration
+    });
+  } catch (error) {
+    console.error('Error in handleSlotLock:', error);
+    const errorResponse = formatErrorResponse(error);
+    return Response.json(errorResponse, { status: errorResponse.statusCode || 500 });
   }
-  
-  // Add travel time info to lock data
-  const enhancedLockData = {
-    ...lockData,
-    travelTimeInfo
-  };
-  
-  console.log('Enhanced lock data:', enhancedLockData);
-  
-  // Acquire lock
-  const lockToken = await acquireLock(enhancedLockData);
-  
-  if (!lockToken) {
-    return formatErrorResponse(new AppError('Failed to acquire slot lock - slot may be taken', 'LOCK_ACQUISITION_FAILED', 'CONFLICT', 409));
-  }
-  
-  console.log('Lock acquired with token:', lockToken);
-  
-  // Create temporary appointment with travel time information
-  const tempAppointment = await createTemporaryAppointment(enhancedLockData, lockToken);
-  
-  // Use the actual MongoDB ObjectId of the temporary appointment
-  const tempAppointmentId = tempAppointment._id.toString();
-  
-  console.log('Temporary appointment created with ID:', tempAppointmentId);
-  
-  return Response.json({
-    success: true,
-    message: "Slot lock acquired successfully",
-    lockId: lockToken,
-    appointmentId: tempAppointmentId,
-    expiresAt: tempAppointment.lockExpiration
-  });
 }
 
 /**

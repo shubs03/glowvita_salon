@@ -210,3 +210,8 @@ const cacheManager = new CacheManager();
 // Export both the class and instance
 export { CacheManager };
 export default cacheManager;
+
+// Export convenience functions
+export const getCache = (key) => cacheManager.get(key);
+export const setCache = (key, value, ttl) => cacheManager.set(key, value, ttl);
+export const deleteCache = (key) => cacheManager.delete(key);

@@ -60,6 +60,7 @@ import {
   useCreateWeddingPackageMutation,
   useUpdateWeddingPackageMutation,
   useDeleteWeddingPackageMutation,
+  useGetPublicVendorStaffQuery,
 } from "@repo/store/services/api";
 import Image from "next/image";
 import { Skeleton } from "@repo/ui/skeleton";
@@ -90,6 +91,8 @@ interface WeddingPackage {
   totalPrice: number;
   discountedPrice: number | null;
   duration: number;
+  staffCount: number;
+  assignedStaff: string[];
   image: string | null;
   status: string;
   isActive: boolean;
@@ -104,6 +107,8 @@ interface FormData {
   totalPrice: number;
   discountedPrice: number | null;
   duration: number;
+  staffCount: number;
+  assignedStaff: string[];
   image: string | null;
 }
 
@@ -126,6 +131,8 @@ export default function WeddingPackagesPage() {
     totalPrice: 0,
     discountedPrice: null,
     duration: 0,
+    staffCount: 1,
+    assignedStaff: [],
     image: null,
   });
   const [newService, setNewService] = useState({
@@ -133,15 +140,17 @@ export default function WeddingPackagesPage() {
     quantity: 1,
     staffRequired: true,
   });
+  const [selectedStaffForAdd, setSelectedStaffForAdd] = useState("");
 
   // API hooks
   const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useGetVendorServicesQuery({ vendorId }, { skip: !vendorId });
+  const { data: staffData, isLoading: staffLoading, error: staffError } = useGetPublicVendorStaffQuery(vendorId, { skip: !vendorId });
   const { data: packagesData, isLoading: packagesLoading, refetch } = useGetVendorWeddingPackagesQuery(vendorId, { skip: !vendorId });
   const [createPackage, { isLoading: isCreating }] = useCreateWeddingPackageMutation();
   const [updatePackage, { isLoading: isUpdating }] = useUpdateWeddingPackageMutation();
   const [deletePackage, { isLoading: isDeleting }] = useDeleteWeddingPackageMutation();
 
-  // Debugging: Log the services data
+  // Debugging: Log the data
   useEffect(() => {
     if (servicesData) {
       console.log('Services data:', servicesData);
@@ -149,10 +158,21 @@ export default function WeddingPackagesPage() {
     if (servicesError) {
       console.error('Services error:', servicesError);
     }
-  }, [servicesData, servicesError]);
+    if (staffData) {
+      console.log('Staff data:', staffData);
+    }
+    if (staffError) {
+      console.error('Staff error:', staffError);
+    }
+  }, [servicesData, servicesError, staffData, staffError]);
 
   const services = servicesData?.services || [];
+  const staff = staffData?.staff || staffData?.data || [];
   const packages = packagesData?.weddingPackages || [];
+  
+  // Log staff for debugging
+  console.log('Parsed staff array:', staff);
+  console.log('Staff count:', staff.length);
   
   // Filter packages based on search term
   const filteredPackages = packages.filter((pkg: WeddingPackage) => 
@@ -189,6 +209,7 @@ export default function WeddingPackagesPage() {
 
   const handleOpenModal = (type: "create" | "edit" | "view", pkg?: WeddingPackage) => {
     setModalType(type);
+    setSelectedStaffForAdd(""); // Reset staff selector
     if (type === "create") {
       setFormData({
         name: "",
@@ -197,6 +218,8 @@ export default function WeddingPackagesPage() {
         totalPrice: 0,
         discountedPrice: null,
         duration: 0,
+        staffCount: 1,
+        assignedStaff: [],
         image: null,
       });
     } else if (pkg) {
@@ -208,6 +231,8 @@ export default function WeddingPackagesPage() {
         totalPrice: pkg.totalPrice,
         discountedPrice: pkg.discountedPrice,
         duration: pkg.duration,
+        staffCount: pkg.staffCount || 1,
+        assignedStaff: pkg.assignedStaff || [],
         image: pkg.image,
       });
     }
@@ -217,6 +242,7 @@ export default function WeddingPackagesPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedPackage(null);
+    setSelectedStaffForAdd(""); // Reset staff selector
   };
 
   const handleDeleteClick = (pkg: WeddingPackage) => {
@@ -451,6 +477,7 @@ export default function WeddingPackagesPage() {
                   <TableHead>Package</TableHead>
                   <TableHead>Services</TableHead>
                   <TableHead>Duration</TableHead>
+                  <TableHead>Staff</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Active</TableHead>
@@ -483,6 +510,30 @@ export default function WeddingPackagesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>{Math.floor(pkg.duration / 60)}h {pkg.duration % 60}m</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge variant="secondary">
+                            {pkg.staffCount || 1} {pkg.staffCount === 1 ? 'staff' : 'staff'}
+                          </Badge>
+                          {pkg.assignedStaff && pkg.assignedStaff.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {pkg.assignedStaff.slice(0, 2).map((staffId: string) => {
+                                const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
+                                return staffMember ? (
+                                  <span key={staffId} className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
+                                    {staffMember.name}
+                                  </span>
+                                ) : null;
+                              })}
+                              {pkg.assignedStaff.length > 2 && (
+                                <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                                  +{pkg.assignedStaff.length - 2}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {pkg.discountedPrice ? (
                           <div className="flex flex-col">
@@ -658,6 +709,10 @@ export default function WeddingPackagesPage() {
                       </span>
                     </div>
                     <div className="flex justify-between">
+                      <span>Staff Required:</span>
+                      <span className="font-medium">{formData.staffCount} {formData.staffCount === 1 ? 'Professional' : 'Professionals'}</span>
+                    </div>
+                    <div className="flex justify-between">
                       <span>Total Price:</span>
                       <span className="font-medium">₹{formData.totalPrice.toFixed(2)}</span>
                     </div>
@@ -668,6 +723,126 @@ export default function WeddingPackagesPage() {
                       </div>
                     )}
                   </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="staffCount">Staff Required</Label>
+                  <Input
+                    id="staffCount"
+                    type="number"
+                    min="1"
+                    placeholder="e.g., 2"
+                    value={formData.staffCount}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      staffCount: parseInt(e.target.value) || 1
+                    }))}
+                    disabled={modalType === "view"}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Number of professionals needed to perform this package
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Assign Staff (Optional)</Label>
+                  {staffLoading ? (
+                    <div className="flex items-center justify-center p-4 border rounded-lg">
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      <span className="text-sm text-muted-foreground">Loading staff...</span>
+                    </div>
+                  ) : staffError ? (
+                    <div className="p-4 border border-red-200 rounded-lg bg-red-50">
+                      <p className="text-sm text-red-600">Error loading staff. Please try again.</p>
+                    </div>
+                  ) : modalType === "view" ? (
+                    <div className="flex flex-wrap gap-2">
+                      {formData.assignedStaff.length > 0 ? (
+                        formData.assignedStaff.map((staffId) => {
+                          const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
+                          return staffMember ? (
+                            <Badge key={staffId} variant="secondary">
+                              {staffMember.name}
+                            </Badge>
+                          ) : null;
+                        })
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No staff assigned</p>
+                      )}
+                    </div>
+                  ) : staff.length === 0 ? (
+                    <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50">
+                      <p className="text-sm text-yellow-800">No staff members available. Please add staff members first.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Select
+                        value={selectedStaffForAdd}
+                        onValueChange={(value) => {
+                          console.log('Selected staff value:', value);
+                          console.log('Current assignedStaff:', formData.assignedStaff);
+                          console.log('All staff:', staff);
+                          
+                          if (value && value !== "no-staff" && !formData.assignedStaff.includes(value)) {
+                            setFormData(prev => ({
+                              ...prev,
+                              assignedStaff: [...prev.assignedStaff, value]
+                            }));
+                            // Reset after a brief delay to allow the selection to register
+                            setTimeout(() => {
+                              setSelectedStaffForAdd("");
+                            }, 100);
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select staff members" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {staff.length > 0 ? (
+                            staff.map((staffMember: any) => (
+                              <SelectItem 
+                                key={staffMember.id || staffMember._id} 
+                                value={staffMember.id || staffMember._id}
+                                disabled={formData.assignedStaff.includes(staffMember.id || staffMember._id)}
+                              >
+                                {staffMember.name} {formData.assignedStaff.includes(staffMember.id || staffMember._id) ? '(Selected)' : ''}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-staff" disabled>
+                              No staff available
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {formData.assignedStaff.map((staffId) => {
+                          const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
+                          return staffMember ? (
+                            <Badge key={staffId} variant="secondary" className="flex items-center gap-1">
+                              {staffMember.name}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    assignedStaff: prev.assignedStaff.filter(id => id !== staffId)
+                                  }));
+                                }}
+                                className="ml-1 hover:text-destructive"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          ) : null;
+                        })}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {staff.length} staff member{staff.length !== 1 ? 's' : ''} available. Select those who can perform this package.
+                      </p>
+                    </>
+                  )}
                 </div>
                 
                 <div className="space-y-2">

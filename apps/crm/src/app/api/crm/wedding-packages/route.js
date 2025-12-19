@@ -11,7 +11,7 @@ export const POST = authMiddlewareCrm(async (req) => {
   const vendor = req.user;
   const vendorId = vendor.userId.toString();
   const body = await req.json();
-  const { name, description, services, totalPrice, discountedPrice, duration, image } = body;
+  const { name, description, services, totalPrice, discountedPrice, duration, staffCount, assignedStaff, image } = body;
 
   // Validate required fields
   if (!name || !description || !services || !Array.isArray(services) || services.length === 0) {
@@ -56,6 +56,8 @@ export const POST = authMiddlewareCrm(async (req) => {
       totalPrice,
       discountedPrice: discountedPrice || null,
       duration,
+      staffCount: staffCount || 1,
+      assignedStaff: assignedStaff || [],
       image: imageUrl || null,
     });
 

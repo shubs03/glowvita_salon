@@ -77,6 +77,17 @@ interface VendorProfile {
   subscription?: Subscription;
   openingHours?: OpeningHour[];
   type?: UserType;
+  vendorType?: 'shop-only' | 'home-only' | 'onsite-only' | 'hybrid' | 'vendor-home-travel';
+  travelRadius?: number;
+  travelSpeed?: number;
+  baseLocation?: {
+    lat: number;
+    lng: number;
+  };
+  location?: {
+    lat: number;
+    lng: number;
+  };
 }
 
 interface Subscription {
@@ -184,6 +195,156 @@ interface DoctorProfile {
 }
 
 // SUB-COMPONENTS FOR TABS
+const TravelSettingsTab = ({ vendor, setVendor }: any) => {
+  const [updateVendorProfile] = useUpdateVendorProfileMutation();
+  
+  const handleSave = async () => {
+    try {
+      const result: any = await updateVendorProfile({
+        _id: vendor._id,
+        vendorType: vendor.vendorType,
+        travelRadius: vendor.travelRadius,
+        travelSpeed: vendor.travelSpeed,
+        baseLocation: vendor.baseLocation,
+      }).unwrap();
+      
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error?.data?.message || 'Failed to update travel settings');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Travel Settings</CardTitle>
+        <CardDescription>Configure your home service travel settings for accurate travel time calculation.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label>Vendor Type</Label>
+          <Select
+            value={vendor.vendorType || 'shop-only'}
+            onValueChange={(value) => setVendor({ ...vendor, vendorType: value })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="shop-only">Shop Only (No travel)</SelectItem>
+              <SelectItem value="home-only">Home Only</SelectItem>
+              <SelectItem value="onsite-only">Onsite Only</SelectItem>
+              <SelectItem value="hybrid">Hybrid (Shop + Home Services)</SelectItem>
+              <SelectItem value="vendor-home-travel">Vendor Home Travel</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Select how you provide services to customers</p>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="travelRadius">Travel Radius (km)</Label>
+          <Input
+            id="travelRadius"
+            type="number"
+            min="0"
+            step="1"
+            value={vendor.travelRadius || 0}
+            onChange={(e) =>
+              setVendor({ ...vendor, travelRadius: Number(e.target.value) })
+            }
+            placeholder="e.g., 50"
+          />
+          <p className="text-xs text-muted-foreground">Maximum distance you can travel for home services</p>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="travelSpeed">Average Travel Speed (km/h)</Label>
+          <Input
+            id="travelSpeed"
+            type="number"
+            min="1"
+            step="1"
+            value={vendor.travelSpeed || 30}
+            onChange={(e) =>
+              setVendor({ ...vendor, travelSpeed: Number(e.target.value) })
+            }
+            placeholder="e.g., 30"
+          />
+          <p className="text-xs text-muted-foreground">Your average travel speed for time estimation (default: 30 km/h)</p>
+        </div>
+        
+        <div className="space-y-4">
+          <Label>Base Location</Label>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="baseLat">Latitude</Label>
+              <Input
+                id="baseLat"
+                type="number"
+                step="any"
+                value={vendor.baseLocation?.lat || vendor.location?.lat || ''}
+                onChange={(e) =>
+                  setVendor({ 
+                    ...vendor, 
+                    baseLocation: { 
+                      ...vendor.baseLocation, 
+                      lat: Number(e.target.value),
+                      lng: vendor.baseLocation?.lng || vendor.location?.lng || 0
+                    } 
+                  })
+                }
+                placeholder="e.g., 19.0760"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="baseLng">Longitude</Label>
+              <Input
+                id="baseLng"
+                type="number"
+                step="any"
+                value={vendor.baseLocation?.lng || vendor.location?.lng || ''}
+                onChange={(e) =>
+                  setVendor({ 
+                    ...vendor, 
+                    baseLocation: { 
+                      lat: vendor.baseLocation?.lat || vendor.location?.lat || 0,
+                      lng: Number(e.target.value)
+                    } 
+                  })
+                }
+                placeholder="e.g., 72.8777"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">Your starting location for travel calculations (shop/home address)</p>
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex gap-2">
+            <MapPin className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-blue-900">
+              <p className="font-medium mb-1">Why are these settings important?</p>
+              <ul className="list-disc list-inside space-y-1 text-blue-800">
+                <li>Travel radius determines which customers you can serve</li>
+                <li>Travel speed helps estimate accurate arrival times</li>
+                <li>Base location is used to calculate distances to customers</li>
+                <li>These settings enable real-time travel time calculation via Google Maps</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={handleSave}>Save Travel Settings</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
 const ProfileTab = ({ vendor, setVendor }: any) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
   
@@ -2570,9 +2731,10 @@ export default function SalonProfilePage() {
 
       {role === 'vendor' ? (
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-9">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="subscription">Subscription</TabsTrigger>
+            <TabsTrigger value="travel-settings">Travel Settings</TabsTrigger>
             <TabsTrigger value="gallery">Gallery</TabsTrigger>
             <TabsTrigger value="bank-details">Bank Details</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -2590,6 +2752,12 @@ export default function SalonProfilePage() {
             <SubscriptionTab 
               subscription={localVendor?.subscription} 
               userType={localVendor?.type || 'vendor'}
+            />
+          </TabsContent>
+          <TabsContent value="travel-settings" className="mt-4">
+            <TravelSettingsTab
+              vendor={localVendor as VendorProfile}
+              setVendor={setLocalVendor}
             />
           </TabsContent>
           <TabsContent value="gallery" className="mt-4">

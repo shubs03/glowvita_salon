@@ -9,16 +9,45 @@ import mongoose from 'mongoose';
 // In-memory store for locks (in production, use Redis or similar)
 const locks = new Map();
 const LOCK_TTL = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Clean up expired locks periodically
+ */
+function cleanupExpiredLocks() {
+  const now = Date.now();
+  let cleanedCount = 0;
+  
+  for (const [key, lock] of locks.entries()) {
+    if (lock.expiration < now) {
+      locks.delete(key);
+      cleanedCount++;
+    }
+  }
+  
+  if (cleanedCount > 0) {
+    console.log(`Cleaned up ${cleanedCount} expired locks`);
+  }
+}
+
+// Run cleanup every 5 minutes
+setInterval(cleanupExpiredLocks, 5 * 60 * 1000);
+
 /**
  * Generate a unique lock key
  * @param {string} vendorId - Vendor ID
- * @param {string} staffId - Staff ID
+ * @param {string} staffId - Staff ID (can be 'any' or specific ID)
  * @param {Date} date - Appointment date
  * @param {string} timeSlot - Time slot (HH:MM)
  * @returns {string} - Unique lock key
  */
 function generateLockKey(vendorId, staffId, date, timeSlot) {
-  return `lock:${vendorId}:${staffId}:${date.toISOString().split('T')[0]}:${timeSlot}`;
+  // For wedding packages or team bookings with 'any' staff, use vendor+date+time only
+  // This allows multiple customers to book different slots but prevents double-booking same slot
+  const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : date;
+  if (staffId === 'any') {
+    return `lock:${vendorId}:${dateStr}:${timeSlot}`;
+  }
+  return `lock:${vendorId}:${staffId}:${dateStr}:${timeSlot}`;
 }
 
 /**
@@ -63,9 +92,11 @@ export async function acquireLock(params) {
     // Check if lock already exists and is still valid
     if (locks.has(lockKey)) {
       const existingLock = locks.get(lockKey);
+      console.log('Existing lock found:', existingLock);
       if (existingLock.expiration > Date.now()) {
         // Lock is still held by someone else
-        console.log('Lock already held by someone else:', lockKey);
+        const timeRemaining = Math.round((existingLock.expiration - Date.now()) / 1000);
+        console.log(`Lock already held for ${lockKey}, expires in ${timeRemaining} seconds`);
         return null;
       } else {
         // Lock has expired, remove it
@@ -175,21 +206,23 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
     // Extract travel time info and location if present
     const { travelTimeInfo, location, ...cleanAppointmentData } = appointmentData;
     
+    // Helper to check if a string is a valid ObjectId
+    const isValidObjectId = (str) => {
+      return str && typeof str === 'string' && /^[0-9a-fA-F]{24}$/.test(str);
+    };
+    
     // Add lock information to appointment data
     const tempAppointmentData = {
-      ...cleanAppointmentData,
       status: 'temp-locked',
       lockToken: lockToken,
       lockExpiration: new Date(Date.now() + LOCK_TTL),
       createdAt: new Date(),
       updatedAt: new Date(),
       // Ensure all required fields are populated
-      vendorId: cleanAppointmentData.vendorId || 'temp',
-      client: cleanAppointmentData.clientId,
+      vendorId: cleanAppointmentData.vendorId,
       clientName: cleanAppointmentData.clientName || 'Temporary Client',
-      service: cleanAppointmentData.serviceId || 'temp',
+      service: cleanAppointmentData.serviceId,
       serviceName: cleanAppointmentData.serviceName || 'Temporary Service',
-      staff: cleanAppointmentData.staffId || null,
       staffName: cleanAppointmentData.staffName || 'Any Professional',
       date: cleanAppointmentData.date || new Date(),
       startTime: cleanAppointmentData.startTime || '00:00',
@@ -197,8 +230,29 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
       duration: cleanAppointmentData.duration || 0,
       amount: cleanAppointmentData.amount || 0,
       totalAmount: cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0,
-      finalAmount: cleanAppointmentData.finalAmount || cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0
+      finalAmount: cleanAppointmentData.finalAmount || cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0,
+      mode: 'online', // Web bookings are always online
+      isHomeService: cleanAppointmentData.isHomeService || false,
+      isWeddingService: cleanAppointmentData.isWeddingService || false
     };
+    
+    // Only add client if it's a valid ObjectId
+    if (isValidObjectId(cleanAppointmentData.clientId)) {
+      tempAppointmentData.client = cleanAppointmentData.clientId;
+    }
+    
+    // Only add staff if it's a valid ObjectId (not 'any')
+    if (isValidObjectId(cleanAppointmentData.staffId)) {
+      tempAppointmentData.staff = cleanAppointmentData.staffId;
+    }
+    
+    // Add packageId if present
+    if (cleanAppointmentData.packageId) {
+      tempAppointmentData.weddingPackageDetails = {
+        packageId: cleanAppointmentData.packageId,
+        packageServices: []
+      };
+    }
     
     // Add travel time information if available
     if (travelTimeInfo) {
@@ -294,6 +348,17 @@ export async function confirmAppointment(appointmentId, lockToken, paymentDetail
     // Set payment details and confirmation time
     appointment.paymentDetails = paymentDetails;
     appointment.confirmedAt = new Date();
+    
+    // Preserve home service location and travel time data
+    const homeServiceLocationData = appointment.homeServiceLocation || {};
+    const travelTimeData = {
+      travelTime: appointment.travelTime || 0,
+      travelDistance: appointment.travelDistance || 0,
+      distanceMeters: appointment.distanceMeters || 0
+    };
+    
+    console.log('Preserving home service location data:', homeServiceLocationData);
+    console.log('Preserving travel time data:', travelTimeData);
     
     // Remove lock information but preserve home service location and travel time data
     appointment.lockToken = undefined;

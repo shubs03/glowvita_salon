@@ -346,6 +346,7 @@ const appointmentSchema = new mongoose.Schema({
     bufferAfter: {
         type: Number, // in minutes
         default: 0
+    },
     // Booking mode: 'online' for web bookings, 'offline' for CRM bookings
     mode: {
         type: String,
