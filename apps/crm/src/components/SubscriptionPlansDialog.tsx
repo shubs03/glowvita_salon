@@ -1,14 +1,16 @@
 
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Star, Check, Zap, RefreshCw } from 'lucide-react';
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
 import { toast } from 'sonner';
-import { useGetSubscriptionPlansQuery, useChangePlanMutation } from '@repo/store/api';
+import { useDispatch } from 'react-redux';
+import { useGetCrmSubscriptionPlansQuery, useChangePlanMutation, useRenewPlanMutation, useGetProfileQuery } from '@repo/store/api';
+import { updateUser } from '@repo/store/slices/crmAuthSlice';
 
 interface SubscriptionPlan {
   _id: string;
@@ -40,55 +42,127 @@ interface SubscriptionPlansDialogProps {
   userType?: 'vendor' | 'supplier' | 'doctor';
 }
 
-export function SubscriptionPlansDialog({ 
-  open, 
+export function SubscriptionPlansDialog({
+  open,
   onOpenChange,
   subscription,
   userType = 'vendor'
 }: SubscriptionPlansDialogProps) {
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
-  
-  const { data: plansResponse, isLoading: plansLoading } = useGetSubscriptionPlansQuery(undefined);
+  const [fallbackPlans, setFallbackPlans] = useState<SubscriptionPlan[]>([]);
+
+  const { data: plansResponse, isLoading: plansLoading } = useGetCrmSubscriptionPlansQuery(undefined);
   const [changePlan, { isLoading: changingPlan }] = useChangePlanMutation();
-  
+  const [renewPlan, { isLoading: renewingPlan }] = useRenewPlanMutation();
+
   const isExpired = subscription?.endDate ? new Date(subscription.endDate) < new Date() : true;
 
-  const availablePlans = useMemo(() => {
-    if (!Array.isArray(plansResponse)) return [];
-    
-    return plansResponse
-      .filter((plan: SubscriptionPlan) => {
-        const isCorrectType = plan.planType === 'regular';
-        const isActive = plan.status === 'Active';
-        const isForPurchase = plan.isAvailableForPurchase;
-        
-        // Handle cases where userTypes might be empty or undefined
-        const userTypes = plan.userTypes || [];
-        const matchesUserType = userTypes.length === 0 || userTypes.includes(userType);
-        
-        // Fix: Don't filter out the current plan if it has expired
-        const isNotCurrentActivePlan = isExpired ? true : plan._id !== subscription?.plan?._id;
+  // Fallback: fetch plans from CRM API directly if RTK query doesn't return
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/crm/subscription/plans');
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!cancelled && Array.isArray(json)) {
+          setFallbackPlans(json as SubscriptionPlan[]);
+        }
+      } catch (_) {
+        // ignore
+      }
+    };
+    // Only attempt when dialog is open
+    if (open) load();
+    return () => { cancelled = true; };
+  }, [open]);
 
-        return isCorrectType && isActive && isForPurchase && matchesUserType && isNotCurrentActivePlan;
+  const availablePlans = useMemo(() => {
+    let plansArray: SubscriptionPlan[] = Array.isArray(plansResponse)
+      ? (plansResponse as SubscriptionPlan[])
+      : (Array.isArray((plansResponse as any)?.data) ? (plansResponse as any).data : []);
+
+    // Use fallback if primary source is empty or invalid
+    if (!Array.isArray(plansArray) || plansArray.length === 0) {
+      plansArray = fallbackPlans;
+    }
+
+    if (!Array.isArray(plansArray)) return [];
+
+    return plansArray
+      .filter((plan: SubscriptionPlan) => {
+        const isActive = plan.status === 'Active';
+        return isActive;
       })
       .sort((a: SubscriptionPlan, b: SubscriptionPlan) => a.price - b.price);
-  }, [plansResponse, userType, subscription, isExpired]);
+  }, [plansResponse, userType, subscription, isExpired, fallbackPlans]);
 
-  const isLoading = plansLoading || changingPlan;
+  const isLoading = plansLoading || changingPlan || renewingPlan;
+
+  const dispatch = useDispatch();
 
   const handlePlanChange = async () => {
     if (!selectedPlan) return;
 
     try {
-      await changePlan({
-        planId: selectedPlan._id,
-        userType: userType
-      }).unwrap();
-      
-      toast.success('Subscription plan changed successfully!');
-      onOpenChange(false);
+      if (isExpired) {
+        console.log('Attempting to renew subscription with:', {
+          planId: selectedPlan._id,
+          userType: userType,
+          amount: selectedPlan.discountedPrice || selectedPlan.price
+        });
+
+        const response = await renewPlan({
+          planId: selectedPlan._id,
+          userType: userType,
+          amount: selectedPlan.discountedPrice || selectedPlan.price,
+          paymentMethod: 'online',
+        }).unwrap();
+
+        console.log('Renewal response:', response);
+
+        if (response?.success) {
+          // Update the user data in the Redux store
+          if (response.user) {
+            dispatch(updateUser(response.user));
+          }
+
+
+          toast.success(response.message || 'Subscription renewed successfully!');
+
+          // Close the dialog
+          onOpenChange(false);
+        } else {
+          throw new Error(response?.message || 'Failed to renew subscription');
+        }
+      } else {
+        const response = await changePlan({
+          planId: selectedPlan._id,
+          userType: userType
+        }).unwrap();
+
+        if (response?.success) {
+          // Update the user data in the Redux store
+          if (response.user) {
+            dispatch(updateUser(response.user));
+          }
+
+
+          toast.success(response.message || 'Subscription plan changed successfully!');
+
+          // Close the dialog
+          onOpenChange(false);
+        } else {
+          throw new Error(response?.message || 'Failed to change subscription plan');
+        }
+      }
     } catch (error: any) {
-      toast.error(error?.data?.message || 'Failed to change subscription plan');
+      console.error('Subscription error:', error);
+      const errorMessage = error?.data?.message ||
+        error?.error ||
+        error?.message ||
+        (isExpired ? 'Failed to renew subscription' : 'Failed to change subscription plan');
+      toast.error(errorMessage);
     }
   };
 
@@ -99,7 +173,7 @@ export function SubscriptionPlansDialog({
           <DialogTitle>{isExpired ? 'Renew Subscription' : 'Change Plan'}</DialogTitle>
           <DialogDescription>Choose a plan that best suits your needs</DialogDescription>
         </DialogHeader>
-        
+
         <div className="relative py-8 px-2">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
           <div className="relative grid md:grid-cols-3 gap-8">
@@ -118,8 +192,8 @@ export function SubscriptionPlansDialog({
                   key={plan._id}
                   className={cn(
                     "group relative p-6 border-2 rounded-xl cursor-pointer transition-all hover:shadow-lg",
-                    selectedPlan?._id === plan._id 
-                      ? "border-primary ring-2 ring-primary/20 bg-primary/5" 
+                    selectedPlan?._id === plan._id
+                      ? "border-primary ring-2 ring-primary/20 bg-primary/5"
                       : "border-border hover:border-primary/50"
                   )}
                   onClick={() => setSelectedPlan(plan)}
@@ -131,7 +205,7 @@ export function SubscriptionPlansDialog({
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="text-center relative">
                     <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
                     <div className="flex items-baseline justify-center gap-2">
@@ -169,8 +243,8 @@ export function SubscriptionPlansDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button 
-            onClick={handlePlanChange} 
+          <Button
+            onClick={handlePlanChange}
             disabled={!selectedPlan || isLoading}
             className="relative overflow-hidden"
           >

@@ -59,21 +59,21 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number, setStep:
   return (
     <div className="w-full mb-4 mt-2">
       <div className="flex space-x-2">
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 1 ? "bg-purple-600" : "bg-gray-200"
           )}
           onClick={() => currentStep > 1 && setStep(1)}
         />
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 2 ? "bg-purple-600" : "bg-gray-200"
           )}
           onClick={() => currentStep > 2 && setStep(2)}
         />
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 3 ? "bg-purple-600" : "bg-gray-200"
@@ -126,7 +126,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   useEffect(() => {
     if (refCode) {
-      setFormData(prev => ({...prev, referredByCode: refCode}));
+      setFormData(prev => ({ ...prev, referredByCode: refCode }));
     }
   }, [refCode]);
 
@@ -134,7 +134,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleCheckboxChange = (id: SubCategory, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
@@ -184,7 +184,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   const validateStep2 = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.businessName) newErrors.businessName = 'Business name is required';
@@ -212,8 +212,8 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep1() || !validateStep2() || !validateStep3()) {
-        toast.error("Please ensure all required fields are filled correctly.");
-        return;
+      toast.error("Please ensure all required fields are filled correctly.");
+      return;
     }
 
     try {
@@ -227,14 +227,14 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   const nextStep = () => {
     if (step === 1 && validateStep1()) {
-        setStep(2);
+      setStep(2);
     } else if (step === 2 && validateStep2()) {
-        setStep(3);
+      setStep(3);
     } else {
       // Show error toast if validation fails
-      if ((step === 1 && !validateStep1()) || 
-          (step === 2 && !validateStep2()) || 
-          (step === 3 && !validateStep3())) {
+      if ((step === 1 && !validateStep1()) ||
+        (step === 2 && !validateStep2()) ||
+        (step === 3 && !validateStep3())) {
         toast.error("Please fill all required fields correctly.");
       }
     }
@@ -248,12 +248,12 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   useEffect(() => {
     if (!isMapOpen || !MAPBOX_TOKEN) return;
-    
+
     const initMap = () => {
       if (!mapContainer.current) return;
-      
+
       mapboxgl.accessToken = MAPBOX_TOKEN;
-      
+
       if (map.current && map.current.getCanvas()) {
         try {
           map.current.remove();
@@ -261,7 +261,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
           console.warn('Error removing existing map:', error);
         }
       }
-      
+
       if (marker.current) {
         try {
           marker.current.remove();
@@ -269,18 +269,18 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
           console.warn('Error removing existing marker:', error);
         }
       }
-      
+
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v11',
         center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
         zoom: formData.location ? 15 : 5
       });
-      
+
       marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
         .setLngLat(formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599])
         .addTo(map.current);
-        
+
       marker.current.on('dragend', () => {
         if (marker.current) {
           const lngLat = marker.current.getLngLat();
@@ -288,7 +288,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
           fetchAddress([lngLat.lng, lngLat.lat]);
         }
       });
-      
+
       map.current.on('click', (e: mapboxgl.MapLayerMouseEvent) => {
         const { lng, lat } = e.lngLat;
         setFormData(prev => ({ ...prev, location: { lat, lng } }));
@@ -297,7 +297,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
         }
         fetchAddress([lng, lat]);
       });
-      
+
       map.current.on('load', () => {
         setTimeout(() => {
           if (map.current && map.current.getCanvas()) {
@@ -306,9 +306,9 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
         }, 100);
       });
     };
-    
+
     const timeoutId = setTimeout(initMap, 100);
-    
+
     return () => {
       clearTimeout(timeoutId);
       if (marker.current) {
@@ -396,26 +396,26 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       {/* Added responsive container with proper scrolling for mobile */}
       <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2 overflow-y-auto max-h-[calc(100vh-20px)]">
         <div className="fixed top-4 sm:top-8 left-4 sm:left-10 right-4 sm:right-10 flex justify-between items-center z-20">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={step === 1 ? () => window.history.back() : prevStep} 
+          <Button
+            type="button"
+            variant="outline"
+            onClick={step === 1 ? () => window.history.back() : prevStep}
             className="px-3 sm:px-4 py-2 text-base sm:text-lg text-gray-600 border-gray-300 hover:bg-gray-50 h-10 sm:h-auto"
           >
             ← {step === 1 ? 'Back to Role Selection' : 'Back'}
           </Button>
           {step < 3 ? (
-            <Button 
-              type="button" 
-              onClick={nextStep} 
+            <Button
+              type="button"
+              onClick={nextStep}
               className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
             >
               Continue →
             </Button>
           ) : (
-            <Button 
-              type="submit" 
-              disabled={isLoading} 
+            <Button
+              type="submit"
+              disabled={isLoading}
               className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
               form="registration-form"
             >
@@ -423,11 +423,11 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
             </Button>
           )}
         </div>
-        
+
         <div className="mt-16 sm:mt-8">
           <StepIndicator currentStep={step} setStep={setStep} />
         </div>
-      
+
         <form id="registration-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 pb-8 mt-4">
           {/* Added responsive container for form content */}
           <div className="flex flex-col justify-start" style={{ minHeight: 'calc(100vh - 200px)' }}>
@@ -493,7 +493,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
-                    <Select name="category" onValueChange={(value) => setFormData(prev => ({...prev, category: value as SalonCategory}))} value={formData.category}>
+                    <Select name="category" onValueChange={(value) => setFormData(prev => ({ ...prev, category: value as SalonCategory }))} value={formData.category}>
                       <SelectTrigger className="h-12 sm:h-14 w-full text-base sm:text-lg">
                         <SelectValue placeholder="Select salon category" />
                       </SelectTrigger>
@@ -509,9 +509,9 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                       {(['at-salon', 'at-home', 'custom-location'] as SubCategory[]).map(sc => (
                         <div key={sc} className="flex items-center space-x-2 p-2 sm:p-3 border rounded-md hover:bg-gray-50">
-                          <Checkbox 
-                            id={sc} 
-                            checked={formData.subCategories.includes(sc)} 
+                          <Checkbox
+                            id={sc}
+                            checked={formData.subCategories.includes(sc)}
                             onCheckedChange={(checked) => handleCheckboxChange(sc, checked as boolean)}
                             className="h-3 w-3 sm:h-4 sm:w-4"
                           />
@@ -587,7 +587,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
             )}
           </div>
         </form>
-      
+
         {/* Map Modal */}
         <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
           <DialogContent className="sm:max-w-4xl max-h-[80vh]">
@@ -622,19 +622,19 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                   </div>
                 )}
               </div>
-              
+
               {formData.location && (
                 <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
                   <strong>Selected Location:</strong> {formData.location?.lat.toFixed(6)}, {formData.location?.lng.toFixed(6)}
                 </div>
               )}
-              
+
               <div className="relative border rounded-lg overflow-hidden" style={{ height: '300px' }}>
-                <div 
-                  ref={mapContainer} 
+                <div
+                  ref={mapContainer}
                   className="w-full h-full"
                 />
-                
+
                 {!MAPBOX_TOKEN && (
                   <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
                     <div className="text-center">
@@ -644,14 +644,14 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                   </div>
                 )}
               </div>
-              
+
               <div className="text-xs text-gray-500 space-y-1">
                 <p>• Click anywhere on the map to place the marker</p>
                 <p>• Drag the marker to adjust the location</p>
                 <p>• Use the search box to find specific places</p>
               </div>
             </div>
-            
+
             <DialogFooter className="mt-4">
               <Button type="button" variant="outline" onClick={() => setIsMapOpen(false)}>
                 Cancel
