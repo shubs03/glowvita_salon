@@ -14,7 +14,7 @@ type Appointment = {
   startTime: string;
   endTime: string;
   notes?: string;
-  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+  status: 'confirmed' | 'pending' | 'completed' | 'cancelled' | 'partially-completed' | 'missed' | 'no_show' | 'scheduled' | 'in_progress' | 'completed without payment';
   isBlocked?: boolean;
   description?: string;
   clientPhone?: string;
@@ -34,7 +34,7 @@ interface AppointmentCardProps {
 
 const getServiceGradient = (service: string | null | undefined) => {
   const serviceName = service?.toLowerCase() || 'default';
-  
+
   if (serviceName.includes('hair')) {
     return {
       gradient: 'from-purple-500 to-pink-500',
@@ -78,36 +78,60 @@ const getServiceGradient = (service: string | null | undefined) => {
 
 const getStatusConfig = (status: Appointment['status']) => {
   switch (status) {
-    case 'confirmed': 
-      return { 
+    case 'confirmed':
+      return {
         label: 'Confirmed',
         icon: <CheckCircle2 className="w-4 h-4" />,
         color: 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-green-200',
         dotColor: 'bg-green-400'
       };
-    case 'completed': 
-      return { 
-        label: 'Completed',
+    case 'completed':
+    case 'completed without payment':
+      return {
+        label: status === 'completed' ? 'Completed' : 'Completed without payment',
         icon: <CheckCircle2 className="w-4 h-4" />,
         color: 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-blue-200',
         dotColor: 'bg-blue-400'
       };
-    case 'pending': 
-      return { 
+    case 'pending':
+      return {
         label: 'Pending',
         icon: <Clock4 className="w-4 h-4" />,
         color: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-amber-200',
         dotColor: 'bg-amber-400'
       };
-    case 'cancelled': 
-      return { 
+    case 'cancelled':
+      return {
         label: 'Cancelled',
         icon: <XCircle className="w-4 h-4" />,
         color: 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-red-200',
         dotColor: 'bg-red-400'
       };
-    default: 
-      return { 
+    case 'partially-completed':
+      return {
+        label: 'Partially Completed',
+        icon: <Clock4 className="w-4 h-4" />,
+        color: 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-indigo-200',
+        dotColor: 'bg-indigo-400'
+      };
+    case 'missed':
+    case 'no_show':
+      return {
+        label: status === 'missed' ? 'Missed' : 'No Show',
+        icon: <XCircle className="w-4 h-4" />,
+        color: 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200',
+        dotColor: 'bg-purple-400'
+      };
+    case 'scheduled':
+    case 'in_progress':
+      return {
+        label: status === 'scheduled' ? 'Scheduled' : 'In Progress',
+        icon: <Clock4 className="w-4 h-4" />,
+        color: 'bg-gradient-to-r from-purple-500 to-fuchsia-600 text-white shadow-purple-200',
+        dotColor: 'bg-purple-400'
+      };
+    default:
+      return {
         label: 'Unknown',
         icon: <span>?</span>,
         color: 'bg-gradient-to-r from-gray-500 to-slate-500 text-white shadow-gray-200',
@@ -117,13 +141,13 @@ const getStatusConfig = (status: Appointment['status']) => {
 };
 
 // Enhanced Button Component
-const Button = ({ 
-  children, 
-  variant = 'default', 
-  size = 'default', 
-  className = '', 
-  onClick, 
-  ...props 
+const Button = ({
+  children,
+  variant = 'default',
+  size = 'default',
+  className = '',
+  onClick,
+  ...props
 }: {
   children: React.ReactNode;
   variant?: 'default' | 'ghost' | 'outline';
@@ -133,19 +157,19 @@ const Button = ({
   [key: string]: any;
 }) => {
   const baseClasses = 'inline-flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
-  
+
   const variantClasses = {
     default: 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl',
     ghost: 'hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105',
     outline: 'border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-800',
   };
-  
+
   const sizeClasses = {
     default: 'h-10 py-2 px-4',
     sm: 'h-8 py-1 px-3 text-xs',
     icon: 'h-9 w-9 p-0',
   };
-  
+
   return (
     <button
       className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
@@ -162,24 +186,24 @@ const DropdownMenu = ({ children }: { children: React.ReactNode }) => {
   return <div className="relative inline-block text-left">{children}</div>;
 };
 
-const DropdownMenuTrigger = ({ 
-  children, 
-  asChild = false 
-}: { 
-  children: React.ReactNode; 
-  asChild?: boolean; 
+const DropdownMenuTrigger = ({
+  children,
+  asChild = false
+}: {
+  children: React.ReactNode;
+  asChild?: boolean;
 }) => {
   return <>{children}</>;
 };
 
-const DropdownMenuContent = ({ 
-  children, 
-  align = 'center', 
-  className = '' 
-}: { 
-  children: React.ReactNode; 
-  align?: 'start' | 'center' | 'end'; 
-  className?: string; 
+const DropdownMenuContent = ({
+  children,
+  align = 'center',
+  className = ''
+}: {
+  children: React.ReactNode;
+  align?: 'start' | 'center' | 'end';
+  className?: string;
 }) => {
   const alignmentClasses = {
     start: 'left-0',
@@ -194,14 +218,14 @@ const DropdownMenuContent = ({
   );
 };
 
-const DropdownMenuItem = ({ 
-  children, 
-  className = '', 
-  onClick 
-}: { 
-  children: React.ReactNode; 
-  className?: string; 
-  onClick?: (e: React.MouseEvent) => void; 
+const DropdownMenuItem = ({
+  children,
+  className = '',
+  onClick
+}: {
+  children: React.ReactNode;
+  className?: string;
+  onClick?: (e: React.MouseEvent) => void;
 }) => {
   return (
     <button
@@ -213,12 +237,12 @@ const DropdownMenuItem = ({
   );
 };
 
-export default function AppointmentCard({ 
-  appointment, 
-  onViewDetails, 
-  onEdit, 
-  onCancel, 
-  onComplete 
+export default function AppointmentCard({
+  appointment,
+  onViewDetails,
+  onEdit,
+  onCancel,
+  onComplete
 }: AppointmentCardProps) {
   const { theme } = useTheme();
   const [isMounted, setIsMounted] = useState(false);
@@ -233,7 +257,7 @@ export default function AppointmentCard({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const statusConfig = getStatusConfig(appointment.status);
   const { gradient, bg, border, accent, hover } = getServiceGradient(appointment.service);
-  
+
   const handleAction = (e: React.MouseEvent, action?: () => void) => {
     e.stopPropagation();
     setIsDropdownOpen(false);
@@ -241,7 +265,7 @@ export default function AppointmentCard({
   };
 
   return (
-    <div 
+    <div
       className={`relative p-4 rounded-lg shadow-sm transition-all duration-200 cursor-pointer border-l-4 ${border} ${bg} ${hover} hover:shadow-md dark:shadow-gray-900/20`}
       onClick={onViewDetails}
     >
@@ -309,16 +333,15 @@ export default function AppointmentCard({
         )}
         {appointment.mode && (
           <div className="mt-3">
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${
-              appointment.mode === 'online'
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-            }`}>
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${appointment.mode === 'online'
+              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+              }`}>
               <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
                 {appointment.mode === 'online' ? (
-                  <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"/>
+                  <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z" />
                 ) : (
-                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                  <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
                 )}
               </svg>
               {appointment.mode === 'online' ? 'Web Booking' : 'Offline Booking'}
@@ -330,9 +353,9 @@ export default function AppointmentCard({
       {/* Quick Actions */}
       <div className="flex justify-between items-center">
         <div className="flex gap-3">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="text-sm font-extrabold rounded-lg border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm px-4 py-2"
             onClick={(e) => handleAction(e, onViewDetails)}
           >
@@ -340,12 +363,12 @@ export default function AppointmentCard({
             View Details
           </Button>
         </div>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="h-10 w-10 p-0 text-gray-600 hover:text-gray-800 hover:bg-gray-100 dark:hover:bg-gray-800 border-gray-300 dark:border-gray-600 shadow-sm"
               onClick={(e) => {
                 e.stopPropagation();
@@ -355,37 +378,37 @@ export default function AppointmentCard({
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          
+
           {isDropdownOpen && (
             <DropdownMenuContent align="end" className="w-52 rounded-xl border-gray-200 dark:border-gray-700 shadow-xl">
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={(e) => handleAction(e, onViewDetails)}
                 className="py-3 font-bold text-base"
               >
                 <ArrowRight className="w-5 h-5 mr-3" />
                 View Details
               </DropdownMenuItem>
-              
-              {appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
+
+              {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && appointment.status !== 'cancelled' && (
                 <>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={(e) => handleAction(e, onEdit)}
                     className="py-3 font-bold text-base"
                   >
                     <Clock className="w-5 h-5 mr-3" />
                     Edit
                   </DropdownMenuItem>
-                  
-                  <DropdownMenuItem 
+
+                  <DropdownMenuItem
                     className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 py-3 font-bold text-base"
                     onClick={(e) => handleAction(e, onCancel)}
                   >
                     <XCircle className="w-5 h-5 mr-3" />
                     Cancel
                   </DropdownMenuItem>
-                  
+
                   {appointment.status === 'confirmed' && (
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       className="text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 py-3 font-bold text-base"
                       onClick={(e) => handleAction(e, onComplete)}
                     >
@@ -399,7 +422,7 @@ export default function AppointmentCard({
           )}
         </DropdownMenu>
       </div>
-      
+
       {/* Notes Indicator */}
       {appointment.notes && (
         <div className="absolute -top-2.5 -right-2.5">
@@ -415,11 +438,11 @@ export default function AppointmentCard({
           </div>
         </div>
       )}
-      
+
       {/* Dropdown backdrop */}
       {isDropdownOpen && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setIsDropdownOpen(false)}
         />
       )}

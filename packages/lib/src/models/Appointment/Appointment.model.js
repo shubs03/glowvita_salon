@@ -191,7 +191,7 @@ const appointmentSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['temp-locked', 'scheduled', 'confirmed', 'completed', 'cancelled', 'no-show'],
+        enum: ['temp-locked', 'scheduled', 'confirmed', 'completed', 'partially-completed', 'cancelled', 'no-show'],
         default: 'scheduled'
     },
     // Fields for optimistic locking

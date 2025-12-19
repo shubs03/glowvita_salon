@@ -69,7 +69,7 @@ interface Appointment {
   endTime: string;
   duration: number;
   notes: string;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending' | 'completed without payment';
   amount: number;
   discount: number;
   tax: number;
@@ -102,7 +102,7 @@ interface ClientAppointment {
   id: string;
   date: Date;
   service: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed' | 'completed without payment';
   staffName: string;
   amount: number;
   startTime?: string;
@@ -124,7 +124,7 @@ export function AppointmentDetailView({
   const [activeTab, setActiveTab] = useState('details');
   const [clientHistory, setClientHistory] = useState<ClientAppointment[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [activeHistoryFilter, setActiveHistoryFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed'>('all');
+  const [activeHistoryFilter, setActiveHistoryFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed' | 'completed without payment'>('all');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCollectingPayment, setIsCollectingPayment] = useState(false);
@@ -235,8 +235,8 @@ export function AppointmentDetailView({
           ...data,
           // Ensure date is a Date object
           date: data.date instanceof Date ? data.date : new Date(data.date),
-          // Preserve the original status unless explicitly changed
-          status: appointment.status,
+          // Reset status to confirmed on reschedule
+          status: 'confirmed',
         };
 
         await onRescheduleAppointment(updatedAppointment);
@@ -291,7 +291,7 @@ export function AppointmentDetailView({
         staffName: formData.staffName || appointment?.staffName,
         startTime: formData.startTime || appointment?.startTime,
         endTime: formData.endTime || appointment?.endTime,
-        status: formData.status || appointment?.status || 'scheduled',
+        status: formData.status || (appointment.status === 'cancelled' ? 'confirmed' : appointment.status) || 'scheduled',
         notes: formData.notes || appointment?.notes || '',
         amount: formData.amount || appointment?.amount || 0,
         discount: formData.discount || appointment?.discount || 0,
@@ -396,7 +396,7 @@ export function AppointmentDetailView({
       const mapStatus = (s: any): ClientAppointment['status'] => {
         const status = String(s || '').toLowerCase();
         if (status === 'confirmed') return 'confirmed';
-        if (status === 'completed') return 'completed';
+        if (status === 'completed' || status === 'completed without payment') return 'completed';
         if (status === 'cancelled') return 'cancelled';
         if (status === 'no_show' || status === 'no-show' || status === 'missed') return 'missed';
         return 'pending';
@@ -443,7 +443,7 @@ export function AppointmentDetailView({
   }, [appointmentsList, appointment, activeHistoryFilter]);
 
   // Function to update appointment status
-  const updateAppointmentStatus = (appointmentId: string, newStatus: 'pending' | 'completed' | 'cancelled' | 'missed') => {
+  const updateAppointmentStatus = (appointmentId: string, newStatus: 'pending' | 'completed' | 'cancelled' | 'missed' | 'completed without payment') => {
     setPendingStatus(newStatus);
     setShowStatusConfirm(true);
   };
@@ -451,7 +451,7 @@ export function AppointmentDetailView({
   const confirmStatusUpdate = () => {
     if (!pendingStatus) return;
 
-    const newStatus = pendingStatus as 'pending' | 'completed' | 'cancelled' | 'missed';
+    const newStatus = pendingStatus as 'pending' | 'completed' | 'cancelled' | 'missed' | 'completed without payment';
 
     // Update local state
     setClientHistory(prevHistory =>
@@ -489,10 +489,10 @@ export function AppointmentDetailView({
           <Button
             variant="default"
             onClick={confirmStatusUpdate}
-            className={`${pendingStatus === 'completed' ? 'bg-green-600 hover:bg-green-700' :
-                pendingStatus === 'cancelled' ? 'bg-red-600 hover:bg-red-700' :
-                  pendingStatus === 'missed' ? 'bg-purple-600 hover:bg-purple-700' :
-                    'bg-blue-600 hover:bg-blue-700'
+            className={`${(pendingStatus === 'completed' || pendingStatus === 'completed without payment') ? 'bg-green-600 hover:bg-green-700' :
+              pendingStatus === 'cancelled' ? 'bg-red-600 hover:bg-red-700' :
+                pendingStatus === 'missed' ? 'bg-purple-600 hover:bg-purple-700' :
+                  'bg-blue-600 hover:bg-blue-700'
               }`}
           >
             Confirm {pendingStatus}
@@ -520,11 +520,14 @@ export function AppointmentDetailView({
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'completed':
+      case 'completed without payment':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'partially-completed':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'missed':
         return 'bg-purple-100 text-purple-800 border-purple-200';
       default:
@@ -541,19 +544,19 @@ export function AppointmentDetailView({
       case 'scheduled':
         return [
           { value: 'confirmed', label: 'Confirm Appointment' },
-          { value: 'completed', label: 'Mark as Completed' },
+          { value: 'completed without payment', label: 'Completed without payment' },
           ...commonOptions
         ];
       case 'pending':
         return [
           { value: 'scheduled', label: 'Mark as Scheduled' },
           { value: 'confirmed', label: 'Confirm Appointment' },
-          { value: 'completed', label: 'Mark as Completed' },
+          { value: 'completed without payment', label: 'Completed without payment' },
           ...commonOptions
         ];
       case 'confirmed':
         return [
-          { value: 'completed', label: 'Mark as Completed' },
+          { value: 'completed without payment', label: 'Completed without payment' },
           ...commonOptions
         ];
       default:
@@ -1070,8 +1073,8 @@ export function AppointmentDetailView({
                           <div className="flex justify-between items-center py-2 px-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
                             <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Payment Status:</span>
                             <span className={`text-sm font-semibold capitalize ${(appointment as any).paymentStatus === 'completed' ? 'text-green-700 dark:text-green-300' :
-                                (appointment as any).paymentStatus === 'pending' ? 'text-yellow-700 dark:text-yellow-300' :
-                                  'text-red-700 dark:text-red-300'
+                              (appointment as any).paymentStatus === 'pending' ? 'text-yellow-700 dark:text-yellow-300' :
+                                'text-red-700 dark:text-red-300'
                               }`}>
                               {(appointment as any).paymentStatus}
                             </span>
@@ -1151,8 +1154,8 @@ export function AppointmentDetailView({
                         <div className={`flex justify-between items-center py-2 px-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg`}>
                           <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Payment Status</span>
                           <span className={`text-sm font-semibold ${(overridePayment?.paymentStatus ?? (appointment as any).paymentStatus) === 'completed' ? 'text-green-700 dark:text-green-300' :
-                              (overridePayment?.paymentStatus ?? (appointment as any).paymentStatus) === 'pending' ? 'text-yellow-700 dark:text-yellow-300' :
-                                'text-red-700 dark:text-red-300'
+                            (overridePayment?.paymentStatus ?? (appointment as any).paymentStatus) === 'pending' ? 'text-yellow-700 dark:text-yellow-300' :
+                              'text-red-700 dark:text-red-300'
                             }`}>
                             {/* Map backend payment status to user-friendly terms */}
                             {(() => {
@@ -1229,8 +1232,8 @@ export function AppointmentDetailView({
                             <button
                               onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'cash' }))}
                               className={`p-3 rounded-lg border-2 transition-all ${paymentData.paymentMethod === 'cash'
-                                  ? 'border-foreground bg-muted'
-                                  : 'border-muted hover:border-foreground/50'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
                                 }`}
                             >
                               <Wallet className={`w-6 h-6 mx-auto mb-1 ${paymentData.paymentMethod === 'cash' ? 'text-foreground' : 'text-foreground/60'
@@ -1241,8 +1244,8 @@ export function AppointmentDetailView({
                             <button
                               onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'card' }))}
                               className={`p-3 rounded-lg border-2 transition-all ${paymentData.paymentMethod === 'card'
-                                  ? 'border-foreground bg-muted'
-                                  : 'border-muted hover:border-foreground/50'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
                                 }`}
                             >
                               <CreditCard className={`w-6 h-6 mx-auto mb-1 ${paymentData.paymentMethod === 'card' ? 'text-foreground' : 'text-foreground/60'
@@ -1253,8 +1256,8 @@ export function AppointmentDetailView({
                             <button
                               onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'upi' }))}
                               className={`p-3 rounded-lg border-2 transition-all ${paymentData.paymentMethod === 'upi'
-                                  ? 'border-foreground bg-muted'
-                                  : 'border-muted hover:border-foreground/50'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
                                 }`}
                             >
                               <Smartphone className={`w-6 h-6 mx-auto mb-1 ${paymentData.paymentMethod === 'upi' ? 'text-foreground' : 'text-foreground/60'
@@ -1265,8 +1268,8 @@ export function AppointmentDetailView({
                             <button
                               onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'netbanking' }))}
                               className={`p-3 rounded-lg border-2 transition-all ${paymentData.paymentMethod === 'netbanking'
-                                  ? 'border-foreground bg-muted'
-                                  : 'border-muted hover:border-foreground/50'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
                                 }`}
                             >
                               <svg className={`w-6 h-6 mx-auto mb-1 ${paymentData.paymentMethod === 'netbanking' ? 'text-foreground' : 'text-foreground/60'
@@ -1534,17 +1537,20 @@ export function AppointmentDetailView({
                     <div className="bg-background p-3 rounded-lg border shadow-sm">
                       <div className="flex items-center space-x-3">
                         <div className={`p-2 rounded-lg ${appointment.status === 'confirmed' ? 'bg-blue-100 dark:bg-blue-900/30' :
-                            appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
+                          appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
+                            appointment.status === 'partially-completed' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
                               appointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30' :
                                 'bg-red-100 dark:bg-red-900/30'
                           }`}>
                           <div className={`h-5 w-5 rounded-full flex items-center justify-center ${appointment.status === 'confirmed' ? 'text-blue-600 dark:text-blue-400' :
-                              appointment.status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' :
+                            appointment.status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' :
+                              appointment.status === 'partially-completed' ? 'text-indigo-600 dark:text-indigo-400' :
                                 appointment.status === 'completed' ? 'text-green-600 dark:text-green-400' :
                                   'text-red-600 dark:text-red-400'
                             }`}>
                             <div className={`h-2.5 w-2.5 rounded-full ${appointment.status === 'confirmed' ? 'bg-blue-500' :
-                                appointment.status === 'pending' ? 'bg-yellow-500' :
+                              appointment.status === 'pending' ? 'bg-yellow-500' :
+                                appointment.status === 'partially-completed' ? 'bg-indigo-500' :
                                   appointment.status === 'completed' ? 'bg-green-500' : 'bg-red-500'
                               }`} />
                           </div>
@@ -1558,7 +1564,8 @@ export function AppointmentDetailView({
                             <Badge
                               variant="outline"
                               className={`px-2 py-0.5 text-xs font-medium ${appointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
-                                  appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' :
+                                appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' :
+                                  appointment.status === 'partially-completed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
                                     appointment.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' :
                                       'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
                                 } border-0`}
@@ -1696,8 +1703,8 @@ export function AppointmentDetailView({
                       key={filter}
                       onClick={() => setActiveHistoryFilter(filter as any)}
                       className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap ${activeHistoryFilter === filter
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted'
                         }`}
                     >
                       {filter.charAt(0).toUpperCase() + filter.slice(1)}
