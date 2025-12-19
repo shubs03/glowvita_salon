@@ -56,6 +56,9 @@ export default function StaffPage() {
     const { data: staffList = [], isLoading, isError, refetch } = useGetStaffQuery(user?._id, {
         skip: !user?._id,
     });
+
+    console.log("Staff List:", staffList)
+
     const [deleteStaff, { isLoading: isDeleting }] = useDeleteStaffMutation();
     
     // Refetch staff data when the page becomes visible to ensure latest data
