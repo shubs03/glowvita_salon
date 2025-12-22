@@ -383,12 +383,23 @@ html {
 
 .animate-marquee {
   animation: marquee 40s linear infinite;
+  transition: animation-play-state 0.5s ease;
 }
 
 .animate-marquee-reverse {
   animation: marquee-reverse 45s linear infinite;
+  transition: animation-play-state 0.5s ease;
 }
 
 .pause-marquee:hover {
   animation-play-state: paused;
+}
+
+/* Cursor grab styles for marquee */
+.cursor-grab {
+  cursor: grab;
+}
+
+.cursor-grab:active {
+  cursor: grabbing;
 }

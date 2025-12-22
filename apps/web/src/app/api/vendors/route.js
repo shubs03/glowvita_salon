@@ -1,5 +1,7 @@
 import _db from "@repo/lib/db";
 import VendorModel from "@repo/lib/models/Vendor.model";
+import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
+import CategoryModel from "@repo/lib/models/admin/Category.model";
 
 const setCorsHeaders = (response) => {
   response.headers.set('Access-Control-Allow-Origin', '*');
@@ -21,7 +23,7 @@ export const GET = async () => {
       );
     }
 
-    // ✅ Clean and efficient query
+    // ✅ Clean and efficient query for approved vendors
     const vendors = await VendorModel.find(
       { status: "Approved" },
       {
@@ -43,17 +45,54 @@ export const GET = async () => {
       .maxTimeMS(2000) // increased timeout
       .exec();
 
+    // Get vendor IDs for fetching services
+    const vendorIds = vendors.map(vendor => vendor._id);
+
+    // Fetch services for all vendors in one query
+    const vendorServices = await VendorServicesModel.find({
+      vendor: { $in: vendorIds },
+      "services.status": "approved"
+    }).populate('services.category', 'name');
+
+    // Create a map of vendor ID to services for easy lookup
+    const servicesMap = {};
+    vendorServices.forEach(vendorService => {
+      servicesMap[vendorService.vendor.toString()] = vendorService.services
+        .filter(service => service.status === 'approved')
+        .map(service => ({
+          _id: service._id,
+          name: service.name,
+          category: service.category ? {
+            _id: service.category._id,
+            name: service.category.name
+          } : null,
+          price: service.price,
+          duration: service.duration,
+          description: service.description
+        }));
+    });
+
+    // Attach services to each vendor
+    const vendorsWithServices = vendors.map(vendor => ({
+      ...vendor,
+      services: servicesMap[vendor._id.toString()] || []
+    }));
+
+    // Fetch all categories for reference
+    const categories = await CategoryModel.find({});
+
     return setCorsHeaders(
       Response.json({
         success: true,
-        vendors,
-        count: vendors.length,
+        vendors: vendorsWithServices,
+        categories: categories,
+        count: vendorsWithServices.length,
       })
     );
   } catch (error) {
     console.error("Error fetching public vendors:", error);
     return setCorsHeaders(
-      Response.json({ success: false, message: "Failed to fetch vendors", vendors: [] }, { status: 500 })
+      Response.json({ success: false, message: "Failed to fetch vendors", vendors: [], categories: [] }, { status: 500 })
     );
   }
 };
