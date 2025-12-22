@@ -9,10 +9,38 @@ import { calculateVendorTravelTime } from './EnhancedTravelUtils.js';
 
 /**
  * Convert time string to minutes for faster comparisons
- * @param {string} timeStr - Time in HH:MM format
+ * Handles both 24-hour format (HH:MM) and 12-hour format (HH:MMAM/PM)
+ * @param {string} timeStr - Time in HH:MM or HH:MMAM/PM format
  * @returns {number} - Minutes from midnight
  */
 function timeToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  
+  // Remove any spaces
+  timeStr = timeStr.trim();
+  
+  // Check if it's 12-hour format with AM/PM
+  const isPM = timeStr.toUpperCase().includes('PM');
+  const isAM = timeStr.toUpperCase().includes('AM');
+  
+  if (isPM || isAM) {
+    // Remove AM/PM and parse
+    const cleanTime = timeStr.replace(/AM|PM|am|pm/gi, '').trim();
+    const [hours, minutes] = cleanTime.split(':').map(Number);
+    
+    let totalHours = hours;
+    
+    // Convert to 24-hour format
+    if (isPM && hours !== 12) {
+      totalHours = hours + 12;
+    } else if (isAM && hours === 12) {
+      totalHours = 0; // Midnight
+    }
+    
+    return totalHours * 60 + minutes;
+  }
+  
+  // Standard 24-hour format
   const [hours, minutes] = timeStr.split(':').map(Number);
   return hours * 60 + minutes;
 }
@@ -491,7 +519,7 @@ export async function generateWeddingPackageSlots({
   services,
   date,
   customerLocation = null,
-  stepMinutes = 30, // Larger step for wedding packages
+  stepMinutes = 15, // 15-minute intervals for better availability
   acceptanceWindowHours = 24, // Time window for staff acceptance
   bufferBefore = 0,
   bufferAfter = 0
@@ -513,44 +541,102 @@ export async function generateWeddingPackageSlots({
       throw new Error('Vendor not found');
     }
 
-    // Get all active staff for this vendor
-    const staffMembers = await StaffModel.find({
-      vendorId: vendorId,
-      status: 'Active'
-    });
+    // Get assigned staff for this wedding package, or all active staff if none assigned
+    let staffMembers;
+    if (weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0) {
+      console.log('Wedding package has assigned staff:', weddingPackage.assignedStaff);
+      
+      // Use only the assigned staff members
+      staffMembers = await StaffModel.find({
+        _id: { $in: weddingPackage.assignedStaff },
+        vendorId: vendorId,
+        status: 'Active'
+      });
+      
+      console.log(`Found ${staffMembers.length} assigned staff members:`, staffMembers.map(s => ({ id: s._id, name: s.fullName })));
+      
+      // If no staff found, it might be an ID format mismatch - try treating as strings
+      if (staffMembers.length === 0) {
+        console.log('No staff found with _id, trying string comparison...');
+        const allStaff = await StaffModel.find({
+          vendorId: vendorId,
+          status: 'Active'
+        });
+        
+        // Filter staff manually by comparing ID strings
+        const assignedStaffStrings = weddingPackage.assignedStaff.map(id => id.toString());
+        staffMembers = allStaff.filter(staff => 
+          assignedStaffStrings.includes(staff._id.toString())
+        );
+        
+        console.log(`After manual filtering: Found ${staffMembers.length} staff members`);
+      }
+    } else {
+      // Fallback to all active staff if no specific staff assigned
+      staffMembers = await StaffModel.find({
+        vendorId: vendorId,
+        status: 'Active'
+      });
+      console.log(`No assigned staff, using all ${staffMembers.length} active staff members`);
+    }
 
     if (!staffMembers.length) {
+      console.error('No available staff members for wedding package');
+      console.error('Package assigned staff:', weddingPackage.assignedStaff);
+      console.error('Vendor ID:', vendorId);
       return [];
     }
+
+    // Log detailed staff information for debugging
+    console.log('=== STAFF DETAILS FOR WEDDING PACKAGE ===');
+    staffMembers.forEach(staff => {
+      console.log(`Staff: ${staff.fullName}`);
+      console.log(`  - Status: ${staff.status}`);
+      console.log(`  - Monday: Available=${staff.mondayAvailable}, Slots=${staff.mondaySlots?.length || 0}`);
+      console.log(`  - Tuesday: Available=${staff.tuesdayAvailable}, Slots=${staff.tuesdaySlots?.length || 0}`);
+      console.log(`  - Wednesday: Available=${staff.wednesdayAvailable}, Slots=${staff.wednesdaySlots?.length || 0}`);
+      console.log(`  - Thursday: Available=${staff.thursdayAvailable}, Slots=${staff.thursdaySlots?.length || 0}`);
+      console.log(`  - Friday: Available=${staff.fridayAvailable}, Slots=${staff.fridaySlots?.length || 0}`);
+      console.log(`  - Saturday: Available=${staff.saturdayAvailable}, Slots=${staff.saturdaySlots?.length || 0}`);
+      console.log(`  - Sunday: Available=${staff.sundayAvailable}, Slots=${staff.sundaySlots?.length || 0}`);
+      if (staff.mondaySlots && staff.mondaySlots.length > 0) {
+        console.log(`  - Monday slots detail:`, staff.mondaySlots);
+      }
+    });
+    console.log('=========================================');
 
     // Get vendor working hours
     const VendorWorkingHoursModel = (await import('../../models/Vendor/VendorWorkingHours.model.js')).default;
     const vendorWorkingHours = await VendorWorkingHoursModel.findOne({ vendor: vendorId });
 
     if (!vendorWorkingHours) {
+      console.error('Vendor working hours not found for vendor:', vendorId);
       throw new Error('Vendor working hours not found');
     }
 
-    // Get day of week
-    const dayOfWeek = date.toLocaleString('en-US', { weekday: 'lowercase' });
+    // Get day of week (convert to lowercase for matching with working hours keys)
+    const dayOfWeek = date.toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
     const dayHours = vendorWorkingHours.workingHours[dayOfWeek];
 
+    console.log(`Checking working hours for ${dayOfWeek}:`, dayHours);
+
     if (!dayHours || !dayHours.isOpen || !dayHours.hours.length) {
+      console.warn(`Vendor is closed on ${dayOfWeek}`);
       return []; // Vendor is closed on this day
     }
 
     // Use the first time slot for the day
     const workingHours = dayHours.hours[0];
 
-    // Calculate total duration including all services
-    const totalDuration = weddingPackage.services.reduce((sum, pkgService) => {
-      // Find the service in the services array
-      const service = services.find(s => s._id.toString() === pkgService.serviceId.toString());
-      if (service) {
-        return sum + (service.duration || 0) + (service.prepTime || 0) + (service.setupCleanupTime || 0);
-      }
-      return sum;
-    }, 0);
+    // Calculate total duration - use package duration directly as it's already calculated
+    let totalDuration = weddingPackage.duration || 0;
+    
+    console.log(`Wedding package "${weddingPackage.name}" duration: ${totalDuration} minutes`);
+    
+    if (totalDuration === 0) {
+      console.error('Wedding package has no duration set');
+      throw new Error('Wedding package duration is not configured');
+    }
 
     // Calculate travel time if customer location is provided
     let travelTime = 0;
@@ -568,6 +654,18 @@ export async function generateWeddingPackageSlots({
     const availableSlots = [];
     let currentTime = timeToMinutes(workingHours.openTime);
     const closeMinutes = timeToMinutes(workingHours.closeTime);
+
+    // Check if the selected date is today
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const currentMinutes = isToday ? (now.getHours() * 60 + now.getMinutes()) : 0;
+    
+    // If it's today, start from current time or opening time, whichever is later
+    if (isToday && currentMinutes > currentTime) {
+      // Round up to next 15-minute interval
+      currentTime = Math.ceil(currentMinutes / 15) * 15;
+      console.log(`Today's date detected. Starting slots from ${minutesToTime(currentTime)} (current time: ${minutesToTime(currentMinutes)})`);
+    }
 
     // Account for travel time to and from the customer for home services
     const totalSlotTime = customerLocation ? 
@@ -648,6 +746,8 @@ export async function generateWeddingPackageSlots({
         isHomeService: !!customerLocation
       });
 
+      console.log(`Slot ${slotStart}-${slotEnd}: ${isValidSlot ? 'VALID' : 'INVALID'}`);
+
       if (isValidSlot) {
         // Create team slot
         const teamSlot = {
@@ -702,6 +802,11 @@ export async function generateWeddingPackageSlots({
       };
     }).sort((a, b) => b.score - a.score); // Sort by score descending
 
+    console.log(`=== Wedding Package Slot Generation Complete ===`);
+    console.log(`Total slots generated: ${scoredSlots.length}`);
+    console.log(`Date: ${date.toDateString()}`);
+    console.log(`Staff members used: ${staffMembers.map(s => s.fullName).join(', ')}`);
+
     return scoredSlots;
   } catch (error) {
     console.error('Error generating wedding package slots:', error);
@@ -731,8 +836,63 @@ async function validateWeddingPackageSlot({
     const slotStartMinutes = timeToMinutes(slotStartTime);
     const slotEndMinutes = timeToMinutes(slotEndTime);
 
+    console.log(`Validating slot ${slotStartTime}-${slotEndTime} for ${staffMembers.length} staff members`);
+
     // Check each staff member for conflicts
     for (const staff of staffMembers) {
+      // Check if staff is available on this day based on their working hours
+      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const dayAvailableField = `${dayOfWeek}Available`;
+      const daySlotsField = `${dayOfWeek}Slots`;
+
+      console.log(`[Staff Check] ${staff.fullName}:`, {
+        dayOfWeek,
+        dayAvailableField,
+        dayAvailable: staff[dayAvailableField],
+        daySlotsField,
+        slotsCount: staff[daySlotsField]?.length || 0,
+        slots: staff[daySlotsField]
+      });
+
+      // If staff is not available on this day, slot is invalid
+      if (!staff[dayAvailableField]) {
+        console.log(`❌ Staff ${staff.fullName} is not available on ${dayOfWeek} (${dayAvailableField}=${staff[dayAvailableField]})`);
+        return false;
+      }
+
+      // Get staff working hours for the day
+      const staffWorkingHours = staff[daySlotsField];
+      if (!staffWorkingHours || staffWorkingHours.length === 0) {
+        console.log(`❌ Staff ${staff.fullName} has no working hours on ${dayOfWeek} (${daySlotsField} is empty or undefined)`);
+        return false;
+      }
+
+      // Check if the slot time falls within staff's working hours
+      let slotWithinWorkingHours = false;
+      for (const period of staffWorkingHours) {
+        const periodStart = timeToMinutes(period.startTime);
+        const periodEnd = timeToMinutes(period.endTime);
+
+        console.log(`  Checking period: ${period.startTime}-${period.endTime} (${periodStart}-${periodEnd} minutes)`);
+        console.log(`  Slot range: ${slotStartMinutes}-${slotEndMinutes} minutes`);
+
+        // Check if slot falls within this working period
+        if (slotStartMinutes >= periodStart && slotEndMinutes <= periodEnd) {
+          slotWithinWorkingHours = true;
+          console.log(`  ✅ Slot fits within this working period`);
+          break;
+        } else {
+          console.log(`  ❌ Slot does NOT fit (start: ${slotStartMinutes >= periodStart}, end: ${slotEndMinutes <= periodEnd})`);
+        }
+      }
+
+      if (!slotWithinWorkingHours) {
+        console.log(`❌ Slot ${slotStartTime}-${slotEndTime} is outside staff ${staff.fullName}'s working hours`);
+        return false;
+      }
+
+      console.log(`✅ Staff ${staff.fullName} is available for this slot`);
+
       // Get existing appointments for this staff member on this day
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
@@ -740,15 +900,27 @@ async function validateWeddingPackageSlot({
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
+      // Query for appointments:
+      // 1. Regular appointments (with staff.id)
+      // 2. Wedding packages (with weddingPackageDetails.teamMembers)
+      // 3. For wedding slot generation, also get ALL wedding appointments for that date
       const existingAppointments = await AppointmentModel.find({
         vendorId: vendorId,
-        'staff.id': staff._id,
+        $or: [
+          { 'staff.id': staff._id },
+          { 'weddingPackageDetails.teamMembers.staffId': staff._id.toString() },
+          { 'weddingPackageDetails.teamMembers.staffId': staff._id },
+          // Also include ALL wedding service appointments for the same date/vendor
+          { isWeddingService: true }
+        ],
         date: {
           $gte: startOfDay,
           $lte: endOfDay
         },
         status: { $in: ['scheduled', 'confirmed', 'checked-in'] }
       });
+
+      console.log(`Found ${existingAppointments.length} existing appointments for validation`);
 
       // Check for conflicts with existing appointments
       for (const appointment of existingAppointments) {
@@ -757,6 +929,7 @@ async function validateWeddingPackageSlot({
 
         // Check for overlap with the main service time
         if (slotStartMinutes < aptEndMinutes && slotEndMinutes > aptStartMinutes) {
+          console.log(`Slot conflicts with appointment at ${appointment.startTime}-${appointment.endTime}`);
           return false; // Slot conflicts with existing appointment
         }
 
@@ -856,7 +1029,7 @@ async function validateWeddingPackageSlot({
           }
         }
       }
-    }
+    } // End of for loop for each staff member
 
     return true; // Slot is valid for all staff members
   } catch (error) {

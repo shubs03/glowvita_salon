@@ -13,7 +13,13 @@ export async function GET(
             vendorId: params.vendorId,
             isActive: true,
             status: 'approved'
-        }).lean();
+        })
+        .select('name description services totalPrice discountedPrice duration staffCount assignedStaff image status isActive createdAt updatedAt')
+        .lean();
+
+        console.log('Fetched wedding packages:', packages);
+        console.log('Package 0 assignedStaff:', packages[0]?.assignedStaff);
+        console.log('Package 0 staffCount:', packages[0]?.staffCount);
 
         return NextResponse.json({
             success: true,

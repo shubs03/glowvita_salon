@@ -2017,10 +2017,10 @@ export const glowvitaApi = createApi({
 
     // Lock Wedding Package Mutation
     lockWeddingPackage: builder.mutation({
-      query: (lockData) => ({
-        url: "/scheduling/wedding-package",
-        method: "PUT",
-        body: lockData
+      query: (lockData) => ({ 
+        url: "/scheduling/wedding-package", 
+        method: "POST", 
+        body: lockData 
       }),
     }),
 
@@ -2028,7 +2028,45 @@ export const glowvitaApi = createApi({
     getPublicVendorWeddingPackages: builder.query({
       query: (vendorId) => ({ url: `/wedding-packages/vendor/${vendorId}`, method: "GET" }),
       providesTags: ["PublicVendorWeddingPackages"],
+      transformResponse: (response) => {
+        console.log("🔍 Redux transformResponse - raw response:", response);
+        console.log("🔍 Redux transformResponse - first package keys:", response?.data?.[0] ? Object.keys(response.data[0]) : "no data");
+        return response;
+      },
+    }),
+
+    // CRM Wedding Packages Endpoints
+    getVendorWeddingPackages: builder.query({
+      query: (vendorId) => ({ url: `/crm/wedding-packages`, method: "GET" }),
+      providesTags: ["VendorWeddingPackages"],
       transformResponse: (response) => response,
+    }),
+
+    createWeddingPackage: builder.mutation({
+      query: (packageData) => ({
+        url: "/crm/wedding-packages",
+        method: "POST",
+        body: packageData,
+      }),
+      invalidatesTags: ["VendorWeddingPackages", "PublicVendorWeddingPackages"],
+    }),
+
+    updateWeddingPackage: builder.mutation({
+      query: ({ packageId, ...packageData }) => ({
+        url: `/crm/wedding-packages`,
+        method: "PUT",
+        body: { packageId, ...packageData },
+      }),
+      invalidatesTags: ["VendorWeddingPackages", "PublicVendorWeddingPackages"],
+    }),
+
+    deleteWeddingPackage: builder.mutation({
+      query: (packageId) => ({
+        url: `/crm/wedding-packages`,
+        method: "DELETE",
+        body: { packageId },
+      }),
+      invalidatesTags: ["VendorWeddingPackages", "PublicVendorWeddingPackages"],
     }),
 
     // Payment Collection Endpoint
@@ -2405,6 +2443,11 @@ export const {
   useLockWeddingPackageMutation,
   // Public Wedding Packages Hook
   useGetPublicVendorWeddingPackagesQuery,
+  // CRM Wedding Packages Hooks
+  useGetVendorWeddingPackagesQuery,
+  useCreateWeddingPackageMutation,
+  useUpdateWeddingPackageMutation,
+  useDeleteWeddingPackageMutation,
 
 
   // Payment Collection Hook

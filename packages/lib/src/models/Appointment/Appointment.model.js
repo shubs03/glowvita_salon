@@ -203,6 +203,7 @@ const appointmentSchema = new mongoose.Schema(
         "scheduled",
         "confirmed",
         "completed",
+        "partially-completed",
         "cancelled",
         "no-show",
       ],
@@ -360,8 +361,8 @@ const appointmentSchema = new mongoose.Schema(
       default: 0,
     },
     bufferAfter: {
-      type: Number, // in minutes
-      default: 0,
+        type: Number, // in minutes
+        default: 0
     },
     // Booking mode: 'online' for web bookings, 'offline' for CRM bookings
     mode: {

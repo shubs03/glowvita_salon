@@ -197,6 +197,9 @@ export const GET = async (req) => {
     }
 };
 
+// Import travel time calculation utility
+import { calculateVendorTravelTime } from '@repo/lib/modules/scheduling/EnhancedTravelUtils';
+
 // POST a new appointment from public web booking
 export const POST = async (req) => {
     try {
@@ -204,6 +207,14 @@ export const POST = async (req) => {
         const body = await req.json();
 
         console.log('POST request - creating public appointment:', body);
+        console.log('Home service data received:', {
+            isHomeService: body.isHomeService,
+            homeServiceLocation: body.homeServiceLocation,
+            hasLocation: !!body.homeServiceLocation,
+            locationKeys: body.homeServiceLocation ? Object.keys(body.homeServiceLocation) : [],
+            locationValues: body.homeServiceLocation
+        });
+        console.log('Full body received:', JSON.stringify(body, null, 2));
 
         // Required fields validation (client is handled separately)
         const requiredFields = [
@@ -254,6 +265,34 @@ export const POST = async (req) => {
             );
         }
 
+        // Calculate travel time for home services
+        let travelTimeInfo = null;
+        const isHomeService = body.isHomeService || false;
+        const homeServiceLocation = body.homeServiceLocation || null;
+        
+        console.log('Processing appointment - isHomeService:', isHomeService, 'location:', homeServiceLocation);
+        
+        if (isHomeService && homeServiceLocation && homeServiceLocation.lat && homeServiceLocation.lng) {
+            try {
+                console.log('Calculating travel time for home service...');
+                const customerLocation = {
+                    lat: Number(homeServiceLocation.lat),
+                    lng: Number(homeServiceLocation.lng)
+                };
+                travelTimeInfo = await calculateVendorTravelTime(body.vendorId, customerLocation);
+                console.log('Travel time calculated:', travelTimeInfo);
+            } catch (error) {
+                console.warn('Could not calculate travel time, using fallback:', error.message);
+                // Use a conservative estimate
+                travelTimeInfo = {
+                    timeInMinutes: 30,
+                    distanceInKm: 10,
+                    distanceInMeters: 10000,
+                    source: 'fallback'
+                };
+            }
+        }
+
         // Set default values and ensure proper data types
         const appointmentData = {
             vendorId: body.vendorId,
@@ -279,13 +318,66 @@ export const POST = async (req) => {
             notes: body.notes || '',
             serviceItems: body.serviceItems || [],
             isMultiService: body.isMultiService || (body.serviceItems && body.serviceItems.length > 1),
+            // Add home service fields
+            isHomeService: isHomeService,
+            isWeddingService: body.isWeddingService || false,
             mode: 'online' // Web bookings are always online mode
         };
+        
+        // Add home service location if it's a home service
+        if (isHomeService && homeServiceLocation) {
+            appointmentData.homeServiceLocation = {
+                address: homeServiceLocation.address || '',
+                city: homeServiceLocation.city || '',
+                state: homeServiceLocation.state || '',
+                pincode: homeServiceLocation.pincode || '',
+                landmark: homeServiceLocation.landmark || '',
+                lat: Number(homeServiceLocation.lat) || 0,
+                lng: Number(homeServiceLocation.lng) || 0
+            };
+            console.log('Added home service location to appointment:', appointmentData.homeServiceLocation);
+        }
+        
+        // Add travel time information if available
+        if (travelTimeInfo) {
+            appointmentData.travelTime = travelTimeInfo.timeInMinutes || 0;
+            appointmentData.travelDistance = travelTimeInfo.distanceInKm || 0;
+            appointmentData.distanceMeters = travelTimeInfo.distanceInMeters || 0;
+            console.log('Added travel time data:', {
+                travelTime: appointmentData.travelTime,
+                travelDistance: appointmentData.travelDistance,
+                distanceMeters: appointmentData.distanceMeters
+            });
+        }
+        
+        // Add travel time to serviceItems if it's a multi-service appointment
+        if (appointmentData.isMultiService && appointmentData.serviceItems && appointmentData.serviceItems.length > 0 && travelTimeInfo) {
+            appointmentData.serviceItems = appointmentData.serviceItems.map((item, index) => ({
+                ...item,
+                // Add travel time only to the first service
+                travelTime: index === 0 ? (travelTimeInfo.timeInMinutes || 0) : 0,
+                travelDistance: index === 0 ? (travelTimeInfo.distanceInKm || 0) : 0,
+                distanceMeters: index === 0 ? (travelTimeInfo.distanceInMeters || 0) : 0
+            }));
+        }
 
         console.log('Creating appointment with data:', appointmentData);
+        console.log('Final appointment data before saving:', {
+            isHomeService: appointmentData.isHomeService,
+            homeServiceLocation: appointmentData.homeServiceLocation,
+            travelTime: appointmentData.travelTime,
+            travelDistance: appointmentData.travelDistance,
+            distanceMeters: appointmentData.distanceMeters
+        });
 
         const newAppointment = await AppointmentModel.create(appointmentData);
         console.log('Appointment created successfully with ID:', newAppointment._id);
+        console.log('Saved appointment data:', {
+            isHomeService: newAppointment.isHomeService,
+            homeServiceLocation: newAppointment.homeServiceLocation,
+            travelTime: newAppointment.travelTime,
+            travelDistance: newAppointment.travelDistance
+        });
         
         // Populate the appointment with related data
         // For multi-service appointments, we need to populate serviceItems properly

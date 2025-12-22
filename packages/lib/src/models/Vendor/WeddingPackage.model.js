@@ -69,6 +69,17 @@ const weddingPackageSchema = new mongoose.Schema({
     required: true,
     min: 1,
   },
+  staffCount: {
+    type: Number, // Number of staff members required
+    default: 1,
+    min: 1,
+  },
+  assignedStaff: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Staff",
+    },
+  ],
   image: {
     type: String,
     trim: true,

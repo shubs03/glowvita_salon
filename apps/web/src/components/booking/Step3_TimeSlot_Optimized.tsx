@@ -1,25 +1,45 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card } from '@repo/ui/card';
-import { Clock, Loader2, RefreshCw, Lock, AlertCircle } from 'lucide-react';
+import { Clock, Loader2, RefreshCw, Lock, AlertCircle, ChevronRight, ChevronLeft, CalendarDays } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 import { toast } from 'react-toastify';
 import { Service, StaffMember, WeddingPackage } from '@/hooks/useBookingData';
+import { format, addDays } from 'date-fns';
 
-// Simple Calendar implementation (replace with your actual calendar component)
-const Calendar = ({ mode, selected, onSelect, disabled, className }: any) => (
-  <div className={className}>
-    <input 
-      type="date" 
-      value={selected?.toISOString().split('T')[0]} 
-      onChange={(e) => onSelect?.(new Date(e.target.value))}
-      min={new Date().toISOString().split('T')[0]}
-      className="w-full p-2 border rounded-md"
-    />
-  </div>
-);
+// Breadcrumb navigation component
+const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: { 
+  currentStep: number; 
+  setCurrentStep: (step: number) => void;
+  isWeddingPackage?: boolean;
+}) => {
+  // Wedding packages skip step 2 (staff selection)
+  const steps = isWeddingPackage 
+    ? ['Select Package', 'Select Date & Time', 'Confirm Booking']
+    : ['Select Service', 'Select Professional', 'Select Date & Time', 'Confirm Booking'];
+  
+  return (
+    <nav className="flex items-center text-sm font-medium text-muted-foreground mb-6">
+      {steps.map((step, index) => (
+        <React.Fragment key={step}>
+          <button
+            onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+            className={cn(
+              "transition-colors",
+              currentStep > index + 1 ? "hover:text-primary cursor-pointer" : "cursor-default",
+              currentStep === index + 1 && "text-primary font-semibold"
+            )}
+          >
+            {step}
+          </button>
+          {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
+        </React.Fragment>
+      ))}
+    </nav>
+  );
+};
 
 // Skeleton loader for time slots
 const TimeSlotSkeleton = memo(() => (
@@ -62,12 +82,17 @@ interface Step3TimeSlotProps {
   workingHours: any;
   isLoading: boolean;
   error?: any;
-  vendorId: string;
-  selectedService: Service | null;
+  vendorId?: string;
+  salonId?: string;
+  service?: Service | null;
+  selectedService?: Service | null;
   isHomeService?: boolean;
   isWeddingService?: boolean;
+  isWeddingPackage?: boolean;
   weddingPackage?: WeddingPackage | null;
+  weddingPackageServices?: any[];
   homeServiceLocation?: any;
+  onLockAcquired?: (lockToken: string) => void; // Callback when lock is acquired
 }
 
 export const Step3_TimeSlot = memo(({
@@ -84,11 +109,16 @@ export const Step3_TimeSlot = memo(({
   isLoading: parentLoading,
   error: parentError,
   vendorId,
+  salonId,
+  service,
   selectedService,
   isHomeService = false,
   isWeddingService = false,
+  isWeddingPackage = false,
   weddingPackage,
-  homeServiceLocation
+  weddingPackageServices,
+  homeServiceLocation,
+  onLockAcquired
 }: Step3TimeSlotProps) => {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -98,22 +128,38 @@ export const Step3_TimeSlot = memo(({
   const [isLocking, setIsLocking] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isStale, setIsStale] = useState(false);
+  const dateScrollerRef = useRef<HTMLDivElement>(null);
+  
+  // Use salonId or vendorId (they're the same)
+  const effectiveVendorId = vendorId || salonId;
+  // Use service or selectedService
+  const effectiveService = service || selectedService;
 
   // Fetch slots from API
   const fetchSlots = useCallback(async () => {
-    if (!vendorId || !selectedDate || !selectedService) return;
+    if (!effectiveVendorId || !selectedDate || !effectiveService) return;
 
     setIsLoadingSlots(true);
     setSlotsError(null);
 
     try {
+      // For wedding packages, we need to send the service IDs from the package services
+      let serviceIdsParam = effectiveService.id;
+      if (isWeddingPackage && weddingPackageServices && weddingPackageServices.length > 0) {
+        // Extract service IDs from wedding package services
+        serviceIdsParam = weddingPackageServices
+          .map(s => s.serviceId || s.id || s._id)
+          .filter(Boolean)
+          .join(',');
+      }
+      
       const params = new URLSearchParams({
-        vendorId,
+        vendorId: effectiveVendorId,
         staffId: selectedStaff?.id || 'any',
-        serviceIds: selectedService.id,
+        serviceIds: serviceIdsParam,
         date: selectedDate.toISOString(),
         isHomeService: isHomeService.toString(),
-        isWeddingService: isWeddingService.toString(),
+        isWeddingService: (isWeddingService || isWeddingPackage).toString(),
         ...(weddingPackage && { packageId: weddingPackage.id || weddingPackage._id }),
         ...(homeServiceLocation?.lat && { lat: homeServiceLocation.lat.toString() }),
         ...(homeServiceLocation?.lng && { lng: homeServiceLocation.lng.toString() })
@@ -138,8 +184,8 @@ export const Step3_TimeSlot = memo(({
     } finally {
       setIsLoadingSlots(false);
     }
-  }, [vendorId, selectedDate, selectedService, selectedStaff, isHomeService, isWeddingService, 
-      weddingPackage, homeServiceLocation]);
+  }, [effectiveVendorId, selectedDate, effectiveService, selectedStaff, isHomeService, isWeddingService, 
+      isWeddingPackage, weddingPackage, weddingPackageServices, homeServiceLocation]);
 
   // Fetch slots on mount and when dependencies change
   useEffect(() => {
@@ -148,14 +194,14 @@ export const Step3_TimeSlot = memo(({
 
   // Auto-refresh slots every 30 seconds
   useEffect(() => {
-    if (!vendorId || !selectedDate) return;
+    if (!effectiveVendorId || !selectedDate) return;
 
     const refreshInterval = setInterval(() => {
       fetchSlots();
     }, 30000); // 30 seconds
 
     return () => clearInterval(refreshInterval);
-  }, [vendorId, selectedDate, fetchSlots]);
+  }, [effectiveVendorId, selectedDate, fetchSlots]);
 
   // Check if data is stale (> 60 seconds)
   useEffect(() => {
@@ -200,12 +246,101 @@ export const Step3_TimeSlot = memo(({
     setIsLocking(true);
 
     try {
+      // Use effectiveVendorId to ensure we have a valid vendor ID
+      if (!effectiveVendorId) {
+        throw new Error('Vendor ID is required but not available');
+      }
+
       // Prepare lock request
-      const lockRequest = {
-        vendorId,
+      // For wedding packages, use the package ID and get service IDs from package services
+      const effectiveService = service || selectedService;
+      let serviceIdForLock = effectiveService?.id;
+      
+      // If it's a wedding package, we still need a serviceId for the lock
+      // Use the first service from the package or the package ID itself
+      if (isWeddingPackage && weddingPackage) {
+        // Use the first service from wedding package services, or fallback to a placeholder
+        if (weddingPackageServices && weddingPackageServices.length > 0) {
+          serviceIdForLock = weddingPackageServices[0].serviceId || weddingPackageServices[0].id || weddingPackageServices[0]._id;
+        } else if (weddingPackage.services && weddingPackage.services.length > 0) {
+          const firstService = weddingPackage.services[0];
+          serviceIdForLock = typeof firstService === 'object' && 'serviceId' in firstService ? firstService.serviceId : String(firstService);
+        } else {
+          // Use the package ID as serviceId if no services found
+          serviceIdForLock = weddingPackage.id || weddingPackage._id;
+        }
+      }
+      
+      // For wedding packages, use the wedding-package specific lock endpoint
+      // which doesn't create a temporary appointment
+      if (isWeddingPackage && weddingPackage) {
+        console.log('Using wedding package lock endpoint');
+        
+        const weddingLockRequest = {
+          packageId: weddingPackage.id || weddingPackage._id,
+          selectedSlot: {
+            date: selectedDate.toISOString(),
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            location: isHomeService && homeServiceLocation ? homeServiceLocation : null,
+            totalAmount: weddingPackage.discountedPrice || weddingPackage.totalPrice || 0,
+            depositAmount: (weddingPackage as any).depositAmount || 0
+          },
+          clientId: 'temp-client-id', // TODO: Replace with actual client ID from auth
+          clientName: 'Customer', // TODO: Replace with actual client name
+          customerDetails: {
+            name: 'Customer',
+            phone: null
+          }
+        };
+
+        console.log('Sending wedding package lock request:', weddingLockRequest);
+
+        const response = await fetch('/api/scheduling/wedding-package', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(weddingLockRequest)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Slot no longer available');
+        }
+
+        const lockData = await response.json();
+        console.log('Wedding package lock response received:', lockData);
+
+        // Store lock - backend returns lockId
+        setLockedSlot({
+          slot,
+          lockToken: lockData.lockId,
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes from now
+        });
+
+        console.log('Wedding package slot locked successfully');
+        
+        // Notify parent component about the lock token
+        if (onLockAcquired && lockData.lockId) {
+          onLockAcquired(lockData.lockId);
+        }
+        
+        // Trigger the next step by calling onSelectTime
+        onSelectTime(slot.startTime);
+        toast.success('Slot locked! You have 30 minutes to complete booking.');
+        
+        // Remove locked slot from available slots (optimistic update)
+        setSlots(prev => prev.filter(s => s.startTime !== slot.startTime));
+        
+        return;
+      }
+
+      // For regular services, use the standard booking lock endpoint
+      // Build lock request - only include location if it's actually for a home service
+      const lockRequest: any = {
+        vendorId: effectiveVendorId,
         staffId: selectedStaff?.id || 'any',
-        serviceId: selectedService?.id,
-        serviceName: selectedService?.name,
+        serviceId: serviceIdForLock,
+        serviceName: effectiveService?.name || 'Service',
         date: selectedDate.toISOString(),
         startTime: slot.startTime,
         endTime: slot.endTime,
@@ -213,13 +348,19 @@ export const Step3_TimeSlot = memo(({
         clientName: 'Customer', // TODO: Replace with actual client name
         staffName: selectedStaff?.name || 'Any Professional',
         isHomeService,
-        isWeddingService,
-        location: homeServiceLocation,
-        duration: slot.duration,
+        isWeddingService: isWeddingService,
+        duration: slot.duration || effectiveService?.duration,
         amount: slot.services?.reduce((sum, s) => sum + (s.amount || 0), 0) || 0,
         totalAmount: slot.services?.reduce((sum, s) => sum + (s.amount || 0), 0) || 0,
         finalAmount: slot.services?.reduce((sum, s) => sum + (s.amount || 0), 0) || 0
       };
+
+      // Only include location if it's actually provided and valid
+      if (isHomeService && homeServiceLocation && homeServiceLocation.lat && homeServiceLocation.lng) {
+        lockRequest.location = homeServiceLocation;
+      }
+
+      console.log('Sending lock request:', lockRequest);
 
       const response = await fetch('/api/booking/lock', {
         method: 'POST',
@@ -229,16 +370,18 @@ export const Step3_TimeSlot = memo(({
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Slot no longer available');
+        throw new Error(errorData.error?.message || errorData.message || 'Slot no longer available');
       }
 
       const lockData = await response.json();
 
-      // Store lock
+      console.log('Lock response received:', lockData);
+
+      // Store lock - backend returns lockId and expiresAt
       setLockedSlot({
         slot,
-        lockToken: lockData.lockToken,
-        expiresAt: new Date(lockData.lockExpiration)
+        lockToken: lockData.lockId || lockData.lockToken,
+        expiresAt: new Date(lockData.expiresAt || lockData.lockExpiration)
       });
 
       onSelectTime(slot.startTime);
@@ -256,8 +399,8 @@ export const Step3_TimeSlot = memo(({
     } finally {
       setIsLocking(false);
     }
-  }, [vendorId, selectedStaff, selectedService, selectedDate, isHomeService, isWeddingService, 
-      homeServiceLocation, onSelectTime, fetchSlots, isLocking]);
+  }, [effectiveVendorId, selectedStaff, selectedService, service, selectedDate, isHomeService, isWeddingService, 
+      isWeddingPackage, weddingPackage, weddingPackageServices, homeServiceLocation, onSelectTime, fetchSlots, isLocking]);
 
   // Release lock manually
   const handleReleaseLock = useCallback(async () => {
@@ -311,10 +454,34 @@ export const Step3_TimeSlot = memo(({
       : slots;
   }, [selectedStaff, slots, groupedSlots]);
 
+  // Generate available dates (next 60 days)
+  const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
+  
+  const currentMonthYear = useMemo(() => format(selectedDate, 'MMMM yyyy'), [selectedDate]);
+
+  // Handle date scroll
+  const handleDateScroll = (direction: 'left' | 'right') => {
+    if (dateScrollerRef.current) {
+      const scrollAmount = direction === 'left' ? -200 : 200;
+      dateScrollerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  // Scroll selected date into view
+  useEffect(() => {
+    const selectedDateElement = document.getElementById(`date-${format(selectedDate, 'yyyy-MM-dd')}`);
+    if (selectedDateElement && dateScrollerRef.current) {
+      const container = dateScrollerRef.current;
+      const scrollLeft = selectedDateElement.offsetLeft - container.offsetLeft - (container.offsetWidth / 2) + (selectedDateElement.offsetWidth / 2);
+      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+    }
+  }, [selectedDate]);
+
   // Loading state
   if (parentLoading || isLoadingSlots) {
     return (
       <div className="w-full">
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} />
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -344,6 +511,7 @@ export const Step3_TimeSlot = memo(({
   if (parentError || slotsError) {
     return (
       <div className="w-full">
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} />
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -367,6 +535,7 @@ export const Step3_TimeSlot = memo(({
 
   return (
     <div className="w-full">
+      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} />
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -412,24 +581,56 @@ export const Step3_TimeSlot = memo(({
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Date Selection */}
+      <div className="grid md:grid-cols-1 gap-6">
+        {/* Date Scroller with Month and Navigation */}
         <div>
-          <h3 className="font-semibold mb-3">Select Date</h3>
-          <Calendar
-            mode="single"
-            selected={selectedDate}
-            onSelect={(date) => date && onSelectDate(date)}
-            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-            className="rounded-md border"
-          />
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-lg">{currentMonthYear}</h3>
+            <div className="flex gap-1">
+              <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('left')}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('right')}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div id="date-scroller" ref={dateScrollerRef} className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
+            {dates.map((date: Date) => {
+              const isToday = date.toDateString() === new Date().toDateString();
+              const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+              return (
+                <Button
+                  key={date.toISOString()}
+                  id={`date-${format(date, 'yyyy-MM-dd')}`}
+                  variant={selectedDate.toDateString() === date.toDateString() ? 'default' : 'outline'}
+                  className={cn(
+                    'flex-shrink-0 flex flex-col items-center justify-center h-20 w-16 rounded-lg',
+                    selectedDate.toDateString() === date.toDateString() && 'ring-2 ring-primary ring-offset-2',
+                    isPast && 'opacity-50 cursor-not-allowed'
+                  )}
+                  onClick={() => !isPast && onSelectDate(date)}
+                  disabled={isPast}
+                >
+                  <span className="text-xs font-medium">
+                    {isToday ? 'Today' : format(date, 'EEE')}
+                  </span>
+                  <span className="text-2xl font-bold">{format(date, 'd')}</span>
+                  <span className="text-xs">{format(date, 'MMM')}</span>
+                </Button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Time Slots */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold">Available Time Slots</h3>
-            <Button size="sm" variant="ghost" onClick={handleRefresh} disabled={isLoadingSlots}>
+        <div className="mt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 bg-primary/10 rounded-full text-primary">
+              <Clock className="h-5 w-5" />
+            </div>
+            <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
+            <Button size="sm" variant="ghost" onClick={handleRefresh} disabled={isLoadingSlots} className="ml-auto">
               <RefreshCw className={cn("h-4 w-4", isLoadingSlots && "animate-spin")} />
             </Button>
           </div>
@@ -441,8 +642,9 @@ export const Step3_TimeSlot = memo(({
               <p className="text-sm text-muted-foreground mt-2">Try selecting a different date</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2">
-              {displaySlots.map((slot) => {
+            <div className="max-h-64 overflow-y-auto pr-2 no-scrollbar">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {displaySlots.map((slot) => {
                 const isSelected = selectedTime === slot.startTime;
                 const isLocked = lockedSlot?.slot.startTime === slot.startTime;
 
@@ -462,7 +664,10 @@ export const Step3_TimeSlot = memo(({
                     )}
                   >
                     <div className="font-semibold text-sm">
-                      {slot.startTime} - {slot.endTime}
+                      {slot.startTime}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      {slot.duration} min
                     </div>
                     {slot.travelTime && slot.travelTime > 0 && (
                       <div className="text-xs text-blue-600 mt-1">
@@ -483,6 +688,7 @@ export const Step3_TimeSlot = memo(({
                   </button>
                 );
               })}
+              </div>
             </div>
           )}
         </div>

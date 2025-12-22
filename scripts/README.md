@@ -1,14 +1,14 @@
-# Vendor Configuration Scripts
+# Utility Scripts
 
 ## Purpose
 
-This directory contains scripts to update, verify, and troubleshoot vendor configurations for proper travel time calculations.
+This directory contains scripts for managing vendor configurations, wedding packages, and database operations for the Glowvita Salon application.
 
 ## Prerequisites
 
 1. Make sure your MongoDB database is accessible
 2. Ensure you have the correct MongoDB connection string in your environment variables
-3. Install dependencies: `npm install`
+3. Install dependencies: `npm install` or `turbo install`
 
 ## Environment Variables
 
@@ -16,7 +16,114 @@ The scripts look for the MongoDB connection URI in these environment variables (
 - `MONGODB_URI`
 - `MONGO_URI`
 
-Make sure one of these is set in your environment or `.env` file.
+Set these in `apps/web/.env.local`:
+```env
+MONGODB_URI=mongodb://localhost:27017/glowvita
+```
+
+## Available Scripts
+
+### Wedding Packages Management
+
+#### 1. Check Wedding Packages
+```bash
+node scripts/check-wedding-packages.js
+```
+**Purpose**: Displays all wedding packages for a vendor and shows which ones are visible to customers.
+
+**What it shows**:
+- Total packages count
+- Package details (name, price, services, status)
+- Active & approved packages (visible to customers)
+- API endpoint information
+
+**Example Output**:
+```
+✅ Active & Approved Packages (visible to customers): 1
+
+1. Bride Package
+   Price: ₹300
+   Duration: 105 min
+   Services: 2
+
+✅ Customers can see and book these packages!
+```
+
+#### 2. Approve Wedding Package
+```bash
+node scripts/approve-wedding-package.js
+```
+**Purpose**: Approves a pending wedding package so it becomes visible to customers.
+
+**Steps**:
+1. Run `check-wedding-packages.js` to get the package ID
+2. Update `packageId` variable in the script
+3. Run the script
+
+#### 3. Create Sample Wedding Package
+```bash
+node scripts/create-sample-wedding-package.js
+```
+**Purpose**: Creates a sample wedding package for testing.
+
+**Features**:
+- Automatically selects services from the vendor
+- Calculates total price and duration
+- Applies 10% discount
+- Sets status to "approved" for immediate visibility
+
+### Vendor Travel Settings
+
+#### 4. Update Vendor Travel Settings
+```bash
+node scripts/update-vendor-travel-settings.js
+```
+**Purpose**: Updates vendor travel settings for home service bookings.
+
+**Settings Updated**:
+- Travel radius (km)
+- Travel speed (km/h)
+- Vendor type (shop-only, home-only, hybrid, etc.)
+- Base location (latitude, longitude)
+
+**Note**: These settings can now be managed via **CRM → Salon Profile → Travel Settings** tab.
+
+## Common Workflows
+
+### Setting Up Wedding Packages
+
+1. **Check if packages exist**:
+   ```bash
+   node scripts/check-wedding-packages.js
+   ```
+
+2. **If no packages, create a sample one**:
+   ```bash
+   node scripts/create-sample-wedding-package.js
+   ```
+
+3. **If packages are pending, approve them**:
+   ```bash
+   node scripts/approve-wedding-package.js
+   ```
+
+4. **Verify the package is visible**:
+   ```bash
+   node scripts/check-wedding-packages.js
+   ```
+
+### Enabling Home Services
+
+1. **Update travel settings**:
+   ```bash
+   node scripts/update-vendor-travel-settings.js
+   ```
+   
+   Or use the CRM interface:
+   - Go to CRM → Salon Profile
+   - Click "Travel Settings" tab
+   - Set travel radius, speed, and vendor type
+   - Save changes
 
 ## Running the Scripts
 

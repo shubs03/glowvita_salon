@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
-import { Minus, Plus, Check, X, Heart, Scissors } from 'lucide-react';
+import { Minus, Plus, Check, X, Heart, Scissors, Info } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 import { Service, WeddingPackage as WeddingPackageType } from '@/hooks/useBookingData';
 import { ChevronRight } from 'lucide-react';
@@ -183,6 +183,12 @@ export function Step1_WeddingPackageCustomizer({
                     <h2 className="text-3xl font-bold font-headline">Customize Your Wedding Package</h2>
                 </div>
                 <p className="text-muted-foreground">Modify your package by adding or removing services</p>
+                <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-2">
+                    <Info className="h-5 w-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-rose-800">
+                        Showing only wedding services. Services marked with wedding availability can be added to your package.
+                    </p>
+                </div>
             </div>
 
             {/* Package Header */}

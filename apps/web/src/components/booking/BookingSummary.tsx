@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@repo/ui/c
 import { Button } from '@repo/ui/button';
 import { Separator } from '@repo/ui/separator';
 import Image from 'next/image';
-import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown, Search, X } from 'lucide-react';
+import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown, Search, X, Heart } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState, useEffect } from 'react';
 import { cn } from '@repo/ui/cn';
@@ -32,6 +32,10 @@ interface BookingSummaryProps {
     salonInfo?: SalonInfo | null;
     serviceStaffAssignments?: ServiceStaffAssignment[]; // For multi-service bookings
     priceBreakdown?: PriceBreakdown | null;
+    weddingPackage?: any;
+    weddingPackageMode?: 'default' | 'customized' | null;
+    customizedPackageServices?: Service[];
+    onEditPackage?: () => void; // New prop for editing wedding package
 }
 
 export function BookingSummary({ 
@@ -44,17 +48,23 @@ export function BookingSummary({
   isMobileFooter = false,
   salonInfo,
   serviceStaffAssignments = [],
-  priceBreakdown
+  priceBreakdown,
+  weddingPackage,
+  weddingPackageMode,
+  customizedPackageServices,
+  onEditPackage
 }: BookingSummaryProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     
-    // Use priceBreakdown values if available, otherwise fallback to static calculations
-    const subtotal = priceBreakdown?.subtotal ?? selectedServices.reduce((acc, service) => {
-      const price = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-        service.discountedPrice : 
-        (service.price || 0);
-      return acc + parseFloat(String(price) || '0');
-    }, 0);
+    // Calculate totals - handle wedding package pricing
+    const subtotal = weddingPackage 
+      ? (weddingPackage.discountedPrice || weddingPackage.totalPrice || 0)
+      : (priceBreakdown?.subtotal ?? selectedServices.reduce((acc, service) => {
+          const price = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
+            service.discountedPrice : 
+            (service.price || 0);
+          return acc + parseFloat(String(price) || '0');
+        }, 0));
     
     const total = priceBreakdown?.finalTotal ?? subtotal;
 
@@ -68,18 +78,24 @@ export function BookingSummary({
     };
     
     const stepDetails = [
-      { step: 1, label: 'Select Staff', enabled: selectedServices.length > 0 },
-      { step: 2, label: 'Find a Time', 
+      { 
+        step: 1, 
+        label: weddingPackage ? 'Select Time' : 'Select Staff', 
+        enabled: weddingPackage ? true : selectedServices.length > 0 
+      },
+      { 
+        step: 2, 
+        label: 'Find a Time', 
         enabled: serviceStaffAssignments && serviceStaffAssignments.length > 0 
           ? serviceStaffAssignments.every(a => a.staff !== undefined) 
-          : !!selectedStaff 
+          : (weddingPackage ? true : !!selectedStaff)
       },
-      { step: 3, label: 'Confirm Booking', enabled: !!selectedTime },
-      { step: 4, label: 'Finish', enabled: false }, // Final step
+      { step: 3, label: 'Select Location', enabled: !!selectedTime },
+      { step: 4, label: 'Confirm Booking', enabled: true }, // Enabled on step 4
     ];
     
     const nextStepInfo = stepDetails.find(s => s.step === currentStep);
-    const buttonLabel = currentStep === 3 ? 'Confirm Booking' : nextStepInfo?.label || 'Continue';
+    const buttonLabel = nextStepInfo?.label || 'Continue';
 
     if (isMobileFooter) {
         return (
@@ -179,17 +195,80 @@ export function BookingSummary({
         <div className="space-y-3">
           <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4" />Your Booking Details</h4>
           
-          <div className="p-3 bg-secondary/50 rounded-md">
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-md"><Scissors className="h-4 w-4 text-primary" /></div>
-                <div>
-                    <p className="text-xs text-muted-foreground">Services</p>
-                    <p className="font-medium text-sm">
-                        {selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : 'No services selected'}
-                    </p>
+          {/* Show Wedding Package or Regular Services */}
+          {weddingPackage ? (
+            <div className="p-4 bg-rose-50 border-2 border-rose-200 rounded-lg">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="p-2 bg-rose-100 rounded-md"><Heart className="h-5 w-5 text-rose-600" /></div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-xs text-rose-600 font-medium uppercase tracking-wide">Wedding Package</p>
+                    {weddingPackageMode === 'customized' && (
+                      <span className="text-[10px] bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full font-medium">Customized</span>
+                    )}
+                  </div>
+                  <p className="font-bold text-rose-900">{weddingPackage.name}</p>
+                  <p className="text-xs text-rose-700 mt-1">{weddingPackage.description}</p>
                 </div>
+              </div>
+              
+              <div className="space-y-2 border-t border-rose-200 pt-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-rose-700">Services Included:</span>
+                  <span className="font-semibold text-rose-900">
+                    {weddingPackageMode === 'customized' && customizedPackageServices 
+                      ? customizedPackageServices.length 
+                      : weddingPackage.services?.length || 0}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-rose-700">Total Duration:</span>
+                  <span className="font-semibold text-rose-900">{weddingPackage.duration} min</span>
+                </div>
+                {weddingPackage.staffCount && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-rose-700">Staff Required:</span>
+                    <span className="font-semibold text-rose-900">
+                      {weddingPackage.staffCount} {weddingPackage.staffCount === 1 ? 'Professional' : 'Professionals'}
+                    </span>
+                  </div>
+                )}
+                {weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0 && (
+                  <div className="text-sm">
+                    <span className="text-rose-700">Available Staff:</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {weddingPackage.assignedStaff.slice(0, 3).map((staff, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-rose-100 text-rose-700">
+                          {typeof staff === 'string' ? staff : staff.name}
+                        </span>
+                      ))}
+                      {weddingPackage.assignedStaff.length > 3 && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-rose-100 text-rose-700">
+                          +{weddingPackage.assignedStaff.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-between text-base font-bold border-t border-rose-200 pt-2 mt-2">
+                  <span className="text-rose-800">Package Price:</span>
+                  <span className="text-rose-900">₹{weddingPackage.discountedPrice || weddingPackage.totalPrice}</span>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-3 bg-secondary/50 rounded-md">
+              <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-md"><Scissors className="h-4 w-4 text-primary" /></div>
+                  <div>
+                      <p className="text-xs text-muted-foreground">Services</p>
+                      <p className="font-medium text-sm">
+                          {selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : 'No services selected'}
+                      </p>
+                  </div>
+              </div>
+            </div>
+          )}
           
           <div className="p-3 bg-secondary/50 rounded-md">
             <div className="flex items-center gap-3">
@@ -277,15 +356,40 @@ export function BookingSummary({
         </div>
       </CardContent>
       <CardFooter className="p-6 flex-shrink-0">
-        <Button 
-          className="w-full h-12 text-base group" 
-          size="lg" 
-          disabled={!nextStepInfo?.enabled} 
-          onClick={onNextStep}
-        >
-            {buttonLabel}
-            <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-        </Button>
+        {weddingPackage && currentStep === 1 ? (
+          <div className="w-full space-y-3">
+            {onEditPackage && (
+              <Button 
+                className="w-full h-12 text-base" 
+                size="lg" 
+                variant="outline"
+                onClick={onEditPackage}
+              >
+                <Scissors className="mr-2 h-5 w-5" />
+                Edit Package
+              </Button>
+            )}
+            <Button 
+              className="w-full h-12 text-base group" 
+              size="lg" 
+              disabled={!nextStepInfo?.enabled} 
+              onClick={onNextStep}
+            >
+              {buttonLabel}
+              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </div>
+        ) : (
+          <Button 
+            className="w-full h-12 text-base group" 
+            size="lg" 
+            disabled={!nextStepInfo?.enabled} 
+            onClick={onNextStep}
+          >
+              {buttonLabel}
+              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
