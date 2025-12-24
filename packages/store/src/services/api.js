@@ -305,29 +305,10 @@ export const glowvitaApi = createApi({
 
     // Public Vendors for landing page
     getPublicVendors: builder.query({
-      query: (params = {}) => {
-        const { lat, lng, radius, limit } = params;
-        const queryParams = new URLSearchParams();
-
-        if (lat !== undefined && lng !== undefined) {
-          queryParams.append('lat', lat.toString());
-          queryParams.append('lng', lng.toString());
-        }
-
-        if (radius !== undefined) {
-          queryParams.append('radius', radius.toString());
-        }
-
-        if (limit !== undefined) {
-          queryParams.append('limit', limit.toString());
-        }
-
-        const queryString = queryParams.toString();
-        return {
-          url: `/vendors${queryString ? `?${queryString}` : ''}`,
-          method: "GET"
-        };
-      },
+      query: () => ({
+        url: `/vendors`,
+        method: "GET"
+      }),
       providesTags: ["PublicVendors"],
       transformResponse: (response) => response,
     }),

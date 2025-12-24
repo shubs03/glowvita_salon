@@ -14,3 +14,4 @@ export * from './Blog';
 export * from './Services';
 export * from './SalonsSection';
 export * from './FeaturedProducts';
+export * from './SalonFilterContext';

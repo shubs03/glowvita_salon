@@ -29,6 +29,8 @@ import HeroSection2 from "@/components/landing/HeroSection2";
 import OffersSection2 from "@/components/landing/OffersSection2";
 import WhyChooseUs from "@/components/landing/WhyChooseUs";
 import Testimonials2 from "@/components/landing/Testimonials2";
+import { SalonFilterProvider } from "@/components/landing/SalonFilterContext";
+
 
 // Inline ProductCard component
 function ProductCard({
@@ -369,16 +371,18 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
+      <SalonFilterProvider>
+      
       <main className="flex-grow">
         <HeroSection2 />
         <OffersSection2 />
         <WhyChooseUs/>
         <Testimonials2 />
         <HeroSection />
+        <PlatformFor />
         <SalonsSection />
         <Offers />
         {/* <BentoGrid/> */}
-        <PlatformFor />
         {/* <HowItWorks /> */}
         {/* <FeaturedProducts /> */}
         {/* Replace FeaturedProducts with ProductCard grid */}
@@ -528,6 +532,7 @@ export default function HomePage() {
         {/* <FAQ /> */}
         <AppCTA />
       </main>
+      </SalonFilterProvider>
     </div>
   );
 }

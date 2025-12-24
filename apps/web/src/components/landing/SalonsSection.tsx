@@ -18,8 +18,8 @@ import { useState, useEffect } from "react";
 import { cn } from "@repo/ui/cn";
 import { useGetPublicVendorsQuery, useGetPublicCategoriesQuery, useGetPublicServicesQuery } from "@repo/store/services/api";
 import { useRouter } from "next/navigation";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Button } from "@repo/ui/button";
+import { useSalonFilter } from "./SalonFilterContext";
 
 // Types for vendor data
 interface VendorData {
@@ -39,6 +39,17 @@ interface VendorData {
     lng: number;
   };
   vendorType?: string;
+  services?: Array<{
+    _id: string;
+    name: string;
+    category: {
+      _id: string;
+      name: string;
+    } | null;
+    price: number;
+    duration: number;
+    description: string;
+  }>;
 }
 
 interface TransformedSalon {
@@ -138,62 +149,47 @@ const keyFeatures = [
 export function SalonsSection() {
   const [isVisible, setIsVisible] = useState(false);
   const router = useRouter();
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [locationPermission, setLocationPermission] = useState<'granted' | 'denied' | 'prompt' | null>(null);
   
-  // Filter states
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedService, setSelectedService] = useState<string | null>(null);
+  // Use shared filter context for filtering salons based on PlatformFor selections
+  const { 
+    selectedCategories, 
+    selectedServices, 
+    removeCategory, 
+    removeService,
+    clearFilters 
+  } = useSalonFilter();
 
-  // Get user's current location
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-          setLocationPermission('granted');
-        },
-        (error) => {
-          console.warn('Location access denied:', error);
-          setLocationPermission('denied');
-          // Still fetch vendors without location filtering
-        }
-      );
-    } else {
-      console.warn('Geolocation not supported');
-      setLocationPermission('denied');
-    }
-  }, []);
-
-  // Fetch vendors with location-based filtering
-  const { data: VendorsData, isLoading, error } = useGetPublicVendorsQuery(
-    userLocation ? { 
-      lat: userLocation.lat, 
-      lng: userLocation.lng, 
-      radius: 50, // 50km radius
-      limit: 6 
-    } : { limit: 6 }
-  );
+  // Fetch vendors and categories/services for filter display
+  const { data: VendorsData, isLoading, error } = useGetPublicVendorsQuery(void 0);
+  const { data: CategoriesData } = useGetPublicCategoriesQuery(undefined);
+  const { data: ServicesData } = useGetPublicServicesQuery({});
   
-  // Fetch categories for filter
-  const { data: CategoriesData, isLoading: categoriesLoading } = useGetPublicCategoriesQuery(undefined);
-  
-  // Fetch services for filter based on selected category
-  const { data: ServicesData, isLoading: servicesLoading } = useGetPublicServicesQuery(
-    selectedCategory ? { categoryId: selectedCategory } : {}
-  );
-
   // Transform vendor data to match the card structure, with fallbacks
   const transformedSalons: TransformedSalon[] = React.useMemo(() => {
     // Check for the correct API response structure
-    const vendorsArray = VendorsData?.vendors;
+    let vendorsArray = VendorsData?.vendors;
     
+    // Apply filtering based on selected categories or services from PlatformFor
+    if (vendorsArray && Array.isArray(vendorsArray) && vendorsArray.length > 0) {
+      // Filter by selected services first (higher priority)
+      if (selectedServices.length > 0) {
+        vendorsArray = vendorsArray.filter(vendor => 
+          vendor.services && vendor.services.some((service: any) => selectedServices.includes(service._id))
+        );
+      } 
+      // If no services selected, filter by categories
+      else if (selectedCategories.length > 0) {
+        vendorsArray = vendorsArray.filter(vendor => 
+          vendor.services && vendor.services.some((service: any) => 
+            service.category && selectedCategories.includes(service.category._id)
+          )
+        );
+      }
+    }
+    
+    // No fallback to mock data anymore - show empty state instead
     if (!vendorsArray || !Array.isArray(vendorsArray) || vendorsArray.length === 0) {
-      console.log("No vendor data found, using fallback static data");
-      return keyFeatures; // Fallback to static data
+      return []; // Return empty array instead of mock data
     }
 
     console.log("Using dynamic vendor data:", vendorsArray.length, "vendors");
@@ -236,7 +232,7 @@ export function SalonsSection() {
         image: imageUrl,
       };
     }).slice(0, 6); // Limit to 6 cards to match original design
-  }, [VendorsData]);
+  }, [VendorsData, selectedCategories, selectedServices]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -256,6 +252,12 @@ export function SalonsSection() {
 
   // Render the salon cards
   const renderSalonCards = () => {
+    // Check if we have vendors data and if filtering resulted in no matches
+    const vendorsArray = VendorsData?.vendors;
+    const hasFilters = selectedCategories.length > 0 || selectedServices.length > 0;
+    const noMatchingVendors = hasFilters && transformedSalons && transformedSalons.length === 0 && 
+                              vendorsArray && Array.isArray(vendorsArray) && vendorsArray.length > 0;
+
     if (isLoading) {
       // Loading skeleton cards
       return Array.from({ length: 6 }).map((_, index) => (
@@ -276,6 +278,53 @@ export function SalonsSection() {
           </div>
         </div>
       ));
+    }
+
+    // Show error state if there's an error
+    if (error) {
+      return (
+        <div className="col-span-full text-center py-12">
+          <div className="inline-block p-4 bg-destructive/10 rounded-full mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-foreground mb-2">Unable to Load Salons</h3>
+          <p className="text-muted-foreground mb-4">There was an error loading salon data. Please try again later.</p>
+          <Button onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
+      );
+    }
+
+    // Show message when no vendors match the filters
+    if (noMatchingVendors) {
+      return (
+        <div className="col-span-full text-center py-12">
+          <div className="inline-block p-4 bg-primary/10 rounded-full mb-4">
+            <Filter className="h-12 w-12 text-primary" />
+          </div>
+          <h3 className="text-xl font-semibold text-foreground mb-2">No Matching Salons Found</h3>
+          <p className="text-muted-foreground mb-4">Try adjusting your filters to see more results.</p>
+          <Button onClick={clearFilters} variant="outline">
+            Clear Filters
+          </Button>
+        </div>
+      );
+    }
+
+    // Show message when no vendors are available at all
+    if (transformedSalons.length === 0 && !hasFilters) {
+      return (
+        <div className="col-span-full text-center py-12">
+          <div className="inline-block p-4 bg-primary/10 rounded-full mb-4">
+            <Sparkles className="h-12 w-12 text-primary" />
+          </div>
+          <h3 className="text-xl font-semibold text-foreground mb-2">No Salons Available</h3>
+          <p className="text-muted-foreground">We don't have any salons to display right now. Please check back later.</p>
+        </div>
+      );
     }
 
     return transformedSalons.map((salon: TransformedSalon, index: number) => {
@@ -302,8 +351,8 @@ export function SalonsSection() {
             blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+Wj2he"
           />
           <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Star className="h-3 w-3 fill-yellow-300 text-yellow-300" />
-            <span className="font-semibold text-white text-xs">
+            <Star className="h-3 w-3 fill-primary text-primary" />
+            <span className="font-semibold text-primary text-xs">
               {salon.rating}
             </span>
           </div>
@@ -362,92 +411,6 @@ export function SalonsSection() {
       <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,white,transparent_70%)] opacity-20"></div>
 
       <div className="container mx-auto px-4 relative z-10">
-        {/* Filter Section */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row gap-4 items-end">
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Browse Services
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Service Category</label>
-                  <Select 
-                    value={selectedCategory || ""} 
-                    onValueChange={(value) => {
-                      setSelectedCategory(value === "all" ? null : value);
-                      setSelectedService(null); // Reset service when category changes
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      {!categoriesLoading && CategoriesData?.categories?.map((category: any) => (
-                        <SelectItem key={category._id} value={category._id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Service</label>
-                  <Select 
-                    value={selectedService || ""} 
-                    onValueChange={(value) => setSelectedService(value === "all" ? null : value)}
-                    disabled={!selectedCategory || servicesLoading}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={selectedCategory ? "Select a service" : "Select a category first"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Services</SelectItem>
-                      {!servicesLoading && ServicesData?.services?.map((service: any) => (
-                        <SelectItem key={service._id} value={service._id}>
-                          {service.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-            
-            {(selectedCategory || selectedService) && (
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setSelectedCategory(null);
-                  setSelectedService(null);
-                }}
-                className="whitespace-nowrap"
-              >
-                Clear Filters
-              </Button>
-            )}
-          </div>
-          
-          {/* Show selected service info */}
-          {(selectedCategory || selectedService) && (
-            <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="text-sm">
-                {selectedService 
-                  ? `Selected service: ${ServicesData?.services?.find((s: any) => s._id === selectedService)?.name}`
-                  : selectedCategory 
-                    ? `Selected category: ${CategoriesData?.categories?.find((c: any) => c._id === selectedCategory)?.name}`
-                    : "No selection"}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                In a future update, this will filter salons that offer these services.
-              </p>
-            </div>
-          )}
-        </div>
-        
         {/* Key Features Section */}
         <div
           className={`transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}
@@ -469,18 +432,55 @@ export function SalonsSection() {
               comprehensive platform
             </p>
             
-            {/* Location Status Indicator */}
-            {locationPermission === 'granted' && userLocation && (
-              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-green-600">
-                <MapPin className="h-4 w-4" />
-                <span>Showing salons near you</span>
-              </div>
-            )}
-            
-            {locationPermission === 'denied' && (
-              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>Enable location to see nearby salons</span>
+            {/* Selected Filters Display - Moved here as requested */}
+            {(selectedCategories.length > 0 || selectedServices.length > 0) && (
+              <div className="mt-8 flex flex-wrap justify-center gap-2">
+                {selectedCategories.map((categoryId) => {
+                  // Find category name from categories data
+                  const category = CategoriesData?.categories?.find((cat: { _id: string; name: string; }) => cat._id === categoryId);
+                  
+                  return (
+                    <div 
+                      key={`cat-${categoryId}`} 
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary border border-primary/20 text-sm rounded-md"
+                    >
+                      <span>{category?.name || categoryId}</span>
+                      <button 
+                        onClick={() => removeCategory(categoryId)}
+                        className="ml-1 hover:bg-primary/20 rounded-md w-5 h-5 flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+                
+                {selectedServices.map((serviceId) => {
+                  // Find service name from services data
+                  const service = ServicesData?.services?.find((svc: { _id: string; name: string; }) => svc._id === serviceId);
+                  
+                  return (
+                    <div 
+                      key={`svc-${serviceId}`} 
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-secondary/10 text-secondary-foreground border border-secondary/20 text-sm rounded-md"
+                    >
+                      <span>{service?.name || serviceId}</span>
+                      <button 
+                        onClick={() => removeService(serviceId)}
+                        className="ml-1 hover:bg-secondary/20 rounded-md w-5 h-5 flex items-center justify-center"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+                
+                <button 
+                  onClick={clearFilters}
+                  className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary border border-primary/20 text-sm rounded-md hover:bg-primary/20 transition-colors"
+                >
+                  Clear All
+                </button>
               </div>
             )}
           </div>
@@ -489,45 +489,45 @@ export function SalonsSection() {
             {renderSalonCards()}
           </div>
         </div>
-      </div>
 
-      {/* Platform Benefits */}
-      <div className="mt-20 max-w-6xl mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-background/30 backdrop-blur-sm border border-border/50 rounded-lg p-6 hover:shadow-lg transition-shadow duration-300">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Zap className="h-6 w-6 text-primary" />
+        {/* Platform Benefits */}
+        <div className="mt-20 max-w-6xl mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-background/30 backdrop-blur-sm border border-border/50 rounded-lg p-6 hover:shadow-lg transition-shadow duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Zap className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Lightning Fast</h3>
               </div>
-              <h3 className="text-xl font-semibold">Lightning Fast</h3>
+              <p className="text-muted-foreground">
+                Instant booking with real-time availability and seamless payment processing
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              Instant booking with real-time availability and seamless payment processing
-            </p>
-          </div>
-          
-          <div className="bg-background/30 backdrop-blur-sm border border-border/50 rounded-lg p-6 hover:shadow-lg transition-shadow duration-300">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Star className="h-6 w-6 text-primary" />
+            
+            <div className="bg-background/30 backdrop-blur-sm border border-border/50 rounded-lg p-6 hover:shadow-lg transition-shadow duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Star className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Verified Quality</h3>
               </div>
-              <h3 className="text-xl font-semibold">Verified Quality</h3>
+              <p className="text-muted-foreground">
+                All partners undergo rigorous vetting to ensure exceptional service standards
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              All partners undergo rigorous vetting to ensure exceptional service standards
-            </p>
-          </div>
-          
-          <div className="bg-background/30 backdrop-blur-sm border border-border/50 rounded-lg p-6 hover:shadow-lg transition-shadow duration-300">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Heart className="h-6 w-6 text-primary" />
+            
+            <div className="bg-background/30 backdrop-blur-sm border border-border/50 rounded-lg p-6 hover:shadow-lg transition-shadow duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Heart className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold">Trusted Community</h3>
               </div>
-              <h3 className="text-xl font-semibold">Trusted Community</h3>
+              <p className="text-muted-foreground">
+                Join thousands of satisfied customers who trust our platform for their beauty needs
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              Join thousands of satisfied customers who trust our platform for their beauty needs
-            </p>
           </div>
         </div>
       </div>
