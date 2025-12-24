@@ -32,7 +32,7 @@ interface ProfileData {
 
 function SubscriptionCheck({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { isCrmAuthenticated, isAuthLoading } = useCrmAuth();
+  const { isCrmAuthenticated, isLoading: isAuthLoading } = useCrmAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [showExpired, setShowExpired] = useState(false);
   const [initialCheckComplete, setInitialCheckComplete] = useState(false);
@@ -87,7 +87,7 @@ function SubscriptionCheck({ children }: { children: React.ReactNode }) {
           (subscription.status?.toLowerCase() === 'expired') ||
           (endDate && endDate.getTime() <= Date.now());
 
-        setShowExpired(isExpired);
+        setShowExpired(isExpired || false);
 
         // If expired, redirect to subscription expired page
         if (isExpired && typeof window !== 'undefined' && !window.location.pathname.startsWith('/subscription-expired')) {

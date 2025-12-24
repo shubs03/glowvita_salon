@@ -4,10 +4,13 @@
 import { selectRootState } from '@repo/store';
 import { useAppSelector } from '@repo/store/hooks';
 import { useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { clearCrmAuth } from '@repo/store/slices/crmAuthSlice';
 
 // This hook is now specifically for the CRM panel.
 export const useCrmAuth = () => {
   const { user, isCrmAuthenticated, token, role, permissions } = useAppSelector((state) => selectRootState(state).crmAuth);
+  const dispatch = useDispatch();
   
   // The hook is loading if the store hasn't been rehydrated from localStorage yet.
   const [isLoading, setIsLoading] = useState(true);
@@ -20,6 +23,9 @@ export const useCrmAuth = () => {
     }
   }, [isCrmAuthenticated]);
 
+  const logout = () => {
+    dispatch(clearCrmAuth());
+  };
 
   return {
     user,
@@ -28,5 +34,6 @@ export const useCrmAuth = () => {
     role,
     permissions,
     isLoading,
+    logout,
   };
 };

@@ -18,7 +18,7 @@ import { format, parseISO, isSameDay, addMinutes, parse, isWithinInterval, addDa
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 // Types
-type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'partially-completed' | 'missed' | 'pending';
+type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment' | 'partially-completed';
 
 type Appointment = {
   id?: string;

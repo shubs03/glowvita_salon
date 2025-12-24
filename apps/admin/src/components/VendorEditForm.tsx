@@ -1510,7 +1510,7 @@ const getInitialFormData = (): Vendor => ({
   address: '',
   password: '',
   confirmPassword: '',
-  subscription: { startDate: '', endDate: '', package: '', isActive: false },
+  subscription: { startDate: '', endDate: '', plan: '', isActive: false },
   gallery: [],
   documents: [],
   location: null

@@ -14,7 +14,7 @@ type Appointment = {
   startTime: string;
   endTime: string;
   notes?: string;
-  status: 'confirmed' | 'pending' | 'completed' | 'cancelled' | 'partially-completed' | 'missed' | 'no_show' | 'scheduled' | 'in_progress' | 'completed without payment';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment';
   isBlocked?: boolean;
   description?: string;
   clientPhone?: string;
@@ -93,13 +93,6 @@ const getStatusConfig = (status: Appointment['status']) => {
         color: 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-blue-200',
         dotColor: 'bg-blue-400'
       };
-    case 'pending':
-      return {
-        label: 'Pending',
-        icon: <Clock4 className="w-4 h-4" />,
-        color: 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-amber-200',
-        dotColor: 'bg-amber-400'
-      };
     case 'cancelled':
       return {
         label: 'Cancelled',
@@ -107,17 +100,9 @@ const getStatusConfig = (status: Appointment['status']) => {
         color: 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-red-200',
         dotColor: 'bg-red-400'
       };
-    case 'partially-completed':
-      return {
-        label: 'Partially Completed',
-        icon: <Clock4 className="w-4 h-4" />,
-        color: 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-indigo-200',
-        dotColor: 'bg-indigo-400'
-      };
-    case 'missed':
     case 'no_show':
       return {
-        label: status === 'missed' ? 'Missed' : 'No Show',
+        label: 'No Show',
         icon: <XCircle className="w-4 h-4" />,
         color: 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-purple-200',
         dotColor: 'bg-purple-400'
@@ -407,7 +392,7 @@ export default function AppointmentCard({
                     Cancel
                   </DropdownMenuItem>
 
-                  {appointment.status === 'confirmed' && (
+                  {(appointment.status === 'confirmed' || appointment.status === 'scheduled' || appointment.status === 'in_progress') && (
                     <DropdownMenuItem
                       className="text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 py-3 font-bold text-base"
                       onClick={(e) => handleAction(e, onComplete)}

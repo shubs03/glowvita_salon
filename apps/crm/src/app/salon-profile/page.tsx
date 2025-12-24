@@ -482,7 +482,7 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription?:
     totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24));
 
     // Determine if subscription is expired based on end date and status
-    isExpired = subscription?.status === 'expired' || daysLeft <= 0;
+    isExpired = subscription?.status === 'Expired' || daysLeft <= 0;
   }
 
   // Calculate progress percentage for the progress bar
@@ -621,9 +621,9 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription?:
                     {subscription.history.map((entry, index) => {
                       const startDate = new Date(entry.startDate);
                       const endDate = new Date(entry.endDate);
-                      const historyDate = entry.historyDate ? new Date(entry.historyDate) : startDate;
+                      const historyDate = startDate;
                       const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-                      const isCurrent = entry.status.toLowerCase() === 'active' && endDate > new Date();
+                      const isCurrent = entry.status === 'Active' && endDate > new Date();
 
                       return (
                         <tr
@@ -655,7 +655,7 @@ const SubscriptionTab = ({ subscription, userType = 'vendor' }: { subscription?:
                             </div>
                           </td>
                           <td className="p-3 border-b">
-                            {entry.paymentMode || 'Online'}
+                            {'Online'}
                           </td>
                           <td className="p-3 border-b text-right">
                             {days} days

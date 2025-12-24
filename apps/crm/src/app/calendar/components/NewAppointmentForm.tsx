@@ -18,6 +18,8 @@ import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { toast } from 'sonner';
 
+import { Appointment, AppointmentStatus, ServiceItem } from '../../../../../../packages/types/src/appointment';
+
 // Format date to YYYY-MM-DD for API requests (timezone-safe)
 const formatDateForBackend = (date: Date | string | null | undefined): string => {
   if (!date) return '';
@@ -61,14 +63,14 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment';
-
 export interface StaffMember {
   _id: string;
   name: string;
   email?: string;
   phone?: string;
 }
+
+export type { Appointment, AppointmentStatus, ServiceItem };
 
 export interface Client {
   _id: string;
@@ -77,42 +79,6 @@ export interface Client {
   phone?: string;
 }
 
-export interface ServiceItem {
-  service: string;
-  serviceName: string;
-  staff: string;
-  staffName: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  amount: number;
-}
-
-export interface Appointment {
-  id?: string;
-  _id?: string;
-  client: string;
-  clientName: string;
-  service: string;
-  serviceName: string;
-  services?: ServiceItem[];  // Multiple services
-  staff: string;  // This should be a MongoDB ObjectId
-  staffName: string;
-  date: Date | string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  notes: string;
-  status: AppointmentStatus;
-  amount: number;
-  discount: number;
-  tax: number;
-  totalAmount: number;
-  paymentStatus?: string;
-  mode?: 'online' | 'offline'; // Booking mode
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 // Helper function to validate MongoDB ObjectId
 const isValidObjectId = (id: string): boolean => {
@@ -969,7 +935,7 @@ export default function NewAppointmentForm({
     if (!defaultValues && !isLoadingServices && services.length > 0 && !appointmentData.service) {
       const firstService = services[0];
       if (firstService) {
-        setAppointmentData(prev => ({
+        setAppointmentData((prev: Appointment) => ({
           ...prev,
           service: firstService.id,
           serviceName: firstService.name,
@@ -989,7 +955,7 @@ export default function NewAppointmentForm({
   const handleStaffChange = (staffId: string) => {
     const selectedStaff = staffData.find((s: StaffMember) => s._id === staffId);
     if (selectedStaff) {
-      setAppointmentData(prev => ({
+      setAppointmentData((prev: Appointment) => ({
         ...prev,
         staff: staffId,
         staffName: selectedStaff.name
@@ -1004,7 +970,7 @@ export default function NewAppointmentForm({
       if (appointmentData.staff) {
         const selectedStaff = staffData.find((s: StaffMember) => s._id === appointmentData.staff);
         if (selectedStaff && selectedStaff.name !== appointmentData.staffName) {
-          setAppointmentData(prev => ({
+          setAppointmentData((prev: Appointment) => ({
             ...prev,
             staffName: selectedStaff.name
           }));
@@ -1012,7 +978,7 @@ export default function NewAppointmentForm({
       }
       // If no staff selected, select the first one
       else if (staffData[0]) {
-        setAppointmentData(prev => ({
+        setAppointmentData((prev: Appointment) => ({
           ...prev,
           staff: staffData[0]._id,
           staffName: staffData[0].name
@@ -1060,7 +1026,7 @@ export default function NewAppointmentForm({
       const tax = appointmentData.tax || 0;
       const totalAmount = Math.max(0, amount - discount + tax);
 
-      setAppointmentData(prev => ({
+      setAppointmentData((prev: Appointment) => ({
         ...prev,
         service: selectedService.id || selectedService._id,
         serviceName: selectedService.name,
@@ -1092,7 +1058,7 @@ export default function NewAppointmentForm({
 
     // Check if service is already added
     const isAlreadyAdded = appointmentData.services?.some(
-      s => s.service === selectedService.id || s.service === selectedService._id
+      (s: ServiceItem) => s.service === selectedService.id || s.service === selectedService._id
     );
 
     if (isAlreadyAdded) {
@@ -1139,7 +1105,7 @@ export default function NewAppointmentForm({
     const totalDuration = updatedServices.reduce((sum, s) => sum + s.duration, 0);
     const totalAmount = updatedServices.reduce((sum, s) => sum + s.amount, 0);
 
-    setAppointmentData(prev => ({
+    setAppointmentData((prev: Appointment) => ({
       ...prev,
       services: updatedServices,
       duration: totalDuration,
@@ -1153,7 +1119,7 @@ export default function NewAppointmentForm({
 
   // Remove a service from the services array
   const handleRemoveService = (index: number) => {
-    const updatedServices = appointmentData.services?.filter((_, i) => i !== index) || [];
+    const updatedServices = appointmentData.services?.filter((_, i: number) => i !== index) || [];
 
     // Recalculate start/end times for remaining services
     let currentStartTime = appointmentData.startTime;
@@ -1172,7 +1138,7 @@ export default function NewAppointmentForm({
     const totalDuration = recalculatedServices.reduce((sum, s) => sum + s.duration, 0) || 60;
     const totalAmount = recalculatedServices.reduce((sum, s) => sum + s.amount, 0);
 
-    setAppointmentData(prev => ({
+    setAppointmentData((prev: Appointment) => ({
       ...prev,
       services: recalculatedServices,
       duration: totalDuration,
@@ -1290,7 +1256,7 @@ export default function NewAppointmentForm({
 
   // Update the end time handler
   const handleEndTimeChange = (time: string) => {
-    setAppointmentData(prev => ({
+    setAppointmentData((prev: Appointment) => ({
       ...prev,
       endTime: time,
       // Update duration when end time is manually changed
@@ -1683,7 +1649,7 @@ export default function NewAppointmentForm({
 
   // Handle client selection
   const handleClientSelect = (client: any) => {
-    setAppointmentData(prev => ({
+    setAppointmentData((prev: Appointment) => ({
       ...prev,
       client: client._id,
       clientName: client.fullName || client.name || ''
@@ -1694,7 +1660,7 @@ export default function NewAppointmentForm({
 
   // Clear selected client
   const clearClient = () => {
-    setAppointmentData(prev => ({
+    setAppointmentData((prev: Appointment) => ({
       ...prev,
       client: '',
       clientName: ''
@@ -2286,7 +2252,7 @@ export default function NewAppointmentForm({
             value={appointmentData.duration || ''}
             onChange={(e) => {
               const duration = e.target.value ? parseInt(e.target.value) : 60;
-              setAppointmentData(prev => ({
+              setAppointmentData((prev: Appointment) => ({
                 ...prev,
                 duration: Math.max(1, duration),
                 endTime: calculateEndTime(prev.startTime, duration)

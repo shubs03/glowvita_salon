@@ -8,7 +8,8 @@
       "@models/*": ["packages/models/*"],
       "@utils/*": ["packages/utils/*"],
       "@repo/store/*": ["packages/store/src/*"],
-      "@repo/lib/*": ["packages/lib/src/*"]
+      "@repo/lib/*": ["packages/lib/src/*"],
+      "@repo/types/*": ["packages/types/src/*"]
     }
   }
 }

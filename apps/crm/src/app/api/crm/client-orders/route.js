@@ -27,7 +27,7 @@ export const GET = withSubscriptionCheck(async (req) => {
 }, ['vendor', 'supplier']);
 
 // PATCH - Update ClientOrder status
-export const PATCH = authMiddlewareCrm(async (req) => {
+export const PATCH = withSubscriptionCheck(async (req) => {
   try {
     const userId = req.user.userId;
     const role = req.user.role;

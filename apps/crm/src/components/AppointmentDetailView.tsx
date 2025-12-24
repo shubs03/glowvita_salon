@@ -69,7 +69,7 @@ interface Appointment {
   endTime: string;
   duration: number;
   notes: string;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending' | 'completed without payment';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending' | 'completed without payment' | 'partially-completed';
   amount: number;
   discount: number;
   tax: number;
@@ -102,7 +102,7 @@ interface ClientAppointment {
   id: string;
   date: Date;
   service: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed' | 'completed without payment';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed' | 'completed without payment' | 'partially-completed';
   staffName: string;
   amount: number;
   startTime?: string;
@@ -124,7 +124,7 @@ export function AppointmentDetailView({
   const [activeTab, setActiveTab] = useState('details');
   const [clientHistory, setClientHistory] = useState<ClientAppointment[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [activeHistoryFilter, setActiveHistoryFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed' | 'completed without payment'>('all');
+  const [activeHistoryFilter, setActiveHistoryFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed' | 'completed without payment' | 'partially-completed'>('all');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCollectingPayment, setIsCollectingPayment] = useState(false);
@@ -443,7 +443,7 @@ export function AppointmentDetailView({
   }, [appointmentsList, appointment, activeHistoryFilter]);
 
   // Function to update appointment status
-  const updateAppointmentStatus = (appointmentId: string, newStatus: 'pending' | 'completed' | 'cancelled' | 'missed' | 'completed without payment') => {
+  const updateAppointmentStatus = (appointmentId: string, newStatus: 'pending' | 'completed' | 'cancelled' | 'missed' | 'completed without payment' | 'partially-completed') => {
     setPendingStatus(newStatus);
     setShowStatusConfirm(true);
   };
@@ -451,7 +451,7 @@ export function AppointmentDetailView({
   const confirmStatusUpdate = () => {
     if (!pendingStatus) return;
 
-    const newStatus = pendingStatus as 'pending' | 'completed' | 'cancelled' | 'missed' | 'completed without payment';
+    const newStatus = pendingStatus as 'pending' | 'completed' | 'cancelled' | 'missed' | 'completed without payment' | 'partially-completed';
 
     // Update local state
     setClientHistory(prevHistory =>
@@ -527,8 +527,10 @@ export function AppointmentDetailView({
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'partially-completed':
+      case 'in_progress':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'missed':
+      case 'no_show':
         return 'bg-purple-100 text-purple-800 border-purple-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -1536,22 +1538,28 @@ export function AppointmentDetailView({
 
                     <div className="bg-background p-3 rounded-lg border shadow-sm">
                       <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${appointment.status === 'confirmed' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                        <div className={`p-2 rounded-lg ${(appointment.status === 'confirmed' || appointment.status === 'in_progress') ? 'bg-blue-100 dark:bg-blue-900/30' :
                           appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
                             appointment.status === 'partially-completed' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
                               appointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30' :
-                                'bg-red-100 dark:bg-red-900/30'
+                                appointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/30' :
+                                  appointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                                    'bg-red-100 dark:bg-red-900/30'
                           }`}>
-                          <div className={`h-5 w-5 rounded-full flex items-center justify-center ${appointment.status === 'confirmed' ? 'text-blue-600 dark:text-blue-400' :
+                          <div className={`h-5 w-5 rounded-full flex items-center justify-center ${(appointment.status === 'confirmed' || appointment.status === 'in_progress') ? 'text-blue-600 dark:text-blue-400' :
                             appointment.status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' :
                               appointment.status === 'partially-completed' ? 'text-indigo-600 dark:text-indigo-400' :
                                 appointment.status === 'completed' ? 'text-green-600 dark:text-green-400' :
-                                  'text-red-600 dark:text-red-400'
+                                  appointment.status === 'completed without payment' ? 'text-green-600 dark:text-green-400' :
+                                    appointment.status === 'no_show' ? 'text-purple-600 dark:text-purple-400' :
+                                      'text-red-600 dark:text-red-400'
                             }`}>
-                            <div className={`h-2.5 w-2.5 rounded-full ${appointment.status === 'confirmed' ? 'bg-blue-500' :
+                            <div className={`h-2.5 w-2.5 rounded-full ${(appointment.status === 'confirmed' || appointment.status === 'in_progress') ? 'bg-blue-500' :
                               appointment.status === 'pending' ? 'bg-yellow-500' :
                                 appointment.status === 'partially-completed' ? 'bg-indigo-500' :
-                                  appointment.status === 'completed' ? 'bg-green-500' : 'bg-red-500'
+                                  appointment.status === 'completed' ? 'bg-green-500' :
+                                    appointment.status === 'completed without payment' ? 'bg-green-500' :
+                                      appointment.status === 'no_show' ? 'bg-purple-500' : 'bg-red-500'
                               }`} />
                           </div>
                         </div>
@@ -1567,7 +1575,11 @@ export function AppointmentDetailView({
                                 appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' :
                                   appointment.status === 'partially-completed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
                                     appointment.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' :
-                                      'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
+                                      appointment.status === 'confirmed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                                        appointment.status === 'in_progress' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                                          appointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
+                                            appointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200' :
+                                              'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
                                 } border-0`}
                             >
                               {appointment.status.toUpperCase()}

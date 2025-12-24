@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@repo/ui/button';
 import { useRouter } from 'next/navigation';
-import { useCrmAuth } from '@repo/store/hooks/useCrmAuth';
-import { useGetProfileQuery } from '@repo/store/services/glowvitaApi';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
+import { useGetProfileQuery } from '@repo/store/api';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 

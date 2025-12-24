@@ -17,59 +17,14 @@ import { startOfDay, endOfDay } from 'date-fns';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { AppointmentDetailCard } from './components/AppointmentDetailCard';
+import { Appointment, AppointmentStatus } from '../../../../../packages/types/src/appointment';
 
 const NewAppointmentForm = dynamic(
   () => import('../calendar/components/NewAppointmentForm'),
   { ssr: false }
 );
 
-type Appointment = {
-  _id?: string;
-  id?: string;
-  client: string;
-  clientName: string;
-  clientPhone?: string;
-  service: string;
-  serviceName: string;
-  serviceItems?: Array<{
-    service: string;
-    serviceName: string;
-    staff: string;
-    staffName: string;
-    startTime: string;
-    endTime: string;
-    duration: number;
-    amount: number;
-    _id: string;
-  }>;
-  staff: string;
-  staffName: string;
-  date: Date | string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  notes?: string;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-  amount: number;
-  discount: number;
-  tax?: number;
-  totalAmount: number;
-  paymentStatus?: string;
-  paymentMethod?: string;
-  platformFee?: number;
-  serviceTax?: number;
-  discountAmount?: number;
-  finalAmount?: number;
-  payment?: {
-    paid?: number;
-    paymentMode?: string;
-    paymentStatus?: string;
-    paymentMethod?: string;
-    [key: string]: any;
-  };
-  createdAt?: string;
-  updatedAt?: string;
-};
+
 
 export default function AppointmentsPage() {
   const dispatch = useAppDispatch();
@@ -132,7 +87,7 @@ export default function AppointmentsPage() {
     return appointments.filter(appt => 
       (appt.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
        appt.service?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (statusFilter === 'all' || appt.status === statusFilter)
+      (statusFilter === 'all' || appt.status === statusFilter || (statusFilter === 'completed without payment' && appt.status === 'completed without payment'))
     );
   }, [appointments, searchTerm, statusFilter]);
 
@@ -247,6 +202,10 @@ export default function AppointmentsPage() {
 
   // Format status for display
   const formatStatus = (status: string) => {
+    // Handle the special case for 'completed without payment'
+    if (status === 'completed without payment') {
+      return 'Completed Without Payment';
+    }
     return status.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
@@ -292,7 +251,7 @@ export default function AppointmentsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {appointments.filter(a => a.status === 'completed').length}
+                  {appointments.filter(a => a.status === 'completed' || a.status === 'completed without payment').length}
                 </div>
                 <p className="text-xs text-muted-foreground">Successfully completed</p>
               </CardContent>
@@ -333,6 +292,7 @@ export default function AppointmentsPage() {
                   <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="completed without payment">Completed without payment</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
@@ -492,6 +452,7 @@ export default function AppointmentsPage() {
                               <div className="flex items-center gap-2">
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                   appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  appointment.status === 'completed without payment' ? 'bg-orange-100 text-orange-800' :
                                   appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                   appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                                   appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
@@ -623,7 +584,10 @@ export default function AppointmentsPage() {
               </div>
             ) : (
               <NewAppointmentForm
-                defaultValues={selectedAppointment || undefined}
+                defaultValues={selectedAppointment ? {
+                  ...selectedAppointment,
+                  status: selectedAppointment.status as 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'partially-completed' | 'completed without payment' | 'cancelled' | 'no_show' | undefined
+                } : undefined}
                 isEditing={modalType === 'edit'}
                 onSubmit={handleFormSubmit}
                 onCancel={handleCloseModal}

@@ -8,6 +8,7 @@ import { format, addDays, subDays, isToday, isSameDay } from 'date-fns';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import NewAppointmentForm from './NewAppointmentForm';
 import { AppointmentDetailView } from '../../../components/AppointmentDetailView';
+import { Appointment as SharedAppointment } from '../../../../../../packages/types/src/appointment';
 
 type Appointment = {
   id: string;
@@ -20,7 +21,7 @@ type Appointment = {
   endTime: string;
   duration?: number;
   notes?: string;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending' | 'partially-completed' | 'missed';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment';
   isBlocked?: boolean;
   description?: string;
   mode?: 'online' | 'offline'; // Booking mode
@@ -155,34 +156,17 @@ const getStatusConfig = (status: Appointment['status']) => {
         className: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800'
       };
     case 'completed':
+    case 'completed without payment':
       return {
-        label: 'Completed',
+        label: status === 'completed' ? 'Completed' : 'Completed Without Payment',
         icon: '✓',
         className: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-      };
-    case 'pending':
-      return {
-        label: 'Pending',
-        icon: '⏳',
-        className: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800'
       };
     case 'cancelled':
       return {
         label: 'Cancelled',
         icon: '✕',
         className: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-      };
-    case 'partially-completed':
-      return {
-        label: 'Partially Completed',
-        icon: '💳',
-        className: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
-      };
-    case 'missed':
-      return {
-        label: 'Missed',
-        icon: '⏰',
-        className: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
       };
     case 'no_show':
       return {
@@ -825,7 +809,7 @@ export default function DayScheduleView({
     setSelectedAppointment(null);
   };
 
-  const handleCreateNewAppointment = async (appointment: import('./NewAppointmentForm').Appointment) => {
+  const handleCreateNewAppointment = async (appointment: SharedAppointment) => {
     if (onCreateAppointment) {
       const appointmentDate = newAppointmentDate && !isNaN(newAppointmentDate.getTime())
         ? newAppointmentDate

@@ -17,7 +17,7 @@ import { AlertCircle, X, Zap } from 'lucide-react';
 export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const { isCrmAuthenticated, isAuthLoading: isAuthLoading, user, role } = useCrmAuth();
+  const { isCrmAuthenticated, isLoading: isAuthLoading, user, role } = useCrmAuth();
   // ...
   const router = useRouter();
   const pathname = usePathname();
@@ -47,7 +47,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
 
     const refreshTokenPeriodically = async () => {
       try {
-        const result = await refreshToken().unwrap();
+        const result = await refreshToken({}).unwrap();
         if (result.success && result.user) {
           dispatch(updateUser(result.user));
         }
