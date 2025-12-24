@@ -1,7 +1,7 @@
 import _db from "@repo/lib/db";
 import OrderModel from "@repo/lib/models/Vendor/Order.model";
-import TaxFeeSettings from "@repo/lib/models/admin/TaxFeeSettings.model";
-import { authMiddlewareAdmin } from '../../../../../../../middlewareAdmin';
+import TaxFeeSettings from "@repo/lib/models/admin/TaxFeeSettings";
+import { authMiddlewareAdmin } from '../../../../../middlewareAdmin';
 
 await _db();
 

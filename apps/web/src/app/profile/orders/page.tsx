@@ -54,7 +54,7 @@ import {
 import { Textarea } from "@repo/ui/textarea";
 import { Label } from "@repo/ui/label";
 import Image from "next/image";
-import { useGetClientOrdersQuery } from "@repo/store/src/services/api";
+import { useGetClientOrdersQuery } from "@repo/store/services/api";
 import { useAuth } from "@/hooks/useAuth";
 
 interface OrderItem {

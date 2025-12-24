@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@repo/ui/dialog";
+import { CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
@@ -294,7 +295,7 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch }:
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg">Current Plan</CardTitle>
-                  <Badge variant={supplier.subscription?.status === 'Active' ? 'success' : 'destructive'}>
+                  <Badge variant={supplier.subscription?.status === 'Active' ? 'default' : 'destructive'}>
                     {supplier.subscription?.status || 'No Active Plan'}
                   </Badge>
                 </div>

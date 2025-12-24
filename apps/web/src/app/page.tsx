@@ -25,6 +25,10 @@ import { useGetAdminProductCategoriesQuery, useGetVendorsQuery, useGetPublicProd
 import { useState, useEffect } from "react";
 import { NewProductCard } from "@/components/landing/NewProductCard";
 import { Badge } from "@repo/ui/badge";
+import HeroSection2 from "@/components/landing/HeroSection2";
+import OffersSection2 from "@/components/landing/OffersSection2";
+import WhyChooseUs from "@/components/landing/WhyChooseUs";
+import Testimonials2 from "@/components/landing/Testimonials2";
 
 // Inline ProductCard component
 function ProductCard({
@@ -366,6 +370,10 @@ export default function HomePage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <main className="flex-grow">
+        <HeroSection2 />
+        <OffersSection2 />
+        <WhyChooseUs/>
+        <Testimonials2 />
         <HeroSection />
         <SalonsSection />
         <Offers />

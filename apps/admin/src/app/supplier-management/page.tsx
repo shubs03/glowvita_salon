@@ -135,7 +135,7 @@ type Supplier = {
   state: string;
   city: string;
   pincode: string;
-  location?: { lat: number; lng: number } | string; // Updated to support both formats
+  location?: { type: string; coordinates: number[]; }; // Changed to match SupplierEditForm expectation
   address: string;
   businessRegistrationNo: string;
   supplierType: string;

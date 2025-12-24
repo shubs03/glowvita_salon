@@ -522,7 +522,7 @@ export default function OrdersPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {((role === 'supplier' && activeTab === 'received-orders') || (role === 'vendor' && activeTab === 'customer-orders')) && order.status && getNextStatus(order.status, order) && (
+                          {role === 'supplier' && order.status && getNextStatus(order.status, order) && (
                             <Button 
                               size="sm" 
                               onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status, order)!)} 
@@ -633,7 +633,7 @@ export default function OrdersPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {((role === 'supplier' && activeTab === 'received-orders') || (role === 'vendor' && activeTab === 'customer-orders')) && order.status && getNextStatus(order.status, order) && (
+                        {role === 'supplier' && order.status && getNextStatus(order.status, order) && (
                           <Button 
                             size="sm" 
                             onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status, order)!)} 

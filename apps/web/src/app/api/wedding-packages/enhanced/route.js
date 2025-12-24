@@ -1,7 +1,6 @@
 import _db from "@repo/lib/db";
 import EnhancedWeddingPackageModel from "@repo/lib/models/Vendor/EnhancedWeddingPackage.model";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
-import { authMiddlewareWeb } from "@repo/lib/middlewares/auth";
 
 /**
  * API route for enhanced wedding package management with customization support
